@@ -659,7 +659,235 @@ struct ExampleView: View {
 
 ---
 
-## 10. References
+## 10. Testing Architecture
+
+### 10.1 Test Pyramid
+
+```
+         ┌─────────────┐
+         │  UI Tests   │   XCUITest — critical user flows (onboarding, settings, dismiss)
+         │  (future)   │   Slowest, highest confidence for UX regressions
+         └──────┬──────┘
+                │
+        ┌───────┴────────┐
+        │  Integration   │   XCTest — real wiring between services, no mocks
+        │  Tests (new)   │   Key pipelines: Settings → Coordinator → ScreenTimeTracker
+        └───────┬────────┘
+                │
+  ┌─────────────┴──────────────┐
+  │      Unit Tests            │   XCTest — isolated, mock-injected, fast
+  │  Models / Services /       │   Primary layer; all logic lives here
+  │  ViewModels / Views        │
+  └────────────────────────────┘
+```
+
+**Unit tests** are the default. Write a unit test whenever logic can be exercised without a live UIWindowScene, real notification delivery, or real system APIs. This covers 100% of models, services, and ViewModels.
+
+**Integration tests** sit in `Tests/EyePostureReminderTests/Integration/` (see §10.4). Use them for pipeline verification: does disabling the master toggle actually cancel pending notifications *and* stop `ScreenTimeTracker`? Integration tests use real `SettingsStore` + real `AppCoordinator` wired together, but still mock UIKit and UNUserNotificationCenter boundaries.
+
+**UI tests** (XCUITest, future target) cover onboarding permission prompt, toggling a reminder type in settings, and tapping the overlay dismiss button. Add these before TestFlight beta.
+
+---
+
+### 10.2 Mock Patterns
+
+#### Protocol-Based Mocks for System APIs
+
+Every system boundary is behind a protocol. Tests inject mock implementations — no swizzling, no subclassing.
+
+| Protocol | Mock Class | Production Type |
+|----------|-----------|-----------------|
+| `NotificationScheduling` | `MockNotificationCenter` | `UNUserNotificationCenter` |
+| `SettingsPersisting` | `MockSettingsPersisting` | `UserDefaults` |
+| `OverlayPresenting` | `MockOverlayPresenting` | `OverlayManager` |
+| `ReminderScheduling` | `MockReminderScheduler` | `ReminderScheduler` |
+| `MediaControlling` | `MockMediaControlling` | `AudioInterruptionManager` |
+| `FocusStatusDetecting` | `MockFocusStatusDetector` | `LiveFocusStatusDetector` (INFocusStatusCenter) |
+| `CarPlayDetecting` | `MockCarPlayDetector` | `LiveCarPlayDetector` (AVAudioSession) |
+| `DrivingActivityDetecting` | `MockDrivingActivityDetector` | `LiveDrivingActivityDetector` (CMMotionActivityManager) |
+
+**Mock contract:** Every mock class exposes call-count properties and `simulate*()` helpers so tests can drive state changes synchronously without real timers or hardware.
+
+```swift
+// Example: simulate a Focus Mode activation in PauseConditionManagerTests
+mockFocus.simulateFocusChange(true)
+XCTAssertTrue(sut.isPaused)
+```
+
+#### In-Memory `UserDefaults`
+
+`MockSettingsPersisting` is a `[String: Any]` dictionary — no file I/O, no persistence across test runs. Instantiate a fresh copy in `setUp()` for full isolation:
+
+```swift
+override func setUp() {
+    mockPersistence = MockSettingsPersisting()
+    settings = SettingsStore(store: mockPersistence)
+}
+```
+
+**When to use the real `UserDefaults`:** Never in unit tests. In integration tests, use a custom suite name (e.g., `UserDefaults(suiteName: "com.yashasg.epr.test-\(UUID())")`) and call `removeSuite(named:)` in `tearDown()`.
+
+#### When to Mock vs. Use Real Implementations
+
+| Scenario | Use Mock | Use Real |
+|----------|----------|----------|
+| Testing scheduling logic in `ReminderScheduler` | `MockNotificationCenter` | — |
+| Testing that `SettingsStore` reads/writes correct keys | — | `MockSettingsPersisting` (is the real test subject) |
+| Testing `PauseConditionManager` aggregation | All three detector mocks | — |
+| Integration test: `AppCoordinator` full pipeline | `MockNotificationCenter`, `MockOverlayPresenting` | `SettingsStore`, `ScreenTimeTracker` |
+| UI test: settings screen saves correctly | — | Full app stack |
+
+---
+
+### 10.3 Test Infrastructure
+
+#### Mock Class Location & Naming
+
+All mocks live in `Tests/EyePostureReminderTests/Mocks/`. Naming convention: `Mock` + protocol name minus the `-ing`/`-able` suffix where it reads naturally.
+
+```
+Tests/EyePostureReminderTests/Mocks/
+├── MockMediaControlling.swift
+├── MockNotificationCenter.swift
+├── MockOverlayPresenting.swift
+├── MockReminderScheduler.swift
+└── MockSettingsPersisting.swift
+```
+
+PauseConditionManager detector mocks are defined inline at the top of `PauseConditionManagerTests.swift` since they are only used in that file.
+
+#### Shared Setup Pattern
+
+Each test class owns its own mock instances created in `setUp()` and nilled in `tearDown()`. No shared static state. No global singletons in test scope.
+
+```swift
+override func setUp() async throws {
+    try await super.setUp()
+    mockPersistence = MockSettingsPersisting()
+    settings = SettingsStore(store: mockPersistence)
+    mockScheduler = MockReminderScheduler()
+    sut = SettingsViewModel(settings: settings, scheduler: mockScheduler)
+}
+
+override func tearDown() async throws {
+    sut = nil
+    mockScheduler = nil
+    settings = nil
+    mockPersistence = nil
+    try await super.tearDown()
+}
+```
+
+#### `@MainActor` Considerations
+
+`SettingsViewModel`, `OverlayManager`, and `AppCoordinator` are `@MainActor` isolated. Their test classes must be annotated `@MainActor` too:
+
+```swift
+@MainActor
+final class SettingsViewModelTests: XCTestCase { ... }
+```
+
+Methods that internally spawn `Task {}` require a short async sleep before assertions to let the spawned task complete:
+
+```swift
+sut.masterToggleChanged()
+try? await Task.sleep(nanoseconds: 200_000_000) // 200ms for inner Task
+XCTAssertEqual(mockScheduler.scheduleRemindersCallCount, 1)
+```
+
+This pattern is intentional — do not replace with `XCTestExpectation` unless the timing is genuinely unpredictable. The 200ms budget is generous for these no-I/O code paths.
+
+---
+
+### 10.4 File Organization
+
+```
+Tests/EyePostureReminderTests/
+├── Fixtures/
+│   └── defaults.json               Bundled defaults fixture for DefaultsLoader tests
+├── Mocks/                          Shared mock implementations (see §10.3)
+├── Models/                         Unit tests for model types
+│   ├── AppConfigTests.swift
+│   ├── OnboardingTests.swift
+│   ├── ReminderTypeTests.swift
+│   ├── SettingsStoreConfigTests.swift
+│   ├── SettingsStorePhase2Tests.swift
+│   └── SettingsStoreTests.swift
+├── Services/                       Unit tests for service layer
+│   ├── AppCoordinatorTests.swift
+│   ├── AudioInterruptionManagerTests.swift
+│   ├── OverlayManagerTests.swift
+│   ├── PauseConditionManagerTests.swift
+│   └── ReminderSchedulerTests.swift
+├── ViewModels/                     Unit tests for ViewModel layer
+│   ├── SettingsViewModelPhase2Tests.swift
+│   └── SettingsViewModelTests.swift
+├── Views/                          Unit tests for design system / string catalog
+│   ├── ColorTokenTests.swift
+│   ├── DesignSystemTests.swift
+│   └── StringCatalogTests.swift
+├── Integration/                    ← NEW: integration tests (real service wiring)
+│   └── (add per pipeline, e.g. SchedulingPipelineTests.swift)
+└── RegressionTests.swift           Bug regression guards; one section per fixed bug
+```
+
+**`RegressionTests.swift`** is the sentinel file. Each section is a compile-time or runtime guard against a specific bug regressing. Add a section here whenever a bug is fixed — not just when tests fail. Format:
+
+```swift
+// Bug N: <title> (fixed: <short description>)
+// Root cause: ...
+// How these tests catch a regression: ...
+```
+
+**Future UI test target:** `EyePostureReminderUITests/` — add before TestFlight beta. Minimum cases: onboarding permission prompt, toggling a reminder type, overlay dismiss button.
+
+---
+
+### 10.5 Coverage Targets
+
+| Layer | Target | Rationale |
+|-------|--------|-----------|
+| **Models** | 90% | Pure Swift — all branches exercisable without system APIs |
+| **Services** | 85% | Some branches require live UIWindowScene (integration-only) |
+| **ViewModels** | 85% | `@MainActor` isolation makes these fast to test |
+| **Views** | 50% | Design system tokens + string catalog keys; visual layout not measurable by XCTest |
+| **Integration** | Key pipelines | Settings → Coordinator → ScreenTimeTracker; Pause signals → Coordinator |
+| **UI** | Critical flows | Onboarding, settings save, overlay dismiss |
+
+**Key service pipelines for integration tests:**
+1. `SettingsStore.masterEnabled = false` → `AppCoordinator` cancels all notifications + stops `ScreenTimeTracker`
+2. `ScreenTimeTracker` threshold reached → `AppCoordinator` shows overlay → overlay dismiss → tracker resets
+3. `PauseConditionManager.isPaused = true` → `AppCoordinator` suspends `ScreenTimeTracker`; `isPaused = false` → resumes from prior elapsed time
+
+---
+
+### 10.6 Performance Testing
+
+Battery-sensitive code paths use `.measure {}` blocks to establish baselines and catch regressions:
+
+```swift
+func test_pauseConditionManager_performance_allDetectorsActive() {
+    measure {
+        // Simulate rapid state changes across all three detectors.
+        // Baseline: < 1ms per evaluation on a mid-range simulator.
+        for _ in 0..<1000 {
+            mockFocus.simulateFocusChange(true)
+            mockFocus.simulateFocusChange(false)
+        }
+    }
+}
+```
+
+**Where to add `.measure {}` blocks:**
+- `PauseConditionManager` state aggregation (fires on every detector event)
+- `ScreenTimeTracker` tick handler (fires every second while foreground)
+- `SettingsStore` key serialization (fires on every settings save)
+
+Establish baselines on the CI runner (not local) to avoid machine-dependent drift. Use `XCTest`'s `measureOptions` to set a `stdDevThreshold` of 10%.
+
+---
+
+## 11. References
 
 - [Apple Human Interface Guidelines – Notifications](https://developer.apple.com/design/human-interface-guidelines/notifications)
 - [UNUserNotificationCenter Documentation](https://developer.apple.com/documentation/usernotifications/unusernotificationcenter)
@@ -673,3 +901,4 @@ struct ExampleView: View {
 | Date | Change | Author |
 |------|--------|--------|
 | 2026-04-24 | Initial architecture definition | Rusty |
+| 2026-04-26 | Added Section 10: Testing Architecture | Rusty |
