@@ -444,6 +444,8 @@ private final class FailOnceNotificationCenter: NotificationScheduling {
 
     func requestAuthorization(options: UNAuthorizationOptions) async throws -> Bool { true }
 
+    func getAuthorizationStatus() async -> UNAuthorizationStatus { .authorized }
+
     func add(_ request: UNNotificationRequest) async throws {
         addAttemptCount += 1
         if !hasFailed {

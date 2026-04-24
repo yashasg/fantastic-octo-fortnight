@@ -32,8 +32,13 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
             Task { @MainActor [weak self] in
                 self?.coordinator?.handleNotification(for: type)
             }
+        } else if categoryID == AppCoordinator.snoozeWakeCategory {
+            // Snooze has expired — resume normal scheduling instead of showing an overlay.
+            Task { @MainActor [weak self] in
+                await self?.coordinator?.scheduleReminders()
+            }
         }
-        // Suppress the system banner — our overlay is the UI.
+        // Suppress the system banner — our overlay (or no-op) is the UI.
         completionHandler([])
     }
 
@@ -47,6 +52,11 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         if let type = ReminderType(categoryIdentifier: categoryID) {
             Task { @MainActor [weak self] in
                 self?.coordinator?.handleNotification(for: type)
+            }
+        } else if categoryID == AppCoordinator.snoozeWakeCategory {
+            // Snooze notification tapped (or delivered silently) — resume scheduling.
+            Task { @MainActor [weak self] in
+                await self?.coordinator?.scheduleReminders()
             }
         }
         completionHandler()

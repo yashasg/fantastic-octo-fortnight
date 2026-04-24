@@ -13,12 +13,18 @@ protocol NotificationScheduling {
     func removePendingNotificationRequests(withIdentifiers identifiers: [String])
     func removeAllPendingNotificationRequests()
     func getPendingNotificationRequests() async -> [UNNotificationRequest]
+    /// Returns the current notification authorization status without triggering a prompt.
+    func getAuthorizationStatus() async -> UNAuthorizationStatus
 }
 
 // Production conformance — zero overhead, zero extra code at the call site.
 extension UNUserNotificationCenter: NotificationScheduling {
     func getPendingNotificationRequests() async -> [UNNotificationRequest] {
         await pendingNotificationRequests()
+    }
+
+    func getAuthorizationStatus() async -> UNAuthorizationStatus {
+        await notificationSettings().authorizationStatus
     }
 }
 

@@ -12,6 +12,12 @@ import os
 /// - Notification authorization state tracking
 /// - Pending-overlay queue (notification-tap race condition)
 /// - Foreground fallback timers (when notifications are denied)
+/// - Snooze state: cancels reminders during snooze and resumes automatically
+///
+/// **P1-2:** Uses injected `NotificationScheduling` for all auth management
+/// instead of calling `UNUserNotificationCenter.current()` directly.
+///
+/// **P1-3:** Uses injected `OverlayPresenting` instead of `OverlayManager.shared` directly.
 ///
 /// `AppCoordinator` conforms to `ReminderScheduling` so Views can pass it
 /// directly to `SettingsViewModel`. The conformance routes every call through
@@ -24,10 +30,28 @@ import os
 @MainActor
 final class AppCoordinator: ObservableObject {
 
+    // MARK: - Snooze Wake Constants
+
+    /// Category identifier for the one-time snooze-wake notification.
+    /// `AppDelegate` checks this to route snooze-wake notifications separately
+    /// from real reminder notifications.
+    static let snoozeWakeCategory = "com.yashasgujjar.epr.snooze-wake"
+    private static let snoozeWakeIdentifier = "com.yashasgujjar.epr.snooze-wake"
+
     // MARK: - Owned Dependencies
 
     let settings: SettingsStore
     let scheduler: ReminderScheduler
+
+    // MARK: - Injected Dependencies (P1-2, P1-3)
+
+    /// Injected notification center — used for auth checks and snooze-wake
+    /// scheduling. Defaults to `UNUserNotificationCenter.current()` in production.
+    private let notificationCenter: NotificationScheduling
+
+    /// Injected overlay manager — used to show overlays and clear the queue.
+    /// Defaults to `OverlayManager.shared` in production.
+    private let overlayManager: OverlayPresenting
 
     // MARK: - Published State
 
@@ -54,14 +78,24 @@ final class AppCoordinator: ObservableObject {
     /// when a newer setting change arrives within the debounce window.
     private var rescheduleDebounce: [ReminderType: Task<Void, Never>] = [:]
 
+    // MARK: - Snooze Wake
+
+    /// In-process wake task — cancels the snooze and reschedules reminders
+    /// when the snooze period expires while the app is in the foreground.
+    private var snoozeWakeTask: Task<Void, Never>?
+
     // MARK: - Init
 
     init(
         settings: SettingsStore = SettingsStore(),
-        scheduler: ReminderScheduler = ReminderScheduler()
+        scheduler: ReminderScheduler = ReminderScheduler(),
+        notificationCenter: NotificationScheduling = UNUserNotificationCenter.current(),
+        overlayManager: OverlayPresenting? = nil
     ) {
         self.settings = settings
         self.scheduler = scheduler
+        self.notificationCenter = notificationCenter
+        self.overlayManager = overlayManager ?? OverlayManager.shared
         Logger.lifecycle.info("AppCoordinator initialised")
     }
 
@@ -74,7 +108,7 @@ final class AppCoordinator: ObservableObject {
     /// is refreshed automatically.
     func requestNotificationPermission() async {
         do {
-            let granted = try await UNUserNotificationCenter.current()
+            let granted = try await notificationCenter
                 .requestAuthorization(options: [.alert, .sound, .badge])
             Logger.lifecycle.info("Notification authorisation \(granted ? "granted" : "denied")")
         } catch {
@@ -85,8 +119,7 @@ final class AppCoordinator: ObservableObject {
 
     /// Re-read the current authorisation status from the system.
     func refreshAuthStatus() async {
-        let currentSettings = await UNUserNotificationCenter.current().notificationSettings()
-        notificationAuthStatus = currentSettings.authorizationStatus
+        notificationAuthStatus = await notificationCenter.getAuthorizationStatus()
         Logger.lifecycle.debug("Notification auth status: \(self.notificationAuthStatus.rawValue)")
     }
 
@@ -95,9 +128,36 @@ final class AppCoordinator: ObservableObject {
     /// Master scheduling entrypoint — determines the right strategy based on
     /// notification authorisation and delegates accordingly.
     ///
+    /// **P1-1 Snooze guard:** If a snooze is active, reminders are cancelled
+    /// and a wake-up timer (in-process Task + silent UNNotification) is scheduled
+    /// at `snoozeEnd`. Expired snoozes are cleared before proceeding normally.
+    ///
     /// Call on launch (`.task`) and whenever settings change.
     func scheduleReminders() async {
         await refreshAuthStatus()
+
+        // P1-1: Snooze guard — check before doing anything else.
+        if let snoozeEnd = settings.snoozedUntil {
+            if snoozeEnd > Date() {
+                // Snooze is still active — cancel reminders and arm wake.
+                scheduler.cancelAllReminders()
+                stopFallbackTimers()
+                scheduleSnoozeWakeTask(at: snoozeEnd)
+                if notificationAuthStatus == .authorized {
+                    await scheduleSnoozeWakeNotification(at: snoozeEnd)
+                }
+                Logger.scheduling.info("Snooze active until \(snoozeEnd) — reminders paused")
+                return
+            } else {
+                // Snooze has expired — clear state and fall through to normal scheduling.
+                settings.snoozedUntil = nil
+                settings.snoozeCount  = 0
+                Logger.scheduling.info("Snooze expired — clearing and resuming normal scheduling")
+            }
+        }
+
+        // No active snooze — cancel any pending wake artifacts.
+        cancelSnoozeWake()
 
         // First launch: prompt the user for permission
         if notificationAuthStatus == .notDetermined {
@@ -142,10 +202,14 @@ final class AppCoordinator: ObservableObject {
     /// Unified handler for both foreground delivery (`willPresent`) and
     /// background-tap delivery (`didReceive`).
     ///
+    /// Resets the consecutive snooze count since a real reminder has fired.
     /// Reads the break duration from `SettingsStore` instead of hardcoding.
     /// If no window scene is active yet (notification-tap race), the overlay is
     /// queued and presented when `presentPendingOverlayIfNeeded()` is called.
     func handleNotification(for type: ReminderType) {
+        // A real reminder fired — reset consecutive snooze count.
+        settings.snoozeCount = 0
+
         let duration = settings.settings(for: type).breakDuration
 
         let hasActiveScene = UIApplication.shared.connectedScenes
@@ -153,7 +217,7 @@ final class AppCoordinator: ObservableObject {
             .contains { $0.activationState == .foregroundActive }
 
         if hasActiveScene {
-            OverlayManager.shared.showOverlay(for: type, duration: duration, hapticsEnabled: settings.hapticsEnabled) {}
+            overlayManager.showOverlay(for: type, duration: duration, hapticsEnabled: settings.hapticsEnabled) {}
         } else {
             pendingOverlay = (type: type, duration: duration)
             Logger.lifecycle.info("Queued pending overlay for \(type.rawValue) (no active scene)")
@@ -166,19 +230,34 @@ final class AppCoordinator: ObservableObject {
         guard let pending = pendingOverlay else { return }
         pendingOverlay = nil
         Logger.lifecycle.info("Presenting queued overlay for \(pending.type.rawValue)")
-        OverlayManager.shared.showOverlay(for: pending.type, duration: pending.duration, hapticsEnabled: settings.hapticsEnabled) {}
+        overlayManager.showOverlay(for: pending.type, duration: pending.duration, hapticsEnabled: settings.hapticsEnabled) {}
     }
 
     // MARK: - App Lifecycle Hooks
 
     /// Called when the app returns to the foreground from background.
     ///
-    /// Refreshes auth status and ensures the correct scheduling strategy is
-    /// running. If permission was granted while the app was backgrounded,
-    /// switches from fallback timers to real notifications. If still denied
-    /// and no timers are running, restarts them.
+    /// Clears any expired snooze first. If snooze is still active, ensures the
+    /// wake task is running. Otherwise refreshes auth status and ensures the
+    /// correct scheduling strategy is active.
     func handleForegroundTransition() async {
         await refreshAuthStatus()
+
+        // P1-1: Handle snooze state on foreground.
+        if let snoozeEnd = settings.snoozedUntil {
+            if snoozeEnd <= Date() {
+                // Snooze expired while backgrounded — clear and reschedule.
+                settings.snoozedUntil = nil
+                settings.snoozeCount  = 0
+                Logger.scheduling.info("Foreground transition: snooze expired — resuming normal scheduling")
+                await scheduleReminders()
+            } else {
+                // Snooze still active — re-arm wake task in case it was lost.
+                scheduleSnoozeWakeTask(at: snoozeEnd)
+                Logger.scheduling.info("Foreground transition: snooze still active until \(snoozeEnd)")
+            }
+            return
+        }
 
         switch notificationAuthStatus {
         case .authorized:
@@ -216,6 +295,12 @@ final class AppCoordinator: ObservableObject {
     func startFallbackTimers() {
         stopFallbackTimers()
 
+        // Do not start fallback timers during an active snooze.
+        guard settings.snoozedUntil == nil else {
+            Logger.scheduling.debug("Skipping fallback timers — snooze is active")
+            return
+        }
+
         for type in ReminderType.allCases {
             guard settings.isEnabled(for: type) else { continue }
             startFallbackTimer(for: type)
@@ -229,6 +314,65 @@ final class AppCoordinator: ObservableObject {
             Logger.scheduling.debug("Fallback timer stopped for \(type.rawValue)")
         }
         fallbackTimers.removeAll()
+    }
+
+    // MARK: - Snooze Wake (Private)
+
+    /// Schedule an in-process `Task` that wakes and resumes reminders when the
+    /// snooze period expires. Safe to call multiple times — cancels the previous task first.
+    private func scheduleSnoozeWakeTask(at date: Date) {
+        snoozeWakeTask?.cancel()
+        snoozeWakeTask = Task { [weak self] in
+            let interval = max(0, date.timeIntervalSinceNow)
+            try? await Task.sleep(nanoseconds: UInt64(interval * 1_000_000_000))
+            guard !Task.isCancelled else { return }
+            await self?.handleSnoozeWake()
+        }
+        Logger.scheduling.debug("Snooze wake task armed for \(date)")
+    }
+
+    /// Cancel both the in-process wake task and the one-time wake notification.
+    private func cancelSnoozeWake() {
+        snoozeWakeTask?.cancel()
+        snoozeWakeTask = nil
+        notificationCenter.removePendingNotificationRequests(
+            withIdentifiers: [Self.snoozeWakeIdentifier]
+        )
+    }
+
+    /// Schedule a silent one-time UNNotification that fires when the snooze
+    /// period expires. Wakes the app even if it was killed and relaunched.
+    private func scheduleSnoozeWakeNotification(at date: Date) async {
+        let interval = max(1, date.timeIntervalSinceNow)
+
+        let content = UNMutableNotificationContent()
+        content.title              = "Reminders Resumed"
+        content.body               = "Your eye and posture reminders are now active again."
+        content.sound              = nil   // silent — informational only
+        content.categoryIdentifier = Self.snoozeWakeCategory
+
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: interval, repeats: false)
+        let request = UNNotificationRequest(
+            identifier: Self.snoozeWakeIdentifier,
+            content: content,
+            trigger: trigger
+        )
+
+        do {
+            try await notificationCenter.add(request)
+            Logger.scheduling.debug("Snooze wake notification scheduled in \(interval)s")
+        } catch {
+            Logger.scheduling.error("Failed to schedule snooze wake notification: \(error.localizedDescription)")
+        }
+    }
+
+    /// Called when the snooze period expires (either via Task or notification tap).
+    /// Clears snooze state and resumes normal scheduling.
+    private func handleSnoozeWake() async {
+        settings.snoozedUntil = nil
+        settings.snoozeCount  = 0
+        await scheduleReminders()
+        Logger.scheduling.info("Snooze wake — reminders resumed")
     }
 
     // MARK: - Private
@@ -265,7 +409,7 @@ final class AppCoordinator: ObservableObject {
             Task { @MainActor [weak self] in
                 guard let self else { return }
                 let duration = self.settings.settings(for: type).breakDuration
-                OverlayManager.shared.showOverlay(for: type, duration: duration, hapticsEnabled: self.settings.hapticsEnabled) {}
+                self.overlayManager.showOverlay(for: type, duration: duration, hapticsEnabled: self.settings.hapticsEnabled) {}
             }
         }
         fallbackTimers[type] = timer
@@ -300,6 +444,13 @@ extension AppCoordinator: ReminderScheduling {
     func cancelAllReminders() {
         scheduler.cancelAllReminders()
         stopFallbackTimers()
-        OverlayManager.shared.clearQueue()
+        overlayManager.clearQueue()
+
+        // If snooze was just applied (snoozedUntil set before this call),
+        // arm the in-process wake task immediately so the app resumes on time
+        // while staying in the foreground throughout the snooze period.
+        if let snoozeEnd = settings.snoozedUntil, snoozeEnd > Date() {
+            scheduleSnoozeWakeTask(at: snoozeEnd)
+        }
     }
 }

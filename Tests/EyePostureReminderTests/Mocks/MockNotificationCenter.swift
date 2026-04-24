@@ -63,4 +63,8 @@ final class MockNotificationCenter: NotificationScheduling {
     func getPendingNotificationRequests() async -> [UNNotificationRequest] {
         return pendingRequests
     }
+
+    func getAuthorizationStatus() async -> UNAuthorizationStatus {
+        return authorizationGranted ? .authorized : .denied
+    }
 }
