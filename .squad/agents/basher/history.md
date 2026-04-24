@@ -26,6 +26,18 @@
 - **Use `SettingsStore` published properties directly in ViewModel** (`eyesInterval`, `eyesBreakDuration`, etc.) — don't create wrapper `ReminderSettings` structs in the VM layer; that adds unnecessary mapping.
 - **`OverlayManager.shared` singleton** is safe on `@MainActor` — added it so AppDelegate can reach the manager without dependency injection ceremony.
 
+### 2026-04-25 — Data-Driven Config Layer: AppConfig + defaults.json (Decision 2.20)
+
+- **Deliverable:** `Resources/defaults.json` (production values), `Models/AppConfig.swift` (Codable loader), `SettingsStore` wiring, `resetToDefaults()` method
+- **JSON schema:** `{ "defaults": { "eyeInterval", "eyeBreakDuration", ... }, "features": { "masterEnabledDefault", "maxSnoozeCount" } }`
+- **First-launch logic:** `SettingsPersisting.hasValue(forKey:)` guard → if keys absent, seed from JSON via `AppConfig.load(from: Bundle)`
+- **Reset path:** `resetToDefaults()` clears keys and re-seeds from JSON (same code path as first launch — no new logic needed)
+- **Testability:** `AppConfig.load()` + `SettingsStore.init(store:configBundle:)` both accept `Bundle` parameter for test injection
+- **Protocol addition:** `SettingsPersisting.hasValue(forKey: String) -> Bool` for first-launch detection; `MockSettingsPersisting` already had this — moved to protocol with zero mock changes
+- **Build verified:** `./scripts/build.sh build` → BUILD SUCCEEDED
+- **Tests pending:** Livingston has 136 tests written (4 intentionally failing until Basher integration wiring complete)
+- **Decision filed:** `.squad/decisions/decisions.md` (Decision 2.20)
+
 ### 2026-04-24 — Phase 1 Services Implementation (M1.1 + M1.3 + M1.4)
 
 - **All scaffold files were already production-quality** — `SettingsStore`, `ReminderScheduler`, `AppCoordinator`, `AppDelegate`, `OverlayManager`, and `EyePostureReminderApp` were fully implemented in the scaffolding. Read carefully before over-writing.

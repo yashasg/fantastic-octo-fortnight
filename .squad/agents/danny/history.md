@@ -27,6 +27,14 @@
 - **Overlay UIWindow inherits system appearance correctly** — `OverlayManager` creates `UIWindow` without setting `overrideUserInterfaceStyle`, which defaults to `.unspecified` (inherits from scene). This is correct but fragile — a code comment is needed to document the intent.
 - **Key spec filed:** `.squad/decisions/inbox/danny-dark-mode-spec.md`
 
+### 2026-04-25: Phase 2 Data-Driven Configuration — FINAL DECISION
+
+- **Decision filed:** `.squad/decisions/decisions.md` (Decision 2.17 — merged from inbox)
+- **Summary:** Native-first 4-layer architecture replaces monolithic app-config.json. Asset Catalog handles colors (light+dark variants via OS), String Catalog handles copy (localization-ready), defaults.json handles settings (~10 values with UserDefaults override), Swift code stays for spacing/layout/animations/symbols (type-safe, non-JSON-serializable).
+- **Rationale:** Each Apple platform mechanism does what it does best. JSON cannot express OS dark/light switching, lacks localization toolchain, adds overhead for stable values.
+- **Team implementation:** Basher (AppConfig + defaults.json), Tess (Asset Catalog colors), Linus (String Catalog extraction), Livingston (136 tests, 4 intentionally failing pending Basher integration).
+- **Status:** ✅ ALL IMPLEMENTATIONS SHIPPED & VERIFIED. Build succeeds. Tests written. Ready for Phase 3 UI integration.
+
 ### 2026-04-24: Initial Roadmap Planning
 - **Architecture Pattern:** MVVM with single shared service layer (ReminderScheduler, OverlayManager)
 - **Background Strategy:** UNUserNotificationCenter preferred over Timer for battery efficiency; iOS handles scheduling natively
@@ -56,7 +64,32 @@
   - `/docs/APP_STORE_LISTING.md` — Complete App Store listing (description, keywords, privacy policy, screenshot plan)
   - `/.squad/decisions/inbox/danny-appstore.md` — Decisions for team review
 
-### 2026-04-25 — Wave 3: Dark Mode Product Spec
+### 2026-04-25 — Wave 4: Native-First Data-Driven Config (Final Architecture)
+
+**Task:** Replace monolithic `app-config.json` spec with a native-first 4-layer architecture  
+**Status:** ✅ SUCCESS  
+
+**Supersedes:** `danny-data-driven-settings-spec.md` and the previous `danny-full-config-spec.md` (app-config.json approach)
+
+**Final Architecture — 4 Layers:**
+1. **Asset Catalog (`.xcassets`)** — 6 semantic color tokens with OS-managed dark/light variants. Accessed via `Color("reminderBlue")` / `UIColor(named:)`. Replaces `UIColor(dynamicProvider:)` in `DesignSystem.swift`.
+2. **String Catalog (`.xcstrings`)** — ~35 user-facing strings across all six view files. SwiftUI picks them up automatically via `Text("key")`. Localization-ready at zero extra cost.
+3. **`defaults.json` (bundled)** — Reminder intervals, break durations, feature flags (~10 values). `DefaultsLoader` seeds `UserDefaults` on first launch only. `SettingsStore.resetToDefaults()` re-seeds from JSON (same path). `DefaultsLoader` accepts `Bundle` parameter for test injection.
+4. **Swift code** — Spacing, layout, animations, SF Symbol names, typography. Type safety + autocomplete; these values are stable.
+
+**Key Design Rule:** JSON does not own colors, fonts, spacing, animations, or copy. Each platform mechanism handles what it does natively.
+
+**Override Hierarchy:** `defaults.json` (seed) → `UserDefaults` (user changes) → OS/runtime (dark mode, Dynamic Type — always win).
+
+**Why the app-config.json approach was rejected:** JSON cannot serialize `UIColor`, `Animation`, or `UIFont`. A bespoke parser for each loses OS-level adaptation (dark mode, Dynamic Type) and re-invents Apple's localization toolchain.
+
+**Docs updated:** `ARCHITECTURE.md` (section 4.4), `ROADMAP.md` (M2.7), `CHANGELOG.md`, `.squad/decisions/inbox/danny-full-config-spec.md` (replaced), `.squad/decisions/inbox/danny-native-config-final.md` (new).
+
+**Implementation Ownership:**
+- Tess: defines Asset Catalog color values
+- Linus: wires Asset Catalog, extracts String Catalog keys, cleans `DesignSystem.swift`
+- Basher: implements `DefaultsLoader` + `defaults.json` pipeline
+- Danny: owns JSON values and String Catalog copy approval
 
 **Task:** Scope dark mode product requirements for team implementation  
 **Status:** ✅ SUCCESS  

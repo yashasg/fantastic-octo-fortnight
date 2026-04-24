@@ -7,7 +7,14 @@
 
 ## Learnings
 
-<!-- Append new learnings below. Each entry is something lasting about the project. -->
+### 2026-04-25 — Asset Catalog Color Migration (Decision 2.18)
+
+- **Deliverable:** 6 color sets in `EyePostureReminder/Resources/Colors.xcassets/`, DesignSystem.swift refactored, UIKit import removed
+- **Color tokens:** ReminderBlue (#4A90D9/#5BA8F0), ReminderGreen (#34C759/#30D158), WarningOrange (#E07000/#FF9500), WarningText (#994F00/#FF9500), PermissionBanner (#FFCC00 static), PermissionBannerText (#262626 static)
+- **Implementation:** Replaced all `UIColor(dynamicProvider:)` + `Color(red:green:blue:)` with `Color("name")` asset references
+- **Result:** DesignSystem.swift now pure SwiftUI (no UIKit import); dark/light adaptation handled by Asset Catalog JSON, not Swift logic
+- **Build verified:** `./scripts/build.sh build` → BUILD SUCCEEDED
+- **Decision filed:** `.squad/decisions/decisions.md` (Decision 2.18)
 
 ## Learnings
 
