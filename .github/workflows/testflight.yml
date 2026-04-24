@@ -1,0 +1,135 @@
+# Eye & Posture Reminder — TestFlight Deployment
+#
+# Manual trigger only (workflow_dispatch). Run this after CI passes on main.
+#
+# Prerequisites before this workflow can succeed:
+#   1. Apple Developer account enrolled in App Store Connect
+#   2. Distribution certificate + provisioning profile uploaded as GitHub secrets
+#   3. App Store Connect API key created and stored as secrets (see below)
+#   4. An Xcode project (.xcodeproj) with correct bundle ID and entitlements
+#   5. ExportOptions.plist committed to repo root (see template below)
+#
+# Required GitHub Secrets:
+#   BUILD_CERTIFICATE_BASE64        — p12 distribution cert, base64-encoded
+#   P12_PASSWORD                    — p12 passphrase
+#   BUILD_PROVISION_PROFILE_BASE64  — .mobileprovision, base64-encoded
+#   KEYCHAIN_PASSWORD               — ephemeral keychain password (any random string)
+#   ASC_API_KEY_BASE64              — App Store Connect API key (.p8), base64-encoded
+#   ASC_KEY_ID                      — API key ID (e.g. ABCDEF1234)
+#   ASC_ISSUER_ID                   — API issuer ID (UUID from App Store Connect)
+#
+# ExportOptions.plist template (save as ExportOptions.plist in repo root):
+#   <?xml version="1.0" encoding="UTF-8"?>
+#   <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" ...>
+#   <plist version="1.0"><dict>
+#     <key>method</key><string>app-store</string>
+#     <key>uploadBitcode</key><false/>
+#     <key>uploadSymbols</key><true/>
+#   </dict></plist>
+
+name: TestFlight Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Marketing version to deploy (e.g. 0.1.0)"
+        required: true
+        default: "0.1.0"
+
+env:
+  XCODE_VERSION: "16.2"
+  SCHEME: "EyePostureReminder"
+  DERIVED_DATA_PATH: "${{ github.workspace }}/DerivedData"
+
+jobs:
+  deploy-testflight:
+    name: Archive & Upload to TestFlight
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode ${{ env.XCODE_VERSION }}
+        run: sudo xcode-select -switch /Applications/Xcode_${{ env.XCODE_VERSION }}.app/Contents/Developer
+
+      # ── Versioning ────────────────────────────────────────────────────────
+      - name: Set marketing version + build number
+        run: |
+          ./scripts/build.sh version "${{ github.event.inputs.version }}"
+          PLIST="EyePostureReminder/Info.plist"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${{ github.run_number }}" "$PLIST"
+          echo "MARKETING_VERSION=${{ github.event.inputs.version }}" >> $GITHUB_ENV
+          echo "BUILD_NUMBER=${{ github.run_number }}" >> $GITHUB_ENV
+
+      # ── Code signing ──────────────────────────────────────────────────────
+      - name: Install certificate and provisioning profile
+        env:
+          BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
+          P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
+          BUILD_PROVISION_PROFILE_BASE64: ${{ secrets.BUILD_PROVISION_PROFILE_BASE64 }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          CERT_PATH="$RUNNER_TEMP/build_certificate.p12"
+          PP_PATH="$RUNNER_TEMP/build_pp.mobileprovision"
+          KEYCHAIN_PATH="$RUNNER_TEMP/app-signing.keychain-db"
+
+          echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode -o "$CERT_PATH"
+          echo -n "$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode -o "$PP_PATH"
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security import "$CERT_PATH" -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security list-keychain -d user -s "$KEYCHAIN_PATH"
+
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          cp "$PP_PATH" ~/Library/MobileDevice/Provisioning\ Profiles/
+
+      # ── Archive ───────────────────────────────────────────────────────────
+      - name: Archive (device build)
+        run: |
+          xcodebuild archive \
+            -scheme "${{ env.SCHEME }}" \
+            -archivePath "${{ github.workspace }}/EyePostureReminder.xcarchive" \
+            -derivedDataPath "${{ env.DERIVED_DATA_PATH }}" \
+            ENABLE_BITCODE=NO
+
+      # ── Export IPA ────────────────────────────────────────────────────────
+      - name: Export IPA
+        run: |
+          xcodebuild -exportArchive \
+            -archivePath "${{ github.workspace }}/EyePostureReminder.xcarchive" \
+            -exportPath "${{ github.workspace }}/export" \
+            -exportOptionsPlist ExportOptions.plist
+
+      # ── Upload to TestFlight ──────────────────────────────────────────────
+      - name: Upload to TestFlight (altool)
+        env:
+          ASC_API_KEY_BASE64: ${{ secrets.ASC_API_KEY_BASE64 }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          API_KEY_PATH="$RUNNER_TEMP/asc_api_key.p8"
+          echo -n "$ASC_API_KEY_BASE64" | base64 --decode -o "$API_KEY_PATH"
+
+          xcrun altool --upload-app \
+            --type ios \
+            --file "${{ github.workspace }}/export/EyePostureReminder.ipa" \
+            --apiKey "$ASC_KEY_ID" \
+            --apiIssuer "$ASC_ISSUER_ID" \
+            --apiKeyPath "$API_KEY_PATH"
+
+      # ── Upload IPA as artifact ────────────────────────────────────────────
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: EyePostureReminder-${{ env.MARKETING_VERSION }}-build${{ github.run_number }}.ipa
+          path: export/EyePostureReminder.ipa
+          retention-days: 30
+
+      # ── Cleanup signing assets ────────────────────────────────────────────
+      - name: Clean up keychain
+        if: always()
+        run: security delete-keychain "$RUNNER_TEMP/app-signing.keychain-db" || true

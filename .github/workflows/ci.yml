@@ -37,8 +37,9 @@ jobs:
         run: sudo xcode-select -switch /Applications/Xcode_${{ env.XCODE_VERSION }}.app/Contents/Developer
 
       # ── Versioning ──────────────────────────────────────────────────────────
-      # CFBundleShortVersionString is manually bumped in the Xcode project (when .xcodeproj exists).
-      # CFBundleVersion is set automatically from the CI run number.
+      # CFBundleShortVersionString is managed via: ./scripts/build.sh version <x.y.z>
+      # CFBundleVersion is auto-incremented here from github.run_number (guaranteed unique + increasing).
+      # EPRCommitHash is a custom key for traceability (not used by Apple — informational only).
       #
       # NOTE: agvtool requires an .xcodeproj. Once the Xcode project is created,
       # replace the PlistBuddy calls below with:
@@ -47,17 +48,17 @@ jobs:
         run: |
           COMMIT_HASH=$(git rev-parse --short HEAD)
           BUILD_NUMBER=${{ github.run_number }}
-          # Export for set-build-info.sh
           echo "BUILD_NUMBER=$BUILD_NUMBER" >> $GITHUB_ENV
           echo "GIT_COMMIT_HASH=$COMMIT_HASH" >> $GITHUB_ENV
 
-          # Inject into Info.plist if present (add .xcodeproj target first)
           PLIST="EyePostureReminder/Info.plist"
           if [[ -f "$PLIST" ]]; then
             /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" "$PLIST" 2>/dev/null || true
             /usr/libexec/PlistBuddy -c "Add :EPRCommitHash string $COMMIT_HASH" "$PLIST" 2>/dev/null || \
             /usr/libexec/PlistBuddy -c "Set :EPRCommitHash $COMMIT_HASH" "$PLIST"
-            echo "Injected build=$BUILD_NUMBER commit=$COMMIT_HASH into $PLIST"
+            MARKETING_VER=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$PLIST" 2>/dev/null || echo "unknown")
+            echo "MARKETING_VERSION=$MARKETING_VER" >> $GITHUB_ENV
+            echo "Injected build=$BUILD_NUMBER commit=$COMMIT_HASH marketing=$MARKETING_VER into $PLIST"
           else
             echo "note: Info.plist not found — versioning will be applied when .xcodeproj is created"
           fi
@@ -72,58 +73,16 @@ jobs:
             derived-data-${{ runner.os }}-
 
       # ── Build ────────────────────────────────────────────────────────────────
-      # Project uses Swift Package Manager. xcodebuild resolves Package.swift directly.
-      # Once an .xcodeproj exists, add: -project EyePostureReminder/EyePostureReminder.xcodeproj
       - name: Build (simulator, no signing)
-        run: |
-          xcodebuild build \
-            -scheme "${{ env.SCHEME }}" \
-            -destination "${{ env.SIMULATOR }}" \
-            -derivedDataPath "${{ env.DERIVED_DATA_PATH }}" \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO \
-            ENABLE_BITCODE=NO \
-            | xcpretty || xcodebuild build \
-            -scheme "${{ env.SCHEME }}" \
-            -destination "${{ env.SIMULATOR }}" \
-            -derivedDataPath "${{ env.DERIVED_DATA_PATH }}" \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO \
-            ENABLE_BITCODE=NO
+        run: ./scripts/build.sh build
 
       # ── Test ─────────────────────────────────────────────────────────────────
       - name: Test (simulator)
-        run: |
-          xcodebuild test \
-            -scheme "${{ env.SCHEME }}" \
-            -destination "${{ env.SIMULATOR }}" \
-            -derivedDataPath "${{ env.DERIVED_DATA_PATH }}" \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO \
-            ENABLE_BITCODE=NO \
-            -resultBundlePath TestResults.xcresult \
-            | xcpretty || xcodebuild test \
-            -scheme "${{ env.SCHEME }}" \
-            -destination "${{ env.SIMULATOR }}" \
-            -derivedDataPath "${{ env.DERIVED_DATA_PATH }}" \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO \
-            ENABLE_BITCODE=NO \
-            -resultBundlePath TestResults.xcresult
+        run: ./scripts/build.sh test
 
       # ── Lint ─────────────────────────────────────────────────────────────────
       - name: Lint (SwiftLint)
-        run: |
-          if which swiftlint > /dev/null; then
-            swiftlint lint --reporter github-actions-logging
-          else
-            brew install swiftlint
-            swiftlint lint --reporter github-actions-logging
-          fi
+        run: ./scripts/build.sh lint
 
       # ── Artifacts ────────────────────────────────────────────────────────────
       - name: Collect dSYMs
@@ -135,7 +94,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: dSYMs-${{ github.run_number }}
+          name: dSYMs-${{ env.MARKETING_VERSION }}-build${{ github.run_number }}
           path: "*.dSYM"
           retention-days: 90
 
@@ -143,7 +102,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: test-results-${{ github.run_number }}
+          name: test-results-${{ env.MARKETING_VERSION }}-build${{ github.run_number }}
           path: TestResults.xcresult
           retention-days: 30
 

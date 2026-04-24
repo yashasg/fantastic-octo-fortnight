@@ -2,12 +2,14 @@
 # scripts/build.sh — Standardized build/test/lint runner for Eye & Posture Reminder
 #
 # Usage:
-#   ./scripts/build.sh build    # Compile the project
-#   ./scripts/build.sh test     # Run unit tests
-#   ./scripts/build.sh lint     # Run SwiftLint (if available)
-#   ./scripts/build.sh clean    # Clean build artifacts
-#   ./scripts/build.sh all      # build + lint + test
-#   ./scripts/build.sh check    # Quick syntax check (compile only, no tests)
+#   ./scripts/build.sh build           # Compile the project
+#   ./scripts/build.sh test            # Run unit tests
+#   ./scripts/build.sh lint            # Run SwiftLint (if available)
+#   ./scripts/build.sh clean           # Clean build artifacts
+#   ./scripts/build.sh all             # build + lint + test
+#   ./scripts/build.sh check           # Quick syntax check (compile only, no tests)
+#   ./scripts/build.sh version         # Show current marketing version
+#   ./scripts/build.sh version 0.2.0   # Set marketing version in Info.plist
 
 set -euo pipefail
 
@@ -181,28 +183,68 @@ cmd_all() {
   pass "All steps passed in $(elapsed "$overall_start")"
 }
 
+# ── Version management ────────────────────────────────────────────────────────
+# Marketing version lives in EyePostureReminder/Info.plist (CFBundleShortVersionString).
+# Build number (CFBundleVersion) is auto-incremented by CI via github.run_number.
+# To bump manually: ./scripts/build.sh version <new-version>
+PLIST="${PACKAGE_PATH}/EyePostureReminder/Info.plist"
+
+cmd_version() {
+  local new_version="${1:-}"
+
+  if [[ -z "$new_version" ]]; then
+    # Show current version
+    if [[ ! -f "$PLIST" ]]; then
+      fail "Info.plist not found at: $PLIST"
+      exit 1
+    fi
+    local current
+    current=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$PLIST" 2>/dev/null)
+    local build
+    build=$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$PLIST" 2>/dev/null)
+    echo -e "${BOLD}Marketing version:${RESET} ${current}"
+    echo -e "${BOLD}Build number:${RESET}     ${build} (overwritten by CI with github.run_number)"
+  else
+    # Validate semver format (digits only — Apple requires numeric segments)
+    if ! [[ "$new_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+      fail "Version must be numeric semver, e.g. 0.2.0 (no pre-release labels)"
+      exit 1
+    fi
+    if [[ ! -f "$PLIST" ]]; then
+      fail "Info.plist not found at: $PLIST"
+      exit 1
+    fi
+    /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $new_version" "$PLIST"
+    pass "Marketing version set to ${new_version}"
+    info "Remember to commit Info.plist and tag: git tag -a v${new_version} -m 'Release ${new_version}'"
+  fi
+}
+
 usage() {
   echo -e "${BOLD}Usage:${RESET} $(basename "$0") <command>"
   echo ""
   echo "Commands:"
-  echo "  build   Compile the project"
-  echo "  test    Run unit tests"
-  echo "  lint    Run SwiftLint (skipped gracefully if not installed)"
-  echo "  clean   Remove build artifacts"
-  echo "  all     build + lint + test"
-  echo "  check   Quick syntax check (compile only)"
+  echo "  build              Compile the project"
+  echo "  test               Run unit tests"
+  echo "  lint               Run SwiftLint (skipped gracefully if not installed)"
+  echo "  clean              Remove build artifacts"
+  echo "  all                build + lint + test"
+  echo "  check              Quick syntax check (compile only)"
+  echo "  version            Show current marketing version"
+  echo "  version <x.y.z>   Set marketing version in Info.plist"
 }
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 COMMAND="${1:-}"
 
 case "$COMMAND" in
-  build) cmd_build ;;
-  test)  cmd_test  ;;
-  lint)  cmd_lint  ;;
-  clean) cmd_clean ;;
-  all)   cmd_all   ;;
-  check) cmd_check ;;
+  build)   cmd_build ;;
+  test)    cmd_test  ;;
+  lint)    cmd_lint  ;;
+  clean)   cmd_clean ;;
+  all)     cmd_all   ;;
+  check)   cmd_check ;;
+  version) cmd_version "${2:-}" ;;
   *)
     fail "Unknown command: '${COMMAND}'"
     echo ""
