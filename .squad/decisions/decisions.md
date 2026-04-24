@@ -274,5 +274,79 @@
 
 ---
 
-Generated: 2026-04-24T10:10:00Z  
-Scribe: Consolidated decisions from all inbox sources
+---
+
+## Phase 3: Full App Config Specification (Danny)
+
+### Decision 3.6: Data-Driven App Configuration — `app-config.json`
+- **Author:** Danny (PM)
+- **Date:** 2026-04-25
+- **Status:** Draft — awaiting team review
+- **Supersedes:** `danny-data-driven-settings-spec.md` (previous settings-only spec)
+- **Scope:** Single bundled JSON file drives theme (colors, fonts, spacing, layout, animations, symbols), defaults (reminder intervals, enabled states), copy (all user-facing strings), and features (flags, limits)
+
+#### Problem Addressed
+1. **Hardcoded design tokens:** Every color, font size, spacing value, animation duration in `DesignSystem.swift` requires Swift code edit + PR review cycle
+2. **Hardcoded copy:** Onboarding headlines, button labels, overlay titles scattered across six view files
+3. **Hardcoded settings defaults:** `ReminderSettings.defaultEyes/defaultPosture` static lets with test override breadcrumbs
+4. **Previous spec gap:** `danny-data-driven-settings-spec.md` addressed defaults only; this absorbs and extends to cover full design system
+
+#### JSON Structure
+- **`theme`:** `AppColor` (light+dark pairs), `AppFont` (sizes, weights), `AppSpacing` (xs–xl), `AppLayout` (dimensions), `AppAnimation` (durations), `AppSymbol` (SF Symbol names)
+- **`defaults`:** Reminder intervals (eyes: 1200s, posture: 1800s), break durations, enabled states, snooze count, haptics, pauseMediaDuringBreaks flag
+- **`copy`:** Onboarding (welcome, permission, setup screens), home (status labels), overlay (titles), settings (headers, footers, buttons, notification disabled state)
+- **`features`:** `snoozeMaxConsecutive`, `enableResetToDefaults`, future feature flags
+
+#### Loading Pipeline
+1. `AppConfigLoader.load(from: Bundle)` — synchronous, runs before first SwiftUI render
+2. Decodes JSON → `AppConfig` struct (fallback to hardcoded defaults on parse error)
+3. `DesignSystem` tokens read from `AppConfig.current.theme` at startup
+4. `SettingsStore.init()` seeds UserDefaults from `AppConfig.current.defaults` (first launch only)
+5. Views reference `AppConfig.current.copy` for all user-facing strings
+
+#### Override Hierarchy
+- **Design tokens:** `app-config.json` only; OS controls dark/light appearance on top
+- **Copy:** `app-config.json` only; not user-overridable
+- **Defaults:** `app-config.json` seeds on first launch; UserDefaults wins on subsequent launches; reset clears UserDefaults and re-seeds
+- **Features:** `app-config.json` (future remote config layer can override)
+
+#### Scope — What Stays in Code
+- Layout logic (VStack/HStack/ZStack structure)
+- Business rules (snooze arithmetic, scheduler logic)
+- OS-controlled features (dark/light mode, Dynamic Type, system colors)
+- View routing and gesture handling
+- Notification scheduling
+- Accessibility labels mirroring copy
+
+#### Acceptance Criteria (10 total)
+1. `app-config.json` added to app target, parses without errors at startup
+2. `AppConfigLoader` unit tests: valid JSON loads; malformed JSON falls back gracefully
+3. All `DesignSystem` tokens read from `AppConfig.current.theme` (no hardcoded literals except fallback)
+4. `SettingsStore.init()` seeds from `AppConfig.current.defaults`, not static lets
+5. All view files read copy from `AppConfig.current.copy` (no string literals remain)
+6. Changing any JSON value + rebuild produces expected change with zero Swift edits
+7. "Reset to Defaults" re-seeds settings from bundled JSON
+8. Dark/light color pairs render correctly in both appearance modes
+9. `AppConfigLoader` accepts `Bundle` parameter for test injection
+10. No regression on existing tests; `SettingsPersisting` mock injection still works
+
+#### Ownership
+| Area | Owner | Deliverable |
+|---|---|---|
+| `AppConfigLoader` + `AppConfig` structs | **Basher** | Codable structs, load, fallback, unit tests |
+| Settings seed + reset pipeline | **Basher** | `SettingsStore` reads from loader output |
+| `theme` JSON section — values | **Tess** | Hex colors, validates against current tokens |
+| `DesignSystem.swift` refactor | **Linus** | All tokens read from config; `AppCopy` accessor pattern |
+| Copy review + `copy` JSON section | **Danny + Tess** | Strings extracted, reviewed, signed off |
+| Reset to Defaults UI button | **Linus** | SettingsView section with reset button |
+
+#### Future (Out of Scope)
+- Remote config override layer
+- A/B testing via config variants
+- Localization / i18n per locale
+- Per-device or per-OS-version variants
+
+---
+
+Generated: 2026-04-25T13:24:00Z  
+Scribe: Consolidated decisions from all inbox sources + Danny full config spec

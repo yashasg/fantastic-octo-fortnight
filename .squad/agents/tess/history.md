@@ -28,6 +28,12 @@
 - All interactive elements at minimum 44pt tap target (iOS HIG).
 - Monospaced countdown font (`design: .monospaced`) prevents digit-width jitter as numbers decrease.
 
+### 2026-04-25 — Data-Driven App Configuration (Danny Decision 3.6)
+
+- **Theme values in spec:** Colors (reminderBlue light #4A90D9 / dark #5BA8F0, reminderGreen, warningOrange, permissionBanner, permissionBannerText, onboardingAccent), fonts, spacing (xs–xl), layout (tap targets, overlay icon, countdown ring), animations, SF symbols.
+- **Tess ownership:** Validate JSON hex values against current `DesignSystem.swift` tokens; confirm contrast ratios for all color pairs.
+- **Future:** Support per-device/per-OS variants in config structure.
+
 ### 2026-04-25: Dark Mode Colour Adaptation
 
 - **No in-app colour scheme toggle** — app follows OS appearance exclusively. No `.preferredColorScheme` modifier exists anywhere in the codebase; confirmed clean.

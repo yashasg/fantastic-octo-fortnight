@@ -28,6 +28,15 @@
 ### 2026-04-24 — M1.6 Integration & Edge Case Handling
 
 - **AppCoordinator as ReminderScheduling** — having `AppCoordinator` conform to `ReminderScheduling` is the cleanest integration seam. `SettingsViewModel` keeps its `scheduler: ReminderScheduling` abstraction (tests unchanged), but in production it receives the coordinator so all scheduling paths (notifications + fallback timers) stay in sync on every settings change.
+
+### 2026-04-25 — Data-Driven App Configuration (Danny Decision 3.6)
+
+- **Full config spec filed:** `app-config.json` bundles theme (colors, fonts, spacing, layout, animations, symbols), defaults (reminder intervals, enabled states), copy (all strings), and features (flags).
+- **Ownership:** Basher delivers `AppConfigLoader` + `AppConfig` Codable structs with fallback graceful error handling, and updates `SettingsStore` seed/reset pipeline.
+- **Tess delivers:** Color/font/spacing JSON values from `theme` section.
+- **Linus delivers:** Refactored `DesignSystem` to read all tokens from `AppConfig.current.theme`, plus `AppCopy` accessor pattern for views, plus "Reset to Defaults" UI button.
+- **Integration point:** This spec absorbs and supersedes `danny-data-driven-settings-spec.md` (previous settings-only spec); extends to full design system coverage.
+- **Audience:** Basher (loader + pipeline), Tess (theme values), Linus (DesignSystem + view refactor).
 - **Debounce in the coordinator, not in the ViewModel** — debounce logic lives in `AppCoordinator.reschedule(for:)` using per-type `Task` cancellation. `MockReminderScheduler` has no debounce, so existing `SettingsViewModelTests` continue passing. The test `test_rapidSettingChanges_allReschedulesAreTriggered` still expects 4 calls against the mock (testing SettingsViewModel dispatch) while production debounces to 2 — this is correct layering, not a gap.
 - **scenePhase background tracking** — `EyePostureReminderApp` needs a `@State var wasInBackground` flag to distinguish `.inactive → .active` (task switcher) from `.background → .active` (true foreground resume). Only the latter should trigger `handleForegroundTransition()` to avoid unnecessary reschedule thrash.
 - **`OverlayManager.init(audioManager:)` public with default** — keeping a `OverlayManager(audioManager: MediaControlling = AudioInterruptionManager())` init makes the singleton init transparent (`static let shared = OverlayManager()` just works) while also enabling mock injection in tests (`OverlayManager(audioManager: mockAudio)`).
