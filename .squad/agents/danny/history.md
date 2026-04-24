@@ -24,3 +24,16 @@
   - `/ROADMAP.md` - Full project roadmap with 4 phases, milestones, work items, dependencies
   - `/.squad/decisions/inbox/danny-roadmap-decisions.md` - Scope and priority decisions
 - **Open Questions Logged:** App name/bundle ID, analytics strategy, monetization model (all deferred to appropriate milestones)
+
+### 2026-04-24: M2.7 App Store Preparation
+- **App Name Decision:** Kept "Eye & Posture Reminder" — descriptive, keyword-rich, favors discoverability over cleverness
+- **Subtitle:** "Healthy screen breaks, on cue." (29 chars, within 30-char limit)
+- **Keywords Strategy:** 96 chars used of 100 max; excluded words already in title/subtitle (Apple indexes those separately)
+- **Privacy Policy:** Zero-collection stance documented — no analytics, no network calls, no third-party SDKs. Must be updated BEFORE any future telemetry ships.
+- **Version Scheme:** v0.1.0-beta for TestFlight; v1.0 reserved for public App Store release
+- **Category:** Health & Fitness (primary), Productivity (secondary)
+- **Age Rating:** 4+ — all questionnaire answers are "No"
+- **Open Items:** Bundle ID, Support URL, and Copyright holder still need team confirmation before App Store Connect submission
+- **Key File Paths:**
+  - `/docs/APP_STORE_LISTING.md` — Complete App Store listing (description, keywords, privacy policy, screenshot plan)
+  - `/.squad/decisions/inbox/danny-appstore.md` — Decisions for team review
