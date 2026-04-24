@@ -22,3 +22,17 @@
 - **Regression strategy:** milestone-by-milestone re-test focus + high-risk file → test mapping.
 - Key risk noted: `MediaControlling` protocol not yet in ARCHITECTURE.md — included speculatively for AVAudioSession mocking. Should be confirmed with Rusty before implementation.
 - CI gate established: all unit tests pass + ≥ 80% coverage on Models/Services/ViewModels per PR.
+
+### 2026-04-24 — Phase 1 Test Suite Implemented
+
+- Created `Tests/EyePostureReminderTests/` with 4 test files (110+ test methods) and 3 mock classes.
+- **Test structure:** `Mocks/` (infrastructure), `Models/` (ReminderTypeTests, SettingsStoreTests), `Services/` (ReminderSchedulerTests), `ViewModels/` (SettingsViewModelTests).
+- **Mocks created:** `MockNotificationCenter` (full `NotificationScheduling` impl with call history + pending queue simulation), `MockSettingsPersisting` (in-memory dict-backed `SettingsPersisting`), `MockReminderScheduler` (call-count tracking `ReminderScheduling`).
+- `SettingsPersisting` protocol uses `defaultValue:` labeled parameters (not the standard UserDefaults API) — mocks must match this signature.
+- `SettingsViewModel` is `@MainActor` — test class must be `@MainActor` too; inner `Task{}` dispatches require a short `Task.sleep` await in tests before asserting call counts.
+- `NotificationScheduling` protocol is defined inside `ReminderScheduler.swift` (not a separate Protocols/ file); same for `SettingsPersisting` inside `SettingsStore.swift`.
+- Preset intervals spec: [600, 1200, 1800, 2700, 3600] seconds (10/20/30/45/60 min). Preset durations: [10, 20, 30, 60] seconds. Both validated in SettingsStoreTests.
+- Package.swift updated to add `testTarget("EyePostureReminderTests")` depending on the executableTarget.
+- Tests require iOS simulator to run (UIKit dependency in main target). `swift build` on macOS host will fail on UIKit import — this is expected. Use `xcodebuild test` with an iOS simulator runtime.
+- `FailOnceNotificationCenter` helper class added inline in ReminderSchedulerTests to verify that a scheduling failure for one type doesn't block other types.
+

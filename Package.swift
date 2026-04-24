@@ -13,6 +13,11 @@ let package = Package(
         .executableTarget(
             name: "EyePostureReminder",
             path: "EyePostureReminder"
+        ),
+        .testTarget(
+            name: "EyePostureReminderTests",
+            dependencies: ["EyePostureReminder"],
+            path: "Tests/EyePostureReminderTests"
         )
     ]
 )
