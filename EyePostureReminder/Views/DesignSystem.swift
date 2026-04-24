@@ -6,46 +6,7 @@
 
 import SwiftUI
 
-// MARK: - Color Palette
-
-extension Color {
-    // Semantic reminder colors
-    /// Eye breaks — calming blue (#4A90D9)
-    static let reminderBlue = Color("ReminderBlue", bundle: nil)
-        .fallback(Color(red: 0.290, green: 0.565, blue: 0.851))
-
-    /// Posture checks — grounded green (#34C759)
-    static let reminderGreen = Color("ReminderGreen", bundle: nil)
-        .fallback(Color(red: 0.204, green: 0.780, blue: 0.349))
-
-    /// Overlay background tint — works with .systemUltraThinMaterial blur
-    static let overlayBackground = Color("OverlayBackground", bundle: nil)
-        .fallback(Color(.systemBackground).opacity(0.6))
-
-    /// Rest-of-day snooze warning — muted orange (#FF9500)
-    static let warningOrange = Color("WarningOrange", bundle: nil)
-        .fallback(Color(red: 1.0, green: 0.584, blue: 0.0))
-
-    /// Permission banner background — accessible yellow (#FFCC00)
-    static let permissionBannerBackground = Color("PermissionBannerBackground", bundle: nil)
-        .fallback(Color(red: 1.0, green: 0.800, blue: 0.0))
-
-    /// Permission banner text — dark enough for WCAG AA on yellow
-    static let permissionBannerText = Color("PermissionBannerText", bundle: nil)
-        .fallback(Color(red: 0.149, green: 0.149, blue: 0.149))
-}
-
-// Fallback helper — resolves named asset or falls back to a literal color.
-private extension Color {
-    func fallback(_ fallback: Color) -> Color {
-        // In production, asset catalog colors are preferred.
-        // This fallback keeps the token usable even without the asset catalog.
-        return self
-    }
-}
-
-// MARK: - Semantic color literals (no asset catalog dependency)
-// Use these in code until the Xcode asset catalog is wired up.
+// MARK: - Semantic Color Literals
 
 enum AppColor {
     /// Eye breaks (#4A90D9) — calming blue
