@@ -58,7 +58,7 @@ detect_destination() {
   if xcrun simctl list runtimes 2>/dev/null | grep -q "iOS"; then
     echo "$sim_dest"
   else
-    warn "No iOS Simulator runtimes found — falling back to Mac Catalyst"
+    warn "No iOS Simulator runtimes found — falling back to Mac Catalyst" >&2
     echo "$catalyst_dest"
   fi
 }
