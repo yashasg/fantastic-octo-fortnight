@@ -48,6 +48,15 @@
 ### 2026-04-25 — 10-Second Testing Defaults
 
 - **`ReminderSettings.defaultEyes` and `defaultPosture` changed to `interval: 10`** for simulator testing. Restore to `1200`/`1800` (20 min/30 min) before shipping. Marked with `// TEST OVERRIDE` comments in `ReminderSettings.swift`.
+
+### 2026-04-24 — Data-Driven Default Settings Spec (filed by Danny)
+
+- **Problem:** Hardcoded Swift `static let` defaults require recompile; Basher had to add `// TEST OVERRIDE` comments to test with 10-second intervals.
+- **Solution:** Bundle `defaults.json` in app target. `SettingsStore.init()` seeds UserDefaults from JSON on first launch only. UserDefaults always wins on subsequent launches (existing guard pattern, no overwrites).
+- **Your ownership:** Build `defaults.json` schema, implement `DefaultsLoader` (JSON decoder with `Bundle` injection for testability), add seeding to `SettingsStore.init()`, expose `resetToDefaults()` API, remove `ReminderSettings.defaultEyes/defaultPosture` statics.
+- **Linus ownership:** Add "Reset to Defaults" button to `SettingsView` with confirmation alert.
+- **Livingston ownership:** Unit tests for `DefaultsLoader` and updated `SettingsStore`.
+- **Key file:** `.squad/decisions.md` (merged from inbox; filed by Danny)
 - **`UNTimeIntervalNotificationTrigger(repeats: true)` requires ≥ 60s** — the OS silently rejects repeating notifications under that threshold. Fixed in `ReminderScheduler` by using `repeats: reminderSettings.interval >= 60`. Short intervals (< 60s) schedule as one-shot; after delivery the notification is gone but the fallback timer path fills the gap.
 - **Fallback timer path is the best way to test short intervals.** When notification permission is denied on the simulator (or revoked via Settings → reset privacy), `AppCoordinator` starts `Timer.scheduledTimer` with no OS minimum — overlays fire every 10s without restriction. Recommend testing with notifications denied for rapid-fire iteration.
 - **Default interval tests in `SettingsStoreTests` will fail** while this testing override is active (they assert 1200/1800). That's expected — revert `ReminderSettings.swift` before running the full test suite or merging to main.

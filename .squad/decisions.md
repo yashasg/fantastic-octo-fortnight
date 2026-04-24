@@ -547,3 +547,190 @@ No `.foregroundColor(.black)`, `.background(.white)`, or `Color.black/white` wer
 - `DesignSystem.swift` — colours section updated
 - No view file changes required
 - Build verified: ✓ succeeded
+
+---
+
+## Spec: Data-Driven Default Settings
+
+**Author:** Danny (PM)  
+**Date:** 2026-04-24  
+**Status:** Draft — awaiting team review  
+**Implements:** Basher (SettingsStore/ReminderSettings) · Linus (UI reset button)
+
+---
+
+### 1. Problem Statement
+
+Default settings in `ReminderSettings.swift` are hardcoded as Swift `static let` values:
+
+```swift
+static let defaultEyes    = ReminderSettings(interval: 10, breakDuration: 20)
+static let defaultPosture = ReminderSettings(interval: 10, breakDuration: 10)
+```
+
+This creates real friction:
+
+- **Requires a recompile** to change any default value (e.g. swapping test intervals back to production values, tuning break durations).
+- **Basher had to edit Swift code** just to set a 10-second test interval — and leave `// TEST OVERRIDE` comments as breadcrumbs to remember to restore them.
+- **Blocked by code review** — a timing change goes through the full PR cycle even though no logic changed.
+- **Future-hostile** — A/B testing, per-device defaults, or remote config are impossible with static values.
+
+A bundled `defaults.json` file makes defaults a data concern, not a code concern.
+
+---
+
+### 2. Proposed Approach
+
+Bundle a `defaults.json` file with the app. On first launch (or after "Reset to Defaults"), `SettingsStore.init()` reads this file and seeds `UserDefaults`. Subsequent launches read directly from `UserDefaults` — the JSON is never re-applied unless explicitly requested.
+
+No new external dependencies. No network call. Pure bundle resource.
+
+---
+
+### 3. Data Pipeline
+
+```
+defaults.json (bundled in app target)
+        │
+        ▼  (read once: first launch, or on explicit reset)
+SettingsStore.init()  ──────────────────────────────────────────────────────┐
+        │                                                                    │
+        │  seeds missing keys only (UserDefaults wins if key already exists) │
+        ▼                                                                    │
+UserDefaults (epr.* keys)  ◄── user changes saved here in real time        │
+        │                                                                    │
+        ▼                                                                    │
+@Published properties on SettingsStore  ◄─── "Reset to Defaults" re-reads ─┘
+        │
+        ▼
+SwiftUI Views (SettingsView, ReminderRowView)
+```
+
+Key rules:
+- JSON is read from `Bundle.main` — no file system writes.
+- `SettingsStore` keeps a private `DefaultsLoader` (or inline method) that decodes the JSON.
+- `SettingsStore` must remain testable: `DefaultsLoader` accepts a `Bundle` parameter so tests can inject a fixture bundle.
+
+---
+
+### 4. JSON Schema
+
+File: `EyePostureReminder/Resources/defaults.json`
+
+```json
+{
+  "schemaVersion": 1,
+  "masterEnabled": true,
+  "eyes": {
+    "enabled": true,
+    "intervalSeconds": 1200,
+    "breakDurationSeconds": 20
+  },
+  "posture": {
+    "enabled": true,
+    "intervalSeconds": 1800,
+    "breakDurationSeconds": 10
+  },
+  "pauseMediaDuringBreaks": false,
+  "hapticsEnabled": true
+}
+```
+
+**Field notes:**
+
+| Field | Type | Maps to `epr.*` key | Notes |
+|---|---|---|---|
+| `schemaVersion` | Int | — | For future migration; not persisted to UserDefaults |
+| `masterEnabled` | Bool | `epr.masterEnabled` | |
+| `eyes.enabled` | Bool | `epr.eyes.enabled` | |
+| `eyes.intervalSeconds` | Double | `epr.eyes.interval` | Production: 1200 (20 min) |
+| `eyes.breakDurationSeconds` | Double | `epr.eyes.breakDuration` | 20 seconds (20-20-20 rule) |
+| `posture.enabled` | Bool | `epr.posture.enabled` | |
+| `posture.intervalSeconds` | Double | `epr.posture.interval` | Production: 1800 (30 min) |
+| `posture.breakDurationSeconds` | Double | `epr.posture.breakDuration` | 10 seconds |
+| `pauseMediaDuringBreaks` | Bool | `epr.pauseMediaDuringBreaks` | Phase 2; default false |
+| `hapticsEnabled` | Bool | `epr.hapticsEnabled` | Default true |
+
+Snooze fields (`snoozedUntil`, `snoozeCount`) are **not** in the JSON — they are runtime state, not defaults.
+
+---
+
+### 5. Override Behavior (UserDefaults Wins)
+
+**On first launch:** No `epr.*` keys exist in UserDefaults. `SettingsStore.init()` reads `defaults.json` and writes all values to UserDefaults. From this point on, user changes are persisted normally.
+
+**On subsequent launches:** `epr.*` keys exist. `SettingsStore.init()` reads from UserDefaults as today — JSON is not consulted.
+
+**Implementation pattern:**
+```swift
+// Only seed if key is absent — never overwrite a user's saved value
+if store.object(forKey: Keys.eyesInterval) == nil {
+    store.set(jsonDefaults.eyes.intervalSeconds, forKey: Keys.eyesInterval)
+}
+```
+
+This is the same pattern `SettingsPersisting` already enforces with `guard object(forKey: key) != nil`.
+
+---
+
+### 6. Reset to Defaults
+
+A **"Reset to Defaults"** button in `SettingsView` (destructive style, behind a confirmation alert):
+
+1. Removes all `epr.*` keys from UserDefaults.
+2. Re-runs the JSON seeding logic from `SettingsStore` (same code path as first launch).
+3. Updates all `@Published` properties so the UI refreshes immediately.
+
+**Linus owns the UI.** Basher exposes a `resetToDefaults()` method on `SettingsStore`.
+
+```swift
+// SettingsStore public API
+func resetToDefaults() {
+    Keys.allCases.forEach { store.removeObject(forKey: $0.rawValue) }
+    seedFromJSON()
+    // Re-read all @Published properties from store
+}
+```
+
+Snooze state (`snoozedUntil`, `snoozeCount`) is also cleared on reset — a reset implies "start fresh."
+
+---
+
+### 7. Future Possibilities (Out of Scope for This Ticket)
+
+- **Remote config:** Swap `Bundle.main` for a downloaded JSON — same decoder, different source. Zero `SettingsStore` logic changes required.
+- **A/B testing:** Ship two JSON variants (`defaults-a.json`, `defaults-b.json`), select at launch based on install ID.
+- **Per-device defaults:** Different JSON for iPad vs. iPhone (longer intervals on iPad desk use).
+- **Build variants:** CI/CD injects a `defaults.json` at build time with test-friendly intervals, eliminating the `// TEST OVERRIDE` pattern entirely.
+
+---
+
+### 8. Acceptance Criteria
+
+- [ ] `defaults.json` is bundled with the app target and contains all non-runtime settings fields.
+- [ ] On a fresh install (no UserDefaults), settings are loaded from `defaults.json` — **not** from Swift hardcoded values.
+- [ ] On subsequent launches, user changes persist correctly; `defaults.json` is not re-applied.
+- [ ] Changing a value in `defaults.json` changes the first-launch experience **without** any Swift code change.
+- [ ] `ReminderSettings.defaultEyes` and `ReminderSettings.defaultPosture` static properties are removed (no more `// TEST OVERRIDE` comments in production code).
+- [ ] `SettingsStore.resetToDefaults()` clears all `epr.*` keys and re-seeds from JSON; UI updates immediately.
+- [ ] "Reset to Defaults" button appears in `SettingsView` with a confirmation alert before executing.
+- [ ] Existing unit tests for `SettingsStore` still pass (inject a test `Bundle` with a fixture `defaults.json`).
+- [ ] `DefaultsLoader` (or equivalent) is covered by a unit test that decodes a known JSON and verifies all fields map correctly.
+
+---
+
+### 9. Ownership
+
+| Work | Owner |
+|---|---|
+| `defaults.json` schema + file | Basher |
+| `DefaultsLoader` (JSON decoder, `Bundle` injection) | Basher |
+| `SettingsStore.init()` JSON seeding (first launch) | Basher |
+| `SettingsStore.resetToDefaults()` method | Basher |
+| Remove `ReminderSettings.defaultEyes/defaultPosture` statics | Basher |
+| "Reset to Defaults" UI button + confirmation alert | Linus |
+| Unit tests for `DefaultsLoader` and updated `SettingsStore` | Livingston (or Basher) |
+
+---
+
+*Filed by Danny · Questions → open an issue or ping in squad channel*

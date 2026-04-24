@@ -61,3 +61,12 @@
 - Tests require iOS simulator to run (UIKit dependency in main target). `swift build` on macOS host will fail on UIKit import — this is expected. Use `xcodebuild test` with an iOS simulator runtime.
 - `FailOnceNotificationCenter` helper class added inline in ReminderSchedulerTests to verify that a scheduling failure for one type doesn't block other types.
 
+### 2026-04-24 — Data-Driven Default Settings Spec (filed by Danny)
+
+- **Your ownership:** Unit tests for `DefaultsLoader` (verify JSON decoding, all field mappings to `epr.*` keys) and updated `SettingsStore.init()` (verify first-launch JSON seeding, subsequent launches read UserDefaults, no overwrites).
+- **Test pattern:** Inject a test `Bundle` with a fixture `defaults.json` into `DefaultsLoader`; verify all fields decode and seed correctly.
+- **Context:** Hardcoded Swift defaults require recompile. Solution: bundle `defaults.json`, seed UserDefaults on first launch only. User changes persist on subsequent launches.
+- **Basher implementation:** `DefaultsLoader`, `SettingsStore.init()` seeding, `SettingsStore.resetToDefaults()`, remove `ReminderSettings.defaultEyes/defaultPosture` statics.
+- **Linus implementation:** "Reset to Defaults" button + confirmation alert.
+- **Key file:** `.squad/decisions.md` (merged from inbox; filed by Danny)
+

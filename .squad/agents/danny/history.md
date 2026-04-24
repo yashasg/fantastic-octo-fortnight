@@ -9,6 +9,16 @@
 
 <!-- Append new learnings below. Each entry is something lasting about the project. -->
 
+### 2026-04-24: Data-Driven Default Settings Spec
+
+- **Root cause of friction:** `ReminderSettings.defaultEyes/defaultPosture` are Swift `static let` values — changing any default (e.g. test intervals) required a code edit, `// TEST OVERRIDE` comment breadcrumbs, and a full PR cycle.
+- **Proposed solution:** Bundle `defaults.json` in the app target. `SettingsStore.init()` seeds UserDefaults from JSON on first launch only. UserDefaults always wins on subsequent launches.
+- **Key design rule:** JSON seeding uses the same "only if key is absent" guard that `SettingsPersisting` already enforces — no risk of overwriting user changes.
+- **Reset path:** `SettingsStore.resetToDefaults()` removes all `epr.*` keys and re-seeds from JSON; Linus adds the UI button. This is the same code path as first launch.
+- **Testability preserved:** `DefaultsLoader` accepts a `Bundle` parameter so unit tests can inject a fixture JSON without touching the real bundle.
+- **Future-ready:** Remote config, A/B testing, and per-device defaults all work by swapping the JSON source — zero `SettingsStore` logic changes required.
+- **Key file:** `.squad/decisions/inbox/danny-data-driven-settings-spec.md`
+
 ### 2026-04-24: Dark Mode Feature Scoping
 
 - **App is mostly dark-mode ready by accident** — SwiftUI's `Form`, system materials (`.ultraThinMaterial`, `.regularMaterial`), and semantic colors (`.secondary`, `.tertiary`) all adapt automatically. No forced `preferredColorScheme` or `overrideUserInterfaceStyle` exists anywhere in the codebase.
