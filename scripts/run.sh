@@ -187,6 +187,58 @@ build_for_simulator() {
   pass "Build succeeded ($(elapsed "$start"))"
 }
 
+# ── App Bundle Assembly ───────────────────────────────────────────────────────
+# Swift Package executableTargets produce a flat Mach-O binary, not a .app
+# bundle. simctl install requires a .app bundle with an Info.plist. This
+# function wraps the built executable into a minimal .app structure.
+assemble_app_bundle() {
+  local app_path="${DERIVED_DATA_PATH}/Build/Products/Debug-iphonesimulator/${SCHEME}.app"
+  local exe_path="${DERIVED_DATA_PATH}/Build/Products/Debug-iphonesimulator/${SCHEME}"
+  local src_plist="${PACKAGE_PATH}/${SCHEME}/Info.plist"
+
+  # If xcodebuild already produced a proper .app bundle, nothing to do
+  if [[ -d "$app_path" ]]; then
+    pass "App bundle already exists (skipping assembly)"
+    return
+  fi
+
+  if [[ ! -f "$exe_path" ]]; then
+    fail "Build output not found at: $exe_path"
+    fail "The build may have failed silently — re-run without --no-build."
+    exit 1
+  fi
+
+  if [[ ! -f "$src_plist" ]]; then
+    fail "Info.plist not found at: $src_plist"
+    exit 1
+  fi
+
+  header "ASSEMBLING APP BUNDLE"
+  info "Swift Package executable → .app bundle wrapper…"
+
+  # Remove stale bundle if present as a plain file (shouldn't happen, but guard)
+  rm -rf "$app_path"
+  mkdir -p "$app_path"
+
+  cp "$exe_path" "$app_path/${SCHEME}"
+  chmod +x "$app_path/${SCHEME}"
+
+  # SPM auto-assigns bundle IDs as: {workspace-name}.{target-name}
+  # Derive workspace name from the package root directory.
+  local workspace_name
+  workspace_name=$(basename "$PACKAGE_PATH")
+  local bundle_id="${workspace_name}.${SCHEME}"
+
+  # Process Info.plist — substitute Xcode build variable placeholders
+  sed \
+    -e "s/\$(PRODUCT_BUNDLE_IDENTIFIER)/${bundle_id}/g" \
+    -e "s/\$(EXECUTABLE_NAME)/${SCHEME}/g" \
+    -e "s/\$(PRODUCT_NAME)/${SCHEME}/g" \
+    "$src_plist" > "$app_path/Info.plist"
+
+  pass "App bundle assembled: ${SCHEME}.app (bundle ID: ${bundle_id})"
+}
+
 # ── Install & Launch ──────────────────────────────────────────────────────────
 install_and_launch() {
   local udid="$1"
@@ -245,6 +297,9 @@ main() {
   # Build (unless skipped)
   if [[ "$SKIP_BUILD" == "false" ]]; then
     build_for_simulator "$sim_name"
+    # Swift Package executable targets produce a flat binary — wrap it in a
+    # .app bundle so simctl can install it.
+    assemble_app_bundle
   else
     warn "Skipping build (--no-build)"
   fi
