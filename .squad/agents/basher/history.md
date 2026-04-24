@@ -7,6 +7,16 @@
 
 ## Learnings
 
+### 2026-04-25 — defaults.json Config Layer (Danny Decision 3.6)
+
+- **`AppConfig.load(from:)`** uses `Bundle` injection — unit tests can pass a fixture bundle pointing at a local `defaults.json` without touching `Bundle.main`.
+- **`ReminderSettings.defaultEyes/defaultPosture` are now `static var`** (not `let`) because they call `AppConfig.load()` each time. That's by design — allows test bundles to substitute different JSON without the value being frozen at module init time.
+- **`SettingsPersisting.hasValue(forKey:)`** was added to the protocol to detect first-launch (no `epr.*` keys present). `MockSettingsPersisting` already had this helper method — moving it to the protocol required zero mock changes.
+- **`SettingsStore.init(store:configBundle:)`** now accepts a `configBundle` parameter alongside `store` for full testability of both layers simultaneously.
+- **`resetToDefaults()` writes through `@Published var` setters**, not directly to `store`. This means `didSet` observers propagate to UserDefaults automatically and SwiftUI views update immediately — no manual `objectWillChange.send()` needed.
+- **`Package.swift` resources**: Added `.process("Resources")` to the `executableTarget` so `defaults.json` is copied into the app bundle. Without this the file would be excluded from the bundle by SPM.
+- **TEST OVERRIDE pattern is now obsolete** — change `eyeInterval` in `defaults.json` to `10` for simulator testing instead of commenting/uncommenting Swift code.
+
 ### 2026-04-24 — Xcode Project Scaffold
 
 - **Rusty had already pre-built half the stack** before I started. Always read existing `EyePostureReminder/` files before creating new ones — Models, Services, Utilities, ViewModels, and DesignSystem were already present.

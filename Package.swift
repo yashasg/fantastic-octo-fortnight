@@ -12,7 +12,10 @@ let package = Package(
     targets: [
         .executableTarget(
             name: "EyePostureReminder",
-            path: "EyePostureReminder"
+            path: "EyePostureReminder",
+            resources: [
+                .process("Resources")
+            ]
         ),
         .testTarget(
             name: "EyePostureReminderTests",
