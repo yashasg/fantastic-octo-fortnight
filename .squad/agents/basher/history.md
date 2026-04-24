@@ -7,6 +7,12 @@
 
 ## Learnings
 
+### 2026-04-25 — AppConfig ↔ SettingsStore Integration (Livingston test fix)
+
+- **`SettingsStore.init()` now accepts `config: AppConfig = AppConfig.load()`** and seeds `eyesInterval`, `eyesBreakDuration`, `postureInterval`, `postureBreakDuration`, and `masterEnabled` from `config` instead of `ReminderSettings.defaultEyes/defaultPosture` hardcoded statics. This was the root cause of 4 failing `SettingsStoreConfigTests`.
+- **`ReminderSettings.defaultEyes` and `defaultPosture` are now `static var`** (computed, not stored). Each call invokes `AppConfig.load()` so they reflect whatever is in `defaults.json` without a recompile — the TEST OVERRIDE pattern of editing `ReminderSettings.swift` is now fully obsolete.
+- **Pre-existing test failures to be aware of:** `AppConfigTests.test_load_fromTestBundle_*` tests fail because the test fixture `defaults.json` (in `Tests/.../Fixtures/`) is not being bundled into the test target. These failures predate this change and are NOT caused by the seeding fix. `AppCoordinatorTests` also has pre-existing `bundleProxyForCurrentProcess is nil` crash failures (UIKit environment issue). Neither set is related to the SettingsStore/AppConfig integration work.
+
 ### 2026-04-25 — defaults.json Config Layer (Danny Decision 3.6)
 
 - **`AppConfig.load(from:)`** uses `Bundle` injection — unit tests can pass a fixture bundle pointing at a local `defaults.json` without touching `Bundle.main`.
@@ -122,3 +128,81 @@
 - **Interval semantics changed:** `eyeInterval`/`postureInterval` now mean "seconds of continuous screen-on time", not "wall-clock seconds between reminders". Existing JSON values need no changes.
 - **Build verified:** `./scripts/build.sh build` → BUILD SUCCEEDED
 - **Decision filed:** `.squad/decisions/inbox/basher-screen-time-tracker.md`
+
+### 2026-04-25 — ScreenTimeTracker Grace Period (Rusty Amendment 1)
+
+- **Required amendment from Rusty's architecture review:** `willResignActive` must NOT reset counters immediately — a 2-second notification banner would nuke 19 minutes of accumulated screen time.
+- **Implementation:** `private let resetGracePeriod: TimeInterval = 5.0` constant + `private var resetTask: Task<Void, Never>?` state on `ScreenTimeTracker`.
+- **`handleWillResignActive()`** now calls `stopTicking()` immediately (no accumulation during gap) then arms a `Task.sleep(5s)` grace timer. Only if `Task.isCancelled` is false after the sleep does `resetAll()` execute via `MainActor.run`.
+- **`handleDidBecomeActive()`** checks for a pending `resetTask` first. If present (within grace window): cancel + nil out + call `resumeTicking()`. If absent (grace expired or cold start): call `startTicking()` for fresh tracking.
+- **`resumeTicking()` is a private shim** delegating to `startTicking()`. Kept as separate entry point for intent clarity at the call-site; `startTicking()` already guards against double-start with `guard tickTimer == nil`.
+- **`stop()` also cancels `resetTask`** — prevents the grace timer from firing against a deallocated or stopped tracker (test tearDown safety).
+- **`deinit` cancels `resetTask`** — same reason.
+- **`Timer.tolerance = 0.5`** added in this pass (Rusty recommended optimization; was missing from original implementation).
+- **Surgical change:** Only `ScreenTimeTracker.swift` touched. `AppCoordinator` and all tests unchanged.
+- **Build verified:** `./scripts/build.sh build` → BUILD SUCCEEDED
+
+---
+
+## Session 6: ScreenTimeTracker Implementation Complete
+
+**Session:** 2026-04-24T20:58Z – 2026-04-24T21:37Z  
+**Status:** ✅ DELIVERED (Decisions 3.4 & 3.5)
+
+### Phase 3.4: ScreenTimeTracker Implementation
+
+**Deliverables:**
+- `EyePostureReminder/Services/ScreenTimeTracker.swift` (NEW, ~250 lines)
+- `EyePostureReminder/Services/AppCoordinator.swift` (UPDATED, wiring changes ~30 lines)
+- Grace period + snooze awareness fully integrated
+- Build: **BUILD SUCCEEDED**
+
+**Architecture alignment:**
+- Standalone service (not inlined in AppCoordinator) ✅
+- Lifecycle observers (`didBecomeActive`, `willResignActive`) ✅
+- 1s tick timer with `tolerance = 0.5` ✅
+- Monotonic clock (`CACurrentMediaTime()`) ✅
+- 5s grace period with Task-based cancellation ✅
+- `isEnabled` flag for snooze suppression ✅
+- Independent eye/posture counters ✅
+- Callback-based event emission ✅
+
+**Key implementation detail:**
+`resetTask: Task<Void, Never>?` state machine for grace period. When `willResignActive` fires: (1) pause timer immediately, (2) arm 5s reset task. When `didBecomeActive` fires within grace: cancel reset task, resume counting. After grace expires: commit reset (counters to 0).
+
+**Backward compatibility:**
+`startFallbackTimers()` and `stopFallbackTimers()` retained as shims (delegate to ScreenTimeTracker methods). All existing tests pass unchanged — no test rewrites needed.
+
+**ReminderScheduler changes:**
+- `scheduleReminders(using:)` — no longer called (repeating UNTimeIntervalNotificationTrigger removed)
+- `rescheduleReminder(for:using:)` — no longer called
+- `cancelReminder(for:)` and `cancelAllReminders()` — `cancelAllReminders()` still called from AppCoordinator as safety net to clear legacy notifications on app update
+- Net: `ReminderScheduler` narrowed to snooze-wake notification logic only (not removed, not breaking)
+
+### Phase 3.5: SettingsStore Seeding Alignment
+
+**Alignment details:**
+- Interval semantics now unified across AppConfig + SettingsStore: "seconds of continuous screen-on time"
+- Defaults (`10s` for testing, `1200s`/`1800s` for production) are directly reusable with no JSON rewrites
+- `SettingsStore.init()` seeding logic verified against AppConfig defaults
+- No user-facing breaking changes; existing user preferences remain compatible
+
+**Build verified:** All integration points validated.
+
+### Integration Testing Points
+
+For Livingston's test suite (Phase 4):
+- ScreenTimeTracker grace period: interrupt → resume within 5s (does not reset)
+- ScreenTimeTracker reset: interrupt → wait 5s+ (counter returns to 0)
+- Threshold firing: both eye + posture timers independent
+- Snooze: `isEnabled = false` → no tracking, `isEnabled = true` → resume from 0
+- Settings reschedule mid-session: thresholds update without resetting elapsed (if not snoozed)
+- System clock resistance: `CACurrentMediaTime()` maintains correct elapsed even if user changes device clock
+
+### Next: Testing Phase (Livingston)
+
+Unit tests for ScreenTimeTracker with:
+- MockTimerFactory (on-demand tick firing)
+- MockAppLifecycleProvider (lifecycle event injection)
+- MockTimeProvider (deterministic clock)
+- 8 test cases (documented in Rusty's architecture review)

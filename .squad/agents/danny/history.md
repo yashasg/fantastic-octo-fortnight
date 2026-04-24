@@ -9,6 +9,15 @@
 
 <!-- Append new learnings below. Each entry is something lasting about the project. -->
 
+### 2026-04-25: Screen-On Time Trigger Model
+
+- **Critical behavioral clarification:** Reminder intervals mean "continuous screen-on time," NOT wall-clock elapsed time. Screen off = full timer reset to zero.
+- **API choice:** `UIApplication.didBecomeActiveNotification` / `willResignActiveNotification` are the correct iOS signals — not `UIScreen` notifications (which are for external displays).
+- **UNUserNotificationCenter cannot do this job** — scheduled notifications fire on wall-clock time. The feature requires a foreground `Timer` + lifecycle observers inside `ReminderScheduler`.
+- **Snooze is the exception:** snooze can use a one-shot `UNNotificationRequest` to wake the app; then the foreground timer takes over.
+- **`defaults.json` values unchanged numerically** — semantic meaning updated: intervals = "minutes of continuous screen time."
+- **Key file:** `.squad/decisions/inbox/danny-screen-time-triggers.md`
+
 ### 2026-04-24: Data-Driven Default Settings Spec
 
 - **Root cause of friction:** `ReminderSettings.defaultEyes/defaultPosture` are Swift `static let` values — changing any default (e.g. test intervals) required a code edit, `// TEST OVERRIDE` comment breadcrumbs, and a full PR cycle.
@@ -115,3 +124,70 @@ App is ~90% dark-mode ready — no code changes to most views. SwiftUI best prac
 **Parallel Work Synergy:**
 - Tess immediately implemented color adaptation while spec was being finalized
 - Basher's 10-second testing overlay enables visual QA iteration in rapid cycles
+
+---
+
+## Session 6: Screen-Time Triggers (2026-04-24T20:58Z – 2026-04-24T21:37Z)
+
+**Team:** Danny (PM), Rusty (Architect), Tess (Designer), Basher (Services), Linus (UI)
+
+### Task
+Define and implement continuous screen-on time trigger model for reminders (replacing fixed wall-clock intervals).
+
+### Deliverable
+- **Document:** `.squad/decisions/inbox/danny-screen-time-triggers.md` → merged to `decisions.md` Decision 3.1
+- **Status:** ✅ COMPLETE
+
+### Key Decision Points
+
+1. **Behavior shift:** Wall-clock intervals → continuous screen-on time
+   - Screen ON (`didBecomeActive`) = start counting seconds
+   - Screen OFF (`willResignActive`) = reset to 0 **with 5s grace period**
+   - Timer threshold = fire reminder, reset to 0
+   - Snooze pauses = tracker disabled, resumes from 0 after snooze
+
+2. **Two reminder types, independent counters**
+   - Eye breaks: 20 min (1200s) of continuous screen time
+   - Posture checks: 30 min (1800s) of continuous screen time
+
+3. **iOS APIs chosen**
+   - `UIApplication.didBecomeActiveNotification` (preferred over UIScreen events for app lifecycle clarity)
+   - `UIApplication.willResignActiveNotification` (catches all interruptions: lock, Control Center, Siri, calls)
+
+4. **No background reminders**
+   - Reminders only fire while app is foregrounded
+   - Foreground-only 1s `Timer` on main RunLoop (no background modes needed)
+   - Battery impact negligible; timer coalesces with other 1s timers
+
+### Architecture Amendments (from Rusty's review)
+6 required amendments documented; critical amendment: **5s grace period** on `willResignActive` to tolerate brief interruptions (notifications, Control Center) without resetting hard-earned elapsed time.
+
+### UX Outcomes (from Tess's review)
+- Mental model: "After X min of screen time" (not "every X min")
+- 8 copy strings identified for update (settings picker label, onboarding body text, setup confirmation)
+- No structural UI changes; overlay + HomeView remain unchanged
+- Grace period remains invisible to users
+
+### Timeline
+- 07:40Z – Danny drafts spec (7 decisions)
+- 10:10Z – Rusty reviews + approves with amendments (6 required changes noted)
+- 14:04Z – Tess reviews + UX copy guidance (8 strings, no structural changes)
+- 20:49Z – Basher implements ScreenTimeTracker + grace period + SettingsStore seeding (BUILD SUCCESS)
+- 20:49Z – Linus updates 7 UI strings (BUILD SUCCESS)
+- 21:37Z – Scribe logs orchestration, merges decisions, prepares for commit
+
+### Open Questions Addressed
+1. **Show warning if app not in foreground?** → Tess: Yes, once (onboarding permission screen). After onboarding, behavior is self-evident.
+2. **Background refresh fallback?** → Deferred to Phase 4; not needed for Phase 3 scope.
+
+### Blocking Resolved
+- Architecture deadlock: Rusty specified standalone `ScreenTimeTracker` service (not in AppCoordinator) to avoid SRP violation in 450+ line coordinator. ✅ Implemented.
+- Copy clarity: Tess clarified mental model shift requires "after" (not "every") + "screen time" terminology. ✅ 7 strings updated.
+
+### Next Phase
+Livingston (QA) will write unit tests for ScreenTimeTracker:
+- Grace period debounce (interrupt → resume within 5s)
+- Threshold firing (both timers independently)
+- Snooze suppression (`isEnabled` flag)
+- System clock immunity (`CACurrentMediaTime()`)
+

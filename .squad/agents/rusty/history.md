@@ -150,3 +150,93 @@ All model, protocol, and service skeletons in `EyePostureReminder/`:
 - M0.3: dSYMs upload + `ENABLE_BITCODE = NO` in CI (Basher, critical)
 - Phase 2: MXMetricManagerSubscriber in AppDelegate (Basher, ~4h)
 - TestFlight onboarding: brief testers on shake-to-feedback and "Share App Data" toggle (Danny)
+
+### 2026-04-25: Architecture Review — Continuous Screen-On Time Triggers
+
+**What I reviewed:**
+- Danny's spec (`danny-screen-time-triggers.md`) proposing replacement of fixed wall-clock interval reminders with continuous screen-on time tracking.
+
+**Verdict: APPROVED with required amendments.**
+
+**Key architectural decisions:**
+1. **New `ScreenTimeTracker` service** — standalone, not bolted onto `AppCoordinator`. Owns lifecycle observers, foreground Timer, elapsed seconds, threshold checking. Emits events via callback; `AppCoordinator` decides what to do with them.
+2. **Grace period on `willResignActive` (5s debounce)** — critical UX fix Danny missed. Without it, notification banners, incoming calls, and Control Center pulls reset the timer. This would make the feature feel broken.
+3. **Monotonic clock (`CACurrentMediaTime`)** over `Date()` — immune to system clock changes.
+4. **`AppLifecycleProviding` protocol** — abstracts `NotificationCenter` lifecycle events for testability. Tests inject `PassthroughSubject` to simulate lifecycle transitions.
+5. **`ReminderScheduler` retained but narrowed** — no longer schedules repeating notifications. Keeps `UNNotificationCenter` interaction for snooze-wake only.
+6. **Fallback timers removed** — `ScreenTimeTracker` replaces them entirely. No more dual-path scheduling.
+7. **`isEnabled` flag on tracker** — `AppCoordinator` disables tracking during snooze without leaking snooze logic into the tracker.
+8. **Battery impact: negligible** — 1s foreground-only timer with 0.5s tolerance. Same pattern as existing fallback timers.
+
+**Documentation:** `.squad/decisions/inbox/rusty-screen-time-review.md`
+
+---
+
+## Session 6 Update: Screen-Time Triggers Architecture Finalized
+
+**Session:** 2026-04-24T20:58Z – 2026-04-24T21:37Z
+
+### Architecture Review Complete ✅
+
+Reviewed Danny's screen-time spec and approved with **6 required amendments** (documented in Decision 3.2):
+
+**Critical Amendment — Grace Period (5s debounce):**
+```swift
+func handleWillResignActive() {
+    pauseTimer()  // stop incrementing immediately
+    resetTask = Task { [weak self] in
+        try? await Task.sleep(nanoseconds: UInt64(5.0 * 1_000_000_000))
+        guard !Task.isCancelled else { return }
+        self?.resetElapsedTime()
+    }
+}
+
+func handleDidBecomeActive() {
+    if let resetTask {
+        resetTask.cancel()  // came back within grace period
+        resumeTimer()
+    } else {
+        startTracking()  // genuine screen-off (grace expired)
+    }
+}
+```
+
+**Why this matters:** Without the grace period, notification banners, incoming calls, and Control Center pulls would reset the timer to zero. User loses 19 minutes of accumulated time because a text arrived — feature feels broken.
+
+### Implementation Status
+
+Basher implemented ScreenTimeTracker per architecture spec (Decision 3.4):
+- ✅ Standalone service (not in AppCoordinator)
+- ✅ 5s grace period with Task-based cancellation
+- ✅ Monotonic clock (`CACurrentMediaTime()`)
+- ✅ `isEnabled` flag for snooze suppression
+- ✅ `Timer.tolerance = 0.5` for battery coalescing
+- ✅ Build: **BUILD SUCCEEDED**
+
+### Module Structure Realized
+
+```
+Services/
+├── ScreenTimeTracker.swift (NEW) — lifecycle + timer + thresholds
+├── ReminderScheduler.swift (NARROWED) — UNNotifications for snooze-wake only
+├── AppCoordinator.swift (UPDATED) — subscribes to tracker events, wires to overlays
+└── OverlayManager.swift — unchanged
+
+Dependency flow:
+  AppCoordinator → ScreenTimeTracker (owns, start/stop/reset)
+  ScreenTimeTracker → (callback) → AppCoordinator (what to do with threshold events)
+  AppCoordinator → OverlayManager (present reminders)
+```
+
+### Testing Strategy Documented
+
+For Livingston's unit tests:
+- `MockTimerFactory` — fires ticks on demand (no real timers in tests)
+- `AppLifecycleProviding` protocol — tests inject `PassthroughSubject` for lifecycle events
+- `MockTimeProvider` — clock is mockable
+- Test cases: grace period, threshold firing, multi-threshold handling, snooze suppression, settings reschedule, system clock immunity
+
+### Next: Testing Phase
+
+Livingston will implement ScreenTimeTracker unit tests using mock factories + mock lifecycle provider. 8 test cases documented in architecture review; ~60-80 lines of test code per case.
+

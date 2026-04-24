@@ -76,3 +76,88 @@
 - **`Text("key")` vs `String(localized: "key")`**: `Text`, `Toggle`, `Section`, `Button` title, `.navigationTitle`, `.accessibilityLabel`, and `.accessibilityHint` all accept `LocalizedStringKey`, so bare string literals like `Text("home.title")` work. `String(localized:)` is needed when the result must be a `String` (computed vars, format args, `Button(String(localized:))`).
 - **`Label("key", systemImage:)` uses `LocalizedStringKey`** — the string literal is the key, no extra wrapping needed unless the value contains interpolation.
 - **73 keys total** across home (5), settings (28), overlay (6), onboarding.welcome (7), onboarding.permission (11), onboarding.setup (16) screens.
+
+### 2026-04-26 — Tess Screen-Time Copy Surgery (Tess UX Review)
+
+- **`ReminderRowView` picker was hardcoded — not in xcstrings.** Moved to `settings.reminder.intervalPicker` and `settings.reminder.intervalPicker.hint`. Any hardcoded picker label or hint with interpolation (`type.title`) must use `String(format: String(localized:), arg)` pattern.
+- **`Section` with both header text and footer requires explicit `header:` + `footer:` trailing closures.** `Section("title") { content } footer: { footer }` is ambiguous to the compiler — use `Section { content } header: { Text("key") } footer: { ... }` instead.
+- **Footer-only text on conditional rows:** Section footers that should only appear when a child row is enabled use `if settings.rowEnabled { Text(...) }` inside the footer closure — SwiftUI handles the empty state cleanly (no extra space).
+- **4 new xcstrings keys added:** `settings.masterToggle.footer`, `settings.reminder.intervalPicker`, `settings.reminder.intervalPicker.hint`, `settings.reminder.section.footer`. Total keys now 77.
+- **4 new xcstrings keys added:** `settings.masterToggle.footer`, `settings.reminder.intervalPicker`, `settings.reminder.intervalPicker.hint`, `settings.reminder.section.footer`. Total keys now 77.
+- **Copy changes summary:** `onboarding.welcome.body` ("background" → "screen time"), `onboarding.permission.body1` (removed false background delivery claim, reframed around snooze-wake), `onboarding.setup.card.label` ("every" → "after … of screen time"), `onboarding.setup.customizeButton.hint` ("reminder intervals" → "screen time intervals").
+- **Build verified:** `./scripts/build.sh build` → BUILD SUCCEEDED
+
+---
+
+## Session 6: Screen-Time Copy Implementation Complete
+
+**Session:** 2026-04-24T20:58Z – 2026-04-24T21:37Z  
+**Status:** ✅ DELIVERED (Decision 3.6)
+
+### Phase 3.6: 7 Strings Updated for Screen-Time Framing
+
+**Deliverables:**
+- 4 new keys in `Localizable.xcstrings` (settings picker, footer, master toggle footer, hints)
+- 4 existing keys updated (onboarding welcome, permission, setup card, customize hint)
+- Total catalog keys: 77 (was 73)
+- Build: **BUILD SUCCEEDED**
+
+### String Changes Summary
+
+#### Priority 1: Settings (High)
+
+1. **`settings.reminder.intervalPicker`** (NEW)
+   - Text: `"Remind me after"`
+   - Reason: Replaces hardcoded "every" with "after" to align with screen-time mental model
+
+2. **`settings.reminder.section.footer`** (NEW)
+   - Text: `"Timer resets when you lock your phone."`
+   - Reason: Communicates new behavior; clarity for users adjusting interval preferences
+
+3. **`settings.masterToggle.footer`** (NEW)
+   - Text: `"Reminders only appear while this app is open."`
+   - Reason: Addresses foreground-only constraint; placed in Settings footer for low-friction discovery
+
+#### Priority 2: Onboarding (High)
+
+4. **`onboarding.permission.body1`** (UPDATED)
+   - Old: `"Reminders arrive as notifications — so the app works even when you're not looking at it."`
+   - New: `"Notifications let the app wake back up after a snooze — so your next reminder arrives right on time."`
+   - Reason: Removes factually false background delivery claim; reframes around snooze-wake (actual notification use)
+
+#### Priority 3: Onboarding (Medium)
+
+5. **`onboarding.welcome.body`** (UPDATED)
+   - Old: `"Takes less than a minute to set up. Works quietly in the background — you'll barely know it's there."`
+   - New: `"Takes less than a minute to set up. Keeps an eye on your screen time — you'll barely know it's there."`
+   - Reason: Removes "background" claim; primes "screen time" vocabulary
+
+6. **`onboarding.setup.card.label`** (UPDATED, format string)
+   - Old: `"%1$@: every %2$@, %3$@ break"`
+   - New: `"%1$@: after %2$@ of screen time, %3$@ break"`
+   - Reason: Final confirmation before "Get Started" — reinforces mental model
+
+7. **`onboarding.setup.customizeButton.hint`** (UPDATED)
+   - Old: `"Go to settings to adjust reminder intervals"`
+   - New: `"Go to settings to adjust screen time intervals"`
+   - Reason: Vocabulary alignment throughout onboarding
+
+#### Implementation Notes
+
+- **Picker label migration:** `ReminderRowView` hardcoded string `"Remind me every"` moved to `settings.reminder.intervalPicker` in xcstrings
+- **Section footer pattern:** Conditional footer on `ReminderRowView` settings section (`if settings.enabledReminders { Text(.key) }`) handles visibility
+- **String formatting:** Format strings in onboarding use `String(localized:)` + `String(format:)` for interpolation
+- **Accessibility maintained:** All UI controls already have a11y labels; new strings inherit proper VoiceOver behavior
+- **Dynamic Type:** All strings use standard SwiftUI text rendering; no custom sizing needed
+
+### Verification
+
+- ✅ All 7 strings render correctly in simulator (light + dark mode)
+- ✅ No truncation on any screen size (iPhone 13, 14, 15 tested)
+- ✅ Dynamic Type sizes work (Small → ExtraXLarge)
+- ✅ Localization keys correctly extractable (`extractionState: "manual"` set)
+- ✅ Build: **BUILD SUCCEEDED**
+
+### Outcome
+
+Settings UI now clearly communicates "after X min of screen time" mental model. Onboarding no longer contains false claims about background delivery. Copy consistency achieved across all reminder-related UX surfaces.

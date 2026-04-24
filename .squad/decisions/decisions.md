@@ -394,5 +394,108 @@ Colors and Strings from catalogs have no UserDefaults override layer — the pla
 
 ---
 
-Generated: 2026-04-25T20:49:07Z  
-Scribe: Merged 5 Phase 2 decision files from inbox; dedup removed; all inbox files deleted and ready for commit
+---
+
+## Phase 3: Screen-Time Trigger Decisions
+
+### Decision 3.1: Continuous Screen-On Time Model (Danny)
+- **Author:** Danny (Product Manager)
+- **Date:** 2026-04-25
+- **Status:** ✅ APPROVED (Architecture reviewed and implemented)
+- **Problem:** Fixed wall-clock intervals mislead users; reminders fired even during phone lockouts
+- **Solution:** Track *continuous* screen-on time; reset timer when screen turns off
+- **Key behaviors:**
+  - Screen ON (`didBecomeActive`) → start 1s tick timer
+  - Screen OFF (`willResignActive`) → reset to 0
+  - Timer reaches threshold → fire overlay, reset to 0
+  - Both eye (20m) and posture (30m) use independent counters
+- **iOS APIs:** `UIApplication.didBecomeActiveNotification` + `UIApplication.willResignActiveNotification`
+- **Semantics change:** Interval values in `defaults.json` now mean "seconds of *continuous* screen-on time", not wall-clock intervals
+
+---
+
+### Decision 3.2: ScreenTimeTracker Architecture (Rusty)
+- **Author:** Rusty (iOS Architect)
+- **Date:** 2026-04-25
+- **Status:** ✅ APPROVED (6 required amendments documented)
+- **Module structure:** `ScreenTimeTracker` as **standalone service**, not inlined in `AppCoordinator`
+- **Dependencies:**
+  - `ScreenTimeTracking` protocol (testability)
+  - `AppLifecycleProviding` protocol (mockable lifecycle events)
+  - `TimeProviding` protocol (mockable clock)
+- **Key amendments:**
+  1. **Grace period (5s):** Debounce on `willResignActive` to tolerate brief interruptions (notifications, Control Center)
+  2. **Monotonic clock:** Use `CACurrentMediaTime()` instead of `Date()` to resist system clock changes
+  3. **`isEnabled` flag:** Allows `AppCoordinator` to suppress tracking during snooze without resetting elapsed
+  4. **`Timer.tolerance = 0.5`:** Allow iOS to coalesce ticks for battery efficiency
+  5. **Battery impact:** Acceptable — timer only fires while app is foregrounded (iOS suspends process on background)
+  6. **Edge cases covered:** Brief interruptions, Split View/Slide Over, system clock changes, snooze interaction
+
+---
+
+### Decision 3.3: Screen-Time UX Copy Changes (Tess)
+- **Author:** Tess (UI/UX Designer)
+- **Date:** 2026-04-25
+- **Status:** ✅ APPROVED (8 actionable copy changes identified)
+- **Mental model shift:** "Every 20 min" → "After 20 min of screen time"
+- **Changes required (by priority):**
+  - 🔴 High: `ReminderRowView` label `"every"` → `"after"` + new footer `"Timer resets when you lock your phone."`
+  - 🔴 High: `onboarding.permission.body1` — remove false background claim; reframe for snooze-wake
+  - 🟡 Medium: `onboarding.welcome.body` — swap "background" for "screen time"
+  - 🟡 Medium: `onboarding.setup.card.label` — add `"of screen time"` to format string
+  - 🟢 Low: `onboarding.setup.customizeButton.hint` — align vocabulary
+- **No structural changes:** Overlay, HomeView, accessibility remain intact
+- **Grace period:** Remains invisible to users (implementation detail)
+
+---
+
+### Decision 3.4: ScreenTimeTracker Implementation (Basher)
+- **Author:** Basher (iOS Services Developer)
+- **Date:** 2026-04-25
+- **Status:** ✅ IMPLEMENTED
+- **Deliverables:**
+  - `EyePostureReminder/Services/ScreenTimeTracker.swift` — lifecycle observation, ticking, thresholds
+  - Updated `AppCoordinator.swift` — wires tracker events to overlay presentation
+  - Grace period (5s debounce) + snooze awareness (`isEnabled` flag)
+  - Backward compatibility: `startFallbackTimers()` / `stopFallbackTimers()` retained as shims
+- **Key implementation details:**
+  - `Timer` on main RunLoop with `tolerance = 0.5`
+  - `CACurrentMediaTime()` for monotonic elapsed measurement
+  - Independent eye/posture thresholds checked per tick
+  - `performReschedule(for:)` updates thresholds without reset if snoozed
+- **ReminderScheduler changes:** Repeating `UNTimeIntervalNotificationTrigger` removed; snooze-wake notification logic retained
+- **Build status:** `./scripts/build.sh build` → **BUILD SUCCEEDED**
+
+---
+
+### Decision 3.5: Settings Store Seeding Alignment (Basher)
+- **Author:** Basher (iOS Services Developer)
+- **Date:** 2026-04-25
+- **Status:** ✅ IMPLEMENTED
+- **Deliverable:** Aligned `SettingsStore.init()` seeding logic with new `AppConfig` defaults
+- **Semantic consistency:** All interval values (10s test, 1200s/1800s production) use same "continuous screen-on seconds" meaning
+- **No breaking changes:** Existing user preferences and defaults remain compatible; no JSON rewrite needed
+- **Build verified:** All existing tests pass; new integration points validated
+
+---
+
+### Decision 3.6: Screen-Time UX String Implementation (Linus)
+- **Author:** Linus (iOS UI Developer)
+- **Date:** 2026-04-25
+- **Status:** ✅ IMPLEMENTED
+- **Deliverables:** 7 strings updated across settings and onboarding views
+- **Changes:**
+  1. Migrated `ReminderRowView` picker label to `Localizable.xcstrings`
+  2. Updated label: `"Remind me every"` → `"Remind me after"`
+  3. New section footer: `"Timer resets when you lock your phone."`
+  4. `onboarding.permission.body1`: Reframed to describe snooze-wake behavior
+  5. `onboarding.welcome.body`: Changed "background" → "screen time"
+  6. `onboarding.setup.card.label`: Format string updated (`"every"` → `"after"`, added `"of screen time"`)
+  7. `onboarding.setup.customizeButton.hint`: Vocabulary alignment
+- **Accessibility:** All strings use standard SwiftUI controls; Dynamic Type inherited automatically
+- **Build status:** `./scripts/build.sh build` → **BUILD SUCCEEDED**
+
+---
+
+Generated: 2026-04-24T21:37:05Z  
+Scribe: Merged 4 Phase 3 decision files (danny, rusty, tess, basher) from inbox; no duplicates; inbox files ready for deletion

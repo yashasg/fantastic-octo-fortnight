@@ -119,3 +119,101 @@
 - `import UIKit` can be fully removed from `DesignSystem.swift` once all `UIColor` references are gone
 - Asset catalog colors are the canonical iOS pattern — light/dark adaptation is declarative, not imperative
 - `Color("Name")` is safe (no crash on miss), but name typos produce invisible failures — treat asset names as stable API
+
+## Learnings
+
+### 2026-04-26: Screen-Time-Based Trigger UX Review
+
+**Task:** UX review of Danny's screen-time trigger spec (Decision: continuous screen-on time vs fixed wall-clock intervals) and Rusty's architecture amendments (grace period, ScreenTimeTracker service).  
+**Status:** ✅ Review complete — `tess-screen-time-ux-review.md` filed
+
+**Key findings:**
+
+- **Critical onboarding copy bug:** `onboarding.permission.body1` ("Reminders arrive as notifications — so the app works even when you're not looking at it") is now factually false. Foreground-only delivery is the new model. This string must change before launch.
+- **Secondary onboarding bug:** `onboarding.welcome.body` ("Works quietly in the background") also needs updating — background delivery is gone.
+- **Settings copy pattern:** `"Remind me every"` → `"Remind me after"` + section footer ("Timer resets when you lock your phone.") is cleaner than appending "of screen time" to every picker row.
+- **HomeView: no progress indicator.** Showing elapsed screen time creates anxiety and contradicts the app's "calm nudge" positioning. Keep it as-is.
+- **OverlayView: no changes.** Trigger mechanism changed, overlay experience is identical.
+- **Grace period: invisible by design.** The 5-second debounce on willResignActive is a pure implementation detail — no user-facing copy needed.
+- **ReminderRowView hardcoded strings:** The picker label `"Remind me every"` and its accessibility hint are hardcoded Swift strings, not in `Localizable.xcstrings`. Flag for Linus to migrate before copy changes are made.
+- **Notification permission framing:** Notifications now serve snooze-wake only, not primary reminders. The permission screen's urgency must soften accordingly — frame around snooze, not primary delivery.
+- **Master toggle footer (new):** Add `"Reminders only appear while this app is open."` to address Danny's open question about foreground-only UX communication — Settings footer is the right low-friction placement.
+
+**Design principles reinforced:**
+- iOS users understand "screen time" — lean on Apple's vocabulary rather than inventing terms like "continuous use"
+- "After" implies accumulation toward a threshold; "every" implies clock cycles — one word carries the entire mental model difference
+- Never surface implementation details (grace periods, timer debounce) as user-facing UX
+
+---
+
+## Session 6 Update: Screen-Time UX Review Complete
+
+**Session:** 2026-04-24T20:58Z – 2026-04-24T21:37Z  
+**Review Status:** ✅ COMPLETE (Decision 3.3)
+
+### UX Recommendation Summary
+
+**No structural UI changes required.** The behavioral change is sound and UX is clean.
+
+### Copy Changes (8 strings, prioritized)
+
+#### 🔴 High Priority (blockers for release)
+
+1. **Settings Picker Label** (`ReminderRowView.swift`)
+   - Current: `"Remind me every"`
+   - Change to: `"Remind me after"`
+   - Reason: "After" correctly implies accumulation; "every" implies clock intervals
+
+2. **Settings Section Footer** (NEW in `Localizable.xcstrings`)
+   - New text: `"Timer resets when you lock your phone."`
+   - Reason: Closes the mental model gap — users understand what happens during phone lock
+
+3. **Onboarding Permission Body** (`onboarding.permission.body1`)
+   - Current: `"Reminders arrive as notifications — so the app works even when you're not looking at it."`
+   - Change to: `"Notifications let the app wake back up after a snooze — so your next reminder arrives right on time."`
+   - Reason: Old text is factually false under new model. Notifications now serve snooze-wake only, not primary delivery. Critical: if users read the old text and grant permission expecting background reminders, they'll be actively misled.
+
+#### 🟡 Medium Priority (mental model clarity)
+
+4. **Onboarding Welcome Body** (`onboarding.welcome.body`)
+   - Current: `"Takes less than a minute to set up. Works quietly in the background — you'll barely know it's there."`
+   - Change to: `"Takes less than a minute to set up. Keeps an eye on your screen time — you'll barely know it's there."`
+   - Reason: Remove false "background" claim; prime "screen time" framing
+
+5. **Onboarding Setup Card** (`onboarding.setup.card.label` format string)
+   - Current: `"%1$@: every %2$@, %3$@ break"`
+   - Change to: `"%1$@: after %2$@ of screen time, %3$@ break"`
+   - Reason: Reinforces mental model at the final "Get Started" confirmation moment
+
+6. **Master Toggle Footer** (NEW in `Localizable.xcstrings`)
+   - New text: `"Reminders only appear while this app is open."`
+   - Reason: Answers Danny's open question. Placed in Settings footer (low-friction) for users who return to Settings wondering why they missed a reminder
+
+#### 🟢 Low Priority (vocabulary consistency)
+
+7. **Picker Row Accessibility Hint** (`ReminderRowView.swift`)
+   - Update to reflect screen-time context (wording pending Linus implementation)
+
+8. **Customize Button Hint** (`onboarding.setup.customizeButton.hint`)
+   - Current: `"Go to settings to adjust reminder intervals"`
+   - Change to: `"Go to settings to adjust screen time intervals"`
+   - Reason: Vocabulary alignment
+
+### Implementation Handoff
+
+Linus implemented all 7 strings (Dec 3.6) — build verified successful.
+
+### Accessibility Audit
+
+✅ **No new issues.** SwiftUI Form + Picker + standard text controls inherit Dynamic Type automatically. VoiceOver already has appropriate labels + hints. The grace period remains invisible (implementation detail).
+
+**One considered-and-rejected enhancement:** Progress bar showing elapsed screen time on HomeView. Rejected because:
+- Creates anxiety/gamification (users race the timer)
+- Contradicts app's positioning as "passive nudge"
+- Edge case: grace period expiry causes confusing resets in the progress bar
+- Existing "Reminders active/paused" status is sufficient
+
+### Interaction with Rusty's Grace Period
+
+The 5-second grace period is a pure implementation detail. No user should ever be aware of it. If they are (e.g., "Why didn't my timer reset when I got a notification?"), the feature has failed. The goal: users think "I got interrupted, my session kept going" — not "oh, there's a 5s debounce." ✅ Achieved through UX invisibility.
+
