@@ -77,3 +77,27 @@
 **Sections updated:** 2.2, 3.1, 3.2, 4.1, 4.2, 4.3, 6.5, 8.1, 8.2, 8.3
 
 **Reusable insight:** The ⚙️ button on the overlay is a clean escape hatch for users who want snooze — it makes the snooze action deliberate without hiding it. Two taps (⚙️ → snooze button) is acceptable friction for a consequential action.
+
+### 2026-04-24: M2.1 Onboarding Flow Spec Complete
+
+**Deliverable created:**
+- `docs/ONBOARDING_SPEC.md` — full implementation-ready spec for the 3-screen onboarding flow, designed for Linus to implement directly.
+
+**Key design decisions:**
+
+1. **Educate before asking for permission (Screen 2)** — The notification permission CTA is preceded by a visual notification mock and plain-language explanation. This "pre-education" pattern consistently improves permission grant rates and builds user trust. Critically: "Maybe Later" is neutral, not guilt-laden.
+
+2. **"Maybe Later" is genuinely equal** — No warning text, no asterisks. The copy says "Maybe Later" not "Skip (reminders won't work)". That's a dark pattern we explicitly rejected. Users who skip will see the permission-denied banner in SettingsView if relevant.
+
+3. **"Get Started" and "Customize" lead to the same place** — Both complete onboarding and navigate to `SettingsView`. The difference is communicative only: "Customize" reassures detail-oriented users that they can change defaults without making them feel locked in.
+
+4. **`@AppStorage` for the flag** — Using `@AppStorage("hasSeenOnboarding")` in the parent view means SwiftUI automatically re-renders when the flag is set. No manual observation needed. Simpler and idiomatic.
+
+5. **Flag set only on explicit completion** — If a user force-quits during onboarding, they see it again. This is intentional — they haven't consented to start yet.
+
+6. **Reduce Motion applied to slide offset only** — Fade (opacity) is not considered motion per iOS HIG. When Reduce Motion is on, the 20pt slide is removed but a short fade (0.15s) is retained. This balances polish with accessibility compliance.
+
+**Reusable patterns:**
+- **Notification preview card as pre-education** — Show a visual mock of what the notification will look like before requesting permission. Sets expectations, reduces anxiety.
+- **Neutral secondary option labeling** — "Maybe Later" over "Skip" or "Not Now" avoids dark pattern territory while remaining honest.
+- **`@AppStorage` for one-time flow flags** — Clean, idiomatic SwiftUI pattern for `hasSeenOnboarding`, `hasSeenWhatsNew`, etc.
