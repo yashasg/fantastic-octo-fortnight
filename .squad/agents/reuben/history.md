@@ -58,3 +58,22 @@
 
 **Decision file:** `.squad/decisions/inbox/reuben-overlay-snooze-ux.md`
 **User preference:** Yashas is open to UX advice — this replaces the original "X + 3 buttons on overlay" proposal.
+
+### 2026-04-24: Session UX Revision — Nine Design Decisions Incorporated into UX_FLOWS.md
+
+**Deliverable:** UX_FLOWS.md updated to v1.1 with all session design decisions.
+
+**Key decisions locked in:**
+1. **Overlay simplification** — × (dismiss) + ⚙️ (open Settings) only. No snooze on the overlay.
+2. **15-second countdown** — Default break duration reduced from 20s to 15s.
+3. **Swipe UP to dismiss** — Overlay exits through the top of the screen (reversed from swipe-down). Feels like a "flick away."
+4. **Vibrate on timer completion — Phase 1** — `.notificationOccurred(.success)` when countdown hits 0. Moved from Phase 2; signals break complete.
+5. **Media pause — Phase 2, opt-in, default OFF** — Documented under Section 4.2 Animations.
+6. **Two-phase overlay model (final form)** — Snooze does NOT appear as a post-dismiss bottom sheet. Snooze lives in Settings only. User path: overlay → tap ⚙️ → Settings → snooze button. Deliberate two-tap path prevents accidental suppression.
+7. **Settings screen additions** — All Phase 1: per-type enable toggles (eye breaks / posture checks independently), snooze controls (5 min / 1 hr / rest of day), version display at bottom.
+8. **os.Logger — Phase 1 (M0.2)** — Engineering decision; noted in revision log for completeness.
+9. **Rest-of-day snooze = orange warning tint** — Consequential action design treatment to prevent casual selection.
+
+**Sections updated:** 2.2, 3.1, 3.2, 4.1, 4.2, 4.3, 6.5, 8.1, 8.2, 8.3
+
+**Reusable insight:** The ⚙️ button on the overlay is a clean escape hatch for users who want snooze — it makes the snooze action deliberate without hiding it. Two taps (⚙️ → snooze button) is acceptable friction for a consequential action.

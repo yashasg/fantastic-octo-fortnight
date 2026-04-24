@@ -1,0 +1,174 @@
+import Foundation
+import Combine
+import os
+
+/// `UserDefaults`-backed observable store for all user-configurable settings.
+///
+/// `@Published` properties drive SwiftUI reactivity. The initialiser accepts a
+/// `SettingsPersisting` dependency so unit tests can inject an in-memory store
+/// without touching the file system.
+///
+/// Key layout (all prefixed `epr.`):
+/// ```
+/// epr.masterEnabled          Bool   – global on/off toggle
+/// epr.eyes.enabled           Bool
+/// epr.eyes.interval          Double – seconds
+/// epr.eyes.breakDuration     Double – seconds
+/// epr.posture.enabled        Bool
+/// epr.posture.interval       Double – seconds
+/// epr.posture.breakDuration  Double – seconds
+/// epr.snoozedUntil           Double – Date.timeIntervalSince1970, 0 = not snoozed
+/// epr.pauseMediaDuringBreaks Bool   – Phase 2, default false
+/// ```
+final class SettingsStore: ObservableObject {
+
+    // MARK: - Master Toggle
+
+    @Published var masterEnabled: Bool {
+        didSet { store.set(masterEnabled, forKey: Keys.masterEnabled) }
+    }
+
+    // MARK: - Per-Type Toggles
+
+    @Published var eyesEnabled: Bool {
+        didSet { store.set(eyesEnabled, forKey: Keys.eyesEnabled) }
+    }
+
+    @Published var postureEnabled: Bool {
+        didSet { store.set(postureEnabled, forKey: Keys.postureEnabled) }
+    }
+
+    // MARK: - Per-Type Intervals (seconds)
+
+    @Published var eyesInterval: TimeInterval {
+        didSet { store.set(eyesInterval, forKey: Keys.eyesInterval) }
+    }
+
+    @Published var postureInterval: TimeInterval {
+        didSet { store.set(postureInterval, forKey: Keys.postureInterval) }
+    }
+
+    // MARK: - Per-Type Break Durations (seconds)
+
+    @Published var eyesBreakDuration: TimeInterval {
+        didSet { store.set(eyesBreakDuration, forKey: Keys.eyesBreakDuration) }
+    }
+
+    @Published var postureBreakDuration: TimeInterval {
+        didSet { store.set(postureBreakDuration, forKey: Keys.postureBreakDuration) }
+    }
+
+    // MARK: - Snooze
+
+    /// `nil` when not snoozed; a future `Date` when snoozed until that moment.
+    @Published var snoozedUntil: Date? {
+        didSet {
+            let value = snoozedUntil?.timeIntervalSince1970 ?? 0
+            store.set(value, forKey: Keys.snoozedUntil)
+        }
+    }
+
+    // MARK: - Phase 2
+
+    /// When `true`, activates `AVAudioSession` on overlay show to interrupt
+    /// other apps' audio. Default is `false`. Phase 2 feature.
+    @Published var pauseMediaDuringBreaks: Bool {
+        didSet { store.set(pauseMediaDuringBreaks, forKey: Keys.pauseMediaDuringBreaks) }
+    }
+
+    // MARK: - Convenience Accessors
+
+    /// Returns `ReminderSettings` for a given `ReminderType`.
+    func settings(for type: ReminderType) -> ReminderSettings {
+        switch type {
+        case .eyes:
+            return ReminderSettings(interval: eyesInterval, breakDuration: eyesBreakDuration)
+        case .posture:
+            return ReminderSettings(interval: postureInterval, breakDuration: postureBreakDuration)
+        }
+    }
+
+    /// Returns whether a given type is enabled (master toggle AND per-type toggle).
+    func isEnabled(for type: ReminderType) -> Bool {
+        guard masterEnabled else { return false }
+        switch type {
+        case .eyes:    return eyesEnabled
+        case .posture: return postureEnabled
+        }
+    }
+
+    // MARK: - Init
+
+    private let store: SettingsPersisting
+
+    init(store: SettingsPersisting = UserDefaults.standard) {
+        self.store = store
+
+        masterEnabled       = store.bool(forKey: Keys.masterEnabled, defaultValue: true)
+        eyesEnabled         = store.bool(forKey: Keys.eyesEnabled,    defaultValue: true)
+        postureEnabled      = store.bool(forKey: Keys.postureEnabled,  defaultValue: true)
+
+        eyesInterval        = store.double(forKey: Keys.eyesInterval,        defaultValue: ReminderSettings.defaultEyes.interval)
+        eyesBreakDuration   = store.double(forKey: Keys.eyesBreakDuration,   defaultValue: ReminderSettings.defaultEyes.breakDuration)
+        postureInterval     = store.double(forKey: Keys.postureInterval,     defaultValue: ReminderSettings.defaultPosture.interval)
+        postureBreakDuration = store.double(forKey: Keys.postureBreakDuration, defaultValue: ReminderSettings.defaultPosture.breakDuration)
+
+        let rawSnooze = store.double(forKey: Keys.snoozedUntil, defaultValue: 0)
+        snoozedUntil = rawSnooze > 0 ? Date(timeIntervalSince1970: rawSnooze) : nil
+
+        pauseMediaDuringBreaks = store.bool(forKey: Keys.pauseMediaDuringBreaks, defaultValue: false)
+
+        Logger.settings.debug("SettingsStore initialised")
+    }
+}
+
+// MARK: - Keys
+
+private extension SettingsStore {
+    enum Keys {
+        static let masterEnabled          = "epr.masterEnabled"
+        static let eyesEnabled            = "epr.eyes.enabled"
+        static let eyesInterval           = "epr.eyes.interval"
+        static let eyesBreakDuration      = "epr.eyes.breakDuration"
+        static let postureEnabled         = "epr.posture.enabled"
+        static let postureInterval        = "epr.posture.interval"
+        static let postureBreakDuration   = "epr.posture.breakDuration"
+        static let snoozedUntil           = "epr.snoozedUntil"
+        static let pauseMediaDuringBreaks = "epr.pauseMediaDuringBreaks"
+    }
+}
+
+// MARK: - SettingsPersisting Protocol
+
+/// Abstracts `UserDefaults` for testability. Provides typed accessors with
+/// explicit `defaultValue` parameters so callers never rely on Foundation's
+/// implicit zero/false returns.
+protocol SettingsPersisting {
+    func bool(forKey key: String, defaultValue: Bool) -> Bool
+    func set(_ value: Bool, forKey key: String)
+
+    func double(forKey key: String, defaultValue: Double) -> Double
+    func set(_ value: Double, forKey key: String)
+
+    func integer(forKey key: String, defaultValue: Int) -> Int
+    func set(_ value: Int, forKey key: String)
+}
+
+// MARK: - UserDefaults Conformance
+
+extension UserDefaults: SettingsPersisting {
+    func bool(forKey key: String, defaultValue: Bool) -> Bool {
+        guard object(forKey: key) != nil else { return defaultValue }
+        return bool(forKey: key)
+    }
+
+    func double(forKey key: String, defaultValue: Double) -> Double {
+        guard object(forKey: key) != nil else { return defaultValue }
+        return double(forKey: key)
+    }
+
+    func integer(forKey key: String, defaultValue: Int) -> Int {
+        guard object(forKey: key) != nil else { return defaultValue }
+        return integer(forKey: key)
+    }
+}

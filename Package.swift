@@ -1,0 +1,18 @@
+// swift-tools-version: 5.9
+import PackageDescription
+
+let package = Package(
+    name: "EyePostureReminder",
+    platforms: [
+        .iOS(.v16)
+    ],
+    products: [
+        .executable(name: "EyePostureReminder", targets: ["EyePostureReminder"])
+    ],
+    targets: [
+        .executableTarget(
+            name: "EyePostureReminder",
+            path: "EyePostureReminder"
+        )
+    ]
+)
