@@ -196,16 +196,20 @@ assemble_app_bundle() {
   local exe_path="${DERIVED_DATA_PATH}/Build/Products/Debug-iphonesimulator/${SCHEME}"
   local src_plist="${PACKAGE_PATH}/${SCHEME}/Info.plist"
 
-  # If xcodebuild already produced a proper .app bundle, nothing to do
-  if [[ -d "$app_path" ]]; then
-    pass "App bundle already exists (skipping assembly)"
-    return
-  fi
-
   if [[ ! -f "$exe_path" ]]; then
     fail "Build output not found at: $exe_path"
     fail "The build may have failed silently — re-run without --no-build."
     exit 1
+  fi
+
+  # If the .app bundle already exists, refresh the binary and skip Info.plist regeneration
+  if [[ -d "$app_path" ]]; then
+    header "REFRESHING APP BUNDLE"
+    info "Updating binary in existing bundle…"
+    cp "$exe_path" "$app_path/${SCHEME}"
+    chmod +x "$app_path/${SCHEME}"
+    pass "Binary refreshed: ${SCHEME}.app"
+    return
   fi
 
   if [[ ! -f "$src_plist" ]]; then
@@ -216,8 +220,6 @@ assemble_app_bundle() {
   header "ASSEMBLING APP BUNDLE"
   info "Swift Package executable → .app bundle wrapper…"
 
-  # Remove stale bundle if present as a plain file (shouldn't happen, but guard)
-  rm -rf "$app_path"
   mkdir -p "$app_path"
 
   cp "$exe_path" "$app_path/${SCHEME}"
