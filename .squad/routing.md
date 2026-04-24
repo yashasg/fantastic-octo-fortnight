@@ -13,6 +13,8 @@ How to decide who handles what.
 | SwiftUI views, overlays, animations | Linus | SettingsView, OverlayView, UIKit bridging |
 | Notifications, persistence, lifecycle | Basher | ReminderScheduler, SettingsStore, AppDelegate |
 | Testing | Livingston | Unit tests, UI tests, edge cases, mock setup |
+| CI/CD, builds, signing, pipelines | Virgil | Xcode config, GitHub Actions, fastlane, code signing |
+| Telemetry, analytics, dashboards, metrics | Turk | Event schemas, App Store Connect, MetricKit, usage analysis |
 | Code review | Saul | Review PRs, check quality, suggest improvements |
 | Scope & priorities | Danny | What to build next, trade-offs, decisions |
 | Session logging | Scribe | Automatic — never needs routing |

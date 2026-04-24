@@ -20,6 +20,8 @@
 | Basher | iOS Dev (Services) | .squad/agents/basher/charter.md | 🔧 Backend |
 | Livingston | Tester | .squad/agents/livingston/charter.md | 🧪 Test |
 | Saul | Code Reviewer | .squad/agents/saul/charter.md | 👁️ Review |
+| Virgil | CI/CD Dev | .squad/agents/virgil/charter.md | ⚙️ CI/CD |
+| Turk | Data Analyst | .squad/agents/turk/charter.md | 📊 Analytics |
 | Scribe | Scribe | .squad/agents/scribe/charter.md | 📋 Logger |
 | Ralph | Work Monitor | — | 🔄 Monitor |
 
