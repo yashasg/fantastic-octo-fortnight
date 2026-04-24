@@ -92,4 +92,58 @@ final class OverlayManagerTests: XCTestCase {
         XCTAssertEqual(mockAudio.pauseCallCount, 0)
         XCTAssertEqual(mockAudio.resumeCallCount, 0)
     }
+
+    // MARK: - Queue FIFO (MockOverlayPresenting — coordinator-level verification)
+
+    /// Full FIFO ordering of `OverlayManager.overlayQueue` requires a live
+    /// `UIWindowScene` (queue only fills when `isOverlayVisible == true`).
+    /// That path is tested in the simulator integration suite.
+    ///
+    /// At the unit level we verify that the `OverlayPresenting` protocol contract
+    /// is correct and that `MockOverlayPresenting` records calls in order, which
+    /// is the same ordering guarantee that `OverlayManager` must uphold.
+    func test_mockOverlayPresenting_recordsShowCallsInFIFOOrder() {
+        let mock = MockOverlayPresenting()
+
+        mock.showOverlay(for: .eyes, duration: 20, hapticsEnabled: true) {}
+        mock.showOverlay(for: .posture, duration: 10, hapticsEnabled: true) {}
+        mock.showOverlay(for: .eyes, duration: 30, hapticsEnabled: false) {}
+
+        XCTAssertEqual(mock.showCallOrder, [.eyes, .posture, .eyes],
+            "showOverlay calls must be recorded in FIFO (first-in, first-out) order")
+        XCTAssertEqual(mock.showCallDurations, [20, 10, 30])
+        XCTAssertEqual(mock.showCallCount, 3)
+    }
+
+    func test_mockOverlayPresenting_clearQueue_incrementsCounter() {
+        let mock = MockOverlayPresenting()
+
+        mock.clearQueue()
+        mock.clearQueue()
+
+        XCTAssertEqual(mock.clearQueueCallCount, 2)
+    }
+
+    func test_mockOverlayPresenting_isOverlayVisible_falseAfterDismiss() {
+        let mock = MockOverlayPresenting()
+
+        mock.showOverlay(for: .eyes, duration: 20, hapticsEnabled: true) {}
+        XCTAssertTrue(mock.isOverlayVisible)
+
+        mock.dismissOverlay()
+        XCTAssertFalse(mock.isOverlayVisible)
+    }
+
+    func test_mockOverlayPresenting_reset_clearsAllState() {
+        let mock = MockOverlayPresenting()
+        mock.showOverlay(for: .posture, duration: 10, hapticsEnabled: false) {}
+        mock.clearQueue()
+
+        mock.reset()
+
+        XCTAssertEqual(mock.showCallCount, 0)
+        XCTAssertEqual(mock.clearQueueCallCount, 0)
+        XCTAssertTrue(mock.showCallOrder.isEmpty)
+        XCTAssertFalse(mock.isOverlayVisible)
+    }
 }

@@ -4,9 +4,15 @@ import XCTest
 /// Unit tests for `AppCoordinator`.
 ///
 /// Coverage is intentionally limited to logic that executes cleanly without a
-/// live `UIWindowScene`. UIKit-dependent paths (`handleNotification`,
-/// `startFallbackTimers`, `scheduleReminders`) are exercised in the simulator
-/// integration suite, not here.
+/// live `UIWindowScene`. UIKit-dependent paths (`handleNotification` foreground
+/// path, `startFallbackTimers`, `scheduleReminders`) are exercised in the
+/// simulator integration suite, not here.
+///
+/// Two test configurations are used:
+/// 1. `sut` — default init with real `UNUserNotificationCenter` and `OverlayManager.shared`
+///    (safe for crash-proof and public-API path tests).
+/// 2. Helper factory `makeCoordinator(overlay:notifCenter:)` — fully injected with
+///    `MockOverlayPresenting` + `MockNotificationCenter` for behavioral assertions.
 @MainActor
 final class AppCoordinatorTests: XCTestCase {
 
@@ -27,6 +33,22 @@ final class AppCoordinatorTests: XCTestCase {
         settings = nil
         mockPersistence = nil
         try await super.tearDown()
+    }
+
+    // MARK: - Factory
+
+    /// Creates a fully-injected `AppCoordinator` for behavioral tests.
+    private func makeCoordinator(
+        overlay: MockOverlayPresenting,
+        notifCenter: MockNotificationCenter
+    ) -> (AppCoordinator, MockOverlayPresenting, MockNotificationCenter) {
+        let coordinator = AppCoordinator(
+            settings: settings,
+            scheduler: ReminderScheduler(notificationCenter: notifCenter),
+            notificationCenter: notifCenter,
+            overlayManager: overlay
+        )
+        return (coordinator, overlay, notifCenter)
     }
 
     // MARK: - Initialisation
@@ -66,8 +88,6 @@ final class AppCoordinatorTests: XCTestCase {
 
     // MARK: - presentPendingOverlayIfNeeded
 
-    /// When no notification-tap has queued an overlay, calling this on
-    /// `.active` scene transition should be a no-op — no crash, no UIKit access.
     func test_presentPendingOverlayIfNeeded_withNoPendingOverlay_doesNotCrash() {
         sut.presentPendingOverlayIfNeeded()
     }
@@ -90,7 +110,7 @@ final class AppCoordinatorTests: XCTestCase {
         sut.appWillResignActive()
     }
 
-    // MARK: - ReminderScheduling conformance
+    // MARK: - ReminderScheduling conformance (crash-safety)
 
     func test_cancelAllReminders_doesNotCrash() {
         sut.cancelAllReminders()
@@ -102,5 +122,173 @@ final class AppCoordinatorTests: XCTestCase {
 
     func test_cancelReminder_forPosture_doesNotCrash() {
         sut.cancelReminder(for: .posture)
+    }
+
+    // MARK: - cancelAllReminders + MockOverlayPresenting
+
+    func test_cancelAllReminders_callsClearQueueOnOverlayManager() {
+        let (coordinator, mockOverlay, _) = makeCoordinator(overlay: MockOverlayPresenting(), notifCenter: MockNotificationCenter())
+        defer { coordinator.stopFallbackTimers() }
+
+        coordinator.cancelAllReminders()
+
+        XCTAssertEqual(mockOverlay.clearQueueCallCount, 1,
+            "cancelAllReminders must clear the overlay queue exactly once")
+    }
+
+    func test_cancelAllReminders_calledTwice_clearQueueCalledTwice() {
+        let (coordinator, mockOverlay, _) = makeCoordinator(overlay: MockOverlayPresenting(), notifCenter: MockNotificationCenter())
+        defer { coordinator.stopFallbackTimers() }
+
+        coordinator.cancelAllReminders()
+        coordinator.cancelAllReminders()
+
+        XCTAssertEqual(mockOverlay.clearQueueCallCount, 2)
+    }
+
+    // MARK: - handleNotification + presentPendingOverlayIfNeeded
+
+    /// In a headless test there is no active `UIWindowScene`. `handleNotification`
+    /// stores the overlay as a pending request. `presentPendingOverlayIfNeeded`
+    /// then calls `overlayManager.showOverlay` — simulating what happens when the
+    /// scene becomes active after a notification tap.
+    func test_handleNotification_eyes_thenPresentPending_callsShowOverlayWithEyes() {
+        let (coordinator, mockOverlay, _) = makeCoordinator(overlay: MockOverlayPresenting(), notifCenter: MockNotificationCenter())
+        defer { coordinator.stopFallbackTimers() }
+
+        coordinator.handleNotification(for: .eyes)
+        coordinator.presentPendingOverlayIfNeeded()
+
+        XCTAssertEqual(mockOverlay.showCallCount, 1)
+        XCTAssertEqual(mockOverlay.showCallOrder.first, .eyes)
+    }
+
+    func test_handleNotification_posture_thenPresentPending_callsShowOverlayWithPosture() {
+        let (coordinator, mockOverlay, _) = makeCoordinator(overlay: MockOverlayPresenting(), notifCenter: MockNotificationCenter())
+        defer { coordinator.stopFallbackTimers() }
+
+        coordinator.handleNotification(for: .posture)
+        coordinator.presentPendingOverlayIfNeeded()
+
+        XCTAssertEqual(mockOverlay.showCallCount, 1)
+        XCTAssertEqual(mockOverlay.showCallOrder.first, .posture)
+    }
+
+    func test_handleNotification_thenPresentPending_usesDurationFromSettings() {
+        settings.eyesBreakDuration = 30
+        let (coordinator, mockOverlay, _) = makeCoordinator(overlay: MockOverlayPresenting(), notifCenter: MockNotificationCenter())
+        defer { coordinator.stopFallbackTimers() }
+
+        coordinator.handleNotification(for: .eyes)
+        coordinator.presentPendingOverlayIfNeeded()
+
+        XCTAssertEqual(mockOverlay.showCallDurations.first, 30,
+            "showOverlay must use the breakDuration from SettingsStore")
+    }
+
+    func test_handleNotification_thenPresentPending_passesHapticsEnabledFromSettings() {
+        settings.hapticsEnabled = false
+        let (coordinator, mockOverlay, _) = makeCoordinator(overlay: MockOverlayPresenting(), notifCenter: MockNotificationCenter())
+        defer { coordinator.stopFallbackTimers() }
+
+        coordinator.handleNotification(for: .eyes)
+        coordinator.presentPendingOverlayIfNeeded()
+
+        XCTAssertEqual(mockOverlay.showCallHapticsEnabled.first, false,
+            "showOverlay must forward hapticsEnabled from SettingsStore")
+    }
+
+    func test_handleNotification_thenPresentPending_hapticsTrue_whenHapticsEnabled() {
+        settings.hapticsEnabled = true
+        let (coordinator, mockOverlay, _) = makeCoordinator(overlay: MockOverlayPresenting(), notifCenter: MockNotificationCenter())
+        defer { coordinator.stopFallbackTimers() }
+
+        coordinator.handleNotification(for: .posture)
+        coordinator.presentPendingOverlayIfNeeded()
+
+        XCTAssertEqual(mockOverlay.showCallHapticsEnabled.first, true)
+    }
+
+    func test_presentPendingOverlayIfNeeded_withNoPending_doesNotCallShowOverlay() {
+        let (coordinator, mockOverlay, _) = makeCoordinator(overlay: MockOverlayPresenting(), notifCenter: MockNotificationCenter())
+        defer { coordinator.stopFallbackTimers() }
+
+        coordinator.presentPendingOverlayIfNeeded()
+
+        XCTAssertEqual(mockOverlay.showCallCount, 0)
+    }
+
+    func test_presentPendingOverlayIfNeeded_calledTwice_showsOnlyOnce() {
+        let (coordinator, mockOverlay, _) = makeCoordinator(overlay: MockOverlayPresenting(), notifCenter: MockNotificationCenter())
+        defer { coordinator.stopFallbackTimers() }
+
+        coordinator.handleNotification(for: .eyes)
+        coordinator.presentPendingOverlayIfNeeded()
+        coordinator.presentPendingOverlayIfNeeded() // second call: no pending
+
+        XCTAssertEqual(mockOverlay.showCallCount, 1,
+            "Second presentPendingOverlayIfNeeded with no pending must not show twice")
+    }
+
+    // MARK: - handleNotification resets snoozeCount
+
+    func test_handleNotification_resetsSnoozeCount_toZero() {
+        settings.snoozeCount = 2
+        let (coordinator, _, _) = makeCoordinator(overlay: MockOverlayPresenting(), notifCenter: MockNotificationCenter())
+        defer { coordinator.stopFallbackTimers() }
+
+        coordinator.handleNotification(for: .posture)
+
+        XCTAssertEqual(settings.snoozeCount, 0,
+            "handleNotification must reset snoozeCount=0 when a real reminder fires")
+    }
+
+    func test_handleNotification_resetsSnoozeCount_regardlessOfType() {
+        settings.snoozeCount = 1
+        let (coordinator, _, _) = makeCoordinator(overlay: MockOverlayPresenting(), notifCenter: MockNotificationCenter())
+        defer { coordinator.stopFallbackTimers() }
+
+        coordinator.handleNotification(for: .eyes)
+
+        XCTAssertEqual(settings.snoozeCount, 0)
+    }
+
+    // MARK: - cancelAllReminders with active snooze
+
+    func test_cancelAllReminders_withActiveSnooze_clearQueueStillCalled() {
+        settings.snoozedUntil = Date().addingTimeInterval(300)
+        let (coordinator, mockOverlay, _) = makeCoordinator(overlay: MockOverlayPresenting(), notifCenter: MockNotificationCenter())
+        defer { coordinator.stopFallbackTimers() }
+
+        coordinator.cancelAllReminders()
+
+        XCTAssertEqual(mockOverlay.clearQueueCallCount, 1,
+            "clearQueue must always be called regardless of snooze state")
+    }
+
+    // MARK: - OverlayManager queue FIFO ordering
+
+    /// Full FIFO ordering of the `OverlayManager.overlayQueue` requires a live
+    /// `UIWindowScene` to set `isOverlayVisible = true` and trigger dequeue.
+    /// This path is covered in the simulator integration test suite.
+    ///
+    /// At the AppCoordinator level we verify that when an overlay is requested
+    /// while one is already showing (via `MockOverlayPresenting.isOverlayVisible`),
+    /// the coordinator correctly delegates to the overlay manager which would
+    /// internally queue the request.
+    func test_overlayManager_showOverlay_receivesCorrectType_forEachRequest() {
+        let (coordinator, mockOverlay, _) = makeCoordinator(overlay: MockOverlayPresenting(), notifCenter: MockNotificationCenter())
+        defer { coordinator.stopFallbackTimers() }
+
+        // First request: store as pending (no active scene in headless test).
+        coordinator.handleNotification(for: .eyes)
+        coordinator.presentPendingOverlayIfNeeded()   // → mock records .eyes
+
+        // Second request: pending slot overwritten by new notification.
+        coordinator.handleNotification(for: .posture)
+        coordinator.presentPendingOverlayIfNeeded()   // → mock records .posture
+
+        XCTAssertEqual(mockOverlay.showCallCount, 2)
+        XCTAssertEqual(mockOverlay.showCallOrder, [.eyes, .posture])
     }
 }

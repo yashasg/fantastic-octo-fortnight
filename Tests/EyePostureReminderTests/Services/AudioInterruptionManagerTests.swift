@@ -24,7 +24,8 @@ final class AudioInterruptionManagerTests: XCTestCase {
     // MARK: - Protocol Conformance
 
     func test_conformsToMediaControlling() {
-        XCTAssertTrue(sut is MediaControlling)
+        let controlling: MediaControlling? = sut
+        XCTAssertNotNil(controlling, "AudioInterruptionManager must conform to MediaControlling")
     }
 
     func test_assignableAsMediaControlling() {
