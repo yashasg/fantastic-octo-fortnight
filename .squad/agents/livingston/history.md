@@ -23,6 +23,18 @@
 - Key risk noted: `MediaControlling` protocol not yet in ARCHITECTURE.md — included speculatively for AVAudioSession mocking. Should be confirmed with Rusty before implementation.
 - CI gate established: all unit tests pass + ≥ 80% coverage on Models/Services/ViewModels per PR.
 
+### 2026-04-24 — Test Suite Verified Against Real Implementations
+
+- Cross-referenced every test file and mock against Basher/Linus actual implementations. No API mismatches found in existing tests — all mocks, protocols, and method signatures were already correct.
+- **MockNotificationCenter** correctly implements `NotificationScheduling` (defined in `ReminderScheduler.swift`); `getPendingNotificationRequests()` extension on `UNUserNotificationCenter` is production-only.
+- **MockSettingsPersisting** correctly uses `defaultValue:` labelled parameters matching the actual `SettingsPersisting` protocol in `SettingsStore.swift`.
+- **`AppCoordinator`** stores `scheduler: ReminderScheduler` (concrete type, not `ReminderScheduling` protocol) — it cannot be injected with a mock scheduler. Tests are limited to pure logic paths that don't touch UIKit.
+- **`OverlayManager`** requires a live `UIWindowScene` for `showOverlay` — only initial-state and guard-path tests are safe in unit context.
+- **`MediaControlling`** protocol IS defined in `AudioInterruptionManager.swift` (confirmed — speculation in prior entry resolved).
+- Added 3 new test files: `AudioInterruptionManagerTests` (11 tests), `AppCoordinatorTests` (9 tests), `OverlayManagerTests` (7 tests).
+- Added `MockMediaControlling` for Phase 2 test infrastructure.
+- Package.swift test target config is correct as-is — no changes needed.
+
 ### 2026-04-24 — Phase 1 Test Suite Implemented
 
 - Created `Tests/EyePostureReminderTests/` with 4 test files (110+ test methods) and 3 mock classes.
