@@ -84,3 +84,31 @@
 - ✅ No view file modifications needed
 - ✅ Integration with Danny's dark mode spec complete
 - ✅ Ready for visual QA in next cycle
+
+## Learnings
+
+### 2026-04-26: Color Token Migration to Asset Catalog
+
+**Task:** Migrate all 6 AppColor tokens from hardcoded Swift to `Colors.xcassets`  
+**Status:** ✅ SUCCESS — Build clean
+
+**Changes Made:**
+
+1. **`EyePostureReminder/Resources/Colors.xcassets/`** — created with 6 `.colorset` entries:
+   - `ReminderBlue`: light #4A90D9 / dark #5BA8F0
+   - `ReminderGreen`: light #34C759 / dark #30D158
+   - `WarningOrange`: light #E07000 / dark #FF9500
+   - `WarningText`: light #994F00 / dark #FF9500
+   - `PermissionBanner`: static #FFCC00 (both modes)
+   - `PermissionBannerText`: static #262626 (both modes)
+
+2. **`DesignSystem.swift`** — replaced all `UIColor(dynamicProvider:)` and `Color(red:green:blue:)` with `Color("Name")`; removed `import UIKit`
+
+3. **`Package.swift`** — added `.process("Resources")` to SPM target so `.xcassets` is bundled
+
+**Key Learnings:**
+- SPM requires explicit `.process("Resources")` in target resources for `.xcassets` to be compiled and bundled
+- Static colors (same light/dark) in `.colorset` use a single entry with no `appearances` array
+- `import UIKit` can be fully removed from `DesignSystem.swift` once all `UIColor` references are gone
+- Asset catalog colors are the canonical iOS pattern — light/dark adaptation is declarative, not imperative
+- `Color("Name")` is safe (no crash on miss), but name typos produce invisible failures — treat asset names as stable API

@@ -5,30 +5,37 @@
 // Every color, font, spacing, and animation in the app references this file.
 
 import SwiftUI
-import UIKit
 
 // MARK: - Semantic Color Literals
 
 enum AppColor {
-    /// Eye breaks (#4A90D9) — calming blue
-    static let reminderBlue     = Color(red: 0.290, green: 0.565, blue: 0.851)
-    /// Posture checks (#34C759) — grounded green
-    static let reminderGreen    = Color(red: 0.204, green: 0.780, blue: 0.349)
-    /// Overlay tint
+    /// Eye breaks — calming blue, adaptive for dark mode.
+    /// Light: #4A90D9 (3.1:1 on white — sufficient for large icons/UI components).
+    /// Dark:  #5BA8F0 (4.0:1 on near-black — brighter for visual pop on dark backgrounds).
+    static let reminderBlue = Color("ReminderBlue")
+
+    /// Posture checks — green, adaptive for dark mode.
+    /// Light: #34C759. Dark: #30D158.
+    static let reminderGreen = Color("ReminderGreen")
+
+    /// Overlay tint — systemBackground with opacity, adapts automatically.
     static let overlayBackground = Color(.systemBackground).opacity(0.6)
-    /// Rest-of-day snooze warning (#FF9500)
-    static let warningOrange    = Color(red: 1.0, green: 0.584, blue: 0.0)
-    /// Permission banner (#FFCC00)
-    static let permissionBanner = Color(red: 1.0, green: 0.800, blue: 0.0)
-    /// Permission banner text — near-black for WCAG AA contrast on yellow
-    static let permissionBannerText = Color(red: 0.149, green: 0.149, blue: 0.149)
+
+    /// Warning icon tint — orange, adaptive for WCAG 1.4.11 non-text contrast (≥3:1).
+    /// Light: #E07000 (~3.5:1 on white). Dark: #FF9500 (6.8:1 on near-black).
+    static let warningOrange = Color("WarningOrange")
+
+    /// Permission banner background (#FFCC00) — intentionally static warm yellow in both modes
+    /// to signal caution. Only used on banner backgrounds; not for text or icon-only contexts.
+    static let permissionBanner = Color("PermissionBanner")
+
+    /// Permission banner text — near-black (#262626) for WCAG AA contrast on the yellow banner.
+    /// Always dark because it is exclusively used on the static yellow permissionBanner background.
+    static let permissionBannerText = Color("PermissionBannerText")
+
     /// Warning text colour for body/label contexts — WCAG AA on both backgrounds.
     /// Light mode: dark amber #994F00 (6.1:1 on white). Dark mode: #FF9500 (6.8:1 on near-black).
-    static let warningText = Color(UIColor(dynamicProvider: { traits in
-        traits.userInterfaceStyle == .dark
-            ? UIColor(red: 1.0,   green: 0.584, blue: 0.0, alpha: 1)
-            : UIColor(red: 0.600, green: 0.310, blue: 0.0, alpha: 1)
-    }))
+    static let warningText = Color("WarningText")
 }
 
 // MARK: - Typography
