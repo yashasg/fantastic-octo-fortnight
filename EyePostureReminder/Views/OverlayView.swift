@@ -113,7 +113,7 @@ struct OverlayView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .opacity(contentOpacity)
-        .accessibilityViewIsModal(true)
+        .accessibilityAddTraits(.isModal)
         // Swipe UP to dismiss (negative Y translation = upward drag)
         .gesture(
             DragGesture(minimumDistance: 30)
