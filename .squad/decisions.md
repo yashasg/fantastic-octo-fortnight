@@ -772,3 +772,43 @@ Applies to all current and future SwiftUI views in `EyePostureReminder/Views/`.
 ---
 
 *Filed by Danny · Questions → open an issue or ping in squad channel*
+
+---
+
+## Phase 2+ Implementation Decisions
+
+### Decision: Bug 3 (run.sh stale binary) is untestable in XCTest
+**Author:** Livingston (Tester)  
+**Date:** 2026-04-25  
+**Status:** Decided
+
+**Decision**
+
+Bug 3 (stale binary cache in `scripts/run.sh::assemble_app_bundle()`) cannot be
+covered by an XCTest unit test. The regression comment is documented inline in
+`RegressionTests.swift` with a manual verification procedure.
+
+**Rationale**
+
+The bug lives entirely in a Bash shell function that copies a compiled `.app`
+binary into a bundle directory. There is no Swift API surface to mock or assert
+against. An XCTest cannot:
+
+- Invoke `assemble_app_bundle()` in isolation
+- Observe the file system state of the `.app` bundle during a `run.sh` invocation
+- Verify that the copy step refreshes the binary after a rebuild
+
+**Manual Verification Procedure**
+
+1. Build and launch via `./scripts/run.sh`
+2. Make a visible source change (e.g., add a print or UI change)
+3. Run `./scripts/run.sh` again without cleaning
+4. Confirm the running app reflects the source change — if the old binary is still
+   in the `.app` bundle the change won't appear (regression)
+
+**Impact on Test Coverage**
+
+This is an acknowledged gap. The shell-level fix (force-refreshing the binary in
+`assemble_app_bundle()`) should be reviewed in code review, not via an automated
+test. No action required from other agents.
+

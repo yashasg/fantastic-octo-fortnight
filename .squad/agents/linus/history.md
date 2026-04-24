@@ -205,3 +205,10 @@ Settings UI now clearly communicates "after X min of screen time" mental model. 
 - ✅ Dynamic Type sizing verified
 
 **Decision Filed:** `.squad/decisions.md` → SPM Localization Bundle Strategy
+
+### 2026-04-27 — Sheet Dismiss Fix + Asset Color Bundle Fix
+
+- **`SettingsView` Done button:** Replaced `@Environment(\.dismiss)` with `@Binding var isPresented: Bool` passed from `HomeView`. `dismiss()` inside a root view of a `NavigationStack`-within-a-sheet can silently fail; the `@Binding` approach is more reliable. `HomeView` now passes `$showSettings` to `SettingsView(isPresented:)`.
+- **Named asset colors need `bundle: .module`:** `Color("ReminderBlue")` (and all other named colors in `AppColor`) was looking in `Bundle.main` at runtime, which has no asset catalog in an SPM package. Fixed by adding `bundle: .module` to every `Color("name")` call in `DesignSystem.swift`. This was the root cause of toggle tint colors appearing unchanged.
+- **`ContentView` root fixed:** `ContentView` was still using `SettingsView()` as the post-onboarding root (a stale reference pre-dating HomeView being promoted to root). Fixed to `HomeView()`, which is the correct NavigationStack root per project architecture.
+- **Build verified:** `./scripts/build.sh build` → BUILD SUCCEEDED
