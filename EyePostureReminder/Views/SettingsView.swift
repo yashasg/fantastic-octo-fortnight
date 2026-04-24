@@ -11,6 +11,7 @@ struct SettingsView: View {
     // the view never observes any @Published properties from the VM itself.
     @State private var viewModel: SettingsViewModel?
 
+    @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     // MARK: - Snooze helpers
@@ -180,6 +181,15 @@ struct SettingsView: View {
         }
         .navigationTitle(Text("settings.navTitle", bundle: .module))
         .navigationBarTitleDisplayMode(.large)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button(String(localized: "settings.doneButton", bundle: .module)) {
+                    dismiss()
+                }
+                .fontWeight(.semibold)
+                .accessibilityHint(Text("settings.doneButton.hint", bundle: .module))
+            }
+        }
         .animation(reduceMotion ? nil : AppAnimation.settingsExpandCurve, value: settings.masterEnabled)
         .animation(reduceMotion ? nil : AppAnimation.settingsExpandCurve, value: isSnoozed)
         .onAppear {
