@@ -5,6 +5,7 @@ struct OverlayView: View {
 
     let type: ReminderType
     let duration: TimeInterval
+    let hapticsEnabled: Bool
     let onDismiss: () -> Void
 
     @State private var secondsRemaining: Int
@@ -12,13 +13,18 @@ struct OverlayView: View {
     @State private var contentOpacity: Double = 0
     @State private var isDismissing = false
 
+    // Generators created in onAppear and pre-prepared for low-latency haptics.
+    @State private var impactGenerator: UIImpactFeedbackGenerator?
+    @State private var notificationGenerator: UINotificationFeedbackGenerator?
+
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    init(type: ReminderType, duration: TimeInterval, onDismiss: @escaping () -> Void) {
-        self.type      = type
-        self.duration  = duration
-        self.onDismiss = onDismiss
-        _secondsRemaining = State(initialValue: Int(duration))
+    init(type: ReminderType, duration: TimeInterval, hapticsEnabled: Bool = true, onDismiss: @escaping () -> Void) {
+        self.type            = type
+        self.duration        = duration
+        self.hapticsEnabled  = hapticsEnabled
+        self.onDismiss       = onDismiss
+        _secondsRemaining    = State(initialValue: Int(duration))
     }
 
     var body: some View {
@@ -87,7 +93,9 @@ struct OverlayView: View {
                     height: AppLayout.countdownRingDiameter
                 )
                 .accessibilityElement(children: .ignore)
-                .accessibilityLabel("\(secondsRemaining) seconds remaining")
+                .accessibilityLabel("Countdown timer")
+                .accessibilityValue("\(secondsRemaining) seconds remaining")
+                .accessibilityAddTraits(.updatesFrequently)
 
                 Spacer()
 
@@ -98,7 +106,7 @@ struct OverlayView: View {
                         .foregroundStyle(.secondary)
                 }
                 .frame(minHeight: AppLayout.minTapTarget)
-                .accessibilityLabel("Open Settings")
+                .accessibilityLabel("Dismiss overlay")
                 .accessibilityHint("Dismisses this reminder and reveals Settings")
             }
             .padding(AppSpacing.xl)
@@ -114,6 +122,16 @@ struct OverlayView: View {
                 }
         )
         .onAppear {
+            // Prepare haptic generators up front so they are ready when needed.
+            let impact = UIImpactFeedbackGenerator(style: .medium)
+            impact.prepare()
+            impactGenerator = impact
+            let notification = UINotificationFeedbackGenerator()
+            notification.prepare()
+            notificationGenerator = notification
+
+            if hapticsEnabled { notification.notificationOccurred(.warning) }
+
             if reduceMotion {
                 contentOpacity = 1
             } else {
@@ -134,6 +152,7 @@ struct OverlayView: View {
         guard !isDismissing else { return }
         isDismissing = true
         timer?.invalidate()
+        if hapticsEnabled { notificationGenerator?.notificationOccurred(.success) }
         if reduceMotion {
             contentOpacity = 0
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { onDismiss() }
@@ -182,9 +201,8 @@ struct OverlayView: View {
     // MARK: - Haptic Feedback
 
     private func triggerCompletionHaptic() {
-        let generator = UIImpactFeedbackGenerator(style: .medium)
-        generator.prepare()
-        generator.impactOccurred()
+        guard hapticsEnabled else { return }
+        impactGenerator?.impactOccurred()
     }
 }
 

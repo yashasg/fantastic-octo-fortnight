@@ -153,7 +153,7 @@ final class AppCoordinator: ObservableObject {
             .contains { $0.activationState == .foregroundActive }
 
         if hasActiveScene {
-            OverlayManager.shared.showOverlay(for: type, duration: duration) {}
+            OverlayManager.shared.showOverlay(for: type, duration: duration, hapticsEnabled: settings.hapticsEnabled) {}
         } else {
             pendingOverlay = (type: type, duration: duration)
             Logger.lifecycle.info("Queued pending overlay for \(type.rawValue) (no active scene)")
@@ -166,7 +166,7 @@ final class AppCoordinator: ObservableObject {
         guard let pending = pendingOverlay else { return }
         pendingOverlay = nil
         Logger.lifecycle.info("Presenting queued overlay for \(pending.type.rawValue)")
-        OverlayManager.shared.showOverlay(for: pending.type, duration: pending.duration) {}
+        OverlayManager.shared.showOverlay(for: pending.type, duration: pending.duration, hapticsEnabled: settings.hapticsEnabled) {}
     }
 
     // MARK: - App Lifecycle Hooks
@@ -265,7 +265,7 @@ final class AppCoordinator: ObservableObject {
             Task { @MainActor [weak self] in
                 guard let self else { return }
                 let duration = self.settings.settings(for: type).breakDuration
-                OverlayManager.shared.showOverlay(for: type, duration: duration) {}
+                OverlayManager.shared.showOverlay(for: type, duration: duration, hapticsEnabled: self.settings.hapticsEnabled) {}
             }
         }
         fallbackTimers[type] = timer

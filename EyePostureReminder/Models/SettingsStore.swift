@@ -68,12 +68,25 @@ final class SettingsStore: ObservableObject {
         }
     }
 
+    /// Number of consecutive snoozes applied since the last reminder actually fired.
+    /// Reset to 0 whenever a real reminder overlay is shown.
+    @Published var snoozeCount: Int {
+        didSet { store.set(snoozeCount, forKey: Keys.snoozeCount) }
+    }
+
     // MARK: - Phase 2
 
     /// When `true`, activates `AVAudioSession` on overlay show to interrupt
     /// other apps' audio. Default is `false`. Phase 2 feature.
     @Published var pauseMediaDuringBreaks: Bool {
         didSet { store.set(pauseMediaDuringBreaks, forKey: Keys.pauseMediaDuringBreaks) }
+    }
+
+    /// When `true`, plays haptic feedback on overlay events (appear, dismiss,
+    /// countdown completion). Respects device silent mode automatically.
+    /// Default is `true`. Phase 2 feature.
+    @Published var hapticsEnabled: Bool {
+        didSet { store.set(hapticsEnabled, forKey: Keys.hapticsEnabled) }
     }
 
     // MARK: - Convenience Accessors
@@ -116,7 +129,10 @@ final class SettingsStore: ObservableObject {
         let rawSnooze = store.double(forKey: Keys.snoozedUntil, defaultValue: 0)
         snoozedUntil = rawSnooze > 0 ? Date(timeIntervalSince1970: rawSnooze) : nil
 
+        snoozeCount = store.integer(forKey: Keys.snoozeCount, defaultValue: 0)
+
         pauseMediaDuringBreaks = store.bool(forKey: Keys.pauseMediaDuringBreaks, defaultValue: false)
+        hapticsEnabled         = store.bool(forKey: Keys.hapticsEnabled,          defaultValue: true)
 
         Logger.settings.debug("SettingsStore initialised")
     }
@@ -134,7 +150,9 @@ private extension SettingsStore {
         static let postureInterval        = "epr.posture.interval"
         static let postureBreakDuration   = "epr.posture.breakDuration"
         static let snoozedUntil           = "epr.snoozedUntil"
+        static let snoozeCount            = "epr.snoozeCount"
         static let pauseMediaDuringBreaks = "epr.pauseMediaDuringBreaks"
+        static let hapticsEnabled         = "epr.hapticsEnabled"
     }
 }
 

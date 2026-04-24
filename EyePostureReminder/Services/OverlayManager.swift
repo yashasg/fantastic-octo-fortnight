@@ -20,10 +20,12 @@ protocol OverlayPresenting: AnyObject {
     ///   - type: Which reminder triggered the overlay.
     ///   - duration: Suggested break duration in seconds (overlay may use this
     ///               for a countdown UI).
+    ///   - hapticsEnabled: Whether haptic feedback should fire on this overlay.
     ///   - onDismiss: Called on the main thread after the overlay is dismissed.
     func showOverlay(
         for type: ReminderType,
         duration: TimeInterval,
+        hapticsEnabled: Bool,
         onDismiss: @escaping () -> Void
     )
 
@@ -32,6 +34,9 @@ protocol OverlayPresenting: AnyObject {
 
     /// `true` while the overlay window is on screen.
     var isOverlayVisible: Bool { get }
+
+    /// Drop all queued overlays (e.g. on snooze or master-toggle-off).
+    func clearQueue()
 }
 
 // MARK: - OverlayManager
@@ -64,7 +69,7 @@ final class OverlayManager: OverlayPresenting {
     private var dismissCallback: (() -> Void)?
 
     /// Pending show requests queued while an overlay is already on screen.
-    private var overlayQueue: [(type: ReminderType, duration: TimeInterval, onDismiss: () -> Void)] = []
+    private var overlayQueue: [(type: ReminderType, duration: TimeInterval, hapticsEnabled: Bool, onDismiss: () -> Void)] = []
 
     var isOverlayVisible: Bool {
         overlayWindow != nil && overlayWindow?.isHidden == false
@@ -81,11 +86,12 @@ final class OverlayManager: OverlayPresenting {
     func showOverlay(
         for type: ReminderType,
         duration: TimeInterval,
+        hapticsEnabled: Bool,
         onDismiss: @escaping () -> Void
     ) {
         guard !isOverlayVisible else {
             // Queue instead of stacking windows — dequeued after current overlay dismisses.
-            overlayQueue.append((type: type, duration: duration, onDismiss: onDismiss))
+            overlayQueue.append((type: type, duration: duration, hapticsEnabled: hapticsEnabled, onDismiss: onDismiss))
             Logger.overlay.info("Overlay for \(type.rawValue) queued (overlay already visible). Queue depth: \(self.overlayQueue.count)")
             return
         }
@@ -106,7 +112,7 @@ final class OverlayManager: OverlayPresenting {
         window.backgroundColor = .clear
 
         let hostingController = UIHostingController(
-            rootView: OverlayView(type: type, duration: duration) { [weak self] in
+            rootView: OverlayView(type: type, duration: duration, hapticsEnabled: hapticsEnabled) { [weak self] in
                 Task { @MainActor in self?.dismissOverlay() }
             }
         )
@@ -154,6 +160,6 @@ final class OverlayManager: OverlayPresenting {
         guard !overlayQueue.isEmpty else { return }
         let next = overlayQueue.removeFirst()
         Logger.overlay.info("Presenting queued overlay for \(next.type.rawValue). Remaining in queue: \(self.overlayQueue.count)")
-        showOverlay(for: next.type, duration: next.duration, onDismiss: next.onDismiss)
+        showOverlay(for: next.type, duration: next.duration, hapticsEnabled: next.hapticsEnabled, onDismiss: next.onDismiss)
     }
 }
