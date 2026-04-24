@@ -9,6 +9,8 @@ struct OverlayView: View {
 
     @State private var secondsRemaining: Int
     @State private var timer: Timer?
+    @State private var contentOpacity: Double = 0
+    @State private var isDismissing = false
 
     init(type: ReminderType, duration: TimeInterval, onDismiss: @escaping () -> Void) {
         self.type      = type
@@ -18,24 +20,26 @@ struct OverlayView: View {
     }
 
     var body: some View {
-        ZStack {
+        ZStack(alignment: .topTrailing) {
+            // MARK: Blur background
             Color.clear
                 .background(.ultraThinMaterial)
                 .ignoresSafeArea()
 
-            VStack(spacing: AppSpacing.lg) {
-                // × dismiss button — top-right corner
-                HStack {
-                    Spacer()
-                    Button(action: onDismiss) {
-                        Image(systemName: AppSymbol.dismiss)
-                            .font(.system(size: 28))
-                            .foregroundStyle(.secondary)
-                    }
+            // MARK: × Dismiss — fixed top-right corner
+            Button(action: performDismiss) {
+                Image(systemName: AppSymbol.dismiss)
+                    .font(.system(size: 28, weight: .medium))
+                    .foregroundStyle(.secondary)
                     .frame(minWidth: AppLayout.minTapTarget, minHeight: AppLayout.minTapTarget)
-                    .accessibilityLabel("Dismiss reminder")
-                }
+                    .contentShape(Rectangle())
+            }
+            .padding(.top, AppSpacing.lg)
+            .padding(.trailing, AppSpacing.lg)
+            .accessibilityLabel("Dismiss reminder")
 
+            // MARK: Center content
+            VStack(spacing: AppSpacing.lg) {
                 Spacer()
 
                 // Icon
@@ -43,10 +47,11 @@ struct OverlayView: View {
                     .font(.system(size: AppLayout.overlayIconSize))
                     .foregroundStyle(type.color)
 
-                // Title
+                // Headline
                 Text(type.overlayTitle)
                     .font(AppFont.headline)
                     .multilineTextAlignment(.center)
+                    .padding(.horizontal, AppSpacing.xl)
 
                 // Circular countdown ring
                 ZStack {
@@ -55,13 +60,17 @@ struct OverlayView: View {
 
                     Circle()
                         .trim(from: 0, to: CGFloat(secondsRemaining) / CGFloat(max(duration, 1)))
-                        .stroke(type.color, style: StrokeStyle(lineWidth: AppLayout.countdownRingStroke, lineCap: .round))
+                        .stroke(
+                            type.color,
+                            style: StrokeStyle(lineWidth: AppLayout.countdownRingStroke, lineCap: .round)
+                        )
                         .rotationEffect(.degrees(-90))
                         .animation(AppAnimation.countdownRingCurve, value: secondsRemaining)
 
                     Text("\(secondsRemaining)")
                         .font(AppFont.countdown)
                         .monospacedDigit()
+                        .contentTransition(.numericText(countsDown: true))
                 }
                 .frame(
                     width: AppLayout.countdownRingDiameter,
@@ -70,28 +79,64 @@ struct OverlayView: View {
 
                 Spacer()
 
-                // Settings gear button — navigates to Settings by dismissing overlay
-                // (Settings is the root view, so it's already visible beneath the overlay)
-                Button(action: onDismiss) {
-                    Image(systemName: AppSymbol.settings)
-                        .font(.system(size: 22))
+                // Settings gear — dismisses overlay, revealing SettingsView underneath
+                Button(action: performDismiss) {
+                    Label("Settings", systemImage: AppSymbol.settings)
+                        .font(AppFont.body)
                         .foregroundStyle(.secondary)
                 }
-                .frame(minWidth: AppLayout.minTapTarget, minHeight: AppLayout.minTapTarget)
+                .frame(minHeight: AppLayout.minTapTarget)
                 .accessibilityLabel("Open Settings")
             }
             .padding(AppSpacing.xl)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .accessibilityAddTraits(.isModal)
-        // Swipe UP dismisses (negative Y translation = upward drag)
+        .opacity(contentOpacity)
+        .accessibilityViewIsModal(true)
+        // Swipe UP to dismiss (negative Y translation = upward drag)
         .gesture(
             DragGesture(minimumDistance: 30)
                 .onEnded { value in
-                    if value.translation.height < 0 { onDismiss() }
+                    if value.translation.height < 0 { performDismiss() }
                 }
         )
-        .onAppear { startTimer() }
-        .onDisappear { timer?.invalidate() }
+        .onAppear {
+            withAnimation(AppAnimation.overlayAppearCurve) {
+                contentOpacity = 1
+            }
+            startTimer()
+        }
+        .onDisappear {
+            timer?.invalidate()
+        }
+    }
+
+    // MARK: - Manual dismiss (× button, swipe up, or Settings tap)
+
+    private func performDismiss() {
+        guard !isDismissing else { return }
+        isDismissing = true
+        timer?.invalidate()
+        withAnimation(AppAnimation.overlayDismissCurve) {
+            contentOpacity = 0
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + AppAnimation.overlayDismiss) {
+            onDismiss()
+        }
+    }
+
+    // MARK: - Auto-dismiss (countdown reaches zero)
+
+    private func performAutoDismiss() {
+        guard !isDismissing else { return }
+        isDismissing = true
+        triggerCompletionHaptic()
+        withAnimation(AppAnimation.overlayFadeCurve) {
+            contentOpacity = 0
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + AppAnimation.overlayAutoDismiss) {
+            onDismiss()
+        }
     }
 
     // MARK: - Timer
@@ -102,8 +147,7 @@ struct OverlayView: View {
                 secondsRemaining -= 1
             } else {
                 timer?.invalidate()
-                triggerCompletionHaptic()
-                onDismiss()
+                performAutoDismiss()
             }
         }
     }
@@ -119,4 +163,8 @@ struct OverlayView: View {
 
 #Preview {
     OverlayView(type: .eyes, duration: 20, onDismiss: {})
+}
+
+#Preview("Posture") {
+    OverlayView(type: .posture, duration: 10, onDismiss: {})
 }

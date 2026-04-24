@@ -9,5 +9,8 @@ struct ContentView: View {
 }
 
 #Preview {
+    let coordinator = AppCoordinator()
     ContentView()
+        .environmentObject(coordinator.settings)
+        .environmentObject(coordinator)
 }

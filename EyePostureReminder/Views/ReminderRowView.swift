@@ -12,8 +12,11 @@ struct ReminderRowView: View {
     private let durationOptions: [TimeInterval] = [10, 20, 30, 60]
 
     var body: some View {
-        Toggle(type.title, isOn: $isEnabled)
-            .onChange(of: isEnabled) { _ in onChanged() }
+        Toggle(isOn: $isEnabled) {
+            Label(type.title, systemImage: type.symbolName)
+        }
+        .tint(type.color)
+        .onChange(of: isEnabled) { _ in onChanged() }
 
         if isEnabled {
             Picker("Remind me every", selection: $interval) {

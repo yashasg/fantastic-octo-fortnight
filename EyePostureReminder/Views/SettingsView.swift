@@ -12,15 +12,23 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
+            // MARK: Master toggle
             Section {
                 Toggle("Enable Reminders", isOn: $settings.masterEnabled)
+                    .tint(AppColor.reminderBlue)
                     .onChange(of: settings.masterEnabled) { _ in
                         viewModel?.masterToggleChanged()
                     }
+            } footer: {
+                if !settings.masterEnabled {
+                    Text("All reminders are paused.")
+                        .font(AppFont.caption)
+                }
             }
 
+            // MARK: Per-type sections (only shown when master is on)
             if settings.masterEnabled {
-                Section("Eyes (20-20-20 Rule)") {
+                Section("Eyes — 20-20-20 Rule") {
                     ReminderRowView(
                         type: .eyes,
                         isEnabled: $settings.eyesEnabled,
@@ -40,8 +48,35 @@ struct SettingsView: View {
                     )
                 }
             }
+
+            // MARK: Notification permission warning
+            if coordinator.notificationAuthStatus == .denied {
+                Section {
+                    HStack(spacing: AppSpacing.sm) {
+                        Image(systemName: AppSymbol.warning)
+                            .foregroundStyle(AppColor.warningOrange)
+                        VStack(alignment: .leading, spacing: AppSpacing.xs) {
+                            Text("Notifications Disabled")
+                                .font(AppFont.bodyEmphasized)
+                            Text("Enable notifications in Settings to receive reminders in the background.")
+                                .font(AppFont.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .padding(.vertical, AppSpacing.xs)
+
+                    Button("Open System Settings") {
+                        if let url = URL(string: UIApplication.openSettingsURLString) {
+                            UIApplication.shared.open(url)
+                        }
+                    }
+                    .font(AppFont.body)
+                }
+            }
         }
         .navigationTitle("Eye & Posture Reminder")
+        .navigationBarTitleDisplayMode(.large)
+        .animation(AppAnimation.settingsExpandCurve, value: settings.masterEnabled)
         .onAppear {
             if viewModel == nil {
                 viewModel = SettingsViewModel(
@@ -49,6 +84,9 @@ struct SettingsView: View {
                     scheduler: coordinator.scheduler
                 )
             }
+        }
+        .task {
+            await coordinator.refreshAuthStatus()
         }
     }
 }
