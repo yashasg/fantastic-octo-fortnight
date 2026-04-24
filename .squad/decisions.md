@@ -367,3 +367,183 @@ This project uses a Swift Package rather than an Xcode `.xcodeproj`. SPM `execut
 - `scripts/run.sh` now works end-to-end: build → assemble bundle → install → launch
 - `--no-build` flag continues to work on subsequent runs (assembled `.app` persists across runs)
 - No changes to `build.sh`, CI workflows, or `Package.swift`
+
+---
+
+### Decision: ReminderScheduler — short-interval notification repeats
+
+**Author:** Basher (iOS Dev — Services)  
+**Date:** 2026-04-25  
+**Status:** Implemented
+
+#### Context
+
+`UNTimeIntervalNotificationTrigger(timeInterval:repeats:)` enforces a minimum of 60 seconds when `repeats: true`. For any interval below that threshold, the OS rejects the request with an error and no notification fires.
+
+#### Decision
+
+`ReminderScheduler.rescheduleReminder` now derives the `repeats` flag dynamically:
+
+```swift
+repeats: reminderSettings.interval >= 60
+```
+
+- Intervals ≥ 60s: unchanged — the OS repeats the notification automatically.
+- Intervals < 60s: schedules a one-shot notification. After it fires, no further notification is scheduled automatically; the foreground fallback timer (`AppCoordinator.startFallbackTimer`) handles repeating via a plain `Timer` with no OS minimum.
+
+#### Impact
+
+- **Normal production behaviour is identical** — production defaults are 1200s/1800s (≥ 60s), so `repeats` stays `true`.
+- **Short-interval test mode** (e.g. 10s): notifications grant one delivery; the fallback timer provides continuous repeating coverage in the foreground.
+- **Tests:** `ReminderSchedulerTests` that assert `trigger?.timeInterval` are unaffected. Tests that inspect `trigger?.repeats` with intervals < 60s should now expect `false`.
+
+#### Revert Note
+
+This change should be kept permanently — it is a correctness fix, not just a testing aid. Even after the 10s default is reverted, the guard prevents a latent crash path if a user somehow sets an interval < 60s via future UI changes.
+
+---
+
+### Decision: Dark Mode — Product Spec
+
+**Author:** Danny (PM)  
+**Date:** 2026-04-24  
+**Status:** Ready for implementation  
+**For:** Tess (UI/UX), Linus (iOS Dev — UI)
+
+#### Requirement
+
+The app must always follow the system appearance. No in-app toggle. No setting. If iOS is in dark mode, the app is dark. If iOS is in light mode, the app is light. Period.
+
+#### Current State: What Already Works (No Code Change Needed)
+
+The app is mostly dark-mode-capable already due to good SwiftUI hygiene:
+
+| Component | Why it's already fine |
+|---|---|
+| `OverlayView` background | Uses `.ultraThinMaterial` — system material, adapts automatically |
+| `OverlayView` dismiss/settings buttons | Use `.foregroundStyle(.secondary)` — semantic, adapts |
+| `OverlayView` countdown ring track | Uses `Color.secondary.opacity(0.3)` — adapts |
+| `SettingsView` (Form) | SwiftUI `Form` uses system grouped style — adapts |
+| `HomeView` | Uses `.secondary` semantic color + system navigation — adapts |
+| All onboarding materials | `.regularMaterial` backgrounds — adapt |
+| Onboarding accent colors | `.indigo`, `.green` system colors — adapt |
+| `AppColor.warningText` | Already uses `UIColor(dynamicProvider:)` for light/dark variants |
+| `AppColor.overlayBackground` | Uses `Color(.systemBackground)` — semantic, adapts |
+| Overlay UIWindow | No `overrideUserInterfaceStyle` is set — inherits system appearance correctly |
+| App entry point | No `preferredColorScheme` locked anywhere — confirmed via codebase search |
+
+#### What Needs to Change
+
+##### 1. `AppColor.permissionBanner` — Hardcoded Yellow (DesignSystem.swift)
+
+**Current:** `Color(red: 1.0, green: 0.800, blue: 0.0)` — static bright yellow  
+**Problem:** Defined for future use (not yet rendered in any view). When it ships, yellow on a dark background looks washed out and has poor contrast with the near-black text companion.  
+**Fix:** Convert to `UIColor(dynamicProvider:)` — brighter yellow in light mode, slightly muted amber in dark mode. Keep it accessible.
+
+##### 2. `AppColor.permissionBannerText` — Hardcoded Near-Black (DesignSystem.swift)
+
+**Current:** `Color(red: 0.149, green: 0.149, blue: 0.149)` — static near-black `#262626`  
+**Problem:** Defined to pair with the yellow banner. Currently not rendered anywhere, but will be invisible in dark mode if it ever lands on a dark background instead of the yellow banner.  
+**Fix:** This color is designed to always sit on the yellow `permissionBanner` background. If the banner always provides its own colored background (not relying on system background), near-black text on yellow is correct regardless of mode. Linus should verify: does the banner always render with an explicit yellow background behind it? If yes — no change needed. If the text could appear without that background — convert to `dynamicProvider`.
+
+##### 3. Hardcoded RGB Accent Colors — Low Risk, Worth Confirming
+
+`AppColor.reminderBlue`, `AppColor.reminderGreen`, `AppColor.warningOrange` are hardcoded RGB. They are used exclusively as **tints on icons and text labels**, never as backgrounds. Both light and dark mode render these colors visibly against system backgrounds. Contrast ratios are acceptable.  
+**Action for Tess:** Do a visual QA pass in dark mode. If any accent looks off (too dim or insufficient contrast on dark background), flag it. Linus can wrap in `dynamicProvider` as needed.
+
+#### Screen-by-Screen Audit
+
+| Screen | Dark Mode Status | Notes |
+|---|---|---|
+| **HomeView** | ✅ Fully adaptive | System nav, semantic colors |
+| **SettingsView** | ✅ Fully adaptive | Form + semantic colors throughout |
+| **ReminderRowView** | ✅ Fully adaptive | Uses `type.color` (accent) + system Picker/Toggle |
+| **OverlayView** | ✅ Fully adaptive | `.ultraThinMaterial` does the heavy lifting |
+| **OnboardingWelcomeView** | ✅ Fully adaptive | System colors + `.regularMaterial` |
+| **OnboardingPermissionView** | ✅ Fully adaptive | `NotificationPreviewCard` uses `.regularMaterial` |
+| **OnboardingSetupView** | ✅ Fully adaptive | Cards use `.regularMaterial` |
+| **Permission banner** (future) | ⚠️ Fix before shipping | `permissionBanner` + `permissionBannerText` are hardcoded |
+
+#### Acceptance Criteria
+
+1. **All screens render correctly in both light and dark mode** — no pure white or near-black surfaces where text becomes invisible.
+2. **No `preferredColorScheme` or `overrideUserInterfaceStyle` lock is present** in any app file when this ships. (Currently confirmed clean — keep it that way.)
+3. **The overlay window** appears in dark mode when the system is dark, light when the system is light. Visually verify by toggling Control Center appearance with the overlay on screen.
+4. **`AppColor.permissionBanner` and `AppColor.permissionBannerText`** are converted to adaptive colors (or confirmed safe as-is — see §2 above) before any view renders them. These are not yet used, so this can happen as part of the banner feature's own ticket — but do not ship the banner without resolving this.
+5. **Switching system appearance while the app is open** (Settings → Display & Brightness) causes all visible screens to update correctly, without restart.
+6. **Visual QA** (Tess): Screenshot light + dark side-by-side for HomeView, SettingsView, OverlayView, and all three onboarding screens. No obvious contrast failures.
+
+#### Edge Cases & Concerns
+
+##### Overlay UIWindow (High Priority)
+The `OverlayManager` creates a secondary `UIWindow` at `.alert + 1`. UIWindows created programmatically default to `overrideUserInterfaceStyle = .unspecified`, which correctly inherits from the scene. **This is already correct** — but it's fragile. If anyone ever adds `window.overrideUserInterfaceStyle = .light` for debugging, the overlay breaks in dark mode. Add a code comment in `OverlayManager` near window creation to document this intent explicitly.
+
+##### Onboarding Color Literals (Low Risk)
+`OnboardingWelcomeView` and `OnboardingSetupView` use `.indigo` and `.green` as `Color` literals (not via `AppColor`). These are SwiftUI system colors and adapt correctly. No change needed — but note this is a minor deviation from the DesignSystem pattern.
+
+##### `permissionBanner` Colors (Not Yet Rendered)
+Both banner colors are defined in `DesignSystem.swift` but grep confirms they are not referenced in any view yet. They are safe to leave as-is for this sprint, as long as the rule is: **do not ship any view that uses these tokens without making them adaptive first**.
+
+#### Out of Scope
+
+- No in-app dark mode toggle (this would contradict the requirement)
+- No custom dark/light override per screen
+- No changes to the onboarding flow, settings structure, or haptic behavior
+
+#### Implementation Notes for Tess & Linus
+
+**Linus:** The actual code work here is minimal — the app mostly already works. Your two concrete tasks:
+1. Add a comment in `OverlayManager` near `UIWindow` creation: no `overrideUserInterfaceStyle` should be set (document the intent).
+2. Convert `AppColor.permissionBanner` and `AppColor.permissionBannerText` in `DesignSystem.swift` to use `UIColor(dynamicProvider:)` — matching the existing pattern already used for `AppColor.warningText`.
+
+**Tess:** Visual QA is the main deliverable. Run the app in Simulator with both light and dark appearances. Check all 6 screens listed above. Flag any contrast or color issues to Linus with a screenshot + context.
+
+No new views. No new settings. No new user-facing copy. This is infrastructure hygiene.
+
+---
+
+### Decision: Dark Mode Colour Adaptation — DesignSystem.swift
+
+**Author:** Tess (UI/UX Designer)  
+**Date:** 2026-04-25  
+**Status:** Implemented
+
+#### Context
+
+The app was asked to fully support OS dark mode. No in-app toggle — colour scheme is OS-controlled exclusively.
+
+#### Decisions
+
+##### 1. No `.preferredColorScheme` anywhere in the app
+The app does not set `.preferredColorScheme` on any view. The OS controls appearance. This is permanent policy — if a future feature request asks for an in-app toggle, it should be rejected or escalated.
+
+##### 2. `reminderBlue` is adaptive (UIColor dynamicProvider)
+- Light: #4A90D9 (unchanged)
+- Dark: #5BA8F0 (slightly brighter — better contrast on near-black backgrounds)
+- Rationale: The original hardcoded value reached only ~2.9:1 on dark backgrounds for large icons. The dark variant improves visual pop without changing brand identity.
+
+##### 3. `reminderGreen` uses `Color(.systemGreen)`
+- Maps to #34C759 (light) and #30D158 (dark) — iOS system values.
+- The original hardcoded #34C759 was identical to system green light mode value, so this change is zero-risk and ensures automatic future adaptation.
+
+##### 4. `warningOrange` is adaptive (UIColor dynamicProvider)
+- Light: #E07000 (~3.5:1 on white — passes WCAG 1.4.11 non-text contrast)
+- Dark: #FF9500 (6.8:1 on near-black — unchanged from original)
+- Rationale: The original static #FF9500 in light mode was only 2.7:1 on white — below the 3:1 WCAG threshold for non-text UI components. This was a real accessibility bug. Fixed as part of dark mode work.
+
+##### 5. `permissionBanner` (yellow) remains static
+- #FFCC00 in both modes — intentionally static warning yellow.
+- Yellow reads as "caution" regardless of dark/light mode. Making it adaptive risks losing the semantic signal.
+
+##### 6. `permissionBannerText` remains near-black static
+- #262626 — exclusively for use on the yellow `permissionBanner` background.
+- On yellow in both light and dark mode, near-black text achieves very high contrast (>10:1). No adaptation required.
+
+##### 7. View files required no changes
+No `.foregroundColor(.black)`, `.background(.white)`, or `Color.black/white` were found in any view file. All views use semantic/adaptive colors from AppColor or SwiftUI built-ins (`.primary`, `.secondary`, `.ultraThinMaterial`).
+
+#### Impact
+
+- `DesignSystem.swift` — colours section updated
+- No view file changes required
+- Build verified: ✓ succeeded

@@ -9,6 +9,14 @@
 
 <!-- Append new learnings below. Each entry is something lasting about the project. -->
 
+### 2026-04-24: Dark Mode Feature Scoping
+
+- **App is mostly dark-mode ready by accident** — SwiftUI's `Form`, system materials (`.ultraThinMaterial`, `.regularMaterial`), and semantic colors (`.secondary`, `.tertiary`) all adapt automatically. No forced `preferredColorScheme` or `overrideUserInterfaceStyle` exists anywhere in the codebase.
+- **`AppColor.warningText` sets the right pattern** — already uses `UIColor(dynamicProvider:)` for light/dark variants. The two remaining hardcoded colors (`permissionBanner`, `permissionBannerText`) should follow the same pattern before they are used in any view.
+- **`permissionBanner` and `permissionBannerText` are defined but unused** — not referenced in any view yet (confirmed via grep). Safe to defer adaptive conversion until the banner feature ships; spec includes a gate on this.
+- **Overlay UIWindow inherits system appearance correctly** — `OverlayManager` creates `UIWindow` without setting `overrideUserInterfaceStyle`, which defaults to `.unspecified` (inherits from scene). This is correct but fragile — a code comment is needed to document the intent.
+- **Key spec filed:** `.squad/decisions/inbox/danny-dark-mode-spec.md`
+
 ### 2026-04-24: Initial Roadmap Planning
 - **Architecture Pattern:** MVVM with single shared service layer (ReminderScheduler, OverlayManager)
 - **Background Strategy:** UNUserNotificationCenter preferred over Timer for battery efficiency; iOS handles scheduling natively
@@ -37,3 +45,30 @@
 - **Key File Paths:**
   - `/docs/APP_STORE_LISTING.md` — Complete App Store listing (description, keywords, privacy policy, screenshot plan)
   - `/.squad/decisions/inbox/danny-appstore.md` — Decisions for team review
+
+### 2026-04-25 — Wave 3: Dark Mode Product Spec
+
+**Task:** Scope dark mode product requirements for team implementation  
+**Status:** ✅ SUCCESS  
+
+**Spec Authored:**
+- Document: `.squad/decisions/inbox/danny-dark-mode-spec.md` (merged to decisions.md)
+- Audience: Tess (UI/UX), Linus (iOS Dev — UI)
+- Status: Ready for implementation
+
+**Key Finding:**
+App is ~90% dark-mode ready — no code changes to most views. SwiftUI best practices (semantic colors, `.ultraThinMaterial`, `.systemBackground`) already handle adaptation.
+
+**Required Changes (Minimal):**
+1. `DesignSystem.swift` — Convert `permissionBanner` + `permissionBannerText` to adaptive colors (using `UIColor(dynamicProvider:)` pattern)
+2. Optional: Visual QA pass on accent colors in dark mode
+
+**Acceptance Criteria:**
+- All screens render correctly in light AND dark mode
+- No `preferredColorScheme` locks in any file (confirmed clean)
+- Overlay UIWindow inherits system appearance (already correct)
+- Visual QA: light + dark screenshots for all 6 key screens
+
+**Parallel Work Synergy:**
+- Tess immediately implemented color adaptation while spec was being finalized
+- Basher's 10-second testing overlay enables visual QA iteration in rapid cycles

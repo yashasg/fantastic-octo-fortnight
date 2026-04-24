@@ -44,3 +44,28 @@
 - **M2.3 SnoozeOption.restOfDay:** Compute as `Calendar.current.date(byAdding: .day, value: 1, to: startOfDay(for: now))`. Always returns a non-optional via fallback to `now + 24h`.
 - **Snooze count limit:** `maxConsecutiveSnoozes = 2` enforced by `canSnooze` check in both `snooze(for:)` and `snooze(option:)`. Reset happens in `handleNotification(for:)` (real reminder fired) and `cancelSnooze()`. Do NOT reset in `scheduleReminders()` snooze-expiry path — that's implicit reset via `snoozeCount = 0` alongside `snoozedUntil = nil`.
 - **Test contract preserved:** `snooze(for: 5)` still calls `cancelAllReminders()` once and `scheduleReminders` zero times. New `snooze(option:)` method is the forward-looking API; legacy method delegates to same logic.
+
+### 2026-04-25 — 10-Second Testing Defaults
+
+- **`ReminderSettings.defaultEyes` and `defaultPosture` changed to `interval: 10`** for simulator testing. Restore to `1200`/`1800` (20 min/30 min) before shipping. Marked with `// TEST OVERRIDE` comments in `ReminderSettings.swift`.
+- **`UNTimeIntervalNotificationTrigger(repeats: true)` requires ≥ 60s** — the OS silently rejects repeating notifications under that threshold. Fixed in `ReminderScheduler` by using `repeats: reminderSettings.interval >= 60`. Short intervals (< 60s) schedule as one-shot; after delivery the notification is gone but the fallback timer path fills the gap.
+- **Fallback timer path is the best way to test short intervals.** When notification permission is denied on the simulator (or revoked via Settings → reset privacy), `AppCoordinator` starts `Timer.scheduledTimer` with no OS minimum — overlays fire every 10s without restriction. Recommend testing with notifications denied for rapid-fire iteration.
+- **Default interval tests in `SettingsStoreTests` will fail** while this testing override is active (they assert 1200/1800). That's expected — revert `ReminderSettings.swift` before running the full test suite or merging to main.
+
+### 2026-04-25 — Wave 3: Dark Mode + 10-Second Testing (Orchestrated)
+
+**Agents:** Basher (Services), Danny (PM), Tess (UI/UX)  
+**Status:** ✅ SUCCESS — All tasks completed
+
+**Basher Contribution Summary:**
+- Set reminder intervals to 10s for testing (ReminderSettings.swift)
+- Fixed UNTimeIntervalNotificationTrigger repeats constraint for < 60s intervals
+- Dynamic `repeats` flag: `repeats: reminderSettings.interval >= 60`
+- Documented decision in decisions.md as permanent correctness fix
+
+**Team Learnings from Parallel Work:**
+- Dark mode infrastructure nearly complete — 90% of app already adaptive (good SwiftUI hygiene)
+- Accent colors (blue, green, orange) now have adaptive variants for dark mode
+- WCAG bug fix: warningOrange in light mode now meets 3:1 contrast threshold (was 2.7:1, now 3.5:1)
+- No `.preferredColorScheme` locks exist anywhere — app follows OS appearance correctly
+- Overlay UIWindow correctly inherits system appearance (no `overrideUserInterfaceStyle` set)
