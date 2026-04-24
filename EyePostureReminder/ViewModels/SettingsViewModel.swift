@@ -14,6 +14,57 @@ import os
 @MainActor
 final class SettingsViewModel: ObservableObject {
 
+    // MARK: - Snooze Options (M2.3)
+
+    /// The three snooze durations available to the user via Settings.
+    enum SnoozeOption: CaseIterable {
+        case fiveMinutes
+        case oneHour
+        case restOfDay
+
+        /// Human-readable label shown in the Settings UI.
+        var label: String {
+            switch self {
+            case .fiveMinutes: return "5 minutes"
+            case .oneHour:     return "1 hour"
+            case .restOfDay:   return "Rest of day"
+            }
+        }
+
+        /// The absolute `Date` at which this snooze should expire.
+        var endDate: Date {
+            switch self {
+            case .fiveMinutes:
+                return Date().addingTimeInterval(5 * 60)
+            case .oneHour:
+                return Date().addingTimeInterval(60 * 60)
+            case .restOfDay:
+                // End of the current calendar day (midnight tonight).
+                let calendar = Calendar.current
+                return calendar.date(
+                    byAdding: .day,
+                    value: 1,
+                    to: calendar.startOfDay(for: Date())
+                ) ?? Date().addingTimeInterval(24 * 60 * 60)
+            }
+        }
+
+        /// Duration in minutes (used by legacy `snooze(for:)` bridge).
+        var minutes: Int {
+            switch self {
+            case .fiveMinutes: return 5
+            case .oneHour:     return 60
+            case .restOfDay:   return -1  // special: use endDate directly
+            }
+        }
+    }
+
+    /// Maximum number of consecutive snoozes allowed before a reminder must fire.
+    static let maxConsecutiveSnoozes = 2
+
+    /// All available snooze options in display order.
+    static let snoozeOptions: [SnoozeOption] = SnoozeOption.allCases
+
     // MARK: - Preset Options
 
     /// Available reminder interval options in seconds (10 / 20 / 30 / 45 / 60 minutes).
@@ -32,6 +83,21 @@ final class SettingsViewModel: ObservableObject {
 
     let settings: SettingsStore
     private let scheduler: ReminderScheduling
+
+    // MARK: - Computed State (M2.3)
+
+    /// `true` while a snooze is active (snoozedUntil is a future date).
+    var isSnoozeActive: Bool {
+        guard let until = settings.snoozedUntil else { return false }
+        return until > Date()
+    }
+
+    /// `true` when the user is allowed to apply another snooze.
+    /// Blocked once `maxConsecutiveSnoozes` consecutive snoozes have been used
+    /// without a reminder actually firing.
+    var canSnooze: Bool {
+        settings.snoozeCount < Self.maxConsecutiveSnoozes
+    }
 
     // MARK: - Init
 
@@ -66,16 +132,43 @@ final class SettingsViewModel: ObservableObject {
         }
     }
 
-    /// Apply a snooze: cancels all reminders and sets `snoozedUntil`.
-    func snooze(for minutes: Int) {
-        settings.snoozedUntil = Date().addingTimeInterval(TimeInterval(minutes * 60))
+    // MARK: - Snooze Actions (M2.3)
+
+    /// Apply a snooze using one of the predefined `SnoozeOption` cases.
+    ///
+    /// Enforces the consecutive snooze limit (`maxConsecutiveSnoozes`). When
+    /// the scheduler is `AppCoordinator`, `cancelAllReminders()` arms the
+    /// in-process wake task automatically.
+    func snooze(option: SnoozeOption) {
+        guard canSnooze else {
+            Logger.settings.info("Snooze limit reached — ignoring snooze request")
+            return
+        }
+        settings.snoozedUntil = option.endDate
+        settings.snoozeCount += 1
         scheduler.cancelAllReminders()
-        Logger.settings.info("Snoozed for \(minutes) minutes")
+        Logger.settings.info("Snoozed until \(option.endDate) via option: \(option.label) (count: \(self.settings.snoozeCount))")
+    }
+
+    /// Apply a snooze for an arbitrary number of minutes.
+    ///
+    /// Preserves backward-compatibility with existing call sites and tests.
+    /// For new code, prefer `snooze(option:)`.
+    func snooze(for minutes: Int) {
+        guard canSnooze else {
+            Logger.settings.info("Snooze limit reached — ignoring snooze request")
+            return
+        }
+        settings.snoozedUntil = Date().addingTimeInterval(TimeInterval(minutes * 60))
+        settings.snoozeCount += 1
+        scheduler.cancelAllReminders()
+        Logger.settings.info("Snoozed for \(minutes) minutes (count: \(self.settings.snoozeCount))")
     }
 
     /// Cancel an active snooze and reschedule reminders immediately.
     func cancelSnooze() {
         settings.snoozedUntil = nil
+        settings.snoozeCount  = 0
         Task {
             await scheduler.scheduleReminders(using: settings)
             Logger.settings.info("Snooze cancelled — reminders rescheduled")

@@ -18,6 +18,7 @@ import os
 /// epr.posture.interval       Double – seconds
 /// epr.posture.breakDuration  Double – seconds
 /// epr.snoozedUntil           Double – Date.timeIntervalSince1970, 0 = not snoozed
+/// epr.snoozeCount            Int    – consecutive snoozes since last reminder fired
 /// epr.pauseMediaDuringBreaks Bool   – Phase 2, default false
 /// ```
 final class SettingsStore: ObservableObject {
