@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct OverlayView: View {
 
@@ -23,10 +24,26 @@ struct OverlayView: View {
                 .ignoresSafeArea()
 
             VStack(spacing: AppSpacing.lg) {
+                // × dismiss button — top-right corner
+                HStack {
+                    Spacer()
+                    Button(action: onDismiss) {
+                        Image(systemName: AppSymbol.dismiss)
+                            .font(.system(size: 28))
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(minWidth: AppLayout.minTapTarget, minHeight: AppLayout.minTapTarget)
+                    .accessibilityLabel("Dismiss reminder")
+                }
+
+                Spacer()
+
+                // Icon
                 Image(systemName: type.symbolName)
                     .font(.system(size: AppLayout.overlayIconSize))
                     .foregroundStyle(type.color)
 
+                // Title
                 Text(type.overlayTitle)
                     .font(AppFont.headline)
                     .multilineTextAlignment(.center)
@@ -51,21 +68,26 @@ struct OverlayView: View {
                     height: AppLayout.countdownRingDiameter
                 )
 
+                Spacer()
+
+                // Settings gear button — navigates to Settings by dismissing overlay
+                // (Settings is the root view, so it's already visible beneath the overlay)
                 Button(action: onDismiss) {
-                    Label("Dismiss", systemImage: AppSymbol.dismiss)
-                        .font(.title3)
+                    Image(systemName: AppSymbol.settings)
+                        .font(.system(size: 22))
+                        .foregroundStyle(.secondary)
                 }
-                .buttonStyle(.bordered)
-                .frame(minHeight: AppLayout.minTapTarget)
-                .accessibilityLabel("Dismiss reminder")
+                .frame(minWidth: AppLayout.minTapTarget, minHeight: AppLayout.minTapTarget)
+                .accessibilityLabel("Open Settings")
             }
             .padding(AppSpacing.xl)
         }
         .accessibilityAddTraits(.isModal)
+        // Swipe UP dismisses (negative Y translation = upward drag)
         .gesture(
             DragGesture(minimumDistance: 30)
                 .onEnded { value in
-                    if value.translation.height > 0 { onDismiss() }
+                    if value.translation.height < 0 { onDismiss() }
                 }
         )
         .onAppear { startTimer() }
@@ -80,9 +102,18 @@ struct OverlayView: View {
                 secondsRemaining -= 1
             } else {
                 timer?.invalidate()
+                triggerCompletionHaptic()
                 onDismiss()
             }
         }
+    }
+
+    // MARK: - Haptic Feedback
+
+    private func triggerCompletionHaptic() {
+        let generator = UIImpactFeedbackGenerator(style: .medium)
+        generator.prepare()
+        generator.impactOccurred()
     }
 }
 

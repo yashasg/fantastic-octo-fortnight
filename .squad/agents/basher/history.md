@@ -16,3 +16,12 @@
 - **Use `SettingsStore` published properties directly in ViewModel** (`eyesInterval`, `eyesBreakDuration`, etc.) — don't create wrapper `ReminderSettings` structs in the VM layer; that adds unnecessary mapping.
 - **`OverlayManager.shared` singleton** is safe on `@MainActor` — added it so AppDelegate can reach the manager without dependency injection ceremony.
 
+### 2026-04-24 — Phase 1 Services Implementation (M1.1 + M1.3 + M1.4)
+
+- **All scaffold files were already production-quality** — `SettingsStore`, `ReminderScheduler`, `AppCoordinator`, `AppDelegate`, `OverlayManager`, and `EyePostureReminderApp` were fully implemented in the scaffolding. Read carefully before over-writing.
+- **SettingsViewModel preset options belong on the ViewModel** — added `static let intervalOptions` and `static let breakDurationOptions` as static arrays on `SettingsViewModel`, plus `labelForInterval` / `labelForBreakDuration` static formatters. `ReminderRowView` duplicated these locally; the canonical source is the VM.
+- **OverlayView swipe direction was inverted** — the scaffold had `value.translation.height > 0` which triggers on downward swipe. The decision says swipe UP dismisses; fixed to `height < 0`. SwiftUI's Y axis is positive-downward.
+- **Haptic on overlay completion** — added `UIImpactFeedbackGenerator(style: .medium)` fired when the countdown timer reaches zero, before calling `onDismiss()`. This is in `OverlayView`, not `OverlayManager`, because the haptic timing is tied to the SwiftUI countdown state.
+- **Settings gear button on overlay** — decision says overlay has "× button + Settings gear button". The app root IS the Settings screen (ContentView → NavigationStack → SettingsView), so the gear button simply calls `onDismiss()` — dismissing the overlay reveals Settings automatically.
+- **`OverlayView` is in the views layer, not my charter** — but since the task explicitly listed overlay behavior requirements and the view had functional bugs (wrong swipe direction, missing haptic, missing Settings button), I fixed them. Flagged in decisions inbox.
+

@@ -14,6 +14,20 @@ import os
 @MainActor
 final class SettingsViewModel: ObservableObject {
 
+    // MARK: - Preset Options
+
+    /// Available reminder interval options in seconds (10 / 20 / 30 / 45 / 60 minutes).
+    static let intervalOptions: [TimeInterval] = [
+        10 * 60,
+        20 * 60,
+        30 * 60,
+        45 * 60,
+        60 * 60,
+    ]
+
+    /// Available break duration options in seconds (10 / 20 / 30 / 60 seconds).
+    static let breakDurationOptions: [TimeInterval] = [10, 20, 30, 60]
+
     // MARK: - Dependencies
 
     let settings: SettingsStore
@@ -66,5 +80,18 @@ final class SettingsViewModel: ObservableObject {
             await scheduler.scheduleReminders(using: settings)
             Logger.settings.info("Snooze cancelled — reminders rescheduled")
         }
+    }
+
+    // MARK: - Formatting Helpers
+
+    /// Human-readable label for an interval option (e.g. "20 min").
+    static func labelForInterval(_ seconds: TimeInterval) -> String {
+        "\(Int(seconds) / 60) min"
+    }
+
+    /// Human-readable label for a break duration option (e.g. "20 sec").
+    static func labelForBreakDuration(_ seconds: TimeInterval) -> String {
+        let s = Int(seconds)
+        return s < 60 ? "\(s) sec" : "\(s / 60) min"
     }
 }
