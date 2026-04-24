@@ -248,9 +248,23 @@
 
 ---
 
+## Phase 3: Navigation & Interaction Flow
+
+### Decision 3.5: HomeView as NavigationStack Root + SettingsView Sheet Dismiss
+- **Author:** Linus (iOS Dev — UI)
+- **Status:** Implemented
+- **Problem:** SettingsView was root of post-onboarding NavigationStack; no way to exit (no back button, no dismiss button)
+- **Solution:** Introduce HomeView as NavigationStack root; present SettingsView as sheet with "Done" button
+- **Implementation:** HomeView displays active/paused status with gear button; SettingsView uses `@Environment(\.dismiss)` for Done toolbar button
+- **Rationale:** iOS HIG pattern — modally-presented settings screens get Done/Close; pushed screens get back. Sheet re-injects EnvironmentObjects for iOS version compatibility.
+- **Files:** `HomeView.swift` (new), `ContentView.swift` (root updated), `SettingsView.swift` (dismiss added)
+- **Future:** HomeView expandable with dashboard, streak stats, countdown in Phase 2
+
+---
+
 ## Summary
 
-**Total Decisions:** 34 (13 architectural, 11 Phase 2 specific, 4 code review findings, 6 App Store decisions)
+**Total Decisions:** 35 (13 architectural, 11 Phase 2 specific, 4 code review findings, 6 App Store decisions, 1 Phase 3 navigation)
 
 **P1 Issues:** 4 (all fixed and verified ✅)
 
