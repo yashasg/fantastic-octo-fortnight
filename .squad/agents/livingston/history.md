@@ -35,7 +35,20 @@
 - Added `MockMediaControlling` for Phase 2 test infrastructure.
 - Package.swift test target config is correct as-is — no changes needed.
 
-### 2026-04-24 — Phase 1 Test Suite Implemented
+### 2026-04-24 — M2.6 Full Regression Testing Complete
+
+- Cross-referenced ALL Phase 2 source files against ALL test files. Zero API mismatches found.
+- `OverlayPresenting.showOverlay()` now requires `hapticsEnabled: Bool` — all mocks and callers already match.
+- `AppCoordinator.init` uses `overlayManager: OverlayPresenting? = nil` with nil-coalescing body (Swift @MainActor constraint) — tests inject via this parameter correctly.
+- **New `MockOverlayPresenting`** — tracks `showOverlay` call order (FIFO verification), durations, hapticsEnabled, clearQueue count, isOverlayVisible state.
+- **AppCoordinatorTests expanded** to 27 tests using `MockOverlayPresenting` + `MockNotificationCenter` injection pattern via helper factory `makeCoordinator(overlay:notifCenter:)`. Default parameter expressions on `@MainActor` types require body-level instantiation (not parameter defaults).
+- **OverlayManager queue FIFO** cannot be unit-tested without a live `UIWindowScene` (queue only fills when `isOverlayVisible == true`, which requires `UIWindow`). Verified at mock level; real FIFO is a simulator integration test.
+- **OnboardingTests** (8 tests): `hasSeenOnboarding` via isolated `UserDefaults` suite. Key lives in `ContentView` (`@AppStorage`) and `OnboardingView` (direct write). Both must match key string `"hasSeenOnboarding"`.
+- **DesignSystemTests** (25 tests): `AppFont` scalable text style compilation, `AppSpacing` 4pt grid, `AppLayout` iOS HIG minimums (≥44pt), `AppAnimation` spec values, `AppColor`/`AppSymbol` token accessibility.
+- Fixed pre-existing warning in `AudioInterruptionManagerTests`: `XCTAssertTrue(sut is MediaControlling)` on IUO always succeeds → replaced with typed optional assignment.
+- **Final counts:** 270 tests across 12 test files, 5 mock files. Models 104 | Services 81 | ViewModels 60 | Views 25.
+- `docs/TEST_REPORT.md` written with full breakdown, known gaps, API mismatch log, and CI notes.
+
 
 - Created `Tests/EyePostureReminderTests/` with 4 test files (110+ test methods) and 3 mock classes.
 - **Test structure:** `Mocks/` (infrastructure), `Models/` (ReminderTypeTests, SettingsStoreTests), `Services/` (ReminderSchedulerTests), `ViewModels/` (SettingsViewModelTests).
