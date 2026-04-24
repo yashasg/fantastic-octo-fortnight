@@ -65,19 +65,20 @@ enum AppColor {
 // MARK: - Typography
 
 enum AppFont {
-    /// Overlay headline — 28pt bold. "Time to rest your eyes."
-    static let headline: Font = .system(size: 28, weight: .bold, design: .default)
+    /// Overlay headline — scales with Dynamic Type (base: 28pt bold).
+    static let headline: Font = .system(.title).weight(.bold)
 
-    /// Body text — 17pt regular. Snooze sheet labels, settings rows.
-    static let body: Font = .system(size: 17, weight: .regular, design: .default)
+    /// Body text — scales with Dynamic Type (base: 17pt regular).
+    static let body: Font = .system(.body)
 
-    /// Snooze sheet title — 17pt semibold.
-    static let bodyEmphasized: Font = .system(size: 17, weight: .semibold, design: .default)
+    /// Snooze sheet title / settings labels — scales with Dynamic Type (17pt semibold).
+    static let bodyEmphasized: Font = .system(.headline)
 
-    /// Caption — 13pt regular. "Tap outside to skip", version string.
-    static let caption: Font = .system(size: 13, weight: .regular, design: .default)
+    /// Caption — scales with Dynamic Type (base: 13pt regular).
+    static let caption: Font = .system(.footnote)
 
-    /// Countdown digits — 64pt monospace bold. Locks digit-width to prevent jitter.
+    /// Countdown digits — fixed 64pt monospaced bold (decorative; not scaled).
+    /// VoiceOver exposes a labelled accessibility element instead of reading this text directly.
     static let countdown: Font = .system(size: 64, weight: .bold, design: .monospaced)
 }
 

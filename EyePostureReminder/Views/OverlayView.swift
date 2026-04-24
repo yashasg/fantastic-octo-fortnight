@@ -12,6 +12,8 @@ struct OverlayView: View {
     @State private var contentOpacity: Double = 0
     @State private var isDismissing = false
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     init(type: ReminderType, duration: TimeInterval, onDismiss: @escaping () -> Void) {
         self.type      = type
         self.duration  = duration
@@ -42,10 +44,11 @@ struct OverlayView: View {
             VStack(spacing: AppSpacing.lg) {
                 Spacer()
 
-                // Icon
+                // Icon — decorative; headline conveys the meaning for VoiceOver
                 Image(systemName: type.symbolName)
                     .font(.system(size: AppLayout.overlayIconSize))
                     .foregroundStyle(type.color)
+                    .accessibilityHidden(true)
 
                 // Headline
                 Text(type.overlayTitle)
@@ -57,6 +60,7 @@ struct OverlayView: View {
                 ZStack {
                     Circle()
                         .stroke(Color.secondary.opacity(0.3), lineWidth: AppLayout.countdownRingStroke)
+                        .accessibilityHidden(true)
 
                     Circle()
                         .trim(from: 0, to: CGFloat(secondsRemaining) / CGFloat(max(duration, 1)))
@@ -65,17 +69,25 @@ struct OverlayView: View {
                             style: StrokeStyle(lineWidth: AppLayout.countdownRingStroke, lineCap: .round)
                         )
                         .rotationEffect(.degrees(-90))
-                        .animation(AppAnimation.countdownRingCurve, value: secondsRemaining)
+                        .animation(
+                            reduceMotion ? .none : AppAnimation.countdownRingCurve,
+                            value: secondsRemaining
+                        )
+                        .accessibilityHidden(true)
 
                     Text("\(secondsRemaining)")
                         .font(AppFont.countdown)
                         .monospacedDigit()
-                        .contentTransition(.numericText(countsDown: true))
+                        .contentTransition(
+                            reduceMotion ? .identity : .numericText(countsDown: true)
+                        )
                 }
                 .frame(
                     width: AppLayout.countdownRingDiameter,
                     height: AppLayout.countdownRingDiameter
                 )
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("\(secondsRemaining) seconds remaining")
 
                 Spacer()
 
@@ -87,6 +99,7 @@ struct OverlayView: View {
                 }
                 .frame(minHeight: AppLayout.minTapTarget)
                 .accessibilityLabel("Open Settings")
+                .accessibilityHint("Dismisses this reminder and reveals Settings")
             }
             .padding(AppSpacing.xl)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -101,8 +114,12 @@ struct OverlayView: View {
                 }
         )
         .onAppear {
-            withAnimation(AppAnimation.overlayAppearCurve) {
+            if reduceMotion {
                 contentOpacity = 1
+            } else {
+                withAnimation(AppAnimation.overlayAppearCurve) {
+                    contentOpacity = 1
+                }
             }
             startTimer()
         }
@@ -117,11 +134,16 @@ struct OverlayView: View {
         guard !isDismissing else { return }
         isDismissing = true
         timer?.invalidate()
-        withAnimation(AppAnimation.overlayDismissCurve) {
+        if reduceMotion {
             contentOpacity = 0
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + AppAnimation.overlayDismiss) {
-            onDismiss()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { onDismiss() }
+        } else {
+            withAnimation(AppAnimation.overlayDismissCurve) {
+                contentOpacity = 0
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + AppAnimation.overlayDismiss) {
+                onDismiss()
+            }
         }
     }
 
@@ -131,11 +153,16 @@ struct OverlayView: View {
         guard !isDismissing else { return }
         isDismissing = true
         triggerCompletionHaptic()
-        withAnimation(AppAnimation.overlayFadeCurve) {
+        if reduceMotion {
             contentOpacity = 0
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + AppAnimation.overlayAutoDismiss) {
-            onDismiss()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { onDismiss() }
+        } else {
+            withAnimation(AppAnimation.overlayFadeCurve) {
+                contentOpacity = 0
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + AppAnimation.overlayAutoDismiss) {
+                onDismiss()
+            }
         }
     }
 

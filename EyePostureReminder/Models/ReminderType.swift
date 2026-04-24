@@ -29,10 +29,11 @@ enum ReminderType: String, CaseIterable, Identifiable {
     }
 
     /// Tint color used consistently across the app for this type.
+    /// Uses DesignSystem semantic tokens for visual consistency.
     var color: Color {
         switch self {
-        case .eyes:    return .blue
-        case .posture: return .green
+        case .eyes:    return AppColor.reminderBlue
+        case .posture: return AppColor.reminderGreen
         }
     }
 
