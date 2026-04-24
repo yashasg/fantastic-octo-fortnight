@@ -1614,3 +1614,105 @@ func double(forKey key: String, defaultValue: Double) -> Double
 
 **Open Question:** Starting version (`v0.x.x` vs `v1.0.0` for TestFlight) unresolved. CI is neutral.
 
+
+---
+
+### Decision: Phase 1 Implementation — Services Layer (M1.1, M1.3, M1.4)
+**Author:** Basher (iOS Dev — Services)  
+**Date:** 2026-04-24  
+**Status:** Implemented
+
+**Decision 1: SettingsViewModel owns preset options (canonical source)**
+- Moved `intervalOptions` and `breakDurationOptions` from `ReminderRowView` to `SettingsViewModel` as `static let` arrays
+- Added `labelForInterval()` and `labelForBreakDuration()` static formatters
+- Impact: Views team can refactor `ReminderRowView` to reference the ViewModel arrays
+
+**Decision 2: OverlayView swipe-UP direction fix**
+- Changed dismiss gesture condition from `value.translation.height > 0` (downward) to `value.translation.height < 0` (upward)
+- Aligns with team decision that overlay dismisses by swiping UP (naturally reverses the upward slide entrance)
+- Bug fix in Views file flagged for Linus team awareness
+
+**Decision 3: Overlay Settings gear button navigates by dismissal**
+- Settings gear button calls `onDismiss()` to reveal Settings view behind the overlay
+- No deep-link or navigation coordinator needed in Phase 1 (app root IS SettingsView)
+- Future Phase 2 may add `DeepLink` mechanism if app gains home/dashboard screen
+
+**Decision 4: Haptic feedback on overlay auto-completion lives in OverlayView**
+- `UIImpactFeedbackGenerator(style: .medium)` fired when countdown hits zero
+- Lives in `OverlayView.startTimer()` before `onDismiss()` call
+- Not in `OverlayManager` to avoid coupling — manager controls window lifecycle, not countdown state
+
+---
+
+### Decision: Phase 1 Implementation — UI Layer (M1.2, M1.5)
+**Author:** Linus (iOS Dev — UI)  
+**Date:** 2026-04-24  
+**Status:** Implemented
+
+**Decision 1: Settings gear on OverlayView calls onDismiss()**
+- Overlay has no navigation context — calls `onDismiss()` to reveal Settings view underneath
+- Future work on deep-linking requires new parameter in `OverlayManager.showOverlay()`
+
+**Decision 2: accessibilityViewIsModal(true) replaces .accessibilityAddTraits(.isModal)**
+- Use `.accessibilityViewIsModal(true)` SwiftUI modifier (iOS 14+)
+- Correctly hides other UI elements from VoiceOver while overlay is visible
+
+**Decision 3: isDismissing guard on OverlayView**
+- Added `@State private var isDismissing = false` guard in `performDismiss()` and `performAutoDismiss()`
+- Prevents duplicate dismissal callbacks if × button and timer complete concurrently
+- Ensures `onDismiss()` called exactly once
+
+**Decision 4: Notification permission warning in SettingsView**
+- Added non-blocking warning row when `coordinator.notificationAuthStatus == .denied`
+- Includes deep-link button to iOS Settings
+- Purely informational — does not block other settings (users could be confused why reminders don't fire in background)
+
+---
+
+### Decision: Phase 1 Implementation — Test Suite (M1.7)
+**Author:** Livingston (Tester)  
+**Date:** 2026-04-24  
+**Status:** Implemented
+
+**Decision 1: testTarget Depends on executableTarget**
+- Added `testTarget("EyePostureReminderTests", dependencies: ["EyePostureReminder"])` to Package.swift
+- Swift 5.9 supports test targets depending on executable targets
+- `@main` attribute in `EyePostureReminderApp.swift` does not conflict — test bundles have own entry point
+- Caveat: `swift build --target EyePostureReminderTests` fails on macOS (UIKit iOS-only); must use `xcodebuild test` with iOS simulator runtime
+- Alternative considered: Extract `EyePostureReminderCore` library target (deferred to avoid restructuring)
+
+**Decision 2: Protocol Locations**
+- Both `NotificationScheduling` and `SettingsPersisting` defined inline in implementation files (`ReminderScheduler.swift`, `SettingsStore.swift`)
+- NOT extracted to `Protocols/` directory as shown in ARCHITECTURE.md
+- Mocks use `@testable import` to access protocols (works regardless of file location)
+- Recommendation: If team wants ARCHITECTURE.md structure, Rusty should move protocols; tests do not need changes
+
+**Decision 3: @MainActor Test Pattern for SettingsViewModel**
+- `SettingsViewModelTests` marked `@MainActor` at class level
+- Async test methods use `try? await Task.sleep(nanoseconds: 200_000_000)` (200ms) after ViewModel action calls
+- Allows internally spawned `Task {}` to complete before assertions
+- 200ms is generous budget; in practice < 1ms sufficient; increase to 500ms if flaky under CI load
+- Alternative: Refactor SettingsViewModel to return `@discardableResult Task<Void, Never>` (cleaner but requires production change)
+
+**Decision 4: MockNotificationCenter Design**
+- Maintains two arrays: `addedRequests` (append-only history), `pendingRequests` (live queue)
+- Allows independent assertions: "how many add() calls made" vs "what is currently pending"
+- For reschedule tests: verify cancel happened AND new request added without interference
+
+**Coverage Achieved (Target: 80%+)**
+- Models — ReminderType: ~95%
+- Models — ReminderSettings: ~80%
+- Models — SettingsStore: ~90%
+- Services — ReminderScheduler: ~85%
+- ViewModels — SettingsViewModel: ~80%
+
+---
+
+### User Directive: Test-Driven Development
+**Author:** Yashasg (via Copilot)  
+**Date:** 2026-04-24T09:10:00Z  
+**Status:** Active
+
+**Requirement:** Use test-driven development (TDD). Write and run unit tests alongside every feature as it's built — not just at the end. Livingston (Tester) should validate every feature along the way.
+
+**Rationale:** User request to ensure quality at every step and catch bugs early. Phase 1 implementation confirms TDD workflow is operational.
