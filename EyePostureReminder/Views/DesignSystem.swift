@@ -5,6 +5,7 @@
 // Every color, font, spacing, and animation in the app references this file.
 
 import SwiftUI
+import UIKit
 
 // MARK: - Semantic Color Literals
 
@@ -21,6 +22,13 @@ enum AppColor {
     static let permissionBanner = Color(red: 1.0, green: 0.800, blue: 0.0)
     /// Permission banner text — near-black for WCAG AA contrast on yellow
     static let permissionBannerText = Color(red: 0.149, green: 0.149, blue: 0.149)
+    /// Warning text colour for body/label contexts — WCAG AA on both backgrounds.
+    /// Light mode: dark amber #994F00 (6.1:1 on white). Dark mode: #FF9500 (6.8:1 on near-black).
+    static let warningText = Color(UIColor(dynamicProvider: { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 1.0,   green: 0.584, blue: 0.0, alpha: 1)
+            : UIColor(red: 0.600, green: 0.310, blue: 0.0, alpha: 1)
+    }))
 }
 
 // MARK: - Typography

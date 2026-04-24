@@ -37,7 +37,7 @@ struct OverlayView: View {
             // MARK: × Dismiss — fixed top-right corner
             Button(action: performDismiss) {
                 Image(systemName: AppSymbol.dismiss)
-                    .font(.system(size: 28, weight: .medium))
+                    .font(.system(.title).weight(.medium))
                     .foregroundStyle(.secondary)
                     .frame(minWidth: AppLayout.minTapTarget, minHeight: AppLayout.minTapTarget)
                     .contentShape(Rectangle())
