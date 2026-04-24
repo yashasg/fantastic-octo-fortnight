@@ -812,3 +812,368 @@ This is an acknowledged gap. The shell-level fix (force-refreshing the binary in
 `assemble_app_bundle()`) should be reviewed in code review, not via an automated
 test. No action required from other agents.
 
+
+---
+
+**Author:** Rusty (iOS Architect)  
+**Date:** 2026-04-26  
+**Status:** Proposed — Pending Team Review  
+**Requested by:** Yashasg
+
+---
+
+## Context
+
+The product requires pausing eye/posture reminders when:
+1. A Focus mode (including Game Mode) is active on the device.
+2. The user is in a context where reminders are dangerous or disruptive (e.g., driving, CarPlay navigation).
+
+This document defines what iOS allows, what it doesn't, and the exact architecture to implement it.
+
+---
+
+## Part 1 — Focus Mode Detection
+
+### What iOS Gives Us
+
+**`INFocusStatusCenter`** (Intents framework, iOS 15+):
+
+```swift
+import Intents
+
+let center = INFocusStatusCenter.default
+// One-time auth request:
+center.requestAuthorization { status in ... }
+// Current state:
+let isFocused: Bool = center.focusStatus.isFocused ?? false
+// Observer (push-based, zero battery cost):
+center.observeChanges { updatedCenter in
+    let isPaused = updatedCenter.focusStatus.isFocused ?? false
+}
+```
+
+**What `isFocused` tells us:**
+- `true` — some Focus mode is active (DND, Personal, Work, Gaming, Sleep, Driving, or any custom Focus).
+- `false` — no Focus is active.
+- `nil` — authorization not granted; we must treat this as unknown (do not assume paused).
+
+**What it does NOT tell us:**
+- Which specific Focus mode is active. "Game Mode" in the Shortcuts/Focus sense is just the "Gaming" Focus profile — there is no API to distinguish it from "Work" or "Personal". We only get a boolean.
+
+**Authorization:**
+- Requires `NSFocusStatusUsageDescription` in Info.plist.
+- The system shows one-time prompt: "Allow [App] to check if Focus is enabled?"
+- The user can grant or revoke in Settings → Privacy → Focus.
+- If denied: `focusStatus.isFocused` returns `nil`. We must not pause in this case — failing safe means continuing to remind (the alternative of always-pausing when unknown is worse UX).
+
+**iOS 16+ Focus Filters (App Intents Extension):**
+- An app can declare an `AppFocusFilterIntent` in an App Extension (separate bundle target).
+- When the user includes our app's filter in a Focus configuration, iOS calls our extension handler with the configured parameters.
+- This lets a user say: "When Gaming Focus is active, pause EyePostureReminder reminders."
+- **This is the only mechanism for Focus-mode-specific behavior** — and it requires explicit user setup.
+- Verdict: Implement as a Phase 3 enhancement. For Phase 2, the `isFocused` boolean is the correct foundation.
+
+---
+
+## Part 2 — Critical App Detection (Maps, Games, etc.)
+
+### Hard Truth: We Cannot Detect Another App's Foreground State
+
+iOS sandboxes every app completely. There is **no public API** to:
+- List running foreground apps.
+- Check if Maps, a game, or any third-party app is active.
+- Access process information for other apps.
+
+Any approach using `LSApplicationWorkspace`, task enumeration, or SpringBoard queries is a **private API**. App Review will reject. Do not suggest these.
+
+### What We CAN Detect (As Proxies)
+
+#### Signal 1 — CarPlay Connected
+
+`AVAudioSession.currentRoute` lists connected audio ports. When CarPlay is active, the route includes a port with type `.carPlay` (`AVAudioSessionPortCarPlay`). No special entitlement required to read the current route — just read it.
+
+```swift
+import AVFoundation
+
+// Check current state:
+let isCarPlayActive = AVAudioSession.sharedInstance().currentRoute.outputs
+    .contains { $0.portType == .carPlay }
+
+// Observe changes (push-based):
+NotificationCenter.default.addObserver(
+    forName: AVAudioSession.routeChangeNotification,
+    object: nil, queue: .main
+) { _ in
+    // re-check isCarPlayActive
+}
+```
+
+**Why this matters for Maps:** When Maps is being used for navigation, it almost always routes audio through CarPlay. The CarPlay connection is a strong proxy for "user is in a navigation session." Not perfect (CarPlay can be connected while the user is parked), but it's the best public signal available and it's opt-in via the Settings UI.
+
+#### Signal 2 — Driving Activity Detected
+
+`CMMotionActivityManager` uses the device's dedicated motion coprocessor (M-series chip). It detects `automotive` activity at essentially zero CPU/battery cost — the coprocessor runs independently of the main CPU.
+
+```swift
+import CoreMotion
+
+let motionManager = CMMotionActivityManager()
+motionManager.startActivityUpdates(to: .main) { activity in
+    guard let activity else { return }
+    let isDriving = activity.automotive && activity.confidence != .low
+}
+```
+
+**Requires:** `NSMotionUsageDescription` in Info.plist.
+
+**Why this is the right signal for Maps:** Maps-for-navigation almost always coincides with driving. This signal is cleaner than CarPlay detection because it works even without in-car audio.
+
+**Important:** Combine CarPlay + driving. Either alone can have false positives. CarPlay without driving = parked. Driving without CarPlay = Maps on phone mount = we probably SHOULD pause (user is driving).
+
+#### Signal 3 — What We're NOT Doing
+
+- **`CBCentralManager`** — Bluetooth peripheral scan. Tells us nothing about foreground apps. Rejected.
+- **Screen activity heuristics** — e.g., detecting Maps' blue location pulsing or specific color patterns. Impossible in sandboxed environment. Rejected.
+- **Screen Time API (`FamilyControls`/`ManagedSettings`)** — App Store apps cannot use these to monitor other apps' usage in real-time. Rejected.
+- **Usage of `LSApplicationWorkspace.runningApplications`** — private API. Rejected.
+
+---
+
+## Part 3 — Architecture Proposal
+
+### New Component: `PauseConditionManager`
+
+A standalone service that aggregates pause signals from all sources and emits a single `isPaused: Bool` to `AppCoordinator`.
+
+#### Protocols (for testability)
+
+```swift
+// Each detector is protocol-backed so tests inject mocks.
+
+protocol FocusStatusDetecting: AnyObject {
+    var isFocused: Bool { get }
+    var onFocusChanged: ((Bool) -> Void)? { get set }
+    func startMonitoring()
+    func stopMonitoring()
+}
+
+protocol CarPlayDetecting: AnyObject {
+    var isCarPlayActive: Bool { get }
+    var onCarPlayChanged: ((Bool) -> Void)? { get set }
+    func startMonitoring()
+    func stopMonitoring()
+}
+
+protocol DrivingActivityDetecting: AnyObject {
+    var isDriving: Bool { get }
+    var onDrivingChanged: ((Bool) -> Void)? { get set }
+    func startMonitoring()
+    func stopMonitoring()
+}
+
+protocol PauseConditionProviding: AnyObject {
+    var isPaused: Bool { get }
+    var onPauseStateChanged: ((Bool) -> Void)? { get set }
+    func startMonitoring()
+    func stopMonitoring()
+}
+```
+
+#### `PauseConditionManager` (concrete)
+
+```swift
+final class PauseConditionManager: PauseConditionProviding {
+
+    var onPauseStateChanged: ((Bool) -> Void)?
+
+    private(set) var isPaused: Bool = false {
+        didSet {
+            guard isPaused != oldValue else { return }
+            onPauseStateChanged?(isPaused)
+        }
+    }
+
+    private let focusDetector: FocusStatusDetecting
+    private let carPlayDetector: CarPlayDetecting
+    private let drivingDetector: DrivingActivityDetecting
+
+    // Each condition that is active is tracked as an entry in this set.
+    // isPaused = !activeConditions.isEmpty
+    private var activeConditions: Set<PauseConditionSource> = []
+
+    init(
+        focusDetector: FocusStatusDetecting = LiveFocusStatusDetector(),
+        carPlayDetector: CarPlayDetecting = LiveCarPlayDetector(),
+        drivingDetector: DrivingActivityDetecting = LiveDrivingActivityDetector()
+    ) { ... }
+
+    func startMonitoring() {
+        focusDetector.onFocusChanged = { [weak self] focused in
+            self?.update(.focusMode, isActive: focused)
+        }
+        carPlayDetector.onCarPlayChanged = { [weak self] active in
+            self?.update(.carPlay, isActive: active)
+        }
+        drivingDetector.onDrivingChanged = { [weak self] driving in
+            self?.update(.driving, isActive: driving)
+        }
+        focusDetector.startMonitoring()
+        carPlayDetector.startMonitoring()
+        drivingDetector.startMonitoring()
+    }
+
+    private func update(_ source: PauseConditionSource, isActive: Bool) {
+        if isActive { activeConditions.insert(source) }
+        else { activeConditions.remove(source) }
+        isPaused = !activeConditions.isEmpty
+    }
+}
+
+enum PauseConditionSource: Hashable {
+    case focusMode
+    case carPlay
+    case driving
+}
+```
+
+### Integration with `AppCoordinator`
+
+`AppCoordinator` owns `PauseConditionManager` alongside `ScreenTimeTracker`. The coordinator subscribes once on init:
+
+```swift
+// In AppCoordinator.init():
+pauseConditionManager.onPauseStateChanged = { [weak self] isPaused in
+    guard let self else { return }
+    if isPaused {
+        self.screenTimeTracker.pauseAll()
+        Logger.scheduling.info("PauseConditionManager: pausing reminders (active condition)")
+    } else {
+        // Only resume if no snooze is active.
+        guard self.settings.snoozedUntil == nil || self.settings.snoozedUntil! <= Date() else { return }
+        self.screenTimeTracker.resumeAll()
+        Logger.scheduling.info("PauseConditionManager: resuming reminders (no active conditions)")
+    }
+}
+pauseConditionManager.startMonitoring()
+```
+
+**Critical invariant:** `PauseConditionManager` and snooze are independent pause axes. `AppCoordinator` must check both before calling `resumeAll()`. The rule: **only resume tracking if BOTH snooze is clear AND no pause conditions are active.**
+
+### Settings Integration
+
+Two new keys in `SettingsStore`:
+
+```swift
+// epr.pauseDuringFocus     Bool  — default true (opt-in to Focus pause)
+// epr.pauseWhileDriving    Bool  — default true (opt-in to driving pause)
+```
+
+`PauseConditionManager` reads these at callback time before calling `update()`. If the user has disabled a condition, ignore its signal even if it fires. This means users who drive with their phone mounted but don't want pausing can turn it off.
+
+### Module Dependency Graph (updated)
+
+```
+AppCoordinator
+├── ScreenTimeTracker     (owns: lifecycle + timer + thresholds)
+├── PauseConditionManager (owns: Focus/CarPlay/Driving detectors)
+│   ├── LiveFocusStatusDetector   (INFocusStatusCenter)
+│   ├── LiveCarPlayDetector       (AVAudioSession route)
+│   └── LiveDrivingActivityDetector (CMMotionActivityManager)
+├── SettingsStore
+├── ReminderScheduler
+└── OverlayManager
+```
+
+---
+
+## Part 4 — Battery Impact
+
+| Component | Mechanism | Battery Cost |
+|---|---|---|
+| `LiveFocusStatusDetector` | `INFocusStatusCenter.observeChanges` | Essentially zero — push-based |
+| `LiveCarPlayDetector` | `AVAudioSession.routeChangeNotification` | Essentially zero — push-based |
+| `LiveDrivingActivityDetector` | `CMMotionActivityManager` activity updates | Negligible — dedicated M-chip coprocessor |
+
+**No polling.** All three detectors are event-driven. The driving detector uses the motion coprocessor, which runs independently of the main application CPU. Battery impact of this entire feature: **immeasurable in real-world use**.
+
+---
+
+## Part 5 — Permissions Required
+
+| Feature | Permission | Key in Info.plist |
+|---|---|---|
+| Focus detection | User prompt (one-time) | `NSFocusStatusUsageDescription` |
+| Driving detection | User prompt (one-time) | `NSMotionUsageDescription` |
+| CarPlay detection | None required | — |
+
+**Recommended usage description strings:**
+- Focus: `"EyePostureReminder checks if Focus mode is active to automatically pause reminders during Focus sessions."`
+- Motion: `"EyePostureReminder uses motion data to detect when you're driving so reminders are paused automatically."`
+
+---
+
+## Part 6 — App Store Review Risk
+
+- `INFocusStatusCenter`: Approved API. No review risk.
+- `AVAudioSession.currentRoute`: Approved API. No review risk.
+- `CMMotionActivityManager`: Approved API. Privacy string required. No review risk.
+- No private APIs. No screen-scraping. No inter-app communication. **Review risk: zero.**
+
+---
+
+## Part 7 — What's Deferred
+
+| Feature | Why Deferred |
+|---|---|
+| App Focus Filters (specific Game Mode config) | Phase 3 — requires App Extension target + user setup |
+| Detecting specific "Maps" or game by name | Impossible with public APIs. Full stop. |
+
+---
+
+## Decision
+
+**Adopt `PauseConditionManager` as described.** Phase 2 scope.
+
+The three detectors (Focus, CarPlay, Driving) are the exhaustive set of what iOS legitimately exposes. Anything beyond this requires private APIs that will cause App Store rejection.
+
+The architecture is fully protocol-backed, testable via mock injections, and adds no meaningful battery overhead. Integration with `AppCoordinator` requires ~20 lines of wiring code.
+# Decision: Legal Documents Added to Repository
+
+**Author:** Frank (Legal Advisor)  
+**Date:** 2026-04-24  
+**Status:** Complete  
+
+## Decision
+
+Three legal documents have been created under `docs/legal/`:
+
+1. `docs/legal/TERMS.md` — Terms & Conditions
+2. `docs/legal/PRIVACY.md` — Privacy Policy
+3. `docs/legal/DISCLAIMER.md` — Disclaimer (in-app, App Store, one-liner variants)
+
+## Rationale
+
+The app requires legal protection before App Store submission. Health/wellness apps are under heightened scrutiny — Apple's App Store Review Guidelines (Section 5) and legal best practices require clear disclaimers that the app is not medical advice.
+
+## Key Legal Positions Taken
+
+- **"Not medical advice"** — explicit, prominent, non-negotiable
+- **"Use at your own risk"** — covers both health outcomes and technical failures
+- **"As is" warranty** — covers timer accuracy and notification reliability (iOS system-dependent)
+- **Privacy by design** — Privacy Policy confirms compliance with GDPR/CCPA by architecture (no personal data collected at all)
+- **COPPA** — addressed proactively even with no data collection
+- **iCloud backup carve-out** — UserDefaults may be included in device backup; disclosed in Privacy Policy
+
+## Placeholders to Fill
+
+The following must be completed before App Store submission:
+- `[Your Company Name]`
+- `[Contact Email]`
+- `[Jurisdiction]`
+- `[Date]`
+
+## Team Implications
+
+- If analytics or telemetry are added in a future phase, the Privacy Policy **must** be updated before shipping
+- If IAP or subscriptions are added, Terms must be expanded with billing/refund sections
+- The in-app disclaimer text in `DISCLAIMER.md` should be surfaced to Linus (UI) for implementation on first launch or Settings screen
