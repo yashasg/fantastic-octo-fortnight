@@ -46,3 +46,18 @@
 
 **Verification:** ✅ End-to-end works: build → assemble → install → launch  
 **Committed:** 0e1dc79
+
+## Wave 6 — Binary Cache Fix (2026-04-24T20:08:03Z)
+
+**Task:** Fix stale binary caching bug in run.sh — assemble_app_bundle skipped binary refresh when .app existed  
+**Outcome:** ✅ SUCCESS
+
+**Root Cause:** When `.app` directory already existed, script skipped binary copy, using stale executable from previous build.
+
+**Solution:** Reordered logic in `assemble_app_bundle()` to:
+1. Always copy fresh binary from DerivedData into `.app/EyePostureReminder`
+2. Reuse existing Info.plist if present
+3. Added REFRESHING APP BUNDLE status message for visibility
+
+**Verification:** ✅ Binary refresh works on rebuild
+**Committed:** Pending
