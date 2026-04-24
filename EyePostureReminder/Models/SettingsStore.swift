@@ -115,17 +115,17 @@ final class SettingsStore: ObservableObject {
 
     private let store: SettingsPersisting
 
-    init(store: SettingsPersisting = UserDefaults.standard) {
+    init(store: SettingsPersisting = UserDefaults.standard, config: AppConfig = AppConfig.load()) {
         self.store = store
 
-        masterEnabled       = store.bool(forKey: Keys.masterEnabled, defaultValue: true)
+        masterEnabled       = store.bool(forKey: Keys.masterEnabled, defaultValue: config.features.masterEnabledDefault)
         eyesEnabled         = store.bool(forKey: Keys.eyesEnabled,    defaultValue: true)
         postureEnabled      = store.bool(forKey: Keys.postureEnabled,  defaultValue: true)
 
-        eyesInterval        = store.double(forKey: Keys.eyesInterval,        defaultValue: ReminderSettings.defaultEyes.interval)
-        eyesBreakDuration   = store.double(forKey: Keys.eyesBreakDuration,   defaultValue: ReminderSettings.defaultEyes.breakDuration)
-        postureInterval     = store.double(forKey: Keys.postureInterval,     defaultValue: ReminderSettings.defaultPosture.interval)
-        postureBreakDuration = store.double(forKey: Keys.postureBreakDuration, defaultValue: ReminderSettings.defaultPosture.breakDuration)
+        eyesInterval        = store.double(forKey: Keys.eyesInterval,        defaultValue: config.defaults.eyeInterval)
+        eyesBreakDuration   = store.double(forKey: Keys.eyesBreakDuration,   defaultValue: config.defaults.eyeBreakDuration)
+        postureInterval     = store.double(forKey: Keys.postureInterval,     defaultValue: config.defaults.postureInterval)
+        postureBreakDuration = store.double(forKey: Keys.postureBreakDuration, defaultValue: config.defaults.postureBreakDuration)
 
         let rawSnooze = store.double(forKey: Keys.snoozedUntil, defaultValue: 0)
         snoozedUntil = rawSnooze > 0 ? Date(timeIntervalSince1970: rawSnooze) : nil

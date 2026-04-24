@@ -15,9 +15,15 @@ struct ReminderSettings: Equatable {
 // MARK: - Defaults
 
 extension ReminderSettings {
-    /// 20-20-20 rule: every 20 minutes, look away for 20 seconds.
-    static let defaultEyes = ReminderSettings(interval: 1200, breakDuration: 20)
+    /// 20-20-20 rule defaults driven by `AppConfig` (reads `defaults.json`).
+    static var defaultEyes: ReminderSettings {
+        let config = AppConfig.load()
+        return ReminderSettings(interval: config.defaults.eyeInterval, breakDuration: config.defaults.eyeBreakDuration)
+    }
 
-    /// Posture check every 30 minutes, 10-second awareness pause.
-    static let defaultPosture = ReminderSettings(interval: 1800, breakDuration: 10)
+    /// Posture check defaults driven by `AppConfig` (reads `defaults.json`).
+    static var defaultPosture: ReminderSettings {
+        let config = AppConfig.load()
+        return ReminderSettings(interval: config.defaults.postureInterval, breakDuration: config.defaults.postureBreakDuration)
+    }
 }
