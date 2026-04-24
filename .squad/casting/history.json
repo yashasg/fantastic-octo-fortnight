@@ -1,0 +1,25 @@
+{
+  "universe_usage_history": [
+    {
+      "universe": "Ocean's Eleven",
+      "assignment_id": "oceans-eye-posture-2026-04-24",
+      "used_at": "2026-04-24T07:32:00Z"
+    }
+  ],
+  "assignment_cast_snapshots": {
+    "oceans-eye-posture-2026-04-24": {
+      "universe": "Ocean's Eleven",
+      "agents": {
+        "product-manager": "Danny",
+        "ui-ux-designer": "Tess",
+        "product-designer": "Reuben",
+        "ios-architect": "Rusty",
+        "ios-dev-ui": "Linus",
+        "ios-dev-services": "Basher",
+        "tester": "Livingston",
+        "code-reviewer": "Saul"
+      },
+      "created_at": "2026-04-24T07:32:00Z"
+    }
+  }
+}
