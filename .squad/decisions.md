@@ -317,3 +317,53 @@ Phase 1+ implementation decisions. Pre-Phase 1 roadmap decisions archived in dec
 - `AppColor` enum is single source of color tokens
 - Rationale: Color extension was dead code (nothing referenced it); fallback() returned self unconditionally. AppColor provides reliable literal colors until asset catalog added
 - Impact: Simplified codebase; no competing color systems; design tokens centralized
+# Decision: SPM Executable Target Requires Post-Build .app Bundle Assembly
+
+**Author:** Virgil (CI/CD Dev)  
+**Date:** 2026-04-24  
+**Status:** Implemented  
+
+## Problem
+
+`Package.swift` declares `executableTarget("EyePostureReminder", ...)`. When built with `xcodebuild`, this target produces a flat Mach-O binary at:
+
+```
+DerivedData/Build/Products/Debug-iphonesimulator/EyePostureReminder
+```
+
+`xcrun simctl install` requires a `.app` bundle (a directory with `Info.plist` + executable). Without the bundle, `run.sh` failed with:
+
+```
+✗ App bundle not found at: .../EyePostureReminder.app
+✗ Run without --no-build to build first.
+```
+
+...even when the build had just succeeded.
+
+## Decision
+
+Add `assemble_app_bundle()` to `scripts/run.sh`. It runs immediately after `build_for_simulator()` and:
+
+1. Skips if a `.app` directory already exists (future-proof if xcodebuild ever produces one)
+2. Creates `DerivedData/Build/Products/Debug-iphonesimulator/EyePostureReminder.app/`
+3. Copies the flat executable into the bundle
+4. Processes `EyePostureReminder/Info.plist` via `sed` to substitute build variable placeholders:
+   - `$(PRODUCT_BUNDLE_IDENTIFIER)` → derived bundle ID
+   - `$(EXECUTABLE_NAME)` → scheme name
+   - `$(PRODUCT_NAME)` → scheme name
+5. Derives bundle ID as `{workspace-name}.{scheme}` (SPM auto-convention: `fantastic-octo-fortnight.EyePostureReminder`)
+
+## Rationale
+
+This project uses a Swift Package rather than an Xcode `.xcodeproj`. SPM `executableTarget` builds command-line tool binaries, not iOS app bundles. Creating a real Xcode project with an App target would be the long-term solution, but that is a larger structural change. The assembly step is minimal, self-documenting, and keeps the project Swift Package-only.
+
+## Alternatives Considered
+
+- **Create an Xcode .xcodeproj with App target** — correct long-term, but out of scope for this fix
+- **Use `xcrun simctl spawn`** — runs a binary directly without install; not appropriate for a SwiftUI App
+
+## Impact
+
+- `scripts/run.sh` now works end-to-end: build → assemble bundle → install → launch
+- `--no-build` flag continues to work on subsequent runs (assembled `.app` persists across runs)
+- No changes to `build.sh`, CI workflows, or `Package.swift`

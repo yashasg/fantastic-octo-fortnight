@@ -27,3 +27,22 @@
 - **run.sh flat executable bug (2026-04-24):** Swift Package `executableTarget` builds produce a flat Mach-O binary (`EyePostureReminder`), NOT a `.app` bundle. `simctl install` requires a `.app` bundle. Fixed by adding `assemble_app_bundle()` to `run.sh` — runs post-build, wraps the flat binary in `EyePostureReminder.app/`, copies executable, and generates `Info.plist` from source with variable substitution. Bundle ID derived as `{workspace-name}.{scheme}` (SPM auto-convention, confirmed by test bundle ID `fantastic-octo-fortnight.EyePostureReminderTests`).
 - **SPM bundle ID convention:** SPM auto-assigns bundle IDs as `{workspace-name}.{target-name}`. Workspace name = basename of package root directory. This project: `fantastic-octo-fortnight.EyePostureReminder` and `fantastic-octo-fortnight.EyePostureReminderTests`.
 - **Key build output paths:** Flat executable at `DerivedData/Build/Products/Debug-iphonesimulator/EyePostureReminder`. Assembled `.app` bundle at `DerivedData/Build/Products/Debug-iphonesimulator/EyePostureReminder.app/`. Source `Info.plist` at `EyePostureReminder/Info.plist` (uses `$(PRODUCT_BUNDLE_IDENTIFIER)`, `$(EXECUTABLE_NAME)`, `$(PRODUCT_NAME)` placeholders — must be sed-substituted when assembling bundle manually).
+
+## Wave 5+ — run.sh SPM Bundle Assembly (2026-04-24T19:44:00Z)
+
+**Task:** Debug and fix scripts/run.sh — app bundle not found error  
+**Outcome:** ✅ SUCCESS
+
+**Root Cause:** `executableTarget` in Package.swift produces flat Mach-O binary, not .app bundle. `simctl install` requires `.app` directory with Info.plist + executable.
+
+**Solution:** Added `assemble_app_bundle()` function to run.sh post-build:
+1. Creates `DerivedData/Build/Products/Debug-iphonesimulator/EyePostureReminder.app/`
+2. Copies flat executable into bundle
+3. Processes `EyePostureReminder/Info.plist` via sed to substitute build variables:
+   - `$(PRODUCT_BUNDLE_IDENTIFIER)` → `fantastic-octo-fortnight.EyePostureReminder`
+   - `$(EXECUTABLE_NAME)` → `EyePostureReminder`
+   - `$(PRODUCT_NAME)` → `EyePostureReminder`
+4. Skips if `.app` already exists (future-proof)
+
+**Verification:** ✅ End-to-end works: build → assemble → install → launch  
+**Committed:** 0e1dc79
