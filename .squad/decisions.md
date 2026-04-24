@@ -1464,3 +1464,153 @@ Team should confirm:
 1. Starting version `1.0.0` (vs `0.1.0` for pre-release)
 2. Whether to start with `0.x.x` during TestFlight-only phase and go `1.0.0` at App Store launch
 3. Custom Info.plist key name (`EPRCommitHash` vs alternatives)
+---
+
+## Phase 0 Inbox Decisions (Merged 2026-04-24)
+
+### Decision: Xcode Project Setup via Swift Package Manager
+**Author:** Basher  
+**Date:** 2026-04-24  
+**Status:** Adopted
+
+Use **Swift Package Manager** (`Package.swift`) as the project manifest:
+- `Package.swift` at repo root, targeting `.iOS(.v16)`
+- Source root: `EyePostureReminder/` (custom `path:` in the executable target)
+- Bundle identifier placeholder: `com.yashasg.eyeposture`
+
+**Consequences:**
+- ✅ Xcode can open `Package.swift` directly — full IDE support, previews, and signing
+- ⚠️ `swift build` on macOS fails (UIKit/SwiftUI are iOS-only). All builds must target a simulator or device inside Xcode
+- ⚠️ If a CI pipeline is needed, it must use `xcodebuild` with `-destination 'platform=iOS Simulator,...'`
+
+**Notification Routing Pattern:** All UNUserNotification category identifiers are owned by `ReminderType`:
+- `ReminderType.categoryIdentifier` — canonical identifier
+- `ReminderType.init?(categoryIdentifier:)` — reverses the mapping in AppDelegate
+
+---
+
+### Decision: Test Coverage Targets and Mock Strategy
+**From:** Livingston (Tester)  
+**Date:** 2026-04-24  
+**Status:** Proposed — needs team acknowledgement  
+
+**Coverage Targets:** Establish as CI gates:
+- Models: 90%
+- Services: 80%
+- ViewModels: 80%
+- Views: 60% (via UI tests)
+
+**MediaControlling Protocol:** Add to `Protocols/MediaControlling.swift` if `OverlayManager` interacts with `AVAudioSession`:
+```swift
+protocol MediaControlling {
+    func setActive(_ active: Bool, options: AVAudioSession.SetActiveOptions) throws
+    func setCategory(_ category: AVAudioSession.Category) throws
+}
+extension AVAudioSession: MediaControlling { }
+```
+**Action:** Rusty to confirm whether `OverlayManager` will interact with `AVAudioSession` in Phase 1.
+
+**2-Second Queue Gap:** The delay between dismissal of first overlay and appearance of queued second should be injectable:
+```swift
+static let queuedOverlayDelay: TimeInterval = 2.0  // 0.0 in tests
+```
+
+---
+
+### Decision: Architecture Scaffolding API Contracts
+**Author:** Rusty  
+**Date:** 2025-07-25  
+**Status:** Informational — no team vote required (architecture milestone)
+
+**SettingsPersisting adds defaultValue parameter:** Methods take explicit `defaultValue:` rather than Foundation's implicit zero/false:
+```swift
+func bool(forKey key: String, defaultValue: Bool) -> Bool
+func double(forKey key: String, defaultValue: Double) -> Double
+```
+
+**SettingsPersisting protocol location:** Defined in `SettingsStore.swift`, not in separate `Protocols/` directory. Extract to `Protocols/SettingsPersisting.swift` if second consumer appears in Phase 2+.
+
+**OverlayManager is @MainActor:** Entire class annotated `@MainActor` for thread-safety with UIKit APIs. Callers not `@MainActor` must use `await MainActor.run { ... }`.
+
+**SettingsViewModel updated:** Replaced Basher's placeholder with protocol-based implementation matching architecture.
+
+---
+
+### Decision: Design System
+**Author:** Tess (UI/UX Designer)  
+**Date:** 2026-04-24  
+**Status:** Proposed — for team awareness
+
+**Colors:**
+- `reminderBlue` (#4A90D9): Calming, distinct from iOS system blue
+- `reminderGreen` (#34C759): Matches iOS system green
+- `warningOrange` (#FF9500): Matches iOS system orange
+- `permissionBanner` (#FFCC00): Warm yellow = warning, not error
+
+**Overlay Dismiss Gesture:** Swipe UP (not down) — naturally reverses the motion as overlay slides UP to appear. Swipe down reserved for Notification Centre.
+**⚠️ Needs confirmation:** Swipe UP (recommendation) vs original spec's swipe DOWN.
+
+**Settings Snooze Section:** Proposed dedicated "Snooze" section separate from overlay snooze sheet.
+**⚠️ Needs confirmation:** Should Settings Screen include dedicated Snooze section, or only via post-dismiss sheet?
+
+**DesignSystem.swift structure:** Uses `AppColor` enum as primary token access path. `Color` extension variants also provided for asset catalog setup.
+
+---
+
+### Decision: Telemetry Event Schema & Dashboard Requirements
+**Author:** Turk (Data Analyst)  
+**Date:** 2025-07-25  
+**Status:** Proposed
+
+**Logger Categories:** Four categories under subsystem `com.yashasg.eyeposturereminder`:
+- `Scheduling`: UNNotificationRequest lifecycle, snooze activate/expire, auth flow
+- `Overlay`: UIWindow show/dismiss/queue, settings tap
+- `Settings`: Every SettingsStore write, permission events
+- `AppLifecycle`: App state transitions, notification delivery callbacks, MetricKit payloads
+
+**Log Format:** `event_name key1=value1 key2=value2`
+- Enum values and numeric: `privacy: .public`
+- User-authored text: `privacy: .private`
+- No wall-clock timestamps in message body
+
+**MetricKit Payload Storage (Phase 2):** Logged to `Logger.appLife` as JSON string — no separate storage or external server initially.
+
+**Dashboard Metrics:** Key instrumentation requirements:
+- Auto-dismiss rate: `overlay_dismissed source=auto|manual|swipe`
+- Snooze duration: `snooze_activated duration_sec`
+- Permission funnel: `permission_granted` + `permission_denied`
+- Interval usage: `interval_changed new_sec`
+- Overlay queue: `overlay_queued` count
+
+**Privacy:** Phase 1-2 declare "Data Not Collected" for all user-linked categories in Privacy Nutrition Label.
+
+---
+
+### Decision: CI/CD Pipeline Setup
+**Author:** Virgil (CI/CD Dev)  
+**Date:** 2025-07-17  
+**Status:** Implemented  
+
+**Runner:** `macos-14` (Apple Silicon), Xcode 16.2 pinned.
+
+**No signing in CI:** All builds use `CODE_SIGN_IDENTITY=""`, `CODE_SIGNING_REQUIRED=NO`. Only simulator destinations used.
+
+**ENABLE_BITCODE=NO:** Bitcode deprecated by Apple in Xcode 14.
+
+**DerivedData caching:** Cache key = hash of `project.pbxproj` + `.swift` files. Restores on prefix miss.
+
+**dSYMs as artifacts:** Collected after every build, retained 90 days for crash symbolication.
+
+**SwiftLint configuration:**
+- Line length: 120 warning / 160 error
+- Disabled: `function_body_length`, `large_tuple`, `opening_brace` (conflict with SwiftUI)
+- `force_unwrapping` enabled as warning
+
+**TestFlight job:** Present but commented out in `ci.yml`. Uncomment when Apple Developer account available.
+
+**Tag format:**
+- `v0.x.x`: TestFlight beta phase
+- `v1.0.0`: App Store launch
+
+**Open Question:** Starting version (`v0.x.x` vs `v1.0.0` for TestFlight) unresolved. CI is neutral.
+
