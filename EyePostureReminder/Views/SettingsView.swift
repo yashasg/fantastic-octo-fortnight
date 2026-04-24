@@ -11,6 +11,20 @@ struct SettingsView: View {
     // the view never observes any @Published properties from the VM itself.
     @State private var viewModel: SettingsViewModel?
 
+    // MARK: - Snooze helpers
+
+    private var isSnoozed: Bool {
+        guard let until = settings.snoozedUntil else { return false }
+        return until > Date()
+    }
+
+    private var snoozeUntilFormatted: String {
+        guard let until = settings.snoozedUntil, until > Date() else { return "" }
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        return formatter.string(from: until)
+    }
+
     var body: some View {
         Form {
             // MARK: Master toggle
@@ -50,6 +64,48 @@ struct SettingsView: View {
                 }
             }
 
+            // MARK: Snooze
+            Section("Snooze") {
+                if isSnoozed {
+                    HStack {
+                        Label("Snoozed until \(snoozeUntilFormatted)", systemImage: "moon.zzz.fill")
+                            .font(AppFont.body)
+                            .foregroundStyle(AppColor.warningOrange)
+                        Spacer()
+                    }
+                    Button(role: .destructive) {
+                        viewModel?.cancelSnooze()
+                    } label: {
+                        Label("Cancel Snooze", systemImage: "bell.fill")
+                            .font(AppFont.body)
+                    }
+                } else {
+                    Button("5 minutes") {
+                        viewModel?.snooze(for: 5)
+                    }
+                    .font(AppFont.body)
+
+                    Button("1 hour") {
+                        viewModel?.snooze(for: 60)
+                    }
+                    .font(AppFont.body)
+
+                    Button("Rest of day") {
+                        let endOfDay = Calendar.current.startOfDay(for: Date()).addingTimeInterval(24 * 3600)
+                        let minutesLeft = max(1, Int(endOfDay.timeIntervalSince(Date()) / 60))
+                        viewModel?.snooze(for: minutesLeft)
+                    }
+                    .font(AppFont.body)
+                    .foregroundStyle(AppColor.warningOrange)
+                }
+            }
+
+            // MARK: Preferences
+            Section("Preferences") {
+                Toggle("Haptic Feedback", isOn: $settings.hapticsEnabled)
+                    .tint(AppColor.reminderBlue)
+            }
+
             // MARK: Notification permission warning
             if coordinator.notificationAuthStatus == .denied {
                 Section {
@@ -78,6 +134,7 @@ struct SettingsView: View {
         .navigationTitle("Eye & Posture Reminder")
         .navigationBarTitleDisplayMode(.large)
         .animation(AppAnimation.settingsExpandCurve, value: settings.masterEnabled)
+        .animation(AppAnimation.settingsExpandCurve, value: isSnoozed)
         .onAppear {
             if viewModel == nil {
                 // Pass `coordinator` as `ReminderScheduling` so setting changes
