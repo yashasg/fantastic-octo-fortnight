@@ -32,6 +32,7 @@ Each phase delivers a testable, reviewable increment. Phase 0-2 are required for
 | **Basher** | iOS Services Developer | Background scheduling, notification handling, persistence |
 | **Livingston** | Tester | Test plans, manual/automated QA, edge case validation |
 | **Saul** | Code Reviewer | Code quality, standards enforcement, security review |
+| **Frank** | Legal Advisor | Terms of Service, Privacy Policy, legal compliance (joined Phase 2) |
 
 ---
 
@@ -369,7 +370,44 @@ Each phase delivers a testable, reviewable increment. Phase 0-2 are required for
   - Reminder fires again after 5 min
   - Limit enforced (no infinite snoozes)
 
-#### M2.4: App Icon & Launch Screen
+#### M2.3b: Smart Pause – Focus Mode & Driving Detection
+- **Owner:** Rusty (Architect) + Basher (Services Dev)
+- **Deliverables:**
+  - `PauseConditionManager` service aggregating three detectors:
+    - Focus Status Detector: Uses `INFocusStatusCenter` (iOS 16+, requires `com.apple.intents` entitlement)
+    - CarPlay Detector: Uses `AVAudioSession.currentRoute` (no special entitlement)
+    - Driving Activity Detector: Uses `CMMotionActivityManager` coprocessor (requires Info.plist `NSMotionUsageDescription`)
+  - Integration with `AppCoordinator`: `isPaused` state → `screenTimeTracker.pauseAll()` / `resumeAll()`
+  - Pause logic: Focus active OR CarPlay active OR driving detected → no reminders
+  - Unit tests with protocol mocks for all three detectors
+- **Dependencies:** M1.3 (ReminderScheduler), Phase 1 complete
+- **Duration:** 4 days
+- **Acceptance Criteria:**
+  - Reminders pause when Focus Mode active or driving detected
+  - Timers resume from previous elapsed time when pause cleared
+  - CarPlay route change correctly detected
+  - All three detectors tested independently via mocks
+  - Info.plist permissions documented and included
+
+#### M2.4: Disclaimer UI
+- **Owner:** Reuben (Product Designer) + Linus (iOS UI Dev)
+- **Deliverables:**
+  - Onboarding screen (4th screen post-permission): Disclaimer notice linking to legal docs
+  - Settings section: "Legal & Privacy" with links to:
+    - Terms of Service (docs/legal/TERMS.md)
+    - Privacy Policy (docs/legal/PRIVACY.md)
+    - Disclaimer (docs/legal/DISCLAIMER.md)
+  - In-app WebView or link to external docs
+  - "I Agree" checkbox on onboarding (required to proceed)
+- **Dependencies:** M2.1 (onboarding), legal docs from Frank
+- **Duration:** 2 days
+- **Acceptance Criteria:**
+  - Disclaimer displays on first launch onboarding
+  - All three legal docs accessible from Settings
+  - "I Agree" flag persisted in UserDefaults
+  - Links open correctly (in-app or system browser)
+
+#### M2.5: App Icon & Launch Screen
 - **Owner:** Tess (UI/UX Designer)
 - **Deliverables:**
   - App icon design (1024x1024 master, all required sizes generated)
@@ -383,7 +421,7 @@ Each phase delivers a testable, reviewable increment. Phase 0-2 are required for
   - Launch screen displays without delay
   - Design approved by Danny
 
-#### M2.5: Accessibility Refinements
+#### M2.6: Accessibility Refinements
 - **Owner:** Linus (iOS UI Dev) + Livingston (Tester)
 - **Deliverables:**
   - VoiceOver labels refined for all UI elements
@@ -399,7 +437,7 @@ Each phase delivers a testable, reviewable increment. Phase 0-2 are required for
   - Animations disabled if Reduce Motion on
   - High contrast colors meet WCAG AAA
 
-#### M2.6: Polish Testing & Bug Fixes
+#### M2.7: Polish Testing & Bug Fixes
 - **Owner:** Livingston (Tester)
 - **Deliverables:**
   - Full regression pass on all Phase 1 + Phase 2 features
@@ -408,14 +446,34 @@ Each phase delivers a testable, reviewable increment. Phase 0-2 are required for
   - Notification stress test (rapid interval changes)
   - Bug fixes for all P0/P1/P2 issues
   - Final accessibility audit
-- **Dependencies:** M2.5 (accessibility complete)
+- **Dependencies:** M2.6 (accessibility complete)
 - **Duration:** 3 days
 - **Acceptance Criteria:**
   - Zero P0/P1 bugs
   - All devices tested
   - Accessibility audit passed
 
-#### M2.7: App Store Preparation
+#### M2.8: Data-Driven Configuration
+- **Owner:** Basher (Services Dev) + Linus (iOS UI Dev) + Tess (UI/UX Designer)
+- **Deliverables:**
+  - **Asset Catalog:** 6 semantic color tokens (`reminderBlue`, `reminderGreen`, `reminderWarning`, `overlayBackground`, `surfaceBackground`, `labelSecondary`) with dark/light variants. `DesignSystem.swift` `UIColor(dynamicProvider:)` calls removed.
+  - **String Catalog:** `Localizable.xcstrings` with ~35 user-facing keys covering all six view files. Bare string literals replaced with `Text("key")` / `String(localized:)`.
+  - **`defaults.json`** (bundled): reminder intervals, break durations, haptic + snooze defaults, feature flags (~10 values). `DefaultsLoader.swift` seeds `UserDefaults` on first launch only.
+  - **`SettingsStore.resetToDefaults()`** re-seeds from `defaults.json` (same first-launch code path).
+  - Unit tests for `DefaultsLoader` with fixture bundle injection.
+- **Dependencies:** M1.1 (SettingsStore), M0.4 (design system), M2.1 (Onboarding — all copy in scope)
+- **Duration:** 3 days
+- **Acceptance Criteria:**
+  - Zero `UIColor(dynamicProvider:)` calls in Swift — all colors via Asset Catalog
+  - Zero bare string literals in views — all via String Catalog keys
+  - `defaults.json` included in Copy Bundle Resources build phase
+  - Settings seed correctly on first launch and survive restart
+  - `resetToDefaults()` re-seeds correctly
+  - App renders correctly in light and dark mode
+  - SwiftLint passes with no new violations
+  - Unit tests for `DefaultsLoader` pass
+
+#### M2.9: App Store Preparation
 - **Owner:** Danny (Product Manager) + Saul (Code Reviewer)
 - **Deliverables:**
   - App Store Connect listing:
@@ -426,7 +484,7 @@ Each phase delivers a testable, reviewable increment. Phase 0-2 are required for
   - Release notes for v1.0
   - TestFlight beta submission (internal testing)
   - Final code review and version tagging (v1.0.0)
-- **Dependencies:** M2.6 (testing complete)
+- **Dependencies:** M2.7 (testing complete)
 - **Duration:** 2 days
 - **Acceptance Criteria:**
   - App Store listing complete
@@ -438,14 +496,18 @@ Each phase delivers a testable, reviewable increment. Phase 0-2 are required for
 - ✅ Onboarding flow guides new users smoothly
 - ✅ Haptic feedback enhances tactile experience
 - ✅ Snooze action functional with limits
+- ✅ Smart Pause pauses reminders during Focus Mode, CarPlay, or driving
+- ✅ Disclaimer UI displayed on onboarding and accessible in Settings
 - ✅ App icon and launch screen polished
 - ✅ Accessibility meets WCAG AA (ideally AAA)
 - ✅ All devices tested (iPhone, iPad, accessibility modes)
 - ✅ App Store listing ready
 - ✅ TestFlight build live for beta testing
+- ✅ Data-driven config: colors via Asset Catalog, copy via String Catalog, settings seeded from `defaults.json`
 
 ### Phase 2 Risks & Open Questions
-- **Risk:** Onboarding adds complexity to first-launch → **Mitigation:** Keep to 3 screens max, allow skip
+- **Risk:** Smart Pause detectors conflict (e.g., focusing while driving) → **Mitigation:** Logical OR aggregates all signals; testing validates priority
+- **Risk:** Onboarding adds complexity to first-launch → **Mitigation:** Keep to 4 screens max (added disclaimer), allow skip
 - **Risk:** Haptics drain battery more than expected → **Mitigation:** Measure in M2.2 with Instruments
 - **Question:** Should we include a "rate the app" prompt? → **Decision:** Defer to post-launch (avoid interrupting UX)
 
@@ -558,9 +620,11 @@ Phase 2:
   M1.2 + M0.5 → M2.1 (Onboarding)
   M1.5 → M2.2 (Haptics)
   M1.4 → M2.3 (Snooze)
-  M0.4 → M2.4 (App Icon)
-  M1.2 + M1.5 → M2.5 (Accessibility)
-  M2.5 → M2.6 (Polish Testing) → M2.7 (App Store Prep)
+  M1.3 + Phase 1 → M2.3b (Smart Pause)
+  M2.1 → M2.4 (Disclaimer UI)
+  M0.4 → M2.5 (App Icon)
+  M1.2 + M1.5 → M2.6 (Accessibility)
+  M2.6 → M2.7 (Polish Testing) → M2.8 (Data-Driven Config) → M2.9 (App Store Prep)
 
 Phase 3:
   Phase 1 → M3.1 (iCloud Sync)

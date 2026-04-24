@@ -14,25 +14,26 @@
 │                    (@main entry point)                      │
 └────────────────────────┬────────────────────────────────────┘
                          │
-         ┌───────────────┼───────────────┐
-         │               │               │
-         ▼               ▼               ▼
-┌────────────┐   ┌──────────────┐   ┌──────────┐
-│   Views    │   │ ViewModels   │   │ Services │
-│            │   │              │   │          │
-│ Settings   │◄──┤  Settings    │◄──┤ Scheduler│
-│ ReminderRow│   │  ViewModel   │   │ Overlay  │
-│ Overlay    │   │              │   │          │
-└────────────┘   └──────┬───────┘   └─────┬────┘
-                        │                  │
-                        ▼                  │
-                 ┌────────────┐            │
-                 │   Models   │◄───────────┘
-                 │            │
-                 │ ReminderType
-                 │ ReminderSettings
-                 │ SettingsStore
-                 └────────────┘
+          ┌───────────────┼───────────────────────────┐
+          │               │                           │
+          ▼               ▼                           ▼
+ ┌────────────┐   ┌──────────────┐   ┌──────────────────────┐
+ │   Views    │   │ ViewModels   │   │     Services         │
+ │            │   │              │   │                      │
+ │ Settings   │◄──┤  Settings    │◄──┤ Scheduler            │
+ │ ReminderRow│   │  ViewModel   │   │ Overlay              │
+ │ Overlay    │   │              │   │ ScreenTimeTracker    │
+ │ Disclaimer │   │              │   │ PauseConditionManager│
+ └────────────┘   └──────┬───────┘   └──────────────────────┘
+                         │                  ▲
+                         ▼                  │
+                  ┌────────────┐            │
+                  │   Models   │◄───────────┘
+                  │            │
+                  │ ReminderType
+                  │ ReminderSettings
+                  │ SettingsStore
+                  └────────────┘
 ```
 
 **Dependency Rules:**
@@ -224,7 +225,121 @@ EyePostureReminder.xcodeproj
 
 ---
 
-### 4.4 UserDefaults vs SwiftData for Settings Persistence
+### 4.4 Data-Driven Configuration (Native-First, 4-Layer)
+
+**Decision:** Use Apple's native platform mechanisms for configuration — not a monolithic JSON file.
+
+**The 4 layers:**
+
+| Layer | Mechanism | What It Owns |
+|-------|-----------|-------------|
+| **1** | Asset Catalog (`.xcassets`) | 6 semantic color tokens with automatic dark/light variants |
+| **2** | String Catalog (`.xcstrings`) | ~35 user-facing strings; localization-ready |
+| **3** | `defaults.json` (bundled) | Reminder intervals, break durations, feature flags (~10 values) |
+| **4** | Swift code | Spacing, layout, animations, SF Symbol names, typography |
+
+**Layer 1 — Asset Catalog colors:**
+```swift
+// SwiftUI (automatic dark/light adaptation)
+Color("reminderBlue")
+
+// UIKit (e.g., UIWindow tint in OverlayManager)
+UIColor(named: "reminderBlue")
+```
+Replaces all `UIColor(dynamicProvider:)` calls in `DesignSystem.swift`. The OS handles dark/light switching — no Swift logic needed.
+
+**Layer 2 — String Catalog:**
+```swift
+// SwiftUI picks up .xcstrings keys automatically
+Text("overlay.eyes.title")
+
+// Programmatic
+String(localized: "overlay.eyes.title")
+```
+Covers all six view files. Xcode 15's String Catalog editor warns on stale keys and is localization-ready at no extra cost.
+
+**Layer 3 — `defaults.json` load path:**
+1. `SettingsStore.init()` checks if `epr.*` UserDefaults keys are absent (first launch).
+2. If absent, `DefaultsLoader` reads `defaults.json` from `Bundle.main` and seeds `UserDefaults`.
+3. On subsequent launches, `UserDefaults` wins — JSON is never re-read.
+4. `SettingsStore.resetToDefaults()` clears `epr.*` keys and re-seeds (same path as first launch).
+
+`DefaultsLoader` accepts a `Bundle` parameter for test injection.
+
+**Layer 4 — Swift stays for:**
+- Spacing constants (`AppSpacing.xs`, `AppSpacing.md`)
+- Layout structure (`VStack`, `HStack`)
+- Animation curves (`withAnimation(.easeInOut(duration: 0.3))`)
+- SF Symbol names (`"eye.fill"`, `"figure.stand"`)
+- Typography scale (`AppFont.headline`, `AppFont.body`)
+
+**Override hierarchy:**
+```
+defaults.json (first-launch seed only)
+    ↓
+UserDefaults (user-editable settings)
+    ↓
+OS / runtime (dark mode, Dynamic Type, locale — always win)
+```
+
+**Rationale:**
+1. **Asset Catalog colors** — The OS manages dark/light variants; no parsing, no `dynamicProvider` boilerplate.
+2. **String Catalog** — Proper localization toolchain. JSON strings can't be pluralized or localized without re-inventing the wheel.
+3. **defaults.json for settings** — Intervals and flags change frequently during development; JSON avoids PRs for tuning.
+4. **Swift for layout/animation** — Type safety + autocomplete. These values are stable and never need runtime override.
+
+**Alternatives considered and rejected:**
+- **Single `app-config.json`:** JSON cannot serialize `UIColor`, `Animation`, or `UIFont`. Putting all four categories in JSON requires a bespoke parser for each and loses OS-level adaptation (dark mode, Dynamic Type).
+
+---
+
+### 4.6 Smart Pause – Focus Mode & Driving Detection
+
+**Decision:** Pause reminders intelligently when users are in Focus Mode or driving.
+
+**The Three Detectors (Phase 2 Feature):**
+
+1. **Focus Status Detector** (`FocusStatusDetecting` protocol)
+   - Uses `INFocusStatusCenter` to detect active Focus Modes (Do Not Disturb, Driving, Sleeping)
+   - Requires `com.apple.intents` entitlement; available on iOS 16+
+   - Query: `INFocusStatusCenter.default.focusStatus`
+
+2. **CarPlay Detector** (`CarPlayDetecting` protocol)
+   - Uses `AVAudioSession.currentRoute.outputs` to detect active CarPlay audio route
+   - No special entitlement required; reliably indicates active navigation
+   - Query: `.contains(where: { $0.portType == .carAudio })`
+
+3. **Driving Activity Detector** (`DrivingActivityDetector` protocol)
+   - Uses `CMMotionActivityManager` coprocessor for vehicle motion detection
+   - Requires `NSMotionUsageDescription` in Info.plist
+   - Query: `CMMotionActivityManager.current().dataFromDate(_:to:)` for recent activity
+
+**Integration with AppCoordinator:**
+
+`PauseConditionManager` aggregates signals from all three detectors and emits a single `isPaused: Bool` state:
+```
+isPaused = focusStatus == .active || carPlayActive || drivingDetected
+```
+
+When `isPaused` changes:
+1. `AppCoordinator` calls `screenTimeTracker.pauseAll()` or `resumeAll()`
+2. No reminders fire while paused; timers remain suspended
+3. Timers resume from their previous elapsed time when `isPaused` returns to false
+
+**Info.plist Permissions Required:**
+
+```xml
+<key>NSLocationWhenInUseUsageDescription</key>
+<string>We use your location to avoid interrupting while driving.</string>
+<key>NSMotionUsageDescription</key>
+<string>We detect driving activity to pause reminders while you're behind the wheel.</string>
+```
+
+**Why Separate Service:**
+
+Keeps `AppCoordinator` (450+ lines) within SRP. Pause logic is cohesive and testable independently via protocol mocks.
+
+---
 
 **Decision:** Use `UserDefaults` with a typed `SettingsStore` wrapper.
 

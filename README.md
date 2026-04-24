@@ -6,6 +6,7 @@ A lightweight iOS app that runs in the background and reminds you to rest your e
 
 - 👁 **Eye-rest reminders** – configurable interval and break duration (e.g. 20-20-20 rule)
 - 🧍 **Posture reminders** – configurable interval and break duration
+- 🧠 **Smart Pause** – automatically pauses reminders during Focus Mode, CarPlay navigation, or when driving
 - Full-screen dismissible overlay with countdown timer
 - Dropdown pickers for reminder interval and break length
 - Battery-efficient background scheduling via `UNUserNotificationCenter`
@@ -47,3 +48,13 @@ All build, test, and lint commands are standardised through `scripts/build.sh`.
 ## Implementation Plan
 
 See **[IMPLEMENTATION_PLAN.md](./IMPLEMENTATION_PLAN.md)** for the full architecture, design decisions, file structure, data flow, and phased delivery plan.
+
+## Legal & Privacy
+
+This app is committed to user privacy and transparency:
+
+- **[Terms of Service](./docs/legal/TERMS.md)** – legal agreement and liability disclaimer
+- **[Privacy Policy](./docs/legal/PRIVACY.md)** – data collection and usage practices
+- **[Disclaimer](./docs/legal/DISCLAIMER.md)** – health/medical information and liability limitations
+
+All legal documents are included in the app bundle and linked in Settings.
