@@ -208,6 +208,8 @@ assemble_app_bundle() {
     info "Updating binary in existing bundle…"
     cp "$exe_path" "$app_path/${SCHEME}"
     chmod +x "$app_path/${SCHEME}"
+    # Re-embed the SPM resource bundle so Bundle.module resolves at runtime
+    embed_resource_bundle "$app_path"
     pass "Binary refreshed: ${SCHEME}.app"
     return
   fi
@@ -238,7 +240,28 @@ assemble_app_bundle() {
     -e "s/\$(PRODUCT_NAME)/${SCHEME}/g" \
     "$src_plist" > "$app_path/Info.plist"
 
+  # Embed the SPM resource bundle so Bundle.module resolves at runtime
+  embed_resource_bundle "$app_path"
+
   pass "App bundle assembled: ${SCHEME}.app (bundle ID: ${bundle_id})"
+}
+
+# ── Resource Bundle Embedding ─────────────────────────────────────────────────
+# SPM resource bundles land alongside the .app in DerivedData but are NOT
+# automatically embedded by xcodebuild for executable targets. Copy the bundle
+# inside the .app so Bundle.module can find it via Bundle.main.resourceURL.
+embed_resource_bundle() {
+  local app_path="$1"
+  local resource_bundle="${DERIVED_DATA_PATH}/Build/Products/Debug-iphonesimulator/${SCHEME}_${SCHEME}.bundle"
+
+  if [[ -d "$resource_bundle" ]]; then
+    local dest="${app_path}/$(basename "$resource_bundle")"
+    rm -rf "$dest"
+    cp -r "$resource_bundle" "$dest"
+    info "Embedded resource bundle: $(basename "$resource_bundle")"
+  else
+    warn "Resource bundle not found at: $resource_bundle — localization may not work"
+  fi
 }
 
 # ── Install & Launch ──────────────────────────────────────────────────────────

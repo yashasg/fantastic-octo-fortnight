@@ -18,12 +18,12 @@ struct OnboardingSetupView: View {
 
                     // Headline + subheadline
                     VStack(spacing: AppSpacing.sm) {
-                        Text("You're all set.")
+                        Text("onboarding.setup.title", bundle: .module)
                             .font(.title2)
                             .fontWeight(.bold)
                             .multilineTextAlignment(.center)
 
-                        Text("Here's how we've set things up for you:")
+                        Text("onboarding.setup.subtitle", bundle: .module)
                             .font(.headline)
                             .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)
@@ -34,22 +34,22 @@ struct OnboardingSetupView: View {
                         SetupPreviewCard(
                             icon: AppSymbol.eyeBreak,
                             color: .indigo,
-                            title: "Eye Breaks",
-                            interval: "20 min",
-                            duration: "20 seconds"
+                            title: String(localized: "onboarding.setup.eyeBreaks.title", bundle: .module),
+                            interval: String(localized: "onboarding.setup.eyeBreaks.interval", bundle: .module),
+                            duration: String(localized: "onboarding.setup.eyeBreaks.duration", bundle: .module)
                         )
                         SetupPreviewCard(
                             icon: AppSymbol.postureCheck,
                             color: .green,
-                            title: "Posture Checks",
-                            interval: "30 min",
-                            duration: "10 seconds"
+                            title: String(localized: "onboarding.setup.postureChecks.title", bundle: .module),
+                            interval: String(localized: "onboarding.setup.postureChecks.interval", bundle: .module),
+                            duration: String(localized: "onboarding.setup.postureChecks.duration", bundle: .module)
                         )
                     }
                     .padding(.horizontal, AppSpacing.md)
 
                     // Reassurance copy
-                    Text("You'll get a gentle reminder to look away and sit up straight — no effort required from you.")
+                    Text("onboarding.setup.body", bundle: .module)
                         .font(.body)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
@@ -59,22 +59,24 @@ struct OnboardingSetupView: View {
 
                     // Primary CTA
                     Button(action: onGetStarted) {
-                        Text("Get Started")
+                        Text("onboarding.setup.getStartedButton", bundle: .module)
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
                     .controlSize(.large)
                     .tint(.indigo)
                     .padding(.horizontal, AppSpacing.xl)
-                    .accessibilityLabel("Get Started")
-                    .accessibilityHint("Dismiss setup and begin using the app")
+                    .accessibilityLabel(Text("onboarding.setup.getStartedButton", bundle: .module))
+                    .accessibilityHint(Text("onboarding.setup.getStartedButton.hint", bundle: .module))
 
                     // Secondary option
-                    Button("Customize settings", action: onCustomize)
+                    Button(action: onCustomize) {
+                        Text("onboarding.setup.customizeButton", bundle: .module)
+                    }
                         .foregroundStyle(.indigo)
                         .font(.subheadline)
-                        .accessibilityLabel("Customize settings")
-                        .accessibilityHint("Go to settings to adjust reminder intervals")
+                        .accessibilityLabel(Text("onboarding.setup.customizeButton", bundle: .module))
+                        .accessibilityHint(Text("onboarding.setup.customizeButton.hint", bundle: .module))
                 }
                 .padding()
                 .frame(maxWidth: 540)
@@ -119,7 +121,7 @@ struct SetupPreviewCard: View {
         .padding(AppSpacing.md)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(title): every \(interval), \(duration) break")
+        .accessibilityLabel(String(format: String(localized: "onboarding.setup.card.label", bundle: .module), title, interval, duration))
     }
 }
 

@@ -44,7 +44,7 @@ struct OverlayView: View {
             }
             .padding(.top, AppSpacing.lg)
             .padding(.trailing, AppSpacing.lg)
-            .accessibilityLabel("Dismiss reminder")
+            .accessibilityLabel(Text("overlay.dismissButton", bundle: .module))
 
             // MARK: Center content
             VStack(spacing: AppSpacing.lg) {
@@ -93,21 +93,21 @@ struct OverlayView: View {
                     height: AppLayout.countdownRingDiameter
                 )
                 .accessibilityElement(children: .ignore)
-                .accessibilityLabel("Countdown timer")
-                .accessibilityValue("\(secondsRemaining) seconds remaining")
+                .accessibilityLabel(Text("overlay.countdown.label", bundle: .module))
+                .accessibilityValue(String(format: String(localized: "overlay.countdown.value", bundle: .module), secondsRemaining))
                 .accessibilityAddTraits(.updatesFrequently)
 
                 Spacer()
 
                 // Settings gear — dismisses overlay, revealing SettingsView underneath
                 Button(action: performDismiss) {
-                    Label("Settings", systemImage: AppSymbol.settings)
+                    Label(title: { Text("overlay.settingsLabel", bundle: .module) }, icon: { Image(systemName: AppSymbol.settings) })
                         .font(AppFont.body)
                         .foregroundStyle(.secondary)
                 }
                 .frame(minHeight: AppLayout.minTapTarget)
-                .accessibilityLabel("Dismiss overlay")
-                .accessibilityHint("Dismisses this reminder and reveals Settings")
+                .accessibilityLabel(Text("overlay.settingsButton", bundle: .module))
+                .accessibilityHint(Text("overlay.settingsButton.hint", bundle: .module))
             }
             .padding(AppSpacing.xl)
             .frame(maxWidth: .infinity, maxHeight: .infinity)

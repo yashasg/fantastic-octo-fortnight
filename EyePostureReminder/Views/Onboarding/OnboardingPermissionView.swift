@@ -20,19 +20,19 @@ struct OnboardingPermissionView: View {
                     NotificationPreviewCard()
 
                     // Headline
-                    Text("Stay on track,\neffortlessly.")
+                    Text("onboarding.permission.title", bundle: .module)
                         .font(.title2)
                         .fontWeight(.bold)
                         .multilineTextAlignment(.center)
 
                     // Explanation + reassurance copy
                     VStack(spacing: AppSpacing.md) {
-                        Text("Reminders arrive as notifications — so the app works even when you're not looking at it.")
+                        Text("onboarding.permission.body1", bundle: .module)
                             .font(.body)
                             .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)
 
-                        Text("No spam. Just the breaks you asked for, when you need them.")
+                        Text("onboarding.permission.body2", bundle: .module)
                             .font(.body)
                             .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)
@@ -43,22 +43,24 @@ struct OnboardingPermissionView: View {
 
                     // Primary CTA — triggers system permission prompt
                     Button(action: requestNotificationPermission) {
-                        Text("Enable Notifications")
+                        Text("onboarding.permission.enableButton", bundle: .module)
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
                     .controlSize(.large)
                     .tint(.indigo)
                     .padding(.horizontal, AppSpacing.xl)
-                    .accessibilityLabel("Enable Notifications")
-                    .accessibilityHint("Opens system notification permission prompt")
+                    .accessibilityLabel(Text("onboarding.permission.enableButton", bundle: .module))
+                    .accessibilityHint(Text("onboarding.permission.enableButton.hint", bundle: .module))
 
                     // Secondary option — no system prompt, just advance
-                    Button("Maybe Later", action: onNext)
+                    Button(action: onNext) {
+                        Text("onboarding.permission.skipButton", bundle: .module)
+                    }
                         .foregroundStyle(.secondary)
                         .font(.subheadline)
-                        .accessibilityLabel("Maybe Later")
-                        .accessibilityHint("Skip for now, you can enable notifications later in Settings")
+                        .accessibilityLabel(Text("onboarding.permission.skipButton", bundle: .module))
+                        .accessibilityHint(Text("onboarding.permission.skipButton.hint", bundle: .module))
                 }
                 .padding()
                 .frame(maxWidth: 540)
@@ -88,19 +90,19 @@ private struct NotificationPreviewCard: View {
                 Image(systemName: AppSymbol.eyeBreak)
                     .foregroundStyle(.indigo)
                     .font(.caption)
-                Text("Eye & Posture Reminder")
+                Text("onboarding.permission.notificationCard.appName", bundle: .module)
                     .font(.caption)
                     .fontWeight(.semibold)
                     .foregroundStyle(.secondary)
                 Spacer()
-                Text("now")
+                Text("onboarding.permission.notificationCard.now", bundle: .module)
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
             }
-            Text("Eye Break")
+            Text("onboarding.permission.notificationCard.title", bundle: .module)
                 .font(.subheadline)
                 .fontWeight(.semibold)
-            Text("Time to rest your eyes.")
+            Text("onboarding.permission.notificationCard.body", bundle: .module)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }
@@ -108,7 +110,7 @@ private struct NotificationPreviewCard: View {
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
         .padding(.horizontal, AppSpacing.md)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Example notification: Eye Break — Time to rest your eyes.")
+        .accessibilityLabel(Text("onboarding.permission.notificationCard.label", bundle: .module))
     }
 }
 

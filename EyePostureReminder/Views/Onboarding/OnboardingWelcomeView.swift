@@ -28,23 +28,23 @@ struct OnboardingWelcomeView: View {
                     .padding(AppSpacing.xl)
                     .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 24))
                     .accessibilityElement(children: .ignore)
-                    .accessibilityLabel("Eye break and posture check icons")
+                    .accessibilityLabel(Text("onboarding.welcome.illustrationLabel", bundle: .module))
 
                     // Headline + Subheadline
                     VStack(spacing: AppSpacing.sm) {
-                        Text("Welcome to Eye & Posture Reminder")
+                        Text("onboarding.welcome.title", bundle: .module)
                             .font(.title2)
                             .fontWeight(.bold)
                             .multilineTextAlignment(.center)
 
-                        Text("Small, helpful nudges to rest your eyes and sit up straight.")
+                        Text("onboarding.welcome.subtitle", bundle: .module)
                             .font(.headline)
                             .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)
                     }
 
                     // Value proposition body
-                    Text("Takes less than a minute to set up. Works quietly in the background — you'll barely know it's there.")
+                    Text("onboarding.welcome.body", bundle: .module)
                         .font(.body)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
@@ -54,15 +54,15 @@ struct OnboardingWelcomeView: View {
 
                     // Next CTA
                     Button(action: onNext) {
-                        Text("Next")
+                        Text("onboarding.welcome.nextButton", bundle: .module)
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
                     .controlSize(.large)
                     .tint(.indigo)
                     .padding(.horizontal, AppSpacing.xl)
-                    .accessibilityLabel("Next")
-                    .accessibilityHint("Go to notifications screen")
+                    .accessibilityLabel(Text("onboarding.welcome.nextButton", bundle: .module))
+                    .accessibilityHint(Text("onboarding.welcome.nextButton.hint", bundle: .module))
                 }
                 .padding()
                 .frame(maxWidth: 540)

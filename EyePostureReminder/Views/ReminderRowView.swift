@@ -20,13 +20,13 @@ struct ReminderRowView: View {
         .accessibilityHint(isEnabled ? "Tap to disable \(type.title) reminders" : "Tap to enable \(type.title) reminders")
 
         if isEnabled {
-            Picker("Remind me every", selection: $interval) {
+            Picker(String(localized: "settings.reminder.intervalPicker", bundle: .module), selection: $interval) {
                 ForEach(intervalOptions, id: \.self) { seconds in
                     Text(formatInterval(seconds)).tag(seconds)
                 }
             }
             .onChange(of: interval) { _ in onChanged() }
-            .accessibilityHint("Sets how frequently \(type.title) reminders appear")
+            .accessibilityHint(String(format: String(localized: "settings.reminder.intervalPicker.hint", bundle: .module), type.title))
 
             Picker("Break duration", selection: $breakDuration) {
                 ForEach(durationOptions, id: \.self) { seconds in

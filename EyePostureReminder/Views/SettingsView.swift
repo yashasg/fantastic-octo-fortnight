@@ -31,22 +31,27 @@ struct SettingsView: View {
         Form {
             // MARK: Master toggle
             Section {
-                Toggle("Enable Reminders", isOn: $settings.masterEnabled)
+                Toggle(isOn: $settings.masterEnabled) {
+                    Text("settings.masterToggle", bundle: .module)
+                }
                     .tint(AppColor.reminderBlue)
                     .onChange(of: settings.masterEnabled) { _ in
                         viewModel?.masterToggleChanged()
                     }
-                    .accessibilityHint("Pauses all eye and posture reminders when turned off")
+                    .accessibilityHint(Text("settings.masterToggle.hint", bundle: .module))
             } footer: {
-                if !settings.masterEnabled {
-                    Text("All reminders are paused.")
+                if settings.masterEnabled {
+                    Text("settings.masterToggle.footer", bundle: .module)
+                        .font(AppFont.caption)
+                } else {
+                    Text("settings.pausedBanner", bundle: .module)
                         .font(AppFont.caption)
                 }
             }
 
             // MARK: Per-type sections (only shown when master is on)
             if settings.masterEnabled {
-                Section("Eyes — 20-20-20 Rule") {
+                Section {
                     ReminderRowView(
                         type: .eyes,
                         isEnabled: $settings.eyesEnabled,
@@ -54,9 +59,16 @@ struct SettingsView: View {
                         breakDuration: $settings.eyesBreakDuration,
                         onChanged: { viewModel?.reminderSettingChanged(for: .eyes) }
                     )
+                } header: {
+                    Text("settings.section.eyes", bundle: .module)
+                } footer: {
+                    if settings.eyesEnabled {
+                        Text("settings.reminder.section.footer", bundle: .module)
+                            .font(AppFont.caption)
+                    }
                 }
 
-                Section("Posture") {
+                Section {
                     ReminderRowView(
                         type: .posture,
                         isEnabled: $settings.postureEnabled,
@@ -64,60 +76,75 @@ struct SettingsView: View {
                         breakDuration: $settings.postureBreakDuration,
                         onChanged: { viewModel?.reminderSettingChanged(for: .posture) }
                     )
+                } header: {
+                    Text("settings.section.posture", bundle: .module)
+                } footer: {
+                    if settings.postureEnabled {
+                        Text("settings.reminder.section.footer", bundle: .module)
+                            .font(AppFont.caption)
+                    }
                 }
             }
 
             // MARK: Snooze
-            Section("Snooze") {
+            Section {
                 if isSnoozed {
                     HStack {
-                        Label("Snoozed until \(snoozeUntilFormatted)", systemImage: "moon.zzz.fill")
+                        Label(String(format: String(localized: "settings.snooze.activeLabel", bundle: .module), snoozeUntilFormatted), systemImage: "moon.zzz.fill")
                             .font(AppFont.body)
                             .foregroundStyle(AppColor.warningText)
                         Spacer()
                     }
                     .accessibilityElement(children: .ignore)
-                    .accessibilityLabel("Reminders snoozed until \(snoozeUntilFormatted)")
+                    .accessibilityLabel(String(format: String(localized: "settings.snooze.activeLabel.accessibility", bundle: .module), snoozeUntilFormatted))
 
                     Button(role: .destructive) {
                         viewModel?.cancelSnooze()
                     } label: {
-                        Label("Cancel Snooze", systemImage: "bell.fill")
+                        Label(title: { Text("settings.snooze.cancelButton", bundle: .module) }, icon: { Image(systemName: "bell.fill") })
                             .font(AppFont.body)
                     }
-                    .accessibilityHint("Resumes all reminders immediately")
+                    .accessibilityHint(Text("settings.snooze.cancelButton.hint", bundle: .module))
                 } else {
-                    Button("5 minutes") {
-                        viewModel?.snooze(for: 5)
+                    Button(action: { viewModel?.snooze(for: 5) }) {
+                        Text("settings.snooze.5min", bundle: .module)
                     }
                     .font(AppFont.body)
-                    .accessibilityLabel("Snooze for 5 minutes")
-                    .accessibilityHint("Pauses reminders for 5 minutes")
+                    .accessibilityLabel(Text("settings.snooze.5min.label", bundle: .module))
+                    .accessibilityHint(Text("settings.snooze.5min.hint", bundle: .module))
 
-                    Button("1 hour") {
-                        viewModel?.snooze(for: 60)
+                    Button(action: { viewModel?.snooze(for: 60) }) {
+                        Text("settings.snooze.1hour", bundle: .module)
                     }
                     .font(AppFont.body)
-                    .accessibilityLabel("Snooze for 1 hour")
-                    .accessibilityHint("Pauses reminders for 1 hour")
+                    .accessibilityLabel(Text("settings.snooze.1hour.label", bundle: .module))
+                    .accessibilityHint(Text("settings.snooze.1hour.hint", bundle: .module))
 
-                    Button("Rest of day") {
+                    Button(action: {
                         let endOfDay = Calendar.current.startOfDay(for: Date()).addingTimeInterval(24 * 3600)
                         let minutesLeft = max(1, Int(endOfDay.timeIntervalSince(Date()) / 60))
                         viewModel?.snooze(for: minutesLeft)
+                    }) {
+                        Text("settings.snooze.restOfDay", bundle: .module)
                     }
                     .font(AppFont.body)
                     .foregroundStyle(AppColor.warningText)
-                    .accessibilityLabel("Snooze for the rest of the day")
-                    .accessibilityHint("Pauses reminders until midnight")
+                    .accessibilityLabel(Text("settings.snooze.restOfDay.label", bundle: .module))
+                    .accessibilityHint(Text("settings.snooze.restOfDay.hint", bundle: .module))
                 }
+            } header: {
+                Text("settings.section.snooze", bundle: .module)
             }
 
             // MARK: Preferences
-            Section("Preferences") {
-                Toggle("Haptic Feedback", isOn: $settings.hapticsEnabled)
+            Section {
+                Toggle(isOn: $settings.hapticsEnabled) {
+                    Text("settings.hapticFeedback", bundle: .module)
+                }
                     .tint(AppColor.reminderBlue)
-                    .accessibilityHint("Plays a vibration when reminders appear")
+                    .accessibilityHint(Text("settings.hapticFeedback.hint", bundle: .module))
+            } header: {
+                Text("settings.section.preferences", bundle: .module)
             }
 
             // MARK: Notification permission warning
@@ -128,28 +155,30 @@ struct SettingsView: View {
                             .foregroundStyle(AppColor.warningOrange)
                             .accessibilityHidden(true)
                         VStack(alignment: .leading, spacing: AppSpacing.xs) {
-                            Text("Notifications Disabled")
+                            Text("settings.notifications.disabledTitle", bundle: .module)
                                 .font(AppFont.bodyEmphasized)
-                            Text("Enable notifications in Settings to receive reminders in the background.")
+                            Text("settings.notifications.disabledBody", bundle: .module)
                                 .font(AppFont.caption)
                                 .foregroundStyle(.secondary)
                         }
                     }
                     .padding(.vertical, AppSpacing.xs)
                     .accessibilityElement(children: .ignore)
-                    .accessibilityLabel("Notifications Disabled. Enable notifications in Settings to receive reminders in the background.")
+                        .accessibilityLabel(Text("settings.notifications.disabledLabel", bundle: .module))
 
-                    Button("Open System Settings") {
+                    Button(action: {
                         if let url = URL(string: UIApplication.openSettingsURLString) {
                             UIApplication.shared.open(url)
                         }
+                    }) {
+                        Text("settings.notifications.openSettings", bundle: .module)
                     }
                     .font(AppFont.body)
-                    .accessibilityHint("Opens iOS Settings to enable notification permissions")
+                    .accessibilityHint(Text("settings.notifications.openSettings.hint", bundle: .module))
                 }
             }
         }
-        .navigationTitle("Eye & Posture Reminder")
+        .navigationTitle(Text("settings.navTitle", bundle: .module))
         .navigationBarTitleDisplayMode(.large)
         .animation(reduceMotion ? nil : AppAnimation.settingsExpandCurve, value: settings.masterEnabled)
         .animation(reduceMotion ? nil : AppAnimation.settingsExpandCurve, value: isSnoozed)

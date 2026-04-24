@@ -1,0 +1,81 @@
+import SwiftUI
+
+struct HomeView: View {
+
+    @EnvironmentObject var settings: SettingsStore
+    @EnvironmentObject var coordinator: AppCoordinator
+
+    @State private var showSettings = false
+
+    private var statusLabel: String {
+        if settings.masterEnabled {
+            return String(localized: "home.status.active", bundle: .module)
+        } else {
+            return String(localized: "home.status.paused", bundle: .module)
+        }
+    }
+
+    private var statusIcon: String {
+        settings.masterEnabled ? AppSymbol.eyeBreak : "moon.zzz.fill"
+    }
+
+    private var statusColor: Color {
+        settings.masterEnabled ? AppColor.reminderBlue : .secondary
+    }
+
+    var body: some View {
+        VStack(spacing: AppSpacing.lg) {
+            Spacer()
+
+            Image(systemName: statusIcon)
+                .resizable()
+                .scaledToFit()
+                .frame(width: AppLayout.overlayIconSize, height: AppLayout.overlayIconSize)
+                .foregroundStyle(statusColor)
+                .accessibilityHidden(true)
+
+            VStack(spacing: AppSpacing.sm) {
+                Text("home.title", bundle: .module)
+                    .font(AppFont.headline)
+                    .multilineTextAlignment(.center)
+
+                Text(statusLabel)
+                    .font(AppFont.body)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+
+            Spacer()
+        }
+        .padding(.horizontal, AppSpacing.xl)
+        .navigationTitle(Text("home.navTitle", bundle: .module))
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
+                    showSettings = true
+                } label: {
+                    Image(systemName: AppSymbol.settings)
+                        .accessibilityLabel(Text("home.settingsButton", bundle: .module))
+                }
+            }
+        }
+        .sheet(isPresented: $showSettings) {
+            NavigationStack {
+                SettingsView()
+                    .environmentObject(settings)
+                    .environmentObject(coordinator)
+            }
+        }
+        .accessibilityElement(children: .contain)
+    }
+}
+
+#Preview {
+    let coordinator = AppCoordinator()
+    NavigationStack {
+        HomeView()
+            .environmentObject(coordinator.settings)
+            .environmentObject(coordinator)
+    }
+}
