@@ -1,7 +1,14 @@
 import UIKit
 import UserNotifications
+import os
 
 final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
+
+    /// Set by `EyePostureReminderApp.onAppear` — bridges UIKit delegate
+    /// callbacks into the SwiftUI-owned coordinator.
+    var coordinator: AppCoordinator?
+
+    // MARK: - UIApplicationDelegate
 
     func application(
         _ application: UIApplication,
@@ -12,7 +19,9 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         return true
     }
 
-    // Show overlay when a notification fires while the app is in the foreground.
+    // MARK: - UNUserNotificationCenterDelegate
+
+    /// Foreground delivery — show overlay immediately via coordinator.
     func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         willPresent notification: UNNotification,
@@ -20,15 +29,15 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     ) {
         let categoryID = notification.request.content.categoryIdentifier
         if let type = ReminderType(categoryIdentifier: categoryID) {
-            Task { @MainActor in
-                OverlayManager.shared.showOverlay(for: type, duration: 20) {}
+            Task { @MainActor [weak self] in
+                self?.coordinator?.handleNotification(for: type)
             }
         }
         // Suppress the system banner — our overlay is the UI.
         completionHandler([])
     }
 
-    // Show overlay when the user taps a notification to open the app from background.
+    /// Background tap — queue via coordinator (scene may not be active yet).
     func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse,
@@ -36,8 +45,8 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     ) {
         let categoryID = response.notification.request.content.categoryIdentifier
         if let type = ReminderType(categoryIdentifier: categoryID) {
-            Task { @MainActor in
-                OverlayManager.shared.showOverlay(for: type, duration: 20) {}
+            Task { @MainActor [weak self] in
+                self?.coordinator?.handleNotification(for: type)
             }
         }
         completionHandler()

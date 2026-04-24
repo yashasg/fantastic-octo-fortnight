@@ -22,8 +22,8 @@ final class SettingsViewModel: ObservableObject {
     // MARK: - Init
 
     init(
-        settings: SettingsStore = SettingsStore(),
-        scheduler: ReminderScheduling = ReminderScheduler()
+        settings: SettingsStore,
+        scheduler: ReminderScheduling
     ) {
         self.settings  = settings
         self.scheduler = scheduler

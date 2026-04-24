@@ -1,3 +1,4 @@
+import Foundation
 import os
 
 /// App-wide `Logger` categories.

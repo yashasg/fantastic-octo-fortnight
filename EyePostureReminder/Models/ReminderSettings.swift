@@ -18,6 +18,6 @@ extension ReminderSettings {
     /// 20-20-20 rule: every 20 minutes, look away for 20 seconds.
     static let defaultEyes = ReminderSettings(interval: 1200, breakDuration: 20)
 
-    /// Posture check every 30 minutes, 15-second awareness pause.
-    static let defaultPosture = ReminderSettings(interval: 1800, breakDuration: 15)
+    /// Posture check every 30 minutes, 10-second awareness pause.
+    static let defaultPosture = ReminderSettings(interval: 1800, breakDuration: 10)
 }

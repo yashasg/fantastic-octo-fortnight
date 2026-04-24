@@ -61,7 +61,7 @@ struct OverlayView: View {
             }
             .padding(AppSpacing.xl)
         }
-        .accessibilityViewIsModal(true)
+        .accessibilityAddTraits(.isModal)
         .gesture(
             DragGesture(minimumDistance: 30)
                 .onEnded { value in
