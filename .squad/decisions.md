@@ -244,3 +244,76 @@ Phase 1+ implementation decisions. Pre-Phase 1 roadmap decisions archived in dec
 - Design system centralized
 
 **Recommendation:** Phase 1 is production-quality for its scope. Track P1 issues in backlog; address before Phase 2 coding begins. Phase 1 launch is unblocked.
+
+---
+
+### Decision: Phase 1 P1/P2 Fixes + Phase 2 M2.2–M2.3 Kickoff (Wave 3)
+**Authors:** Basher (iOS Dev — Services), Linus (iOS Dev — UI)  
+**Date:** 2026-04-24T09:50:00Z  
+**Status:** Implemented
+
+#### Basher — P1 Fixes + M2.3 Snooze Implementation
+
+**Decision 1: NotificationScheduling protocol replaces hardcoded UNUserNotificationCenter**
+- `AppCoordinator` now conforms to `NotificationScheduling` protocol with `getAuthorizationStatus() async -> UNAuthorizationStatus`
+- Resolves P1-2 (hardcoded `UNUserNotificationCenter.current()` was untestable)
+- Rationale: `UNNotificationSettings` has no public initializer; returning `UNAuthorizationStatus` directly is simpler and fully mockable
+- Impact: All auth-dependent flows now protocol-injected; unit tests remain unchanged
+
+**Decision 2: overlayManager default via nil-coalescing in init, not parameter default**
+- `AppCoordinator.init` declares `overlayManager: OverlayPresenting? = nil`, resolves to `OverlayManager.shared` inside init body
+- Rationale: Swift disallows `@MainActor`-isolated values as default parameter expressions; nil-coalescing in body avoids actor-isolation compiler errors
+- Impact: Ergonomic call sites preserved; AppCoordinator testability unblocked
+
+**Decision 3: Snooze wake mechanism — dual Task + silent notification**
+- When snooze is detected in `scheduleReminders()`, two wake paths armed:
+  1. In-process `Task` with `sleep(until:)` — fires while app in foreground/background
+  2. Silent `UNNotificationRequest` with `snoozeWakeCategory` — fires even if app killed
+- Rationale: Task alone insufficient if app killed; notification alone requires user tap. Dual ensures seamless auto-resume in all lifecycle states
+- Implementation: In-process task cancels notification when it fires; notification routes to `scheduleReminders()` which cancels task
+- Impact: Snooze survives app termination and relaunch
+
+**Decision 4: Snooze count reset — three places for invariant consistency**
+- `snoozeCount` reset to 0 in:
+  1. `handleNotification(for:)` — real reminder overlay fired
+  2. `cancelSnooze()` — user manually cancelled
+  3. `scheduleReminders()` when snooze expiry detected — alongside `snoozedUntil = nil`
+- Rationale: Count tracks "consecutive snoozes without real reminder". All three represent snooze cycle end
+- Impact: Invariant clean and predictable; count limit (2 snoozes max) prevents user override abuse
+
+**Decision 5: snooze(for:) preserved for backward compatibility**
+- Existing `snooze(for minutes: Int)` method retained with same contract: `cancelAllReminders()` + no `scheduleReminders()`
+- New `snooze(option: SnoozeOption)` is forward-looking API for M2.3+
+- Rationale: Existing `SettingsViewModelTests` assert specific call counts; changing contract requires test rewrites
+- Impact: No test modifications needed; gradual migration path
+
+**Decision 6: SnoozeOption.restOfDay — DST-aware endDate computation**
+- `restOfDay` computes as `Calendar.current.date(byAdding: .day, value: 1, to: Calendar.current.startOfDay(for: Date()))`
+- Falls back to `Date() + 24h` if Calendar returns nil
+- Rationale: Correctly maps to midnight of current day in user's local timezone, regardless of DST transitions
+- Impact: Snooze boundaries always align with midnight in user's timezone (no off-by-one errors on DST change days)
+
+#### Linus — P1/P2 Fixes + M2.2 Haptics
+
+**Decision 7: Countdown VoiceOver — split static label + dynamic value**
+- Countdown ZStack uses `.accessibilityLabel("Countdown timer")` (static) + `.accessibilityValue("\(n) seconds remaining")` (dynamic) + `.updatesFrequently` trait
+- Replaces previous single-label approach
+- Rationale: VoiceOver's value property is semantically designed for live-updating values (sliders, progress rings, timers). Static label + live value is correct iOS pattern
+- Impact: VoiceOver users now hear label once, then live countdown; UI remains unchanged for sighted users
+
+**Decision 8: hapticsEnabled parameter at call-site (not SettingsStore injection)**
+- `OverlayPresenting.showOverlay()` accepts `hapticsEnabled: Bool` parameter
+- AppCoordinator reads `settings.hapticsEnabled` and passes through at call-site
+- Rationale: OverlayManager must remain testable without live SettingsStore. Passing bool at call-site keeps service layer clean and avoids coupling UIKit to ObservableObject
+- Impact: OverlayManager stays pure; no test modifications for haptic parameter
+
+**Decision 9: Haptic generator lifecycle — onAppear + prepare()**
+- Both `UIImpactFeedbackGenerator` and `UINotificationFeedbackGenerator` created as `@State` optionals, initialized with `.prepare()` in `onAppear`
+- Rationale: UIKit haptic generators should be prepared before use to ensure Taptic Engine is warm. Creating per-tap risked first haptic firing late. Creating in onAppear gives full overlay lifetime for preparation
+- Impact: Haptic feedback instantaneous; no delay on first user interaction
+
+**Decision 10: Dead Color extension removed — AppColor is sole color token**
+- `Color` extension with named-asset lookups and non-functional `fallback()` helper permanently removed
+- `AppColor` enum is single source of color tokens
+- Rationale: Color extension was dead code (nothing referenced it); fallback() returned self unconditionally. AppColor provides reliable literal colors until asset catalog added
+- Impact: Simplified codebase; no competing color systems; design tokens centralized
