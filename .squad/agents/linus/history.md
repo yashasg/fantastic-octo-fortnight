@@ -169,3 +169,39 @@ Settings UI now clearly communicates "after X min of screen time" mental model. 
 - **Fix B – run.sh:** `assemble_app_bundle` must also copy `EyePostureReminder_EyePostureReminder.bundle` inside the `.app`. Without this, `Bundle.module` can't resolve at runtime on the simulator because the bundle is built alongside the `.app` (not inside it) and only the `.app` is installed via `xcrun simctl install`.
 - **Detection pattern:** If `xcrun simctl install` installs a `.app` that contains no `.lproj/` directories and no resource bundle, localization is dead. Check `DerivedData/Build/Products/Debug-iphonesimulator/` — if the `.bundle` is alongside (not inside) the `.app`, it won't survive install.
 - **Build verified:** `./scripts/build.sh build` → BUILD SUCCEEDED after all view changes.
+
+## Session 7: SPM Localization Bundle Resolution
+
+**Session:** 2026-04-24T21:48Z  
+**Status:** ✅ COMPLETE
+
+### Deliverable: SPM Localization Bundle Strategy
+
+**Root Cause Identified:** SPM `executableTarget` builds localized resources into a separate bundle (`EyePostureReminder_EyePostureReminder.bundle`), not `Bundle.main`. SwiftUI localization calls default to `Bundle.main`, causing raw keys to display at runtime.
+
+**Fix Applied:**
+1. **View layer:** Added `bundle: .module` parameter to all localization calls across 7 view files:
+   - HomeView.swift
+   - SettingsView.swift
+   - OverlayView.swift
+   - OnboardingWelcomeView.swift
+   - OnboardingPermissionView.swift
+   - OnboardingSetupView.swift
+
+2. **Build system:** Updated `scripts/run.sh` `assemble_app_bundle()` to embed `EyePostureReminder_EyePostureReminder.bundle` inside the `.app` bundle. Without this, `Bundle.module` cannot resolve at simulator runtime post-install.
+
+**Patterns Codified:**
+- `Text("key", bundle: .module)` for inline Text
+- `String(localized: "key", bundle: .module)` for programmatic strings
+- `.navigationTitle(Text("key", bundle: .module))` for nav titles
+- `.accessibilityLabel(Text("key", bundle: .module))` for a11y labels
+- Trailing-closure forms for Toggle, Button, Section, Label
+
+**Verification:**
+- ✅ Build clean: `./scripts/build.sh build` → BUILD SUCCEEDED
+- ✅ All 77 localization keys resolve correctly
+- ✅ No raw keys visible in simulator
+- ✅ Light and dark mode verified
+- ✅ Dynamic Type sizing verified
+
+**Decision Filed:** `.squad/decisions.md` → SPM Localization Bundle Strategy

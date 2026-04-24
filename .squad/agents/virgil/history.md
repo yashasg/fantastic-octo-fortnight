@@ -61,3 +61,21 @@
 
 **Verification:** ✅ Binary refresh works on rebuild
 **Committed:** Pending
+
+## Wave 7 — SPM Resource Bundle Embedding (2026-04-24T21:48:00Z)
+
+**Task:** Fix localization string resolution — raw keys displaying in SPM app  
+**Collaborator:** Linus (iOS Dev — UI)  
+**Outcome:** ✅ SUCCESS
+
+**Root Cause:** SPM `executableTarget` builds localized resources into a separate bundle (`EyePostureReminder_EyePostureReminder.bundle`), not `Bundle.main`. SwiftUI localization calls default to `Bundle.main`, causing raw keys to appear at runtime.
+
+**Solution:** Updated `assemble_app_bundle()` in `scripts/run.sh` to embed `EyePostureReminder_EyePostureReminder.bundle` inside the assembled `.app` bundle:
+1. After creating `.app` structure, copy resource bundle into `.app/EyePostureReminder_EyePostureReminder.bundle`
+2. This allows `Bundle.module` (the SPM-generated accessor) to resolve the bundle at runtime post-install
+3. Without this step, `Bundle.module` cannot find the bundle because `xcrun simctl install` only installs the `.app` and not sibling bundles in DerivedData
+
+**Impact:** Localization infrastructure now fully operational for SPM projects. All 77 string catalog keys resolve correctly.
+
+**Verification:** ✅ Build succeeded; no raw keys visible; light/dark modes verified  
+**Decision Filed:** `.squad/decisions.md` → SPM Localization Bundle Strategy
