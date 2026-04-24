@@ -34,3 +34,13 @@
 - **`AVAudioSession.soloAmbient` is the right category for interrupting external audio** — it respects the silent switch, interrupts other apps (Spotify, Podcasts), and does NOT show a Control Center "now playing" entry since we don't actually play any audio ourselves. Never use `.playback` or add `UIBackgroundModes: audio`.
 - **`clearQueue()` on `cancelAllReminders()`** — when the master toggle is turned off or all reminders are cancelled, the overlay queue must also be flushed so previously-queued overlays don't surface after the user thought they cancelled everything.
 
+
+### 2026-04-25 — P1 Saul Review Fixes + M2.3 Snooze
+
+- **P1-1 Snooze guard in scheduleReminders():** The guard must run *before* auth checks. Pattern: check `snoozedUntil > Date()` → cancel + arm wake → return early; else clear expired snooze and fall through. `cancelAllReminders()` on `AppCoordinator` also arms the in-process `snoozeWakeTask` when `snoozedUntil` is set, so snooze applied while in foreground gets a wake timer immediately without needing `scheduleReminders()` to be called.
+- **P1-2 NotificationScheduling injection:** Added `getAuthorizationStatus() async -> UNAuthorizationStatus` to the `NotificationScheduling` protocol (wraps `notificationSettings().authorizationStatus`). `MockNotificationCenter` returns `.authorized` when `authorizationGranted == true` and `.denied` otherwise. `FailOnceNotificationCenter` in tests returns `.authorized`.
+- **P1-3 OverlayPresenting injection:** Use `overlayManager: OverlayPresenting? = nil` default parameter; resolve to `OverlayManager.shared` inside init body to avoid actor-isolation issues with default parameter expressions. `clearQueue()` was already in `OverlayPresenting` protocol from a prior commit — no change needed.
+- **snooze wake notification category:** Use `AppCoordinator.snoozeWakeCategory` static constant so `AppDelegate` can distinguish snooze-wake from real reminders. Snooze-wake routes to `scheduleReminders()` not `handleNotification(for:)`.
+- **M2.3 SnoozeOption.restOfDay:** Compute as `Calendar.current.date(byAdding: .day, value: 1, to: startOfDay(for: now))`. Always returns a non-optional via fallback to `now + 24h`.
+- **Snooze count limit:** `maxConsecutiveSnoozes = 2` enforced by `canSnooze` check in both `snooze(for:)` and `snooze(option:)`. Reset happens in `handleNotification(for:)` (real reminder fired) and `cancelSnooze()`. Do NOT reset in `scheduleReminders()` snooze-expiry path — that's implicit reset via `snoozeCount = 0` alongside `snoozedUntil = nil`.
+- **Test contract preserved:** `snooze(for: 5)` still calls `cancelAllReminders()` once and `scheduleReminders` zero times. New `snooze(option:)` method is the forward-looking API; legacy method delegates to same logic.
