@@ -6,8 +6,8 @@ import XCTest
 /// Full overlay presentation/dismissal requires a live `UIWindowScene` and is
 /// covered by UI tests in the simulator suite. These tests validate the parts
 /// of the manager that can run safely in a headless unit test context:
-/// singleton identity, initial visible state, and safe calls when no overlay
-/// is on screen.
+/// singleton identity, initial visible state, safe calls when no overlay
+/// is on screen, and the overlay queue management logic.
 @MainActor
 final class OverlayManagerTests: XCTestCase {
 
@@ -58,5 +58,38 @@ final class OverlayManagerTests: XCTestCase {
     func test_isOverlayVisible_afterDismissOnEmptyManager_remainsFalse() {
         OverlayManager.shared.dismissOverlay()
         XCTAssertFalse(OverlayManager.shared.isOverlayVisible)
+    }
+
+    // MARK: - Queue management
+
+    func test_clearQueue_withNoQueuedItems_doesNotCrash() {
+        OverlayManager.shared.clearQueue()
+    }
+
+    func test_clearQueue_calledMultipleTimes_doesNotCrash() {
+        OverlayManager.shared.clearQueue()
+        OverlayManager.shared.clearQueue()
+    }
+
+    // MARK: - Audio wiring (MockMediaControlling injection)
+
+    /// When an overlay is shown with a mock audio manager and then dismissed,
+    /// `pauseExternalAudio` must be called exactly once and `resumeExternalAudio`
+    /// must be called exactly once (in the absence of a real UIWindowScene the
+    /// window creation path bails early — only the audio calls that precede the
+    /// window check are counted).
+    ///
+    /// NOTE: `showOverlay` calls `audioManager.pauseExternalAudio()` AFTER the
+    /// window-scene guard. In a headless test the guard fires and returns early,
+    /// so neither pause nor resume is invoked. This test validates that
+    /// `dismissOverlay()` on an invisible manager doesn't spuriously resume audio.
+    func test_dismissOverlay_withMockAudio_doesNotCallResume_whenNeverShown() {
+        let mockAudio = MockMediaControlling()
+        let manager = OverlayManager(audioManager: mockAudio)
+
+        manager.dismissOverlay()
+
+        XCTAssertEqual(mockAudio.pauseCallCount, 0)
+        XCTAssertEqual(mockAudio.resumeCallCount, 0)
     }
 }

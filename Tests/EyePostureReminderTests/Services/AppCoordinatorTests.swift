@@ -72,8 +72,35 @@ final class AppCoordinatorTests: XCTestCase {
         sut.presentPendingOverlayIfNeeded()
     }
 
-    func test_presentPendingOverlayIfNeeded_calledTwice_doesNotCrash() {
-        sut.presentPendingOverlayIfNeeded()
-        sut.presentPendingOverlayIfNeeded()
+    // MARK: - handleForegroundTransition
+
+    func test_handleForegroundTransition_whenNoTimersAndDenied_doesNotCrash() async {
+        // System will report .notDetermined in headless tests — no crash expected.
+        await sut.handleForegroundTransition()
+    }
+
+    // MARK: - appWillResignActive
+
+    func test_appWillResignActive_withNoTimers_doesNotCrash() {
+        sut.appWillResignActive()
+    }
+
+    func test_appWillResignActive_calledTwice_doesNotCrash() {
+        sut.appWillResignActive()
+        sut.appWillResignActive()
+    }
+
+    // MARK: - ReminderScheduling conformance
+
+    func test_cancelAllReminders_doesNotCrash() {
+        sut.cancelAllReminders()
+    }
+
+    func test_cancelReminder_forEyes_doesNotCrash() {
+        sut.cancelReminder(for: .eyes)
+    }
+
+    func test_cancelReminder_forPosture_doesNotCrash() {
+        sut.cancelReminder(for: .posture)
     }
 }

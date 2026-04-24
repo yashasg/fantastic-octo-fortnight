@@ -3,10 +3,10 @@ import os
 
 // MARK: - MediaControlling Protocol
 
-/// Abstracts audio session interruption for testability and Phase 2 isolation.
+/// Abstracts audio session interruption for testability.
 ///
-/// **Phase 2 feature.** The concrete implementation activates `AVAudioSession`
-/// without `.mixWithOthers` to interrupt other apps' audio when an overlay is
+/// The concrete implementation activates `AVAudioSession` using the
+/// `.soloAmbient` category to interrupt other apps' audio when an overlay is
 /// shown. The session is deactivated with `.notifyOthersOnDeactivation` in ALL
 /// dismiss paths — this is the single most critical invariant.
 ///
@@ -31,30 +31,34 @@ protocol MediaControlling: AnyObject {
 
 /// Concrete `MediaControlling` implementation.
 ///
-/// Phase 2 body is intentionally empty — the protocol contract is what matters
-/// for Phase 1 compilation. Implementation lands in the Phase 2 milestone.
+/// Uses `.soloAmbient` — the system default category that respects the silent
+/// switch and interrupts other apps' audio (Spotify, Podcasts, etc.) when
+/// the session becomes active. No audio is played by this app, so there is
+/// no Control Center "now playing" entry and no `UIBackgroundModes: audio`
+/// entitlement is needed.
 final class AudioInterruptionManager: MediaControlling {
 
     // MARK: - MediaControlling
 
     func pauseExternalAudio() {
-        // Phase 2: Activate AVAudioSession(.ambient or .playback without .mixWithOthers)
-        // to interrupt other apps' audio. Example:
-        //
-        //   let session = AVAudioSession.sharedInstance()
-        //   try? session.setCategory(.playback, options: [])
-        //   try? session.setActive(true)
-        //
-        Logger.overlay.debug("AudioInterruptionManager.pauseExternalAudio — Phase 2 not yet implemented")
+        let session = AVAudioSession.sharedInstance()
+        do {
+            try session.setCategory(.soloAmbient)
+            try session.setActive(true)
+            Logger.overlay.debug("AudioInterruptionManager: external audio paused")
+        } catch {
+            Logger.overlay.error("AudioInterruptionManager.pauseExternalAudio failed: \(error.localizedDescription)")
+        }
     }
 
     func resumeExternalAudio() {
-        // Phase 2: Deactivate session and notify others.
-        // CRITICAL: .notifyOthersOnDeactivation must always be set here.
-        //
-        //   let session = AVAudioSession.sharedInstance()
-        //   try? session.setActive(false, options: .notifyOthersOnDeactivation)
-        //
-        Logger.overlay.debug("AudioInterruptionManager.resumeExternalAudio — Phase 2 not yet implemented")
+        let session = AVAudioSession.sharedInstance()
+        do {
+            // .notifyOthersOnDeactivation lets Spotify / Podcasts / etc. resume automatically.
+            try session.setActive(false, options: .notifyOthersOnDeactivation)
+            Logger.overlay.debug("AudioInterruptionManager: external audio resumed")
+        } catch {
+            Logger.overlay.error("AudioInterruptionManager.resumeExternalAudio failed: \(error.localizedDescription)")
+        }
     }
 }

@@ -3,9 +3,10 @@ import XCTest
 
 /// Unit tests for `AudioInterruptionManager`.
 ///
-/// Phase 2 implementation is intentionally empty stubs — these tests verify
-/// the protocol conformance contract and that the stubs do not crash. Full
-/// AVAudioSession integration tests belong in a Phase 2 test target.
+/// These tests verify protocol conformance and that the `AVAudioSession` calls
+/// do not crash in the headless test environment. In the simulator the session
+/// API is a no-op, so we validate the interface contract rather than actual
+/// audio interruption behaviour (which is exercised in the simulator suite).
 final class AudioInterruptionManagerTests: XCTestCase {
 
     var sut: AudioInterruptionManager!
@@ -31,7 +32,7 @@ final class AudioInterruptionManagerTests: XCTestCase {
         XCTAssertNotNil(controlling)
     }
 
-    // MARK: - Phase 2 Stub — pauseExternalAudio
+    // MARK: - pauseExternalAudio
 
     func test_pauseExternalAudio_doesNotCrash() {
         sut.pauseExternalAudio()
@@ -43,7 +44,7 @@ final class AudioInterruptionManagerTests: XCTestCase {
         sut.pauseExternalAudio()
     }
 
-    // MARK: - Phase 2 Stub — resumeExternalAudio
+    // MARK: - resumeExternalAudio
 
     func test_resumeExternalAudio_doesNotCrash() {
         sut.resumeExternalAudio()

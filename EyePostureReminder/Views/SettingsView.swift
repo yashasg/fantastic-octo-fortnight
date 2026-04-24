@@ -80,9 +80,12 @@ struct SettingsView: View {
         .animation(AppAnimation.settingsExpandCurve, value: settings.masterEnabled)
         .onAppear {
             if viewModel == nil {
+                // Pass `coordinator` as `ReminderScheduling` so setting changes
+                // route through the auth-aware coordinator paths (including
+                // fallback-timer updates when notifications are denied).
                 viewModel = SettingsViewModel(
                     settings: settings,
-                    scheduler: coordinator.scheduler
+                    scheduler: coordinator
                 )
             }
         }

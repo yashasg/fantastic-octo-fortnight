@@ -6,6 +6,12 @@ struct EyePostureReminderApp: App {
     @StateObject private var coordinator = AppCoordinator()
     @Environment(\.scenePhase) private var scenePhase
 
+    /// Tracks whether the previous `scenePhase` was `.background` so we only
+    /// call `handleForegroundTransition()` on true background → foreground
+    /// transitions, not on every brief `.inactive` interruption (e.g. task
+    /// switcher, control centre).
+    @State private var wasInBackground = false
+
     var body: some Scene {
         WindowGroup {
             ContentView()
@@ -15,8 +21,18 @@ struct EyePostureReminderApp: App {
                     await coordinator.scheduleReminders()
                 }
                 .onChange(of: scenePhase) { phase in
-                    if phase == .active {
+                    switch phase {
+                    case .active:
                         coordinator.presentPendingOverlayIfNeeded()
+                        if wasInBackground {
+                            wasInBackground = false
+                            Task { await coordinator.handleForegroundTransition() }
+                        }
+                    case .background:
+                        wasInBackground = true
+                        coordinator.appWillResignActive()
+                    default:
+                        break
                     }
                 }
                 .onAppear {

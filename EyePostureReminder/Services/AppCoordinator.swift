@@ -13,6 +13,11 @@ import os
 /// - Pending-overlay queue (notification-tap race condition)
 /// - Foreground fallback timers (when notifications are denied)
 ///
+/// `AppCoordinator` conforms to `ReminderScheduling` so Views can pass it
+/// directly to `SettingsViewModel`. The conformance routes every call through
+/// the auth-aware `scheduleReminders()` / `reschedule(for:)` paths, ensuring
+/// fallback timers stay in sync when notifications are denied.
+///
 /// Created once by `EyePostureReminderApp` as a `@StateObject` and injected
 /// into the SwiftUI environment. `AppDelegate` receives a weak-ish reference
 /// so notification callbacks can route through the coordinator.
@@ -42,6 +47,12 @@ final class AppCoordinator: ObservableObject {
     /// Repeating timers that fire overlay breaks when the user has denied
     /// notification permissions. Only active while the app is in the foreground.
     private var fallbackTimers: [ReminderType: Timer] = [:]
+
+    // MARK: - Reschedule Debounce
+
+    /// Per-type debounce tasks — cancels a pending reschedule for the same type
+    /// when a newer setting change arrives within the debounce window.
+    private var rescheduleDebounce: [ReminderType: Task<Void, Never>] = [:]
 
     // MARK: - Init
 
@@ -106,6 +117,26 @@ final class AppCoordinator: ObservableObject {
         }
     }
 
+    // MARK: - Per-Type Auth-Aware Reschedule
+
+    /// Reschedule a single reminder type, respecting the current auth status.
+    ///
+    /// If notifications are authorized the UNNotification for `type` is
+    /// cancelled and re-added with current settings. If notifications are
+    /// denied the fallback timer for `type` is restarted instead.
+    ///
+    /// Calls are debounced per-type (300 ms) so rapid slider/picker changes
+    /// don't flood UNUserNotificationCenter with add/remove requests.
+    func reschedule(for type: ReminderType) async {
+        rescheduleDebounce[type]?.cancel()
+        let task = Task { [weak self] in
+            do { try await Task.sleep(nanoseconds: 300_000_000) } catch { return }
+            guard let self, !Task.isCancelled else { return }
+            await self.performReschedule(for: type)
+        }
+        rescheduleDebounce[type] = task
+    }
+
     // MARK: - Notification Handling
 
     /// Unified handler for both foreground delivery (`willPresent`) and
@@ -138,6 +169,46 @@ final class AppCoordinator: ObservableObject {
         OverlayManager.shared.showOverlay(for: pending.type, duration: pending.duration) {}
     }
 
+    // MARK: - App Lifecycle Hooks
+
+    /// Called when the app returns to the foreground from background.
+    ///
+    /// Refreshes auth status and ensures the correct scheduling strategy is
+    /// running. If permission was granted while the app was backgrounded,
+    /// switches from fallback timers to real notifications. If still denied
+    /// and no timers are running, restarts them.
+    func handleForegroundTransition() async {
+        await refreshAuthStatus()
+
+        switch notificationAuthStatus {
+        case .authorized:
+            if !fallbackTimers.isEmpty {
+                // Auth was granted while we were in the background — switch strategies.
+                stopFallbackTimers()
+                await scheduler.scheduleReminders(using: settings)
+                Logger.scheduling.info("Foreground transition: auth restored — switched to notifications")
+            }
+        case .denied:
+            if fallbackTimers.isEmpty && settings.masterEnabled {
+                // Timers were stopped on background transition — restart them.
+                startFallbackTimers()
+                Logger.scheduling.info("Foreground transition: restarted fallback timers")
+            }
+        default:
+            break
+        }
+    }
+
+    /// Called when the app moves to the background.
+    ///
+    /// Stops foreground-only fallback timers so they don't fire stale breaks
+    /// on the next foreground resume. `handleForegroundTransition()` restarts
+    /// them when the app becomes active again.
+    func appWillResignActive() {
+        stopFallbackTimers()
+        Logger.lifecycle.debug("App resigned active — fallback timers stopped")
+    }
+
     // MARK: - Foreground Fallback Timers
 
     /// Start repeating timers that show the overlay directly, bypassing
@@ -147,20 +218,7 @@ final class AppCoordinator: ObservableObject {
 
         for type in ReminderType.allCases {
             guard settings.isEnabled(for: type) else { continue }
-
-            let reminderSettings = settings.settings(for: type)
-            let timer = Timer.scheduledTimer(
-                withTimeInterval: reminderSettings.interval,
-                repeats: true
-            ) { [weak self] _ in
-                Task { @MainActor [weak self] in
-                    guard let self else { return }
-                    let duration = self.settings.settings(for: type).breakDuration
-                    OverlayManager.shared.showOverlay(for: type, duration: duration) {}
-                }
-            }
-            fallbackTimers[type] = timer
-            Logger.scheduling.info("Fallback timer started for \(type.rawValue) every \(reminderSettings.interval)s")
+            startFallbackTimer(for: type)
         }
     }
 
@@ -171,5 +229,77 @@ final class AppCoordinator: ObservableObject {
             Logger.scheduling.debug("Fallback timer stopped for \(type.rawValue)")
         }
         fallbackTimers.removeAll()
+    }
+
+    // MARK: - Private
+
+    /// Execute a single-type reschedule after the debounce window has elapsed.
+    private func performReschedule(for type: ReminderType) async {
+        await refreshAuthStatus()
+
+        if notificationAuthStatus == .authorized {
+            fallbackTimers[type]?.invalidate()
+            fallbackTimers.removeValue(forKey: type)
+            await scheduler.rescheduleReminder(for: type, using: settings)
+        } else {
+            scheduler.cancelReminder(for: type)
+            startFallbackTimer(for: type)
+        }
+    }
+
+    /// Create (or replace) the repeating fallback timer for a single type.
+    private func startFallbackTimer(for type: ReminderType) {
+        fallbackTimers[type]?.invalidate()
+        fallbackTimers.removeValue(forKey: type)
+
+        guard settings.isEnabled(for: type) else {
+            Logger.scheduling.debug("Skipping fallback timer for \(type.rawValue) — disabled")
+            return
+        }
+
+        let reminderSettings = settings.settings(for: type)
+        let timer = Timer.scheduledTimer(
+            withTimeInterval: reminderSettings.interval,
+            repeats: true
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                let duration = self.settings.settings(for: type).breakDuration
+                OverlayManager.shared.showOverlay(for: type, duration: duration) {}
+            }
+        }
+        fallbackTimers[type] = timer
+        Logger.scheduling.info("Fallback timer started for \(type.rawValue) every \(reminderSettings.interval)s")
+    }
+}
+
+// MARK: - ReminderScheduling Conformance
+
+/// `AppCoordinator` conforms to `ReminderScheduling` so `SettingsViewModel`
+/// can treat it as its scheduler. Every method routes through the
+/// auth-aware coordinator paths, keeping fallback timers in sync when
+/// notifications are denied.
+extension AppCoordinator: ReminderScheduling {
+
+    func scheduleReminders(using settings: SettingsStore) async {
+        // Delegate to the coordinator's full auth-aware entrypoint.
+        await scheduleReminders()
+    }
+
+    func rescheduleReminder(for type: ReminderType, using settings: SettingsStore) async {
+        // Debounced, auth-aware single-type reschedule.
+        await reschedule(for: type)
+    }
+
+    func cancelReminder(for type: ReminderType) {
+        scheduler.cancelReminder(for: type)
+        fallbackTimers[type]?.invalidate()
+        fallbackTimers.removeValue(forKey: type)
+    }
+
+    func cancelAllReminders() {
+        scheduler.cancelAllReminders()
+        stopFallbackTimers()
+        OverlayManager.shared.clearQueue()
     }
 }

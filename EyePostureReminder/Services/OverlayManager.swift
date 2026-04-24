@@ -13,6 +13,9 @@ import os
 protocol OverlayPresenting: AnyObject {
     /// Present a full-screen break overlay for the given reminder type.
     ///
+    /// If an overlay is already on screen the request is queued and presented
+    /// automatically after the current overlay dismisses.
+    ///
     /// - Parameters:
     ///   - type: Which reminder triggered the overlay.
     ///   - duration: Suggested break duration in seconds (overlay may use this
@@ -39,8 +42,11 @@ protocol OverlayPresenting: AnyObject {
 /// 1. `overlayWindow` is created on-demand and set to `nil` after dismissal —
 ///    never cached — to avoid retain cycles and memory pressure between breaks.
 /// 2. All mutations must occur on the main thread (`@MainActor`).
-/// 3. Callers are responsible for requesting window scene access before calling
-///    `showOverlay`. `OverlayManager` does not traverse the scene graph itself.
+/// 3. If `showOverlay` is called while an overlay is already visible the request
+///    is appended to `overlayQueue`. After each dismissal the manager pops the
+///    next queued entry and presents it automatically.
+/// 4. `audioManager.pauseExternalAudio()` is called before the overlay appears
+///    and `resumeExternalAudio()` is called in every dismiss path.
 @MainActor
 final class OverlayManager: OverlayPresenting {
 
@@ -48,13 +54,26 @@ final class OverlayManager: OverlayPresenting {
 
     static let shared = OverlayManager()
 
+    // MARK: - Dependencies
+
+    private let audioManager: MediaControlling
+
     // MARK: - State
 
     private var overlayWindow: UIWindow?
     private var dismissCallback: (() -> Void)?
 
+    /// Pending show requests queued while an overlay is already on screen.
+    private var overlayQueue: [(type: ReminderType, duration: TimeInterval, onDismiss: () -> Void)] = []
+
     var isOverlayVisible: Bool {
         overlayWindow != nil && overlayWindow?.isHidden == false
+    }
+
+    // MARK: - Init
+
+    init(audioManager: MediaControlling = AudioInterruptionManager()) {
+        self.audioManager = audioManager
     }
 
     // MARK: - OverlayPresenting
@@ -65,7 +84,9 @@ final class OverlayManager: OverlayPresenting {
         onDismiss: @escaping () -> Void
     ) {
         guard !isOverlayVisible else {
-            Logger.overlay.warning("showOverlay called while overlay already visible — ignoring")
+            // Queue instead of stacking windows — dequeued after current overlay dismisses.
+            overlayQueue.append((type: type, duration: duration, onDismiss: onDismiss))
+            Logger.overlay.info("Overlay for \(type.rawValue) queued (overlay already visible). Queue depth: \(self.overlayQueue.count)")
             return
         }
 
@@ -77,6 +98,7 @@ final class OverlayManager: OverlayPresenting {
             return
         }
 
+        audioManager.pauseExternalAudio()
         dismissCallback = onDismiss
 
         let window = UIWindow(windowScene: windowScene)
@@ -103,6 +125,8 @@ final class OverlayManager: OverlayPresenting {
         overlayWindow?.rootViewController = nil
         overlayWindow = nil
 
+        audioManager.resumeExternalAudio()
+
         let callback = dismissCallback
         dismissCallback = nil
         callback?()
@@ -111,5 +135,25 @@ final class OverlayManager: OverlayPresenting {
 
         // Debug assertion to catch accidental window retention.
         assert(overlayWindow == nil, "OverlayManager: overlayWindow must be nil after dismissal")
+
+        // Present the next queued overlay, if any.
+        presentNextQueuedOverlay()
+    }
+
+    // MARK: - Queue Management
+
+    /// Drop all queued overlays (e.g. on snooze or master-toggle-off).
+    func clearQueue() {
+        overlayQueue.removeAll()
+        Logger.overlay.info("Overlay queue cleared")
+    }
+
+    // MARK: - Private
+
+    private func presentNextQueuedOverlay() {
+        guard !overlayQueue.isEmpty else { return }
+        let next = overlayQueue.removeFirst()
+        Logger.overlay.info("Presenting queued overlay for \(next.type.rawValue). Remaining in queue: \(self.overlayQueue.count)")
+        showOverlay(for: next.type, duration: next.duration, onDismiss: next.onDismiss)
     }
 }
