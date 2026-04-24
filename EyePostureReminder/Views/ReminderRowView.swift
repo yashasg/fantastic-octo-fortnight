@@ -17,6 +17,7 @@ struct ReminderRowView: View {
         }
         .tint(type.color)
         .onChange(of: isEnabled) { _ in onChanged() }
+        .accessibilityHint(isEnabled ? "Tap to disable \(type.title) reminders" : "Tap to enable \(type.title) reminders")
 
         if isEnabled {
             Picker("Remind me every", selection: $interval) {
@@ -25,6 +26,7 @@ struct ReminderRowView: View {
                 }
             }
             .onChange(of: interval) { _ in onChanged() }
+            .accessibilityHint("Sets how frequently \(type.title) reminders appear")
 
             Picker("Break duration", selection: $breakDuration) {
                 ForEach(durationOptions, id: \.self) { seconds in
@@ -32,6 +34,7 @@ struct ReminderRowView: View {
                 }
             }
             .onChange(of: breakDuration) { _ in onChanged() }
+            .accessibilityHint("Sets how long each \(type.title) break overlay stays on screen")
         }
     }
 
