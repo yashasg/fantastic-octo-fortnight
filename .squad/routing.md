@@ -16,6 +16,7 @@ How to decide who handles what.
 | CI/CD, builds, signing, pipelines | Virgil | Xcode config, GitHub Actions, fastlane, code signing |
 | Telemetry, analytics, dashboards, metrics | Turk | Event schemas, App Store Connect, MetricKit, usage analysis |
 | Code review | Saul | Review PRs, check quality, suggest improvements |
+| Legal, terms, privacy, disclaimers | Frank | Terms of service, privacy policy, liability, compliance |
 | Scope & priorities | Danny | What to build next, trade-offs, decisions |
 | Session logging | Scribe | Automatic — never needs routing |
 

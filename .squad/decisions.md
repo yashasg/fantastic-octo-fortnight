@@ -1177,3 +1177,43 @@ The following must be completed before App Store submission:
 - If analytics or telemetry are added in a future phase, the Privacy Policy **must** be updated before shipping
 - If IAP or subscriptions are added, Terms must be expanded with billing/refund sections
 - The in-app disclaimer text in `DISCLAIMER.md` should be surfaced to Linus (UI) for implementation on first launch or Settings screen
+
+---
+
+## Wave 2 Testing Decisions
+
+### Decision: XCUITest Requires .xcodeproj
+**Filed by:** Livingston (Tester)  
+**Date:** 2026-04-25  
+**Status:** Pending Implementation  
+**Related issue:** #9 — Add XCUITest suite
+
+**Problem**
+
+XCUITest UI test bundles require a dedicated UITest target type. Swift Package Manager's `Package.swift` only supports `.testTarget` (unit tests via XCTest) — there is no `.uiTestTarget` equivalent in SPM.
+
+The UI test files have been written and placed in `Tests/EyePostureReminderUITests/`. They are complete, follow XCUIApplication patterns, and include `launchArguments` for test state control. However, they **cannot be compiled or run** without an Xcode project.
+
+**Options Considered**
+
+1. **Add an `.xcodeproj`** — Generate or manually create an Xcode project alongside Package.swift. Add a UITest target that references `Tests/EyePostureReminderUITests/*.swift`. This is the standard path for shipping iOS apps anyway (App Store submission requires Xcode).
+
+2. **Xcode Cloud / xcodebuild** — Same prerequisite: needs an `.xcodeproj` or `.xcworkspace`.
+
+3. **Defer** — Keep the test files staged. When the team adds an Xcode project for distribution, wire the UITest target at that point.
+
+**Recommendation**
+
+Add an `.xcodeproj`. The project is already iOS-only and App Store-bound — an Xcode project is needed for signing, entitlements, and distribution. This is the right time to add it. **Assigned to:** Basher (iOS Dev).
+
+**Work Required**
+
+1. Generate/create `.xcodeproj` from SPM Package.swift manifest
+2. Add UITest target in Xcode project settings
+3. Reference `Tests/EyePostureReminderUITests/*.swift` in target
+4. Add `launchArguments` handling in `EyePostureReminderApp.swift` (see `Tests/EyePostureReminderUITests/README.md`)
+5. Add `accessibilityIdentifier` modifiers to source views (full list in README)
+6. Run `xcodebuild test -scheme EyePostureReminder -destination 'platform=iOS Simulator,name=iPhone 15 Pro'`
+
+**Blocking:** Yes — Phase 2 full test coverage depends on this.
+

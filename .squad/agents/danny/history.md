@@ -191,3 +191,26 @@ Livingston (QA) will write unit tests for ScreenTimeTracker:
 - Snooze suppression (`isEnabled` flag)
 - System clock immunity (`CACurrentMediaTime()`)
 
+
+## 2026-04-25 — Documentation: Wave 2 Updates (ROADMAP, ARCHITECTURE, README)
+
+**Status:** ✅ Complete  
+**Scope:** Documentation reflecting Phase 1 completion and Phase 2 preview
+
+### Orchestration Summary
+
+- **ROADMAP.md:** Updated with Phase 1 completion status, Phase 2 preview, Phase 3 roadmap
+- **ARCHITECTURE.md:** Added testing strategy, detector architecture patterns, data flow diagrams
+- **README.md:** Updated feature description with pause conditions, legal status note
+- **All docs synchronized** with current implementation state
+- **Orchestration Log:** Filed at `.squad/orchestration-log/2026-04-24T23-19-18Z-danny.md`
+
+### Documentation Highlights
+
+- Testing layers documented: Unit, Integration, UI (XCUITest)
+- Detector architecture and priority order documented
+- Phase 2 roadmap: Full test coverage, .xcodeproj integration, accessibility audit
+
+### Next Phase
+
+Documentation ready for Phase 2 planning cycle.

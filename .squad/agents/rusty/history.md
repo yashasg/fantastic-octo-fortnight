@@ -170,6 +170,35 @@ All model, protocol, and service skeletons in `EyePostureReminder/`:
 
 **Documentation:** `.squad/decisions/inbox/rusty-screen-time-review.md`
 
+### 2026-04-26: PauseConditionManager — Focus Mode & Critical Activity Pausing
+
+**What I proposed:**
+- `PauseConditionManager`: new standalone service that aggregates pause signals and emits a single `isPaused: Bool` to `AppCoordinator`.
+- Three protocol-backed detectors: `LiveFocusStatusDetector` (INFocusStatusCenter), `LiveCarPlayDetector` (AVAudioSession route), `LiveDrivingActivityDetector` (CMMotionActivityManager).
+- Full decision document: `.squad/decisions/inbox/rusty-pause-condition-manager.md`
+
+**Key iOS API findings:**
+1. `INFocusStatusCenter.default.focusStatus.isFocused` (iOS 15+) — only tells us SOME Focus is active; cannot distinguish Gaming vs Work vs Personal Focus. Boolean only.
+2. `AVAudioSessionPortCarPlay` — detectable via `AVAudioSession.currentRoute.outputs` with no special entitlement. Best proxy for Maps/CarPlay navigation sessions.
+3. `CMMotionActivityManager` — automotive activity detection via motion coprocessor, negligible battery. Best proxy for driving.
+4. **Detecting another app's foreground state is impossible via public APIs.** No API exists. Not going to happen. Any suggestion otherwise involves private APIs and App Store rejection.
+5. iOS 16+ Focus Filters (App Intents extension) — lets users configure per-Focus behavior for our app. Deferred to Phase 3.
+
+**Architecture decisions:**
+1. `PauseConditionManager` is fully protocol-backed — `FocusStatusDetecting`, `CarPlayDetecting`, `DrivingActivityDetecting` protocols enable mock injection for testing.
+2. `PauseConditionSource` enum tracks which conditions are active as a `Set` — `isPaused = !activeConditions.isEmpty`.
+3. `AppCoordinator` owns `PauseConditionManager` and wires `onPauseStateChanged` → `screenTimeTracker.pauseAll()` / `resumeAll()`.
+4. Snooze and pause conditions are independent axes — `AppCoordinator` checks BOTH before resuming.
+5. Two new `SettingsStore` keys: `epr.pauseDuringFocus` and `epr.pauseWhileDriving` (both default true).
+6. Battery impact: immeasurable — all three detectors are push/event-based or use dedicated motion coprocessor.
+
+**Permissions needed:**
+- `NSFocusStatusUsageDescription` (one-time user prompt for Focus detection)
+- `NSMotionUsageDescription` (one-time user prompt for driving detection)
+- CarPlay detection: no permission needed (AVAudioSession route is always readable)
+
+**Phase placement:** Phase 2. Zero App Store review risk — all public APIs.
+
 ---
 
 ## Session 6 Update: Screen-Time Triggers Architecture Finalized
@@ -240,3 +269,27 @@ For Livingston's unit tests:
 
 Livingston will implement ScreenTimeTracker unit tests using mock factories + mock lifecycle provider. 8 test cases documented in architecture review; ~60-80 lines of test code per case.
 
+
+## 2026-04-25 — Architecture: Wave 2 Testing Strategy Documentation
+
+**Status:** ✅ Complete  
+**Scope:** Testing architecture patterns and conventions documented in ARCHITECTURE.md
+
+### Orchestration Summary
+
+- **Testing Layers Defined:** Unit (manager + detectors), Integration (cross-component), UI (XCUITest)
+- **Conventions Established:** Mocking patterns, fixture factory, async test patterns
+- **XCUITest Requirements Documented:** Blocker (SPM limitation) and workaround (add .xcodeproj)
+- **Data Flow Diagrams:** Testing architecture visually documented
+- **Orchestration Log:** Filed at `.squad/orchestration-log/2026-04-24T23-19-18Z-rusty.md`
+
+### Architecture Decisions
+
+- Layered testing aligns with clean MVVM architecture
+- Fixture factory pattern for detector mocks (reusable across test suites)
+- Test environment flags via launchArguments for reproducible UI testing
+- Documented test data patterns (UserDefaults mocking, NotificationCenter test doubles)
+
+### Next Phase
+
+Testing infrastructure documented and ready. XCUITest blocker (Phase 2) documented in decisions.md.

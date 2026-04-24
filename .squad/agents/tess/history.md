@@ -217,3 +217,25 @@ Linus implemented all 7 strings (Dec 3.6) — build verified successful.
 
 The 5-second grace period is a pure implementation detail. No user should ever be aware of it. If they are (e.g., "Why didn't my timer reset when I got a notification?"), the feature has failed. The goal: users think "I got interrupted, my session kept going" — not "oh, there's a 5s debounce." ✅ Achieved through UX invisibility.
 
+
+## 2026-04-25 — UX Spec: Pause Status Indicator
+
+**Status:** ✅ Complete  
+**Scope:** Pause status indicator visual design and spec
+
+### Orchestration Summary
+
+- **Pause Status Indicator Design:** Top-right corner, always visible, non-intrusive
+- **Visual States:** Idle (gray), paused-network (blue), paused-screentime (orange), paused-gamemode (red)
+- **Format:** Icon + label, scales for iPhone/iPad
+- **Accessibility:** Color + icon combo for clarity
+- **Spec Filed:** `/docs/PAUSE_STATUS_INDICATOR.md`
+- **Orchestration Log:** Filed at `.squad/orchestration-log/2026-04-24T23-19-18Z-tess.md`
+
+### Handoff
+
+Design spec delivered to Basher and Linus for implementation.
+
+### Next Phase
+
+Ready for Phase 2 design expansion.

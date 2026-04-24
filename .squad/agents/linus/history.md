@@ -212,3 +212,42 @@ Settings UI now clearly communicates "after X min of screen time" mental model. 
 - **Named asset colors need `bundle: .module`:** `Color("ReminderBlue")` (and all other named colors in `AppColor`) was looking in `Bundle.main` at runtime, which has no asset catalog in an SPM package. Fixed by adding `bundle: .module` to every `Color("name")` call in `DesignSystem.swift`. This was the root cause of toggle tint colors appearing unchanged.
 - **`ContentView` root fixed:** `ContentView` was still using `SettingsView()` as the post-onboarding root (a stale reference pre-dating HomeView being promoted to root). Fixed to `HomeView()`, which is the correct NavigationStack root per project architecture.
 - **Build verified:** `./scripts/build.sh build` → BUILD SUCCEEDED
+
+### 2026-04-28 — Disclaimer Integration (Legal UI)
+
+- **Disclaimer shown on OnboardingWelcomeView.** Short disclaimer text added below the body copy, above the Next CTA button. Styled with `AppFont.caption` + `.tertiary` foreground color inside a `.quaternary.opacity(0.5)` rounded rectangle badge. Non-blocking — user just sees it; no acceptance gate required.
+- **Legal section added to SettingsView.** A "Legal" `Section` at the bottom of the Form contains two Button rows: "Terms & Conditions" and "Privacy Policy". Each row uses a `Label` with system image and primary foreground. Tapping either presents a sheet.
+- **`LegalDocumentView` created.** Reusable sheet view taking `LegalDocument` enum (`.terms` / `.privacy`). Contains a `NavigationStack` with large-title nav bar, `Done` dismiss button, and a `ScrollView` of `LegalSection` rows (heading + body). Fully localized via `bundle: .module`.
+- **`LegalSection` sub-view avoids `body` naming conflict.** Internal `Text` property renamed `content` (not `body`) to avoid conflict with the `View` protocol's `body` requirement. This is a subtle Swift gotcha with `View` conformance.
+- **31 new xcstrings keys added.** Namespaced under `onboarding.welcome.disclaimer`, `settings.section.legal`, `settings.legal.*`, `legal.terms.*`, `legal.privacy.*`. Total keys: ~108.
+- **Key naming pattern for legal content:** `legal.<document>.<section>.heading` / `legal.<document>.<section>.body` — parallel to `settings.section.*` convention but with `heading`/`body` pair for each section.
+- **Build verified:** `./scripts/build.sh build` → BUILD SUCCEEDED
+
+## 2026-04-25 — Wave 1 & Wave 2 Completion: UI + Legal + Settings Integration
+
+**Status:** ✅ Complete  
+**Scope:** Disclaimer + Legal section + Smart Pause toggles (Wave 2)
+
+### Orchestration Summary — Wave 1
+
+- **Disclaimer Modal:** Added to onboarding, TOS + Privacy Policy links
+- **Legal Section:** Implemented in SettingsView with placeholder text
+- **Build:** Green; UI layer stable
+- **GitHub Issues Closed:** #6, #7
+
+### Orchestration Summary — Wave 2
+
+- **Smart Pause Toggles:** Three toggles in SettingsView (Network, ScreenTime, GameMode)
+- **UserDefaults Integration:** Toggle state persisted with `pauseCondition_*` keys
+- **PauseManager Wiring:** Toggles connected to Basher's service layer
+- **Build:** Green; all integration tests passing
+- **GitHub Issues Closed:** #8
+
+### Status
+
+- **#2 (Legal Content):** Blocked — waiting on human legal team to fill placeholders (`[Your Company Name]`, `[Contact Email]`, `[Jurisdiction]`, `[Date]`)
+- **Orchestration Log:** Filed at `.squad/orchestration-log/2026-04-24T23-19-18Z-linus.md`
+
+### Next Phase
+
+UI layer ready for Phase 2 expansion. Legal content handoff to human team.
