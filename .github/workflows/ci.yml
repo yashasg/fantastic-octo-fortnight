@@ -1,0 +1,205 @@
+# Eye & Posture Reminder — CI/CD Pipeline
+#
+# Tag format (for release tracking):
+#   v0.x.x  — During TestFlight beta phase (pre-App Store)
+#   v1.0.0  — App Store launch and beyond
+#
+# Annotated tags only. Created after a successful upload, not before.
+# Format: git tag -a v1.0.0 -m "Release 1.0.0, build ${{ github.run_number }}"
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  XCODE_VERSION: "16.2"
+  SCHEME: "EyePostureReminder"
+  # No .xcodeproj — project uses Swift Package Manager.
+  # xcodebuild resolves the package directly from Package.swift.
+  PACKAGE_PATH: "${{ github.workspace }}"
+  SIMULATOR: "platform=iOS Simulator,name=iPhone 16,OS=latest"
+  DERIVED_DATA_PATH: "${{ github.workspace }}/DerivedData"
+
+jobs:
+  build-and-test:
+    name: Build & Test
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode ${{ env.XCODE_VERSION }}
+        run: sudo xcode-select -switch /Applications/Xcode_${{ env.XCODE_VERSION }}.app/Contents/Developer
+
+      # ── Versioning ──────────────────────────────────────────────────────────
+      # CFBundleShortVersionString is manually bumped in the Xcode project (when .xcodeproj exists).
+      # CFBundleVersion is set automatically from the CI run number.
+      #
+      # NOTE: agvtool requires an .xcodeproj. Once the Xcode project is created,
+      # replace the PlistBuddy calls below with:
+      #   agvtool new-version -all ${{ github.run_number }}
+      - name: Set build number + inject commit hash
+        run: |
+          COMMIT_HASH=$(git rev-parse --short HEAD)
+          BUILD_NUMBER=${{ github.run_number }}
+          # Export for set-build-info.sh
+          echo "BUILD_NUMBER=$BUILD_NUMBER" >> $GITHUB_ENV
+          echo "GIT_COMMIT_HASH=$COMMIT_HASH" >> $GITHUB_ENV
+
+          # Inject into Info.plist if present (add .xcodeproj target first)
+          PLIST="EyePostureReminder/Info.plist"
+          if [[ -f "$PLIST" ]]; then
+            /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" "$PLIST" 2>/dev/null || true
+            /usr/libexec/PlistBuddy -c "Add :EPRCommitHash string $COMMIT_HASH" "$PLIST" 2>/dev/null || \
+            /usr/libexec/PlistBuddy -c "Set :EPRCommitHash $COMMIT_HASH" "$PLIST"
+            echo "Injected build=$BUILD_NUMBER commit=$COMMIT_HASH into $PLIST"
+          else
+            echo "note: Info.plist not found — versioning will be applied when .xcodeproj is created"
+          fi
+
+      # ── Dependency cache ─────────────────────────────────────────────────────
+      - name: Cache DerivedData
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.DERIVED_DATA_PATH }}
+          key: derived-data-${{ runner.os }}-${{ hashFiles('**/*.xcodeproj/project.pbxproj', '**/*.swift') }}
+          restore-keys: |
+            derived-data-${{ runner.os }}-
+
+      # ── Build ────────────────────────────────────────────────────────────────
+      # Project uses Swift Package Manager. xcodebuild resolves Package.swift directly.
+      # Once an .xcodeproj exists, add: -project EyePostureReminder/EyePostureReminder.xcodeproj
+      - name: Build (simulator, no signing)
+        run: |
+          xcodebuild build \
+            -scheme "${{ env.SCHEME }}" \
+            -destination "${{ env.SIMULATOR }}" \
+            -derivedDataPath "${{ env.DERIVED_DATA_PATH }}" \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            ENABLE_BITCODE=NO \
+            | xcpretty || xcodebuild build \
+            -scheme "${{ env.SCHEME }}" \
+            -destination "${{ env.SIMULATOR }}" \
+            -derivedDataPath "${{ env.DERIVED_DATA_PATH }}" \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            ENABLE_BITCODE=NO
+
+      # ── Test ─────────────────────────────────────────────────────────────────
+      - name: Test (simulator)
+        run: |
+          xcodebuild test \
+            -scheme "${{ env.SCHEME }}" \
+            -destination "${{ env.SIMULATOR }}" \
+            -derivedDataPath "${{ env.DERIVED_DATA_PATH }}" \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            ENABLE_BITCODE=NO \
+            -resultBundlePath TestResults.xcresult \
+            | xcpretty || xcodebuild test \
+            -scheme "${{ env.SCHEME }}" \
+            -destination "${{ env.SIMULATOR }}" \
+            -derivedDataPath "${{ env.DERIVED_DATA_PATH }}" \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            ENABLE_BITCODE=NO \
+            -resultBundlePath TestResults.xcresult
+
+      # ── Lint ─────────────────────────────────────────────────────────────────
+      - name: Lint (SwiftLint)
+        run: |
+          if which swiftlint > /dev/null; then
+            swiftlint lint --reporter github-actions-logging
+          else
+            brew install swiftlint
+            swiftlint lint --reporter github-actions-logging
+          fi
+
+      # ── Artifacts ────────────────────────────────────────────────────────────
+      - name: Collect dSYMs
+        if: always()
+        run: |
+          find "${{ env.DERIVED_DATA_PATH }}" -name "*.dSYM" -exec cp -r {} . \; 2>/dev/null || true
+
+      - name: Upload dSYMs
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dSYMs-${{ github.run_number }}
+          path: "*.dSYM"
+          retention-days: 90
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-${{ github.run_number }}
+          path: TestResults.xcresult
+          retention-days: 30
+
+  # ── TestFlight upload (DISABLED — no Apple Developer account yet) ──────────
+  # Uncomment and configure when an Apple Developer account is available.
+  #
+  # upload-testflight:
+  #   name: Upload to TestFlight
+  #   runs-on: macos-14
+  #   needs: build-and-test
+  #   if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v4
+  #
+  #     - name: Install certificates and provisioning profiles
+  #       # Uses Apple API key stored in GitHub secrets
+  #       env:
+  #         BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
+  #         P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
+  #         BUILD_PROVISION_PROFILE_BASE64: ${{ secrets.BUILD_PROVISION_PROFILE_BASE64 }}
+  #         KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+  #       run: |
+  #         # Decode and install certificate + provisioning profile
+  #         echo $BUILD_CERTIFICATE_BASE64 | base64 --decode > certificate.p12
+  #         security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+  #         security import certificate.p12 -k build.keychain -P "$P12_PASSWORD" -T /usr/bin/codesign
+  #
+  #     - name: Archive (device build)
+  #       run: |
+  #         xcodebuild archive \
+  #           -scheme "${{ env.SCHEME }}" \
+  #           -archivePath EyePostureReminder.xcarchive \
+  #           -allowProvisioningUpdates
+  #
+  #     - name: Export IPA
+  #       run: |
+  #         xcodebuild -exportArchive \
+  #           -archivePath EyePostureReminder.xcarchive \
+  #           -exportPath ./export \
+  #           -exportOptionsPlist ExportOptions.plist
+  #
+  #     - name: Upload to TestFlight
+  #       env:
+  #         APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
+  #         APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+  #         APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+  #       run: |
+  #         xcrun altool --upload-app \
+  #           --type ios \
+  #           --file ./export/EyePostureReminder.ipa \
+  #           --apiKey "$APP_STORE_CONNECT_KEY_ID" \
+  #           --apiIssuer "$APP_STORE_CONNECT_ISSUER_ID"
+  #
+  #     - name: Tag release
+  #       run: |
+  #         VERSION=$(agvtool mvers -terse1)
+  #         git tag -a "v${VERSION}" -m "Release ${VERSION}, build ${{ github.run_number }}"
+  #         git push origin "v${VERSION}"
