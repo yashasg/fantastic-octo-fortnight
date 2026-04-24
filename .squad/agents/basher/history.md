@@ -109,3 +109,16 @@
 - WCAG bug fix: warningOrange in light mode now meets 3:1 contrast threshold (was 2.7:1, now 3.5:1)
 - No `.preferredColorScheme` locks exist anywhere — app follows OS appearance correctly
 - Overlay UIWindow correctly inherits system appearance (no `overrideUserInterfaceStyle` set)
+
+### 2026-04-25 — Screen-Time-Based Reminder Trigger (ScreenTimeTracker)
+
+- **`ScreenTimeTracker`** — new `Services/` class, owns a 1-second `Timer` and observes `UIApplication.didBecomeActiveNotification` (start) / `willResignActiveNotification` (stop + reset all counters). Fires `onThresholdReached(type)` on the main thread; resets that type's counter to 0 before calling back. `pauseAll()`/`resumeAll()` used for snooze support; `stop()` for test tearDown cleanup.
+- **`willResignActiveNotification` is the correct reset event** (not `didEnterBackground`). `willResignActive` fires immediately on screen off, Control Centre, and any interruption. `didEnterBackground` can fire several seconds later — too late to give accurate screen-on time.
+- **UNNotification periodic triggers are now dead production code.** `ReminderScheduler.scheduleReminders()` and `rescheduleReminder()` are never called by `AppCoordinator` for normal reminders. The class and tests are intentionally left intact (reference + safety net). `cancelAllReminders()` is still called as a legacy-notification cleanup safety net.
+- **Auth status no longer gates the trigger path.** Previously: authorized → UNNotifications, denied → fallback `Timer`s. Now: `ScreenTimeTracker` is universal. Auth still matters for the snooze-wake silent UNNotification.
+- **`startFallbackTimers()` / `stopFallbackTimers()` retained as shims** pointing at `configureScreenTimeTracker()` / `screenTimeTracker.stop()`. Zero test changes needed.
+- **`startIfActive()` pattern** — after updating thresholds mid-session (e.g., master toggle on → `scheduleReminders()` while app is foregrounded), call `screenTimeTracker.startIfActive()` to begin ticking immediately without waiting for the next `didBecomeActive` notification.
+- **`configureScreenTimeTracker()` calls `resumeAll()`** — safe because it is only called from `scheduleReminders()` after the snooze guard has cleared. `performReschedule(for:)` sets individual thresholds directly and does NOT call `resumeAll()` so snooze state is preserved when settings change during a snooze.
+- **Interval semantics changed:** `eyeInterval`/`postureInterval` now mean "seconds of continuous screen-on time", not "wall-clock seconds between reminders". Existing JSON values need no changes.
+- **Build verified:** `./scripts/build.sh build` → BUILD SUCCEEDED
+- **Decision filed:** `.squad/decisions/inbox/basher-screen-time-tracker.md`

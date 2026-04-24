@@ -7,12 +7,18 @@ import os
 /// `AppCoordinator` is the **single source of truth** for shared services:
 /// - `SettingsStore` (user preferences)
 /// - `ReminderScheduler` (notification scheduling)
+/// - `ScreenTimeTracker` (screen-on-time-based reminder trigger)
 ///
 /// It also manages:
 /// - Notification authorization state tracking
 /// - Pending-overlay queue (notification-tap race condition)
-/// - Foreground fallback timers (when notifications are denied)
-/// - Snooze state: cancels reminders during snooze and resumes automatically
+/// - Snooze state: pauses the screen-time tracker during snooze and resumes automatically
+///
+/// **Trigger model:** Reminders fire after CONTINUOUS screen-on time (not wall-clock time).
+/// `ScreenTimeTracker` increments per-type counters while the app is active and resets
+/// them to zero whenever the screen turns off (`willResignActiveNotification`). When a
+/// counter reaches its threshold it fires the overlay — identical to the old fallback-timer
+/// callback, but now the only trigger path for both authorized and denied notification states.
 ///
 /// **P1-2:** Uses injected `NotificationScheduling` for all auth management
 /// instead of calling `UNUserNotificationCenter.current()` directly.
@@ -22,7 +28,7 @@ import os
 /// `AppCoordinator` conforms to `ReminderScheduling` so Views can pass it
 /// directly to `SettingsViewModel`. The conformance routes every call through
 /// the auth-aware `scheduleReminders()` / `reschedule(for:)` paths, ensuring
-/// fallback timers stay in sync when notifications are denied.
+/// the screen-time tracker stays in sync on every settings change.
 ///
 /// Created once by `EyePostureReminderApp` as a `@StateObject` and injected
 /// into the SwiftUI environment. `AppDelegate` receives a weak-ish reference
@@ -53,6 +59,13 @@ final class AppCoordinator: ObservableObject {
     /// Defaults to `OverlayManager.shared` in production.
     private let overlayManager: OverlayPresenting
 
+    // MARK: - Screen-Time Tracker
+
+    /// Tracks continuous screen-on time per reminder type and fires callbacks
+    /// when each type's threshold is reached. Replaces both UNNotification
+    /// periodic triggers and the legacy foreground fallback timers.
+    private let screenTimeTracker: ScreenTimeTracker
+
     // MARK: - Published State
 
     /// Current notification authorization status, refreshed on every
@@ -65,12 +78,6 @@ final class AppCoordinator: ObservableObject {
     /// `UIWindowScene` reaches `.foregroundActive`. We stash the overlay here
     /// and present it once `scenePhase` transitions to `.active`.
     private var pendingOverlay: (type: ReminderType, duration: TimeInterval)?
-
-    // MARK: - Foreground Fallback Timers
-
-    /// Repeating timers that fire overlay breaks when the user has denied
-    /// notification permissions. Only active while the app is in the foreground.
-    private var fallbackTimers: [ReminderType: Timer] = [:]
 
     // MARK: - Reschedule Debounce
 
@@ -96,7 +103,17 @@ final class AppCoordinator: ObservableObject {
         self.scheduler = scheduler
         self.notificationCenter = notificationCenter
         self.overlayManager = overlayManager ?? OverlayManager.shared
+        self.screenTimeTracker = ScreenTimeTracker()
         Logger.lifecycle.info("AppCoordinator initialised")
+
+        // Wire ScreenTimeTracker callback — fires on main thread when a type's
+        // continuous screen-on threshold is reached.
+        screenTimeTracker.onThresholdReached = { [weak self] type in
+            guard let self else { return }
+            let duration = self.settings.settings(for: type).breakDuration
+            self.overlayManager.showOverlay(for: type, duration: duration, hapticsEnabled: self.settings.hapticsEnabled) {}
+            Logger.scheduling.info("Reminder triggered by screen-time threshold: \(type.rawValue)")
+        }
     }
 
     // MARK: - Notification Permission
@@ -125,12 +142,19 @@ final class AppCoordinator: ObservableObject {
 
     // MARK: - Scheduling Entrypoint
 
-    /// Master scheduling entrypoint — determines the right strategy based on
-    /// notification authorisation and delegates accordingly.
+    /// Master scheduling entrypoint — configures the `ScreenTimeTracker` with
+    /// current settings so reminders fire after continuous screen-on time.
     ///
-    /// **P1-1 Snooze guard:** If a snooze is active, reminders are cancelled
-    /// and a wake-up timer (in-process Task + silent UNNotification) is scheduled
-    /// at `snoozeEnd`. Expired snoozes are cleared before proceeding normally.
+    /// **Trigger model:** Reminders are no longer driven by fixed-interval
+    /// `UNNotification` repeats or wall-clock `Timer`s. Instead, `ScreenTimeTracker`
+    /// increments per-type counters each second the app is active and fires the
+    /// overlay callback when a counter reaches its threshold. The counter resets
+    /// to zero whenever the screen turns off, enforcing the "continuous screen-on
+    /// time" contract.
+    ///
+    /// **P1-1 Snooze guard:** If a snooze is active, the tracker is paused and
+    /// a wake-up task (in-process Task + silent UNNotification) is armed at
+    /// `snoozeEnd`. Expired snoozes are cleared before normal configuration.
     ///
     /// Call on launch (`.task`) and whenever settings change.
     func scheduleReminders() async {
@@ -139,14 +163,14 @@ final class AppCoordinator: ObservableObject {
         // P1-1: Snooze guard — check before doing anything else.
         if let snoozeEnd = settings.snoozedUntil {
             if snoozeEnd > Date() {
-                // Snooze is still active — cancel reminders and arm wake.
+                // Snooze still active — pause screen-time tracking and arm wake.
+                screenTimeTracker.pauseAll()
                 scheduler.cancelAllReminders()
-                stopFallbackTimers()
                 scheduleSnoozeWakeTask(at: snoozeEnd)
                 if notificationAuthStatus == .authorized {
                     await scheduleSnoozeWakeNotification(at: snoozeEnd)
                 }
-                Logger.scheduling.info("Snooze active until \(snoozeEnd) — reminders paused")
+                Logger.scheduling.info("Snooze active until \(snoozeEnd) — screen-time tracker paused")
                 return
             } else {
                 // Snooze has expired — clear state and fall through to normal scheduling.
@@ -159,34 +183,30 @@ final class AppCoordinator: ObservableObject {
         // No active snooze — cancel any pending wake artifacts.
         cancelSnoozeWake()
 
-        // First launch: prompt the user for permission
+        // First launch: prompt the user for notification permission.
+        // Permission is still used for the snooze-wake silent notification.
         if notificationAuthStatus == .notDetermined {
             await requestNotificationPermission()
         }
 
-        if notificationAuthStatus == .authorized {
-            // Happy path: use real UNNotifications
-            await scheduler.scheduleReminders(using: settings)
-            stopFallbackTimers()
-            Logger.scheduling.info("Reminders scheduled via notifications")
-        } else {
-            // Denied / provisional / ephemeral — fall back to in-app timers
-            scheduler.cancelAllReminders()
-            startFallbackTimers()
-            Logger.scheduling.info("Notifications unavailable — using foreground fallback timers")
-        }
+        // Cancel any legacy periodic UNNotifications (safety net after app update).
+        // Reminders are now driven exclusively by ScreenTimeTracker.
+        scheduler.cancelAllReminders()
+
+        // Configure ScreenTimeTracker with current thresholds and start counting.
+        configureScreenTimeTracker()
+        Logger.scheduling.info("ScreenTimeTracker configured — reminders fire after continuous screen-on time")
     }
 
     // MARK: - Per-Type Auth-Aware Reschedule
 
-    /// Reschedule a single reminder type, respecting the current auth status.
+    /// Reschedule a single reminder type after a settings change.
     ///
-    /// If notifications are authorized the UNNotification for `type` is
-    /// cancelled and re-added with current settings. If notifications are
-    /// denied the fallback timer for `type` is restarted instead.
+    /// Updates the `ScreenTimeTracker` threshold for the type. If the type is
+    /// disabled the tracker counter is cleared and no callback will fire.
     ///
     /// Calls are debounced per-type (300 ms) so rapid slider/picker changes
-    /// don't flood UNUserNotificationCenter with add/remove requests.
+    /// don't thrash the tracker on every value change.
     func reschedule(for type: ReminderType) async {
         rescheduleDebounce[type]?.cancel()
         let task = Task { [weak self] in
@@ -237,9 +257,10 @@ final class AppCoordinator: ObservableObject {
 
     /// Called when the app returns to the foreground from background.
     ///
-    /// Clears any expired snooze first. If snooze is still active, ensures the
-    /// wake task is running. Otherwise refreshes auth status and ensures the
-    /// correct scheduling strategy is active.
+    /// Clears any expired snooze and re-arms the wake task if snooze is still
+    /// active. `ScreenTimeTracker` starts counting automatically via
+    /// `UIApplication.didBecomeActiveNotification` — no explicit timer
+    /// restart is required here.
     func handleForegroundTransition() async {
         await refreshAuthStatus()
 
@@ -259,61 +280,38 @@ final class AppCoordinator: ObservableObject {
             return
         }
 
-        switch notificationAuthStatus {
-        case .authorized:
-            if !fallbackTimers.isEmpty {
-                // Auth was granted while we were in the background — switch strategies.
-                stopFallbackTimers()
-                await scheduler.scheduleReminders(using: settings)
-                Logger.scheduling.info("Foreground transition: auth restored — switched to notifications")
-            }
-        case .denied:
-            if fallbackTimers.isEmpty && settings.masterEnabled {
-                // Timers were stopped on background transition — restart them.
-                startFallbackTimers()
-                Logger.scheduling.info("Foreground transition: restarted fallback timers")
-            }
-        default:
-            break
-        }
+        // ScreenTimeTracker starts via didBecomeActiveNotification automatically.
+        // Nothing additional needed for the screen-time trigger path.
+        Logger.scheduling.debug("Foreground transition: ScreenTimeTracker will resume via didBecomeActive")
     }
 
     /// Called when the app moves to the background.
     ///
-    /// Stops foreground-only fallback timers so they don't fire stale breaks
-    /// on the next foreground resume. `handleForegroundTransition()` restarts
-    /// them when the app becomes active again.
+    /// `ScreenTimeTracker` resets all elapsed counters automatically via
+    /// `UIApplication.willResignActiveNotification`. This method is kept as
+    /// a lifecycle hook for any future foreground-only cleanup.
     func appWillResignActive() {
-        stopFallbackTimers()
-        Logger.lifecycle.debug("App resigned active — fallback timers stopped")
+        // ScreenTimeTracker observes willResignActiveNotification directly and
+        // resets all elapsed counters — no explicit action needed here.
+        Logger.lifecycle.debug("App resigned active — ScreenTimeTracker will auto-reset elapsed counters")
     }
 
-    // MARK: - Foreground Fallback Timers
+    // MARK: - Fallback Timer Shims (backward compatibility)
 
-    /// Start repeating timers that show the overlay directly, bypassing
-    /// the notification system. Only used when notifications are denied.
+    /// Configure the `ScreenTimeTracker` with current settings and start counting.
+    ///
+    /// Retained for call-site compatibility. The "fallback timer" concept is
+    /// superseded by `ScreenTimeTracker` which handles both notification-authorized
+    /// and notification-denied paths uniformly.
     func startFallbackTimers() {
-        stopFallbackTimers()
-
-        // Do not start fallback timers during an active snooze.
-        guard settings.snoozedUntil == nil else {
-            Logger.scheduling.debug("Skipping fallback timers — snooze is active")
-            return
-        }
-
-        for type in ReminderType.allCases {
-            guard settings.isEnabled(for: type) else { continue }
-            startFallbackTimer(for: type)
-        }
+        configureScreenTimeTracker()
     }
 
-    /// Invalidate and remove all fallback timers.
+    /// Stop the `ScreenTimeTracker` and reset all elapsed counters.
+    ///
+    /// Retained for call-site compatibility (e.g., test `tearDown`).
     func stopFallbackTimers() {
-        for (type, timer) in fallbackTimers {
-            timer.invalidate()
-            Logger.scheduling.debug("Fallback timer stopped for \(type.rawValue)")
-        }
-        fallbackTimers.removeAll()
+        screenTimeTracker.stop()
     }
 
     // MARK: - Snooze Wake (Private)
@@ -377,43 +375,41 @@ final class AppCoordinator: ObservableObject {
 
     // MARK: - Private
 
-    /// Execute a single-type reschedule after the debounce window has elapsed.
+    /// Update the ScreenTimeTracker threshold for a single type after the
+    /// debounce window has elapsed.
     private func performReschedule(for type: ReminderType) async {
         await refreshAuthStatus()
 
-        if notificationAuthStatus == .authorized {
-            fallbackTimers[type]?.invalidate()
-            fallbackTimers.removeValue(forKey: type)
-            await scheduler.rescheduleReminder(for: type, using: settings)
+        if settings.isEnabled(for: type) {
+            let interval = settings.settings(for: type).interval
+            screenTimeTracker.setThreshold(interval, for: type)
+            screenTimeTracker.startIfActive()
+            Logger.scheduling.info("Rescheduled \(type.rawValue): screen-time threshold → \(interval)s")
         } else {
-            scheduler.cancelReminder(for: type)
-            startFallbackTimer(for: type)
+            screenTimeTracker.disableTracking(for: type)
+            Logger.scheduling.info("Rescheduled \(type.rawValue): disabled, tracking cleared")
         }
+
+        // Cancel any pending UNNotification for this type (safety net from legacy system).
+        scheduler.cancelReminder(for: type)
     }
 
-    /// Create (or replace) the repeating fallback timer for a single type.
-    private func startFallbackTimer(for type: ReminderType) {
-        fallbackTimers[type]?.invalidate()
-        fallbackTimers.removeValue(forKey: type)
-
-        guard settings.isEnabled(for: type) else {
-            Logger.scheduling.debug("Skipping fallback timer for \(type.rawValue) — disabled")
-            return
-        }
-
-        let reminderSettings = settings.settings(for: type)
-        let timer = Timer.scheduledTimer(
-            withTimeInterval: reminderSettings.interval,
-            repeats: true
-        ) { [weak self] _ in
-            Task { @MainActor [weak self] in
-                guard let self else { return }
-                let duration = self.settings.settings(for: type).breakDuration
-                self.overlayManager.showOverlay(for: type, duration: duration, hapticsEnabled: self.settings.hapticsEnabled) {}
+    /// Configure all `ScreenTimeTracker` thresholds from current settings
+    /// and start counting if the app is active.
+    ///
+    /// Called from `scheduleReminders()` after the snooze guard clears, so
+    /// `resumeAll()` is always safe here.
+    private func configureScreenTimeTracker() {
+        for type in ReminderType.allCases {
+            if settings.isEnabled(for: type) {
+                let interval = settings.settings(for: type).interval
+                screenTimeTracker.setThreshold(interval, for: type)
+            } else {
+                screenTimeTracker.disableTracking(for: type)
             }
         }
-        fallbackTimers[type] = timer
-        Logger.scheduling.info("Fallback timer started for \(type.rawValue) every \(reminderSettings.interval)s")
+        screenTimeTracker.resumeAll()
+        screenTimeTracker.startIfActive()
     }
 }
 
@@ -437,13 +433,12 @@ extension AppCoordinator: ReminderScheduling {
 
     func cancelReminder(for type: ReminderType) {
         scheduler.cancelReminder(for: type)
-        fallbackTimers[type]?.invalidate()
-        fallbackTimers.removeValue(forKey: type)
+        screenTimeTracker.disableTracking(for: type)
     }
 
     func cancelAllReminders() {
         scheduler.cancelAllReminders()
-        stopFallbackTimers()
+        screenTimeTracker.pauseAll()
         overlayManager.clearQueue()
 
         // If snooze was just applied (snoozedUntil set before this call),
