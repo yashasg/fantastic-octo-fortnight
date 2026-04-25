@@ -296,6 +296,18 @@ final class AppCoordinator: ObservableObject {
 
     // MARK: - App Lifecycle Hooks
 
+    /// Clears `snoozedUntil` if it has already passed.
+    ///
+    /// Called by `AppDelegate.applicationDidBecomeActive` so that a stale
+    /// `snoozedUntil` (left by a swiped-away snooze-wake notification on a
+    /// killed app) is cleaned up before `scheduleReminders()` runs.
+    func clearExpiredSnoozeIfNeeded() async {
+        guard let snoozeEnd = settings.snoozedUntil, snoozeEnd <= Date() else { return }
+        settings.snoozedUntil = nil
+        settings.snoozeCount  = 0
+        Logger.scheduling.info("clearExpiredSnoozeIfNeeded: stale snoozedUntil cleared")
+    }
+
     /// Called when the app returns to the foreground from background.
     ///
     /// Clears any expired snooze and re-arms the wake task if snooze is still
@@ -385,9 +397,15 @@ final class AppCoordinator: ObservableObject {
         let interval = max(1, date.timeIntervalSinceNow)
 
         let content = UNMutableNotificationContent()
-        content.title              = "Reminders Resumed"
-        content.body               = "Your eye and posture reminders are now active again."
-        content.sound              = nil   // silent — informational only
+        // Truly silent wake notification — no banner, no sound, no badge.
+        // iOS 15+ .passive level suppresses lock-screen display and sound entirely.
+        content.title              = ""
+        content.body               = ""
+        content.sound              = nil
+        content.badge              = nil
+        if #available(iOS 15, *) {
+            content.interruptionLevel = .passive
+        }
         content.categoryIdentifier = Self.snoozeWakeCategory
 
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: interval, repeats: false)
