@@ -935,7 +935,7 @@ final class StringCatalogTests: XCTestCase {
         XCTAssertTrue(isTranslated("settings.snooze.limitReached.hint"))
     }
 
-    func test_settingsMasterToggleFooter_resolvesToEnglish() {
+    func test_settingsGlobalToggleFooter_resolvesToEnglish() {
         XCTAssertTrue(isTranslated("settings.masterToggle.footer"))
     }
 
