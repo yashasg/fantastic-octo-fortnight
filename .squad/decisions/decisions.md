@@ -1,3 +1,55 @@
+# Decision: TestBundle helper for SPM resource bundle in tests
+
+**Filed by:** Basher  
+**Date:** 2026-04-25  
+**Related issue:** #11
+
+## Decision
+
+Added `Tests/EyePostureReminderTests/Mocks/TestBundleHelper.swift` — a `TestBundle` enum that resolves the production module's resource bundle for test code.
+
+**Key points:**
+- `TestBundle.module` walks candidates from `Bundle(for: SettingsStore.self)` looking for `EyePostureReminder_EyePostureReminder.bundle` (SPM naming: `{Package}_{Target}.bundle`).
+- Provides `testColor(named:)` and `testLocalizedString(key:value:)` helpers.
+- Package.swift is untouched — structure is correct, the fix is purely on the lookup side.
+- Livingston should migrate any test that calls `UIColor(named:in:.module)` or `Bundle.module` in the test context to use `TestBundle.module` / the convenience helpers instead.
+
+## Rationale
+
+`@testable import EyePostureReminder` does not remap `Bundle.module` — it still resolves to the test target's bundle. The only reliable way to reach the production resource bundle from a test target is via `Bundle(for: SomeProductionClass.self)` + a path traversal to the SPM-generated `.bundle` sub-directory.
+# Decision: TestBundle.module pattern for test resource access
+
+**Author:** Livingston  
+**Date:** 2026-04-25  
+**Issue:** #11  
+
+## Decision
+
+All test code that needs to access production module resources (color assets, string catalog, defaults.json) must use `TestBundle.module` from `Mocks/TestBundleHelper.swift`.
+
+**Exception:** Tests loading test-fixture resources (e.g., `Fixtures/defaults.json` in `AppConfigTests`) must use `Bundle.module` — the SPM-generated accessor for the *test* target's resource bundle.
+
+## Context
+
+In SPM, `Bundle.module` in test code resolves to the test target's resource bundle, not the main module bundle. The production module's compiled assets (Colors.xcassets, Localizable.xcstrings, Resources/defaults.json) live in `EyePostureReminder_EyePostureReminder.bundle`. Using `Bundle.main`, `Bundle(for: SomeTestClass.self)`, or `Bundle.module` naively from test code will not find these resources.
+
+`TestBundle.module` solves this by locating the production resource bundle at runtime via `Bundle(for: SettingsStore.self)` + path traversal.
+
+## Pattern
+
+```swift
+// Color lookups:
+UIColor(named: "ReminderBlue", in: TestBundle.module, compatibleWith: nil)
+
+// String lookups:
+NSLocalizedString("settings.doneButton", bundle: TestBundle.module, comment: "")
+
+// AppConfig from production bundle:
+AppConfig.load(from: TestBundle.module)
+
+// AppConfig from test fixture:
+AppConfig.load(from: Bundle.module)  // test target's own Bundle.module
+```
 # Project Decisions — Eye & Posture Reminder
 
 **Updated:** 2026-04-24  

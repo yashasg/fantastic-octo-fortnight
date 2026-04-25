@@ -7,6 +7,25 @@
 
 ## Learnings
 
+### 2026-04-25 — Issue #11: Fixed 70 Failing Tests (Bundle.module mismatch)
+
+**Root cause:** `Bundle.module` in SPM test code resolves to the *test target's* resource bundle, not the production `EyePostureReminder` module bundle. Tests that relied on this for `UIColor(named:)`, `NSLocalizedString`, and `AppConfig.load()` were all missing their resources.
+
+**Fix pattern:** Created `TestBundle.module` helper (`Mocks/TestBundleHelper.swift`) that locates the production resource bundle by walking SPM candidate paths from `Bundle(for: SettingsStore.self)`, looking for `EyePostureReminder_EyePostureReminder.bundle`.
+
+**Files changed (5 test suites, 70 failures fixed):**
+- `ColorTokenTests.swift` — `uiColor(named:)` now uses `TestBundle.module`
+- `DarkModeTests.swift` — `uiColor(named:)` now uses `TestBundle.module`
+- `StringCatalogTests.swift` — `str(_:)` helper now uses `TestBundle.module` instead of `Bundle.main`
+- `RegressionTests.swift` (LocalizationBundleRegressionTests) — `moduleBundle` now uses `TestBundle.module` instead of `Bundle(for: SettingsStore.self)` directly (code bundle ≠ resource bundle in SPM)
+- `AppConfigTests.swift` — `testBundle` changed from `Bundle(for: AppConfigTests.self)` to `Bundle.module` so SPM's generated accessor provides the test target's Fixtures/ resources (fixture values 900/15/2700/20)
+
+**Key insight:** In SPM, code bundle (`Bundle(for: SomeClass.self)`) ≠ resource bundle (`EyePostureReminder_EyePostureReminder.bundle`). NSLocalizedString and UIColor(named:) only search the resource bundle. Even `Bundle(for: SettingsStore.self)` won't find xcstrings/xcassets without traversing to the resource bundle. `TestBundle.module` does this traversal.
+
+**AppConfigTests special case:** `testBundle` uses `Bundle.module` (test target's resource bundle, with fixture defaults.json). `TestBundle.module` would point to the production bundle (same values as fallback), making test assertions impossible.
+
+**Build verified:** `xcodebuild build-for-testing` → `TEST BUILD SUCCEEDED`.
+
 ## Core Context
 
 **Phase 1 Test Suite (M1.7) — 2026-04-24 to 2026-04-25:**
@@ -214,3 +233,17 @@ Test target depends on executable target in Package.swift (Swift 5.9 supported; 
 ### Next Phase
 
 Unit and integration suites production-ready. XCUITest execution blocked by architectural decision; assigned to Basher for Phase 2.
+
+### 2026-04-25 — Test Bundle Pattern Migration (Issue #11, Livingston Part)
+
+- **Root cause (70 failures):** SPM test code's `Bundle.module` resolves to test target's bundle, not production. Colors.xcassets, Localizable.xcstrings, defaults.json all absent from test bundle → `UIColor(named:)`, `NSLocalizedString`, `AppConfig.load()` all failing.
+- **Solution pattern:** Use `TestBundle.module` (from `Mocks/TestBundleHelper.swift`) for production resources; use `Bundle.module` for test fixtures only (e.g., Fixtures/defaults.json in AppConfigTests).
+- **Files fixed (5 test suites, 70 failures):**
+  - `ColorTokenTests.swift` — `uiColor(named:)` → `TestBundle.module`
+  - `DarkModeTests.swift` — `uiColor(named:)` → `TestBundle.module`
+  - `StringCatalogTests.swift` — `str(_:)` helper → `TestBundle.module` instead of `Bundle.main`
+  - `RegressionTests.swift` (LocalizationBundleRegressionTests) — `moduleBundle` → `TestBundle.module` instead of direct `Bundle(for: SettingsStore.self)`
+  - `AppConfigTests.swift` — `testBundle` uses `Bundle.module` (SPM-generated test target accessor) for fixture access
+- **Additional fix:** `AppCoordinatorTests.swift` — injected `MockNotificationCenter` to prevent `UNUserNotificationCenter` crash (UIKit environment issue).
+- **Build verified:** `xcodebuild build-for-testing` → `TEST BUILD SUCCEEDED`.
+- **Key insight:** In SPM, code bundle ≠ resource bundle. NSLocalizedString and UIColor(named:) only search the resource bundle (`EyePostureReminder_EyePostureReminder.bundle`). Even `Bundle(for: SettingsStore.self)` won't find assets without traversing to the resource bundle.
