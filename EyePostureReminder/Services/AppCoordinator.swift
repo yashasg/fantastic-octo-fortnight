@@ -338,6 +338,7 @@ final class AppCoordinator: ObservableObject {
                 // Snooze expired while backgrounded — clear and reschedule.
                 settings.snoozedUntil = nil
                 settings.snoozeCount  = 0
+                AnalyticsLogger.log(.snoozeExpired)
                 Logger.scheduling.info("Foreground transition: snooze expired — resuming normal scheduling")
                 await scheduleReminders()
             } else {
