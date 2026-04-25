@@ -171,7 +171,19 @@ final class StringCatalogTests: XCTestCase {
             "legal.privacy.childrenPrivacy.body", "legal.privacy.rights.heading",
             "legal.privacy.rights.body", "legal.privacy.changesToPolicy.heading",
             "legal.privacy.changesToPolicy.body", "legal.privacy.contact.heading",
-            "legal.privacy.contact.body"
+            "legal.privacy.contact.body",
+            // settings.smartPause.* keys (6) — added by Linus for Smart Pause feature
+            "settings.section.smartPause",
+            "settings.smartPause.footer",
+            "settings.smartPause.pauseDuringFocus",
+            "settings.smartPause.pauseDuringFocus.hint",
+            "settings.smartPause.pauseWhileDriving",
+            "settings.smartPause.pauseWhileDriving.hint",
+            // reminder.* keys (8) — notification/overlay text used in system banners
+            "reminder.eyes.title", "reminder.eyes.overlayTitle",
+            "reminder.eyes.notificationTitle", "reminder.eyes.notificationBody",
+            "reminder.posture.title", "reminder.posture.overlayTitle",
+            "reminder.posture.notificationTitle", "reminder.posture.notificationBody"
         ]
         for key in expectedKeys {
             XCTAssertFalse(str(key).isEmpty, "Key '\(key)' must resolve to a non-empty string")
@@ -204,7 +216,10 @@ final class StringCatalogTests: XCTestCase {
             "settings.hapticFeedback.hint",
             "settings.notifications.disabledTitle", "settings.notifications.disabledBody",
             "settings.notifications.disabledLabel", "settings.notifications.openSettings",
-            "settings.notifications.openSettings.hint"
+            "settings.notifications.openSettings.hint",
+            "settings.section.smartPause", "settings.smartPause.footer",
+            "settings.smartPause.pauseDuringFocus", "settings.smartPause.pauseDuringFocus.hint",
+            "settings.smartPause.pauseWhileDriving", "settings.smartPause.pauseWhileDriving.hint"
         ]
         XCTAssertEqual(Set(keys).count, keys.count, "Settings screen keys must be unique")
     }
@@ -279,7 +294,16 @@ final class StringCatalogTests: XCTestCase {
             "legal.privacy.childrenPrivacy.body", "legal.privacy.rights.heading",
             "legal.privacy.rights.body", "legal.privacy.changesToPolicy.heading",
             "legal.privacy.changesToPolicy.body", "legal.privacy.contact.heading",
-            "legal.privacy.contact.body"
+            "legal.privacy.contact.body",
+            // settings.smartPause.* keys (6) — added by Linus for Smart Pause feature
+            "settings.section.smartPause", "settings.smartPause.footer",
+            "settings.smartPause.pauseDuringFocus", "settings.smartPause.pauseDuringFocus.hint",
+            "settings.smartPause.pauseWhileDriving", "settings.smartPause.pauseWhileDriving.hint",
+            // reminder.* keys (8) — notification/overlay text
+            "reminder.eyes.title", "reminder.eyes.overlayTitle",
+            "reminder.eyes.notificationTitle", "reminder.eyes.notificationBody",
+            "reminder.posture.title", "reminder.posture.overlayTitle",
+            "reminder.posture.notificationTitle", "reminder.posture.notificationBody"
         ]
         XCTAssertEqual(
             Set(allKeys).count,
@@ -345,13 +369,15 @@ final class StringCatalogTests: XCTestCase {
 
     func test_keyConvention_screenPrefixes_areKnown() {
         // All keys must start with a recognised screen prefix.
-        let validPrefixes = Set(["home", "settings", "overlay", "onboarding", "legal"])
+        let validPrefixes = Set(["home", "settings", "overlay", "onboarding", "legal", "reminder"])
         let allKeys = [
             "home.navTitle", "home.title", "home.status.active",
             "settings.navTitle", "settings.doneButton",
+            "settings.section.smartPause", "settings.smartPause.pauseDuringFocus",
             "overlay.dismissButton", "overlay.countdown.label",
             "onboarding.welcome.title", "onboarding.permission.title",
-            "onboarding.setup.title"
+            "onboarding.setup.title",
+            "reminder.eyes.notificationTitle", "reminder.posture.notificationTitle"
         ]
         for key in allKeys {
             let prefix = String(key.split(separator: ".").first ?? "")
@@ -649,16 +675,91 @@ final class StringCatalogTests: XCTestCase {
         XCTAssertTrue(isTranslated("legal.privacy.contact.body"))
     }
 
-    // MARK: - Future Key Guard: resetToDefaults (pending Linus implementation)
-    //
-    // Once Linus adds the "Reset to Defaults" UI strings, uncomment and update these tests:
-    //
-    // func test_settingsResetDefaultsButton_resolvesToEnglish() {
-    //     XCTAssertTrue(isTranslated("settings.resetDefaults.button"),
-    //         "'settings.resetDefaults.button' must exist in catalog with English translation")
-    // }
-    //
-    // func test_settingsResetDefaultsConfirm_resolvesToEnglish() {
-    //     XCTAssertTrue(isTranslated("settings.resetDefaults.confirm"))
-    // }
+    // MARK: - settings.smartPause.* Keys: Individual Resolution
+
+    func test_settingsSectionSmartPause_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("settings.section.smartPause"),
+            "'settings.section.smartPause' must resolve from catalog, not fall back to key string")
+    }
+
+    func test_settingsSmartPauseFooter_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("settings.smartPause.footer"))
+    }
+
+    func test_settingsSmartPausePauseDuringFocus_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("settings.smartPause.pauseDuringFocus"))
+    }
+
+    func test_settingsSmartPausePauseDuringFocusHint_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("settings.smartPause.pauseDuringFocus.hint"))
+    }
+
+    func test_settingsSmartPausePauseWhileDriving_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("settings.smartPause.pauseWhileDriving"))
+    }
+
+    func test_settingsSmartPausePauseWhileDrivingHint_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("settings.smartPause.pauseWhileDriving.hint"))
+    }
+
+    // MARK: - reminder.* Keys: Individual Resolution
+
+    func test_reminderEyesTitle_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("reminder.eyes.title"),
+            "'reminder.eyes.title' must resolve from catalog, not fall back to key string")
+    }
+
+    func test_reminderEyesOverlayTitle_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("reminder.eyes.overlayTitle"))
+    }
+
+    func test_reminderEyesNotificationTitle_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("reminder.eyes.notificationTitle"),
+            "'reminder.eyes.notificationTitle' must resolve — shown in system notification banners")
+    }
+
+    func test_reminderEyesNotificationBody_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("reminder.eyes.notificationBody"))
+    }
+
+    func test_reminderPostureTitle_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("reminder.posture.title"))
+    }
+
+    func test_reminderPostureOverlayTitle_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("reminder.posture.overlayTitle"))
+    }
+
+    func test_reminderPostureNotificationTitle_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("reminder.posture.notificationTitle"),
+            "'reminder.posture.notificationTitle' must resolve — shown in system notification banners")
+    }
+
+    func test_reminderPostureNotificationBody_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("reminder.posture.notificationBody"))
+    }
+
+    // MARK: - reminder.* Keys: No Duplicates
+
+    func test_noDuplicateKeys_reminderKeys() {
+        let keys = [
+            "reminder.eyes.title", "reminder.eyes.overlayTitle",
+            "reminder.eyes.notificationTitle", "reminder.eyes.notificationBody",
+            "reminder.posture.title", "reminder.posture.overlayTitle",
+            "reminder.posture.notificationTitle", "reminder.posture.notificationBody"
+        ]
+        XCTAssertEqual(Set(keys).count, keys.count, "Reminder keys must be unique")
+    }
+
+    // MARK: - settings.resetToDefaults.* Keys
+
+    func test_settingsResetToDefaultsHint_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("settings.resetToDefaults.hint"),
+            "'settings.resetToDefaults.hint' must exist — VoiceOver pre-action hint for destructive button")
+    }
 }
