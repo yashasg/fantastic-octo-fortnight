@@ -18,11 +18,11 @@ struct OnboardingWelcomeView: View {
                     HStack(spacing: AppSpacing.lg) {
                         Image(systemName: AppSymbol.eyeBreak)
                             .font(.system(size: 72))
-                            .foregroundStyle(.indigo)
+                            .foregroundStyle(AppColor.reminderBlue)
                             .accessibilityHidden(true)
                         Image(systemName: AppSymbol.postureCheck)
                             .font(.system(size: 72))
-                            .foregroundStyle(.green)
+                            .foregroundStyle(AppColor.reminderGreen)
                             .accessibilityHidden(true)
                     }
                     .padding(AppSpacing.xl)
@@ -33,19 +33,18 @@ struct OnboardingWelcomeView: View {
                     // Headline + Subheadline
                     VStack(spacing: AppSpacing.sm) {
                         Text("onboarding.welcome.title", bundle: .module)
-                            .font(.title2)
-                            .fontWeight(.bold)
+                            .font(AppFont.headline)
                             .multilineTextAlignment(.center)
 
                         Text("onboarding.welcome.subtitle", bundle: .module)
-                            .font(.headline)
+                            .font(AppFont.bodyEmphasized)
                             .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)
                     }
 
                     // Value proposition body
                     Text("onboarding.welcome.body", bundle: .module)
-                        .font(.body)
+                        .font(AppFont.body)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, AppSpacing.sm)
@@ -59,7 +58,7 @@ struct OnboardingWelcomeView: View {
                     }
                     .buttonStyle(.borderedProminent)
                     .controlSize(.large)
-                    .tint(.indigo)
+                    .tint(AppColor.reminderBlue)
                     .padding(.horizontal, AppSpacing.xl)
                     .accessibilityLabel(Text("onboarding.welcome.nextButton", bundle: .module))
                     .accessibilityHint(Text("onboarding.welcome.nextButton.hint", bundle: .module))

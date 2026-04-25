@@ -19,8 +19,8 @@ struct ReminderRowView: View {
         .onChange(of: isEnabled) { _ in onChanged() }
         .accessibilityHint(
             isEnabled
-                ? "Tap to disable \(type.title) reminders"
-                : "Tap to enable \(type.title) reminders"
+                ? String(format: String(localized: "settings.reminder.toggle.enabled.hint", bundle: .module), type.title)
+                : String(format: String(localized: "settings.reminder.toggle.disabled.hint", bundle: .module), type.title)
         )
 
         if isEnabled {
@@ -37,13 +37,18 @@ struct ReminderRowView: View {
                 )
             )
 
-            Picker("Break duration", selection: $breakDuration) {
+            Picker(String(localized: "settings.reminder.durationPicker", bundle: .module), selection: $breakDuration) {
                 ForEach(durationOptions, id: \.self) { seconds in
                     Text(formatDuration(seconds)).tag(seconds)
                 }
             }
             .onChange(of: breakDuration) { _ in onChanged() }
-            .accessibilityHint("Sets how long each \(type.title) break overlay stays on screen")
+            .accessibilityHint(
+                String(
+                    format: String(localized: "settings.reminder.durationPicker.hint", bundle: .module),
+                    type.title
+                )
+            )
         }
     }
 

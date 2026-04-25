@@ -156,6 +156,50 @@
         }
       }
     },
+    "settings.reminder.toggle.enabled.hint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tap to disable %@ reminders"
+          }
+        }
+      }
+    },
+    "settings.reminder.toggle.disabled.hint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tap to enable %@ reminders"
+          }
+        }
+      }
+    },
+    "settings.reminder.durationPicker" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Break duration"
+          }
+        }
+      }
+    },
+    "settings.reminder.durationPicker.hint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sets how long each %@ break overlay stays on screen"
+          }
+        }
+      }
+    },
     "settings.reminder.section.footer" : {
       "extractionState" : "manual",
       "localizations" : {
