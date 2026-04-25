@@ -210,12 +210,25 @@ final class SettingsViewModel: ObservableObject {
 
     /// Human-readable label for an interval option (e.g. "20 min").
     static func labelForInterval(_ seconds: TimeInterval) -> String {
-        "\(Int(seconds) / 60) min"
+        String(
+            format: String(localized: "settings.picker.minuteFormat", bundle: .module),
+            Int(seconds) / 60
+        )
     }
 
     /// Human-readable label for a break duration option (e.g. "20 sec").
     static func labelForBreakDuration(_ seconds: TimeInterval) -> String {
         let secs = Int(seconds)
-        return secs < 60 ? "\(secs) sec" : "\(secs / 60) min"
+        if secs < 60 {
+            return String(
+                format: String(localized: "settings.picker.secondFormat", bundle: .module),
+                secs
+            )
+        } else {
+            return String(
+                format: String(localized: "settings.picker.minuteFormat", bundle: .module),
+                secs / 60
+            )
+        }
     }
 }

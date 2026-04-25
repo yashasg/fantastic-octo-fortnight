@@ -58,6 +58,7 @@ struct HomeView: View {
                 } label: {
                     Image(systemName: AppSymbol.settings)
                         .accessibilityLabel(Text("home.settingsButton", bundle: .module))
+                        .accessibilityHint(Text("home.settingsButton.hint", bundle: .module))
                 }
             }
         }

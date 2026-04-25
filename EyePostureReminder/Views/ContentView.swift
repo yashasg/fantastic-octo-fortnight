@@ -2,7 +2,6 @@ import SwiftUI
 
 struct ContentView: View {
     @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
-    @AppStorage("openSettingsOnLaunch") private var openSettingsOnLaunch = false
 
     var body: some View {
         if hasSeenOnboarding {
