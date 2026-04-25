@@ -216,9 +216,10 @@ struct OverlayView: View {
 
     private func startTimer() {
         let newTimer = Timer(timeInterval: 1, repeats: true) { _ in
-            if secondsRemaining > 0 {
+            if secondsRemaining > 1 {
                 secondsRemaining -= 1
             } else {
+                secondsRemaining = 0
                 timer?.invalidate()
                 performAutoDismiss()
             }

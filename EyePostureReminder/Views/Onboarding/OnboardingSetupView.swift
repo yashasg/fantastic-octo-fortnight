@@ -104,23 +104,22 @@ struct SetupPreviewCard: View {
                 .foregroundStyle(color)
                 .frame(width: 40)
                 .accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: AppSpacing.xs) {
                 Text(title)
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
+                    .font(AppFont.bodyEmphasized)
                 HStack(spacing: AppSpacing.sm) {
                     Label(interval, systemImage: "clock")
-                        .font(.caption)
+                        .font(AppFont.caption)
                         .foregroundStyle(.secondary)
                     Label(duration, systemImage: "timer")
-                        .font(.caption)
+                        .font(AppFont.caption)
                         .foregroundStyle(.secondary)
                 }
             }
             Spacer()
         }
         .padding(AppSpacing.md)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: AppLayout.cardCornerRadius))
         .accessibilityElement(children: .combine)
         .accessibilityLabel(
             String(

@@ -6,13 +6,18 @@
 import SwiftUI
 
 struct OnboardingView: View {
+    @EnvironmentObject private var coordinator: AppCoordinator
     @State private var currentPage = 0
 
     var body: some View {
         TabView(selection: $currentPage) {
             OnboardingWelcomeView { currentPage = 1 }
                 .tag(0)
-            OnboardingPermissionView { currentPage = 2 }
+            // Inject the coordinator's notification center so the permission
+            // request can be driven by a mock in UI tests without swizzling.
+            OnboardingPermissionView(
+                notificationCenter: coordinator.notificationCenter
+            ) { currentPage = 2 }
                 .tag(1)
             OnboardingSetupView(
                 onGetStarted: finishOnboarding,
@@ -25,12 +30,12 @@ struct OnboardingView: View {
     }
 
     private func finishOnboarding() {
-        UserDefaults.standard.set(true, forKey: "hasSeenOnboarding")
+        UserDefaults.standard.set(true, forKey: AppStorageKey.hasSeenOnboarding)
     }
 
     private func finishOnboardingAndCustomize() {
-        UserDefaults.standard.set(true, forKey: "openSettingsOnLaunch")
-        UserDefaults.standard.set(true, forKey: "hasSeenOnboarding")
+        UserDefaults.standard.set(true, forKey: AppStorageKey.openSettingsOnLaunch)
+        UserDefaults.standard.set(true, forKey: AppStorageKey.hasSeenOnboarding)
     }
 }
 
@@ -51,7 +56,6 @@ struct OnboardingScreenWrapper<Content: View>: View {
     var body: some View {
         content
             .opacity(appeared ? 1 : 0)
-            .offset(y: (appeared || reduceMotion) ? 0 : 20)
             .onAppear {
                 let animation: Animation = reduceMotion
                     ? .linear(duration: 0.15)
@@ -68,4 +72,5 @@ struct OnboardingScreenWrapper<Content: View>: View {
 
 #Preview {
     OnboardingView()
+        .environmentObject(AppCoordinator())
 }

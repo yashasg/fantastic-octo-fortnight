@@ -41,6 +41,9 @@ enum AppColor {
 // MARK: - Typography
 
 enum AppFont {
+    /// Hero moments / large title tier — scales with Dynamic Type (base: 34pt bold).
+    static let largeTitle: Font = .system(.largeTitle).weight(.bold)
+
     /// Overlay headline — scales with Dynamic Type (base: 28pt bold).
     static let headline: Font = .system(.title).weight(.bold)
 
@@ -92,11 +95,12 @@ enum AppAnimation {
     static let snoozeAutoDismiss: Double = 5.0
 
     // Convenience SwiftUI Animation values
-    static let overlayAppearCurve: Animation  = .easeOut(duration: overlayAppear)
-    static let overlayDismissCurve: Animation = .easeIn(duration: overlayDismiss)
-    static let overlayFadeCurve: Animation    = .linear(duration: overlayAutoDismiss)
-    static let settingsExpandCurve: Animation = .easeInOut(duration: settingsExpand)
-    static let countdownRingCurve: Animation  = .linear(duration: countdownRingTick)
+    static let overlayAppearCurve: Animation      = .easeOut(duration: overlayAppear)
+    static let overlayDismissCurve: Animation     = .easeIn(duration: overlayDismiss)
+    static let overlayFadeCurve: Animation        = .linear(duration: overlayAutoDismiss)
+    static let settingsExpandCurve: Animation     = .easeInOut(duration: settingsExpand)
+    static let countdownRingCurve: Animation      = .linear(duration: countdownRingTick)
+    static let snoozeSheetAppearCurve: Animation  = .easeOut(duration: snoozeSheetAppear)
 }
 
 // MARK: - SF Symbol Names
@@ -135,4 +139,8 @@ enum AppLayout {
     static let sheetCornerRadius: CGFloat = 20
     /// Overlay corner radius (for non-fullscreen contexts)
     static let overlayCornerRadius: CGFloat = 24
+    /// Card / small-surface corner radius (onboarding cards, preview tiles)
+    static let cardCornerRadius: CGFloat = 16
+    /// Onboarding hero illustration icon size
+    static let onboardingIllustrationSize: CGFloat = 72
 }

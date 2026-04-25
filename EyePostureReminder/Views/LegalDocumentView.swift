@@ -108,7 +108,7 @@ private struct LegalSection: View {
     let content: Text
 
     var body: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.xs) {
+        VStack(alignment: .leading, spacing: AppSpacing.sm)  {
             heading
                 .font(AppFont.bodyEmphasized)
                 .foregroundStyle(.primary)

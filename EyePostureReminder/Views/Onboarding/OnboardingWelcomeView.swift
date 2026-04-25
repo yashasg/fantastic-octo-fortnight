@@ -17,16 +17,16 @@ struct OnboardingWelcomeView: View {
                     // Illustration
                     HStack(spacing: AppSpacing.lg) {
                         Image(systemName: AppSymbol.eyeBreak)
-                            .font(.system(size: 72))
+                            .font(.system(size: AppLayout.onboardingIllustrationSize))
                             .foregroundStyle(AppColor.reminderBlue)
                             .accessibilityHidden(true)
                         Image(systemName: AppSymbol.postureCheck)
-                            .font(.system(size: 72))
+                            .font(.system(size: AppLayout.onboardingIllustrationSize))
                             .foregroundStyle(AppColor.reminderGreen)
                             .accessibilityHidden(true)
                     }
                     .padding(AppSpacing.xl)
-                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 24))
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: AppLayout.overlayCornerRadius))
                     .accessibilityElement(children: .ignore)
                     .accessibilityLabel(Text("onboarding.welcome.illustrationLabel", bundle: .module))
 

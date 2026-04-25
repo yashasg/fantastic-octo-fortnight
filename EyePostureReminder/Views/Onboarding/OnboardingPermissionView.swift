@@ -96,8 +96,8 @@ struct OnboardingPermissionView: View {
 /// A styled visual mock of an iOS notification to set user expectations.
 private struct NotificationPreviewCard: View {
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(spacing: 8) {
+        VStack(alignment: .leading, spacing: AppSpacing.xs) {
+            HStack(spacing: AppSpacing.sm) {
                 Image(systemName: AppSymbol.eyeBreak)
                     .foregroundStyle(AppColor.reminderBlue)
                     .font(AppFont.caption)
@@ -107,18 +107,17 @@ private struct NotificationPreviewCard: View {
                     .foregroundStyle(.secondary)
                 Spacer()
                 Text("onboarding.permission.notificationCard.now", bundle: .module)
-                    .font(.caption2)
+                    .font(AppFont.caption)
                     .foregroundStyle(.tertiary)
             }
             Text("onboarding.permission.notificationCard.title", bundle: .module)
-                .font(.subheadline)
-                .fontWeight(.semibold)
+                .font(AppFont.bodyEmphasized)
             Text("onboarding.permission.notificationCard.body", bundle: .module)
-                .font(.subheadline)
+                .font(AppFont.body)
                 .foregroundStyle(.secondary)
         }
         .padding(AppSpacing.md)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: AppLayout.cardCornerRadius))
         .padding(.horizontal, AppSpacing.md)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(Text("onboarding.permission.notificationCard.label", bundle: .module))

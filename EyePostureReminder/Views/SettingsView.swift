@@ -100,7 +100,8 @@ struct SettingsView: View {
                 }
             }
 
-            // MARK: Snooze
+            // MARK: Snooze (only meaningful when reminders are globally enabled)
+            if settings.globalEnabled {
             Section {
                 if isSnoozed {
                     HStack {
@@ -173,6 +174,7 @@ struct SettingsView: View {
             } header: {
                 Text("settings.section.snooze", bundle: .module)
             }
+            } // end if settings.globalEnabled (snooze only meaningful when reminders are on)
 
             // MARK: Preferences
             Section {
@@ -196,6 +198,10 @@ struct SettingsView: View {
                 .tint(AppColor.reminderBlue)
                 .accessibilityHint(Text("settings.smartPause.pauseDuringFocus.hint", bundle: .module))
                 .accessibilityIdentifier("settings.smartPause.pauseDuringFocus")
+                .onChange(of: settings.pauseDuringFocus) { newValue in
+                    // Route through ViewModel so the analytics setter fires.
+                    viewModel?.pauseDuringFocus = newValue
+                }
 
                 Toggle(isOn: $settings.pauseWhileDriving) {
                     Label(
@@ -206,6 +212,10 @@ struct SettingsView: View {
                 .tint(AppColor.reminderBlue)
                 .accessibilityHint(Text("settings.smartPause.pauseWhileDriving.hint", bundle: .module))
                 .accessibilityIdentifier("settings.smartPause.pauseWhileDriving")
+                .onChange(of: settings.pauseWhileDriving) { newValue in
+                    // Route through ViewModel so the analytics setter fires.
+                    viewModel?.pauseWhileDriving = newValue
+                }
             } header: {
                 Text("settings.section.smartPause", bundle: .module)
             } footer: {

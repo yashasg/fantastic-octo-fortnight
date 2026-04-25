@@ -6,7 +6,7 @@ struct HomeView: View {
     @EnvironmentObject var coordinator: AppCoordinator
 
     @State private var showSettings = false
-    @AppStorage("openSettingsOnLaunch") private var openSettingsOnLaunch = false
+    @AppStorage(AppStorageKey.openSettingsOnLaunch) private var openSettingsOnLaunch = false
 
     private var statusLabel: String {
         if settings.globalEnabled {
@@ -29,9 +29,7 @@ struct HomeView: View {
             Spacer()
 
             Image(systemName: statusIcon)
-                .resizable()
-                .scaledToFit()
-                .frame(width: AppLayout.overlayIconSize, height: AppLayout.overlayIconSize)
+                .font(.system(size: AppLayout.overlayIconSize))
                 .foregroundStyle(statusColor)
                 .accessibilityHidden(true)
                 .accessibilityIdentifier("home.statusIcon")
@@ -85,7 +83,6 @@ struct HomeView: View {
                 showSettings = true
             }
         }
-        .accessibilityElement(children: .contain)
     }
 }
 

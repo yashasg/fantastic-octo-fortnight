@@ -8,52 +8,54 @@ struct ReminderRowView: View {
     @Binding var breakDuration: TimeInterval
     let onChanged: () -> Void
 
-    private let intervalOptions: [TimeInterval] = [10 * 60, 20 * 60, 30 * 60, 45 * 60, 60 * 60]
-    private let durationOptions: [TimeInterval] = [10, 20, 30, 60]
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        Toggle(isOn: $isEnabled) {
-            Label(type.title, systemImage: type.symbolName)
-        }
-        .tint(type.color)
-        .onChange(of: isEnabled) { _ in onChanged() }
-        .accessibilityHint(
-            isEnabled
-                ? String(
-                    format: String(localized: "settings.reminder.toggle.enabled.hint", bundle: .module),
-                    type.title)
-                : String(
-                    format: String(localized: "settings.reminder.toggle.disabled.hint", bundle: .module),
-                    type.title)
-        )
-
-        if isEnabled {
-            Picker(String(localized: "settings.reminder.intervalPicker", bundle: .module), selection: $interval) {
-                ForEach(intervalOptions, id: \.self) { seconds in
-                    Text(formatInterval(seconds)).tag(seconds)
-                }
+        Group {
+            Toggle(isOn: $isEnabled) {
+                Label(type.title, systemImage: type.symbolName)
             }
-            .onChange(of: interval) { _ in onChanged() }
+            .tint(type.color)
+            .onChange(of: isEnabled) { _ in onChanged() }
             .accessibilityHint(
-                String(
-                    format: String(localized: "settings.reminder.intervalPicker.hint", bundle: .module),
-                    type.title
-                )
+                isEnabled
+                    ? String(
+                        format: String(localized: "settings.reminder.toggle.enabled.hint", bundle: .module),
+                        type.title)
+                    : String(
+                        format: String(localized: "settings.reminder.toggle.disabled.hint", bundle: .module),
+                        type.title)
             )
 
-            Picker(String(localized: "settings.reminder.durationPicker", bundle: .module), selection: $breakDuration) {
-                ForEach(durationOptions, id: \.self) { seconds in
-                    Text(formatDuration(seconds)).tag(seconds)
+            if isEnabled {
+                Picker(String(localized: "settings.reminder.intervalPicker", bundle: .module), selection: $interval) {
+                    ForEach(SettingsViewModel.intervalOptions, id: \.self) { seconds in
+                        Text(formatInterval(seconds)).tag(seconds)
+                    }
                 }
-            }
-            .onChange(of: breakDuration) { _ in onChanged() }
-            .accessibilityHint(
-                String(
-                    format: String(localized: "settings.reminder.durationPicker.hint", bundle: .module),
-                    type.title
+                .onChange(of: interval) { _ in onChanged() }
+                .accessibilityHint(
+                    String(
+                        format: String(localized: "settings.reminder.intervalPicker.hint", bundle: .module),
+                        type.title
+                    )
                 )
-            )
+
+                Picker(String(localized: "settings.reminder.durationPicker", bundle: .module), selection: $breakDuration) {
+                    ForEach(SettingsViewModel.breakDurationOptions, id: \.self) { seconds in
+                        Text(formatDuration(seconds)).tag(seconds)
+                    }
+                }
+                .onChange(of: breakDuration) { _ in onChanged() }
+                .accessibilityHint(
+                    String(
+                        format: String(localized: "settings.reminder.durationPicker.hint", bundle: .module),
+                        type.title
+                    )
+                )
+            }
         }
+        .animation(reduceMotion ? nil : AppAnimation.settingsExpandCurve, value: isEnabled)
     }
 
     // MARK: - Formatting
