@@ -119,5 +119,5 @@ private struct NotificationPreviewCard: View {
 }
 
 #Preview {
-    OnboardingPermissionView(onNext: {})
+    OnboardingPermissionView { }
 }

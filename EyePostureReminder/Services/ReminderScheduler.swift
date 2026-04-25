@@ -1,6 +1,6 @@
 import Foundation
-import UserNotifications
 import os
+import UserNotifications
 
 // MARK: - NotificationScheduling Protocol
 

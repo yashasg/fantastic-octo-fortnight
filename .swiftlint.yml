@@ -3,6 +3,8 @@
 
 # ── Excluded paths ────────────────────────────────────────────────────────────
 excluded:
+  - .build
+  - DerivedData
   - EyePostureReminder/DerivedData
   - EyePostureReminder/.build
   - Pods

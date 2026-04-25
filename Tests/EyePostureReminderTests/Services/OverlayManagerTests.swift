@@ -1,5 +1,5 @@
-import XCTest
 @testable import EyePostureReminder
+import XCTest
 
 /// Unit tests for `OverlayManager`.
 ///
@@ -109,7 +109,9 @@ final class OverlayManagerTests: XCTestCase {
         mock.showOverlay(for: .posture, duration: 10, hapticsEnabled: true) {}
         mock.showOverlay(for: .eyes, duration: 30, hapticsEnabled: false) {}
 
-        XCTAssertEqual(mock.showCallOrder, [.eyes, .posture, .eyes],
+        XCTAssertEqual(
+            mock.showCallOrder,
+            [.eyes, .posture, .eyes],
             "showOverlay calls must be recorded in FIFO (first-in, first-out) order")
         XCTAssertEqual(mock.showCallDurations, [20, 10, 30])
         XCTAssertEqual(mock.showCallCount, 3)

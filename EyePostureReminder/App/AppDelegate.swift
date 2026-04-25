@@ -1,6 +1,6 @@
+import os
 import UIKit
 import UserNotifications
-import os
 
 final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
 

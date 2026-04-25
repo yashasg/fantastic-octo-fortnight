@@ -1,6 +1,6 @@
-import XCTest
-import SwiftUI
 @testable import EyePostureReminder
+import SwiftUI
+import XCTest
 
 /// Regression tests for `DesignSystem.swift` — the single source of truth for
 /// all visual tokens (colors, fonts, spacing, animation, layout).
@@ -92,7 +92,9 @@ final class DesignSystemTests: XCTestCase {
     func test_appSpacing_valuesAreAscending() {
         let spacings: [CGFloat] = [AppSpacing.xs, AppSpacing.sm, AppSpacing.md, AppSpacing.lg, AppSpacing.xl]
         for i in 1..<spacings.count {
-            XCTAssertGreaterThan(spacings[i], spacings[i - 1],
+            XCTAssertGreaterThan(
+                spacings[i],
+                spacings[i - 1],
                 "Spacing tokens must be in strictly ascending order")
         }
     }
@@ -100,13 +102,17 @@ final class DesignSystemTests: XCTestCase {
     // MARK: - AppLayout: iOS HIG Compliance
 
     func test_appLayout_minTapTarget_meetsHIGMinimum() {
-        XCTAssertGreaterThanOrEqual(AppLayout.minTapTarget, 44,
+        XCTAssertGreaterThanOrEqual(
+            AppLayout.minTapTarget,
+            44,
             "Minimum tap target must be ≥44pt per iOS HIG")
     }
 
     func test_appLayout_overlayIconSize_isReasonable() {
         XCTAssertGreaterThan(AppLayout.overlayIconSize, 0)
-        XCTAssertGreaterThanOrEqual(AppLayout.overlayIconSize, AppLayout.minTapTarget,
+        XCTAssertGreaterThanOrEqual(
+            AppLayout.overlayIconSize,
+            AppLayout.minTapTarget,
             "Overlay icon must be at least as large as minimum tap target")
     }
 
@@ -119,7 +125,9 @@ final class DesignSystemTests: XCTestCase {
     }
 
     func test_appLayout_snoozeButtonHeight_meetsHIGMinimum() {
-        XCTAssertGreaterThanOrEqual(AppLayout.snoozeButtonHeight, 44,
+        XCTAssertGreaterThanOrEqual(
+            AppLayout.snoozeButtonHeight,
+            44,
             "Snooze button height must be ≥44pt per iOS HIG")
     }
 
@@ -134,22 +142,34 @@ final class DesignSystemTests: XCTestCase {
     // MARK: - AppAnimation: Duration Spec Compliance
 
     func test_appAnimation_overlayAppear_is0point3s() {
-        XCTAssertEqual(AppAnimation.overlayAppear, 0.3, accuracy: 0.001,
+        XCTAssertEqual(
+            AppAnimation.overlayAppear,
+            0.3,
+            accuracy: 0.001,
             "Overlay appear animation must be 0.3s (ease-out)")
     }
 
     func test_appAnimation_overlayDismiss_is0point2s() {
-        XCTAssertEqual(AppAnimation.overlayDismiss, 0.2, accuracy: 0.001,
+        XCTAssertEqual(
+            AppAnimation.overlayDismiss,
+            0.2,
+            accuracy: 0.001,
             "Overlay dismiss animation must be 0.2s (ease-in)")
     }
 
     func test_appAnimation_overlayAutoDismiss_is0point3s() {
-        XCTAssertEqual(AppAnimation.overlayAutoDismiss, 0.3, accuracy: 0.001,
+        XCTAssertEqual(
+            AppAnimation.overlayAutoDismiss,
+            0.3,
+            accuracy: 0.001,
             "Overlay auto-dismiss animation must be 0.3s (linear)")
     }
 
     func test_appAnimation_snoozeAutoDismiss_is5s() {
-        XCTAssertEqual(AppAnimation.snoozeAutoDismiss, 5.0, accuracy: 0.001,
+        XCTAssertEqual(
+            AppAnimation.snoozeAutoDismiss,
+            5.0,
+            accuracy: 0.001,
             "Snooze sheet auto-dismiss timeout must be 5 seconds")
     }
 

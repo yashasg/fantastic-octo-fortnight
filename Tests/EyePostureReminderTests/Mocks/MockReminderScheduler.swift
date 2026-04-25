@@ -1,5 +1,5 @@
-import Foundation
 @testable import EyePostureReminder
+import Foundation
 
 /// Mock implementation of `ReminderScheduling` for SettingsViewModel unit tests.
 ///

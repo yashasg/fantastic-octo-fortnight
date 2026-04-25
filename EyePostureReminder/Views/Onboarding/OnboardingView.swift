@@ -10,9 +10,9 @@ struct OnboardingView: View {
 
     var body: some View {
         TabView(selection: $currentPage) {
-            OnboardingWelcomeView(onNext: { currentPage = 1 })
+            OnboardingWelcomeView { currentPage = 1 }
                 .tag(0)
-            OnboardingPermissionView(onNext: { currentPage = 2 })
+            OnboardingPermissionView { currentPage = 2 }
                 .tag(1)
             OnboardingSetupView(
                 onGetStarted: finishOnboarding,

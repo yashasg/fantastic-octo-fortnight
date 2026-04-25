@@ -1,5 +1,5 @@
-import Foundation
 import Combine
+import Foundation
 import os
 
 /// Observable shell binding `SettingsStore` to Settings UI.
