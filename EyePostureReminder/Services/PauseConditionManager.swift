@@ -179,6 +179,7 @@ final class LiveDrivingActivityDetector: DrivingActivityDetecting {
 /// - `.focusMode` → `settings.pauseDuringFocus`
 /// - `.carPlay`   → `settings.pauseWhileDriving` (CarPlay implies a driving context)
 /// - `.driving`   → `settings.pauseWhileDriving`
+@MainActor
 final class PauseConditionManager: PauseConditionProviding {
 
     var onPauseStateChanged: ((Bool) -> Void)?

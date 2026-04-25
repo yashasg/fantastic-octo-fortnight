@@ -5,8 +5,9 @@ import XCTest
 //
 // PauseConditionManager-level tests for focus mode edge cases.
 // Uses mock detectors defined in PauseConditionManagerTests.swift (same test target).
-// NOT @MainActor — PauseConditionManager and SettingsStore are not actor-isolated.
-
+// NOT @MainActor — was not actor-isolated prior to issue #55.
+// Updated to @MainActor because PauseConditionManager is now @MainActor-isolated.
+@MainActor
 final class FocusModeExtendedTests: XCTestCase {
 
     var mockPersistence: MockSettingsPersisting!

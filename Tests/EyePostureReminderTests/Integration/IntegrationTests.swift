@@ -345,6 +345,7 @@ final class AppConfigSettingsStoreIntegrationTests: XCTestCase {
 /// Verifies that `PauseConditionManager` correctly reads from a real `SettingsStore`
 /// backed by a real `UserDefaults` suite. Detector system calls are replaced with
 /// mocks so no hardware or OS APIs are exercised.
+@MainActor
 final class PauseSettingsIntegrationTests: XCTestCase {
 
     private var suiteName: String!

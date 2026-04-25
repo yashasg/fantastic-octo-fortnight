@@ -35,13 +35,16 @@ struct OverlayView: View {
                 .ignoresSafeArea()
 
             // MARK: × Dismiss — fixed top-right corner
-            Button(action: performDismiss) {
-                Image(systemName: AppSymbol.dismiss)
-                    .font(.system(.title).weight(.medium))
-                    .foregroundStyle(.secondary)
-                    .frame(minWidth: AppLayout.minTapTarget, minHeight: AppLayout.minTapTarget)
-                    .contentShape(Rectangle())
-            }
+            Button(
+                action: { performDismiss(method: .button) },
+                label: {
+                    Image(systemName: AppSymbol.dismiss)
+                        .font(.system(.title).weight(.medium))
+                        .foregroundStyle(.secondary)
+                        .frame(minWidth: AppLayout.minTapTarget, minHeight: AppLayout.minTapTarget)
+                        .contentShape(Rectangle())
+                }
+            )
             .padding(.top, AppSpacing.lg)
             .padding(.trailing, AppSpacing.lg)
             .accessibilityLabel(Text("overlay.dismissButton", bundle: .module))
@@ -105,14 +108,17 @@ struct OverlayView: View {
                 Spacer()
 
                 // Settings gear — dismisses overlay, revealing SettingsView underneath
-                Button(action: performDismiss) {
-                    Label(
-                        title: { Text("overlay.settingsLabel", bundle: .module) },
-                        icon: { Image(systemName: AppSymbol.settings) }
-                    )
-                        .font(AppFont.body)
-                        .foregroundStyle(.secondary)
-                }
+                Button(
+                    action: { performDismiss(method: .settingsTap) },
+                    label: {
+                        Label(
+                            title: { Text("overlay.settingsLabel", bundle: .module) },
+                            icon: { Image(systemName: AppSymbol.settings) }
+                        )
+                            .font(AppFont.body)
+                            .foregroundStyle(.secondary)
+                    }
+                )
                 .frame(minHeight: AppLayout.minTapTarget)
                 .accessibilityLabel(Text("overlay.settingsButton", bundle: .module))
                 .accessibilityHint(Text("overlay.settingsButton.hint", bundle: .module))
@@ -126,7 +132,7 @@ struct OverlayView: View {
         .gesture(
             DragGesture(minimumDistance: 30)
                 .onEnded { value in
-                    if value.translation.height < 0 { performDismiss() }
+                    if value.translation.height < 0 { performDismiss(method: .swipe) }
                 }
         )
         .onAppear {
@@ -156,10 +162,12 @@ struct OverlayView: View {
 
     // MARK: - Manual dismiss (× button, swipe up, or Settings tap)
 
-    private func performDismiss() {
+    private func performDismiss(method: AnalyticsEvent.DismissMethod = .button) {
         guard !isDismissing else { return }
         isDismissing = true
         timer?.invalidate()
+        let elapsedS = duration - TimeInterval(secondsRemaining)
+        AnalyticsLogger.log(.overlayDismissed(type: type, method: method, elapsedS: elapsedS))
         if hapticsEnabled { notificationGenerator?.notificationOccurred(.success) }
         if reduceMotion {
             contentOpacity = 0
@@ -179,6 +187,7 @@ struct OverlayView: View {
     private func performAutoDismiss() {
         guard !isDismissing else { return }
         isDismissing = true
+        AnalyticsLogger.log(.overlayAutoDismissed(type: type, durationS: duration))
         triggerCompletionHaptic()
         if reduceMotion {
             contentOpacity = 0

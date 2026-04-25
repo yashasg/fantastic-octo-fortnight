@@ -98,6 +98,12 @@ final class AppCoordinator: ObservableObject {
     /// when the snooze period expires while the app is in the foreground.
     private var snoozeWakeTask: Task<Void, Never>?
 
+    // MARK: - Session Timing
+
+    /// Records the time when a reminder session starts (scheduleReminders completes successfully).
+    /// Used to compute session duration for the appSessionEnd analytics event.
+    private var sessionStartTime: Date?
+
     // MARK: - Init
 
     init(
@@ -124,8 +130,10 @@ final class AppCoordinator: ObservableObject {
             // gets a fresh snooze budget on every threshold fire.
             self.settings.snoozeCount = 0
             let duration = self.settings.settings(for: type).breakDuration
+            let thresholdS = self.settings.settings(for: type).interval
             self.overlayManager.showOverlay(
                 for: type, duration: duration, hapticsEnabled: self.settings.hapticsEnabled) {}
+            AnalyticsLogger.log(.reminderTriggered(type: type, thresholdS: thresholdS))
             Logger.scheduling.info("Reminder triggered by screen-time threshold: \(type.rawValue)")
         }
 
@@ -235,6 +243,12 @@ final class AppCoordinator: ObservableObject {
 
         // Configure ScreenTimeTracker with current thresholds and start counting.
         configureScreenTimeTracker()
+        sessionStartTime = Date()
+        AnalyticsLogger.log(.appSessionStart(
+            eyeEnabled: settings.isEnabled(for: .eyes),
+            postureEnabled: settings.isEnabled(for: .posture),
+            snoozeActive: false
+        ))
         Logger.scheduling.info("ScreenTimeTracker configured — reminders fire after continuous screen-on time")
     }
 
@@ -346,6 +360,9 @@ final class AppCoordinator: ObservableObject {
     func appWillResignActive() {
         // ScreenTimeTracker observes willResignActiveNotification directly and
         // resets all elapsed counters — no explicit action needed here.
+        let sessionDuration = sessionStartTime.map { Date().timeIntervalSince($0) } ?? 0
+        AnalyticsLogger.log(.appSessionEnd(sessionDurationS: sessionDuration))
+        sessionStartTime = nil
         Logger.lifecycle.debug("App resigned active — ScreenTimeTracker will auto-reset elapsed counters")
     }
 

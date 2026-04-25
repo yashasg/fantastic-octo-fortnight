@@ -4,6 +4,7 @@ import Foundation
 /// Mock implementation of `ScreenTimeTracking` for use in `AppCoordinatorTests`
 /// and any test that needs to control or observe screen-time tracking behaviour
 /// without spinning up real `Timer`s or UIApplication lifecycle observers.
+@MainActor
 final class MockScreenTimeTracker: ScreenTimeTracking {
 
     var onThresholdReached: ((ReminderType) -> Void)?

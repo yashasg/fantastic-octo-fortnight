@@ -24,6 +24,7 @@ import UIKit
 /// tracker begins counting without waiting for the next lifecycle event.
 ///
 /// All methods must be called on the main thread (owned by `@MainActor AppCoordinator`).
+@MainActor
 protocol ScreenTimeTracking: AnyObject {
     var onThresholdReached: ((ReminderType) -> Void)? { get set }
     func setThreshold(_ interval: TimeInterval, for type: ReminderType)
@@ -38,6 +39,7 @@ protocol ScreenTimeTracking: AnyObject {
     func stop()
 }
 
+@MainActor
 final class ScreenTimeTracker: ScreenTimeTracking {
 
     typealias ThresholdCallback = (ReminderType) -> Void

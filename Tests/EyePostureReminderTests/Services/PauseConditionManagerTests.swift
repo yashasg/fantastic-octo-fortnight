@@ -8,6 +8,7 @@ import XCTest
 /// All three live detectors are replaced with mocks so no system APIs are hit.
 /// State changes are triggered synchronously via mock `simulate*` helpers, which
 /// fire the same callbacks the live detectors would fire.
+@MainActor
 final class PauseConditionManagerTests: XCTestCase {
 
     var mockFocus: MockFocusStatusDetector!
