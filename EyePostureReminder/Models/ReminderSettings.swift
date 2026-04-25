@@ -24,6 +24,9 @@ extension ReminderSettings {
     /// Posture check defaults driven by `AppConfig` (reads `defaults.json`).
     static var defaultPosture: ReminderSettings {
         let config = AppConfig.load()
-        return ReminderSettings(interval: config.defaults.postureInterval, breakDuration: config.defaults.postureBreakDuration)
+        return ReminderSettings(
+            interval: config.defaults.postureInterval,
+            breakDuration: config.defaults.postureBreakDuration
+        )
     }
 }

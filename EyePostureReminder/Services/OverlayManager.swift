@@ -1,6 +1,6 @@
-import UIKit
-import SwiftUI
 import os
+import SwiftUI
+import UIKit
 
 // MARK: - OverlayPresenting Protocol
 
@@ -69,7 +69,9 @@ final class OverlayManager: OverlayPresenting {
     private var dismissCallback: (() -> Void)?
 
     /// Pending show requests queued while an overlay is already on screen.
-    private var overlayQueue: [(type: ReminderType, duration: TimeInterval, hapticsEnabled: Bool, onDismiss: () -> Void)] = []
+    private var overlayQueue: [
+        (type: ReminderType, duration: TimeInterval, hapticsEnabled: Bool, onDismiss: () -> Void)
+    ] = []
 
     var isOverlayVisible: Bool {
         overlayWindow != nil && overlayWindow?.isHidden == false
@@ -160,6 +162,10 @@ final class OverlayManager: OverlayPresenting {
         guard !overlayQueue.isEmpty else { return }
         let next = overlayQueue.removeFirst()
         Logger.overlay.info("Presenting queued overlay for \(next.type.rawValue). Remaining in queue: \(self.overlayQueue.count)")
-        showOverlay(for: next.type, duration: next.duration, hapticsEnabled: next.hapticsEnabled, onDismiss: next.onDismiss)
+        showOverlay(
+            for: next.type,
+            duration: next.duration,
+            hapticsEnabled: next.hapticsEnabled,
+            onDismiss: next.onDismiss)
     }
 }

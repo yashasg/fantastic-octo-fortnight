@@ -119,7 +119,8 @@ final class AppCoordinator: ObservableObject {
         screenTimeTracker.onThresholdReached = { [weak self] type in
             guard let self else { return }
             let duration = self.settings.settings(for: type).breakDuration
-            self.overlayManager.showOverlay(for: type, duration: duration, hapticsEnabled: self.settings.hapticsEnabled) {}
+            self.overlayManager.showOverlay(
+                for: type, duration: duration, hapticsEnabled: self.settings.hapticsEnabled) {}
             Logger.scheduling.info("Reminder triggered by screen-time threshold: \(type.rawValue)")
         }
 
@@ -132,8 +133,9 @@ final class AppCoordinator: ObservableObject {
                 self.screenTimeTracker.pauseAll()
                 Logger.scheduling.info("PauseConditionManager: pausing reminders (active condition)")
             } else {
-                guard self.settings.snoozedUntil == nil || self.settings.snoozedUntil.map({ $0 <= Date() }) == true else {
-                    Logger.scheduling.debug("PauseConditionManager: pause cleared but snooze still active — not resuming")
+                guard (self.settings.snoozedUntil ?? .distantPast) <= Date() else {
+                    Logger.scheduling.debug(
+                        "PauseConditionManager: pause cleared but snooze still active — not resuming")
                     return
                 }
                 self.screenTimeTracker.resumeAll()
@@ -277,7 +279,8 @@ final class AppCoordinator: ObservableObject {
         guard let pending = pendingOverlay else { return }
         pendingOverlay = nil
         Logger.lifecycle.info("Presenting queued overlay for \(pending.type.rawValue)")
-        overlayManager.showOverlay(for: pending.type, duration: pending.duration, hapticsEnabled: settings.hapticsEnabled) {}
+        overlayManager.showOverlay(
+            for: pending.type, duration: pending.duration, hapticsEnabled: settings.hapticsEnabled) {}
     }
 
     // MARK: - App Lifecycle Hooks

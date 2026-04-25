@@ -1,5 +1,5 @@
-import Foundation
 import Combine
+import Foundation
 import os
 
 /// `UserDefaults`-backed observable store for all user-configurable settings.
@@ -10,7 +10,7 @@ import os
 ///
 /// Key layout (all prefixed `epr.`):
 /// ```
-/// epr.masterEnabled          Bool   – global on/off toggle
+/// epr.globalEnabled          Bool   – global on/off toggle
 /// epr.eyes.enabled           Bool
 /// epr.eyes.interval          Double – seconds
 /// epr.eyes.breakDuration     Double – seconds
@@ -20,13 +20,15 @@ import os
 /// epr.snoozedUntil           Double – Date.timeIntervalSince1970, 0 = not snoozed
 /// epr.snoozeCount            Int    – consecutive snoozes since last reminder fired
 /// epr.pauseMediaDuringBreaks Bool   – Phase 2, default false
+/// epr.pauseDuringFocus       Bool   – pause reminders while a Focus mode is active, default true
+/// epr.pauseWhileDriving      Bool   – pause reminders while driving or CarPlay is active, default true
 /// ```
 final class SettingsStore: ObservableObject {
 
-    // MARK: - Master Toggle
+    // MARK: - Global Toggle
 
-    @Published var masterEnabled: Bool {
-        didSet { store.set(masterEnabled, forKey: Keys.masterEnabled) }
+    @Published var globalEnabled: Bool {
+        didSet { store.set(globalEnabled, forKey: Keys.globalEnabled) }
     }
 
     // MARK: - Per-Type Toggles
@@ -75,6 +77,21 @@ final class SettingsStore: ObservableObject {
         didSet { store.set(snoozeCount, forKey: Keys.snoozeCount) }
     }
 
+    // MARK: - Pause Conditions
+
+    /// When `true`, pauses reminders while a Focus mode is active.
+    /// Default is `true`. Requires `NSFocusStatusUsageDescription` in Info.plist.
+    @Published var pauseDuringFocus: Bool {
+        didSet { store.set(pauseDuringFocus, forKey: Keys.pauseDuringFocus) }
+    }
+
+    /// When `true`, pauses reminders while driving or CarPlay is connected.
+    /// Covers both `CMMotionActivity.automotive` and `AVAudioSession.Port.carPlay`.
+    /// Default is `true`. Requires `NSMotionUsageDescription` in Info.plist.
+    @Published var pauseWhileDriving: Bool {
+        didSet { store.set(pauseWhileDriving, forKey: Keys.pauseWhileDriving) }
+    }
+
     // MARK: - Phase 2
 
     /// When `true`, activates `AVAudioSession` on overlay show to interrupt
@@ -104,7 +121,7 @@ final class SettingsStore: ObservableObject {
 
     /// Returns whether a given type is enabled (master toggle AND per-type toggle).
     func isEnabled(for type: ReminderType) -> Bool {
-        guard masterEnabled else { return false }
+        guard globalEnabled else { return false }
         switch type {
         case .eyes:    return eyesEnabled
         case .posture: return postureEnabled
@@ -118,14 +135,16 @@ final class SettingsStore: ObservableObject {
     init(store: SettingsPersisting = UserDefaults.standard, config: AppConfig = AppConfig.load()) {
         self.store = store
 
-        masterEnabled       = store.bool(forKey: Keys.masterEnabled, defaultValue: config.features.masterEnabledDefault)
-        eyesEnabled         = store.bool(forKey: Keys.eyesEnabled,    defaultValue: true)
-        postureEnabled      = store.bool(forKey: Keys.postureEnabled,  defaultValue: true)
+        globalEnabled       = store.bool(forKey: Keys.globalEnabled, defaultValue: config.features.globalEnabledDefault)
+        eyesEnabled         = store.bool(forKey: Keys.eyesEnabled, defaultValue: true)
+        postureEnabled      = store.bool(forKey: Keys.postureEnabled, defaultValue: true)
 
-        eyesInterval        = store.double(forKey: Keys.eyesInterval,        defaultValue: config.defaults.eyeInterval)
-        eyesBreakDuration   = store.double(forKey: Keys.eyesBreakDuration,   defaultValue: config.defaults.eyeBreakDuration)
-        postureInterval     = store.double(forKey: Keys.postureInterval,     defaultValue: config.defaults.postureInterval)
-        postureBreakDuration = store.double(forKey: Keys.postureBreakDuration, defaultValue: config.defaults.postureBreakDuration)
+        eyesInterval        = store.double(forKey: Keys.eyesInterval, defaultValue: config.defaults.eyeInterval)
+        eyesBreakDuration   = store.double(
+            forKey: Keys.eyesBreakDuration, defaultValue: config.defaults.eyeBreakDuration)
+        postureInterval     = store.double(forKey: Keys.postureInterval, defaultValue: config.defaults.postureInterval)
+        postureBreakDuration = store.double(
+            forKey: Keys.postureBreakDuration, defaultValue: config.defaults.postureBreakDuration)
 
         let rawSnooze = store.double(forKey: Keys.snoozedUntil, defaultValue: 0)
         snoozedUntil = rawSnooze > 0 ? Date(timeIntervalSince1970: rawSnooze) : nil
@@ -133,7 +152,9 @@ final class SettingsStore: ObservableObject {
         snoozeCount = store.integer(forKey: Keys.snoozeCount, defaultValue: 0)
 
         pauseMediaDuringBreaks = store.bool(forKey: Keys.pauseMediaDuringBreaks, defaultValue: false)
-        hapticsEnabled         = store.bool(forKey: Keys.hapticsEnabled,          defaultValue: true)
+        hapticsEnabled         = store.bool(forKey: Keys.hapticsEnabled, defaultValue: true)
+        pauseDuringFocus       = store.bool(forKey: Keys.pauseDuringFocus, defaultValue: true)
+        pauseWhileDriving      = store.bool(forKey: Keys.pauseWhileDriving, defaultValue: true)
 
         Logger.settings.debug("SettingsStore initialised")
     }
@@ -143,7 +164,7 @@ final class SettingsStore: ObservableObject {
 
 private extension SettingsStore {
     enum Keys {
-        static let masterEnabled          = "epr.masterEnabled"
+        static let globalEnabled          = "epr.masterEnabled"
         static let eyesEnabled            = "epr.eyes.enabled"
         static let eyesInterval           = "epr.eyes.interval"
         static let eyesBreakDuration      = "epr.eyes.breakDuration"
@@ -154,6 +175,8 @@ private extension SettingsStore {
         static let snoozeCount            = "epr.snoozeCount"
         static let pauseMediaDuringBreaks = "epr.pauseMediaDuringBreaks"
         static let hapticsEnabled         = "epr.hapticsEnabled"
+        static let pauseDuringFocus       = "epr.pauseDuringFocus"
+        static let pauseWhileDriving      = "epr.pauseWhileDriving"
     }
 }
 

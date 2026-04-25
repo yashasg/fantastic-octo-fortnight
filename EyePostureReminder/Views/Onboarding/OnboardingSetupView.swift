@@ -121,7 +121,14 @@ struct SetupPreviewCard: View {
         .padding(AppSpacing.md)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(String(format: String(localized: "onboarding.setup.card.label", bundle: .module), title, interval, duration))
+        .accessibilityLabel(
+            String(
+                format: String(localized: "onboarding.setup.card.label", bundle: .module),
+                title,
+                interval,
+                duration
+            )
+        )
     }
 }
 
