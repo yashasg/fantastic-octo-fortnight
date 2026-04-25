@@ -325,3 +325,42 @@ Early design system work covering: DesignSystem.swift tokens (colors, fonts, spa
 **Key finding:** Onboarding module is an island of inconsistency — main app (HomeView, SettingsView, OverlayView) follows established patterns correctly. Design system drift occurred because onboarding was built before final token convention was established.
 
 **Phase 2 readiness:** All 4 issues have clear scope. #32 (design tokens) highest priority for Linus refactoring. #35 and #36 straightforward button/formatter fixes. #33 aligns with ongoing localization effort.
+
+---
+
+## Learnings
+
+### 2026-04-27: UX Quality Audit Pass v2 — Full View Layer Review
+
+**Task:** Comprehensive read-only UX audit of all SwiftUI views, design system, accessibility, onboarding, overlay, settings, and error states.  
+**Report filed:** `.squad/decisions/inbox/tess-ux-pass-v2.md`  
+**Overall health score:** 6.5 / 10
+
+**Critical findings (P0):**
+
+1. **`OverlayView` uses `.accessibilityAddTraits(.isModal)` instead of `.accessibilityViewIsModal(true)`** — Linus Decision 2 (2026-04-24) specified the correct modifier but it was never applied. VoiceOver users can reach content behind the overlay. One-line fix.
+
+2. **`ReminderType.title`, `overlayTitle`, `notificationTitle`, `notificationBody` are hardcoded English strings** — Not localized. The overlay headline and notification banners — the most user-visible text — bypass the localization pipeline entirely.
+
+3. **`ReminderRowView.formatInterval/formatDuration` hardcode "min"/"sec"** — Should use `DateComponentsFormatter` or `MeasurementFormatter` for locale-aware output. These appear in VoiceOver-read picker values.
+
+**Key structural finding:**
+
+- **`HomeView.swift` is dead code.** `ContentView` routes to `SettingsView` as root post-onboarding (per Phase 1 design decision). `HomeView` presents `SettingsView` as a *sheet* internally — a contradictory navigation model if it were ever wired in. Should be deleted or explicitly flagged as Phase 2 work to avoid accidental wiring.
+
+**Onboarding findings:**
+
+- `OnboardingView` uses `PageTabViewStyle` — users can swipe to skip the permission screen entirely.
+- "Get Started" and "Customize" buttons in `OnboardingSetupView` are functionally identical (both call `finishOnboarding()`). "Customize" intent (go to Settings) is unimplemented.
+- Magic string `"hasSeenOnboarding"` duplicated in `ContentView` and `OnboardingView` — needs shared constant.
+
+**Design system drift in onboarding (consistent with previous audit #32):**
+
+- `OnboardingPermissionView` (NotificationPreviewCard) and `OnboardingSetupView` (SetupPreviewCard) use raw `.subheadline`, `.caption`, `.title2`, `.caption2` fonts instead of `AppFont` tokens. Main app views (HomeView, SettingsView, OverlayView) are clean.
+
+**Policy confirmed:**
+
+- `AppColor` tokens are fully asset-catalog-backed, no raw Color() calls anywhere in views. ✅
+- `AppFont` Dynamic Type tokens (headline, body, bodyEmphasized, caption) scale correctly; countdown intentionally fixed. ✅
+- Reduce motion is respected in all views (OverlayView, SettingsView, OnboardingScreenWrapper). ✅
+- Snooze time formatted with `.formatted(date: .omitted, time: .shortened)` — locale-aware. ✅

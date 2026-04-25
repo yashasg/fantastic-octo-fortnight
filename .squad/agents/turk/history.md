@@ -66,3 +66,14 @@
 - Onboarding drop-off not tracked (cannot identify funnel leak screens)
 
 **Quality note:** Zero analytics instrumentation in Phase 1–2 is acceptable — base telemetry (App Store Connect + MetricKit) provides sufficient diagnostic surface for TestFlight quality gate.
+
+### 2025-07-25 — Analytics Instrumentation Audit v2 (Post-Implementation)
+
+- **Coverage score: 3/10** — Schema is well-designed (11 events, clean naming, correct privacy annotations) but critically under-wired.
+- **5 of 11 events never emitted** — `appSessionStart`, `appSessionEnd`, `reminderTriggered`, `overlayDismissed`, `overlayAutoDismissed`, and `snoozeExpired` have no `AnalyticsLogger.log()` call at their trigger points. Only `snoozeActivated`, `settingChanged` (2 of 7 settings), `pauseActivated`, and `pauseDeactivated` are live.
+- **MetricKitSubscriber.register() never called in AppDelegate** — `didFinishLaunchingWithOptions` sets up notification center but omits MetricKit registration. Zero diagnostic payloads during TestFlight.
+- **Settings instrumentation partial** — Only `pauseDuringFocus` and `pauseWhileDriving` emit `settingChanged`. Global toggle, per-type toggles, intervals, break durations, and haptics toggle are silent.
+- **Overlay dismiss method not differentiated at call site** — `DismissMethod` enum exists but `performDismiss()` is called identically from button, swipe, and settings gear. Cannot measure Tess's discoverability signal.
+- **Privacy: clean** — No PII, no user IDs, no ATT, no network calls. "Data Not Collected" label safe.
+- **Fix is straightforward** — All missing events need only `AnalyticsLogger.log()` calls at existing trigger points. No schema changes required. ~1 hour estimated.
+- **Report filed:** `.squad/decisions/inbox/turk-analytics-pass-v2.md`

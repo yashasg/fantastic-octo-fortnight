@@ -7,6 +7,22 @@
 
 ## Learnings
 
+### 2026-04-26: Architecture Audit v2 — Deeper Pass
+
+**Scope:** Full re-read of all key files (AppCoordinator, ScreenTimeTracker, PauseConditionManager, OverlayManager, AnalyticsLogger, MetricKitSubscriber, ReminderScheduler, SettingsViewModel, AppDelegate, Package.swift).
+
+**Key new findings (beyond v1):**
+
+1. **🔴 P0: ScreenTimeTracker and its protocol lack `@MainActor`** — all access is main-thread in practice (Timer, NotificationCenter observers), but no compile-time enforcement. This will fail under Swift 6 strict concurrency. Protocol `ScreenTimeTracking` must also be annotated.
+2. **🟡 P1: PauseConditionManager and detector protocols also lack `@MainActor`** — same class of issue. `PauseConditionProviding` callbacks cross isolation boundaries without Sendable guarantees.
+3. **🟡 P1: Analytics events `.reminderTriggered`, `.overlayDismissed`, `.overlayAutoDismissed`, `.appSessionEnd` are defined but never emitted** — analytics system has gaps that undermine its debugging value.
+4. **🟢 P2: `AppDelegate.coordinator` is strong (not weak)** — safe in single-window app but defensive improvement for multi-scene.
+5. **🟢 P2: `resumeAll()` doesn't reset elapsed counters (asymmetric with `pauseAll()`)** — intentional design, but undocumented.
+
+**v1 P1s confirmed still open:** AnalyticsEvent Sendable, MetricKitSubscriber unregistered.
+
+**Score:** 8/10 (down from 8.5). Report: `.squad/decisions/inbox/rusty-arch-pass-v2.md`
+
 ### 2026-04-26: Edge Case Analysis — Quality Pass (Issues #26–#29)
 
 **Scope:** Full read of AppCoordinator, ScreenTimeTracker, OverlayManager, PauseConditionManager, ReminderScheduler, SettingsStore, AppDelegate, EyePostureReminderApp.
