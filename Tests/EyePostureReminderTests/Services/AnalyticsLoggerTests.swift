@@ -1,0 +1,159 @@
+@testable import EyePostureReminder
+import XCTest
+
+/// Tests for `AnalyticsLogger` and `AnalyticsEvent`.
+///
+/// Every event case must be constructable and loggable without crashing.
+/// `os.Logger` writes are fire-and-forget — these tests verify crash-safety
+/// and that all enum branches compile and execute without throwing.
+final class AnalyticsLoggerTests: XCTestCase {
+
+    // MARK: - AnalyticsEvent Construction
+
+    func test_appSessionStart_canBeConstructed() {
+        let event = AnalyticsEvent.appSessionStart(eyeEnabled: true, postureEnabled: false, snoozeActive: false)
+        _ = event
+    }
+
+    func test_appSessionEnd_canBeConstructed() {
+        let event = AnalyticsEvent.appSessionEnd(sessionDurationS: 42.5)
+        _ = event
+    }
+
+    func test_reminderTriggered_eyes_canBeConstructed() {
+        let event = AnalyticsEvent.reminderTriggered(type: .eyes, thresholdS: 1200)
+        _ = event
+    }
+
+    func test_reminderTriggered_posture_canBeConstructed() {
+        let event = AnalyticsEvent.reminderTriggered(type: .posture, thresholdS: 900)
+        _ = event
+    }
+
+    func test_overlayDismissed_button_canBeConstructed() {
+        let event = AnalyticsEvent.overlayDismissed(type: .eyes, method: .button, elapsedS: 15.0)
+        _ = event
+    }
+
+    func test_overlayDismissed_swipe_canBeConstructed() {
+        let event = AnalyticsEvent.overlayDismissed(type: .posture, method: .swipe, elapsedS: 5.0)
+        _ = event
+    }
+
+    func test_overlayDismissed_settingsTap_canBeConstructed() {
+        let event = AnalyticsEvent.overlayDismissed(type: .eyes, method: .settingsTap, elapsedS: 2.0)
+        _ = event
+    }
+
+    func test_overlayAutoDismissed_canBeConstructed() {
+        let event = AnalyticsEvent.overlayAutoDismissed(type: .eyes, durationS: 20)
+        _ = event
+    }
+
+    func test_snoozeActivated_canBeConstructed() {
+        let event = AnalyticsEvent.snoozeActivated(durationOption: "15m")
+        _ = event
+    }
+
+    func test_snoozeExpired_canBeConstructed() {
+        let event = AnalyticsEvent.snoozeExpired
+        _ = event
+    }
+
+    func test_settingChanged_canBeConstructed() {
+        let event = AnalyticsEvent.settingChanged(setting: "eyeInterval", oldValue: "20", newValue: "30")
+        _ = event
+    }
+
+    func test_pauseActivated_canBeConstructed() {
+        let event = AnalyticsEvent.pauseActivated(conditionType: "focusMode")
+        _ = event
+    }
+
+    func test_pauseDeactivated_canBeConstructed() {
+        let event = AnalyticsEvent.pauseDeactivated(conditionType: "all_cleared")
+        _ = event
+    }
+
+    // MARK: - DismissMethod Raw Values
+
+    func test_dismissMethod_button_rawValue() {
+        XCTAssertEqual(AnalyticsEvent.DismissMethod.button.rawValue, "button")
+    }
+
+    func test_dismissMethod_swipe_rawValue() {
+        XCTAssertEqual(AnalyticsEvent.DismissMethod.swipe.rawValue, "swipe")
+    }
+
+    func test_dismissMethod_settingsTap_rawValue() {
+        XCTAssertEqual(AnalyticsEvent.DismissMethod.settingsTap.rawValue, "settings_tap")
+    }
+
+    // MARK: - AnalyticsLogger.log — crash-safety
+
+    func test_log_appSessionStart_doesNotCrash() {
+        AnalyticsLogger.log(.appSessionStart(eyeEnabled: true, postureEnabled: true, snoozeActive: false))
+    }
+
+    func test_log_appSessionStart_allCombinations_doNotCrash() {
+        AnalyticsLogger.log(.appSessionStart(eyeEnabled: false, postureEnabled: false, snoozeActive: true))
+        AnalyticsLogger.log(.appSessionStart(eyeEnabled: true, postureEnabled: false, snoozeActive: false))
+        AnalyticsLogger.log(.appSessionStart(eyeEnabled: false, postureEnabled: true, snoozeActive: true))
+    }
+
+    func test_log_appSessionEnd_doesNotCrash() {
+        AnalyticsLogger.log(.appSessionEnd(sessionDurationS: 0))
+        AnalyticsLogger.log(.appSessionEnd(sessionDurationS: 3600))
+    }
+
+    func test_log_reminderTriggered_eyes_doesNotCrash() {
+        AnalyticsLogger.log(.reminderTriggered(type: .eyes, thresholdS: 1200))
+    }
+
+    func test_log_reminderTriggered_posture_doesNotCrash() {
+        AnalyticsLogger.log(.reminderTriggered(type: .posture, thresholdS: 900))
+    }
+
+    func test_log_overlayDismissed_allMethods_doNotCrash() {
+        AnalyticsLogger.log(.overlayDismissed(type: .eyes, method: .button, elapsedS: 10.0))
+        AnalyticsLogger.log(.overlayDismissed(type: .posture, method: .swipe, elapsedS: 5.0))
+        AnalyticsLogger.log(.overlayDismissed(type: .eyes, method: .settingsTap, elapsedS: 1.0))
+    }
+
+    func test_log_overlayAutoDismissed_doesNotCrash() {
+        AnalyticsLogger.log(.overlayAutoDismissed(type: .eyes, durationS: 20))
+        AnalyticsLogger.log(.overlayAutoDismissed(type: .posture, durationS: 30))
+    }
+
+    func test_log_snoozeActivated_doesNotCrash() {
+        AnalyticsLogger.log(.snoozeActivated(durationOption: "5m"))
+        AnalyticsLogger.log(.snoozeActivated(durationOption: "30m"))
+        AnalyticsLogger.log(.snoozeActivated(durationOption: "custom"))
+    }
+
+    func test_log_snoozeExpired_doesNotCrash() {
+        AnalyticsLogger.log(.snoozeExpired)
+    }
+
+    func test_log_settingChanged_doesNotCrash() {
+        AnalyticsLogger.log(.settingChanged(setting: "eyeInterval", oldValue: "20", newValue: "30"))
+        AnalyticsLogger.log(.settingChanged(setting: "postureEnabled", oldValue: "true", newValue: "false"))
+    }
+
+    func test_log_pauseActivated_doesNotCrash() {
+        AnalyticsLogger.log(.pauseActivated(conditionType: "focusMode"))
+        AnalyticsLogger.log(.pauseActivated(conditionType: "carPlay,driving"))
+    }
+
+    func test_log_pauseDeactivated_doesNotCrash() {
+        AnalyticsLogger.log(.pauseDeactivated(conditionType: "all_cleared"))
+    }
+
+    // MARK: - Repeated logging
+
+    func test_log_calledRepeatedly_doesNotCrash() {
+        for _ in 0..<20 {
+            AnalyticsLogger.log(.appSessionEnd(sessionDurationS: 1.0))
+        }
+    }
+}
