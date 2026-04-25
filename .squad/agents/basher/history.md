@@ -52,3 +52,43 @@
 - MockNotificationCenter: addedRequests (append-only history) + pendingRequests (live queue)
 - @testable import accesses protocol definitions inline (no Protocols/ folder needed)
 - Bundle injection on AppConfig.load() + SettingsStore.init() for fixture testing
+
+## Learnings — 2026-04-24 — DI Protocols for AppCoordinator (Issues #13, #14)
+
+### Architecture decisions
+- `ScreenTimeTracking` protocol added directly above `ScreenTimeTracker` in the same file — keeps protocol/conformance co-located, avoids a separate Protocols/ folder
+- `AppCoordinator.init()` uses optional parameters with `?? default` pattern: `screenTimeTracker: ScreenTimeTracking? = nil` defaulting to `ScreenTimeTracker()`. This avoids making callers (EyePostureReminderApp) provide explicit defaults while still allowing full injection in tests.
+- `pauseConditionManager` internal property typed as `PauseConditionProviding` (protocol), not `PauseConditionManager` — same injection pattern as above
+
+### Mock patterns
+- `MockScreenTimeTracker` and `MockPauseConditionProvider` live in `Tests/EyePostureReminderTests/Mocks/`
+- Both follow the established call-recording pattern: `private(set) var xyzCallCount = 0` + simulation helpers
+- `simulateThresholdReached(for:)` and `simulatePauseStateChange(_:)` allow tests to trigger AppCoordinator reactions without real timers
+
+### Bundle resolution bug (AppConfigTests)
+- **Root cause:** `@testable import EyePostureReminder` causes the production module's `static let module: Bundle` (on Foundation.Bundle) to shadow the test target's generated accessor. The test was loading production defaults (eyeInterval: 1200) instead of fixture values (900).
+- **Fix:** Replace `Bundle.module` in `AppConfigTests.testBundle` with explicit path construction: `Bundle(for: AppConfigTests.self).bundleURL.appendingPathComponent("EyePostureReminder_EyePostureReminderTests.bundle")`
+- **Pattern:** Any test file that uses `Bundle.module` AND does `@testable import` of a module with resources must use explicit xctest bundle path, not `Bundle.module`
+
+### JSON key rename missed (AppConfig.Features)
+- Livingston renamed `masterEnabledDefault` → `globalEnabledDefault` in AppConfig.swift but did NOT update `defaults.json` (production) or `Fixtures/defaults.json` (test fixture)
+- Fix: updated both JSON files to use `globalEnabledDefault`
+- **Lesson:** When renaming Codable property names, always grep for the old name in JSON files
+
+### Key file paths
+- `EyePostureReminder/Services/ScreenTimeTracker.swift` — protocol + implementation
+- `EyePostureReminder/Services/AppCoordinator.swift` — DI init params
+- `Tests/EyePostureReminderTests/Mocks/MockScreenTimeTracker.swift` — new mock
+- `Tests/EyePostureReminderTests/Mocks/MockPauseConditionProvider.swift` — new mock  
+- `Tests/EyePostureReminderTests/Fixtures/defaults.json` — test fixture (900s eye interval, maxSnoozeCount: 5)
+- `EyePostureReminder/Resources/defaults.json` — production defaults (1200s eye interval, maxSnoozeCount: 3)
+
+## Team Sync — 2026-04-25T04:35
+
+**PR #17 Status:**
+- ScreenTimeTracking + PauseConditionProviding DI protocols complete
+- All 575 tests pass
+- Ready for team review and Views layer integration
+- Aligns with Rusty's architecture corrections
+
+**Next:** Await PR #17 review; support Views team in Phase 2 completion

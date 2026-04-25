@@ -330,3 +330,12 @@ Performed a full audit of the production codebase vs ARCHITECTURE.md (which was 
 **Protocol signature update:** `SettingsPersisting` now requires explicit `defaultValue:` parameters on all read methods — this eliminates the silent-zero/false class of bug that bit us before. The old doc showed the pre-fix signature.
 
 **Lesson:** Architecture docs written at project start become actively misleading within a few sprints. Consider requiring ARCHITECTURE.md to be in the PR diff for any service-layer change.
+
+## Team Sync — 2026-04-25T04:35
+
+**Corrections Validated:**
+- Module graph, protocols, SPM structure, trigger model, AppConfig, onboarding all corrected
+- Basher's DI design (ScreenTimeTracking, PauseConditionProviding injection) aligns with updated architecture
+- Livingston's coverage analysis confirms Services layer strength (46%)
+
+**Next:** ARCHITECTURE.md now authoritative for Phase 2 completion and Phase 3 planning
