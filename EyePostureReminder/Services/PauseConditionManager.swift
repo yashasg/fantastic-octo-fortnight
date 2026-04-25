@@ -1,4 +1,5 @@
 import AVFoundation
+import Combine
 import CoreMotion
 import Foundation
 import Intents
@@ -196,6 +197,8 @@ final class PauseConditionManager: PauseConditionProviding {
 
     private var activeConditions: Set<PauseConditionSource> = []
 
+    private var cancellables: Set<AnyCancellable> = []
+
     init(
         settings: SettingsStore,
         focusDetector: FocusStatusDetecting = LiveFocusStatusDetector(),
@@ -222,6 +225,26 @@ final class PauseConditionManager: PauseConditionProviding {
             self.update(.driving, isActive: driving && self.settings.pauseWhileDriving)
         }
 
+        // Re-evaluate all conditions whenever a pause setting is toggled.
+        // Note: @Published fires in willSet, so we use the value passed by the publisher
+        // rather than re-reading from settings (which still holds the old value at that point).
+        settings.$pauseDuringFocus
+            .dropFirst()
+            .sink { [weak self] newValue in
+                guard let self else { return }
+                self.update(.focusMode, isActive: self.focusDetector.isFocused && newValue)
+            }
+            .store(in: &cancellables)
+
+        settings.$pauseWhileDriving
+            .dropFirst()
+            .sink { [weak self] newValue in
+                guard let self else { return }
+                self.update(.carPlay, isActive: self.carPlayDetector.isCarPlayActive && newValue)
+                self.update(.driving, isActive: self.drivingDetector.isDriving && newValue)
+            }
+            .store(in: &cancellables)
+
         focusDetector.startMonitoring()
         carPlayDetector.startMonitoring()
         drivingDetector.startMonitoring()
@@ -229,10 +252,19 @@ final class PauseConditionManager: PauseConditionProviding {
     }
 
     func stopMonitoring() {
+        cancellables.removeAll()
         focusDetector.stopMonitoring()
         carPlayDetector.stopMonitoring()
         drivingDetector.stopMonitoring()
         Logger.scheduling.debug("PauseConditionManager: monitoring stopped")
+    }
+
+    /// Re-evaluates all three conditions against current detector state and settings.
+    /// Called when a pause-related setting changes so the paused state stays consistent.
+    private func reevaluate() {
+        update(.focusMode, isActive: focusDetector.isFocused && settings.pauseDuringFocus)
+        update(.carPlay, isActive: carPlayDetector.isCarPlayActive && settings.pauseWhileDriving)
+        update(.driving, isActive: drivingDetector.isDriving && settings.pauseWhileDriving)
     }
 
     private func update(_ source: PauseConditionSource, isActive: Bool) {

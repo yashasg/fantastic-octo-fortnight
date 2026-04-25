@@ -277,6 +277,69 @@ final class PauseConditionManagerTests: XCTestCase {
 
         XCTAssertEqual(callbackCount, 1, "Callback must not fire when isPaused value does not change")
     }
+
+    // MARK: - Settings Toggle Re-evaluation (Issue #26)
+
+    func test_pauseDuringFocus_toggledOff_whileFocusActive_resumesImmediately() {
+        settings.pauseDuringFocus = true
+        mockFocus.simulateFocusChange(true)
+        XCTAssertTrue(sut.isPaused, "Precondition: must be paused with focus active")
+
+        settings.pauseDuringFocus = false
+
+        XCTAssertFalse(sut.isPaused, "Disabling pauseDuringFocus while focus is still active must immediately resume")
+    }
+
+    func test_pauseWhileDriving_toggledOff_whileDrivingActive_resumesImmediately() {
+        settings.pauseWhileDriving = true
+        mockDriving.simulateDrivingChange(true)
+        XCTAssertTrue(sut.isPaused, "Precondition: must be paused with driving active")
+
+        settings.pauseWhileDriving = false
+
+        XCTAssertFalse(sut.isPaused, "Disabling pauseWhileDriving while driving is still active must immediately resume")
+    }
+
+    func test_pauseWhileDriving_toggledOff_whileCarPlayActive_resumesImmediately() {
+        settings.pauseWhileDriving = true
+        mockCarPlay.simulateCarPlayChange(true)
+        XCTAssertTrue(sut.isPaused, "Precondition: must be paused with CarPlay active")
+
+        settings.pauseWhileDriving = false
+
+        XCTAssertFalse(sut.isPaused, "Disabling pauseWhileDriving while CarPlay is still active must immediately resume")
+    }
+
+    func test_pauseDuringFocus_toggledOn_whileFocusActive_pausesImmediately() {
+        settings.pauseDuringFocus = false
+        mockFocus.simulateFocusChange(true)
+        XCTAssertFalse(sut.isPaused, "Precondition: must not be paused when setting is off")
+
+        settings.pauseDuringFocus = true
+
+        XCTAssertTrue(sut.isPaused, "Enabling pauseDuringFocus while focus is already active must immediately pause")
+    }
+
+    func test_settingToggle_withNoActiveCondition_doesNotChangePauseState() {
+        settings.pauseDuringFocus = true
+        XCTAssertFalse(sut.isPaused, "Precondition: not paused — no conditions active")
+
+        settings.pauseDuringFocus = false
+
+        XCTAssertFalse(sut.isPaused, "Toggling setting with no active condition must not change isPaused")
+    }
+
+    func test_pauseDuringFocus_toggledOff_withMultipleConditions_remainsPausedIfOtherActive() {
+        settings.pauseDuringFocus = true
+        settings.pauseWhileDriving = true
+        mockFocus.simulateFocusChange(true)
+        mockDriving.simulateDrivingChange(true)
+        XCTAssertTrue(sut.isPaused, "Precondition: paused by both conditions")
+
+        settings.pauseDuringFocus = false
+
+        XCTAssertTrue(sut.isPaused, "Must remain paused — driving condition is still active")
+    }
 }
 
 // MARK: - SettingsStore Pause-Flag Tests
