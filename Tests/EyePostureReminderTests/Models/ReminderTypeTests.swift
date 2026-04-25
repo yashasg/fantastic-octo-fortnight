@@ -6,7 +6,9 @@ final class ReminderTypeTests: XCTestCase {
     // MARK: - CaseIterable / Exhaustiveness
 
     func test_allCases_countIsTwo() {
-        XCTAssertEqual(ReminderType.allCases.count, 2,
+        XCTAssertEqual(
+            ReminderType.allCases.count,
+            2,
             "Adding a new ReminderType case requires updating this test and all switch statements.")
     }
 
@@ -157,7 +159,9 @@ final class ReminderTypeTests: XCTestCase {
     func test_initFromCategoryIdentifier_roundtrip_forAllCases() {
         for type in ReminderType.allCases {
             let roundtripped = ReminderType(categoryIdentifier: type.categoryIdentifier)
-            XCTAssertEqual(roundtripped, type,
+            XCTAssertEqual(
+                roundtripped,
+                type,
                 "Round-trip via categoryIdentifier failed for \(type.rawValue)")
         }
     }

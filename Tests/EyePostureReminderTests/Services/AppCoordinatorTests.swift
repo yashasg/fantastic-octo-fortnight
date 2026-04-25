@@ -364,7 +364,9 @@ final class AppCoordinatorTests: XCTestCase {
             pauseConditionProvider: mockPause
         )
         defer { coordinator.stopFallbackTimers() }
-        XCTAssertEqual(mockPause.startMonitoringCallCount, 1,
+        XCTAssertEqual(
+            mockPause.startMonitoringCallCount,
+            1,
             "AppCoordinator.init must call startMonitoring() on the injected PauseConditionProviding")
     }
 
@@ -381,7 +383,9 @@ final class AppCoordinatorTests: XCTestCase {
             pauseConditionProvider: MockPauseConditionProvider()
         )
         coordinator.stopFallbackTimers()
-        XCTAssertEqual(mockTracker.stopCallCount, 1,
+        XCTAssertEqual(
+            mockTracker.stopCallCount,
+            1,
             "stopFallbackTimers must call stop() on the injected ScreenTimeTracking")
     }
 }
