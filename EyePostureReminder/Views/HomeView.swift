@@ -34,16 +34,19 @@ struct HomeView: View {
                 .frame(width: AppLayout.overlayIconSize, height: AppLayout.overlayIconSize)
                 .foregroundStyle(statusColor)
                 .accessibilityHidden(true)
+                .accessibilityIdentifier("home.statusIcon")
 
             VStack(spacing: AppSpacing.sm) {
                 Text("home.title", bundle: .module)
                     .font(AppFont.headline)
                     .multilineTextAlignment(.center)
+                    .accessibilityIdentifier("home.title")
 
                 Text(statusLabel)
                     .font(AppFont.body)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
+                    .accessibilityIdentifier("home.statusLabel")
             }
 
             Spacer()
@@ -60,6 +63,7 @@ struct HomeView: View {
                         .accessibilityLabel(Text("home.settingsButton", bundle: .module))
                         .accessibilityHint(Text("home.settingsButton.hint", bundle: .module))
                 }
+                .accessibilityIdentifier("home.settingsButton")
             }
         }
         .sheet(isPresented: $showSettings) {

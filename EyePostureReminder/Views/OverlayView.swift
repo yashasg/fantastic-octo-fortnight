@@ -48,6 +48,7 @@ struct OverlayView: View {
             .padding(.top, AppSpacing.lg)
             .padding(.trailing, AppSpacing.lg)
             .accessibilityLabel(Text("overlay.dismissButton", bundle: .module))
+            .accessibilityIdentifier("overlay.dismissButton")
 
             // MARK: Center content
             VStack(spacing: AppSpacing.lg) {

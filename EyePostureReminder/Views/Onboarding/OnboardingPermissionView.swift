@@ -68,6 +68,7 @@ struct OnboardingPermissionView: View {
                         .font(.subheadline)
                         .accessibilityLabel(Text("onboarding.permission.skipButton", bundle: .module))
                         .accessibilityHint(Text("onboarding.permission.skipButton.hint", bundle: .module))
+                        .accessibilityIdentifier("onboarding.permission.nextButton")
                 }
                 .padding()
                 .frame(maxWidth: 540)

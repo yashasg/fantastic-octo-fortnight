@@ -16,8 +16,22 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     ) -> Bool {
         UNUserNotificationCenter.current().delegate = self
         MetricKitSubscriber.shared.register()
+        applyUITestLaunchArguments()
         Logger.lifecycle.info("App did finish launching")
         return true
+    }
+
+    // MARK: - UI Test Support
+
+    /// Handles launch arguments injected by XCUITest targets to control app state.
+    private func applyUITestLaunchArguments() {
+        let args = CommandLine.arguments
+        if args.contains("--skip-onboarding") {
+            UserDefaults.standard.set(true, forKey: "hasSeenOnboarding")
+        }
+        if args.contains("--reset-onboarding") {
+            UserDefaults.standard.removeObject(forKey: "hasSeenOnboarding")
+        }
     }
 
     func applicationDidBecomeActive(_ application: UIApplication) {

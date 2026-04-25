@@ -48,6 +48,7 @@ struct OnboardingWelcomeView: View {
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, AppSpacing.sm)
+                        .accessibilityIdentifier("onboarding.welcome.disclaimer")
 
                     Spacer(minLength: AppSpacing.lg)
 
@@ -62,6 +63,7 @@ struct OnboardingWelcomeView: View {
                     .padding(.horizontal, AppSpacing.xl)
                     .accessibilityLabel(Text("onboarding.welcome.nextButton", bundle: .module))
                     .accessibilityHint(Text("onboarding.welcome.nextButton.hint", bundle: .module))
+                    .accessibilityIdentifier("onboarding.welcome.nextButton")
                 }
                 .padding()
                 .frame(maxWidth: 540)

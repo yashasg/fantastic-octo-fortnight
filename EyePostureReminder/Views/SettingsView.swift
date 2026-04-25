@@ -14,6 +14,9 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+    @State private var showTerms = false
+    @State private var showPrivacy = false
+
     // MARK: - Snooze helpers
 
     private var isSnoozed: Bool {
@@ -127,6 +130,7 @@ struct SettingsView: View {
                     .font(AppFont.body)
                     .accessibilityLabel(Text("settings.snooze.5min.label", bundle: .module))
                     .accessibilityHint(Text("settings.snooze.5min.hint", bundle: .module))
+                    .accessibilityIdentifier("settings.snooze.5min")
 
                     Button(
                         action: { viewModel?.snooze(option: .oneHour) },
@@ -160,6 +164,34 @@ struct SettingsView: View {
                 Text("settings.section.preferences", bundle: .module)
             }
 
+            // MARK: Smart Pause
+            Section {
+                Toggle(isOn: $settings.pauseDuringFocus) {
+                    Label(
+                        String(localized: "settings.smartPause.pauseDuringFocus", bundle: .module),
+                        systemImage: "moon.fill"
+                    )
+                }
+                .tint(AppColor.reminderBlue)
+                .accessibilityHint(Text("settings.smartPause.pauseDuringFocus.hint", bundle: .module))
+                .accessibilityIdentifier("settings.smartPause.pauseDuringFocus")
+
+                Toggle(isOn: $settings.pauseWhileDriving) {
+                    Label(
+                        String(localized: "settings.smartPause.pauseWhileDriving", bundle: .module),
+                        systemImage: "car.fill"
+                    )
+                }
+                .tint(AppColor.reminderBlue)
+                .accessibilityHint(Text("settings.smartPause.pauseWhileDriving.hint", bundle: .module))
+                .accessibilityIdentifier("settings.smartPause.pauseWhileDriving")
+            } header: {
+                Text("settings.section.smartPause", bundle: .module)
+            } footer: {
+                Text("settings.smartPause.footer", bundle: .module)
+                    .font(AppFont.caption)
+            }
+
             // MARK: Notification permission warning
             if coordinator.notificationAuthStatus == .denied {
                 Section {
@@ -191,6 +223,21 @@ struct SettingsView: View {
                     .accessibilityHint(Text("settings.notifications.openSettings.hint", bundle: .module))
                 }
             }
+
+            // MARK: Legal
+            Section {
+                Button(action: { showTerms = true },
+                       label: { Text("settings.legal.terms", bundle: .module) })
+                .font(AppFont.body)
+                .accessibilityIdentifier("settings.legal.terms")
+
+                Button(action: { showPrivacy = true },
+                       label: { Text("settings.legal.privacy", bundle: .module) })
+                .font(AppFont.body)
+                .accessibilityIdentifier("settings.legal.privacy")
+            } header: {
+                Text("settings.section.legal", bundle: .module)
+            }
         }
         .navigationTitle(Text("settings.navTitle", bundle: .module))
         .navigationBarTitleDisplayMode(.large)
@@ -201,7 +248,14 @@ struct SettingsView: View {
                 }
                 .fontWeight(.semibold)
                 .accessibilityHint(Text("settings.doneButton.hint", bundle: .module))
+                .accessibilityIdentifier("settings.doneButton")
             }
+        }
+        .sheet(isPresented: $showTerms) {
+            LegalDocumentView(document: .terms)
+        }
+        .sheet(isPresented: $showPrivacy) {
+            LegalDocumentView(document: .privacy)
         }
         .animation(reduceMotion ? nil : AppAnimation.settingsExpandCurve, value: settings.globalEnabled)
         .animation(reduceMotion ? nil : AppAnimation.settingsExpandCurve, value: isSnoozed)

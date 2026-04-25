@@ -2,15 +2,17 @@
 ## EyePostureReminderUITests
 
 ### Status
-✅ Test files written — **not yet runnable** (see SPM limitation below).
+✅ Test files written and production code updated with accessibility identifiers + launch arg handling.
+⚠️ **Not yet runnable** (see SPM limitation below).
 
 ### Test Files
 
 | File | Tests |
 |---|---|
-| `OnboardingFlowTests.swift` | `testDisclaimerVisibleOnWelcomeScreen`, `testOnboardingCompletesSuccessfully` |
-| `SettingsFlowTests.swift` | `testSettingsOpensFromHomeScreen`, `testDoneButtonDismissesSettings`, `testLegalSectionExists`, `testTermsSheetOpens`, `testPrivacySheetOpens`, `testSmartPauseTogglesExist` |
-| `HomeScreenTests.swift` | `testHomeScreenLoads`, `testSnoozeButtonExists` |
+| `OnboardingFlowTests.swift` | `testDisclaimerVisibleOnWelcomeScreen`, `testOnboardingCompletesSuccessfully`, `testWelcomeScreenTitleIsVisible`, `testOnboardingNextButtonTapsToPermissionScreen`, `testOnboardingSkipPermissionReachesSetupScreen`, `testOnboardingSetupCustomizeButtonExists`, `testOnboardingCustomizeButtonOpensSettingsAfterCompletion` |
+| `SettingsFlowTests.swift` | `testSettingsOpensFromHomeScreen`, `testDoneButtonDismissesSettings`, `testLegalSectionExists`, `testTermsSheetOpens`, `testPrivacySheetOpens`, `testSmartPauseTogglesExist`, `testMasterToggleIsVisible`, `testMasterToggleCanBeTapped`, `testHapticsToggleExists`, `testTermsSheetDismissReturnsToSettings`, `testPrivacySheetDismissReturnsToSettings`, `testFocusToggleCanBeTapped`, `testDrivingToggleCanBeTapped` |
+| `HomeScreenTests.swift` | `testHomeScreenLoads`, `testSnoozeButtonExists`, `testHomeNavigationBarTitleIsCorrect`, `testSettingsButtonIsHittable`, `testStatusLabelChangesAfterTogglingMaster`, `testHomeScreenStatusLabelIsNotEmpty`, `testSettingsSheetCanBeOpenedAndClosed` |
+| `OverlayTests.swift` | `testOverlayDismissButtonIdentifierIsDocumented`, `testOverlayNotPresentOnNormalLaunch`, `testHomeScreenIsVisibleNotOverlay`, `testOverlayCountdownAccessibilityLabelIsDocumented` |
 
 ### SPM Limitation
 
@@ -27,45 +29,36 @@ Tests use `launchArguments` to control app state:
 | `--skip-onboarding` | Sets `hasSeenOnboarding = true` before launch → app opens on Home screen |
 | `--reset-onboarding` | Clears `hasSeenOnboarding` → app starts with onboarding flow |
 
-**These arguments must be handled in `EyePostureReminderApp.swift` or `AppDelegate.swift`:**
+**These arguments are handled in `AppDelegate.swift`** via `applyUITestLaunchArguments()` called from `application(_:didFinishLaunchingWithOptions:)`.
 
-```swift
-// In App entry point or AppDelegate, before SwiftUI scene is created:
-if CommandLine.arguments.contains("--skip-onboarding") {
-    UserDefaults.standard.set(true, forKey: "hasSeenOnboarding")
-}
-if CommandLine.arguments.contains("--reset-onboarding") {
-    UserDefaults.standard.removeObject(forKey: "hasSeenOnboarding")
-}
-```
-
-### Accessibility Identifiers Required
-
-The following `.accessibilityIdentifier()` modifiers must be added to source views before tests pass:
+### Accessibility Identifiers (All Added ✅)
 
 #### OnboardingWelcomeView
-- Disclaimer `Text` → `"onboarding.welcome.disclaimer"`
-- Next `Button` → `"onboarding.welcome.nextButton"`
+- Body/disclaimer `Text` → `"onboarding.welcome.disclaimer"` ✅
+- Next `Button` → `"onboarding.welcome.nextButton"` ✅
 
 #### OnboardingPermissionView
-- Continue/next `Button` → `"onboarding.permission.nextButton"`
+- Skip/next `Button` → `"onboarding.permission.nextButton"` ✅
 
 #### OnboardingSetupView
-- Get Started `Button` → `"onboarding.setup.getStartedButton"`
+- Get Started `Button` → `"onboarding.setup.getStartedButton"` ✅
 
 #### HomeView
-- Status icon `Image` → `"home.statusIcon"`
-- Title `Text` → `"home.title"`
-- Status label `Text` → `"home.statusLabel"`
-- Settings toolbar `Button` → `"home.settingsButton"`
+- Status icon `Image` → `"home.statusIcon"` ✅
+- Title `Text` → `"home.title"` ✅
+- Status label `Text` → `"home.statusLabel"` ✅
+- Settings toolbar `Button` → `"home.settingsButton"` ✅
 
 #### SettingsView
-- Done toolbar `Button` → `"settings.doneButton"`
-- Focus Mode `Toggle` → `"settings.smartPause.pauseDuringFocus"`
-- Driving `Toggle` → `"settings.smartPause.pauseWhileDriving"`
-- Terms row `Button` → `"settings.legal.terms"`
-- Privacy row `Button` → `"settings.legal.privacy"`
-- Snooze 5 min `Button` → `"settings.snooze.5min"`
+- Done toolbar `Button` → `"settings.doneButton"` ✅
+- Focus Mode `Toggle` → `"settings.smartPause.pauseDuringFocus"` ✅
+- Driving `Toggle` → `"settings.smartPause.pauseWhileDriving"` ✅
+- Terms row `Button` → `"settings.legal.terms"` ✅
+- Privacy row `Button` → `"settings.legal.privacy"` ✅
+- Snooze 5 min `Button` → `"settings.snooze.5min"` ✅
 
 #### LegalDocumentView
-- Dismiss `Button` → `"legal.dismissButton"`
+- Dismiss `Button` → `"legal.dismissButton"` ✅
+
+#### OverlayView
+- × dismiss `Button` → `"overlay.dismissButton"` ✅

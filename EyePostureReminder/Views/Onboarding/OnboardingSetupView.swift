@@ -67,6 +67,7 @@ struct OnboardingSetupView: View {
                     .padding(.horizontal, AppSpacing.xl)
                     .accessibilityLabel(Text("onboarding.setup.getStartedButton", bundle: .module))
                     .accessibilityHint(Text("onboarding.setup.getStartedButton.hint", bundle: .module))
+                    .accessibilityIdentifier("onboarding.setup.getStartedButton")
 
                     // Secondary option
                     Button(action: onCustomize) {

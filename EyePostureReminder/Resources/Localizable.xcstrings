@@ -1025,6 +1025,336 @@
           }
         }
       }
+    },
+    "settings.section.smartPause": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Smart Pause"
+          }
+        }
+      }
+    },
+    "settings.smartPause.pauseDuringFocus": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pause During Focus"
+          }
+        }
+      }
+    },
+    "settings.smartPause.pauseDuringFocus.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pauses reminders when a Focus mode is active"
+          }
+        }
+      }
+    },
+    "settings.smartPause.pauseWhileDriving": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pause While Driving"
+          }
+        }
+      }
+    },
+    "settings.smartPause.pauseWhileDriving.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pauses reminders when CarPlay is connected or driving is detected"
+          }
+        }
+      }
+    },
+    "settings.smartPause.footer": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reminders resume automatically when conditions clear."
+          }
+        }
+      }
+    },
+    "settings.section.legal": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Legal"
+          }
+        }
+      }
+    },
+    "settings.legal.terms": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Terms & Conditions"
+          }
+        }
+      }
+    },
+    "settings.legal.privacy": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Privacy Policy"
+          }
+        }
+      }
+    },
+    "legal.dismissButton": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Done"
+          }
+        }
+      }
+    },
+    "legal.terms.navTitle": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Terms & Conditions"
+          }
+        }
+      }
+    },
+    "legal.privacy.navTitle": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Privacy Policy"
+          }
+        }
+      }
+    },
+    "legal.terms.notMedical.heading": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not Medical Advice"
+          }
+        }
+      }
+    },
+    "legal.terms.notMedical.body": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This app is designed to support healthy screen habits. It is not medical advice. Consult a healthcare professional for eye or posture concerns."
+          }
+        }
+      }
+    },
+    "legal.terms.professional.heading": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Professional Guidance"
+          }
+        }
+      }
+    },
+    "legal.terms.professional.body": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "If you experience eye strain, neck pain, or related symptoms, seek advice from a qualified optometrist or physiotherapist."
+          }
+        }
+      }
+    },
+    "legal.terms.liability.heading": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Limitation of Liability"
+          }
+        }
+      }
+    },
+    "legal.terms.liability.body": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The developer is not liable for any health outcomes resulting from use or non-use of this app."
+          }
+        }
+      }
+    },
+    "legal.terms.warranty.heading": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No Warranty"
+          }
+        }
+      }
+    },
+    "legal.terms.warranty.body": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This app is provided \"as is\" without warranty of any kind. Features may change or be removed in future updates."
+          }
+        }
+      }
+    },
+    "legal.terms.contact.heading": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Contact"
+          }
+        }
+      }
+    },
+    "legal.terms.contact.body": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "For questions or concerns, contact the developer through the App Store listing."
+          }
+        }
+      }
+    },
+    "legal.privacy.collect.heading": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Data We Collect"
+          }
+        }
+      }
+    },
+    "legal.privacy.collect.body": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reminder preferences and settings are stored locally on your device using UserDefaults. No data is sent to external servers."
+          }
+        }
+      }
+    },
+    "legal.privacy.noCollect.heading": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What We Don't Collect"
+          }
+        }
+      }
+    },
+    "legal.privacy.noCollect.body": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "We do not collect personal information, usage analytics, or any data that leaves your device."
+          }
+        }
+      }
+    },
+    "legal.privacy.rights.heading": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your Rights"
+          }
+        }
+      }
+    },
+    "legal.privacy.rights.body": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You can reset all app data by deleting the app. Settings are not backed up to iCloud."
+          }
+        }
+      }
+    },
+    "legal.privacy.contact.heading": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Contact"
+          }
+        }
+      }
+    },
+    "legal.privacy.contact.body": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "For privacy questions, contact the developer through the App Store listing."
+          }
+        }
+      }
     }
   }
 }

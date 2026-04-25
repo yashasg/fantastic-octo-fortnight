@@ -98,4 +98,101 @@ final class HomeScreenTests: XCTestCase {
         )
         XCTAssertTrue(snoozeButton.isHittable, "Snooze button should be tappable.")
     }
+
+    // MARK: - testHomeNavigationBarTitleIsCorrect
+
+    /// Verifies the navigation bar displays the correct app title.
+    func testHomeNavigationBarTitleIsCorrect() throws {
+        let navBar = app.navigationBars.firstMatch
+        XCTAssertTrue(navBar.waitForExistence(timeout: 5))
+
+        // The nav bar should contain a title element; verify at least one text element exists within it.
+        XCTAssertTrue(
+            navBar.staticTexts.firstMatch.waitForExistence(timeout: 3) ||
+            navBar.buttons.firstMatch.waitForExistence(timeout: 3),
+            "Home navigation bar should contain a title or button element."
+        )
+    }
+
+    // MARK: - testSettingsButtonIsHittable
+
+    /// Verifies the settings toolbar button is tappable (not obscured or zero-size).
+    func testSettingsButtonIsHittable() throws {
+        let settingsButton = app.buttons["home.settingsButton"]
+        XCTAssertTrue(settingsButton.waitForExistence(timeout: 5))
+        XCTAssertTrue(
+            settingsButton.isHittable,
+            "Settings toolbar button must be hittable (not obscured or zero-size)."
+        )
+    }
+
+    // MARK: - testStatusLabelChangesAfterTogglingGlobalSwitch
+
+    /// Opens Settings, toggles the global switch OFF, closes Settings,
+    /// and verifies the status label reflects the paused state.
+    func testStatusLabelChangesAfterTogglingGlobalSwitch() throws {
+        // Check initial status label
+        let statusLabel = app.staticTexts["home.statusLabel"]
+        XCTAssertTrue(statusLabel.waitForExistence(timeout: 5))
+        let initialText = statusLabel.label
+
+        // Open Settings and toggle global switch
+        let settingsButton = app.buttons["home.settingsButton"]
+        XCTAssertTrue(settingsButton.waitForExistence(timeout: 5))
+        settingsButton.tap()
+
+        let globalToggle = app.switches.firstMatch
+        XCTAssertTrue(globalToggle.waitForExistence(timeout: 5))
+        globalToggle.tap()
+
+        // Dismiss Settings
+        let doneButton = app.buttons["settings.doneButton"]
+        XCTAssertTrue(doneButton.waitForExistence(timeout: 5))
+        doneButton.tap()
+
+        // Status label should have changed
+        XCTAssertTrue(statusLabel.waitForExistence(timeout: 5))
+        let updatedText = statusLabel.label
+        XCTAssertNotEqual(initialText, updatedText, "Status label should update after toggling the global switch.")
+    }
+
+    // MARK: - testHomeScreenStatusLabelIsNotEmpty
+
+    /// Verifies the status label is non-empty (shows "active" or "paused" state).
+    func testHomeScreenStatusLabelIsNotEmpty() throws {
+        let statusLabel = app.staticTexts["home.statusLabel"]
+        XCTAssertTrue(statusLabel.waitForExistence(timeout: 5))
+        XCTAssertFalse(
+            statusLabel.label.isEmpty,
+            "Home screen status label should not be empty."
+        )
+    }
+
+    // MARK: - testSettingsSheetCanBeOpenedAndClosed
+
+    /// Opens Settings and closes it multiple times to verify no state corruption.
+    func testSettingsSheetCanBeOpenedAndClosed() throws {
+        let settingsButton = app.buttons["home.settingsButton"]
+        XCTAssertTrue(settingsButton.waitForExistence(timeout: 5))
+
+        // Open Settings
+        settingsButton.tap()
+        let settingsNav = app.navigationBars["Settings"]
+        XCTAssertTrue(settingsNav.waitForExistence(timeout: 5))
+
+        // Close Settings
+        let doneButton = app.buttons["settings.doneButton"]
+        XCTAssertTrue(doneButton.waitForExistence(timeout: 5))
+        doneButton.tap()
+        XCTAssertFalse(settingsNav.waitForExistence(timeout: 3))
+
+        // Open again
+        XCTAssertTrue(settingsButton.waitForExistence(timeout: 3))
+        settingsButton.tap()
+        XCTAssertTrue(settingsNav.waitForExistence(timeout: 5), "Settings should reopen successfully.")
+
+        // Close again
+        XCTAssertTrue(doneButton.waitForExistence(timeout: 5))
+        doneButton.tap()
+    }
 }

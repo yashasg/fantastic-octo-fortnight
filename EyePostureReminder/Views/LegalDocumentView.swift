@@ -37,6 +37,7 @@ struct LegalDocumentView: View {
                         dismiss()
                     }
                     .fontWeight(.semibold)
+                    .accessibilityIdentifier("legal.dismissButton")
                 }
             }
         }

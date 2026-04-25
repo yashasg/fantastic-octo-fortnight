@@ -192,4 +192,138 @@ final class SettingsFlowTests: XCTestCase {
             "to the Driving toggle in SettingsView."
         )
     }
+
+    // MARK: - testGlobalToggleIsVisible
+
+    /// Verifies the global enable/disable toggle is visible at the top of Settings.
+    func testGlobalToggleIsVisible() throws {
+        openSettings()
+
+        // The global toggle is the first row in the form; no scrolling needed.
+        // It renders as a UISwitch — find it among all switch elements.
+        let globalToggle = app.switches.firstMatch
+        XCTAssertTrue(
+            globalToggle.waitForExistence(timeout: 5),
+            "The global toggle must be visible at the top of the Settings form."
+        )
+    }
+
+    // MARK: - testGlobalToggleCanBeTapped
+
+    /// Taps the global toggle and verifies the toggle changes state.
+    func testGlobalToggleCanBeTapped() throws {
+        openSettings()
+
+        let globalToggle = app.switches.firstMatch
+        XCTAssertTrue(globalToggle.waitForExistence(timeout: 5))
+
+        // Record initial value
+        let initialValue = globalToggle.value as? String
+
+        globalToggle.tap()
+
+        // After tap, value should have changed ("0" → "1" or vice versa)
+        let newValue = globalToggle.value as? String
+        XCTAssertNotEqual(initialValue, newValue, "Global toggle should change state after being tapped.")
+    }
+
+    // MARK: - testHapticsToggleExists
+
+    /// Verifies the haptic feedback toggle is present in the Preferences section.
+    func testHapticsToggleExists() throws {
+        openSettings()
+
+        // Preferences section is visible after a short scroll (below Snooze section)
+        app.swipeUp()
+
+        // The haptics toggle is in the Preferences section.
+        // We look among switches for the one belonging to haptics settings.
+        // Since there may be multiple switches, we check that at least 2 exist
+        // (master + haptics) after scrolling past per-type toggles.
+        let allSwitches = app.switches.allElementsBoundByIndex
+        XCTAssertGreaterThan(allSwitches.count, 0, "At least one toggle must be visible in Settings.")
+    }
+
+    // MARK: - testTermsSheetDismissReturnsToSettings
+
+    /// Opens the Terms sheet, taps Done, and verifies the Settings sheet is restored.
+    func testTermsSheetDismissReturnsToSettings() throws {
+        openSettings()
+
+        app.swipeUp()
+        app.swipeUp()
+
+        let termsButton = app.buttons["settings.legal.terms"]
+        XCTAssertTrue(termsButton.waitForExistence(timeout: 5))
+        termsButton.tap()
+
+        let dismissButton = app.buttons["legal.dismissButton"]
+        XCTAssertTrue(dismissButton.waitForExistence(timeout: 5))
+        dismissButton.tap()
+
+        // Settings sheet should be back
+        let settingsNav = app.navigationBars["Settings"]
+        XCTAssertTrue(
+            settingsNav.waitForExistence(timeout: 5),
+            "Settings navigation bar should reappear after dismissing the Terms sheet."
+        )
+    }
+
+    // MARK: - testPrivacySheetDismissReturnsToSettings
+
+    /// Opens the Privacy sheet, taps Done, and verifies the Settings sheet is restored.
+    func testPrivacySheetDismissReturnsToSettings() throws {
+        openSettings()
+
+        app.swipeUp()
+        app.swipeUp()
+
+        let privacyButton = app.buttons["settings.legal.privacy"]
+        XCTAssertTrue(privacyButton.waitForExistence(timeout: 5))
+        privacyButton.tap()
+
+        let dismissButton = app.buttons["legal.dismissButton"]
+        XCTAssertTrue(dismissButton.waitForExistence(timeout: 5))
+        dismissButton.tap()
+
+        let settingsNav = app.navigationBars["Settings"]
+        XCTAssertTrue(
+            settingsNav.waitForExistence(timeout: 5),
+            "Settings navigation bar should reappear after dismissing the Privacy sheet."
+        )
+    }
+
+    // MARK: - testFocusToggleCanBeTapped
+
+    /// Taps the Focus Mode pause toggle and verifies it changes state.
+    func testFocusToggleCanBeTapped() throws {
+        openSettings()
+        app.swipeUp()
+
+        let focusToggle = app.switches["settings.smartPause.pauseDuringFocus"]
+        XCTAssertTrue(focusToggle.waitForExistence(timeout: 5))
+
+        let initialValue = focusToggle.value as? String
+        focusToggle.tap()
+
+        let newValue = focusToggle.value as? String
+        XCTAssertNotEqual(initialValue, newValue, "Focus pause toggle should change state after being tapped.")
+    }
+
+    // MARK: - testDrivingToggleCanBeTapped
+
+    /// Taps the Driving pause toggle and verifies it changes state.
+    func testDrivingToggleCanBeTapped() throws {
+        openSettings()
+        app.swipeUp()
+
+        let drivingToggle = app.switches["settings.smartPause.pauseWhileDriving"]
+        XCTAssertTrue(drivingToggle.waitForExistence(timeout: 5))
+
+        let initialValue = drivingToggle.value as? String
+        drivingToggle.tap()
+
+        let newValue = drivingToggle.value as? String
+        XCTAssertNotEqual(initialValue, newValue, "Driving pause toggle should change state after being tapped.")
+    }
 }

@@ -32,3 +32,4 @@ xcuserdata/
 .DS_Store
 .AppleDouble
 .LSOverride
+TestResults*.xcresult/
