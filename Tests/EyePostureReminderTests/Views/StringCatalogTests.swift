@@ -1028,8 +1028,10 @@ final class StringCatalogTests: XCTestCase {
         let value = str("settings.about.versionFormat")
         let count = value.components(separatedBy: "%@").count - 1
         XCTAssertEqual(
-            count, 2,
-            "'settings.about.versionFormat' must contain exactly 2 %%@ specifiers — received: \(value)")
+            count,
+            2,
+            "'settings.about.versionFormat' must contain exactly 2 %%@ specifiers — received: \(value)"
+        )
     }
 
     /// `settings.reminder.durationPicker.hint` VoiceOver hint contains one `%@`
