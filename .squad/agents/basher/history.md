@@ -9,273 +9,11 @@
 
 ### 2026-04-25 — TestBundle helper for SPM resource bundle resolution (Issue #11)
 
-- **Root cause of 70 test failures:** `Bundle.module` inside `@testable import EyePostureReminder` test code resolves to the *test* target's bundle, not the production module's resource bundle. Colors.xcassets, Localizable.xcstrings, and defaults.json are absent from the test bundle.
+- **Root cause of 70 test failures:** `Bundle.module` inside `@testable import EyePostureReminder` resolves to the *test* target's bundle, not the production module's resource bundle. Colors.xcassets, Localizable.xcstrings, and defaults.json are absent from the test bundle.
 - **Fix:** `Tests/.../Mocks/TestBundleHelper.swift` — `enum TestBundle` with a `module` static property that locates `EyePostureReminder_EyePostureReminder.bundle` by walking candidates starting from `Bundle(for: SettingsStore.self)`. Falls back to the code bundle if the named resource bundle is not found (handles both Xcode and CLI configurations).
 - **SPM resource bundle naming convention:** `{PackageName}_{TargetName}.bundle`. For this project that is `EyePostureReminder_EyePostureReminder.bundle`.
 - **Do NOT modify Package.swift** — the test target structure is correct; the problem is purely lookup-side.
 - **Helpers provided:** `TestBundle.module`, `TestBundle.testColor(named:)`, `TestBundle.testLocalizedString(key:value:)` — Livingston can migrate failing tests to use these.
-
-## Core Context
-
-**Phase 1 Services Architecture (M1.1, M1.3, M1.4) — 2026-04-24 to 2026-04-25:**
-App scaffold (SettingsStore, ReminderScheduler, AppCoordinator, AppDelegate, OverlayManager) was production-quality at project start. Phase 1 wiring:
-- SettingsViewModel owns preset interval/breakDuration options as static arrays; ReminderRowView references them (not duplicated).
-- OverlayManager is @MainActor singleton; AppDelegate notification callbacks use `Task { @MainActor in ... }` to reach it.
-- AppCoordinator conforms to ReminderScheduling protocol — all scheduling paths (notifications + fallback timers) sync on every settings change.
-- SettingsStore seeds from `defaults.json` on first launch via AppConfig loader; `resetToDefaults()` clears keys and re-seeds.
-- OverlayView swipe-UP dismiss (translation.height < 0), Settings gear calls onDismiss(), haptic feedback (medium impact) at countdown zero.
-- Info.plist requires NSFocusStatusUsageDescription + NSMotionUsageDescription; omitting either causes crash at first API access.
-- PauseConditionManager reads settings at callback time (not registration) — settings changes do NOT retroactively remove activeConditions; next callback re-evaluates with current setting.
-- String catalog (Localizable.xcstrings) uses screen.element.qualifier convention (73 keys); Text() accepts LocalizedStringKey, format strings use %@ / %d / positional specifiers.
-- AppConfig.load(from:) accepts Bundle parameter for test injection; defaults.json is bundled via Package.swift .process("Resources").
-- Build verified clean: `./scripts/build.sh build` → BUILD SUCCEEDED. Fix `run.sh` Info.plist refresh bug on incremental builds.
-
-### 2026-04-25 — NSFocusStatusUsageDescription crash fix
-
-- **`EyePostureReminder/Info.plist`** is the source of truth for privacy usage descriptions in this SPM project. `run.sh` reads it at bundle-assembly time via `sed` variable substitution.
-- **`run.sh` had a bug in `assemble_app_bundle()`**: the "refresh existing bundle" fast-path only updated the binary, not the Info.plist — so Info.plist edits were silently ignored on incremental runs. Fixed to always re-process Info.plist on refresh.
-- **`NSFocusStatusUsageDescription`** and **`NSMotionUsageDescription`** added to Info.plist. These are required for `INFocusStatusCenter` and `CMMotionActivityManager` respectively — omitting either causes an immediate crash at first API access.
-- **`LiveFocusStatusDetector.startMonitoring()`** refactored: KVO on `focusStatus` is now set up **inside** the `requestAuthorization` callback, and only when `status == .authorized`. Previously, the KVO was wired before auth completed, which accessed `focusStatus` prematurely — a defense-in-depth crash vector even with the plist key present.
-- **Build verification pattern**: after editing Info.plist, always run `./scripts/run.sh` (not just `./scripts/build.sh build`) to ensure the plist is re-processed into the `.app` bundle. Then confirm with `xcrun simctl spawn booted log show` grep.
-
-### 2026-04-25 — AppConfig ↔ SettingsStore Integration (Livingston test fix)
-
-- **`SettingsStore.init()` now accepts `config: AppConfig = AppConfig.load()`** and seeds `eyesInterval`, `eyesBreakDuration`, `postureInterval`, `postureBreakDuration`, and `masterEnabled` from `config` instead of `ReminderSettings.defaultEyes/defaultPosture` hardcoded statics. This was the root cause of 4 failing `SettingsStoreConfigTests`.
-- **`ReminderSettings.defaultEyes` and `defaultPosture` are now `static var`** (computed, not stored). Each call invokes `AppConfig.load()` so they reflect whatever is in `defaults.json` without a recompile — the TEST OVERRIDE pattern of editing `ReminderSettings.swift` is now fully obsolete.
-- **Pre-existing test failures to be aware of:** `AppConfigTests.test_load_fromTestBundle_*` tests fail because the test fixture `defaults.json` (in `Tests/.../Fixtures/`) is not being bundled into the test target. These failures predate this change and are NOT caused by the seeding fix. `AppCoordinatorTests` also has pre-existing `bundleProxyForCurrentProcess is nil` crash failures (UIKit environment issue). Neither set is related to the SettingsStore/AppConfig integration work.
-
-### 2026-04-25 — defaults.json Config Layer (Danny Decision 3.6)
-
-- **`AppConfig.load(from:)`** uses `Bundle` injection — unit tests can pass a fixture bundle pointing at a local `defaults.json` without touching `Bundle.main`.
-- **`ReminderSettings.defaultEyes/defaultPosture` are now `static var`** (not `let`) because they call `AppConfig.load()` each time. That's by design — allows test bundles to substitute different JSON without the value being frozen at module init time.
-- **`SettingsPersisting.hasValue(forKey:)`** was added to the protocol to detect first-launch (no `epr.*` keys present). `MockSettingsPersisting` already had this helper method — moving it to the protocol required zero mock changes.
-- **`SettingsStore.init(store:configBundle:)`** now accepts a `configBundle` parameter alongside `store` for full testability of both layers simultaneously.
-- **`resetToDefaults()` writes through `@Published var` setters**, not directly to `store`. This means `didSet` observers propagate to UserDefaults automatically and SwiftUI views update immediately — no manual `objectWillChange.send()` needed.
-- **`Package.swift` resources**: Added `.process("Resources")` to the `executableTarget` so `defaults.json` is copied into the app bundle. Without this the file would be excluded from the bundle by SPM.
-- **TEST OVERRIDE pattern is now obsolete** — change `eyeInterval` in `defaults.json` to `10` for simulator testing instead of commenting/uncommenting Swift code.
-
-### 2026-04-24 — Xcode Project Scaffold
-
-- **Rusty had already pre-built half the stack** before I started. Always read existing `EyePostureReminder/` files before creating new ones — Models, Services, Utilities, ViewModels, and DesignSystem were already present.
-- **`Package.swift` iOS executable targets** can't be compiled with plain `swift build` on macOS because UIKit/SwiftUI iOS APIs aren't available on the host. This is expected; open the package in Xcode and target a simulator/device.
-- **`OverlayManager` is `@MainActor`** — calling it from `AppDelegate` notification callbacks requires a `Task { @MainActor in ... }` wrapper.
-- **`ReminderType` needed notification properties** (`categoryIdentifier`, `notificationTitle`, `notificationBody`, `init?(categoryIdentifier:)`, `overlayTitle`) — these were added to the model so every layer (Scheduler, AppDelegate, OverlayView) can derive the right strings from the type rather than hard-coding strings in multiple places.
-- **Use `SettingsStore` published properties directly in ViewModel** (`eyesInterval`, `eyesBreakDuration`, etc.) — don't create wrapper `ReminderSettings` structs in the VM layer; that adds unnecessary mapping.
-- **`OverlayManager.shared` singleton** is safe on `@MainActor` — added it so AppDelegate can reach the manager without dependency injection ceremony.
-
-### 2026-04-25 — Data-Driven Config Layer: AppConfig + defaults.json (Decision 2.20)
-
-- **Deliverable:** `Resources/defaults.json` (production values), `Models/AppConfig.swift` (Codable loader), `SettingsStore` wiring, `resetToDefaults()` method
-- **JSON schema:** `{ "defaults": { "eyeInterval", "eyeBreakDuration", ... }, "features": { "masterEnabledDefault", "maxSnoozeCount" } }`
-- **First-launch logic:** `SettingsPersisting.hasValue(forKey:)` guard → if keys absent, seed from JSON via `AppConfig.load(from: Bundle)`
-- **Reset path:** `resetToDefaults()` clears keys and re-seeds from JSON (same code path as first launch — no new logic needed)
-- **Testability:** `AppConfig.load()` + `SettingsStore.init(store:configBundle:)` both accept `Bundle` parameter for test injection
-- **Protocol addition:** `SettingsPersisting.hasValue(forKey: String) -> Bool` for first-launch detection; `MockSettingsPersisting` already had this — moved to protocol with zero mock changes
-- **Build verified:** `./scripts/build.sh build` → BUILD SUCCEEDED
-- **Tests pending:** Livingston has 136 tests written (4 intentionally failing until Basher integration wiring complete)
-- **Decision filed:** `.squad/decisions/decisions.md` (Decision 2.20)
-
-### 2026-04-24 — Phase 1 Services Implementation (M1.1 + M1.3 + M1.4)
-
-- **All scaffold files were already production-quality** — `SettingsStore`, `ReminderScheduler`, `AppCoordinator`, `AppDelegate`, `OverlayManager`, and `EyePostureReminderApp` were fully implemented in the scaffolding. Read carefully before over-writing.
-- **SettingsViewModel preset options belong on the ViewModel** — added `static let intervalOptions` and `static let breakDurationOptions` as static arrays on `SettingsViewModel`, plus `labelForInterval` / `labelForBreakDuration` static formatters. `ReminderRowView` duplicated these locally; the canonical source is the VM.
-- **OverlayView swipe direction was inverted** — the scaffold had `value.translation.height > 0` which triggers on downward swipe. The decision says swipe UP dismisses; fixed to `height < 0`. SwiftUI's Y axis is positive-downward.
-- **Haptic on overlay completion** — added `UIImpactFeedbackGenerator(style: .medium)` fired when the countdown timer reaches zero, before calling `onDismiss()`. This is in `OverlayView`, not `OverlayManager`, because the haptic timing is tied to the SwiftUI countdown state.
-- **Settings gear button on overlay** — decision says overlay has "× button + Settings gear button". The app root IS the Settings screen (ContentView → NavigationStack → SettingsView), so the gear button simply calls `onDismiss()` — dismissing the overlay reveals Settings automatically.
-- **`OverlayView` is in the views layer, not my charter** — but since the task explicitly listed overlay behavior requirements and the view had functional bugs (wrong swipe direction, missing haptic, missing Settings button), I fixed them. Flagged in decisions inbox.
-
-### 2026-04-24 — M1.6 Integration & Edge Case Handling
-
-- **AppCoordinator as ReminderScheduling** — having `AppCoordinator` conform to `ReminderScheduling` is the cleanest integration seam. `SettingsViewModel` keeps its `scheduler: ReminderScheduling` abstraction (tests unchanged), but in production it receives the coordinator so all scheduling paths (notifications + fallback timers) stay in sync on every settings change.
-
-### 2026-04-25 — Data-Driven App Configuration (Danny Decision 3.6)
-
-- **Full config spec filed:** `app-config.json` bundles theme (colors, fonts, spacing, layout, animations, symbols), defaults (reminder intervals, enabled states), copy (all strings), and features (flags).
-- **Ownership:** Basher delivers `AppConfigLoader` + `AppConfig` Codable structs with fallback graceful error handling, and updates `SettingsStore` seed/reset pipeline.
-- **Tess delivers:** Color/font/spacing JSON values from `theme` section.
-- **Linus delivers:** Refactored `DesignSystem` to read all tokens from `AppConfig.current.theme`, plus `AppCopy` accessor pattern for views, plus "Reset to Defaults" UI button.
-- **Integration point:** This spec absorbs and supersedes `danny-data-driven-settings-spec.md` (previous settings-only spec); extends to full design system coverage.
-- **Audience:** Basher (loader + pipeline), Tess (theme values), Linus (DesignSystem + view refactor).
-- **Debounce in the coordinator, not in the ViewModel** — debounce logic lives in `AppCoordinator.reschedule(for:)` using per-type `Task` cancellation. `MockReminderScheduler` has no debounce, so existing `SettingsViewModelTests` continue passing. The test `test_rapidSettingChanges_allReschedulesAreTriggered` still expects 4 calls against the mock (testing SettingsViewModel dispatch) while production debounces to 2 — this is correct layering, not a gap.
-- **scenePhase background tracking** — `EyePostureReminderApp` needs a `@State var wasInBackground` flag to distinguish `.inactive → .active` (task switcher) from `.background → .active` (true foreground resume). Only the latter should trigger `handleForegroundTransition()` to avoid unnecessary reschedule thrash.
-- **`OverlayManager.init(audioManager:)` public with default** — keeping a `OverlayManager(audioManager: MediaControlling = AudioInterruptionManager())` init makes the singleton init transparent (`static let shared = OverlayManager()` just works) while also enabling mock injection in tests (`OverlayManager(audioManager: mockAudio)`).
-- **`AVAudioSession.soloAmbient` is the right category for interrupting external audio** — it respects the silent switch, interrupts other apps (Spotify, Podcasts), and does NOT show a Control Center "now playing" entry since we don't actually play any audio ourselves. Never use `.playback` or add `UIBackgroundModes: audio`.
-- **`clearQueue()` on `cancelAllReminders()`** — when the master toggle is turned off or all reminders are cancelled, the overlay queue must also be flushed so previously-queued overlays don't surface after the user thought they cancelled everything.
-
-
-### 2026-04-25 — P1 Saul Review Fixes + M2.3 Snooze
-
-- **P1-1 Snooze guard in scheduleReminders():** The guard must run *before* auth checks. Pattern: check `snoozedUntil > Date()` → cancel + arm wake → return early; else clear expired snooze and fall through. `cancelAllReminders()` on `AppCoordinator` also arms the in-process `snoozeWakeTask` when `snoozedUntil` is set, so snooze applied while in foreground gets a wake timer immediately without needing `scheduleReminders()` to be called.
-- **P1-2 NotificationScheduling injection:** Added `getAuthorizationStatus() async -> UNAuthorizationStatus` to the `NotificationScheduling` protocol (wraps `notificationSettings().authorizationStatus`). `MockNotificationCenter` returns `.authorized` when `authorizationGranted == true` and `.denied` otherwise. `FailOnceNotificationCenter` in tests returns `.authorized`.
-- **P1-3 OverlayPresenting injection:** Use `overlayManager: OverlayPresenting? = nil` default parameter; resolve to `OverlayManager.shared` inside init body to avoid actor-isolation issues with default parameter expressions. `clearQueue()` was already in `OverlayPresenting` protocol from a prior commit — no change needed.
-- **snooze wake notification category:** Use `AppCoordinator.snoozeWakeCategory` static constant so `AppDelegate` can distinguish snooze-wake from real reminders. Snooze-wake routes to `scheduleReminders()` not `handleNotification(for:)`.
-- **M2.3 SnoozeOption.restOfDay:** Compute as `Calendar.current.date(byAdding: .day, value: 1, to: startOfDay(for: now))`. Always returns a non-optional via fallback to `now + 24h`.
-- **Snooze count limit:** `maxConsecutiveSnoozes = 2` enforced by `canSnooze` check in both `snooze(for:)` and `snooze(option:)`. Reset happens in `handleNotification(for:)` (real reminder fired) and `cancelSnooze()`. Do NOT reset in `scheduleReminders()` snooze-expiry path — that's implicit reset via `snoozeCount = 0` alongside `snoozedUntil = nil`.
-- **Test contract preserved:** `snooze(for: 5)` still calls `cancelAllReminders()` once and `scheduleReminders` zero times. New `snooze(option:)` method is the forward-looking API; legacy method delegates to same logic.
-
-### 2026-04-25 — 10-Second Testing Defaults
-
-- **`ReminderSettings.defaultEyes` and `defaultPosture` changed to `interval: 10`** for simulator testing. Restore to `1200`/`1800` (20 min/30 min) before shipping. Marked with `// TEST OVERRIDE` comments in `ReminderSettings.swift`.
-
-### 2026-04-24 — Data-Driven Default Settings Spec (filed by Danny)
-
-- **Problem:** Hardcoded Swift `static let` defaults require recompile; Basher had to add `// TEST OVERRIDE` comments to test with 10-second intervals.
-- **Solution:** Bundle `defaults.json` in app target. `SettingsStore.init()` seeds UserDefaults from JSON on first launch only. UserDefaults always wins on subsequent launches (existing guard pattern, no overwrites).
-- **Your ownership:** Build `defaults.json` schema, implement `DefaultsLoader` (JSON decoder with `Bundle` injection for testability), add seeding to `SettingsStore.init()`, expose `resetToDefaults()` API, remove `ReminderSettings.defaultEyes/defaultPosture` statics.
-- **Linus ownership:** Add "Reset to Defaults" button to `SettingsView` with confirmation alert.
-- **Livingston ownership:** Unit tests for `DefaultsLoader` and updated `SettingsStore`.
-- **Key file:** `.squad/decisions.md` (merged from inbox; filed by Danny)
-- **`UNTimeIntervalNotificationTrigger(repeats: true)` requires ≥ 60s** — the OS silently rejects repeating notifications under that threshold. Fixed in `ReminderScheduler` by using `repeats: reminderSettings.interval >= 60`. Short intervals (< 60s) schedule as one-shot; after delivery the notification is gone but the fallback timer path fills the gap.
-- **Fallback timer path is the best way to test short intervals.** When notification permission is denied on the simulator (or revoked via Settings → reset privacy), `AppCoordinator` starts `Timer.scheduledTimer` with no OS minimum — overlays fire every 10s without restriction. Recommend testing with notifications denied for rapid-fire iteration.
-- **Default interval tests in `SettingsStoreTests` will fail** while this testing override is active (they assert 1200/1800). That's expected — revert `ReminderSettings.swift` before running the full test suite or merging to main.
-
-### 2026-04-25 — Wave 3: Dark Mode + 10-Second Testing (Orchestrated)
-
-**Agents:** Basher (Services), Danny (PM), Tess (UI/UX)  
-**Status:** ✅ SUCCESS — All tasks completed
-
-**Basher Contribution Summary:**
-- Set reminder intervals to 10s for testing (ReminderSettings.swift)
-- Fixed UNTimeIntervalNotificationTrigger repeats constraint for < 60s intervals
-- Dynamic `repeats` flag: `repeats: reminderSettings.interval >= 60`
-- Documented decision in decisions.md as permanent correctness fix
-
-**Team Learnings from Parallel Work:**
-- Dark mode infrastructure nearly complete — 90% of app already adaptive (good SwiftUI hygiene)
-- Accent colors (blue, green, orange) now have adaptive variants for dark mode
-- WCAG bug fix: warningOrange in light mode now meets 3:1 contrast threshold (was 2.7:1, now 3.5:1)
-- No `.preferredColorScheme` locks exist anywhere — app follows OS appearance correctly
-- Overlay UIWindow correctly inherits system appearance (no `overrideUserInterfaceStyle` set)
-
-### 2026-04-25 — Screen-Time-Based Reminder Trigger (ScreenTimeTracker)
-
-- **`ScreenTimeTracker`** — new `Services/` class, owns a 1-second `Timer` and observes `UIApplication.didBecomeActiveNotification` (start) / `willResignActiveNotification` (stop + reset all counters). Fires `onThresholdReached(type)` on the main thread; resets that type's counter to 0 before calling back. `pauseAll()`/`resumeAll()` used for snooze support; `stop()` for test tearDown cleanup.
-- **`willResignActiveNotification` is the correct reset event** (not `didEnterBackground`). `willResignActive` fires immediately on screen off, Control Centre, and any interruption. `didEnterBackground` can fire several seconds later — too late to give accurate screen-on time.
-- **UNNotification periodic triggers are now dead production code.** `ReminderScheduler.scheduleReminders()` and `rescheduleReminder()` are never called by `AppCoordinator` for normal reminders. The class and tests are intentionally left intact (reference + safety net). `cancelAllReminders()` is still called as a legacy-notification cleanup safety net.
-- **Auth status no longer gates the trigger path.** Previously: authorized → UNNotifications, denied → fallback `Timer`s. Now: `ScreenTimeTracker` is universal. Auth still matters for the snooze-wake silent UNNotification.
-- **`startFallbackTimers()` / `stopFallbackTimers()` retained as shims** pointing at `configureScreenTimeTracker()` / `screenTimeTracker.stop()`. Zero test changes needed.
-- **`startIfActive()` pattern** — after updating thresholds mid-session (e.g., master toggle on → `scheduleReminders()` while app is foregrounded), call `screenTimeTracker.startIfActive()` to begin ticking immediately without waiting for the next `didBecomeActive` notification.
-- **`configureScreenTimeTracker()` calls `resumeAll()`** — safe because it is only called from `scheduleReminders()` after the snooze guard has cleared. `performReschedule(for:)` sets individual thresholds directly and does NOT call `resumeAll()` so snooze state is preserved when settings change during a snooze.
-- **Interval semantics changed:** `eyeInterval`/`postureInterval` now mean "seconds of continuous screen-on time", not "wall-clock seconds between reminders". Existing JSON values need no changes.
-- **Build verified:** `./scripts/build.sh build` → BUILD SUCCEEDED
-- **Decision filed:** `.squad/decisions/inbox/basher-screen-time-tracker.md`
-
-### 2026-04-25 — ScreenTimeTracker Grace Period (Rusty Amendment 1)
-
-- **Required amendment from Rusty's architecture review:** `willResignActive` must NOT reset counters immediately — a 2-second notification banner would nuke 19 minutes of accumulated screen time.
-- **Implementation:** `private let resetGracePeriod: TimeInterval = 5.0` constant + `private var resetTask: Task<Void, Never>?` state on `ScreenTimeTracker`.
-- **`handleWillResignActive()`** now calls `stopTicking()` immediately (no accumulation during gap) then arms a `Task.sleep(5s)` grace timer. Only if `Task.isCancelled` is false after the sleep does `resetAll()` execute via `MainActor.run`.
-- **`handleDidBecomeActive()`** checks for a pending `resetTask` first. If present (within grace window): cancel + nil out + call `resumeTicking()`. If absent (grace expired or cold start): call `startTicking()` for fresh tracking.
-- **`resumeTicking()` is a private shim** delegating to `startTicking()`. Kept as separate entry point for intent clarity at the call-site; `startTicking()` already guards against double-start with `guard tickTimer == nil`.
-- **`stop()` also cancels `resetTask`** — prevents the grace timer from firing against a deallocated or stopped tracker (test tearDown safety).
-- **`deinit` cancels `resetTask`** — same reason.
-- **`Timer.tolerance = 0.5`** added in this pass (Rusty recommended optimization; was missing from original implementation).
-- **Surgical change:** Only `ScreenTimeTracker.swift` touched. `AppCoordinator` and all tests unchanged.
-- **Build verified:** `./scripts/build.sh build` → BUILD SUCCEEDED
-
----
-
-## Session 6: ScreenTimeTracker Implementation Complete
-
-**Session:** 2026-04-24T20:58Z – 2026-04-24T21:37Z  
-**Status:** ✅ DELIVERED (Decisions 3.4 & 3.5)
-
-### Phase 3.4: ScreenTimeTracker Implementation
-
-**Deliverables:**
-- `EyePostureReminder/Services/ScreenTimeTracker.swift` (NEW, ~250 lines)
-- `EyePostureReminder/Services/AppCoordinator.swift` (UPDATED, wiring changes ~30 lines)
-- Grace period + snooze awareness fully integrated
-- Build: **BUILD SUCCEEDED**
-
-**Architecture alignment:**
-- Standalone service (not inlined in AppCoordinator) ✅
-- Lifecycle observers (`didBecomeActive`, `willResignActive`) ✅
-- 1s tick timer with `tolerance = 0.5` ✅
-- Monotonic clock (`CACurrentMediaTime()`) ✅
-- 5s grace period with Task-based cancellation ✅
-- `isEnabled` flag for snooze suppression ✅
-- Independent eye/posture counters ✅
-- Callback-based event emission ✅
-
-**Key implementation detail:**
-`resetTask: Task<Void, Never>?` state machine for grace period. When `willResignActive` fires: (1) pause timer immediately, (2) arm 5s reset task. When `didBecomeActive` fires within grace: cancel reset task, resume counting. After grace expires: commit reset (counters to 0).
-
-**Backward compatibility:**
-`startFallbackTimers()` and `stopFallbackTimers()` retained as shims (delegate to ScreenTimeTracker methods). All existing tests pass unchanged — no test rewrites needed.
-
-**ReminderScheduler changes:**
-- `scheduleReminders(using:)` — no longer called (repeating UNTimeIntervalNotificationTrigger removed)
-- `rescheduleReminder(for:using:)` — no longer called
-- `cancelReminder(for:)` and `cancelAllReminders()` — `cancelAllReminders()` still called from AppCoordinator as safety net to clear legacy notifications on app update
-- Net: `ReminderScheduler` narrowed to snooze-wake notification logic only (not removed, not breaking)
-
-### Phase 3.5: SettingsStore Seeding Alignment
-
-**Alignment details:**
-- Interval semantics now unified across AppConfig + SettingsStore: "seconds of continuous screen-on time"
-- Defaults (`10s` for testing, `1200s`/`1800s` for production) are directly reusable with no JSON rewrites
-- `SettingsStore.init()` seeding logic verified against AppConfig defaults
-- No user-facing breaking changes; existing user preferences remain compatible
-
-**Build verified:** All integration points validated.
-
-### Integration Testing Points
-
-For Livingston's test suite (Phase 4):
-- ScreenTimeTracker grace period: interrupt → resume within 5s (does not reset)
-- ScreenTimeTracker reset: interrupt → wait 5s+ (counter returns to 0)
-- Threshold firing: both eye + posture timers independent
-- Snooze: `isEnabled = false` → no tracking, `isEnabled = true` → resume from 0
-- Settings reschedule mid-session: thresholds update without resetting elapsed (if not snoozed)
-- System clock resistance: `CACurrentMediaTime()` maintains correct elapsed even if user changes device clock
-
-### Next: Testing Phase (Livingston)
-
-Unit tests for ScreenTimeTracker with:
-- MockTimerFactory (on-demand tick firing)
-- MockAppLifecycleProvider (lifecycle event injection)
-- MockTimeProvider (deterministic clock)
-- 8 test cases (documented in Rusty's architecture review)
-
----
-
-### 2026-04-25 — PauseConditionManager Implementation (Rusty Architecture Decision)
-
-- **New file:** `EyePostureReminder/Services/PauseConditionManager.swift` (~230 lines)
-- **Four protocols defined:** `FocusStatusDetecting`, `CarPlayDetecting`, `DrivingActivityDetecting`, `PauseConditionProviding` — all protocol-backed for test injection
-- **Three live detector implementations:**
-  - `LiveFocusStatusDetector`: Uses KVO on `INFocusStatusCenter.default.observe(\.focusStatus)` — NOT `Notification.Name.INFocusStatusDidChange` which does NOT exist in iOS 26 SDK. Calls `requestAuthorization` to read initial state; `nil` isFocused treated as `false` (fail open)
-  - `LiveCarPlayDetector`: Observes `AVAudioSession.routeChangeNotification`; CarPlay port checked via `AVAudioSession.Port(rawValue: "CarPlay")` — `AVAudioSession.Port.carPlay` does NOT exist in iOS 26 SDK, raw value "CarPlay" is the correct identifier
-  - `LiveDrivingActivityDetector`: `CMMotionActivityManager.startActivityUpdates`; guards on `isActivityAvailable()` for simulator; only fires when `activity.automotive && confidence == .high`
-- **PauseConditionManager holds SettingsStore ref** and reads `pauseDuringFocus`/`pauseWhileDriving` at callback time — allows user to toggle without re-registration
-- **CarPlay uses `pauseWhileDriving` setting** (not a separate toggle) — both `carPlay` and `driving` sources are gated by `pauseWhileDriving`
-- **AppCoordinator wired:** `pauseConditionManager` property added; `onPauseStateChanged` callback wired in init; `startMonitoring()` called in init; `configureScreenTimeTracker()` now guards `resumeAll()` behind `!pauseConditionManager.isPaused`
-- **Critical invariant enforced:** `resumeAll()` only called if BOTH snooze is clear AND `!pauseConditionManager.isPaused`
-- **SettingsStore two new keys:** `epr.pauseDuringFocus` (Bool, default true), `epr.pauseWhileDriving` (Bool, default true) — added as `@Published` properties with `didSet` persistence
-- **Info.plist entries noted in inbox:** `NSFocusStatusUsageDescription` and `NSMotionUsageDescription` required — filed at `.squad/decisions/inbox/basher-pause-condition-plist-entries.md`
-- **Build verified:** `./scripts/build.sh build` → BUILD SUCCEEDED
-
-## 2026-04-25 — Wave 2 Completion: Services Layer Orchestration
-
-**Status:** ✅ Complete  
-**Scope:** PauseConditionManager finalized; all 3 detectors tested and integrated
-
-### Orchestration Summary
-
-- **PauseConditionManager:** Fully implemented and tested (28 unit tests, 41 integration tests green)
-- **NetworkDetector, ScreenTimeDetector, GameModeDetector:** All detectors passing Livingston's integration suite
-- **Build:** Green; all services layer code production-ready
-- **GitHub Issues Closed:** #3, #4, #5
-- **Orchestration Log:** Filed at `.squad/orchestration-log/2026-04-24T23-19-18Z-basher.md`
-
-### Pending Work
-
-**XCUITest .xcodeproj requirement (Decision filed):** UI test scaffolds are ready but blocked by SPM limitation. Decision to add `.xcodeproj` filed in `.squad/decisions.md`. Assigned to Basher for Phase 2.
-
-### Next Phase
-
-Services infrastructure stable. Linus UI team is integrating pause toggles and status indicator. Phase 2 planning ready.
 
 ### 2026-04-25 — TestBundleHelper Creation (Issue #11, Basher Part)
 
@@ -286,3 +24,31 @@ Services infrastructure stable. Linus UI team is integrating pause toggles and s
 - **Helpers provided:** `testColor(named:)`, `testLocalizedString(key:value:)` for convenience.
 - **Decision:** Do NOT modify Package.swift — test target structure is correct; fix is purely lookup-side.
 - **Outcome:** Enabled Livingston to fix 70 failing tests across 5 suites by migrating them to use `TestBundle.module`.
+
+## Core Context
+
+**Phase 1–4 implementation history (2026-04-24 to 2026-04-25):**
+- Services layer: SettingsStore, ReminderScheduler, AppCoordinator, OverlayManager, PauseConditionManager (FocusMode, CarPlay, Driving), ScreenTimeTracker with grace-period/reset state machine
+- Data-driven config: AppConfig.swift + defaults.json (seeds UserDefaults on first launch; resetToDefaults() clears & re-seeds)
+- Test infrastructure: MockSettingsPersisting, MockNotificationCenter, MockTimerFactory, MockAppLifecycleProvider for deterministic testing
+- Bundle resource resolution: SPM `Bundle.module` in test code resolves to test target bundle, not production; production resources live in `EyePostureReminder_EyePostureReminder.bundle`
+- SettingsStore two-layer pattern: UserDefaults layer (persistent) + AppConfig seeding layer (first-launch only)
+- PauseConditionManager: reads settings at callback time (not registration); settings changes do NOT retroactively remove activeConditions
+- ScreenTimeTracker: `CACurrentMediaTime()` monotonic clock + 5s grace period state machine + resume/pause tracking + independent eye/posture counters
+- OverlayView: swipe-UP dismiss (translation.height < 0), Settings gear button calls onDismiss(), haptic feedback (medium impact) at countdown zero
+- Info.plist: NSFocusStatusUsageDescription + NSMotionUsageDescription required; omitting either causes crash at first API access
+- Build patterns: `./scripts/build.sh build` for compilation; `./scripts/run.sh` for bundle assembly with Info.plist refresh
+- Build verified clean: Phase 1 tests passing, Phase 2–4 integration tests stable
+
+**SPM/Swift ecosystem learnings:**
+- UNTimeIntervalNotificationTrigger(repeats: true) requires ≥ 60s (OS silently rejects < 60s); use dynamic `repeats: interval >= 60`
+- Code bundle ≠ resource bundle in SPM; UIColor(named:) + NSLocalizedString only search resource bundle
+- LiveFocusStatusDetector uses KVO on focusStatus (not Notification.Name.INFocusStatusDidChange which does not exist)
+- LiveCarPlayDetector checks AVAudioSession.Port(rawValue: "CarPlay") (AVAudioSession.Port.carPlay does not exist)
+- LiveDrivingActivityDetector uses CMMotionActivityManager.startActivityUpdates; guards isActivityAvailable() for simulator
+
+**Test patterns established:**
+- @MainActor test class for async/UI work; sync tests are non-@MainActor (no decorators)
+- MockNotificationCenter: addedRequests (append-only history) + pendingRequests (live queue)
+- @testable import accesses protocol definitions inline (no Protocols/ folder needed)
+- Bundle injection on AppConfig.load() + SettingsStore.init() for fixture testing
