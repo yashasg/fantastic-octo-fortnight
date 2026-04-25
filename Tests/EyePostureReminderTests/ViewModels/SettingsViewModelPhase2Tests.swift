@@ -1,4 +1,3 @@
-import Combine
 @testable import EyePostureReminder
 import XCTest
 
@@ -183,7 +182,10 @@ final class SettingsViewModelPhase2Tests: XCTestCase {
     func test_canSnooze_falseAfterTwoConsecutiveSnoozes() {
         sut.snooze(option: .fiveMinutes)   // snoozeCount = 1
         sut.snooze(option: .fiveMinutes)   // snoozeCount = 2
-        XCTAssertFalse(sut.canSnooze, "canSnooze must return false after \(SettingsViewModel.maxConsecutiveSnoozes) consecutive snoozes")
+        XCTAssertFalse(
+            sut.canSnooze,
+            "canSnooze must return false after \(SettingsViewModel.maxConsecutiveSnoozes) consecutive snoozes"
+        )
     }
 
     func test_canSnooze_falseWhenSnoozeCountEqualsMax() {
@@ -205,7 +207,11 @@ final class SettingsViewModelPhase2Tests: XCTestCase {
 
         sut.snooze(option: .fiveMinutes)
 
-        XCTAssertEqual(mockScheduler.cancelAllCallCount, 0, "cancelAllReminders must not be called when snooze is blocked")
+        XCTAssertEqual(
+            mockScheduler.cancelAllCallCount,
+            0,
+            "cancelAllReminders must not be called when snooze is blocked"
+        )
     }
 
     func test_canSnooze_trueAgainAfterCancelSnooze() async {
@@ -296,7 +302,10 @@ final class SettingsViewModelPhase2Tests: XCTestCase {
 
         try? await Task.sleep(nanoseconds: 200_000_000)
 
-        let snoozedUntilAfter = try XCTUnwrap(settings.snoozedUntil, "snoozedUntil must not be cleared by a settings-change reschedule")
+        let snoozedUntilAfter = try XCTUnwrap(
+            settings.snoozedUntil,
+            "snoozedUntil must not be cleared by a settings-change reschedule"
+        )
         XCTAssertEqual(
             snoozedUntilAfter.timeIntervalSince1970,
             snoozeEnd.timeIntervalSince1970,

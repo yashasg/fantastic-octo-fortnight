@@ -1,7 +1,8 @@
-import XCTest
-import UserNotifications
 @testable import EyePostureReminder
+import UserNotifications
+import XCTest
 
+// swiftlint:disable:next type_body_length
 final class ReminderSchedulerTests: XCTestCase {
 
     var mockCenter: MockNotificationCenter!
@@ -28,7 +29,7 @@ final class ReminderSchedulerTests: XCTestCase {
     // MARK: - scheduleReminders — request count
 
     func test_scheduleAll_bothEnabled_addsTwoRequests() async {
-        settings.masterEnabled = true
+        settings.globalEnabled = true
         settings.eyesEnabled = true
         settings.postureEnabled = true
 
@@ -37,8 +38,8 @@ final class ReminderSchedulerTests: XCTestCase {
         XCTAssertEqual(mockCenter.addedRequests.count, 2)
     }
 
-    func test_scheduleAll_masterDisabled_addsNoRequests() async {
-        settings.masterEnabled = false
+    func test_scheduleAll_globalDisabled_addsNoRequests() async {
+        settings.globalEnabled = false
         settings.eyesEnabled = true
         settings.postureEnabled = true
 
@@ -48,7 +49,7 @@ final class ReminderSchedulerTests: XCTestCase {
     }
 
     func test_scheduleAll_eyesDisabled_addsOnlyPostureRequest() async {
-        settings.masterEnabled = true
+        settings.globalEnabled = true
         settings.eyesEnabled = false
         settings.postureEnabled = true
 
@@ -62,7 +63,7 @@ final class ReminderSchedulerTests: XCTestCase {
     }
 
     func test_scheduleAll_postureDisabled_addsOnlyEyesRequest() async {
-        settings.masterEnabled = true
+        settings.globalEnabled = true
         settings.eyesEnabled = true
         settings.postureEnabled = false
 
@@ -76,7 +77,7 @@ final class ReminderSchedulerTests: XCTestCase {
     }
 
     func test_scheduleAll_bothDisabled_addsNoRequests() async {
-        settings.masterEnabled = true
+        settings.globalEnabled = true
         settings.eyesEnabled = false
         settings.postureEnabled = false
 
@@ -88,7 +89,7 @@ final class ReminderSchedulerTests: XCTestCase {
     // MARK: - rescheduleReminder — cancel-before-add contract
 
     func test_reschedule_cancelsExistingBeforeAdding() async {
-        settings.masterEnabled = true
+        settings.globalEnabled = true
         settings.eyesEnabled = true
 
         // First schedule
@@ -100,14 +101,15 @@ final class ReminderSchedulerTests: XCTestCase {
         await sut.rescheduleReminder(for: .eyes, using: settings)
 
         // Cancel must have been called before the second add
-        XCTAssertFalse(mockCenter.removedIdentifiers.isEmpty,
+        XCTAssertFalse(
+            mockCenter.removedIdentifiers.isEmpty,
             "reschedule must cancel the previous request before adding a new one")
         XCTAssertEqual(mockCenter.addedRequests.count, 2, "Second schedule should produce a second add")
         XCTAssertEqual(mockCenter.pendingRequests.count, 1, "Only one pending request should remain after reschedule")
     }
 
     func test_reschedule_whenDisabled_removesAndDoesNotAdd() async {
-        settings.masterEnabled = true
+        settings.globalEnabled = true
         settings.eyesEnabled = true
 
         await sut.rescheduleReminder(for: .eyes, using: settings)
@@ -116,13 +118,15 @@ final class ReminderSchedulerTests: XCTestCase {
         settings.eyesEnabled = false
         await sut.rescheduleReminder(for: .eyes, using: settings)
 
-        XCTAssertEqual(mockCenter.pendingRequests.count, 0,
+        XCTAssertEqual(
+            mockCenter.pendingRequests.count,
+            0,
             "Rescheduling a disabled type must remove the existing request")
         XCTAssertEqual(mockCenter.addedRequests.count, 1, "No new add should occur when type is disabled")
     }
 
     func test_reschedule_onlyAffectsTargetType() async {
-        settings.masterEnabled = true
+        settings.globalEnabled = true
         settings.eyesEnabled = true
         settings.postureEnabled = true
 
@@ -144,7 +148,7 @@ final class ReminderSchedulerTests: XCTestCase {
     // MARK: - cancelReminder
 
     func test_cancelReminder_removesCorrectIdentifier() async {
-        settings.masterEnabled = true
+        settings.globalEnabled = true
         settings.eyesEnabled = true
         settings.postureEnabled = true
         await sut.scheduleReminders(using: settings)
@@ -160,7 +164,7 @@ final class ReminderSchedulerTests: XCTestCase {
     }
 
     func test_cancelReminder_forPosture_leavesEyesPending() async {
-        settings.masterEnabled = true
+        settings.globalEnabled = true
         settings.eyesEnabled = true
         settings.postureEnabled = true
         await sut.scheduleReminders(using: settings)
@@ -177,7 +181,7 @@ final class ReminderSchedulerTests: XCTestCase {
     // MARK: - cancelAllReminders
 
     func test_cancelAll_callsRemoveAll() async {
-        settings.masterEnabled = true
+        settings.globalEnabled = true
         settings.eyesEnabled = true
         settings.postureEnabled = true
         await sut.scheduleReminders(using: settings)
@@ -188,7 +192,7 @@ final class ReminderSchedulerTests: XCTestCase {
     }
 
     func test_cancelAll_clearsAllPendingRequests() async {
-        settings.masterEnabled = true
+        settings.globalEnabled = true
         settings.eyesEnabled = true
         settings.postureEnabled = true
         await sut.scheduleReminders(using: settings)
@@ -206,7 +210,7 @@ final class ReminderSchedulerTests: XCTestCase {
     // MARK: - Notification content: Eyes
 
     func test_eyesNotification_title_matchesSpec() async {
-        settings.masterEnabled = true
+        settings.globalEnabled = true
         settings.eyesEnabled = true
         settings.postureEnabled = false
 
@@ -216,7 +220,7 @@ final class ReminderSchedulerTests: XCTestCase {
     }
 
     func test_eyesNotification_body_matchesSpec() async {
-        settings.masterEnabled = true
+        settings.globalEnabled = true
         settings.eyesEnabled = true
         settings.postureEnabled = false
 
@@ -229,7 +233,7 @@ final class ReminderSchedulerTests: XCTestCase {
     }
 
     func test_eyesNotification_categoryIdentifier_matchesSpec() async {
-        settings.masterEnabled = true
+        settings.globalEnabled = true
         settings.eyesEnabled = true
         settings.postureEnabled = false
 
@@ -241,7 +245,7 @@ final class ReminderSchedulerTests: XCTestCase {
     // MARK: - Notification content: Posture
 
     func test_postureNotification_title_matchesSpec() async {
-        settings.masterEnabled = true
+        settings.globalEnabled = true
         settings.eyesEnabled = false
         settings.postureEnabled = true
 
@@ -251,7 +255,7 @@ final class ReminderSchedulerTests: XCTestCase {
     }
 
     func test_postureNotification_body_matchesSpec() async {
-        settings.masterEnabled = true
+        settings.globalEnabled = true
         settings.eyesEnabled = false
         settings.postureEnabled = true
 
@@ -264,7 +268,7 @@ final class ReminderSchedulerTests: XCTestCase {
     }
 
     func test_postureNotification_categoryIdentifier_matchesSpec() async {
-        settings.masterEnabled = true
+        settings.globalEnabled = true
         settings.eyesEnabled = false
         settings.postureEnabled = true
 
@@ -276,7 +280,7 @@ final class ReminderSchedulerTests: XCTestCase {
     // MARK: - Trigger: repeats = true
 
     func test_eyesTrigger_repeatsIsTrue() async {
-        settings.masterEnabled = true
+        settings.globalEnabled = true
         settings.eyesEnabled = true
         settings.postureEnabled = false
 
@@ -287,7 +291,7 @@ final class ReminderSchedulerTests: XCTestCase {
     }
 
     func test_postureTrigger_repeatsIsTrue() async {
-        settings.masterEnabled = true
+        settings.globalEnabled = true
         settings.eyesEnabled = false
         settings.postureEnabled = true
 
@@ -300,7 +304,7 @@ final class ReminderSchedulerTests: XCTestCase {
     // MARK: - Trigger: timeInterval matches settings
 
     func test_eyesTrigger_timeInterval_matchesSettingsInterval() async {
-        settings.masterEnabled = true
+        settings.globalEnabled = true
         settings.eyesEnabled = true
         settings.postureEnabled = false
         settings.eyesInterval = 600
@@ -312,7 +316,7 @@ final class ReminderSchedulerTests: XCTestCase {
     }
 
     func test_postureTrigger_timeInterval_matchesSettingsInterval() async {
-        settings.masterEnabled = true
+        settings.globalEnabled = true
         settings.eyesEnabled = false
         settings.postureEnabled = true
         settings.postureInterval = 2700
@@ -326,45 +330,49 @@ final class ReminderSchedulerTests: XCTestCase {
     // MARK: - Notification Identifiers
 
     func test_requestIdentifiers_areUnique() async {
-        settings.masterEnabled = true
+        settings.globalEnabled = true
         settings.eyesEnabled = true
         settings.postureEnabled = true
 
         await sut.scheduleReminders(using: settings)
 
         let identifiers = mockCenter.addedRequests.map { $0.identifier }
-        XCTAssertEqual(Set(identifiers).count, identifiers.count,
+        XCTAssertEqual(
+            Set(identifiers).count,
+            identifiers.count,
             "Each reminder type must use a distinct notification identifier")
     }
 
     func test_eyesRequest_identifierContainsEyes() async {
-        settings.masterEnabled = true
+        settings.globalEnabled = true
         settings.eyesEnabled = true
         settings.postureEnabled = false
 
         await sut.scheduleReminders(using: settings)
 
         let identifier = mockCenter.addedRequests.first?.identifier ?? ""
-        XCTAssertTrue(identifier.contains("eyes"),
+        XCTAssertTrue(
+            identifier.contains("eyes"),
             "Eyes notification identifier should contain 'eyes', got: \(identifier)")
     }
 
     func test_postureRequest_identifierContainsPosture() async {
-        settings.masterEnabled = true
+        settings.globalEnabled = true
         settings.eyesEnabled = false
         settings.postureEnabled = true
 
         await sut.scheduleReminders(using: settings)
 
         let identifier = mockCenter.addedRequests.first?.identifier ?? ""
-        XCTAssertTrue(identifier.contains("posture"),
+        XCTAssertTrue(
+            identifier.contains("posture"),
             "Posture notification identifier should contain 'posture', got: \(identifier)")
     }
 
     // MARK: - getPendingNotificationRequests
 
     func test_getPendingRequests_afterScheduleAll_returnsTwo() async {
-        settings.masterEnabled = true
+        settings.globalEnabled = true
         settings.eyesEnabled = true
         settings.postureEnabled = true
 
@@ -375,7 +383,7 @@ final class ReminderSchedulerTests: XCTestCase {
     }
 
     func test_getPendingRequests_afterCancelAll_isEmpty() async {
-        settings.masterEnabled = true
+        settings.globalEnabled = true
         settings.eyesEnabled = true
         settings.postureEnabled = true
         await sut.scheduleReminders(using: settings)
@@ -389,15 +397,18 @@ final class ReminderSchedulerTests: XCTestCase {
     // MARK: - Edge Case: add() throws (permission denied simulation)
 
     func test_addThrows_doesNotCrash_andLogsGracefully() async {
-        mockCenter.addError = NSError(domain: "UNErrorDomain", code: 1,
+        mockCenter.addError = NSError(
+            domain: "UNErrorDomain",
+            code: 1,
             userInfo: [NSLocalizedDescriptionKey: "Notifications not authorized"])
-        settings.masterEnabled = true
+        settings.globalEnabled = true
         settings.eyesEnabled = true
 
         // Must not throw or crash
         await sut.rescheduleReminder(for: .eyes, using: settings)
 
-        XCTAssertTrue(mockCenter.addedRequests.isEmpty,
+        XCTAssertTrue(
+            mockCenter.addedRequests.isEmpty,
             "No request should be added when the notification center throws")
     }
 
@@ -407,21 +418,23 @@ final class ReminderSchedulerTests: XCTestCase {
         let failOnceCenter = FailOnceNotificationCenter()
         let scheduler = ReminderScheduler(notificationCenter: failOnceCenter)
 
-        settings.masterEnabled = true
+        settings.globalEnabled = true
         settings.eyesEnabled = true
         settings.postureEnabled = true
 
         await scheduler.scheduleReminders(using: settings)
 
         // Both types should have been attempted (eyes fails, posture succeeds).
-        XCTAssertGreaterThanOrEqual(failOnceCenter.addAttemptCount, 2,
+        XCTAssertGreaterThanOrEqual(
+            failOnceCenter.addAttemptCount,
+            2,
             "Scheduler must attempt to add all types even if the first add fails")
     }
 
     // MARK: - Overlapping Reminders
 
     func test_scheduleAllTwice_secondCallReplacesFirst() async {
-        settings.masterEnabled = true
+        settings.globalEnabled = true
         settings.eyesEnabled = true
         settings.postureEnabled = true
 
@@ -429,7 +442,9 @@ final class ReminderSchedulerTests: XCTestCase {
         await sut.scheduleReminders(using: settings)
 
         // After two full scheduleAll calls, there should still be exactly 2 pending
-        XCTAssertEqual(mockCenter.pendingRequests.count, 2,
+        XCTAssertEqual(
+            mockCenter.pendingRequests.count,
+            2,
             "Scheduling all twice must not stack duplicate requests")
     }
 }

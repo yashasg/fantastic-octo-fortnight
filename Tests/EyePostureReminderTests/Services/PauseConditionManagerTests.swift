@@ -1,64 +1,6 @@
 @testable import EyePostureReminder
 import XCTest
 
-// MARK: - Mock Detectors
-//
-// These satisfy the protocols defined in PauseConditionManager.swift.
-// Named to match the production protocols exactly: FocusStatusDetecting,
-// CarPlayDetecting, DrivingActivityDetecting.
-
-final class MockFocusStatusDetector: FocusStatusDetecting {
-
-    private(set) var isFocused: Bool = false
-    var onFocusChanged: ((Bool) -> Void)?
-
-    private(set) var startMonitoringCallCount = 0
-    private(set) var stopMonitoringCallCount = 0
-
-    func startMonitoring() { startMonitoringCallCount += 1 }
-    func stopMonitoring()  { stopMonitoringCallCount += 1 }
-
-    /// Test helper — updates state and fires the registered callback.
-    func simulateFocusChange(_ focused: Bool) {
-        isFocused = focused
-        onFocusChanged?(focused)
-    }
-}
-
-final class MockCarPlayDetector: CarPlayDetecting {
-
-    private(set) var isCarPlayActive: Bool = false
-    var onCarPlayChanged: ((Bool) -> Void)?
-
-    private(set) var startMonitoringCallCount = 0
-    private(set) var stopMonitoringCallCount = 0
-
-    func startMonitoring() { startMonitoringCallCount += 1 }
-    func stopMonitoring()  { stopMonitoringCallCount += 1 }
-
-    func simulateCarPlayChange(_ active: Bool) {
-        isCarPlayActive = active
-        onCarPlayChanged?(active)
-    }
-}
-
-final class MockDrivingActivityDetector: DrivingActivityDetecting {
-
-    private(set) var isDriving: Bool = false
-    var onDrivingChanged: ((Bool) -> Void)?
-
-    private(set) var startMonitoringCallCount = 0
-    private(set) var stopMonitoringCallCount = 0
-
-    func startMonitoring() { startMonitoringCallCount += 1 }
-    func stopMonitoring()  { stopMonitoringCallCount += 1 }
-
-    func simulateDrivingChange(_ driving: Bool) {
-        isDriving = driving
-        onDrivingChanged?(driving)
-    }
-}
-
 // MARK: - PauseConditionManagerTests
 
 /// Unit tests for `PauseConditionManager`.
@@ -87,6 +29,7 @@ final class PauseConditionManagerTests: XCTestCase {
     }
 
     override func tearDown() {
+        sut?.stopMonitoring()
         sut = nil
         settings = nil
         mockPersistence = nil
@@ -108,20 +51,20 @@ final class PauseConditionManagerTests: XCTestCase {
 
     // MARK: - Initial State
 
-    func testInitialState_IsNotPaused() {
+    func test_init_isPaused_isFalse() {
         let freshSUT = makeSUT()
         XCTAssertFalse(freshSUT.isPaused, "PauseConditionManager must not be paused on init — no conditions active yet")
     }
 
     // MARK: - Focus Mode
 
-    func testFocusModeActive_PausesReminders() {
+    func test_focusMode_whenActive_pausesReminders() {
         settings.pauseDuringFocus = true
         mockFocus.simulateFocusChange(true)
         XCTAssertTrue(sut.isPaused, "Focus active with pauseDuringFocus=true must set isPaused=true")
     }
 
-    func testFocusModeInactive_DoesNotPause() {
+    func test_focusMode_whenInactive_isNotPaused() {
         settings.pauseDuringFocus = true
         mockFocus.simulateFocusChange(false)
         XCTAssertFalse(sut.isPaused, "Focus inactive must not pause reminders")
@@ -130,13 +73,13 @@ final class PauseConditionManagerTests: XCTestCase {
     /// Auth denied → `LiveFocusStatusDetector` never fires the callback.
     /// No callback means no condition is ever inserted, so `isPaused` stays `false`.
     /// This is the "fail open" contract: unknown state = don't pause.
-    func testFocusAuthDenied_FailsOpen() {
+    func test_focusMode_whenAuthDenied_failsOpen() {
         settings.pauseDuringFocus = true
         // No simulate call — detector never fires because auth was denied.
         XCTAssertFalse(sut.isPaused, "Auth-denied focus detector must not trigger a pause (fail-open)")
     }
 
-    func testFocusPauseDisabledInSettings_IgnoresFocus() {
+    func test_focusMode_whenPauseSettingDisabled_ignoresFocusSignal() {
         settings.pauseDuringFocus = false
         mockFocus.simulateFocusChange(true)
         XCTAssertFalse(sut.isPaused, "Focus signal must be ignored when pauseDuringFocus is disabled")
@@ -144,13 +87,13 @@ final class PauseConditionManagerTests: XCTestCase {
 
     // MARK: - CarPlay
 
-    func testCarPlayConnected_PausesReminders() {
+    func test_carPlay_whenConnected_pausesReminders() {
         settings.pauseWhileDriving = true
         mockCarPlay.simulateCarPlayChange(true)
         XCTAssertTrue(sut.isPaused, "CarPlay connected with pauseWhileDriving=true must set isPaused=true")
     }
 
-    func testCarPlayDisconnected_DoesNotPause() {
+    func test_carPlay_whenDisconnected_isNotPaused() {
         settings.pauseWhileDriving = true
         mockCarPlay.simulateCarPlayChange(false)
         XCTAssertFalse(sut.isPaused, "CarPlay disconnected must not pause reminders")
@@ -158,19 +101,19 @@ final class PauseConditionManagerTests: XCTestCase {
 
     // MARK: - Driving
 
-    func testDrivingDetected_PausesReminders() {
+    func test_driving_whenDetected_pausesReminders() {
         settings.pauseWhileDriving = true
         mockDriving.simulateDrivingChange(true)
         XCTAssertTrue(sut.isPaused, "Driving detected with pauseWhileDriving=true must set isPaused=true")
     }
 
-    func testDrivingNotDetected_DoesNotPause() {
+    func test_driving_whenNotDetected_isNotPaused() {
         settings.pauseWhileDriving = true
         mockDriving.simulateDrivingChange(false)
         XCTAssertFalse(sut.isPaused, "Driving=false must not pause reminders")
     }
 
-    func testDrivingPauseDisabledInSettings_IgnoresDriving() {
+    func test_driving_whenPauseSettingDisabled_ignoresDrivingSignal() {
         settings.pauseWhileDriving = false
         mockDriving.simulateDrivingChange(true)
         XCTAssertFalse(sut.isPaused, "Driving signal must be ignored when pauseWhileDriving is disabled")
@@ -178,7 +121,7 @@ final class PauseConditionManagerTests: XCTestCase {
 
     // MARK: - Multiple Conditions
 
-    func testMultipleConditionsActive_StillPaused() {
+    func test_multipleConditions_whenBothActive_remainsPaused() {
         settings.pauseDuringFocus = true
         settings.pauseWhileDriving = true
         mockFocus.simulateFocusChange(true)
@@ -186,7 +129,7 @@ final class PauseConditionManagerTests: XCTestCase {
         XCTAssertTrue(sut.isPaused, "Multiple active conditions must keep isPaused=true")
     }
 
-    func testOneConditionClears_StillPausedIfOtherActive() {
+    func test_multipleConditions_whenOneClears_remainsPausedIfOtherActive() {
         settings.pauseDuringFocus = true
         settings.pauseWhileDriving = true
         mockFocus.simulateFocusChange(true)
@@ -197,7 +140,7 @@ final class PauseConditionManagerTests: XCTestCase {
         XCTAssertTrue(sut.isPaused, "Must remain paused while at least one condition is still active")
     }
 
-    func testAllConditionsClear_Resumes() {
+    func test_allConditions_whenAllClear_resumes() {
         settings.pauseDuringFocus = true
         settings.pauseWhileDriving = true
         mockFocus.simulateFocusChange(true)
@@ -217,7 +160,7 @@ final class PauseConditionManagerTests: XCTestCase {
     // PauseConditionManager reports its own state truthfully; AppCoordinator is
     // responsible for checking both before calling resumeAll().
 
-    func testPauseAndSnooze_ResumeOnlyWhenBothClear() {
+    func test_pause_whenPauseClearsWhileSnoozeActive_conditionManagerReportsNotPaused() {
         settings.pauseDuringFocus = true
         settings.snoozedUntil = Date().addingTimeInterval(300)
         mockFocus.simulateFocusChange(true)
@@ -236,7 +179,7 @@ final class PauseConditionManagerTests: XCTestCase {
         XCTAssertTrue(snoozeStillActive, "Snooze is still active — AppCoordinator must not resume tracking yet")
     }
 
-    func testSnoozeActiveWhenPauseClears_StaysSnooze() {
+    func test_snooze_aloneDoesNotAffect_isPaused() {
         // Snooze lives in SettingsStore, not in PauseConditionManager.
         // When snooze is set and no pause conditions are active, isPaused is still false.
         settings.snoozedUntil = Date().addingTimeInterval(300)
@@ -248,7 +191,7 @@ final class PauseConditionManagerTests: XCTestCase {
 
     // MARK: - Lifecycle
 
-    func testStartMonitoring_RegistersObservers() {
+    func test_startMonitoring_callsStartOnAllDetectors() {
         // Use fresh detectors so the startMonitoring call from setUp doesn't inflate counts.
         let focus = MockFocusStatusDetector()
         let carPlay = MockCarPlayDetector()
@@ -271,7 +214,7 @@ final class PauseConditionManagerTests: XCTestCase {
         mgr.stopMonitoring()
     }
 
-    func testStartMonitoring_RegistersCallbacks() {
+    func test_startMonitoring_registersCallbacksOnAllDetectors() {
         let focus = MockFocusStatusDetector()
         let carPlay = MockCarPlayDetector()
         let driving = MockDrivingActivityDetector()
@@ -300,7 +243,7 @@ final class PauseConditionManagerTests: XCTestCase {
         mgr.stopMonitoring()
     }
 
-    func testStopMonitoring_CleansUp() {
+    func test_stopMonitoring_callsStopOnAllDetectors() {
         // setUp already called startMonitoring() on sut.
         sut.stopMonitoring()
 
@@ -312,7 +255,7 @@ final class PauseConditionManagerTests: XCTestCase {
         sut = nil
     }
 
-    func testCallbackFiredOnStateChange() {
+    func test_onPauseStateChanged_firesOnStateFlip() {
         settings.pauseDuringFocus = true
         var callbackValues: [Bool] = []
         sut.onPauseStateChanged = { callbackValues.append($0) }
@@ -323,7 +266,7 @@ final class PauseConditionManagerTests: XCTestCase {
         XCTAssertEqual(callbackValues, [true, false], "onPauseStateChanged must fire for each state flip")
     }
 
-    func testCallbackNotFiredWhenStateUnchanged() {
+    func test_onPauseStateChanged_notFiredWhenStateUnchanged() {
         settings.pauseDuringFocus = true
         settings.pauseWhileDriving = true
         var callbackCount = 0
@@ -361,11 +304,11 @@ final class SettingsPauseFlagsTests: XCTestCase {
 
     // MARK: - Defaults
 
-    func testPauseDuringFocusDefault_IsTrue() {
+    func test_pauseDuringFocus_default_isTrue() {
         XCTAssertTrue(sut.pauseDuringFocus, "pauseDuringFocus must default to true (spec: opt-in Focus pause is on)")
     }
 
-    func testPauseWhileDrivingDefault_IsTrue() {
+    func test_pauseWhileDriving_default_isTrue() {
         XCTAssertTrue(
             sut.pauseWhileDriving,
             "pauseWhileDriving must default to true (spec: opt-in driving pause is on)"
@@ -374,19 +317,19 @@ final class SettingsPauseFlagsTests: XCTestCase {
 
     // MARK: - Persistence
 
-    func testPauseDuringFocusToggle_Persists() {
+    func test_pauseDuringFocus_whenSetFalse_persists() {
         sut.pauseDuringFocus = false
         let reloaded = SettingsStore(store: mockPersistence)
         XCTAssertFalse(reloaded.pauseDuringFocus, "pauseDuringFocus=false must survive a SettingsStore reload")
     }
 
-    func testPauseWhileDrivingToggle_Persists() {
+    func test_pauseWhileDriving_whenSetFalse_persists() {
         sut.pauseWhileDriving = false
         let reloaded = SettingsStore(store: mockPersistence)
         XCTAssertFalse(reloaded.pauseWhileDriving, "pauseWhileDriving=false must survive a SettingsStore reload")
     }
 
-    func testPauseDuringFocusToggle_WritesToPersistence() {
+    func test_pauseDuringFocus_whenSet_writesToPersistence() {
         sut.pauseDuringFocus = false
         XCTAssertTrue(
             mockPersistence.hasValue(forKey: "epr.pauseDuringFocus"),
@@ -394,7 +337,7 @@ final class SettingsPauseFlagsTests: XCTestCase {
         )
     }
 
-    func testPauseWhileDrivingToggle_WritesToPersistence() {
+    func test_pauseWhileDriving_whenSet_writesToPersistence() {
         sut.pauseWhileDriving = false
         XCTAssertTrue(
             mockPersistence.hasValue(forKey: "epr.pauseWhileDriving"),
@@ -402,7 +345,7 @@ final class SettingsPauseFlagsTests: XCTestCase {
         )
     }
 
-    func testPauseFlags_IndependentOfEachOther() {
+    func test_pauseFlags_areIndependent() {
         sut.pauseDuringFocus = false
         XCTAssertTrue(sut.pauseWhileDriving, "Changing pauseDuringFocus must not affect pauseWhileDriving")
     }
