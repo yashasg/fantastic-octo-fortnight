@@ -19,12 +19,11 @@ struct OnboardingSetupView: View {
                     // Headline + subheadline
                     VStack(spacing: AppSpacing.sm) {
                         Text("onboarding.setup.title", bundle: .module)
-                            .font(.title2)
-                            .fontWeight(.bold)
+                            .font(AppFont.headline)
                             .multilineTextAlignment(.center)
 
                         Text("onboarding.setup.subtitle", bundle: .module)
-                            .font(.headline)
+                            .font(AppFont.bodyEmphasized)
                             .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)
                     }
@@ -33,14 +32,14 @@ struct OnboardingSetupView: View {
                     VStack(spacing: AppSpacing.md) {
                         SetupPreviewCard(
                             icon: AppSymbol.eyeBreak,
-                            color: .indigo,
+                            color: AppColor.reminderBlue,
                             title: String(localized: "onboarding.setup.eyeBreaks.title", bundle: .module),
                             interval: String(localized: "onboarding.setup.eyeBreaks.interval", bundle: .module),
                             duration: String(localized: "onboarding.setup.eyeBreaks.duration", bundle: .module)
                         )
                         SetupPreviewCard(
                             icon: AppSymbol.postureCheck,
-                            color: .green,
+                            color: AppColor.reminderGreen,
                             title: String(localized: "onboarding.setup.postureChecks.title", bundle: .module),
                             interval: String(localized: "onboarding.setup.postureChecks.interval", bundle: .module),
                             duration: String(localized: "onboarding.setup.postureChecks.duration", bundle: .module)
@@ -50,7 +49,7 @@ struct OnboardingSetupView: View {
 
                     // Reassurance copy
                     Text("onboarding.setup.body", bundle: .module)
-                        .font(.body)
+                        .font(AppFont.body)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, AppSpacing.sm)
@@ -64,7 +63,7 @@ struct OnboardingSetupView: View {
                     }
                     .buttonStyle(.borderedProminent)
                     .controlSize(.large)
-                    .tint(.indigo)
+                    .tint(AppColor.reminderBlue)
                     .padding(.horizontal, AppSpacing.xl)
                     .accessibilityLabel(Text("onboarding.setup.getStartedButton", bundle: .module))
                     .accessibilityHint(Text("onboarding.setup.getStartedButton.hint", bundle: .module))
@@ -74,7 +73,7 @@ struct OnboardingSetupView: View {
                         Text("onboarding.setup.customizeButton", bundle: .module)
                             .frame(minHeight: 44)
                     }
-                        .foregroundStyle(.indigo)
+                        .foregroundStyle(AppColor.reminderBlue)
                         .font(.subheadline)
                         .accessibilityLabel(Text("onboarding.setup.customizeButton", bundle: .module))
                         .accessibilityHint(Text("onboarding.setup.customizeButton.hint", bundle: .module))

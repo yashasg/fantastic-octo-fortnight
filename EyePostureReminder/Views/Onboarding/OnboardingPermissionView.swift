@@ -28,19 +28,18 @@ struct OnboardingPermissionView: View {
 
                     // Headline
                     Text("onboarding.permission.title", bundle: .module)
-                        .font(.title2)
-                        .fontWeight(.bold)
+                        .font(AppFont.headline)
                         .multilineTextAlignment(.center)
 
                     // Explanation + reassurance copy
                     VStack(spacing: AppSpacing.md) {
                         Text("onboarding.permission.body1", bundle: .module)
-                            .font(.body)
+                            .font(AppFont.body)
                             .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)
 
                         Text("onboarding.permission.body2", bundle: .module)
-                            .font(.body)
+                            .font(AppFont.body)
                             .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)
                     }
@@ -55,7 +54,7 @@ struct OnboardingPermissionView: View {
                     }
                     .buttonStyle(.borderedProminent)
                     .controlSize(.large)
-                    .tint(.indigo)
+                    .tint(AppColor.reminderBlue)
                     .padding(.horizontal, AppSpacing.xl)
                     .accessibilityLabel(Text("onboarding.permission.enableButton", bundle: .module))
                     .accessibilityHint(Text("onboarding.permission.enableButton.hint", bundle: .module))
@@ -93,10 +92,10 @@ private struct NotificationPreviewCard: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 8) {
                 Image(systemName: AppSymbol.eyeBreak)
-                    .foregroundStyle(.indigo)
-                    .font(.caption)
+                    .foregroundStyle(AppColor.reminderBlue)
+                    .font(AppFont.caption)
                 Text("onboarding.permission.notificationCard.appName", bundle: .module)
-                    .font(.caption)
+                    .font(AppFont.caption)
                     .fontWeight(.semibold)
                     .foregroundStyle(.secondary)
                 Spacer()
