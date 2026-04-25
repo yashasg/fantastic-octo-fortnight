@@ -74,7 +74,7 @@ final class SettingsViewModel: ObservableObject {
         20 * 60,
         30 * 60,
         45 * 60,
-        60 * 60,
+        60 * 60
     ]
 
     /// Available break duration options in seconds (10 / 20 / 30 / 60 seconds).
@@ -102,12 +102,28 @@ final class SettingsViewModel: ObservableObject {
 
     var pauseDuringFocus: Bool {
         get { settings.pauseDuringFocus }
-        set { settings.pauseDuringFocus = newValue }
+        set {
+            let old = settings.pauseDuringFocus
+            settings.pauseDuringFocus = newValue
+            AnalyticsLogger.log(.settingChanged(
+                setting: "pauseDuringFocus",
+                oldValue: String(old),
+                newValue: String(newValue)
+            ))
+        }
     }
 
     var pauseWhileDriving: Bool {
         get { settings.pauseWhileDriving }
-        set { settings.pauseWhileDriving = newValue }
+        set {
+            let old = settings.pauseWhileDriving
+            settings.pauseWhileDriving = newValue
+            AnalyticsLogger.log(.settingChanged(
+                setting: "pauseWhileDriving",
+                oldValue: String(old),
+                newValue: String(newValue)
+            ))
+        }
     }
 
     // MARK: - Init
@@ -160,6 +176,7 @@ final class SettingsViewModel: ObservableObject {
         settings.snoozedUntil = option.endDate
         settings.snoozeCount += 1
         scheduler.cancelAllReminders()
+        AnalyticsLogger.log(.snoozeActivated(durationOption: option.label))
         Logger.settings.info("Snoozed until \(option.endDate) via option: \(option.label) (count: \(self.settings.snoozeCount))")
     }
 
@@ -175,6 +192,7 @@ final class SettingsViewModel: ObservableObject {
         settings.snoozedUntil = Date().addingTimeInterval(TimeInterval(minutes * 60))
         settings.snoozeCount += 1
         scheduler.cancelAllReminders()
+        AnalyticsLogger.log(.snoozeActivated(durationOption: "\(minutes)m"))
         Logger.settings.info("Snoozed for \(minutes) minutes (count: \(self.settings.snoozeCount))")
     }
 
@@ -197,7 +215,7 @@ final class SettingsViewModel: ObservableObject {
 
     /// Human-readable label for a break duration option (e.g. "20 sec").
     static func labelForBreakDuration(_ seconds: TimeInterval) -> String {
-        let s = Int(seconds)
-        return s < 60 ? "\(s) sec" : "\(s / 60) min"
+        let secs = Int(seconds)
+        return secs < 60 ? "\(secs) sec" : "\(secs / 60) min"
     }
 }

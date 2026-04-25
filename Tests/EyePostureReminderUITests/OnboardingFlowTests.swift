@@ -47,7 +47,8 @@ final class OnboardingFlowTests: XCTestCase {
         XCTAssertTrue(
             disclaimerElement.waitForExistence(timeout: 5),
             "Disclaimer text should be visible on the Welcome screen. " +
-            "Add .accessibilityIdentifier(\"onboarding.welcome.disclaimer\") to the disclaimer Text in OnboardingWelcomeView."
+            "Add .accessibilityIdentifier(\"onboarding.welcome.disclaimer\") " +
+            "to the disclaimer Text in OnboardingWelcomeView."
         )
     }
 
@@ -61,7 +62,8 @@ final class OnboardingFlowTests: XCTestCase {
         XCTAssertTrue(
             nextButton.waitForExistence(timeout: 5),
             "Next button must exist on Welcome screen. " +
-            "Add .accessibilityIdentifier(\"onboarding.welcome.nextButton\") to the CTA button in OnboardingWelcomeView."
+            "Add .accessibilityIdentifier(\"onboarding.welcome.nextButton\") " +
+            "to the CTA button in OnboardingWelcomeView."
         )
         nextButton.tap()
 

@@ -297,7 +297,10 @@ final class PauseConditionManagerTests: XCTestCase {
 
         settings.pauseWhileDriving = false
 
-        XCTAssertFalse(sut.isPaused, "Disabling pauseWhileDriving while driving is still active must immediately resume")
+        XCTAssertFalse(
+            sut.isPaused,
+            "Disabling pauseWhileDriving while driving is still active must immediately resume"
+        )
     }
 
     func test_pauseWhileDriving_toggledOff_whileCarPlayActive_resumesImmediately() {
@@ -307,7 +310,10 @@ final class PauseConditionManagerTests: XCTestCase {
 
         settings.pauseWhileDriving = false
 
-        XCTAssertFalse(sut.isPaused, "Disabling pauseWhileDriving while CarPlay is still active must immediately resume")
+        XCTAssertFalse(
+            sut.isPaused,
+            "Disabling pauseWhileDriving while CarPlay is still active must immediately resume"
+        )
     }
 
     func test_pauseDuringFocus_toggledOn_whileFocusActive_pausesImmediately() {

@@ -182,12 +182,14 @@ final class SettingsFlowTests: XCTestCase {
         XCTAssertTrue(
             focusToggle.waitForExistence(timeout: 5),
             "Focus Mode toggle must exist in the Smart Pause section. " +
-            "Add .accessibilityIdentifier(\"settings.smartPause.pauseDuringFocus\") to the Focus toggle in SettingsView."
+            "Add .accessibilityIdentifier(\"settings.smartPause.pauseDuringFocus\") " +
+            "to the Focus toggle in SettingsView."
         )
         XCTAssertTrue(
             drivingToggle.waitForExistence(timeout: 5),
             "Driving toggle must exist in the Smart Pause section. " +
-            "Add .accessibilityIdentifier(\"settings.smartPause.pauseWhileDriving\") to the Driving toggle in SettingsView."
+            "Add .accessibilityIdentifier(\"settings.smartPause.pauseWhileDriving\") " +
+            "to the Driving toggle in SettingsView."
         )
     }
 }

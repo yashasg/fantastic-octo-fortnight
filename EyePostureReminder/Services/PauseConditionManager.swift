@@ -186,6 +186,12 @@ final class PauseConditionManager: PauseConditionProviding {
     private(set) var isPaused: Bool = false {
         didSet {
             guard isPaused != oldValue else { return }
+            if isPaused {
+                let conditionType = activeConditions.map { "\($0)" }.joined(separator: ",")
+                AnalyticsLogger.log(.pauseActivated(conditionType: conditionType))
+            } else {
+                AnalyticsLogger.log(.pauseDeactivated(conditionType: "all_cleared"))
+            }
             onPauseStateChanged?(isPaused)
         }
     }

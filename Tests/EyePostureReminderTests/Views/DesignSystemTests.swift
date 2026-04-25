@@ -91,10 +91,10 @@ final class DesignSystemTests: XCTestCase {
 
     func test_appSpacing_valuesAreAscending() {
         let spacings: [CGFloat] = [AppSpacing.xs, AppSpacing.sm, AppSpacing.md, AppSpacing.lg, AppSpacing.xl]
-        for i in 1..<spacings.count {
+        for index in 1..<spacings.count {
             XCTAssertGreaterThan(
-                spacings[i],
-                spacings[i - 1],
+                spacings[index],
+                spacings[index - 1],
                 "Spacing tokens must be in strictly ascending order")
         }
     }
@@ -181,7 +181,7 @@ final class DesignSystemTests: XCTestCase {
             AppAnimation.settingsExpand,
             AppAnimation.countdownRingTick,
             AppAnimation.snoozeSheetAppear,
-            AppAnimation.snoozeAutoDismiss,
+            AppAnimation.snoozeAutoDismiss
         ]
         for duration in durations {
             XCTAssertGreaterThan(duration, 0, "All animation durations must be positive")
@@ -211,7 +211,7 @@ final class DesignSystemTests: XCTestCase {
             AppSymbol.settings,
             AppSymbol.chevronDown,
             AppSymbol.chevronUp,
-            AppSymbol.warning,
+            AppSymbol.warning
         ]
         for symbol in symbols {
             XCTAssertFalse(symbol.isEmpty, "AppSymbol name must not be empty: \(symbol)")

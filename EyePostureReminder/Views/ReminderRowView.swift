@@ -19,8 +19,12 @@ struct ReminderRowView: View {
         .onChange(of: isEnabled) { _ in onChanged() }
         .accessibilityHint(
             isEnabled
-                ? String(format: String(localized: "settings.reminder.toggle.enabled.hint", bundle: .module), type.title)
-                : String(format: String(localized: "settings.reminder.toggle.disabled.hint", bundle: .module), type.title)
+                ? String(
+                    format: String(localized: "settings.reminder.toggle.enabled.hint", bundle: .module),
+                    type.title)
+                : String(
+                    format: String(localized: "settings.reminder.toggle.disabled.hint", bundle: .module),
+                    type.title)
         )
 
         if isEnabled {
