@@ -98,8 +98,8 @@ struct OverlayView: View {
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel(Text("overlay.countdown.label", bundle: .module))
                 .accessibilityValue(
-                    String(
-                        format: String(localized: "overlay.countdown.value", bundle: .module),
+                    String.localizedStringWithFormat(
+                        NSLocalizedString("overlay.countdown.value", tableName: "Localizable", bundle: .module, value: "", comment: ""),
                         secondsRemaining
                     )
                 )
