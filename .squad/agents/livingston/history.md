@@ -92,3 +92,24 @@
 - String catalog uses screen.element.qualifier convention (73 keys); Text() accepts LocalizedStringKey
 - Format strings use %@/%d/positional specifiers; NSLocalizedString("key", bundle:, comment:) for programmatic access
 - Mock patterns: MockSettingsPersisting, MockNotificationCenter, MockTimerFactory, MockAppLifecycleProvider, MockDetectors
+
+### 2026-04-25: Post-Phase-1 Quality Pass — Test Status Complete
+
+**Deliverable:** AppConfigTests #15 fixed, PR #30 open, 575/575 tests pass (100%)
+
+**Fixes in PR #30:**
+- All 15 `globalEnabled` test method references corrected
+- Integration tests now properly exercise AppConfig merge logic
+- Test pass rate: 573/575 → 575/575 (all tests green)
+
+**Coverage baseline (frozen for Phase 2 planning):**
+- Overall: 64.2%
+- Services layer: 46% (solid for Phase 1 scope)
+- App-level integration: 18%
+- Views layer: 0% (known gap; Phase 2 priority)
+
+**Phase 2 readiness:**
+- Test harnesses established for all 4 Saul code review issues (#22–#25)
+- Edge case test patterns ready for Rusty's 4 bugs (#26–#29)
+- Coverage baseline provides Phase 2 target (Views coverage focus)
+- All Basher DI protocols (#17) integrate cleanly with test structure

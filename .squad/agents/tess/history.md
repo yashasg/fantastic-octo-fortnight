@@ -245,3 +245,83 @@ Ready for Phase 2 design expansion.
 ### 2026-04-24 — Design System Foundation & Color Adaptation
 
 Early design system work covering: DesignSystem.swift tokens (colors, fonts, spacing, animations, symbols), Design System documentation spec, dark mode color adaptation strategy (adaptive UIColor, system colors, WCAG contrast fixes), Asset Catalog color migration (6 color sets with light/dark variants), pause status indicator UX spec. All implementations verified and build green. Preserved for reference; current focus on Phase 2 UI/design expansion.
+
+## Learnings
+
+### 2026-04-26: Full UI/UX Audit — TestFlight Quality Pass
+
+**Task:** Complete review of all SwiftUI views for accessibility gaps, HIG violations, dark mode issues, layout problems, interaction issues, and design system violations.
+**Status:** ✅ Complete — 4 GitHub issues filed (#32, #33, #35, #36)
+
+**What was reviewed:**
+- `DesignSystem.swift`, `ContentView.swift`, `HomeView.swift`, `OverlayView.swift`, `SettingsView.swift`, `ReminderRowView.swift`, `LegalDocumentView.swift`
+- `Onboarding/OnboardingView.swift`, `OnboardingWelcomeView.swift`, `OnboardingPermissionView.swift`, `OnboardingSetupView.swift`
+- `docs/DESIGN_SYSTEM.md`
+
+**Issues filed:**
+
+1. **#32 — Design system token violations in onboarding (squad:linus)**
+   - All 3 onboarding views use `.indigo`/`.green` raw colors instead of `AppColor.reminderBlue`/`AppColor.reminderGreen`
+   - Raw SwiftUI font styles instead of `AppFont.*` tokens
+   - Raw spacing literals in `NotificationPreviewCard` and `SetupPreviewCard`
+
+2. **#33 — Hardcoded a11y strings in ReminderRowView (squad:linus)** — WCAG 4.1.3 AA
+   - Toggle `accessibilityHint` for enable/disable not in `Localizable.xcstrings`
+   - `Picker("Break duration", ...)` label hardcoded
+   - Break duration picker `accessibilityHint` hardcoded
+
+3. **#35 — Sub-44pt tap targets on secondary onboarding buttons (squad:linus)** — WCAG 2.5.5 AAA / iOS HIG
+   - Permission skip button: `.font(.subheadline)` only, no `minHeight: 44`
+   - Setup customize button: same issue
+
+4. **#36 — SettingsView snooze time ignores device locale 12h/24h (squad:linus)**
+   - `formatter.dateFormat = "HH:mm"` hardcoded; US users see `14:30` instead of `2:30 PM`
+   - Fix: use `dateStyle = .none` + `timeStyle = .short`
+
+**Views confirmed clean (no issues filed):**
+- `OverlayView.swift` — accessibility excellent (countdown ring has label+value+updatesFrequently, haptics pre-warmed, reduce motion respected, dismiss button 44pt)
+- `HomeView.swift` — good structure; icon correctly `accessibilityHidden`, status label via semantic colors
+- `SettingsView.swift` — all snooze buttons have `accessibilityLabel`+`accessibilityHint`; notification warning has combined a11y element (except the time format issue)
+- `LegalDocumentView.swift` — `LegalSection` uses `.accessibilityElement(children: .combine)`; clean
+
+**Key patterns observed:**
+- `OverlayView` and `SettingsView` are well-built references for accessibility patterns
+- The onboarding views were clearly written before the design system was fully established — they predate the token convention
+- `ReminderRowView` has a known pattern of hardcoded strings (flagged in screen-time review); this audit surfaced additional ones in the break duration picker
+
+### 2026-04-25: Full UI/UX Audit — Spawn Wave Quality Pass
+
+**Scope:** Complete review of 10 SwiftUI view files, DesignSystem.swift, design documentation post-Phase-2 implementation
+
+**Four issues filed (#32–#36, minus one duplicate):**
+
+1. **#32: [UX] Onboarding views bypass design system tokens** (P2 quality/consistency)
+   - Scope: OnboardingView, OnboardingWelcomeView, OnboardingPermissionView, OnboardingSetupView
+   - Violations: Raw `.indigo`/`.green` colors instead of `AppColor.*`; system fonts instead of `AppFont.*`; raw spacing literals instead of `DesignSystem` constants
+   - Impact: Onboarding visually inconsistent with main app; difficult to maintain across design updates
+   - Pattern: Module written pre-finalization of design system convention
+
+2. **#33: [A11y] ReminderRowView hardcoded accessibility strings** (P2 accessibility/WCAG 4.1.3)
+   - Violations: Toggle hint, picker label, break duration hint all hardcoded Swift strings
+   - Impact: Cannot localize a11y content; VoiceOver users in non-English locales get mixed language
+   - Known from screen-time review; audit surfaced additional instances
+
+3. **#35: [A11y] Secondary onboarding buttons sub-44pt tap targets** (P2 accessibility/WCAG 2.5.5 AAA)
+   - Violations: Permission skip button and setup customize button lack `minHeight: 44` constraint
+   - Impact: Non-compliant with iOS HIG; users with reduced dexterity may miss buttons
+   - Fix: Add `.frame(minHeight: 44)` or explicit Button sizing
+
+4. **#36: [UX] SettingsView snooze time hardcoded 24h format** (P2 UX localization)
+   - Root cause: `formatter.dateFormat = "HH:mm"` hardcoded
+   - Impact: US users see `14:30` instead of `2:30 PM` (locale mismatch)
+   - Fix: Use `dateStyle = .none` + `timeStyle = .short`
+
+**Views confirmed clean:**
+- OverlayView — accessibility excellent (countdown ring fully labeled, haptics/reduce motion respected, 44pt dismiss)
+- HomeView — good structure; icon correctly hidden from a11y; semantic color usage
+- SettingsView — snooze buttons have full a11y labels; only time format issue
+- LegalDocumentView — `.accessibilityElement(children: .combine)` pattern used correctly
+
+**Key finding:** Onboarding module is an island of inconsistency — main app (HomeView, SettingsView, OverlayView) follows established patterns correctly. Design system drift occurred because onboarding was built before final token convention was established.
+
+**Phase 2 readiness:** All 4 issues have clear scope. #32 (design tokens) highest priority for Linus refactoring. #35 and #36 straightforward button/formatter fixes. #33 aligns with ongoing localization effort.
