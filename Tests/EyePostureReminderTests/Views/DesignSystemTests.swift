@@ -124,17 +124,6 @@ final class DesignSystemTests: XCTestCase {
         XCTAssertGreaterThan(AppLayout.countdownRingStroke, 0)
     }
 
-    func test_appLayout_snoozeButtonHeight_meetsHIGMinimum() {
-        XCTAssertGreaterThanOrEqual(
-            AppLayout.snoozeButtonHeight,
-            44,
-            "Snooze button height must be ≥44pt per iOS HIG")
-    }
-
-    func test_appLayout_sheetCornerRadius_isPositive() {
-        XCTAssertGreaterThan(AppLayout.sheetCornerRadius, 0)
-    }
-
     func test_appLayout_overlayCornerRadius_isPositive() {
         XCTAssertGreaterThan(AppLayout.overlayCornerRadius, 0)
     }
@@ -165,23 +154,13 @@ final class DesignSystemTests: XCTestCase {
             "Overlay auto-dismiss animation must be 0.3s (linear)")
     }
 
-    func test_appAnimation_snoozeAutoDismiss_is5s() {
-        XCTAssertEqual(
-            AppAnimation.snoozeAutoDismiss,
-            5.0,
-            accuracy: 0.001,
-            "Snooze sheet auto-dismiss timeout must be 5 seconds")
-    }
-
     func test_appAnimation_allDurationsArePositive() {
         let durations = [
             AppAnimation.overlayAppear,
             AppAnimation.overlayDismiss,
             AppAnimation.overlayAutoDismiss,
             AppAnimation.settingsExpand,
-            AppAnimation.countdownRingTick,
-            AppAnimation.snoozeSheetAppear,
-            AppAnimation.snoozeAutoDismiss
+            AppAnimation.countdownRingTick
         ]
         for duration in durations {
             XCTAssertGreaterThan(duration, 0, "All animation durations must be positive")

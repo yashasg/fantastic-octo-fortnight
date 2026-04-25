@@ -150,7 +150,7 @@ cmd_lint() {
 
   if command -v swiftlint &>/dev/null; then
     info "Running SwiftLint…"
-    swiftlint lint --path "$PACKAGE_PATH"
+    swiftlint lint "$PACKAGE_PATH"
     pass "Lint passed (took $(elapsed "$start"))"
   else
     warn "swiftlint not found — skipping lint"

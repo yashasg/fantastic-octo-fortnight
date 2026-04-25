@@ -298,6 +298,7 @@ struct SettingsView: View {
                     Text("settings.resetToDefaults", bundle: .module)
                 }
                 .font(AppFont.body)
+                .accessibilityHint(Text("settings.resetToDefaults.hint", bundle: .module))
                 .accessibilityIdentifier("settings.resetToDefaults")
             } header: {
                 Text("settings.section.advanced", bundle: .module)

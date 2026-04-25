@@ -151,6 +151,7 @@ struct OverlayView: View {
 
             if reduceMotion {
                 contentOpacity = 1
+                slideOffset = 0
             } else {
                 withAnimation(AppAnimation.overlayAppearCurve) {
                     contentOpacity = 1

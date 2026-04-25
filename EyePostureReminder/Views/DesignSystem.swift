@@ -38,9 +38,6 @@ enum AppColor {
 // MARK: - Typography
 
 enum AppFont {
-    /// Hero moments / large title tier — scales with Dynamic Type (base: 34pt bold).
-    static let largeTitle: Font = .system(.largeTitle).weight(.bold)
-
     /// Overlay headline — scales with Dynamic Type (base: 28pt bold).
     static let headline: Font = .system(.title).weight(.bold)
 
@@ -89,18 +86,13 @@ enum AppAnimation {
     static let settingsExpand: Double = 0.2
     /// Countdown ring — continuous, driven by a 1-second timer tick
     static let countdownRingTick: Double = 1.0
-    /// Snooze sheet slide-up — 0.25s ease-out
-    static let snoozeSheetAppear: Double = 0.25
-    /// Snooze sheet auto-dismiss timeout — 5 seconds of no interaction
-    static let snoozeAutoDismiss: Double = 5.0
 
     // Convenience SwiftUI Animation values
-    static let overlayAppearCurve: Animation      = .easeOut(duration: overlayAppear)
-    static let overlayDismissCurve: Animation     = .easeIn(duration: overlayDismiss)
-    static let overlayFadeCurve: Animation        = .linear(duration: overlayAutoDismiss)
-    static let settingsExpandCurve: Animation     = .easeInOut(duration: settingsExpand)
-    static let countdownRingCurve: Animation      = .linear(duration: countdownRingTick)
-    static let snoozeSheetAppearCurve: Animation  = .easeOut(duration: snoozeSheetAppear)
+    static let overlayAppearCurve: Animation  = .easeOut(duration: overlayAppear)
+    static let overlayDismissCurve: Animation = .easeIn(duration: overlayDismiss)
+    static let overlayFadeCurve: Animation    = .linear(duration: overlayAutoDismiss)
+    static let settingsExpandCurve: Animation = .easeInOut(duration: settingsExpand)
+    static let countdownRingCurve: Animation  = .linear(duration: countdownRingTick)
 }
 
 // MARK: - SF Symbol Names
@@ -133,10 +125,6 @@ enum AppLayout {
     static let countdownRingDiameter: CGFloat = 160
     /// Countdown ring stroke width
     static let countdownRingStroke: CGFloat = 8
-    /// Snooze button height (full-width, comfortable)
-    static let snoozeButtonHeight: CGFloat = 50
-    /// Bottom sheet corner radius
-    static let sheetCornerRadius: CGFloat = 20
     /// Overlay corner radius (for non-fullscreen contexts)
     static let overlayCornerRadius: CGFloat = 24
     /// Card / small-surface corner radius (onboarding cards, preview tiles)

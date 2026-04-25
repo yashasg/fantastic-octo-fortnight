@@ -1488,6 +1488,17 @@
         }
       }
     },
+    "settings.resetToDefaults.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opens a confirmation before resetting all settings to factory defaults"
+          }
+        }
+      }
+    },
     "settings.feedback.sendFeedback": {
       "extractionState": "manual",
       "localizations": {
