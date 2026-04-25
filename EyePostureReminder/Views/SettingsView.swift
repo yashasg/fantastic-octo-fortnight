@@ -22,7 +22,7 @@ struct SettingsView: View {
 
     private var viewModel: SettingsViewModel? { vmBox.inner }
 
-    @Environment(\.dismiss) private var dismiss
+    @Binding var isPresented: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @State private var showTerms = false
@@ -141,6 +141,7 @@ struct SettingsView: View {
                     )
                     .foregroundStyle(AppColor.reminderBlue)
                     .accessibilityHint(Text("settings.snooze.cancelButton.hint", bundle: .module))
+                    .accessibilityIdentifier("settings.snooze.cancelButton")
                 } else {
                     Button(
                         action: {
@@ -172,6 +173,7 @@ struct SettingsView: View {
                     .accessibilityHint(viewModel?.canSnooze ?? false
                         ? Text("settings.snooze.1hour.hint", bundle: .module)
                         : Text("settings.snooze.limitReached.hint", bundle: .module))
+                    .accessibilityIdentifier("settings.snooze.1hour")
 
                     Button(
                         action: {
@@ -188,6 +190,7 @@ struct SettingsView: View {
                     .accessibilityHint(viewModel?.canSnooze ?? false
                         ? Text("settings.snooze.restOfDay.hint", bundle: .module)
                         : Text("settings.snooze.limitReached.hint", bundle: .module))
+                    .accessibilityIdentifier("settings.snooze.restOfDay")
                 }
             } header: {
                 Text("settings.section.snooze", bundle: .module)
@@ -325,8 +328,15 @@ struct SettingsView: View {
             // MARK: About — feedback + version
             Section {
                 Button {
+                    // itms-beta:// opens TestFlight when installed.
+                    // For users who installed from the App Store, fall back to the
+                    // TestFlight website so the tap is never a silent no-op.
                     if let url = URL(string: "itms-beta://") {
-                        UIApplication.shared.open(url)
+                        UIApplication.shared.open(url, options: [:]) { success in
+                            if !success, let fallback = URL(string: "https://testflight.apple.com") {
+                                UIApplication.shared.open(fallback)
+                            }
+                        }
                     }
                 } label: {
                     Text("settings.feedback.sendFeedback", bundle: .module)
@@ -354,7 +364,7 @@ struct SettingsView: View {
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button(String(localized: "settings.doneButton", bundle: .module)) {
-                    dismiss()
+                    isPresented = false
                 }
                 .fontWeight(.semibold)
                 .accessibilityHint(Text("settings.doneButton.hint", bundle: .module))
@@ -383,7 +393,7 @@ struct SettingsView: View {
 
 #Preview {
     NavigationStack {
-        SettingsView()
+        SettingsView(isPresented: .constant(true))
             .environmentObject(SettingsStore())
             .environmentObject(AppCoordinator())
     }

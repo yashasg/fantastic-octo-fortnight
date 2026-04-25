@@ -23,23 +23,23 @@ import XCTest
 /// `NavigationStack` was silently ignored — the environment-provided dismiss action
 /// routed to the wrong ancestor (Issue #15).
 ///
-/// **Fix:** Migrated SettingsView to use `@Environment(\.dismiss)` correctly.
-/// SettingsView now takes no `isPresented:` parameter.
+/// **Fix:** SettingsView uses `@Binding var isPresented: Bool` so the Done button
+/// writes `isPresented = false` directly to HomeView's `@State showSettings`.
 ///
 /// **How these catch a regression:**
 /// - `test_settingsView_instantiatesCorrectly` ensures SettingsView can be constructed
-///   with no parameters (confirming it uses `@Environment(\.dismiss)`).
+///   with an `isPresented:` binding (confirming it uses `@Binding`, not `@Environment`).
 /// - The binding tests verify the abstract dismiss pattern works.
 @MainActor
 final class SettingsDismissRegressionTests: XCTestCase {
 
-    /// Compile-time guard: SettingsView must be instantiatable.
-    /// SettingsView uses @Environment(\.dismiss) for dismissal.
+    /// Compile-time guard: SettingsView must be instantiatable with an isPresented binding.
+    /// SettingsView uses @Binding var isPresented: Bool for reliable sheet dismissal.
     func test_settingsView_instantiatesCorrectly() {
-        let view = SettingsView()
+        let view = SettingsView(isPresented: .constant(true))
         XCTAssertNotNil(
             view,
-            "SettingsView must be instantiatable with no arguments.")
+            "SettingsView must be instantiatable with an isPresented binding.")
     }
 
     /// Runtime guard: writing `false` to the binding must propagate to the caller's state.
@@ -61,12 +61,12 @@ final class SettingsDismissRegressionTests: XCTestCase {
             + "Regression: if the action uses dismiss() instead of the binding, the sheet stays open.")
     }
 
-    /// Compile-time guard from HomeView's perspective: SettingsView() must compile.
+    /// Compile-time guard from HomeView's perspective: SettingsView(isPresented:) must compile.
     func test_homeView_controlsSettingsPresentation_viaBinding() {
         var showSettings = true
         let binding = Binding<Bool>(get: { showSettings }, set: { showSettings = $0 })
 
-        _ = SettingsView()   // must compile
+        _ = SettingsView(isPresented: binding)   // must compile
 
         // Sheet dismissed:
         binding.wrappedValue = false

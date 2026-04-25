@@ -172,6 +172,36 @@ final class StringCatalogTests: XCTestCase {
             "legal.privacy.rights.body", "legal.privacy.changesToPolicy.heading",
             "legal.privacy.changesToPolicy.body", "legal.privacy.contact.heading",
             "legal.privacy.contact.body",
+            // settings.resetToDefaults.* keys (6) — destructive confirmation dialog
+            "settings.resetToDefaults", "settings.resetToDefaults.hint",
+            "settings.resetToDefaults.cancel", "settings.resetToDefaults.confirmAction",
+            "settings.resetToDefaults.confirmMessage", "settings.resetToDefaults.confirmTitle",
+            // settings.reminder.* picker/toggle keys — shown on every SettingsView load
+            "settings.reminder.durationPicker", "settings.reminder.durationPicker.hint",
+            "settings.reminder.intervalPicker", "settings.reminder.intervalPicker.hint",
+            "settings.reminder.section.footer",
+            "settings.reminder.toggle.disabled.hint", "settings.reminder.toggle.enabled.hint",
+            // settings.legal.* — legal section buttons and hints
+            "settings.legal.privacy", "settings.legal.privacy.hint",
+            "settings.legal.terms", "settings.legal.terms.hint",
+            // settings section headers — about, advanced, legal
+            "settings.section.about", "settings.section.advanced", "settings.section.legal",
+            // settings.snooze.limitReached.hint — shown when snooze limit is reached
+            "settings.snooze.limitReached.hint",
+            // settings.masterToggle.footer — footer below master toggle
+            "settings.masterToggle.footer",
+            // settings.about.* — version string in About section
+            "settings.about.versionFormat",
+            // settings.feedback.* — send feedback button
+            "settings.feedback.sendFeedback", "settings.feedback.sendFeedback.hint",
+            // settings.picker.* — minute/second format strings in pickers
+            "settings.picker.minuteFormat", "settings.picker.secondFormat",
+            // overlay.dismissButton.hint — VoiceOver hint on overlay dismiss
+            "overlay.dismissButton.hint",
+            // home.settingsButton.hint — VoiceOver hint on home settings gear
+            "home.settingsButton.hint",
+            // onboarding.welcome.disclaimer
+            "onboarding.welcome.disclaimer",
             // settings.smartPause.* keys (6) — added by Linus for Smart Pause feature
             "settings.section.smartPause",
             "settings.smartPause.footer",
@@ -219,7 +249,26 @@ final class StringCatalogTests: XCTestCase {
             "settings.notifications.openSettings.hint",
             "settings.section.smartPause", "settings.smartPause.footer",
             "settings.smartPause.pauseDuringFocus", "settings.smartPause.pauseDuringFocus.hint",
-            "settings.smartPause.pauseWhileDriving", "settings.smartPause.pauseWhileDriving.hint"
+            "settings.smartPause.pauseWhileDriving", "settings.smartPause.pauseWhileDriving.hint",
+            // settings.resetToDefaults.* cluster — destructive confirmation dialog
+            "settings.resetToDefaults", "settings.resetToDefaults.hint",
+            "settings.resetToDefaults.cancel", "settings.resetToDefaults.confirmAction",
+            "settings.resetToDefaults.confirmMessage", "settings.resetToDefaults.confirmTitle",
+            // settings.reminder.* — picker/toggle strings visible on every SettingsView load
+            "settings.reminder.durationPicker", "settings.reminder.durationPicker.hint",
+            "settings.reminder.intervalPicker", "settings.reminder.intervalPicker.hint",
+            "settings.reminder.section.footer",
+            "settings.reminder.toggle.disabled.hint", "settings.reminder.toggle.enabled.hint",
+            // settings.legal.* — legal section buttons
+            "settings.legal.privacy", "settings.legal.privacy.hint",
+            "settings.legal.terms", "settings.legal.terms.hint",
+            // settings section headers and footers
+            "settings.section.about", "settings.section.advanced", "settings.section.legal",
+            "settings.snooze.limitReached.hint", "settings.masterToggle.footer",
+            // settings.about, feedback, picker format strings
+            "settings.about.versionFormat",
+            "settings.feedback.sendFeedback", "settings.feedback.sendFeedback.hint",
+            "settings.picker.minuteFormat", "settings.picker.secondFormat"
         ]
         XCTAssertEqual(Set(keys).count, keys.count, "Settings screen keys must be unique")
     }
@@ -299,6 +348,28 @@ final class StringCatalogTests: XCTestCase {
             "settings.section.smartPause", "settings.smartPause.footer",
             "settings.smartPause.pauseDuringFocus", "settings.smartPause.pauseDuringFocus.hint",
             "settings.smartPause.pauseWhileDriving", "settings.smartPause.pauseWhileDriving.hint",
+            // settings.resetToDefaults.* cluster — destructive confirmation dialog
+            "settings.resetToDefaults", "settings.resetToDefaults.hint",
+            "settings.resetToDefaults.cancel", "settings.resetToDefaults.confirmAction",
+            "settings.resetToDefaults.confirmMessage", "settings.resetToDefaults.confirmTitle",
+            // settings.reminder.* — picker/toggle strings
+            "settings.reminder.durationPicker", "settings.reminder.durationPicker.hint",
+            "settings.reminder.intervalPicker", "settings.reminder.intervalPicker.hint",
+            "settings.reminder.section.footer",
+            "settings.reminder.toggle.disabled.hint", "settings.reminder.toggle.enabled.hint",
+            // settings.legal.*
+            "settings.legal.privacy", "settings.legal.privacy.hint",
+            "settings.legal.terms", "settings.legal.terms.hint",
+            // settings section headers, footers, feedback, about
+            "settings.section.about", "settings.section.advanced", "settings.section.legal",
+            "settings.snooze.limitReached.hint", "settings.masterToggle.footer",
+            "settings.about.versionFormat",
+            "settings.feedback.sendFeedback", "settings.feedback.sendFeedback.hint",
+            "settings.picker.minuteFormat", "settings.picker.secondFormat",
+            // overlay hint and home settings button hint
+            "overlay.dismissButton.hint", "home.settingsButton.hint",
+            // onboarding.welcome.disclaimer
+            "onboarding.welcome.disclaimer",
             // reminder.* keys (8) — notification/overlay text
             "reminder.eyes.title", "reminder.eyes.overlayTitle",
             "reminder.eyes.notificationTitle", "reminder.eyes.notificationBody",
@@ -761,5 +832,142 @@ final class StringCatalogTests: XCTestCase {
         XCTAssertTrue(
             isTranslated("settings.resetToDefaults.hint"),
             "'settings.resetToDefaults.hint' must exist — VoiceOver pre-action hint for destructive button")
+    }
+
+    // MARK: - settings.resetToDefaults.* Spot-Checks (P1-1 fix)
+
+    func test_settingsResetToDefaults_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("settings.resetToDefaults"),
+            "'settings.resetToDefaults' must resolve — button label in Advanced section")
+    }
+
+    func test_settingsResetToDefaultsConfirmTitle_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("settings.resetToDefaults.confirmTitle"),
+            "'settings.resetToDefaults.confirmTitle' must resolve — confirmation alert title")
+    }
+
+    func test_settingsResetToDefaultsConfirmAction_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("settings.resetToDefaults.confirmAction"),
+            "'settings.resetToDefaults.confirmAction' must resolve — destructive action label")
+    }
+
+    func test_settingsResetToDefaultsCancel_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("settings.resetToDefaults.cancel"))
+    }
+
+    func test_settingsResetToDefaultsConfirmMessage_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("settings.resetToDefaults.confirmMessage"))
+    }
+
+    // MARK: - settings.resetToDefaults.* No Duplicates
+
+    func test_noDuplicateKeys_resetToDefaultsCluster() {
+        let keys = [
+            "settings.resetToDefaults", "settings.resetToDefaults.hint",
+            "settings.resetToDefaults.cancel", "settings.resetToDefaults.confirmAction",
+            "settings.resetToDefaults.confirmMessage", "settings.resetToDefaults.confirmTitle"
+        ]
+        XCTAssertEqual(Set(keys).count, keys.count, "resetToDefaults cluster keys must be unique")
+    }
+
+    // MARK: - P2-1 High-Risk Untested Keys (individual resolution)
+
+    func test_settingsReminderDurationPicker_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("settings.reminder.durationPicker"))
+    }
+
+    func test_settingsReminderDurationPickerHint_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("settings.reminder.durationPicker.hint"))
+    }
+
+    func test_settingsReminderIntervalPicker_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("settings.reminder.intervalPicker"))
+    }
+
+    func test_settingsReminderIntervalPickerHint_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("settings.reminder.intervalPicker.hint"))
+    }
+
+    func test_settingsReminderSectionFooter_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("settings.reminder.section.footer"))
+    }
+
+    func test_settingsReminderToggleDisabledHint_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("settings.reminder.toggle.disabled.hint"))
+    }
+
+    func test_settingsReminderToggleEnabledHint_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("settings.reminder.toggle.enabled.hint"))
+    }
+
+    func test_settingsLegalPrivacy_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("settings.legal.privacy"))
+    }
+
+    func test_settingsLegalPrivacyHint_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("settings.legal.privacy.hint"))
+    }
+
+    func test_settingsLegalTerms_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("settings.legal.terms"))
+    }
+
+    func test_settingsLegalTermsHint_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("settings.legal.terms.hint"))
+    }
+
+    func test_settingsSectionAbout_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("settings.section.about"))
+    }
+
+    func test_settingsSectionAdvanced_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("settings.section.advanced"))
+    }
+
+    func test_settingsSectionLegal_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("settings.section.legal"))
+    }
+
+    func test_settingsSnoozeLimit_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("settings.snooze.limitReached.hint"))
+    }
+
+    func test_settingsMasterToggleFooter_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("settings.masterToggle.footer"))
+    }
+
+    func test_settingsAboutVersionFormat_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("settings.about.versionFormat"))
+    }
+
+    func test_settingsFeedbackSendFeedback_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("settings.feedback.sendFeedback"))
+    }
+
+    func test_settingsFeedbackSendFeedbackHint_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("settings.feedback.sendFeedback.hint"))
+    }
+
+    func test_settingsPickerMinuteFormat_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("settings.picker.minuteFormat"))
+    }
+
+    func test_settingsPickerSecondFormat_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("settings.picker.secondFormat"))
+    }
+
+    func test_overlayDismissButtonHint_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("overlay.dismissButton.hint"))
+    }
+
+    func test_homeSettingsButtonHint_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("home.settingsButton.hint"))
+    }
+
+    func test_onboardingWelcomeDisclaimer_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("onboarding.welcome.disclaimer"))
     }
 }

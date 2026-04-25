@@ -66,7 +66,7 @@ struct HomeView: View {
         }
         .sheet(isPresented: $showSettings) {
             NavigationStack {
-                SettingsView()
+                SettingsView(isPresented: $showSettings)
                     .environmentObject(settings)
                     .environmentObject(coordinator)
             }
