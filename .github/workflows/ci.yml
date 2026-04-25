@@ -24,7 +24,6 @@ env:
   SCHEME: "EyePostureReminder"
   # No .xcodeproj — project uses Swift Package Manager.
   # xcodebuild resolves the package directly from Package.swift.
-  PACKAGE_PATH: "${{ github.workspace }}"
   SIMULATOR: "platform=iOS Simulator,name=iPhone 16,OS=latest"
   DERIVED_DATA_PATH: "${{ github.workspace }}/DerivedData"
 
@@ -32,6 +31,7 @@ jobs:
   build-and-test:
     name: Build & Test
     runs-on: macos-15
+    timeout-minutes: 30
 
     steps:
       - name: Checkout
@@ -87,7 +87,7 @@ jobs:
 
       # ── Lint ─────────────────────────────────────────────────────────────────
       - name: Install SwiftLint
-        run: brew install swiftlint
+        run: brew install swiftlint@0.57.0 || brew install swiftlint
 
       - name: Lint (SwiftLint)
         run: ./scripts/build.sh lint
@@ -97,6 +97,13 @@ jobs:
         if: always()
         run: |
           xcrun xccov view --report TestResults.xcresult || true
+          COVERAGE=$(xcrun xccov view --report --json TestResults.xcresult \
+            | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['lineCoverage']*100)" 2>/dev/null || echo "0")
+          echo "Line coverage: ${COVERAGE}%"
+          if (( $(echo "$COVERAGE < 50" | bc -l) )); then
+            echo "Coverage ${COVERAGE}% is below the minimum threshold (50%)"
+            exit 1
+          fi
 
       # ── Artifacts ────────────────────────────────────────────────────────────
       - name: Collect dSYMs
@@ -111,6 +118,7 @@ jobs:
           name: dSYMs-${{ env.MARKETING_VERSION }}-build${{ github.run_number }}
           path: "*.dSYM"
           retention-days: 90
+          if-no-files-found: ignore
 
       - name: Upload test results
         uses: actions/upload-artifact@v4

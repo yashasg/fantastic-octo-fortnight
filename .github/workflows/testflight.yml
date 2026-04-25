@@ -59,11 +59,18 @@ jobs:
       # ── CI gate ───────────────────────────────────────────────────────────
       - name: Verify CI passed on this commit
         run: |
-          STATUS=$(gh api "repos/${{ github.repository }}/commits/${{ github.sha }}/check-runs" \
-            --jq '[.check_runs[] | select(.name == "Build & Test")] | first | .conclusion')
+          for i in {1..10}; do
+            STATUS=$(gh api "repos/${{ github.repository }}/commits/${{ github.sha }}/check-runs" \
+              --jq '[.check_runs[] | select(.name == "Build & Test")] | first | .conclusion')
+            if [[ "$STATUS" == "success" ]]; then break; fi
+            if [[ "$STATUS" == "failure" || "$STATUS" == "cancelled" ]]; then
+              echo "CI failed or cancelled (status: $STATUS). Aborting deploy."; exit 1
+            fi
+            echo "CI status: ${STATUS:-pending}. Waiting 30s (attempt $i/10)…"
+            sleep 30
+          done
           if [[ "$STATUS" != "success" ]]; then
-            echo "CI has not passed on this commit (status: ${STATUS:-not found}). Aborting deploy."
-            exit 1
+            echo "CI did not succeed within timeout. Aborting."; exit 1
           fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -109,6 +116,8 @@ jobs:
         run: |
           xcodebuild archive \
             -scheme "${{ env.SCHEME }}" \
+            -destination "generic/platform=iOS" \
+            -configuration Release \
             -archivePath "${{ github.workspace }}/EyePostureReminder.xcarchive" \
             -derivedDataPath "${{ env.DERIVED_DATA_PATH }}" \
             ENABLE_BITCODE=NO
