@@ -79,3 +79,22 @@
 
 **Verification:** ✅ Build succeeded; no raw keys visible; light/dark modes verified  
 **Decision Filed:** `.squad/decisions.md` → SPM Localization Bundle Strategy
+
+## Wave 8 — CI/CD Full Audit Fix #66 (2026-04-25)
+
+**Task:** Fix all P0/P1/P2 issues from `.squad/decisions/inbox/virgil-full-audit.md`  
+**Outcome:** ✅ All fixes confirmed in HEAD (36a5071)
+
+**Fixes applied:**
+- **P0-1:** Added `permissions: contents: read, actions: read` to both `ci.yml` and `testflight.yml`
+- **P1-1:** Added `brew install swiftlint` step to `ci.yml` before the lint step — lint was a silent no-op on every CI run
+- **P1-2:** Replaced `xcrun altool --upload-app` (removed in Xcode 15) with `xcodebuild -exportArchive` using modern `-authenticationKeyPath/-authenticationKeyID/-authenticationKeyIssuerID` flags and inline `ExportOptions.plist` with `destination: upload`
+- **P1-3:** Added `-enableCodeCoverage YES` to `cmd_test` in `build.sh`; added `xcrun xccov view --report` step in `ci.yml`
+- **P1-4:** Added CI-pass guard step to `testflight.yml` that checks `gh api .../check-runs` before deploying
+- **P1-5:** Added `if: always()` cleanup step to remove `asc_api_key.p8` from runner temp
+- **P2-1:** Fixed DerivedData cache key from `hashFiles('**/*.swift')` → `hashFiles('Package.swift', 'Package.resolved')`
+- **P2-2:** Switched both workflows from `macos-14` to `macos-15` (native Xcode 16.x lifecycle)
+- **P2-3:** Added `echo "MARKETING_VERSION=unknown"` in the else branch of Info.plist check
+- **P2-4:** Removed the broken commented-out `upload-testflight` job block from `ci.yml`
+- **P2-5:** Collapsed `cmd_check` in `build.sh` to an explicit alias for `cmd_build` with a warning message
+
