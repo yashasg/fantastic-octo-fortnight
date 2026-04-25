@@ -12,27 +12,27 @@ enum AppColor {
     /// Eye breaks — calming blue, adaptive for dark mode.
     /// Light: #2868B0 (5.6:1 on white — WCAG AA for normal text and CTA button text).
     /// Dark:  #82C3FF (high contrast on near-black — vivid, accessible blue for dark mode).
-    static let reminderBlue = Color("ReminderBlue")
+    static let reminderBlue = Color("ReminderBlue", bundle: .module)
 
     /// Posture checks — green, adaptive for dark mode.
     /// Light: #34C759. Dark: #30D158.
-    static let reminderGreen = Color("ReminderGreen")
+    static let reminderGreen = Color("ReminderGreen", bundle: .module)
 
     /// Warning icon tint — orange, adaptive for WCAG 1.4.11 non-text contrast (≥3:1).
     /// Light: #E07000 (~3.5:1 on white). Dark: #FF9500 (6.8:1 on near-black).
-    static let warningOrange = Color("WarningOrange")
+    static let warningOrange = Color("WarningOrange", bundle: .module)
 
     /// Permission banner background (#FFCC00) — intentionally static warm yellow in both modes
     /// to signal caution. Only used on banner backgrounds; not for text or icon-only contexts.
-    static let permissionBanner = Color("PermissionBanner")
+    static let permissionBanner = Color("PermissionBanner", bundle: .module)
 
     /// Permission banner text — near-black (#262626) for WCAG AA contrast on the yellow banner.
     /// Always dark because it is exclusively used on the static yellow permissionBanner background.
-    static let permissionBannerText = Color("PermissionBannerText")
+    static let permissionBannerText = Color("PermissionBannerText", bundle: .module)
 
     /// Warning text colour for body/label contexts — WCAG AA on both backgrounds.
     /// Light mode: dark amber #994F00 (6.1:1 on white). Dark mode: #FF9500 (6.8:1 on near-black).
-    static let warningText = Color("WarningText")
+    static let warningText = Color("WarningText", bundle: .module)
 }
 
 // MARK: - Typography
