@@ -35,6 +35,7 @@ extension UNUserNotificationCenter: NotificationScheduling {
 /// Callers provide a `SettingsStore` snapshot; the scheduler is responsible
 /// for translating settings into `UNNotificationRequest` objects and managing
 /// the notification identifier namespace.
+@MainActor
 protocol ReminderScheduling: AnyObject {
     /// Schedule (or reschedule) all enabled reminders based on current settings.
     func scheduleReminders(using settings: SettingsStore) async

@@ -6,6 +6,7 @@ import Foundation
 /// Records every call to `showOverlay`, `dismissOverlay`, and `clearQueue`
 /// so tests can assert correct overlay lifecycle without touching UIKit.
 /// `isOverlayVisible` is writable so tests can simulate an overlay already being on screen.
+@MainActor
 final class MockOverlayPresenting: OverlayPresenting {
 
     // MARK: - Call Counts

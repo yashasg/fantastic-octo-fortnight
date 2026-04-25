@@ -3,6 +3,7 @@ import UserNotifications
 import XCTest
 
 // swiftlint:disable:next type_body_length
+@MainActor
 final class ReminderSchedulerTests: XCTestCase {
 
     var mockCenter: MockNotificationCenter!
