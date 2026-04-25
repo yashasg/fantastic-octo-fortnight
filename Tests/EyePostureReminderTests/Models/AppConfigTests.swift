@@ -447,7 +447,10 @@ final class AppConfigTests: XCTestCase { // swiftlint:disable:this type_body_len
     }
 
     func test_defaults_hasPostureBreakDuration() {
-        XCTAssertNotNil(AppConfig.fallback.defaults.postureBreakDuration as TimeInterval?, "postureBreakDuration must be a non-nil TimeInterval on AppConfig.Defaults")
+        XCTAssertNotNil(
+            AppConfig.fallback.defaults.postureBreakDuration as TimeInterval?,
+            "postureBreakDuration must be a non-nil TimeInterval on AppConfig.Defaults"
+        )
     }
 
     func test_features_hasGlobalEnabledDefault() {
