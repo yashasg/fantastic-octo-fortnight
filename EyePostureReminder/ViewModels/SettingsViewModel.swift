@@ -99,6 +99,16 @@ final class SettingsViewModel: ObservableObject {
         settings.snoozeCount < Self.maxConsecutiveSnoozes
     }
 
+    var pauseDuringFocus: Bool {
+        get { settings.pauseDuringFocus }
+        set { settings.pauseDuringFocus = newValue }
+    }
+
+    var pauseWhileDriving: Bool {
+        get { settings.pauseWhileDriving }
+        set { settings.pauseWhileDriving = newValue }
+    }
+
     // MARK: - Init
 
     init(
@@ -113,14 +123,14 @@ final class SettingsViewModel: ObservableObject {
     // MARK: - User Actions
 
     /// Called when the master toggle is flipped.
-    func masterToggleChanged() {
+    func globalToggleChanged() {
         Task {
-            if settings.masterEnabled {
+            if settings.globalEnabled {
                 await scheduler.scheduleReminders(using: settings)
             } else {
                 scheduler.cancelAllReminders()
             }
-            Logger.settings.info("Master toggle → \(self.settings.masterEnabled)")
+            Logger.settings.info("Master toggle → \(self.settings.globalEnabled)")
         }
     }
 

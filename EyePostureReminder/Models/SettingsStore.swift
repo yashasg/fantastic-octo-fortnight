@@ -164,7 +164,7 @@ final class SettingsStore: ObservableObject {
 
 private extension SettingsStore {
     enum Keys {
-        static let globalEnabled          = "epr.masterEnabled"
+        static let globalEnabled          = "epr.globalEnabled"
         static let eyesEnabled            = "epr.eyes.enabled"
         static let eyesInterval           = "epr.eyes.interval"
         static let eyesBreakDuration      = "epr.eyes.breakDuration"

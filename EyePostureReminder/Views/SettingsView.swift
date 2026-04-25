@@ -32,16 +32,16 @@ struct SettingsView: View {
         Form {
             // MARK: Master toggle
             Section {
-                Toggle(isOn: $settings.masterEnabled) {
+                Toggle(isOn: $settings.globalEnabled) {
                     Text("settings.masterToggle", bundle: .module)
                 }
                     .tint(AppColor.reminderBlue)
-                    .onChange(of: settings.masterEnabled) { _ in
-                        viewModel?.masterToggleChanged()
+                    .onChange(of: settings.globalEnabled) { _ in
+                        viewModel?.globalToggleChanged()
                     }
                     .accessibilityHint(Text("settings.masterToggle.hint", bundle: .module))
             } footer: {
-                if settings.masterEnabled {
+                if settings.globalEnabled {
                     Text("settings.masterToggle.footer", bundle: .module)
                         .font(AppFont.caption)
                 } else {
@@ -51,7 +51,7 @@ struct SettingsView: View {
             }
 
             // MARK: Per-type sections (only shown when master is on)
-            if settings.masterEnabled {
+            if settings.globalEnabled {
                 Section {
                     ReminderRowView(
                         type: .eyes,
@@ -190,7 +190,7 @@ struct SettingsView: View {
                 .accessibilityHint(Text("settings.doneButton.hint", bundle: .module))
             }
         }
-        .animation(reduceMotion ? nil : AppAnimation.settingsExpandCurve, value: settings.masterEnabled)
+        .animation(reduceMotion ? nil : AppAnimation.settingsExpandCurve, value: settings.globalEnabled)
         .animation(reduceMotion ? nil : AppAnimation.settingsExpandCurve, value: isSnoozed)
         .onAppear {
             if viewModel == nil {

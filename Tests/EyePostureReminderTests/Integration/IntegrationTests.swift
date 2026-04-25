@@ -196,8 +196,8 @@ final class AppConfigSettingsStoreIntegrationTests: XCTestCase {
     private var suiteName: String!
     private var userDefaults: UserDefaults!
 
-    override func setUp() throws {
-        try super.setUp()
+    override func setUpWithError() throws {
+        try super.setUpWithError()
         suiteName = "com.epr.integration.config.\(UUID().uuidString)"
         userDefaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
     }
@@ -355,8 +355,8 @@ final class PauseConditionManagerSettingsIntegrationTests: XCTestCase {
     private var drivingDetector: MockDrivingActivityDetector!
     private var sut: PauseConditionManager!
 
-    override func setUp() throws {
-        try super.setUp()
+    override func setUpWithError() throws {
+        try super.setUpWithError()
         suiteName = "com.epr.integration.pause.\(UUID().uuidString)"
         userDefaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
         store = SettingsStore(store: userDefaults, config: AppConfig.fallback)

@@ -23,8 +23,8 @@ final class OnboardingTests: XCTestCase {
     let testSuiteName = "com.yashasg.epr.test.onboarding"
     var testDefaults: UserDefaults!
 
-    override func setUp() throws {
-        try super.setUp()
+    override func setUpWithError() throws {
+        try super.setUpWithError()
         testDefaults = try XCTUnwrap(UserDefaults(suiteName: testSuiteName))
         testDefaults.removePersistentDomain(forName: testSuiteName)
     }
