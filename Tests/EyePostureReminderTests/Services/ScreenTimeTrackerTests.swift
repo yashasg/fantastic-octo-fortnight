@@ -313,4 +313,184 @@ final class ScreenTimeTrackerTests: XCTestCase {
         sut.disableTracking(for: .eyes)
         sut.setThreshold(60, for: .eyes)
     }
+
+    // MARK: - Behavioral: resume after pause
+
+    /// `pause` followed by `resume` must allow the threshold callback to fire again.
+    /// This verifies the pause/resume cycle is reversible and counting resumes from 0
+    /// (pause resets elapsed to 0 per the ScreenTimeTracker contract).
+    func test_resume_afterPause_callbackEventuallyFires() async throws {
+        let exp = expectation(description: "callback fires after resume")
+        sut.setThreshold(2, for: .eyes)
+        sut.pause(for: .eyes)
+        sut.onThresholdReached = { type in
+            if type == .eyes { exp.fulfill() }
+        }
+
+        NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
+
+        // Timer is running but .eyes is paused — wait 1 s, then resume.
+        // After resume the elapsed counter is 0 (pause resets it), so the threshold
+        // must fire after another ~2 s of ticking.
+        try await Task.sleep(nanoseconds: 1_000_000_000)
+        sut.resume(for: .eyes)
+
+        await fulfillment(of: [exp], timeout: 5.0)
+        sut.stop()
+    }
+
+    // MARK: - Behavioral: disableTracking prevents callback permanently
+
+    /// After `disableTracking` the type must never fire a threshold callback,
+    /// even if the tick timer is running — the threshold entry is removed.
+    func test_disableTracking_preventsCallback() async throws {
+        var eyesFired = false
+        let postureExp = expectation(description: "posture callback fires (timer is alive)")
+
+        sut.setThreshold(2, for: .eyes)
+        sut.setThreshold(2, for: .posture)
+        sut.onThresholdReached = { type in
+            if type == .eyes    { eyesFired = true }
+            if type == .posture { postureExp.fulfill() }
+        }
+
+        // Disable .eyes BEFORE starting the timer so the threshold entry is removed.
+        sut.disableTracking(for: .eyes)
+
+        NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
+
+        // Wait for posture to fire (proves the timer is alive).
+        await fulfillment(of: [postureExp], timeout: 5.0)
+        XCTAssertFalse(eyesFired, "disableTracking must permanently prevent .eyes from firing")
+        sut.stop()
+    }
+
+    // MARK: - Behavioral: setThreshold(0) never fires callback
+
+    /// A threshold of exactly 0 must be ignored by the tick logic (guard: threshold > 0).
+    func test_setThreshold_zero_neverFiresCallback() async throws {
+        var eyesFired = false
+        let postureExp = expectation(description: "posture fires (non-zero threshold)")
+
+        sut.setThreshold(0, for: .eyes)
+        sut.setThreshold(2, for: .posture)
+        sut.onThresholdReached = { type in
+            if type == .eyes    { eyesFired = true }
+            if type == .posture { postureExp.fulfill() }
+        }
+
+        NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
+
+        await fulfillment(of: [postureExp], timeout: 5.0)
+        XCTAssertFalse(eyesFired, "threshold = 0 must never trigger the callback")
+        sut.stop()
+    }
+
+    // MARK: - Behavioral: pauseAll / resumeAll
+
+    /// `pauseAll` must prevent ALL types from firing their threshold callbacks.
+    func test_pauseAll_preventsAllCallbacks() async throws {
+        var eyesFired   = false
+        var postureFired = false
+
+        sut.setThreshold(2, for: .eyes)
+        sut.setThreshold(2, for: .posture)
+        sut.pauseAll()
+        sut.onThresholdReached = { type in
+            if type == .eyes    { eyesFired   = true }
+            if type == .posture { postureFired = true }
+        }
+
+        NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
+
+        try await Task.sleep(nanoseconds: 3_000_000_000)
+        XCTAssertFalse(eyesFired,   "pauseAll must prevent .eyes callback")
+        XCTAssertFalse(postureFired, "pauseAll must prevent .posture callback")
+        sut.stop()
+    }
+
+    /// After `resumeAll`, ALL types paused with `pauseAll` must be able to fire again.
+    func test_resumeAll_afterPauseAll_allowsAllCallbacks() async throws {
+        let eyesExp    = expectation(description: ".eyes fires after resumeAll")
+        let postureExp = expectation(description: ".posture fires after resumeAll")
+
+        sut.setThreshold(2, for: .eyes)
+        sut.setThreshold(2, for: .posture)
+        sut.pauseAll()
+        sut.onThresholdReached = { type in
+            if type == .eyes    { eyesExp.fulfill() }
+            if type == .posture { postureExp.fulfill() }
+        }
+
+        NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
+
+        try await Task.sleep(nanoseconds: 500_000_000) // 0.5 s — still paused
+        sut.resumeAll()
+
+        await fulfillment(of: [eyesExp, postureExp], timeout: 6.0)
+        sut.stop()
+    }
+
+    // MARK: - Behavioral: stop invalidates timer
+
+    /// After `stop()`, no threshold callbacks must fire even if the timer would have
+    /// fired had it kept running.
+    func test_stop_preventsCallbacksAfterStop() async throws {
+        let firstExp = expectation(description: "first callback fires before stop")
+        var callCount = 0
+
+        sut.setThreshold(1, for: .eyes)
+        sut.onThresholdReached = { type in
+            guard type == .eyes else { return }
+            callCount += 1
+            firstExp.fulfill()
+        }
+
+        NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
+
+        await fulfillment(of: [firstExp], timeout: 5.0)
+        sut.stop() // invalidates the timer immediately
+
+        let countAfterStop = callCount
+        try await Task.sleep(nanoseconds: 2_000_000_000) // 2 s — timer should be dead
+        XCTAssertEqual(callCount, countAfterStop, "stop() must invalidate the timer — no callbacks after stop")
+    }
+
+    // MARK: - Behavioral: reset zeroes elapsed counter
+
+    /// After `reset(for:)`, the type must require a full threshold period before
+    /// firing the callback — i.e. the elapsed counter is genuinely zeroed.
+    ///
+    /// Strategy: set threshold = 1, start the timer, wait 0.8 s (close to threshold
+    /// but before it fires), reset the counter, then measure the time until the
+    /// callback fires.  It must be ≥ ~0.8 s from the reset (not ~0.2 s), proving
+    /// the counter was zeroed.
+    func test_reset_zeroeselapsed_delaysNextCallback() async throws {
+        let exp = expectation(description: "callback fires after reset")
+        var callCount = 0
+
+        sut.setThreshold(2, for: .eyes)
+        sut.onThresholdReached = { type in
+            guard type == .eyes else { return }
+            callCount += 1
+            exp.fulfill()
+        }
+
+        NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
+
+        // Wait ~1 s so elapsed is approximately 1 (half of threshold=2).
+        try await Task.sleep(nanoseconds: 1_100_000_000)
+        // Reset elapsed to 0 — callback should NOT fire for another ~2 s.
+        sut.reset(for: .eyes)
+
+        let resetTime = Date()
+        await fulfillment(of: [exp], timeout: 5.0)
+        let elapsed = Date().timeIntervalSince(resetTime)
+
+        XCTAssertGreaterThanOrEqual(
+            elapsed, 1.5,
+            "After reset, callback must not fire sooner than ~threshold (2 s) — elapsed was \(elapsed) s")
+        XCTAssertEqual(callCount, 1, "Exactly one callback must fire after reset")
+        sut.stop()
+    }
 }

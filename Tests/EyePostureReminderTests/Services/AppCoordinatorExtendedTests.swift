@@ -543,6 +543,131 @@ final class AppCoordinatorExtendedTests: XCTestCase {
             1,
             "startFallbackTimers must call startMonitoring() on the ScreenTimeTracker")
     }
+
+    // MARK: - P0-3: reschedule debounce cancellation
+
+    /// A rapid second `reschedule(for:)` must cancel the first debounced task so that
+    /// `performReschedule` runs only once. Verified by counting `setThreshold` calls
+    /// on the mock tracker (each `performReschedule` call issues one `setThreshold`).
+    func test_debounce_rapidDoubleReschedule_runsOnlyOnce() async throws {
+        let mockTracker = MockScreenTimeTracker()
+        let (coordinator, _, _, _) = makeCoordinator(screenTimeTracker: mockTracker)
+        defer { coordinator.stopFallbackTimers() }
+
+        settings.eyesEnabled = true
+
+        // Both calls return immediately; the second cancels the first debounced task.
+        await coordinator.reschedule(for: .eyes)
+        await coordinator.reschedule(for: .eyes)
+
+        // Wait beyond the 300 ms debounce window.
+        try await Task.sleep(nanoseconds: 500_000_000)
+
+        let setThresholdCount = mockTracker.setThresholdCalls.filter { $0.type == .eyes }.count
+        XCTAssertEqual(
+            setThresholdCount,
+            1,
+            "Rapid double reschedule must produce exactly one performReschedule call for .eyes")
+    }
+
+    /// After debounce the LAST setting value must be used, not the first.
+    func test_debounce_lastValueIsUsed() async throws {
+        let mockTracker = MockScreenTimeTracker()
+        let (coordinator, _, _, _) = makeCoordinator(screenTimeTracker: mockTracker)
+        defer { coordinator.stopFallbackTimers() }
+
+        settings.eyesEnabled = true
+        settings.eyesInterval = 600  // first value
+
+        await coordinator.reschedule(for: .eyes) // first call — will be cancelled
+
+        settings.eyesInterval = 900  // change before debounce window elapses
+
+        await coordinator.reschedule(for: .eyes) // second call — this one runs
+
+        try await Task.sleep(nanoseconds: 500_000_000) // wait for debounce to settle
+
+        let eyesCalls = mockTracker.setThresholdCalls.filter { $0.type == .eyes }
+        XCTAssertEqual(eyesCalls.count, 1, "Only one reschedule must reach the tracker")
+        XCTAssertEqual(
+            eyesCalls.first?.interval,
+            900,
+            "The last-set interval (900) must be used, not the cancelled first value (600)")
+    }
+
+    /// Debouncing for one type must not cancel the debounce task for a different type.
+    func test_debounce_independentPerType() async throws {
+        let mockTracker = MockScreenTimeTracker()
+        let (coordinator, _, _, _) = makeCoordinator(screenTimeTracker: mockTracker)
+        defer { coordinator.stopFallbackTimers() }
+
+        settings.eyesEnabled = true
+        settings.postureEnabled = true
+
+        // Rapid double for .eyes (first cancels), single for .posture.
+        await coordinator.reschedule(for: .eyes)
+        await coordinator.reschedule(for: .eyes)
+        await coordinator.reschedule(for: .posture)
+
+        try await Task.sleep(nanoseconds: 500_000_000)
+
+        let eyesCount    = mockTracker.setThresholdCalls.filter { $0.type == .eyes }.count
+        let postureCount = mockTracker.setThresholdCalls.filter { $0.type == .posture }.count
+        XCTAssertEqual(eyesCount,    1, ".eyes debounce must run exactly once")
+        XCTAssertEqual(postureCount, 1, ".posture must run exactly once and be independent of .eyes debounce")
+    }
+
+    // MARK: - P1-2: onDismiss callback chain
+
+    /// The `onDismiss` closure passed to `showOverlay` must be stored by the mock,
+    /// not silently discarded. This ensures tests can verify the post-dismiss callback chain.
+    func test_thresholdCallback_onDismiss_isStoredByMock() {
+        let mockTracker = MockScreenTimeTracker()
+        let mockOverlay = MockOverlayPresenting()
+        let (coordinator, _, _, _) = makeCoordinator(overlay: mockOverlay, screenTimeTracker: mockTracker)
+        defer { coordinator.stopFallbackTimers() }
+
+        mockTracker.simulateThresholdReached(for: .eyes)
+
+        XCTAssertEqual(
+            mockOverlay.onDismissCalls.count,
+            1,
+            "showOverlay must receive an onDismiss closure that the mock stores (not discards)")
+    }
+
+    /// Calling `simulateDismiss()` must invoke the stored `onDismiss` closure and
+    /// mark the overlay as no longer visible — verifying the mock itself is correct.
+    func test_simulateDismiss_invokesStoredOnDismissCallback() {
+        let mockOverlay = MockOverlayPresenting()
+        var dismissFired = false
+
+        mockOverlay.showOverlay(for: .eyes, duration: 20, hapticsEnabled: false) {
+            dismissFired = true
+        }
+
+        XCTAssertTrue(mockOverlay.isOverlayVisible, "Overlay must be visible after showOverlay")
+        XCTAssertEqual(mockOverlay.onDismissCalls.count, 1, "onDismiss must be stored")
+
+        mockOverlay.simulateDismiss()
+
+        XCTAssertTrue(dismissFired, "simulateDismiss must invoke the stored onDismiss closure")
+        XCTAssertFalse(mockOverlay.isOverlayVisible, "Overlay must not be visible after simulateDismiss")
+    }
+
+    /// After a threshold callback triggers `showOverlay`, simulating a dismiss
+    /// must not crash — the full show→dismiss lifecycle must be exercise-safe.
+    func test_thresholdCallback_showOverlay_thenSimulateDismiss_doesNotCrash() {
+        let mockTracker = MockScreenTimeTracker()
+        let mockOverlay = MockOverlayPresenting()
+        let (coordinator, _, _, _) = makeCoordinator(overlay: mockOverlay, screenTimeTracker: mockTracker)
+        defer { coordinator.stopFallbackTimers() }
+
+        mockTracker.simulateThresholdReached(for: .posture)
+
+        XCTAssertEqual(mockOverlay.showCallCount, 1)
+        mockOverlay.simulateDismiss() // must not crash; onDismiss is currently {} in coordinator
+        XCTAssertFalse(mockOverlay.isOverlayVisible)
+    }
 }
 
 // MARK: - AlwaysPausedProvider

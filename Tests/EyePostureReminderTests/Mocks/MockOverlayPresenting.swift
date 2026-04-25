@@ -27,6 +27,10 @@ final class MockOverlayPresenting: OverlayPresenting {
     /// `hapticsEnabled` arguments passed to `showOverlay`, parallel to `showCallOrder`.
     private(set) var showCallHapticsEnabled: [Bool] = []
 
+    /// `onDismiss` closures passed to `showOverlay`, in call order.
+    /// Previously discarded; now stored so tests can verify the post-dismiss callback chain.
+    private(set) var onDismissCalls: [() -> Void] = []
+
     // MARK: - State
 
     var isOverlayVisible = false
@@ -40,7 +44,19 @@ final class MockOverlayPresenting: OverlayPresenting {
         showCallOrder = []
         showCallDurations = []
         showCallHapticsEnabled = []
+        onDismissCalls = []
         isOverlayVisible = false
+    }
+
+    // MARK: - Simulation Helpers
+
+    /// Simulates an overlay dismissal by calling the stored `onDismiss` closure at
+    /// the given index and marking the overlay as no longer visible.
+    /// Use `index: 0` (default) for the most common case of a single pending dismiss.
+    func simulateDismiss(index: Int = 0) {
+        guard index < onDismissCalls.count else { return }
+        isOverlayVisible = false
+        onDismissCalls[index]()
     }
 
     // MARK: - OverlayPresenting
@@ -55,6 +71,7 @@ final class MockOverlayPresenting: OverlayPresenting {
         showCallOrder.append(type)
         showCallDurations.append(duration)
         showCallHapticsEnabled.append(hapticsEnabled)
+        onDismissCalls.append(onDismiss)
         isOverlayVisible = true
     }
 
