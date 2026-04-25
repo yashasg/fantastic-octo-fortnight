@@ -60,7 +60,8 @@ final class SettingsViewModel: ObservableObject {
     }
 
     /// Maximum number of consecutive snoozes allowed before a reminder must fire.
-    static let maxConsecutiveSnoozes = 2
+    /// Sourced from `AppConfig.features.maxSnoozeCount` at initialisation time.
+    let maxConsecutiveSnoozes: Int
 
     /// All available snooze options in display order.
     static let snoozeOptions: [SnoozeOption] = SnoozeOption.allCases
@@ -96,7 +97,7 @@ final class SettingsViewModel: ObservableObject {
     /// Blocked once `maxConsecutiveSnoozes` consecutive snoozes have been used
     /// without a reminder actually firing.
     var canSnooze: Bool {
-        settings.snoozeCount < Self.maxConsecutiveSnoozes
+        settings.snoozeCount < maxConsecutiveSnoozes
     }
 
     var pauseDuringFocus: Bool {
@@ -113,10 +114,12 @@ final class SettingsViewModel: ObservableObject {
 
     init(
         settings: SettingsStore,
-        scheduler: ReminderScheduling
+        scheduler: ReminderScheduling,
+        maxSnoozeCount: Int = AppConfig.load().features.maxSnoozeCount
     ) {
         self.settings  = settings
         self.scheduler = scheduler
+        self.maxConsecutiveSnoozes = maxSnoozeCount
         Logger.settings.debug("SettingsViewModel initialised")
     }
 
