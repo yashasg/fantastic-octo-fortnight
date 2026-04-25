@@ -19,6 +19,17 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         return true
     }
 
+    func applicationDidBecomeActive(_ application: UIApplication) {
+        // Safety net: if the snooze-wake notification was swiped away on a killed
+        // app the in-process Task never fires. Clear any stale snoozedUntil so the
+        // first scheduleReminders() call (via EyePostureReminderApp .task) sees a
+        // clean slate. handleForegroundTransition() handles the background→foreground
+        // path; this covers cold-launch after a dismissed snooze-wake notification.
+        Task { @MainActor [weak self] in
+            await self?.coordinator?.clearExpiredSnoozeIfNeeded()
+        }
+    }
+
     // MARK: - UNUserNotificationCenterDelegate
 
     /// Foreground delivery — show overlay immediately via coordinator.
