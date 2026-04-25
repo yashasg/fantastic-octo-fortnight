@@ -52,16 +52,18 @@ final class AppCoordinatorTests: XCTestCase {
     private func makeCoordinator(
         overlay: MockOverlayPresenting,
         notifCenter: MockNotificationCenter,
-        screenTimeTracker: MockScreenTimeTracker = MockScreenTimeTracker(),
-        pauseConditionProvider: MockPauseConditionProvider = MockPauseConditionProvider()
+        screenTimeTracker screenTimeTrackerArg: MockScreenTimeTracker? = nil,
+        pauseConditionProvider pauseProviderArg: MockPauseConditionProvider? = nil
     ) -> (AppCoordinator, MockOverlayPresenting, MockNotificationCenter) {
+        let tracker = screenTimeTrackerArg ?? MockScreenTimeTracker()
+        let pause = pauseProviderArg ?? MockPauseConditionProvider()
         let coordinator = AppCoordinator(
             settings: settings,
             scheduler: ReminderScheduler(notificationCenter: notifCenter),
             notificationCenter: notifCenter,
             overlayManager: overlay,
-            screenTimeTracker: screenTimeTracker,
-            pauseConditionProvider: pauseConditionProvider
+            screenTimeTracker: tracker,
+            pauseConditionProvider: pause
         )
         return (coordinator, overlay, notifCenter)
     }
