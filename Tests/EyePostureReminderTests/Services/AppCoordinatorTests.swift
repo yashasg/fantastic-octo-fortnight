@@ -14,6 +14,7 @@ import XCTest
 /// 2. Helper factory `makeCoordinator(overlay:notifCenter:)` — fully injected with
 ///    `MockOverlayPresenting` + `MockNotificationCenter` for behavioral assertions.
 @MainActor
+// swiftlint:disable:next type_body_length
 final class AppCoordinatorTests: XCTestCase {
 
     var mockPersistence: MockSettingsPersisting!
@@ -387,5 +388,94 @@ final class AppCoordinatorTests: XCTestCase {
             mockTracker.stopCallCount,
             1,
             "stopFallbackTimers must call stop() on the injected ScreenTimeTracking")
+    }
+
+    // MARK: - Issue #29: clearExpiredSnoozeIfNeeded + silent snooze-wake notification
+
+    func test_clearExpiredSnoozeIfNeeded_clearsSnoozeWhenExpired() async {
+        // Arrange: snooze ended in the past.
+        settings.snoozedUntil = Date(timeIntervalSinceNow: -60)
+        settings.snoozeCount  = 2
+
+        // Act
+        await sut.clearExpiredSnoozeIfNeeded()
+
+        // Assert: stale snooze cleared.
+        XCTAssertNil(
+            settings.snoozedUntil,
+            "clearExpiredSnoozeIfNeeded must nil out a past snoozedUntil")
+        XCTAssertEqual(
+            settings.snoozeCount,
+            0,
+            "clearExpiredSnoozeIfNeeded must reset snoozeCount to 0")
+    }
+
+    func test_clearExpiredSnoozeIfNeeded_preservesSnoozeWhenStillActive() async {
+        // Arrange: snooze ends in the future.
+        let futureDate = Date(timeIntervalSinceNow: 300)
+        settings.snoozedUntil = futureDate
+        settings.snoozeCount  = 1
+
+        // Act
+        await sut.clearExpiredSnoozeIfNeeded()
+
+        // Assert: active snooze must NOT be touched.
+        XCTAssertEqual(
+            settings.snoozedUntil,
+            futureDate,
+            "clearExpiredSnoozeIfNeeded must not clear a future snoozedUntil")
+        XCTAssertEqual(
+            settings.snoozeCount,
+            1,
+            "clearExpiredSnoozeIfNeeded must not reset snoozeCount for an active snooze")
+    }
+
+    func test_clearExpiredSnoozeIfNeeded_noOp_whenSnoozedUntilIsNil() async {
+        // Arrange: no active snooze.
+        settings.snoozedUntil = nil
+
+        // Act – must not crash or mutate anything.
+        await sut.clearExpiredSnoozeIfNeeded()
+
+        XCTAssertNil(settings.snoozedUntil)
+    }
+
+    func test_scheduleReminders_snoozeWakeNotification_isSilent() async {
+        // Arrange: inject auth-authorized mock so the silent notification is actually scheduled.
+        let mockNotif = MockNotificationCenter()
+        mockNotif.authorizationGranted = true
+        let (coordinator, _, _) = makeCoordinator(
+            overlay: MockOverlayPresenting(),
+            notifCenter: mockNotif)
+        defer { coordinator.stopFallbackTimers() }
+
+        // Force the coordinator to believe it is authorized.
+        settings.snoozedUntil = Date(timeIntervalSinceNow: 300)
+
+        // scheduleReminders reads notificationAuthStatus which is refreshed via
+        // getAuthorizationStatus(). The mock returns .authorized when authorizationGranted == true.
+        await coordinator.scheduleReminders()
+
+        // Assert: exactly one snooze-wake notification was added.
+        let wakeRequests = mockNotif.addedRequests.filter {
+            $0.content.categoryIdentifier == AppCoordinator.snoozeWakeCategory
+        }
+        XCTAssertEqual(
+            wakeRequests.count,
+            1,
+            "Exactly one snooze-wake notification should be scheduled")
+
+        let content = wakeRequests[0].content
+        XCTAssertEqual(
+            content.title,
+            "",
+            "Snooze-wake notification title must be empty (silent)")
+        XCTAssertEqual(
+            content.body,
+            "",
+            "Snooze-wake notification body must be empty (silent)")
+        XCTAssertNil(
+            content.sound,
+            "Snooze-wake notification must have no sound (silent)")
     }
 }
