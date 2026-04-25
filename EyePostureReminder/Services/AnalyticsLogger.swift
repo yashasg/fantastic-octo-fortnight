@@ -77,22 +77,22 @@ enum AnalyticsLogger {
         case let .appSessionStart(eyeEnabled, postureEnabled, snoozeActive):
             logger.info("""
                 event=app_session_start \
-                eye_enabled=\(eyeEnabled, privacy: .public) \
-                posture_enabled=\(postureEnabled, privacy: .public) \
-                snooze_active=\(snoozeActive, privacy: .public)
+                eye_enabled=\(eyeEnabled, privacy: .private) \
+                posture_enabled=\(postureEnabled, privacy: .private) \
+                snooze_active=\(snoozeActive, privacy: .private)
                 """)
 
         case let .appSessionEnd(durationS):
             logger.info("""
                 event=app_session_end \
-                session_duration_s=\(durationS, format: .fixed(precision: 1), privacy: .public)
+                session_duration_s=\(durationS, format: .fixed(precision: 1), privacy: .private)
                 """)
 
         case let .reminderTriggered(type, thresholdS):
             logger.info("""
                 event=reminder_triggered \
                 type=\(type.rawValue, privacy: .public) \
-                threshold_s=\(thresholdS, format: .fixed(precision: 0), privacy: .public)
+                threshold_s=\(thresholdS, format: .fixed(precision: 0), privacy: .private)
                 """)
 
         case let .overlayDismissed(type, method, elapsedS):
@@ -100,20 +100,20 @@ enum AnalyticsLogger {
                 event=overlay_dismissed \
                 type=\(type.rawValue, privacy: .public) \
                 method=\(method.rawValue, privacy: .public) \
-                elapsed_s=\(elapsedS, format: .fixed(precision: 1), privacy: .public)
+                elapsed_s=\(elapsedS, format: .fixed(precision: 1), privacy: .private)
                 """)
 
         case let .overlayAutoDismissed(type, durationS):
             logger.info("""
                 event=overlay_auto_dismissed \
                 type=\(type.rawValue, privacy: .public) \
-                duration_s=\(durationS, format: .fixed(precision: 0), privacy: .public)
+                duration_s=\(durationS, format: .fixed(precision: 0), privacy: .private)
                 """)
 
         case let .snoozeActivated(durationOption):
             logger.info("""
                 event=snooze_activated \
-                duration_option=\(durationOption, privacy: .public)
+                duration_option=\(durationOption, privacy: .private)
                 """)
 
         case .snoozeExpired:
@@ -126,8 +126,8 @@ enum AnalyticsLogger {
             logger.info("""
                 event=setting_changed \
                 setting=\(setting, privacy: .public) \
-                old_value=\(oldValue, privacy: .public) \
-                new_value=\(newValue, privacy: .public)
+                old_value=\(oldValue, privacy: .private) \
+                new_value=\(newValue, privacy: .private)
                 """)
 
         case let .pauseActivated(conditionType):

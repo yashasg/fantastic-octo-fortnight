@@ -1296,7 +1296,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Reminder preferences and settings are stored locally on your device using UserDefaults. No data is sent to external servers."
+            "value": "Reminder preferences and settings are stored locally on your device using UserDefaults. No data is sent to external servers. The app also reads motion activity state and Focus mode status in memory only (never stored) to pause reminders while driving or during Focus sessions."
           }
         }
       }
@@ -1318,7 +1318,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "We do not collect personal information, usage analytics, or any data that leaves your device."
+            "value": "We do not collect personal information or any data that leaves your device. Motion activity data is accessed transiently in memory to pause reminders while driving and is never stored or transmitted. Diagnostic events are logged locally via Apple’s os.Logger with behavioral values redacted."
           }
         }
       }
@@ -1340,7 +1340,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "You can reset all app data by deleting the app. Settings are not backed up to iCloud."
+            "value": "You can reset all app data by deleting the app. Settings may be included in your device's iCloud backup if you have iCloud backup enabled. This is controlled by your iOS settings."
           }
         }
       }
@@ -1363,6 +1363,50 @@
           "stringUnit": {
             "state": "translated",
             "value": "For privacy questions, contact the developer through the App Store listing."
+          }
+        }
+      }
+    },
+    "settings.section.about": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "About"
+          }
+        }
+      }
+    },
+    "settings.feedback.sendFeedback": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Send Feedback via TestFlight"
+          }
+        }
+      }
+    },
+    "settings.feedback.sendFeedback.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opens TestFlight to submit beta feedback"
+          }
+        }
+      }
+    },
+    "settings.about.versionFormat": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "v%@ (build %@)"
           }
         }
       }

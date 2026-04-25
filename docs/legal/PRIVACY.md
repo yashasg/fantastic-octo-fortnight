@@ -21,6 +21,11 @@ Eye & Posture Reminder stores the following data **locally on your device only**
 
 This data exists solely to remember your preferences between sessions. It is stored in the app's sandboxed container on your device.
 
+The App also accesses the following device data **in memory only** — this data is never stored or transmitted:
+
+- **Motion activity data** — the App reads your device's motion activity state (via `CMMotionActivityManager`) to detect when you are driving, so that reminders are automatically paused. This data is read in memory for the sole purpose of pause logic and is discarded immediately; it is never written to disk, sent to any server, or associated with your identity.
+- **Focus mode status** — the App reads your device's Focus mode state (e.g., Do Not Disturb, Work, Personal) to pause reminders during active Focus sessions. This information is read in memory and is never stored or transmitted.
+
 ---
 
 ## 2. What We Do NOT Collect
@@ -28,8 +33,8 @@ This data exists solely to remember your preferences between sessions. It is sto
 To be explicit about what does **not** happen:
 
 - **No personal information** — we do not collect your name, email address, phone number, date of birth, or any identifying information
-- **No health or biometric data** — we do not collect eye strain data, posture measurements, physical activity data, or any health-related metrics
-- **No usage analytics** — we do not track how often you use the App, which features you use, or how long sessions last
+- **No health or biometric data** — we do not collect eye strain data, posture measurements, or any health-related metrics; physical activity (motion) data is accessed transiently in memory to pause reminders while driving and is never stored or transmitted
+- **No persistent usage analytics** — we do not transmit usage data to any external service. The App emits structured diagnostic events (session duration, settings changes, reminder interactions) via Apple's `os.Logger` framework. These events are visible in Xcode Instruments and Console.app for development purposes. When using a TestFlight build with "Share App Data" enabled, these events may be included in diagnostic logs shared with the developer. All behavioral values (e.g., session durations, setting values) are marked `privacy: .private` and are redacted in any exported log
 - **No location data** — we do not access your GPS or location services
 - **No camera or microphone access** — the App does not request access to camera or microphone
 - **No device identifiers** — we do not collect device IDs, advertising identifiers (IDFA), or any persistent hardware identifiers

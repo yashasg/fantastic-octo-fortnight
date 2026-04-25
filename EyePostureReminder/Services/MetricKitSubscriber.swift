@@ -6,6 +6,15 @@ import os
 /// Registered once in `AppDelegate.application(_:didFinishLaunchingWithOptions:)`.
 /// Key health signals (crashes, hangs, memory pressure, CPU usage) are logged
 /// via `Logger.lifecycle` so they appear in Console.app and Xcode Instruments.
+///
+/// **Crash reporting for TestFlight builds:**
+/// iOS automatically captures crash logs for TestFlight testers. These are visible in:
+/// - **Xcode Organizer** (Window → Organizer → Crashes) — aggregated from all testers
+/// - **Console.app** — real-time `Logger.lifecycle` output when device is connected
+///
+/// MetricKit delivers `MXCrashDiagnostic` payloads 24h after a crash. The signal
+/// number and exception type are logged at `.error` level so they appear prominently
+/// in the Xcode Organizer log stream. No third-party crash SDK is needed for the beta.
 final class MetricKitSubscriber: NSObject, MXMetricManagerSubscriber {
 
     static let shared = MetricKitSubscriber()

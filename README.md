@@ -9,7 +9,7 @@ A lightweight iOS app that runs in the background and reminds you to rest your e
 - 🧠 **Smart Pause** – automatically pauses reminders during Focus Mode, CarPlay navigation, or when driving
 - Full-screen dismissible overlay with countdown timer
 - Dropdown pickers for reminder interval and break length
-- Battery-efficient background scheduling via `UNUserNotificationCenter`
+- Foreground screen-time tracking via a 1-second `Timer` — reminders fire based on actual eyes-on-screen time, not wall-clock intervals
 
 ## Building & Testing
 

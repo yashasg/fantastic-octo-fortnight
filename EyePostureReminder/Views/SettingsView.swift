@@ -269,6 +269,34 @@ struct SettingsView: View {
             } header: {
                 Text("settings.section.legal", bundle: .module)
             }
+
+            // MARK: About — feedback + version
+            Section {
+                Button {
+                    if let url = URL(string: "itms-beta://") {
+                        UIApplication.shared.open(url)
+                    }
+                } label: {
+                    Text("settings.feedback.sendFeedback", bundle: .module)
+                }
+                .font(AppFont.body)
+                .accessibilityHint(Text("settings.feedback.sendFeedback.hint", bundle: .module))
+                .accessibilityIdentifier("settings.feedback.sendFeedback")
+            } header: {
+                Text("settings.section.about", bundle: .module)
+            } footer: {
+                let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—"
+                let build   = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "—"
+                Text(
+                    String(
+                        format: String(localized: "settings.about.versionFormat", bundle: .module),
+                        version,
+                        build
+                    )
+                )
+                .font(AppFont.caption)
+                .accessibilityLabel("Version \(version), build \(build)")
+            }
         }
         .navigationTitle(Text("settings.navTitle", bundle: .module))
         .navigationBarTitleDisplayMode(.large)
