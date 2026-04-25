@@ -107,25 +107,21 @@ struct SettingsView: View {
                     }
                     .accessibilityHint(Text("settings.snooze.cancelButton.hint", bundle: .module))
                 } else {
-                    Button(action: { viewModel?.snooze(for: 5) }) {
+                    Button(action: { viewModel?.snooze(option: .fiveMinutes) }) {
                         Text("settings.snooze.5min", bundle: .module)
                     }
                     .font(AppFont.body)
                     .accessibilityLabel(Text("settings.snooze.5min.label", bundle: .module))
                     .accessibilityHint(Text("settings.snooze.5min.hint", bundle: .module))
 
-                    Button(action: { viewModel?.snooze(for: 60) }) {
+                    Button(action: { viewModel?.snooze(option: .oneHour) }) {
                         Text("settings.snooze.1hour", bundle: .module)
                     }
                     .font(AppFont.body)
                     .accessibilityLabel(Text("settings.snooze.1hour.label", bundle: .module))
                     .accessibilityHint(Text("settings.snooze.1hour.hint", bundle: .module))
 
-                    Button(action: {
-                        let endOfDay = Calendar.current.startOfDay(for: Date()).addingTimeInterval(24 * 3600)
-                        let minutesLeft = max(1, Int(endOfDay.timeIntervalSince(Date()) / 60))
-                        viewModel?.snooze(for: minutesLeft)
-                    }) {
+                    Button(action: { viewModel?.snooze(option: .restOfDay) }) {
                         Text("settings.snooze.restOfDay", bundle: .module)
                     }
                     .font(AppFont.body)
