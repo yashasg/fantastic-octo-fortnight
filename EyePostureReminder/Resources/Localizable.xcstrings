@@ -74,7 +74,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Notifications let the app wake back up after a snooze — so your next reminder arrives right on time."
+            "value": "Notifications wake reminders back up when a snooze ends — so your next break arrives right on time."
           }
         }
       }
@@ -228,7 +228,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Customize settings"
+            "value": "Customize Settings"
           }
         }
       }
@@ -239,7 +239,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Go to settings to adjust screen time intervals"
+            "value": "Go to Settings to customize your reminder intervals"
           }
         }
       }
@@ -360,7 +360,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Takes less than a minute to set up. Keeps an eye on your screen time — you'll barely know it's there."
+            "value": "Takes less than a minute to set up. Works quietly in the background — you'll barely know it's there."
           }
         }
       }
@@ -702,7 +702,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Enable notifications in Settings to receive reminders while the app is open."
+            "value": "Enable notifications in Settings so reminders resume after snoozing, even when the app is in the background."
           }
         }
       }
@@ -713,7 +713,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Notifications Disabled. Enable notifications in Settings to receive reminders while the app is open."
+            "value": "Notifications disabled. Enable them in Settings so reminders resume after snoozing, even when the app is in the background."
           }
         }
       }
@@ -768,7 +768,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Break duration"
+            "value": "Break Duration"
           }
         }
       }
@@ -911,7 +911,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "1 hour"
+            "value": "1 Hour"
           }
         }
       }
@@ -944,7 +944,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "5 minutes"
+            "value": "5 Minutes"
           }
         }
       }
@@ -1021,7 +1021,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Rest of day"
+            "value": "Rest of Day"
           }
         }
       }
