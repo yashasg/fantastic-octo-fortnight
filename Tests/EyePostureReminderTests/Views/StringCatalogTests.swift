@@ -329,11 +329,14 @@ final class StringCatalogTests: XCTestCase {
     }
 
     func test_overlayCountdownValue_containsIntegerFormatSpecifier() {
-        // "overlay.countdown.value" = "%d seconds remaining" — must contain %d
-        let value = str("overlay.countdown.value")
+        // "overlay.countdown.value" uses plural variants — verify it resolves
+        let formatted = String.localizedStringWithFormat(
+            NSLocalizedString("overlay.countdown.value", bundle: TestBundle.module, comment: ""),
+            5
+        )
         XCTAssertTrue(
-            value.contains("%d") || value.contains("%1$d"),
-            "'overlay.countdown.value' must contain a %d integer format specifier for the countdown")
+            formatted.contains("5"),
+            "'overlay.countdown.value' must resolve to a string containing the count")
     }
 
     func test_setupCardLabel_containsPositionalSpecifiers() {
