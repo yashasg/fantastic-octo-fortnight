@@ -641,7 +641,7 @@ final class AppCoordinatorExtendedTests: XCTestCase {
         let mockOverlay = MockOverlayPresenting()
         var dismissFired = false
 
-        mockOverlay.showOverlay(for: .eyes, duration: 20, hapticsEnabled: false) {
+        mockOverlay.showOverlay(for: .eyes, duration: 20, hapticsEnabled: false, pauseMediaEnabled: false) {
             dismissFired = true
         }
 

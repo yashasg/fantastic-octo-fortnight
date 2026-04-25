@@ -22,11 +22,13 @@ protocol OverlayPresenting: AnyObject {
     ///   - duration: Suggested break duration in seconds (overlay may use this
     ///               for a countdown UI).
     ///   - hapticsEnabled: Whether haptic feedback should fire on this overlay.
+    ///   - pauseMediaEnabled: Whether to interrupt external audio during this overlay.
     ///   - onDismiss: Called on the main thread after the overlay is dismissed.
     func showOverlay(
         for type: ReminderType,
         duration: TimeInterval,
         hapticsEnabled: Bool,
+        pauseMediaEnabled: Bool,
         onDismiss: @escaping () -> Void
     )
 
@@ -71,7 +73,7 @@ final class OverlayManager: OverlayPresenting {
 
     /// Pending show requests queued while an overlay is already on screen.
     private var overlayQueue: [
-        (type: ReminderType, duration: TimeInterval, hapticsEnabled: Bool, onDismiss: () -> Void)
+        (type: ReminderType, duration: TimeInterval, hapticsEnabled: Bool, pauseMediaEnabled: Bool, onDismiss: () -> Void)
     ] = []
 
     var isOverlayVisible: Bool {
@@ -90,11 +92,12 @@ final class OverlayManager: OverlayPresenting {
         for type: ReminderType,
         duration: TimeInterval,
         hapticsEnabled: Bool,
+        pauseMediaEnabled: Bool,
         onDismiss: @escaping () -> Void
     ) {
         guard !isOverlayVisible else {
             // Queue instead of stacking windows — dequeued after current overlay dismisses.
-            overlayQueue.append((type: type, duration: duration, hapticsEnabled: hapticsEnabled, onDismiss: onDismiss))
+            overlayQueue.append((type: type, duration: duration, hapticsEnabled: hapticsEnabled, pauseMediaEnabled: pauseMediaEnabled, onDismiss: onDismiss))
             Logger.overlay.info("Overlay for \(type.rawValue) queued (overlay already visible). Queue depth: \(self.overlayQueue.count)")
             return
         }
@@ -107,7 +110,9 @@ final class OverlayManager: OverlayPresenting {
             return
         }
 
-        audioManager.pauseExternalAudio()
+        if pauseMediaEnabled {
+            audioManager.pauseExternalAudio()
+        }
         dismissCallback = onDismiss
 
         // Do NOT set window.overrideUserInterfaceStyle — the window must inherit the
@@ -179,6 +184,7 @@ final class OverlayManager: OverlayPresenting {
             for: next.type,
             duration: next.duration,
             hapticsEnabled: next.hapticsEnabled,
+            pauseMediaEnabled: next.pauseMediaEnabled,
             onDismiss: next.onDismiss)
     }
 }

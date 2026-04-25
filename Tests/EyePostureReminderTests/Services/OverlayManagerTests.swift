@@ -84,10 +84,11 @@ final class OverlayManagerTests: XCTestCase {
     /// window creation path bails early — only the audio calls that precede the
     /// window check are counted).
     ///
-    /// NOTE: `showOverlay` calls `audioManager.pauseExternalAudio()` AFTER the
-    /// window-scene guard. In a headless test the guard fires and returns early,
-    /// so neither pause nor resume is invoked. This test validates that
-    /// `dismissOverlay()` on an invisible manager doesn't spuriously resume audio.
+    /// NOTE: `showOverlay` only calls `audioManager.pauseExternalAudio()` when
+    /// `pauseMediaEnabled` is true AND a window scene is active. In a headless
+    /// test neither condition holds, so neither pause nor resume is invoked.
+    /// This test validates that `dismissOverlay()` on an invisible manager
+    /// doesn't spuriously resume audio.
     func test_dismissOverlay_withMockAudio_doesNotCallResume_whenNeverShown() {
         let mockAudio = MockMediaControlling()
         let manager = OverlayManager(audioManager: mockAudio)
@@ -110,9 +111,9 @@ final class OverlayManagerTests: XCTestCase {
     func test_mockOverlayPresenting_recordsShowCallsInFIFOOrder() {
         let mock = MockOverlayPresenting()
 
-        mock.showOverlay(for: .eyes, duration: 20, hapticsEnabled: true) {}
-        mock.showOverlay(for: .posture, duration: 10, hapticsEnabled: true) {}
-        mock.showOverlay(for: .eyes, duration: 30, hapticsEnabled: false) {}
+        mock.showOverlay(for: .eyes, duration: 20, hapticsEnabled: true, pauseMediaEnabled: false) {}
+        mock.showOverlay(for: .posture, duration: 10, hapticsEnabled: true, pauseMediaEnabled: false) {}
+        mock.showOverlay(for: .eyes, duration: 30, hapticsEnabled: false, pauseMediaEnabled: false) {}
 
         XCTAssertEqual(
             mock.showCallOrder,
@@ -134,7 +135,7 @@ final class OverlayManagerTests: XCTestCase {
     func test_mockOverlayPresenting_isOverlayVisible_falseAfterDismiss() {
         let mock = MockOverlayPresenting()
 
-        mock.showOverlay(for: .eyes, duration: 20, hapticsEnabled: true) {}
+        mock.showOverlay(for: .eyes, duration: 20, hapticsEnabled: true, pauseMediaEnabled: false) {}
         XCTAssertTrue(mock.isOverlayVisible)
 
         mock.dismissOverlay()
@@ -143,7 +144,7 @@ final class OverlayManagerTests: XCTestCase {
 
     func test_mockOverlayPresenting_reset_clearsAllState() {
         let mock = MockOverlayPresenting()
-        mock.showOverlay(for: .posture, duration: 10, hapticsEnabled: false) {}
+        mock.showOverlay(for: .posture, duration: 10, hapticsEnabled: false, pauseMediaEnabled: false) {}
         mock.clearQueue()
 
         mock.reset()

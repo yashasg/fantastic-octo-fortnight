@@ -27,6 +27,9 @@ final class MockOverlayPresenting: OverlayPresenting {
     /// `hapticsEnabled` arguments passed to `showOverlay`, parallel to `showCallOrder`.
     private(set) var showCallHapticsEnabled: [Bool] = []
 
+    /// `pauseMediaEnabled` arguments passed to `showOverlay`, parallel to `showCallOrder`.
+    private(set) var showCallPauseMediaEnabled: [Bool] = []
+
     /// `onDismiss` closures passed to `showOverlay`, in call order.
     /// Previously discarded; now stored so tests can verify the post-dismiss callback chain.
     private(set) var onDismissCalls: [() -> Void] = []
@@ -44,6 +47,7 @@ final class MockOverlayPresenting: OverlayPresenting {
         showCallOrder = []
         showCallDurations = []
         showCallHapticsEnabled = []
+        showCallPauseMediaEnabled = []
         onDismissCalls = []
         isOverlayVisible = false
     }
@@ -65,12 +69,14 @@ final class MockOverlayPresenting: OverlayPresenting {
         for type: ReminderType,
         duration: TimeInterval,
         hapticsEnabled: Bool,
+        pauseMediaEnabled: Bool,
         onDismiss: @escaping () -> Void
     ) {
         showCallCount += 1
         showCallOrder.append(type)
         showCallDurations.append(duration)
         showCallHapticsEnabled.append(hapticsEnabled)
+        showCallPauseMediaEnabled.append(pauseMediaEnabled)
         onDismissCalls.append(onDismiss)
         isOverlayVisible = true
     }
