@@ -20,7 +20,10 @@ let package = Package(
         .testTarget(
             name: "EyePostureReminderTests",
             dependencies: ["EyePostureReminder"],
-            path: "Tests/EyePostureReminderTests"
+            path: "Tests/EyePostureReminderTests",
+            resources: [
+                .process("Fixtures")
+            ]
         )
     ]
 )

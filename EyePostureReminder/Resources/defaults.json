@@ -6,7 +6,7 @@
     "postureBreakDuration": 10
   },
   "features": {
-    "masterEnabledDefault": true,
+    "globalEnabledDefault": true,
     "maxSnoozeCount": 3
   }
 }

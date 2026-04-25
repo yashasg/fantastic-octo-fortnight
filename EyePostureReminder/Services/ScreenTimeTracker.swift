@@ -1,26 +1,53 @@
-import UIKit
 import os
+import UIKit
 
 /// Tracks continuous screen-on time per `ReminderType` and fires a callback
 /// when a type's threshold is reached.
 ///
 /// **Screen-time semantics:** The elapsed counter for each type increments
 /// only while the app is active. When the app resigns active (screen off,
-/// backgrounded, or interrupted), all counters reset to zero so the user must
-/// accumulate the full threshold of unbroken screen time before the next reminder.
+/// backgrounded, or interrupted), the tick timer pauses immediately but counters
+/// are NOT reset until a 5-second grace period elapses. If the app returns to
+/// active within the grace period (e.g., a notification banner, incoming call,
+/// or Control Center swipe), the grace timer is cancelled and counting resumes
+/// from where it left off. Only after the grace period expires without a return
+/// to active are all counters reset to zero.
 ///
 /// **Lifecycle:**
-/// - `UIApplication.didBecomeActiveNotification`  → starts the 1-second tick timer.
-/// - `UIApplication.willResignActiveNotification` → stops the timer and resets all counters.
+/// - `UIApplication.didBecomeActiveNotification`  → starts the 1-second tick timer
+///   (or resumes it if still within the grace period).
+/// - `UIApplication.willResignActiveNotification` → pauses the timer and starts the
+///   grace period; resets counters only if the grace period expires.
 ///
 /// Call `startIfActive()` after configuring thresholds if the app is already in
 /// the foreground (e.g., on `scheduleReminders()` with the app open) so the
 /// tracker begins counting without waiting for the next lifecycle event.
 ///
 /// All methods must be called on the main thread (owned by `@MainActor AppCoordinator`).
-final class ScreenTimeTracker {
+protocol ScreenTimeTracking: AnyObject {
+    var onThresholdReached: ((ReminderType) -> Void)? { get set }
+    func setThreshold(_ interval: TimeInterval, for type: ReminderType)
+    func disableTracking(for type: ReminderType)
+    func pause(for type: ReminderType)
+    func resume(for type: ReminderType)
+    func pauseAll()
+    func resumeAll()
+    func reset(for type: ReminderType)
+    func resetAll()
+    func startIfActive()
+    func stop()
+}
+
+final class ScreenTimeTracker: ScreenTimeTracking {
 
     typealias ThresholdCallback = (ReminderType) -> Void
+
+    // MARK: - Configuration Constants
+
+    /// Seconds to wait after `willResignActive` before resetting counters to zero.
+    /// Brief interruptions (notification banners, incoming calls, Control Center) that
+    /// resolve within this window resume counting rather than nuking accumulated time.
+    private let resetGracePeriod: TimeInterval = 5.0
 
     // MARK: - State
 
@@ -28,6 +55,10 @@ final class ScreenTimeTracker {
     private var thresholds: [ReminderType: TimeInterval] = [:]
     private var paused: Set<ReminderType> = []
     private var tickTimer: Timer?
+
+    /// Non-nil while we are within the grace period after `willResignActive`.
+    /// Cancelled if the app returns to active before the grace period expires.
+    private var resetTask: Task<Void, Never>?
 
     // MARK: - Callback
 
@@ -47,6 +78,7 @@ final class ScreenTimeTracker {
     deinit {
         NotificationCenter.default.removeObserver(self)
         tickTimer?.invalidate()
+        resetTask?.cancel()
     }
 
     // MARK: - Configuration
@@ -117,8 +149,11 @@ final class ScreenTimeTracker {
     }
 
     /// Stop the tick timer and reset all elapsed counters.
+    /// Also cancels any pending grace-period reset.
     /// Use for cleanup (e.g., test `tearDown`) or when reminders are permanently disabled.
     func stop() {
+        resetTask?.cancel()
+        resetTask = nil
         stopTicking()
         resetAll()
         Logger.scheduling.debug("ScreenTimeTracker: stopped and reset")
@@ -142,13 +177,34 @@ final class ScreenTimeTracker {
     }
 
     @objc private func handleDidBecomeActive() {
-        startTicking()
+        if let pendingReset = resetTask {
+            // Returned within the grace period — cancel the reset and resume counting.
+            pendingReset.cancel()
+            resetTask = nil
+            resumeTicking()
+            Logger.scheduling.debug("ScreenTimeTracker: returned within grace period — resuming (no reset)")
+        } else {
+            // Grace period already expired or this is a cold start — begin fresh.
+            startTicking()
+        }
     }
 
     @objc private func handleWillResignActive() {
+        // Pause the tick timer immediately so no time is accumulated during the gap.
         stopTicking()
-        resetAll()
-        Logger.scheduling.debug("ScreenTimeTracker: screen off — all counters reset to 0")
+        Logger.scheduling.debug("ScreenTimeTracker: resigned active — starting \(self.resetGracePeriod)s grace period")
+
+        // Arm the grace-period reset. Cancelled if the app becomes active again in time.
+        resetTask = Task { [weak self] in
+            guard let self else { return }
+            try? await Task.sleep(nanoseconds: UInt64(self.resetGracePeriod * 1_000_000_000))
+            guard !Task.isCancelled else { return }
+            await MainActor.run { [weak self] in
+                self?.resetTask = nil
+                self?.resetAll()
+                Logger.scheduling.debug("ScreenTimeTracker: grace period expired — all counters reset to 0")
+            }
+        }
     }
 
     // MARK: - Private: Tick Timer
@@ -158,7 +214,14 @@ final class ScreenTimeTracker {
         tickTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
             self?.tick()
         }
+        tickTimer?.tolerance = 0.5
         Logger.scheduling.debug("ScreenTimeTracker: started ticking")
+    }
+
+    /// Resume the tick timer after a grace-period interruption.
+    /// Identical to `startTicking()` — kept as a separate entry point for clarity.
+    private func resumeTicking() {
+        startTicking()
     }
 
     private func stopTicking() {

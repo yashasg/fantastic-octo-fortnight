@@ -1,5 +1,5 @@
-import XCTest
 @testable import EyePostureReminder
+import XCTest
 
 /// Unit tests for `AppCoordinator`.
 ///
@@ -24,7 +24,17 @@ final class AppCoordinatorTests: XCTestCase {
         try await super.setUp()
         mockPersistence = MockSettingsPersisting()
         settings = SettingsStore(store: mockPersistence)
-        sut = AppCoordinator(settings: settings, scheduler: ReminderScheduler())
+        // Inject MockNotificationCenter everywhere to avoid UNUserNotificationCenter.current()
+        // which crashes in the headless test runner (no app bundle).
+        // Inject MockScreenTimeTracker and MockPauseConditionProvider to avoid real timers/detectors.
+        let mockNotif = MockNotificationCenter()
+        sut = AppCoordinator(
+            settings: settings,
+            scheduler: ReminderScheduler(notificationCenter: mockNotif),
+            notificationCenter: mockNotif,
+            screenTimeTracker: MockScreenTimeTracker(),
+            pauseConditionProvider: MockPauseConditionProvider()
+        )
     }
 
     override func tearDown() async throws {
@@ -40,13 +50,17 @@ final class AppCoordinatorTests: XCTestCase {
     /// Creates a fully-injected `AppCoordinator` for behavioral tests.
     private func makeCoordinator(
         overlay: MockOverlayPresenting,
-        notifCenter: MockNotificationCenter
+        notifCenter: MockNotificationCenter,
+        screenTimeTracker: MockScreenTimeTracker = MockScreenTimeTracker(),
+        pauseConditionProvider: MockPauseConditionProvider = MockPauseConditionProvider()
     ) -> (AppCoordinator, MockOverlayPresenting, MockNotificationCenter) {
         let coordinator = AppCoordinator(
             settings: settings,
             scheduler: ReminderScheduler(notificationCenter: notifCenter),
             notificationCenter: notifCenter,
-            overlayManager: overlay
+            overlayManager: overlay,
+            screenTimeTracker: screenTimeTracker,
+            pauseConditionProvider: pauseConditionProvider
         )
         return (coordinator, overlay, notifCenter)
     }
@@ -69,8 +83,15 @@ final class AppCoordinatorTests: XCTestCase {
         XCTAssertTrue(sut.settings === settings)
     }
 
-    func test_init_defaultParameterless_doesNotCrash() {
-        let coordinator = AppCoordinator()
+    func test_init_withMockDependencies_doesNotCrash() {
+        let mockNotif = MockNotificationCenter()
+        let coordinator = AppCoordinator(
+            settings: SettingsStore(store: MockSettingsPersisting()),
+            scheduler: ReminderScheduler(notificationCenter: mockNotif),
+            notificationCenter: mockNotif,
+            screenTimeTracker: MockScreenTimeTracker(),
+            pauseConditionProvider: MockPauseConditionProvider()
+        )
         XCTAssertNotNil(coordinator)
         coordinator.stopFallbackTimers()
     }
@@ -127,17 +148,23 @@ final class AppCoordinatorTests: XCTestCase {
     // MARK: - cancelAllReminders + MockOverlayPresenting
 
     func test_cancelAllReminders_callsClearQueueOnOverlayManager() {
-        let (coordinator, mockOverlay, _) = makeCoordinator(overlay: MockOverlayPresenting(), notifCenter: MockNotificationCenter())
+        let (coordinator, mockOverlay, _) = makeCoordinator(
+            overlay: MockOverlayPresenting(),
+            notifCenter: MockNotificationCenter())
         defer { coordinator.stopFallbackTimers() }
 
         coordinator.cancelAllReminders()
 
-        XCTAssertEqual(mockOverlay.clearQueueCallCount, 1,
+        XCTAssertEqual(
+            mockOverlay.clearQueueCallCount,
+            1,
             "cancelAllReminders must clear the overlay queue exactly once")
     }
 
     func test_cancelAllReminders_calledTwice_clearQueueCalledTwice() {
-        let (coordinator, mockOverlay, _) = makeCoordinator(overlay: MockOverlayPresenting(), notifCenter: MockNotificationCenter())
+        let (coordinator, mockOverlay, _) = makeCoordinator(
+            overlay: MockOverlayPresenting(),
+            notifCenter: MockNotificationCenter())
         defer { coordinator.stopFallbackTimers() }
 
         coordinator.cancelAllReminders()
@@ -153,7 +180,9 @@ final class AppCoordinatorTests: XCTestCase {
     /// then calls `overlayManager.showOverlay` — simulating what happens when the
     /// scene becomes active after a notification tap.
     func test_handleNotification_eyes_thenPresentPending_callsShowOverlayWithEyes() {
-        let (coordinator, mockOverlay, _) = makeCoordinator(overlay: MockOverlayPresenting(), notifCenter: MockNotificationCenter())
+        let (coordinator, mockOverlay, _) = makeCoordinator(
+            overlay: MockOverlayPresenting(),
+            notifCenter: MockNotificationCenter())
         defer { coordinator.stopFallbackTimers() }
 
         coordinator.handleNotification(for: .eyes)
@@ -164,7 +193,9 @@ final class AppCoordinatorTests: XCTestCase {
     }
 
     func test_handleNotification_posture_thenPresentPending_callsShowOverlayWithPosture() {
-        let (coordinator, mockOverlay, _) = makeCoordinator(overlay: MockOverlayPresenting(), notifCenter: MockNotificationCenter())
+        let (coordinator, mockOverlay, _) = makeCoordinator(
+            overlay: MockOverlayPresenting(),
+            notifCenter: MockNotificationCenter())
         defer { coordinator.stopFallbackTimers() }
 
         coordinator.handleNotification(for: .posture)
@@ -176,31 +207,41 @@ final class AppCoordinatorTests: XCTestCase {
 
     func test_handleNotification_thenPresentPending_usesDurationFromSettings() {
         settings.eyesBreakDuration = 30
-        let (coordinator, mockOverlay, _) = makeCoordinator(overlay: MockOverlayPresenting(), notifCenter: MockNotificationCenter())
+        let (coordinator, mockOverlay, _) = makeCoordinator(
+            overlay: MockOverlayPresenting(),
+            notifCenter: MockNotificationCenter())
         defer { coordinator.stopFallbackTimers() }
 
         coordinator.handleNotification(for: .eyes)
         coordinator.presentPendingOverlayIfNeeded()
 
-        XCTAssertEqual(mockOverlay.showCallDurations.first, 30,
+        XCTAssertEqual(
+            mockOverlay.showCallDurations.first,
+            30,
             "showOverlay must use the breakDuration from SettingsStore")
     }
 
     func test_handleNotification_thenPresentPending_passesHapticsEnabledFromSettings() {
         settings.hapticsEnabled = false
-        let (coordinator, mockOverlay, _) = makeCoordinator(overlay: MockOverlayPresenting(), notifCenter: MockNotificationCenter())
+        let (coordinator, mockOverlay, _) = makeCoordinator(
+            overlay: MockOverlayPresenting(),
+            notifCenter: MockNotificationCenter())
         defer { coordinator.stopFallbackTimers() }
 
         coordinator.handleNotification(for: .eyes)
         coordinator.presentPendingOverlayIfNeeded()
 
-        XCTAssertEqual(mockOverlay.showCallHapticsEnabled.first, false,
+        XCTAssertEqual(
+            mockOverlay.showCallHapticsEnabled.first,
+            false,
             "showOverlay must forward hapticsEnabled from SettingsStore")
     }
 
     func test_handleNotification_thenPresentPending_hapticsTrue_whenHapticsEnabled() {
         settings.hapticsEnabled = true
-        let (coordinator, mockOverlay, _) = makeCoordinator(overlay: MockOverlayPresenting(), notifCenter: MockNotificationCenter())
+        let (coordinator, mockOverlay, _) = makeCoordinator(
+            overlay: MockOverlayPresenting(),
+            notifCenter: MockNotificationCenter())
         defer { coordinator.stopFallbackTimers() }
 
         coordinator.handleNotification(for: .posture)
@@ -210,7 +251,9 @@ final class AppCoordinatorTests: XCTestCase {
     }
 
     func test_presentPendingOverlayIfNeeded_withNoPending_doesNotCallShowOverlay() {
-        let (coordinator, mockOverlay, _) = makeCoordinator(overlay: MockOverlayPresenting(), notifCenter: MockNotificationCenter())
+        let (coordinator, mockOverlay, _) = makeCoordinator(
+            overlay: MockOverlayPresenting(),
+            notifCenter: MockNotificationCenter())
         defer { coordinator.stopFallbackTimers() }
 
         coordinator.presentPendingOverlayIfNeeded()
@@ -219,14 +262,18 @@ final class AppCoordinatorTests: XCTestCase {
     }
 
     func test_presentPendingOverlayIfNeeded_calledTwice_showsOnlyOnce() {
-        let (coordinator, mockOverlay, _) = makeCoordinator(overlay: MockOverlayPresenting(), notifCenter: MockNotificationCenter())
+        let (coordinator, mockOverlay, _) = makeCoordinator(
+            overlay: MockOverlayPresenting(),
+            notifCenter: MockNotificationCenter())
         defer { coordinator.stopFallbackTimers() }
 
         coordinator.handleNotification(for: .eyes)
         coordinator.presentPendingOverlayIfNeeded()
         coordinator.presentPendingOverlayIfNeeded() // second call: no pending
 
-        XCTAssertEqual(mockOverlay.showCallCount, 1,
+        XCTAssertEqual(
+            mockOverlay.showCallCount,
+            1,
             "Second presentPendingOverlayIfNeeded with no pending must not show twice")
     }
 
@@ -234,18 +281,24 @@ final class AppCoordinatorTests: XCTestCase {
 
     func test_handleNotification_resetsSnoozeCount_toZero() {
         settings.snoozeCount = 2
-        let (coordinator, _, _) = makeCoordinator(overlay: MockOverlayPresenting(), notifCenter: MockNotificationCenter())
+        let (coordinator, _, _) = makeCoordinator(
+            overlay: MockOverlayPresenting(),
+            notifCenter: MockNotificationCenter())
         defer { coordinator.stopFallbackTimers() }
 
         coordinator.handleNotification(for: .posture)
 
-        XCTAssertEqual(settings.snoozeCount, 0,
+        XCTAssertEqual(
+            settings.snoozeCount,
+            0,
             "handleNotification must reset snoozeCount=0 when a real reminder fires")
     }
 
     func test_handleNotification_resetsSnoozeCount_regardlessOfType() {
         settings.snoozeCount = 1
-        let (coordinator, _, _) = makeCoordinator(overlay: MockOverlayPresenting(), notifCenter: MockNotificationCenter())
+        let (coordinator, _, _) = makeCoordinator(
+            overlay: MockOverlayPresenting(),
+            notifCenter: MockNotificationCenter())
         defer { coordinator.stopFallbackTimers() }
 
         coordinator.handleNotification(for: .eyes)
@@ -257,12 +310,16 @@ final class AppCoordinatorTests: XCTestCase {
 
     func test_cancelAllReminders_withActiveSnooze_clearQueueStillCalled() {
         settings.snoozedUntil = Date().addingTimeInterval(300)
-        let (coordinator, mockOverlay, _) = makeCoordinator(overlay: MockOverlayPresenting(), notifCenter: MockNotificationCenter())
+        let (coordinator, mockOverlay, _) = makeCoordinator(
+            overlay: MockOverlayPresenting(),
+            notifCenter: MockNotificationCenter())
         defer { coordinator.stopFallbackTimers() }
 
         coordinator.cancelAllReminders()
 
-        XCTAssertEqual(mockOverlay.clearQueueCallCount, 1,
+        XCTAssertEqual(
+            mockOverlay.clearQueueCallCount,
+            1,
             "clearQueue must always be called regardless of snooze state")
     }
 
@@ -277,7 +334,9 @@ final class AppCoordinatorTests: XCTestCase {
     /// the coordinator correctly delegates to the overlay manager which would
     /// internally queue the request.
     func test_overlayManager_showOverlay_receivesCorrectType_forEachRequest() {
-        let (coordinator, mockOverlay, _) = makeCoordinator(overlay: MockOverlayPresenting(), notifCenter: MockNotificationCenter())
+        let (coordinator, mockOverlay, _) = makeCoordinator(
+            overlay: MockOverlayPresenting(),
+            notifCenter: MockNotificationCenter())
         defer { coordinator.stopFallbackTimers() }
 
         // First request: store as pending (no active scene in headless test).
@@ -290,5 +349,39 @@ final class AppCoordinatorTests: XCTestCase {
 
         XCTAssertEqual(mockOverlay.showCallCount, 2)
         XCTAssertEqual(mockOverlay.showCallOrder, [.eyes, .posture])
+    }
+
+    // MARK: - Issue #13: PauseConditionProviding DI
+
+    func test_init_withMockPauseConditionProvider_startMonitoringCalled() {
+        let mockNotif = MockNotificationCenter()
+        let mockPause = MockPauseConditionProvider()
+        let coordinator = AppCoordinator(
+            settings: settings,
+            scheduler: ReminderScheduler(notificationCenter: mockNotif),
+            notificationCenter: mockNotif,
+            screenTimeTracker: MockScreenTimeTracker(),
+            pauseConditionProvider: mockPause
+        )
+        defer { coordinator.stopFallbackTimers() }
+        XCTAssertEqual(mockPause.startMonitoringCallCount, 1,
+            "AppCoordinator.init must call startMonitoring() on the injected PauseConditionProviding")
+    }
+
+    // MARK: - Issue #14: ScreenTimeTracking DI
+
+    func test_stopFallbackTimers_callsStopOnInjectedScreenTimeTracker() {
+        let mockNotif = MockNotificationCenter()
+        let mockTracker = MockScreenTimeTracker()
+        let coordinator = AppCoordinator(
+            settings: settings,
+            scheduler: ReminderScheduler(notificationCenter: mockNotif),
+            notificationCenter: mockNotif,
+            screenTimeTracker: mockTracker,
+            pauseConditionProvider: MockPauseConditionProvider()
+        )
+        coordinator.stopFallbackTimers()
+        XCTAssertEqual(mockTracker.stopCallCount, 1,
+            "stopFallbackTimers must call stop() on the injected ScreenTimeTracking")
     }
 }

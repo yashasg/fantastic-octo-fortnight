@@ -16,7 +16,7 @@ struct AppConfig: Codable {
     }
 
     struct Features: Codable {
-        let masterEnabledDefault: Bool
+        let globalEnabledDefault: Bool
         let maxSnoozeCount: Int
     }
 
@@ -36,7 +36,7 @@ extension AppConfig {
             postureBreakDuration: 10
         ),
         features: Features(
-            masterEnabledDefault: true,
+            globalEnabledDefault: true,
             maxSnoozeCount: 3
         )
     )

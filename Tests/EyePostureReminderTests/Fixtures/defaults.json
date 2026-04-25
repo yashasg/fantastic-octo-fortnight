@@ -1,0 +1,12 @@
+{
+  "defaults": {
+    "eyeInterval": 900,
+    "eyeBreakDuration": 15,
+    "postureInterval": 2700,
+    "postureBreakDuration": 20
+  },
+  "features": {
+    "globalEnabledDefault": true,
+    "maxSnoozeCount": 5
+  }
+}

@@ -64,14 +64,14 @@ final class AppCoordinator: ObservableObject {
     /// Tracks continuous screen-on time per reminder type and fires callbacks
     /// when each type's threshold is reached. Replaces both UNNotification
     /// periodic triggers and the legacy foreground fallback timers.
-    private let screenTimeTracker: ScreenTimeTracker
+    private let screenTimeTracker: ScreenTimeTracking
 
     // MARK: - Pause Condition Manager
 
     /// Aggregates Focus mode, CarPlay, and driving-activity signals. When any
     /// condition becomes active (and its corresponding setting is enabled) the
     /// screen-time tracker is paused until all conditions clear AND snooze is clear.
-    private let pauseConditionManager: PauseConditionManager
+    private let pauseConditionManager: PauseConditionProviding
 
     // MARK: - Published State
 
@@ -104,19 +104,21 @@ final class AppCoordinator: ObservableObject {
         settings: SettingsStore = SettingsStore(),
         scheduler: ReminderScheduler = ReminderScheduler(),
         notificationCenter: NotificationScheduling = UNUserNotificationCenter.current(),
-        overlayManager: OverlayPresenting? = nil
+        overlayManager: OverlayPresenting? = nil,
+        screenTimeTracker: ScreenTimeTracking? = nil,
+        pauseConditionProvider: PauseConditionProviding? = nil
     ) {
         self.settings = settings
         self.scheduler = scheduler
         self.notificationCenter = notificationCenter
         self.overlayManager = overlayManager ?? OverlayManager.shared
-        self.screenTimeTracker = ScreenTimeTracker()
-        self.pauseConditionManager = PauseConditionManager(settings: settings)
+        self.screenTimeTracker = screenTimeTracker ?? ScreenTimeTracker()
+        self.pauseConditionManager = pauseConditionProvider ?? PauseConditionManager(settings: settings)
         Logger.lifecycle.info("AppCoordinator initialised")
 
         // Wire ScreenTimeTracker callback — fires on main thread when a type's
         // continuous screen-on threshold is reached.
-        screenTimeTracker.onThresholdReached = { [weak self] type in
+        self.screenTimeTracker.onThresholdReached = { [weak self] type in
             guard let self else { return }
             let duration = self.settings.settings(for: type).breakDuration
             self.overlayManager.showOverlay(
@@ -127,7 +129,7 @@ final class AppCoordinator: ObservableObject {
         // Wire PauseConditionManager — pauses/resumes tracker when conditions change.
         // Critical invariant: only call resumeAll() if BOTH snooze is clear AND no
         // pause conditions are active.
-        pauseConditionManager.onPauseStateChanged = { [weak self] isPaused in
+        self.pauseConditionManager.onPauseStateChanged = { [weak self] isPaused in
             guard let self else { return }
             if isPaused {
                 self.screenTimeTracker.pauseAll()
@@ -142,7 +144,7 @@ final class AppCoordinator: ObservableObject {
                 Logger.scheduling.info("PauseConditionManager: resuming reminders (no active conditions)")
             }
         }
-        pauseConditionManager.startMonitoring()
+        self.pauseConditionManager.startMonitoring()
     }
 
     // MARK: - Notification Permission

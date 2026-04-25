@@ -1,27 +1,36 @@
 @testable import EyePostureReminder
 import XCTest
 
-/// Tests for `AppConfig` — the data-driven default configuration loaded from `defaults.json`.
-///
-/// Tests cover:
-/// - Hardcoded fallback values (used when JSON is absent or corrupt)
-/// - Codable decoding from JSON strings (core schema correctness)
-/// - `AppConfig.load(from:)` — happy path, missing file, corrupt file
-/// - Range validation (intervals > 0, durations > 0)
-/// - Forward compatibility (unknown keys in JSON are ignored)
-/// - Partial JSON (missing required keys fail gracefully via fallback)
-/// - Concurrent access safety
-///
-/// **Bundle injection pattern:** `AppConfig.load(from:)` accepts a `Bundle`
-/// parameter so tests can inject a fixture bundle without touching `Bundle.main`.
-final class AppConfigTests: XCTestCase {
+// Tests for `AppConfig` — the data-driven default configuration loaded from `defaults.json`.
+//
+// Tests cover:
+// - Hardcoded fallback values (used when JSON is absent or corrupt)
+// - Codable decoding from JSON strings (core schema correctness)
+// - `AppConfig.load(from:)` — happy path, missing file, corrupt file
+// - Range validation (intervals > 0, durations > 0)
+// - Forward compatibility (unknown keys in JSON are ignored)
+// - Partial JSON (missing required keys fail gracefully via fallback)
+// - Concurrent access safety
+//
+// **Bundle injection pattern:** `AppConfig.load(from:)` accepts a `Bundle`
+// parameter so tests can inject a fixture bundle without touching `Bundle.main`.
+// swiftlint:disable:next type_body_length
+final class AppConfigTests: XCTestCase { // swiftlint:disable:this type_body_length
 
     // MARK: - Helpers
 
-    /// The test bundle (contains Fixtures/defaults.json at build time).
-    /// In SPM, test-target resources are accessed via `Bundle.module` — the generated
-    /// accessor for this test target — not via `Bundle(for: SomeTestClass.self)`.
-    private var testBundle: Bundle { Bundle.module }
+    /// The test resource bundle (contains Fixtures/defaults.json at build time).
+    ///
+    /// ⚠️ Do NOT use `Bundle.module` here. `@testable import EyePostureReminder` causes
+    /// the production module's `Bundle.module` accessor to shadow the test target's
+    /// generated accessor. Locate the test resource bundle explicitly via the xctest
+    /// bundle URL to avoid the ambiguity.
+    private var testBundle: Bundle {
+        let xctest = Bundle(for: AppConfigTests.self)
+        let subBundleName = "EyePostureReminder_EyePostureReminderTests"
+        let url = xctest.bundleURL.appendingPathComponent(subBundleName + ".bundle")
+        return Bundle(url: url) ?? xctest
+    }
 
     /// Returns an `AppConfig` decoded from a JSON string literal. Asserts non-nil.
     private func decode(_ json: String, file: StaticString = #file, line: UInt = #line) -> AppConfig? {
@@ -268,16 +277,16 @@ final class AppConfigTests: XCTestCase {
 
     // MARK: - Codable: Corrupt / Malformed JSON
 
-    func test_decode_corruptJSON_throws() throws {
-        let data = try XCTUnwrap("not-valid-json{{{{".data(using: .utf8))
+    func test_decode_corruptJSON_throws() {
+        let data = Data("not-valid-json{{{{".utf8)
         XCTAssertThrowsError(
             try JSONDecoder().decode(AppConfig.self, from: data),
             "Malformed JSON must throw a decoding error"
         )
     }
 
-    func test_decode_emptyJSON_throws() throws {
-        let data = try XCTUnwrap("{}".data(using: .utf8))
+    func test_decode_emptyJSON_throws() {
+        let data = Data("{}".utf8)
         XCTAssertThrowsError(
             try JSONDecoder().decode(AppConfig.self, from: data),
             "Empty JSON object must throw DecodingError (required keys missing)"
