@@ -32,6 +32,7 @@ import XCTest
 ///   fail to **compile**.
 /// - If the Done button body stops writing `isPresented = false`, the binding-propagation
 ///   test fails at runtime.
+@MainActor
 final class SettingsDismissRegressionTests: XCTestCase {
 
     /// Compile-time guard: SettingsView must be instantiatable.
@@ -433,6 +434,7 @@ final class ScreenTimeTrackerRegressionTests: XCTestCase {
 /// - `test_customConfig_*` fail if the config parameter is ignored.
 /// - `test_userChange_overrides_*` fail if UserDefaults-stored values are clobbered by JSON.
 /// - `test_reminderSettings_default*_matchesAppConfig` fail if the statics revert to literals.
+@MainActor
 final class DataDrivenDefaultsRegressionTests: XCTestCase {
 
     // MARK: First-Launch: Defaults Must Come from AppConfig

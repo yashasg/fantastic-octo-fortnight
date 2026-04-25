@@ -191,6 +191,7 @@ final class SettingsStoreViewModelIntegrationTests: XCTestCase {
 
 /// Verifies the data-driven defaults pipeline using real `UserDefaults` suites
 /// (no `MockSettingsPersisting`). Each test gets a fresh suite to avoid pollution.
+@MainActor
 final class AppConfigSettingsStoreIntegrationTests: XCTestCase {
 
     private var suiteName: String!

@@ -5,7 +5,7 @@ import os
 
 /// Structured analytics events for Xcode Instruments / Console.app debugging.
 /// All events are emitted via `os.Logger` — no SDK, no network calls.
-enum AnalyticsEvent {
+enum AnalyticsEvent: Sendable {
 
     // MARK: Session
 
@@ -36,12 +36,14 @@ enum AnalyticsEvent {
     }
 
     // MARK: Snooze
-
     /// Fired when the user activates a snooze.
     case snoozeActivated(durationOption: String)
 
     /// Fired when a snooze period expires and normal scheduling resumes.
     case snoozeExpired
+
+    /// Fired when the user manually cancels an active snooze.
+    case snoozeCancelled
 
     // MARK: Settings
 
@@ -116,6 +118,9 @@ enum AnalyticsLogger {
 
         case .snoozeExpired:
             logger.info("event=snooze_expired")
+
+        case .snoozeCancelled:
+            logger.info("event=snooze_cancelled")
 
         case let .settingChanged(setting, oldValue, newValue):
             logger.info("""

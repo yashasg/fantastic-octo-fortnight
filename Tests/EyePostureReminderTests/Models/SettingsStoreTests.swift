@@ -1,6 +1,7 @@
 @testable import EyePostureReminder
 import XCTest
 
+@MainActor
 final class SettingsStoreTests: XCTestCase {
 
     var mockPersistence: MockSettingsPersisting!

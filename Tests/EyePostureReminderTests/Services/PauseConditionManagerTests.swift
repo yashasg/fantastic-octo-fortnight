@@ -355,6 +355,7 @@ final class PauseConditionManagerTests: XCTestCase {
 //   epr.pauseDuringFocus   (default true)
 //   epr.pauseWhileDriving  (default true)
 
+@MainActor
 final class SettingsPauseFlagsTests: XCTestCase {
 
     var mockPersistence: MockSettingsPersisting!

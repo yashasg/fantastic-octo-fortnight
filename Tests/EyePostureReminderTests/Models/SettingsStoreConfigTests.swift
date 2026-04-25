@@ -17,6 +17,7 @@ import XCTest
 /// init(store: SettingsPersisting = UserDefaults.standard, config: AppConfig = .load())
 /// func resetToDefaults(config: AppConfig = .load())
 /// ```
+@MainActor
 final class SettingsStoreConfigTests: XCTestCase {
 
     var mockPersistence: MockSettingsPersisting!

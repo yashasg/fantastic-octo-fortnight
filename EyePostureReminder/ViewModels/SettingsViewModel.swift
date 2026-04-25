@@ -200,6 +200,7 @@ final class SettingsViewModel: ObservableObject {
     func cancelSnooze() {
         settings.snoozedUntil = nil
         settings.snoozeCount  = 0
+        AnalyticsLogger.log(.snoozeCancelled)
         Task {
             await scheduler.scheduleReminders(using: settings)
             Logger.settings.info("Snooze cancelled — reminders rescheduled")

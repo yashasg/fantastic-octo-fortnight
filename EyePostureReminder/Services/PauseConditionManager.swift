@@ -253,6 +253,13 @@ final class PauseConditionManager: PauseConditionProviding {
         focusDetector.startMonitoring()
         carPlayDetector.startMonitoring()
         drivingDetector.startMonitoring()
+
+        // #73: Propagate initial detector state immediately — detectors only fire
+        // onXxxChanged on state *changes*, so if CarPlay or driving is already active
+        // on cold-start, activeConditions would stay empty without this seed call.
+        update(.carPlay, isActive: carPlayDetector.isCarPlayActive && settings.pauseWhileDriving)
+        update(.driving, isActive: drivingDetector.isDriving && settings.pauseWhileDriving)
+
         Logger.scheduling.info("PauseConditionManager: monitoring started")
     }
 

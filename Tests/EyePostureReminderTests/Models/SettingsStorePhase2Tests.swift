@@ -2,6 +2,7 @@
 import XCTest
 
 /// Phase 2 unit tests for `SettingsStore` covering haptics and snooze-count persistence.
+@MainActor
 final class SettingsStorePhase2Tests: XCTestCase {
 
     var mockPersistence: MockSettingsPersisting!

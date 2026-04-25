@@ -23,6 +23,7 @@ import os
 /// epr.pauseDuringFocus       Bool   – pause reminders while a Focus mode is active, default true
 /// epr.pauseWhileDriving      Bool   – pause reminders while driving or CarPlay is active, default true
 /// ```
+@MainActor
 final class SettingsStore: ObservableObject {
 
     // MARK: - Global Toggle

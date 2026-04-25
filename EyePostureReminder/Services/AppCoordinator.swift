@@ -107,19 +107,19 @@ final class AppCoordinator: ObservableObject {
     // MARK: - Init
 
     init(
-        settings: SettingsStore = SettingsStore(),
+        settings: SettingsStore? = nil,
         scheduler: ReminderScheduling? = nil,
         notificationCenter: NotificationScheduling = UNUserNotificationCenter.current(),
         overlayManager: OverlayPresenting? = nil,
         screenTimeTracker: ScreenTimeTracking? = nil,
         pauseConditionProvider: PauseConditionProviding? = nil
     ) {
-        self.settings = settings
+        self.settings = settings ?? SettingsStore()
         self.scheduler = scheduler ?? ReminderScheduler()
         self.notificationCenter = notificationCenter
         self.overlayManager = overlayManager ?? OverlayManager.shared
         self.screenTimeTracker = screenTimeTracker ?? ScreenTimeTracker()
-        self.pauseConditionManager = pauseConditionProvider ?? PauseConditionManager(settings: settings)
+        self.pauseConditionManager = pauseConditionProvider ?? PauseConditionManager(settings: self.settings)
         Logger.lifecycle.info("AppCoordinator initialised")
 
         // Wire ScreenTimeTracker callback — fires on main thread when a type's
@@ -243,12 +243,17 @@ final class AppCoordinator: ObservableObject {
 
         // Configure ScreenTimeTracker with current thresholds and start counting.
         configureScreenTimeTracker()
-        sessionStartTime = Date()
-        AnalyticsLogger.log(.appSessionStart(
-            eyeEnabled: settings.isEnabled(for: .eyes),
-            postureEnabled: settings.isEnabled(for: .posture),
-            snoozeActive: settings.snoozedUntil.map { $0 > Date() } ?? false
-        ))
+        // #71: Only fire appSessionStart once per real session — guard against
+        // re-entry from snooze-cancel or snooze-wake paths that call scheduleReminders()
+        // while a session is already in progress.
+        if sessionStartTime == nil {
+            sessionStartTime = Date()
+            AnalyticsLogger.log(.appSessionStart(
+                eyeEnabled: settings.isEnabled(for: .eyes),
+                postureEnabled: settings.isEnabled(for: .posture),
+                snoozeActive: settings.snoozedUntil.map { $0 > Date() } ?? false
+            ))
+        }
         Logger.scheduling.info("ScreenTimeTracker configured — reminders fire after continuous screen-on time")
     }
 
@@ -342,15 +347,23 @@ final class AppCoordinator: ObservableObject {
                 Logger.scheduling.info("Foreground transition: snooze expired — resuming normal scheduling")
                 await scheduleReminders()
             } else {
-                // Snooze still active — re-arm wake task in case it was lost.
+                // Snooze still active — re-arm wake task and notification in case
+                // they were lost while the app was backgrounded (#73).
                 scheduleSnoozeWakeTask(at: snoozeEnd)
+                if notificationAuthStatus == .authorized {
+                    await scheduleSnoozeWakeNotification(at: snoozeEnd)
+                }
                 Logger.scheduling.info("Foreground transition: snooze still active until \(snoozeEnd)")
             }
             return
         }
 
         // ScreenTimeTracker starts via didBecomeActiveNotification automatically.
-        // Nothing additional needed for the screen-time trigger path.
+        // #65: Record session start so appSessionEnd can compute duration correctly
+        // on subsequent foreground returns (scheduleReminders is not re-called here).
+        if sessionStartTime == nil {
+            sessionStartTime = Date()
+        }
         Logger.scheduling.debug("Foreground transition: ScreenTimeTracker will resume via didBecomeActive")
     }
 
@@ -457,6 +470,12 @@ final class AppCoordinator: ObservableObject {
     /// Update the ScreenTimeTracker threshold for a single type after the
     /// debounce window has elapsed.
     private func performReschedule(for type: ReminderType) async {
+        // #74: Skip tracker restart when snooze is active — settings changes
+        // during a snooze must not override the explicit pauseAll() applied at snooze start.
+        guard (settings.snoozedUntil ?? .distantPast) <= Date() else {
+            Logger.scheduling.debug("performReschedule skipped — snooze still active")
+            return
+        }
         await refreshAuthStatus()
 
         if settings.isEnabled(for: type) {
@@ -529,8 +548,13 @@ extension AppCoordinator: ReminderScheduling {
         // If snooze was just applied (snoozedUntil set before this call),
         // arm the in-process wake task immediately so the app resumes on time
         // while staying in the foreground throughout the snooze period.
+        // #73: Also schedule the silent background notification so a backgrounded
+        // app can wake even if the in-process task is killed by the OS.
         if let snoozeEnd = settings.snoozedUntil, snoozeEnd > Date() {
             scheduleSnoozeWakeTask(at: snoozeEnd)
+            if notificationAuthStatus == .authorized {
+                Task { await self.scheduleSnoozeWakeNotification(at: snoozeEnd) }
+            }
         }
     }
 }
