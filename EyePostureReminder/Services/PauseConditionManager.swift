@@ -37,11 +37,9 @@ protocol DrivingActivityDetecting: AnyObject {
     func stopMonitoring()
 }
 
-protocol PauseConditionProviding: AnyObject {
+protocol PauseConditionProviding: ServiceLifecycle {
     var isPaused: Bool { get }
     var onPauseStateChanged: ((Bool) -> Void)? { get set }
-    func startMonitoring()
-    func stopMonitoring()
 }
 
 // MARK: - LiveFocusStatusDetector

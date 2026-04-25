@@ -375,7 +375,7 @@ final class AppCoordinatorTests: XCTestCase {
 
     // MARK: - Issue #14: ScreenTimeTracking DI
 
-    func test_stopFallbackTimers_callsStopOnInjectedScreenTimeTracker() {
+    func test_stopFallbackTimers_callsStopMonitoringOnInjectedScreenTimeTracker() {
         let mockNotif = MockNotificationCenter()
         let mockTracker = MockScreenTimeTracker()
         let coordinator = AppCoordinator(
@@ -387,9 +387,9 @@ final class AppCoordinatorTests: XCTestCase {
         )
         coordinator.stopFallbackTimers()
         XCTAssertEqual(
-            mockTracker.stopCallCount,
+            mockTracker.stopMonitoringCallCount,
             1,
-            "stopFallbackTimers must call stop() on the injected ScreenTimeTracking")
+            "stopFallbackTimers must call stopMonitoring() on the injected ScreenTimeTracking")
     }
 
     // MARK: - Issue #29: clearExpiredSnoozeIfNeeded + silent snooze-wake notification

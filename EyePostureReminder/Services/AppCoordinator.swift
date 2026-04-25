@@ -383,7 +383,7 @@ final class AppCoordinator: ObservableObject {
     ///
     /// Retained for call-site compatibility (e.g., test `tearDown`).
     func stopFallbackTimers() {
-        screenTimeTracker.stop()
+        screenTimeTracker.stopMonitoring()
     }
 
     // MARK: - Snooze Wake (Private)
@@ -462,7 +462,7 @@ final class AppCoordinator: ObservableObject {
         if settings.isEnabled(for: type) {
             let interval = settings.settings(for: type).interval
             screenTimeTracker.setThreshold(interval, for: type)
-            screenTimeTracker.startIfActive()
+            screenTimeTracker.startMonitoring()
             Logger.scheduling.info("Rescheduled \(type.rawValue): screen-time threshold → \(interval)s")
         } else {
             screenTimeTracker.disableTracking(for: type)
@@ -494,7 +494,7 @@ final class AppCoordinator: ObservableObject {
             return
         }
         screenTimeTracker.resumeAll()
-        screenTimeTracker.startIfActive()
+        screenTimeTracker.startMonitoring()
     }
 }
 

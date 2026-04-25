@@ -531,7 +531,7 @@ final class AppCoordinatorExtendedTests: XCTestCase {
         coordinator.startFallbackTimers()
     }
 
-    func test_startFallbackTimers_callsStartIfActiveOnTracker() {
+    func test_startFallbackTimers_callsStartMonitoringOnTracker() {
         let mockTracker = MockScreenTimeTracker()
         let (coordinator, _, _, _) = makeCoordinator(screenTimeTracker: mockTracker)
         defer { coordinator.stopFallbackTimers() }
@@ -539,9 +539,9 @@ final class AppCoordinatorExtendedTests: XCTestCase {
         coordinator.startFallbackTimers()
 
         XCTAssertEqual(
-            mockTracker.startIfActiveCallCount,
+            mockTracker.startMonitoringCallCount,
             1,
-            "startFallbackTimers must call startIfActive() on the ScreenTimeTracker")
+            "startFallbackTimers must call startMonitoring() on the ScreenTimeTracker")
     }
 }
 

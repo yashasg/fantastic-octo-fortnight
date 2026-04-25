@@ -20,7 +20,9 @@ final class MockScreenTimeTracker: ScreenTimeTracking {
     private(set) var resetCalls: [ReminderType] = []
     private(set) var resetAllCallCount = 0
     private(set) var startIfActiveCallCount = 0
+    private(set) var startMonitoringCallCount = 0
     private(set) var stopCallCount = 0
+    private(set) var stopMonitoringCallCount = 0
 
     // MARK: - ScreenTimeTracking
 
@@ -62,6 +64,14 @@ final class MockScreenTimeTracker: ScreenTimeTracking {
 
     func stop() {
         stopCallCount += 1
+    }
+
+    func startMonitoring() {
+        startMonitoringCallCount += 1
+    }
+
+    func stopMonitoring() {
+        stopMonitoringCallCount += 1
     }
 
     // MARK: - Simulation Helpers

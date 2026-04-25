@@ -25,7 +25,7 @@ import UIKit
 ///
 /// All methods must be called on the main thread (owned by `@MainActor AppCoordinator`).
 @MainActor
-protocol ScreenTimeTracking: AnyObject {
+protocol ScreenTimeTracking: ServiceLifecycle {
     var onThresholdReached: ((ReminderType) -> Void)? { get set }
     func setThreshold(_ interval: TimeInterval, for type: ReminderType)
     func disableTracking(for type: ReminderType)
@@ -159,6 +159,18 @@ final class ScreenTimeTracker: ScreenTimeTracking {
         stopTicking()
         resetAll()
         Logger.scheduling.debug("ScreenTimeTracker: stopped and reset")
+    }
+
+    // MARK: - ServiceLifecycle
+
+    /// Satisfies `ServiceLifecycle` — delegates to `startIfActive()`.
+    func startMonitoring() {
+        startIfActive()
+    }
+
+    /// Satisfies `ServiceLifecycle` — delegates to `stop()`.
+    func stopMonitoring() {
+        stop()
     }
 
     // MARK: - Private: Lifecycle Observers
