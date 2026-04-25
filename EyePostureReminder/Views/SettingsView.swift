@@ -23,9 +23,7 @@ struct SettingsView: View {
 
     private var snoozeUntilFormatted: String {
         guard let until = settings.snoozedUntil, until > Date() else { return "" }
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm"
-        return formatter.string(from: until)
+        return until.formatted(date: .omitted, time: .shortened)
     }
 
     var body: some View {

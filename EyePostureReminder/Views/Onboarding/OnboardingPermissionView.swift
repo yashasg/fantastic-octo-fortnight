@@ -63,6 +63,7 @@ struct OnboardingPermissionView: View {
                     // Secondary option — no system prompt, just advance
                     Button(action: onNext) {
                         Text("onboarding.permission.skipButton", bundle: .module)
+                            .frame(minHeight: 44)
                     }
                         .foregroundStyle(.secondary)
                         .font(.subheadline)
