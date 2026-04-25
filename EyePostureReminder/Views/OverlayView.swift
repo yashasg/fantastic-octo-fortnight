@@ -49,6 +49,7 @@ struct OverlayView: View {
             .padding(.top, AppSpacing.lg)
             .padding(.trailing, AppSpacing.lg)
             .accessibilityLabel(Text("overlay.dismissButton", bundle: .module))
+            .accessibilityHint(Text("overlay.dismissButton.hint", bundle: .module))
             .accessibilityIdentifier("overlay.dismissButton")
 
             // MARK: Center content
@@ -100,8 +101,8 @@ struct OverlayView: View {
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel(Text("overlay.countdown.label", bundle: .module))
                 .accessibilityValue(
-                    String(
-                        format: String(localized: "overlay.countdown.value", bundle: .module),
+                    String.localizedStringWithFormat(
+                        NSLocalizedString("overlay.countdown.value", bundle: .module, comment: ""),
                         secondsRemaining
                     )
                 )

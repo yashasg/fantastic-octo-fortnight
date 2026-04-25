@@ -387,9 +387,8 @@ final class DarkModeTests: XCTestCase {
             AppColor.warningText
         ]
         for token in tokens {
-            _ = UIColor(token).resolvedColor(with: darkTraits)
+            let resolved = UIColor(token).resolvedColor(with: darkTraits)
+            XCTAssertNotNil(resolved, "\(token) must resolve to a non-nil UIColor in dark mode")
         }
-        // Reaching this line means no crash
-        XCTAssertTrue(true, "All AppColor tokens must resolve without crash in dark mode context")
     }
 }

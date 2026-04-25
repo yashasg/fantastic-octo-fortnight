@@ -26,7 +26,7 @@ final class DesignSystemTests: XCTestCase {
         _ = font
         _ = spec
         // Both expressions compile — proves no hardcoded `size:` parameter.
-        XCTAssertNotNil("\(font)")
+        XCTAssertFalse(String(describing: font).isEmpty, "headline font must produce a non-empty description")
     }
 
     /// Body compiles with Font.TextStyle .body — scales with Dynamic Type.
@@ -35,7 +35,7 @@ final class DesignSystemTests: XCTestCase {
         let spec: Font = .system(.body)
         _ = font
         _ = spec
-        XCTAssertNotNil("\(font)")
+        XCTAssertFalse(String(describing: font).isEmpty, "body font must produce a non-empty description")
     }
 
     /// bodyEmphasized compiles with Font.TextStyle .headline — scales with Dynamic Type.
@@ -44,7 +44,7 @@ final class DesignSystemTests: XCTestCase {
         let spec: Font = .system(.headline)
         _ = font
         _ = spec
-        XCTAssertNotNil("\(font)")
+        XCTAssertFalse(String(describing: font).isEmpty, "bodyEmphasized font must produce a non-empty description")
     }
 
     /// Caption compiles with Font.TextStyle .footnote — scales with Dynamic Type.
@@ -53,7 +53,7 @@ final class DesignSystemTests: XCTestCase {
         let spec: Font = .system(.footnote)
         _ = font
         _ = spec
-        XCTAssertNotNil("\(font)")
+        XCTAssertFalse(String(describing: font).isEmpty, "caption font must produce a non-empty description")
     }
 
     /// Countdown is intentionally fixed-size (64pt monospaced bold).
@@ -64,7 +64,7 @@ final class DesignSystemTests: XCTestCase {
         _ = font
         _ = spec
         // Compile-time confirmation that the fixed-size variant exists.
-        XCTAssertNotNil("\(font)")
+        XCTAssertFalse(String(describing: font).isEmpty, "countdown font must produce a non-empty description")
     }
 
     // MARK: - AppSpacing: 4pt Grid Compliance

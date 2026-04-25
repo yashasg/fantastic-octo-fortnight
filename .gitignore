@@ -33,3 +33,10 @@ xcuserdata/
 .AppleDouble
 .LSOverride
 TestResults*.xcresult/
+
+# One-time scripts and tool output logs
+fix_multiline.py
+manual_violations.txt
+other_violations.txt
+swiftlint_violations.txt
+excalidraw.log

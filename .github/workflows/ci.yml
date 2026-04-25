@@ -87,7 +87,7 @@ jobs:
 
       # ── Lint ─────────────────────────────────────────────────────────────────
       - name: Install SwiftLint
-        run: brew install swiftlint@0.57.0 || brew install swiftlint
+        run: brew install swiftlint@0.57.0
 
       - name: Lint (SwiftLint)
         run: ./scripts/build.sh lint
@@ -96,7 +96,11 @@ jobs:
       - name: Report coverage
         if: always()
         run: |
-          xcrun xccov view --report TestResults.xcresult || true
+          xcrun xccov view --report TestResults.xcresult 2>/dev/null || true
+
+      - name: Enforce coverage threshold
+        if: success()
+        run: |
           COVERAGE=$(xcrun xccov view --report --json TestResults.xcresult \
             | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['lineCoverage']*100)" 2>/dev/null || echo "0")
           echo "Line coverage: ${COVERAGE}%"

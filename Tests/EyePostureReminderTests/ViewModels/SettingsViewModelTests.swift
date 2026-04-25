@@ -270,4 +270,28 @@ final class SettingsViewModelTests: XCTestCase {
             4,
             "Every setting change must trigger a reschedule, even when called rapidly")
     }
+
+    // MARK: - pauseDuringFocus / pauseWhileDriving setter pass-through
+
+    func test_pauseDuringFocus_setter_passesValueToSettings() {
+        sut.pauseDuringFocus = true
+        XCTAssertTrue(settings.pauseDuringFocus, "Setting pauseDuringFocus via VM must persist to SettingsStore")
+    }
+
+    func test_pauseDuringFocus_setter_canBeClearedAgain() {
+        settings.pauseDuringFocus = true
+        sut.pauseDuringFocus = false
+        XCTAssertFalse(settings.pauseDuringFocus, "Clearing pauseDuringFocus via VM must persist to SettingsStore")
+    }
+
+    func test_pauseWhileDriving_setter_passesValueToSettings() {
+        sut.pauseWhileDriving = true
+        XCTAssertTrue(settings.pauseWhileDriving, "Setting pauseWhileDriving via VM must persist to SettingsStore")
+    }
+
+    func test_pauseWhileDriving_setter_canBeClearedAgain() {
+        settings.pauseWhileDriving = true
+        sut.pauseWhileDriving = false
+        XCTAssertFalse(settings.pauseWhileDriving, "Clearing pauseWhileDriving via VM must persist to SettingsStore")
+    }
 }

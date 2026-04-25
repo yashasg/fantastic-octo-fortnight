@@ -284,14 +284,18 @@ final class ScreenTimeTrackerTests: XCTestCase {
     /// A paused type must never trigger the callback even after the tick timer runs.
     func test_pausedType_doesNotFireCallback() async throws {
         var callbackFired = false
+        let noCallback = expectation(description: "paused type must not fire callback")
+        noCallback.isInverted = true
         sut.setThreshold(2, for: .eyes)
         sut.pause(for: .eyes)
-        sut.onThresholdReached = { _ in callbackFired = true }
+        sut.onThresholdReached = { _ in
+            callbackFired = true
+            noCallback.fulfill()
+        }
 
         NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
 
-        // Wait 3 seconds — the threshold would have fired without the pause.
-        try await Task.sleep(nanoseconds: 3_000_000_000)
+        await fulfillment(of: [noCallback], timeout: 3.5)
         XCTAssertFalse(callbackFired, "Paused type must not fire the threshold callback")
         sut.stop()
     }

@@ -465,6 +465,17 @@
         }
       }
     },
+    "overlay.dismissButton.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ends the break early and returns to the app"
+          }
+        }
+      }
+    },
     "overlay.settingsButton": {
       "extractionState": "manual",
       "localizations": {
@@ -482,7 +493,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Dismisses this reminder and reveals Settings"
+            "value": "Closes this reminder and opens the Settings screen"
           }
         }
       }

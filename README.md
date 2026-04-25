@@ -10,6 +10,12 @@ A lightweight iOS app that runs in the background and reminds you to rest your e
 - Full-screen dismissible overlay with countdown timer
 - Dropdown pickers for reminder interval and break length
 - Foreground screen-time tracking via a 1-second `Timer` — reminders fire based on actual eyes-on-screen time, not wall-clock intervals
+- 🚀 **Onboarding flow** – 3-screen first-launch guide (Welcome → Permissions → Setup)
+- 📳 **Haptic feedback** – tactile notifications on reminder appear and dismiss (toggle in Settings)
+- 💤 **Snooze** – snooze active reminders with configurable limits
+- ♿ **Accessibility** – Dynamic Type, VoiceOver labels/hints, Reduce Motion support
+- ⚙️ **Data-driven configuration** – intervals, durations, and feature flags loaded from `defaults.json`
+- 📄 **Legal docs in-app** – Terms of Service, Privacy Policy, and Disclaimer bundled and accessible in Settings
 
 ## Building & Testing
 
