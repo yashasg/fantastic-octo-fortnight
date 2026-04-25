@@ -339,3 +339,9 @@ Performed a full audit of the production codebase vs ARCHITECTURE.md (which was 
 - Livingston's coverage analysis confirms Services layer strength (46%)
 
 **Next:** ARCHITECTURE.md now authoritative for Phase 2 completion and Phase 3 planning
+
+## Archive
+
+### 2025-07-25 — Initial Architecture Scaffolding
+
+Early architecture foundational work: Models, Services, ViewModels, DesignSystem scaffolding with all protocol, service skeleton definitions. Pre-Phase 1 architecture decisions. Preserved for reference; superseded by Phase 1-2 implementations and updated ARCHITECTURE.md audit (2026-04-25).

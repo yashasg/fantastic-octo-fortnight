@@ -264,3 +264,9 @@ Settings UI now clearly communicates "after X min of screen time" mental model. 
 ### Next Phase
 
 UI layer ready for Phase 2 expansion. Legal content handoff to human team.
+
+## Archive
+
+### 2026-04-24 — UI Layer Phase 1 (M1.2, M1.5)
+
+Early phase 1 UI implementation decisions (OverlayView lifecycle, swipe gestures, animations, accessibility, SettingsViewModel patterns, string catalog) and legal/disclaimer/settings integration completed. All build verified and tests passing. Preserved for reference; current active work continues in Phase 2 Views expansion.

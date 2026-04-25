@@ -233,3 +233,11 @@ Documentation ready for Phase 2 planning cycle.
 **Cross-Impact Summary:**
 - Architecture clarity enables Services impl → Views integration ready
 - All Phase 1+2 tests now stable; ready for App Store submission decision
+
+## Archive
+
+### 2026-04-24 — Legacy Planning & Preparation
+
+**Initial Roadmap Planning, M2.7 App Store Preparation, Data-Driven Config Spec, Dark Mode Feature Scoping, App Store Metadata, Wave 4 Native-First Config**
+
+Consolidated 2026-04-24 planning entries covering early architecture decisions (MVVM + UNUserNotificationCenter), app store listing metadata, privacy policy, data-driven configuration exploration, dark mode feature scope, and final 4-layer config architecture (Asset Catalog + String Catalog + defaults.json + Swift code). All decisions have been implemented and verified; legacy planning notes preserved for reference. Phase 0 foundation complete; Phase 1-2 implementation active.
