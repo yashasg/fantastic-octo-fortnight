@@ -120,6 +120,9 @@ final class AppCoordinator: ObservableObject {
         // continuous screen-on threshold is reached.
         self.screenTimeTracker.onThresholdReached = { [weak self] type in
             guard let self else { return }
+            // New reminder cycle — reset consecutive snooze count so the user
+            // gets a fresh snooze budget on every threshold fire.
+            self.settings.snoozeCount = 0
             let duration = self.settings.settings(for: type).breakDuration
             self.overlayManager.showOverlay(
                 for: type, duration: duration, hapticsEnabled: self.settings.hapticsEnabled) {}
