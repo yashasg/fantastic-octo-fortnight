@@ -22,7 +22,6 @@ struct OnboardingView: View {
         }
         .tabViewStyle(PageTabViewStyle(indexDisplayMode: .always))
         .indexViewStyle(PageIndexViewStyle(backgroundDisplayMode: .always))
-        .ignoresSafeArea(edges: .top)
     }
 
     private func finishOnboarding() {

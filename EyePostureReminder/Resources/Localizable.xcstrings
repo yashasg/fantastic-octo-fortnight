@@ -1026,6 +1026,17 @@
         }
       }
     },
+    "settings.snooze.limitReached.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snooze limit reached. Wait for the next reminder before snoozing again."
+          }
+        }
+      }
+    },
     "settings.section.smartPause": {
       "extractionState": "manual",
       "localizations": {

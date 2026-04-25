@@ -11,6 +11,7 @@ struct OverlayView: View {
     @State private var secondsRemaining: Int
     @State private var timer: Timer?
     @State private var contentOpacity: Double = 0
+    @State private var slideOffset: CGFloat = 300
     @State private var isDismissing = false
 
     // Generators created in onAppear and pre-prepared for low-latency haptics.
@@ -134,6 +135,7 @@ struct OverlayView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .opacity(contentOpacity)
+        .offset(y: slideOffset)
         // Swipe UP to dismiss (negative Y translation = upward drag)
         .gesture(
             DragGesture(minimumDistance: 30)
@@ -157,6 +159,7 @@ struct OverlayView: View {
             } else {
                 withAnimation(AppAnimation.overlayAppearCurve) {
                     contentOpacity = 1
+                    slideOffset = 0
                 }
             }
             startTimer()
@@ -181,6 +184,7 @@ struct OverlayView: View {
         } else {
             withAnimation(AppAnimation.overlayDismissCurve) {
                 contentOpacity = 0
+                slideOffset = -UIScreen.main.bounds.height
             }
             DispatchQueue.main.asyncAfter(deadline: .now() + AppAnimation.overlayDismiss) {
                 onDismiss()

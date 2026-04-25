@@ -1,15 +1,25 @@
 import SwiftUI
 import UIKit
 
+// MARK: - ViewModel Box
+
+/// @StateObject container that gives SwiftUI-managed lifecycle to SettingsViewModel.
+/// Using @StateObject (instead of @State) ensures SwiftUI preserves the reference
+/// across view re-renders and parent view updates.
+private final class SettingsViewModelBox: ObservableObject {
+    var inner: SettingsViewModel?
+}
+
 struct SettingsView: View {
 
     @EnvironmentObject var settings: SettingsStore
     @EnvironmentObject var coordinator: AppCoordinator
 
     // SettingsViewModel handles scheduling side-effects only.
-    // Using @State is correct here because we only call action methods on it —
-    // the view never observes any @Published properties from the VM itself.
-    @State private var viewModel: SettingsViewModel?
+    // Stored in a @StateObject container so SwiftUI properly manages the class lifecycle.
+    @StateObject private var vmBox = SettingsViewModelBox()
+
+    private var viewModel: SettingsViewModel? { vmBox.inner }
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -111,16 +121,18 @@ struct SettingsView: View {
                         snoozeUntilFormatted
                     ))
 
-                    Button(role: .destructive) {
-                        viewModel?.cancelSnooze()
-                    } label: {
-                        Label {
-                            Text("settings.snooze.cancelButton", bundle: .module)
-                        } icon: {
-                            Image(systemName: "bell.fill")
+                    Button(
+                        action: { viewModel?.cancelSnooze() },
+                        label: {
+                            Label {
+                                Text("settings.snooze.cancelButton", bundle: .module)
+                            } icon: {
+                                Image(systemName: "bell.fill")
+                            }
+                                .font(AppFont.body)
                         }
-                            .font(AppFont.body)
-                    }
+                    )
+                    .foregroundStyle(AppColor.reminderBlue)
                     .accessibilityHint(Text("settings.snooze.cancelButton.hint", bundle: .module))
                 } else {
                     Button(
@@ -128,8 +140,11 @@ struct SettingsView: View {
                         label: { Text("settings.snooze.5min", bundle: .module) }
                     )
                     .font(AppFont.body)
+                    .disabled(!(viewModel?.canSnooze ?? false))
                     .accessibilityLabel(Text("settings.snooze.5min.label", bundle: .module))
-                    .accessibilityHint(Text("settings.snooze.5min.hint", bundle: .module))
+                    .accessibilityHint(viewModel?.canSnooze ?? false
+                        ? Text("settings.snooze.5min.hint", bundle: .module)
+                        : Text("settings.snooze.limitReached.hint", bundle: .module))
                     .accessibilityIdentifier("settings.snooze.5min")
 
                     Button(
@@ -137,8 +152,11 @@ struct SettingsView: View {
                         label: { Text("settings.snooze.1hour", bundle: .module) }
                     )
                     .font(AppFont.body)
+                    .disabled(!(viewModel?.canSnooze ?? false))
                     .accessibilityLabel(Text("settings.snooze.1hour.label", bundle: .module))
-                    .accessibilityHint(Text("settings.snooze.1hour.hint", bundle: .module))
+                    .accessibilityHint(viewModel?.canSnooze ?? false
+                        ? Text("settings.snooze.1hour.hint", bundle: .module)
+                        : Text("settings.snooze.limitReached.hint", bundle: .module))
 
                     Button(
                         action: { viewModel?.snooze(option: .restOfDay) },
@@ -146,8 +164,11 @@ struct SettingsView: View {
                     )
                     .font(AppFont.body)
                     .foregroundStyle(AppColor.warningText)
+                    .disabled(!(viewModel?.canSnooze ?? false))
                     .accessibilityLabel(Text("settings.snooze.restOfDay.label", bundle: .module))
-                    .accessibilityHint(Text("settings.snooze.restOfDay.hint", bundle: .module))
+                    .accessibilityHint(viewModel?.canSnooze ?? false
+                        ? Text("settings.snooze.restOfDay.hint", bundle: .module)
+                        : Text("settings.snooze.limitReached.hint", bundle: .module))
                 }
             } header: {
                 Text("settings.section.snooze", bundle: .module)
@@ -260,11 +281,8 @@ struct SettingsView: View {
         .animation(reduceMotion ? nil : AppAnimation.settingsExpandCurve, value: settings.globalEnabled)
         .animation(reduceMotion ? nil : AppAnimation.settingsExpandCurve, value: isSnoozed)
         .onAppear {
-            if viewModel == nil {
-                // Pass `coordinator` as `ReminderScheduling` so setting changes
-                // route through the auth-aware coordinator paths (including
-                // fallback-timer updates when notifications are denied).
-                viewModel = SettingsViewModel(
+            if vmBox.inner == nil {
+                vmBox.inner = SettingsViewModel(
                     settings: settings,
                     scheduler: coordinator
                 )

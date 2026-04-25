@@ -10,8 +10,8 @@ import SwiftUI
 
 enum AppColor {
     /// Eye breaks — calming blue, adaptive for dark mode.
-    /// Light: #4A90D9 (3.1:1 on white — sufficient for large icons/UI components).
-    /// Dark:  #5BA8F0 (4.0:1 on near-black — brighter for visual pop on dark backgrounds).
+    /// Light: #2868B0 (5.6:1 on white — WCAG AA for normal text and CTA button text).
+    /// Dark:  #82C3FF (high contrast on near-black — vivid, accessible blue for dark mode).
     static let reminderBlue = Color("ReminderBlue")
 
     /// Posture checks — green, adaptive for dark mode.

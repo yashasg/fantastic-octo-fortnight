@@ -79,6 +79,12 @@ struct HomeView: View {
                 showSettings = true
             }
         }
+        .onChange(of: openSettingsOnLaunch) { newValue in
+            if newValue {
+                openSettingsOnLaunch = false
+                showSettings = true
+            }
+        }
         .accessibilityElement(children: .contain)
     }
 }

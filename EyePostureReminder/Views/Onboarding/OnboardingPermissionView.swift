@@ -73,10 +73,9 @@ struct OnboardingPermissionView: View {
                 .padding()
                 .frame(maxWidth: 540)
                 .frame(maxWidth: .infinity)
-                // Consume horizontal drags so the parent TabView cannot be
-                // swiped past this screen — users must explicitly grant or
-                // skip notification permission.
-                .highPriorityGesture(
+                // Use simultaneousGesture so the parent TabView cannot be
+                // swiped past this screen while the ScrollView remains scrollable.
+                .simultaneousGesture(
                     DragGesture(minimumDistance: 10)
                         .onChanged { _ in }
                 )
