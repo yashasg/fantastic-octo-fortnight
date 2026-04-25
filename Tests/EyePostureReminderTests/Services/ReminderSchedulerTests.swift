@@ -302,6 +302,38 @@ final class ReminderSchedulerTests: XCTestCase {
         XCTAssertEqual(trigger?.repeats, true, "Posture notification trigger must have repeats = true")
     }
 
+    // MARK: - Trigger: repeats = false for short intervals (< 60s)
+
+    func test_eyesTrigger_shortInterval_repeatsIsFalse() async {
+        settings.globalEnabled = true
+        settings.eyesEnabled = true
+        settings.postureEnabled = false
+        settings.eyesInterval = 30 // < 60s
+
+        await sut.scheduleReminders(using: settings)
+
+        let trigger = mockCenter.addedRequests.first?.trigger as? UNTimeIntervalNotificationTrigger
+        XCTAssertEqual(
+            trigger?.repeats,
+            false,
+            "Intervals < 60s must use repeats: false to satisfy UNTimeIntervalNotificationTrigger constraint")
+    }
+
+    func test_postureTrigger_shortInterval_repeatsIsFalse() async {
+        settings.globalEnabled = true
+        settings.eyesEnabled = false
+        settings.postureEnabled = true
+        settings.postureInterval = 30 // < 60s
+
+        await sut.scheduleReminders(using: settings)
+
+        let trigger = mockCenter.addedRequests.first?.trigger as? UNTimeIntervalNotificationTrigger
+        XCTAssertEqual(
+            trigger?.repeats,
+            false,
+            "Intervals < 60s must use repeats: false to satisfy UNTimeIntervalNotificationTrigger constraint")
+    }
+
     // MARK: - Trigger: timeInterval matches settings
 
     func test_eyesTrigger_timeInterval_matchesSettingsInterval() async {

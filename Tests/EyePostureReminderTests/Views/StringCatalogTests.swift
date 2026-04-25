@@ -149,7 +149,28 @@ final class StringCatalogTests: XCTestCase {
             "onboarding.welcome.nextButton",
             "onboarding.permission.title", "onboarding.permission.enableButton",
             "onboarding.permission.skipButton",
-            "onboarding.setup.title", "onboarding.setup.getStartedButton"
+            "onboarding.setup.title", "onboarding.setup.getStartedButton",
+            "legal.dismissButton",
+            "legal.terms.navTitle", "legal.terms.notMedical.heading", "legal.terms.notMedical.body",
+            "legal.terms.professional.heading", "legal.terms.professional.body",
+            "legal.terms.userResponsibilities.heading", "legal.terms.userResponsibilities.body",
+            "legal.terms.intellectualProperty.heading", "legal.terms.intellectualProperty.body",
+            "legal.terms.warranty.heading", "legal.terms.warranty.body",
+            "legal.terms.liability.heading", "legal.terms.liability.body",
+            "legal.terms.thirdPartyServices.heading", "legal.terms.thirdPartyServices.body",
+            "legal.terms.termination.heading", "legal.terms.termination.body",
+            "legal.terms.governingLaw.heading", "legal.terms.governingLaw.body",
+            "legal.terms.changesToTerms.heading", "legal.terms.changesToTerms.body",
+            "legal.terms.contact.heading", "legal.terms.contact.body",
+            "legal.privacy.navTitle", "legal.privacy.localStorageOnly.heading",
+            "legal.privacy.localStorageOnly.body", "legal.privacy.noCollect.heading",
+            "legal.privacy.noCollect.body", "legal.privacy.collect.heading",
+            "legal.privacy.collect.body", "legal.privacy.appleAppStore.heading",
+            "legal.privacy.appleAppStore.body", "legal.privacy.childrenPrivacy.heading",
+            "legal.privacy.childrenPrivacy.body", "legal.privacy.rights.heading",
+            "legal.privacy.rights.body", "legal.privacy.changesToPolicy.heading",
+            "legal.privacy.changesToPolicy.body", "legal.privacy.contact.heading",
+            "legal.privacy.contact.body"
         ]
         for key in expectedKeys {
             XCTAssertFalse(str(key).isEmpty, "Key '\(key)' must resolve to a non-empty string")
@@ -236,7 +257,28 @@ final class StringCatalogTests: XCTestCase {
             "onboarding.setup.postureChecks.duration",
             "onboarding.setup.body", "onboarding.setup.getStartedButton",
             "onboarding.setup.getStartedButton.hint", "onboarding.setup.customizeButton",
-            "onboarding.setup.customizeButton.hint", "onboarding.setup.card.label"
+            "onboarding.setup.customizeButton.hint", "onboarding.setup.card.label",
+            "legal.dismissButton",
+            "legal.terms.navTitle", "legal.terms.notMedical.heading", "legal.terms.notMedical.body",
+            "legal.terms.professional.heading", "legal.terms.professional.body",
+            "legal.terms.userResponsibilities.heading", "legal.terms.userResponsibilities.body",
+            "legal.terms.intellectualProperty.heading", "legal.terms.intellectualProperty.body",
+            "legal.terms.warranty.heading", "legal.terms.warranty.body",
+            "legal.terms.liability.heading", "legal.terms.liability.body",
+            "legal.terms.thirdPartyServices.heading", "legal.terms.thirdPartyServices.body",
+            "legal.terms.termination.heading", "legal.terms.termination.body",
+            "legal.terms.governingLaw.heading", "legal.terms.governingLaw.body",
+            "legal.terms.changesToTerms.heading", "legal.terms.changesToTerms.body",
+            "legal.terms.contact.heading", "legal.terms.contact.body",
+            "legal.privacy.navTitle", "legal.privacy.localStorageOnly.heading",
+            "legal.privacy.localStorageOnly.body", "legal.privacy.noCollect.heading",
+            "legal.privacy.noCollect.body", "legal.privacy.collect.heading",
+            "legal.privacy.collect.body", "legal.privacy.appleAppStore.heading",
+            "legal.privacy.appleAppStore.body", "legal.privacy.childrenPrivacy.heading",
+            "legal.privacy.childrenPrivacy.body", "legal.privacy.rights.heading",
+            "legal.privacy.rights.body", "legal.privacy.changesToPolicy.heading",
+            "legal.privacy.changesToPolicy.body", "legal.privacy.contact.heading",
+            "legal.privacy.contact.body"
         ]
         XCTAssertEqual(
             Set(allKeys).count,
@@ -302,7 +344,7 @@ final class StringCatalogTests: XCTestCase {
 
     func test_keyConvention_screenPrefixes_areKnown() {
         // All keys must start with a recognised screen prefix.
-        let validPrefixes = Set(["home", "settings", "overlay", "onboarding"])
+        let validPrefixes = Set(["home", "settings", "overlay", "onboarding", "legal"])
         let allKeys = [
             "home.navTitle", "home.title", "home.status.active",
             "settings.navTitle", "settings.doneButton",
@@ -406,6 +448,204 @@ final class StringCatalogTests: XCTestCase {
             str("onboarding.setup.postureChecks.interval"),
             "30 min",
             "Setup card must show '30 min' posture check interval (matches AppConfig defaults)")
+    }
+
+    // MARK: - Legal Screen: No Duplicate Keys
+
+    func test_noDuplicateKeys_legalScreen() {
+        let keys = [
+            "legal.dismissButton",
+            "legal.terms.navTitle",
+            "legal.terms.notMedical.heading", "legal.terms.notMedical.body",
+            "legal.terms.professional.heading", "legal.terms.professional.body",
+            "legal.terms.userResponsibilities.heading", "legal.terms.userResponsibilities.body",
+            "legal.terms.intellectualProperty.heading", "legal.terms.intellectualProperty.body",
+            "legal.terms.warranty.heading", "legal.terms.warranty.body",
+            "legal.terms.liability.heading", "legal.terms.liability.body",
+            "legal.terms.thirdPartyServices.heading", "legal.terms.thirdPartyServices.body",
+            "legal.terms.termination.heading", "legal.terms.termination.body",
+            "legal.terms.governingLaw.heading", "legal.terms.governingLaw.body",
+            "legal.terms.changesToTerms.heading", "legal.terms.changesToTerms.body",
+            "legal.terms.contact.heading", "legal.terms.contact.body",
+            "legal.privacy.navTitle",
+            "legal.privacy.localStorageOnly.heading", "legal.privacy.localStorageOnly.body",
+            "legal.privacy.noCollect.heading", "legal.privacy.noCollect.body",
+            "legal.privacy.collect.heading", "legal.privacy.collect.body",
+            "legal.privacy.appleAppStore.heading", "legal.privacy.appleAppStore.body",
+            "legal.privacy.childrenPrivacy.heading", "legal.privacy.childrenPrivacy.body",
+            "legal.privacy.rights.heading", "legal.privacy.rights.body",
+            "legal.privacy.changesToPolicy.heading", "legal.privacy.changesToPolicy.body",
+            "legal.privacy.contact.heading", "legal.privacy.contact.body"
+        ]
+        XCTAssertEqual(Set(keys).count, keys.count, "Legal screen keys must be unique")
+    }
+
+    // MARK: - Legal Screen: Individual Key Resolution
+
+    func test_legalDismissButton_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("legal.dismissButton"),
+            "'legal.dismissButton' must resolve from catalog, not fall back to key string")
+    }
+
+    func test_legalTermsNavTitle_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("legal.terms.navTitle"))
+    }
+
+    func test_legalTermsNotMedicalHeading_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("legal.terms.notMedical.heading"))
+    }
+
+    func test_legalTermsNotMedicalBody_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("legal.terms.notMedical.body"))
+    }
+
+    func test_legalTermsProfessionalHeading_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("legal.terms.professional.heading"))
+    }
+
+    func test_legalTermsProfessionalBody_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("legal.terms.professional.body"))
+    }
+
+    func test_legalTermsUserResponsibilitiesHeading_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("legal.terms.userResponsibilities.heading"))
+    }
+
+    func test_legalTermsUserResponsibilitiesBody_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("legal.terms.userResponsibilities.body"))
+    }
+
+    func test_legalTermsIntellectualPropertyHeading_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("legal.terms.intellectualProperty.heading"))
+    }
+
+    func test_legalTermsIntellectualPropertyBody_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("legal.terms.intellectualProperty.body"))
+    }
+
+    func test_legalTermsWarrantyHeading_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("legal.terms.warranty.heading"))
+    }
+
+    func test_legalTermsWarrantyBody_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("legal.terms.warranty.body"))
+    }
+
+    func test_legalTermsLiabilityHeading_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("legal.terms.liability.heading"))
+    }
+
+    func test_legalTermsLiabilityBody_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("legal.terms.liability.body"))
+    }
+
+    func test_legalTermsThirdPartyServicesHeading_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("legal.terms.thirdPartyServices.heading"))
+    }
+
+    func test_legalTermsThirdPartyServicesBody_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("legal.terms.thirdPartyServices.body"))
+    }
+
+    func test_legalTermsTerminationHeading_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("legal.terms.termination.heading"))
+    }
+
+    func test_legalTermsTerminationBody_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("legal.terms.termination.body"))
+    }
+
+    func test_legalTermsGoverningLawHeading_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("legal.terms.governingLaw.heading"))
+    }
+
+    func test_legalTermsGoverningLawBody_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("legal.terms.governingLaw.body"))
+    }
+
+    func test_legalTermsChangesToTermsHeading_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("legal.terms.changesToTerms.heading"))
+    }
+
+    func test_legalTermsChangesToTermsBody_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("legal.terms.changesToTerms.body"))
+    }
+
+    func test_legalTermsContactHeading_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("legal.terms.contact.heading"))
+    }
+
+    func test_legalTermsContactBody_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("legal.terms.contact.body"))
+    }
+
+    func test_legalPrivacyNavTitle_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("legal.privacy.navTitle"))
+    }
+
+    func test_legalPrivacyLocalStorageOnlyHeading_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("legal.privacy.localStorageOnly.heading"))
+    }
+
+    func test_legalPrivacyLocalStorageOnlyBody_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("legal.privacy.localStorageOnly.body"))
+    }
+
+    func test_legalPrivacyNoCollectHeading_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("legal.privacy.noCollect.heading"))
+    }
+
+    func test_legalPrivacyNoCollectBody_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("legal.privacy.noCollect.body"))
+    }
+
+    func test_legalPrivacyCollectHeading_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("legal.privacy.collect.heading"))
+    }
+
+    func test_legalPrivacyCollectBody_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("legal.privacy.collect.body"))
+    }
+
+    func test_legalPrivacyAppleAppStoreHeading_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("legal.privacy.appleAppStore.heading"))
+    }
+
+    func test_legalPrivacyAppleAppStoreBody_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("legal.privacy.appleAppStore.body"))
+    }
+
+    func test_legalPrivacyChildrenPrivacyHeading_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("legal.privacy.childrenPrivacy.heading"))
+    }
+
+    func test_legalPrivacyChildrenPrivacyBody_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("legal.privacy.childrenPrivacy.body"))
+    }
+
+    func test_legalPrivacyRightsHeading_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("legal.privacy.rights.heading"))
+    }
+
+    func test_legalPrivacyRightsBody_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("legal.privacy.rights.body"))
+    }
+
+    func test_legalPrivacyChangesToPolicyHeading_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("legal.privacy.changesToPolicy.heading"))
+    }
+
+    func test_legalPrivacyChangesToPolicyBody_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("legal.privacy.changesToPolicy.body"))
+    }
+
+    func test_legalPrivacyContactHeading_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("legal.privacy.contact.heading"))
+    }
+
+    func test_legalPrivacyContactBody_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("legal.privacy.contact.body"))
     }
 
     // MARK: - Future Key Guard: resetToDefaults (pending Linus implementation)
