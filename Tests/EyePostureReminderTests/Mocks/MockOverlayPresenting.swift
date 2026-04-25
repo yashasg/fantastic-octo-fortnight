@@ -1,5 +1,5 @@
-import Foundation
 @testable import EyePostureReminder
+import Foundation
 
 /// Mock implementation of `OverlayPresenting` for unit tests.
 ///

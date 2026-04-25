@@ -1,5 +1,5 @@
-import XCTest
 @testable import EyePostureReminder
+import XCTest
 
 final class ReminderTypeTests: XCTestCase {
 

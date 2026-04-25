@@ -1,5 +1,5 @@
-import XCTest
 @testable import EyePostureReminder
+import XCTest
 
 /// Phase 2 unit tests for `SettingsStore` covering haptics and snooze-count persistence.
 final class SettingsStorePhase2Tests: XCTestCase {

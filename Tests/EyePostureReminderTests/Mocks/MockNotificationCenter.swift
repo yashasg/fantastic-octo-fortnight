@@ -1,6 +1,6 @@
+@testable import EyePostureReminder
 import Foundation
 import UserNotifications
-@testable import EyePostureReminder
 
 /// Mock implementation of `NotificationScheduling` for unit tests.
 ///

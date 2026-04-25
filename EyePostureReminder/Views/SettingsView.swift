@@ -55,9 +55,10 @@ struct SettingsView: View {
                         type: .eyes,
                         isEnabled: $settings.eyesEnabled,
                         interval: $settings.eyesInterval,
-                        breakDuration: $settings.eyesBreakDuration,
-                        onChanged: { viewModel?.reminderSettingChanged(for: .eyes) }
-                    )
+                        breakDuration: $settings.eyesBreakDuration
+                    ) {
+                        viewModel?.reminderSettingChanged(for: .eyes)
+                    }
                 } header: {
                     Text("settings.section.eyes", bundle: .module)
                 } footer: {
@@ -72,9 +73,10 @@ struct SettingsView: View {
                         type: .posture,
                         isEnabled: $settings.postureEnabled,
                         interval: $settings.postureInterval,
-                        breakDuration: $settings.postureBreakDuration,
-                        onChanged: { viewModel?.reminderSettingChanged(for: .posture) }
-                    )
+                        breakDuration: $settings.postureBreakDuration
+                    ) {
+                        viewModel?.reminderSettingChanged(for: .posture)
+                    }
                 } header: {
                     Text("settings.section.posture", bundle: .module)
                 } footer: {
@@ -89,39 +91,55 @@ struct SettingsView: View {
             Section {
                 if isSnoozed {
                     HStack {
-                        Label(String(format: String(localized: "settings.snooze.activeLabel", bundle: .module), snoozeUntilFormatted), systemImage: "moon.zzz.fill")
+                        Label(
+                            String(
+                                format: String(localized: "settings.snooze.activeLabel", bundle: .module),
+                                snoozeUntilFormatted
+                            ),
+                            systemImage: "moon.zzz.fill"
+                        )
                             .font(AppFont.body)
                             .foregroundStyle(AppColor.warningText)
                         Spacer()
                     }
                     .accessibilityElement(children: .ignore)
-                    .accessibilityLabel(String(format: String(localized: "settings.snooze.activeLabel.accessibility", bundle: .module), snoozeUntilFormatted))
+                    .accessibilityLabel(String(
+                        format: String(localized: "settings.snooze.activeLabel.accessibility", bundle: .module),
+                        snoozeUntilFormatted
+                    ))
 
                     Button(role: .destructive) {
                         viewModel?.cancelSnooze()
                     } label: {
-                        Label(title: { Text("settings.snooze.cancelButton", bundle: .module) }, icon: { Image(systemName: "bell.fill") })
+                        Label {
+                            Text("settings.snooze.cancelButton", bundle: .module)
+                        } icon: {
+                            Image(systemName: "bell.fill")
+                        }
                             .font(AppFont.body)
                     }
                     .accessibilityHint(Text("settings.snooze.cancelButton.hint", bundle: .module))
                 } else {
-                    Button(action: { viewModel?.snooze(option: .fiveMinutes) }) {
-                        Text("settings.snooze.5min", bundle: .module)
-                    }
+                    Button(
+                        action: { viewModel?.snooze(option: .fiveMinutes) },
+                        label: { Text("settings.snooze.5min", bundle: .module) }
+                    )
                     .font(AppFont.body)
                     .accessibilityLabel(Text("settings.snooze.5min.label", bundle: .module))
                     .accessibilityHint(Text("settings.snooze.5min.hint", bundle: .module))
 
-                    Button(action: { viewModel?.snooze(option: .oneHour) }) {
-                        Text("settings.snooze.1hour", bundle: .module)
-                    }
+                    Button(
+                        action: { viewModel?.snooze(option: .oneHour) },
+                        label: { Text("settings.snooze.1hour", bundle: .module) }
+                    )
                     .font(AppFont.body)
                     .accessibilityLabel(Text("settings.snooze.1hour.label", bundle: .module))
                     .accessibilityHint(Text("settings.snooze.1hour.hint", bundle: .module))
 
-                    Button(action: { viewModel?.snooze(option: .restOfDay) }) {
-                        Text("settings.snooze.restOfDay", bundle: .module)
-                    }
+                    Button(
+                        action: { viewModel?.snooze(option: .restOfDay) },
+                        label: { Text("settings.snooze.restOfDay", bundle: .module) }
+                    )
                     .font(AppFont.body)
                     .foregroundStyle(AppColor.warningText)
                     .accessibilityLabel(Text("settings.snooze.restOfDay.label", bundle: .module))
@@ -161,13 +179,14 @@ struct SettingsView: View {
                     .accessibilityElement(children: .ignore)
                         .accessibilityLabel(Text("settings.notifications.disabledLabel", bundle: .module))
 
-                    Button(action: {
-                        if let url = URL(string: UIApplication.openSettingsURLString) {
-                            UIApplication.shared.open(url)
-                        }
-                    }) {
-                        Text("settings.notifications.openSettings", bundle: .module)
-                    }
+                    Button(
+                        action: {
+                            if let url = URL(string: UIApplication.openSettingsURLString) {
+                                UIApplication.shared.open(url)
+                            }
+                        },
+                        label: { Text("settings.notifications.openSettings", bundle: .module) }
+                    )
                     .font(AppFont.body)
                     .accessibilityHint(Text("settings.notifications.openSettings.hint", bundle: .module))
                 }

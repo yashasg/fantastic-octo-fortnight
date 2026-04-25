@@ -1,6 +1,6 @@
-import XCTest
-import SwiftUI
 @testable import EyePostureReminder
+import SwiftUI
+import XCTest
 
 /// Regression tests for `DesignSystem.swift` — the single source of truth for
 /// all visual tokens (colors, fonts, spacing, animation, layout).
