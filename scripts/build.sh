@@ -50,9 +50,16 @@ require_xcodebuild() {
 }
 
 # ── Destination detection ─────────────────────────────────────────────────────
-# Returns an xcodebuild -destination string, preferring iOS Simulator when
-# a runtime is present, falling back to Mac Catalyst.
+# Returns an xcodebuild -destination string. Respects $SIMULATOR env var when
+# set (used by CI), otherwise probes for an available iPhone simulator and
+# falls back to Mac Catalyst if no iOS runtimes are found.
 detect_destination() {
+  # CI (and local overrides) can set $SIMULATOR explicitly — honour it.
+  if [[ -n "${SIMULATOR:-}" ]]; then
+    echo "$SIMULATOR"
+    return
+  fi
+
   local catalyst_dest="platform=macOS,variant=Mac Catalyst"
 
   # Check whether any iOS Simulator runtime is installed
@@ -61,7 +68,7 @@ detect_destination() {
     local sim_name
     sim_name=$(xcrun simctl list devices available 2>/dev/null | grep -oE 'iPhone [^(]+' | head -1 | sed 's/ *$//')
     if [ -n "$sim_name" ]; then
-      echo "platform=iOS Simulator,name=${sim_name},OS=latest"
+      echo "platform=iOS Simulator,name=${sim_name}"
     else
       echo "platform=iOS Simulator,OS=latest"
     fi
