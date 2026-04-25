@@ -141,6 +141,8 @@ cmd_test() {
   info "Destination: $dest"
   info "Test scheme: $SCHEME (includes $TEST_SCHEME)"
 
+  rm -rf "${PACKAGE_PATH}/TestResults.xcresult"
+
   run_xcodebuild test \
     -scheme "$SCHEME" \
     -destination "$dest" \
