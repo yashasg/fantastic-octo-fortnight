@@ -196,7 +196,7 @@ struct OverlayView: View {
     // MARK: - Timer
 
     private func startTimer() {
-        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
+        let t = Timer(timeInterval: 1, repeats: true) { _ in
             if secondsRemaining > 0 {
                 secondsRemaining -= 1
             } else {
@@ -204,6 +204,8 @@ struct OverlayView: View {
                 performAutoDismiss()
             }
         }
+        RunLoop.main.add(t, forMode: .common)
+        timer = t
     }
 
     // MARK: - Haptic Feedback
