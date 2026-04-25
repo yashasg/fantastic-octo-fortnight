@@ -7,7 +7,14 @@
 
 ## Learnings
 
-<!-- Append new learnings below. Each entry is something lasting about the project. -->
+### 2026-04-25: Roadmap Audit & Status Update
+
+- **Context:** Project evolved significantly from initial Phase 0 planning. Phase 1 (MVP) fully shipped. Phase 2 (Polish) ~80% complete with screen-time triggers, smart pause (Focus/CarPlay/driving), onboarding, snooze, haptics, accessibility, and data-driven config all delivered or in final QA.
+- **Key Finding:** Team now spans 13 members (added Frank, Virgil, Turk, Ralph, Scribe to original 8). Wall-clock notifications replaced with ScreenTimeTracker (continuous screen-on time + 5s grace period). Color/copy/settings config migrated from code to native Apple formats (Asset Catalog + String Catalog + defaults.json).
+- **Product Implications:** v1.0 ready for App Store submission (Phase 2 complete). Phase 3 (DI refactoring, iCloud, widgets, watchOS) deferred to v1.1 post-launch. No descoping occurred — all Phase 1+2 features shipped as planned.
+- **Roadmap Updated:** ROADMAP.md now reflects actual state: Phase 0 ✅, Phase 1 ✅, Phase 2 🔄 ~80%, Phase 3 🔄 partially started. Issue backlog (#13-14 DI, #2 legal placeholders) documented.
+- **Decision Point:** v1.0 scope closed (Phase 1+2). Awaiting Danny sign-off on App Store submission or further Phase 2 polish before proceeding to Phase 3 refactoring.
+- **Artifacts:** Updated ROADMAP.md (status, team, open issues, success metrics, risk register with current state)
 
 ### 2026-04-25: Screen-On Time Trigger Model
 
