@@ -164,6 +164,15 @@ final class OverlayManager: OverlayPresenting {
 
     private func presentNextQueuedOverlay() {
         guard !overlayQueue.isEmpty else { return }
+        guard UIApplication.shared.connectedScenes
+            .compactMap({ $0 as? UIWindowScene })
+            .contains(where: { $0.activationState == .foregroundActive })
+        else {
+            Logger.overlay.warning(
+                "presentNextQueuedOverlay: no active scene — item retained in queue for next attempt"
+            )
+            return
+        }
         let next = overlayQueue.removeFirst()
         Logger.overlay.info("Presenting queued overlay for \(next.type.rawValue). Remaining in queue: \(self.overlayQueue.count)")
         showOverlay(

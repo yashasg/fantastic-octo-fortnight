@@ -268,6 +268,8 @@ final class PauseConditionManager: PauseConditionProviding {
         focusDetector.stopMonitoring()
         carPlayDetector.stopMonitoring()
         drivingDetector.stopMonitoring()
+        activeConditions.removeAll()
+        isPaused = false
         Logger.scheduling.debug("PauseConditionManager: monitoring stopped")
     }
 
