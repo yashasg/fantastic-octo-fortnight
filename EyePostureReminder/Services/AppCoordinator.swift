@@ -47,7 +47,7 @@ final class AppCoordinator: ObservableObject {
     // MARK: - Owned Dependencies
 
     let settings: SettingsStore
-    let scheduler: ReminderScheduler
+    let scheduler: ReminderScheduling
 
     // MARK: - Injected Dependencies (P1-2, P1-3)
 
@@ -102,14 +102,14 @@ final class AppCoordinator: ObservableObject {
 
     init(
         settings: SettingsStore = SettingsStore(),
-        scheduler: ReminderScheduler = ReminderScheduler(),
+        scheduler: ReminderScheduling? = nil,
         notificationCenter: NotificationScheduling = UNUserNotificationCenter.current(),
         overlayManager: OverlayPresenting? = nil,
         screenTimeTracker: ScreenTimeTracking? = nil,
         pauseConditionProvider: PauseConditionProviding? = nil
     ) {
         self.settings = settings
-        self.scheduler = scheduler
+        self.scheduler = scheduler ?? ReminderScheduler()
         self.notificationCenter = notificationCenter
         self.overlayManager = overlayManager ?? OverlayManager.shared
         self.screenTimeTracker = screenTimeTracker ?? ScreenTimeTracker()

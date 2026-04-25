@@ -10,6 +10,7 @@ import UIKit
 /// `UIWindow.Level.alert + 1` so the overlay reliably covers all in-app
 /// content. Tests inject a mock to verify scheduling logic without creating
 /// real UIWindows.
+@MainActor
 protocol OverlayPresenting: AnyObject {
     /// Present a full-screen break overlay for the given reminder type.
     ///

@@ -29,7 +29,7 @@ final class SettingsViewModelPhase2Tests: XCTestCase {
         mockPersistence = MockSettingsPersisting()
         settings = SettingsStore(store: mockPersistence)
         mockScheduler = MockReminderScheduler()
-        sut = SettingsViewModel(settings: settings, scheduler: mockScheduler)
+        sut = SettingsViewModel(settings: settings, scheduler: mockScheduler, maxSnoozeCount: 2)
     }
 
     override func tearDown() async throws {
@@ -184,17 +184,17 @@ final class SettingsViewModelPhase2Tests: XCTestCase {
         sut.snooze(option: .fiveMinutes)   // snoozeCount = 2
         XCTAssertFalse(
             sut.canSnooze,
-            "canSnooze must return false after \(SettingsViewModel.maxConsecutiveSnoozes) consecutive snoozes"
+            "canSnooze must return false after \(sut.maxConsecutiveSnoozes) consecutive snoozes"
         )
     }
 
     func test_canSnooze_falseWhenSnoozeCountEqualsMax() {
-        settings.snoozeCount = SettingsViewModel.maxConsecutiveSnoozes
+        settings.snoozeCount = sut.maxConsecutiveSnoozes
         XCTAssertFalse(sut.canSnooze)
     }
 
     func test_snooze_blockedWhenCanSnoozeFalse_doesNotChangeSnoozedUntil() {
-        settings.snoozeCount = SettingsViewModel.maxConsecutiveSnoozes
+        settings.snoozeCount = sut.maxConsecutiveSnoozes
         settings.snoozedUntil = nil
 
         sut.snooze(option: .fiveMinutes)
@@ -203,7 +203,7 @@ final class SettingsViewModelPhase2Tests: XCTestCase {
     }
 
     func test_snooze_blockedWhenCanSnoozeFalse_doesNotCallCancelAll() {
-        settings.snoozeCount = SettingsViewModel.maxConsecutiveSnoozes
+        settings.snoozeCount = sut.maxConsecutiveSnoozes
 
         sut.snooze(option: .fiveMinutes)
 
@@ -357,7 +357,7 @@ final class SettingsViewModelPhase2Tests: XCTestCase {
 
     func test_snoozeCount_resetPersistedAfterReminderFires() {
         // Simulate reminder firing: snoozeCount goes back to 0.
-        settings.snoozeCount = SettingsViewModel.maxConsecutiveSnoozes
+        settings.snoozeCount = sut.maxConsecutiveSnoozes
         settings.snoozeCount = 0
 
         let reloaded = SettingsStore(store: mockPersistence)
@@ -365,7 +365,7 @@ final class SettingsViewModelPhase2Tests: XCTestCase {
     }
 
     func test_snoozeAvailableAgain_afterSnoozeCountReset() {
-        settings.snoozeCount = SettingsViewModel.maxConsecutiveSnoozes
+        settings.snoozeCount = sut.maxConsecutiveSnoozes
         XCTAssertFalse(sut.canSnooze)
 
         settings.snoozeCount = 0

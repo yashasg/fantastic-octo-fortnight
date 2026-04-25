@@ -4,6 +4,7 @@ import Foundation
 /// Mock implementation of `ReminderScheduling` for SettingsViewModel unit tests.
 ///
 /// Records every call for assertion in tests. All async methods resolve immediately.
+@MainActor
 final class MockReminderScheduler: ReminderScheduling {
 
     // MARK: - Call Counts

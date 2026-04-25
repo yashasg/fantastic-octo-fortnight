@@ -9,6 +9,13 @@ import UserNotifications
 
 struct OnboardingPermissionView: View {
     let onNext: () -> Void
+    private let notificationCenter: NotificationScheduling
+
+    init(onNext: @escaping () -> Void,
+         notificationCenter: NotificationScheduling = UNUserNotificationCenter.current()) {
+        self.onNext = onNext
+        self.notificationCenter = notificationCenter
+    }
 
     var body: some View {
         OnboardingScreenWrapper {
@@ -70,12 +77,9 @@ struct OnboardingPermissionView: View {
     }
 
     private func requestNotificationPermission() {
-        UNUserNotificationCenter.current().requestAuthorization(
-            options: [.alert, .sound, .badge]
-        ) { _, _ in
-            DispatchQueue.main.async {
-                onNext()
-            }
+        Task {
+            _ = try? await notificationCenter.requestAuthorization(options: [.alert, .sound, .badge])
+            await MainActor.run { onNext() }
         }
     }
 }
