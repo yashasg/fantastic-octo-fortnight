@@ -390,7 +390,7 @@ final class ScreenTimeTrackerTests: XCTestCase {
 
     /// `pauseAll` must prevent ALL types from firing their threshold callbacks.
     func test_pauseAll_preventsAllCallbacks() async throws {
-        var eyesFired   = false
+        var eyesFired = false
         var postureFired = false
 
         sut.setThreshold(2, for: .eyes)
@@ -404,7 +404,7 @@ final class ScreenTimeTrackerTests: XCTestCase {
         NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
 
         try await Task.sleep(nanoseconds: 3_000_000_000)
-        XCTAssertFalse(eyesFired,   "pauseAll must prevent .eyes callback")
+        XCTAssertFalse(eyesFired, "pauseAll must prevent .eyes callback")
         XCTAssertFalse(postureFired, "pauseAll must prevent .posture callback")
         sut.stop()
     }
@@ -430,6 +430,12 @@ final class ScreenTimeTrackerTests: XCTestCase {
         await fulfillment(of: [eyesExp, postureExp], timeout: 6.0)
         sut.stop()
     }
+
+}
+
+// MARK: - Stop & Reset Tests
+
+extension ScreenTimeTrackerTests {
 
     // MARK: - Behavioral: stop invalidates timer
 
@@ -488,8 +494,10 @@ final class ScreenTimeTrackerTests: XCTestCase {
         let elapsed = Date().timeIntervalSince(resetTime)
 
         XCTAssertGreaterThanOrEqual(
-            elapsed, 1.5,
-            "After reset, callback must not fire sooner than ~threshold (2 s) — elapsed was \(elapsed) s")
+            elapsed,
+            1.5,
+            "After reset, callback must not fire sooner than ~threshold (2 s) — elapsed was \(elapsed) s"
+        )
         XCTAssertEqual(callCount, 1, "Exactly one callback must fire after reset")
         sut.stop()
     }

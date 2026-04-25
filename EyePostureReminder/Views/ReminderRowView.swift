@@ -41,7 +41,10 @@ struct ReminderRowView: View {
                     )
                 )
 
-                Picker(String(localized: "settings.reminder.durationPicker", bundle: .module), selection: $breakDuration) {
+                Picker(
+                    String(localized: "settings.reminder.durationPicker", bundle: .module),
+                    selection: $breakDuration
+                ) {
                     ForEach(SettingsViewModel.breakDurationOptions, id: \.self) { seconds in
                         Text(formatDuration(seconds)).tag(seconds)
                     }

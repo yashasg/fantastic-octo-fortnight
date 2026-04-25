@@ -613,7 +613,7 @@ final class AppCoordinatorExtendedTests: XCTestCase {
 
         let eyesCount    = mockTracker.setThresholdCalls.filter { $0.type == .eyes }.count
         let postureCount = mockTracker.setThresholdCalls.filter { $0.type == .posture }.count
-        XCTAssertEqual(eyesCount,    1, ".eyes debounce must run exactly once")
+        XCTAssertEqual(eyesCount, 1, ".eyes debounce must run exactly once")
         XCTAssertEqual(postureCount, 1, ".posture must run exactly once and be independent of .eyes debounce")
     }
 

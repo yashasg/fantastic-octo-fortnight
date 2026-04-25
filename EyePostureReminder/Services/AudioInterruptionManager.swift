@@ -51,7 +51,12 @@ final class AudioInterruptionManager: MediaControlling {
             // call), log the error but continue. `resumeExternalAudio()` will still
             // call `setActive(false)` on dismiss — calling setActive(false) on an
             // already-inactive session is a no-op, so dismissal is always safe.
-            Logger.overlay.error("AudioInterruptionManager.pauseExternalAudio failed: \(error.localizedDescription) — overlay shown without audio interruption")
+            Logger.overlay.error(
+                """
+                AudioInterruptionManager.pauseExternalAudio failed: \
+                \(error.localizedDescription) — overlay shown without audio interruption
+                """
+            )
         }
     }
 

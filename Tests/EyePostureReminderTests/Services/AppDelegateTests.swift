@@ -40,16 +40,16 @@ final class AppDelegateTests: XCTestCase {
             screenTimeTracker: MockScreenTimeTracker(),
             pauseConditionProvider: MockPauseConditionProvider()
         )
-        delegate            = AppDelegate()
+        delegate = AppDelegate()
         delegate.coordinator = coordinator
     }
 
     override func tearDown() async throws {
         coordinator.stopFallbackTimers()
-        delegate    = nil
+        delegate = nil
         coordinator = nil
-        settings    = nil
-        mockNotif   = nil
+        settings = nil
+        mockNotif = nil
         mockOverlay = nil
         try await super.tearDown()
     }
@@ -70,8 +70,10 @@ final class AppDelegateTests: XCTestCase {
             settings.snoozedUntil,
             "applicationDidBecomeActive must clear an expired snoozedUntil")
         XCTAssertEqual(
-            settings.snoozeCount, 0,
-            "applicationDidBecomeActive must reset snoozeCount when snooze was expired")
+            settings.snoozeCount,
+            0,
+            "applicationDidBecomeActive must reset snoozeCount when snooze was expired"
+        )
     }
 
     /// When `snoozedUntil` is in the future, `applicationDidBecomeActive` must NOT clear it.
@@ -145,8 +147,11 @@ final class AppDelegateTests: XCTestCase {
     func test_categoryIdentifier_roundTrips_forAllTypes() {
         for reminderType in ReminderType.allCases {
             let parsed = ReminderType(categoryIdentifier: reminderType.categoryIdentifier)
-            XCTAssertEqual(parsed, reminderType,
-                "\(reminderType.categoryIdentifier) must round-trip back to \(reminderType)")
+            XCTAssertEqual(
+                parsed,
+                reminderType,
+                "\(reminderType.categoryIdentifier) must round-trip back to \(reminderType)"
+            )
         }
     }
 
@@ -160,8 +165,11 @@ final class AppDelegateTests: XCTestCase {
 
         coordinator.handleNotification(for: .eyes)
 
-        XCTAssertEqual(settings.snoozeCount, 0,
-            "handleNotification must reset snoozeCount to 0 (a real reminder fired)")
+        XCTAssertEqual(
+            settings.snoozeCount,
+            0,
+            "handleNotification must reset snoozeCount to 0 (a real reminder fired)"
+        )
     }
 
     func test_handleNotification_resetsSnoozeCount_forPosture() {

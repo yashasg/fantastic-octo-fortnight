@@ -51,7 +51,9 @@ final class SettingsViewModel: ObservableObject {
                 ) ?? {
                     // Unreachable in practice; guard against unexpected nil with a
                     // warning rather than silently computing the wrong end time.
-                    Logger.settings.warning("SnoozeOption.restOfDay: calendar.date returned nil — falling back to DateComponents midnight")
+                    Logger.settings.warning(
+                        "SnoozeOption.restOfDay: calendar.date returned nil — falling back to DateComponents midnight"
+                    )
                     var comps = calendar.dateComponents([.year, .month, .day], from: Date())
                     comps.day = (comps.day ?? 0) + 1
                     comps.hour = 0; comps.minute = 0; comps.second = 0

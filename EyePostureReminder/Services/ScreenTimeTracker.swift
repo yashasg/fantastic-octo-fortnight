@@ -95,7 +95,9 @@ final class ScreenTimeTracker: ScreenTimeTracking {
     /// Resets the elapsed counter for the type.
     func setThreshold(_ interval: TimeInterval, for type: ReminderType) {
         guard interval > 0 else {
-            Logger.scheduling.warning("ScreenTimeTracker: ignoring zero/negative threshold for \(type.rawValue) — type will not fire")
+            Logger.scheduling.warning(
+                "ScreenTimeTracker: ignoring zero/negative threshold for \(type.rawValue) — type will not fire"
+            )
             return
         }
         thresholds[type] = interval
