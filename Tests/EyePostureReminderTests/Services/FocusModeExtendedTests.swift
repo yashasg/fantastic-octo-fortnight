@@ -136,8 +136,9 @@ final class FocusModeExtendedTests: XCTestCase {
 
     // MARK: - Settings Change Mid-Monitoring: Disable pauseDuringFocus
 
-    /// Disabling pauseDuringFocus mid-monitoring takes effect on the NEXT callback.
-    /// The .focusMode condition stays in activeConditions until a callback re-evaluates it.
+    /// The setting change triggers immediate re-evaluation of active conditions (Issues #26).
+    /// Subsequent callbacks with the new setting value also correctly ignore the condition.
+    /// The following sequence verifies the final settled state.
     func test_disablePauseDuringFocus_midMonitoring_nextCallbackIgnoresFocus() {
         // Activate focus
         mockFocus.simulateFocusChange(true)

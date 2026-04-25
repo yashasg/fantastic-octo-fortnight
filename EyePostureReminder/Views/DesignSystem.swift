@@ -18,9 +18,6 @@ enum AppColor {
     /// Light: #34C759. Dark: #30D158.
     static let reminderGreen = Color("ReminderGreen")
 
-    /// Overlay tint — systemBackground with opacity, adapts automatically.
-    static let overlayBackground = Color(.systemBackground).opacity(0.6)
-
     /// Warning icon tint — orange, adaptive for WCAG 1.4.11 non-text contrast (≥3:1).
     /// Light: #E07000 (~3.5:1 on white). Dark: #FF9500 (6.8:1 on near-black).
     static let warningOrange = Color("WarningOrange")
@@ -55,6 +52,9 @@ enum AppFont {
 
     /// Caption — scales with Dynamic Type (base: 13pt regular).
     static let caption: Font = .system(.footnote)
+
+    /// Secondary action buttons (onboarding, secondary CTAs) — scales with Dynamic Type (base: 15pt regular).
+    static let secondaryAction: Font = .system(.subheadline)
 
     /// Countdown digits — fixed 64pt monospaced bold (decorative; not scaled).
     /// VoiceOver exposes a labelled accessibility element instead of reading this text directly.

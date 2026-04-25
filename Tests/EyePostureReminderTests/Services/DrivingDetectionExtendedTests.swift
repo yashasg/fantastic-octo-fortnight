@@ -187,8 +187,9 @@ final class DrivingDetectionExtendedTests: XCTestCase {
 
     // MARK: - Settings Change Mid-Drive: Disable pauseWhileDriving
 
-    /// Disabling pauseWhileDriving while actively driving takes effect on the next callback,
-    /// not retroactively. This is documented expected behaviour for PauseConditionManager.
+    /// The setting change triggers immediate re-evaluation of active conditions (Issues #26).
+    /// Subsequent callbacks with the new setting value also correctly ignore the condition.
+    /// The following sequence verifies the final settled state.
     func test_disablePauseWhileDriving_midDrive_nextCallbackIgnoresDriving() {
         mockDriving.simulateDrivingChange(true)
         XCTAssertTrue(manager.isPaused, "Pre-condition: paused with driving=true, setting=true")

@@ -471,7 +471,7 @@ extension ScreenTimeTrackerTests {
     /// but before it fires), reset the counter, then measure the time until the
     /// callback fires.  It must be ≥ ~0.8 s from the reset (not ~0.2 s), proving
     /// the counter was zeroed.
-    func test_reset_zeroeselapsed_delaysNextCallback() async throws {
+    func test_reset_zeroesElapsed_delaysNextCallback() async throws {
         let exp = expectation(description: "callback fires after reset")
         var callCount = 0
 

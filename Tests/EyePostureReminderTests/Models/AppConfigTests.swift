@@ -435,38 +435,28 @@ final class AppConfigTests: XCTestCase { // swiftlint:disable:this type_body_len
 
     func test_defaults_hasEyeInterval() {
         // Structural: AppConfig.Defaults must expose eyeInterval (epr.eyes.interval mapping)
-        let config = AppConfig.fallback
-        _ = config.defaults.eyeInterval  // compile-time proof the property exists
-        XCTAssertTrue(true, "eyeInterval property exists on AppConfig.Defaults")
+        XCTAssertNotNil(AppConfig.fallback.defaults.eyeInterval as TimeInterval?, "eyeInterval must be a non-nil TimeInterval on AppConfig.Defaults")
     }
 
     func test_defaults_hasEyeBreakDuration() {
-        let config = AppConfig.fallback
-        _ = config.defaults.eyeBreakDuration
-        XCTAssertTrue(true, "eyeBreakDuration property exists on AppConfig.Defaults")
+        XCTAssertNotNil(AppConfig.fallback.defaults.eyeBreakDuration as TimeInterval?, "eyeBreakDuration must be a non-nil TimeInterval on AppConfig.Defaults")
     }
 
     func test_defaults_hasPostureInterval() {
-        let config = AppConfig.fallback
-        _ = config.defaults.postureInterval
-        XCTAssertTrue(true, "postureInterval property exists on AppConfig.Defaults")
+        XCTAssertNotNil(AppConfig.fallback.defaults.postureInterval as TimeInterval?, "postureInterval must be a non-nil TimeInterval on AppConfig.Defaults")
     }
 
     func test_defaults_hasPostureBreakDuration() {
-        let config = AppConfig.fallback
-        _ = config.defaults.postureBreakDuration
-        XCTAssertTrue(true, "postureBreakDuration property exists on AppConfig.Defaults")
+        XCTAssertNotNil(AppConfig.fallback.defaults.postureBreakDuration as TimeInterval?, "postureBreakDuration must be a non-nil TimeInterval on AppConfig.Defaults")
     }
 
     func test_features_hasGlobalEnabledDefault() {
-        let config = AppConfig.fallback
-        _ = config.features.globalEnabledDefault
-        XCTAssertTrue(true, "globalEnabledDefault property exists on AppConfig.Features")
+        // Bool is non-optional; verify the property is accessible and has a defined value.
+        let value = AppConfig.fallback.features.globalEnabledDefault
+        XCTAssertNotNil(value as Bool?, "globalEnabledDefault must be a Bool on AppConfig.Features")
     }
 
     func test_features_hasMaxSnoozeCount() {
-        let config = AppConfig.fallback
-        _ = config.features.maxSnoozeCount
-        XCTAssertTrue(true, "maxSnoozeCount property exists on AppConfig.Features")
+        XCTAssertGreaterThanOrEqual(AppConfig.fallback.features.maxSnoozeCount, 0, "maxSnoozeCount must be an Int on AppConfig.Features")
     }
 }

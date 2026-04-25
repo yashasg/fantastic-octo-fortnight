@@ -9,9 +9,9 @@ import Foundation
 enum AppStorageKey {
     /// Set to `true` once the user completes the onboarding flow.
     /// Read by `ContentView` via `@AppStorage` to gate the main UI.
-    static let hasSeenOnboarding = "hasSeenOnboarding"
+    static let hasSeenOnboarding = "epr.hasSeenOnboarding"
 
     /// Set to `true` by `OnboardingView.finishOnboardingAndCustomize()` to
     /// signal that `HomeView` should immediately open the Settings sheet on appear.
-    static let openSettingsOnLaunch = "openSettingsOnLaunch"
+    static let openSettingsOnLaunch = "epr.openSettingsOnLaunch"
 }

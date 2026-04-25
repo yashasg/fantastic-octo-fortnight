@@ -226,6 +226,7 @@ final class AppCoordinator: ObservableObject {
                 // Snooze has expired — clear state and fall through to normal scheduling.
                 settings.snoozedUntil = nil
                 settings.snoozeCount  = 0
+                AnalyticsLogger.log(.snoozeExpired)
                 Logger.scheduling.info("Snooze expired — clearing and resuming normal scheduling")
             }
         }

@@ -39,6 +39,8 @@ final class MetricKitSubscriberTests: XCTestCase {
         MetricKitSubscriber.shared.register()
     }
 
+    /// `MXMetricManager` silently ignores duplicate `add()` calls for the same subscriber,
+    /// so calling `register()` multiple times is safe and must not crash.
     func test_register_calledMultipleTimes_doesNotCrash() {
         MetricKitSubscriber.shared.register()
         MetricKitSubscriber.shared.register()

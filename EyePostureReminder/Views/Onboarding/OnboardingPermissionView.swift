@@ -65,7 +65,7 @@ struct OnboardingPermissionView: View {
                             .frame(minHeight: 44)
                     }
                         .foregroundStyle(.secondary)
-                        .font(.subheadline)
+                        .font(AppFont.secondaryAction)
                         .accessibilityLabel(Text("onboarding.permission.skipButton", bundle: .module))
                         .accessibilityHint(Text("onboarding.permission.skipButton.hint", bundle: .module))
                         .accessibilityIdentifier("onboarding.permission.nextButton")
@@ -73,9 +73,10 @@ struct OnboardingPermissionView: View {
                 .padding()
                 .frame(maxWidth: 540)
                 .frame(maxWidth: .infinity)
-                // Use simultaneousGesture so the parent TabView cannot be
-                // swiped past this screen while the ScrollView remains scrollable.
-                .simultaneousGesture(
+                // Use highPriorityGesture so this view consumes horizontal drags
+                // before the parent TabView sees them, preventing accidental swipe
+                // past the permission screen.
+                .highPriorityGesture(
                     DragGesture(minimumDistance: 10)
                         .onChanged { _ in }
                 )

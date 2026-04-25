@@ -25,9 +25,9 @@ final class SettingsViewModel: ObservableObject {
         /// Human-readable label shown in the Settings UI.
         var label: String {
             switch self {
-            case .fiveMinutes: return "5 minutes"
-            case .oneHour:     return "1 hour"
-            case .restOfDay:   return "Rest of day"
+            case .fiveMinutes: return String(localized: "settings.snooze.5min", bundle: .module)
+            case .oneHour:     return String(localized: "settings.snooze.1hour", bundle: .module)
+            case .restOfDay:   return String(localized: "settings.snooze.restOfDay", bundle: .module)
             }
         }
 

@@ -102,7 +102,7 @@ final class ReminderScheduler: ReminderScheduling {
 
         let trigger = UNTimeIntervalNotificationTrigger(
             timeInterval: reminderSettings.interval,
-            repeats: true
+            repeats: reminderSettings.interval >= 60
         )
 
         let request = UNNotificationRequest(

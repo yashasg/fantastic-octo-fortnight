@@ -74,8 +74,8 @@ struct OnboardingSetupView: View {
                         Text("onboarding.setup.customizeButton", bundle: .module)
                             .frame(minHeight: 44)
                     }
-                        .foregroundStyle(AppColor.reminderBlue)
-                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .font(AppFont.secondaryAction)
                         .accessibilityLabel(Text("onboarding.setup.customizeButton", bundle: .module))
                         .accessibilityHint(Text("onboarding.setup.customizeButton.hint", bundle: .module))
                 }

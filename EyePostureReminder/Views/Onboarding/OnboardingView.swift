@@ -41,8 +41,8 @@ struct OnboardingView: View {
 
 // MARK: - Animation Helper
 
-/// Wraps any onboarding screen content with a fade + slide-up entrance animation.
-/// Respects `accessibilityReduceMotion` — when enabled, only a quick fade is used.
+/// Wraps any onboarding screen content with a fade-in entrance animation.
+/// Respects `accessibilityReduceMotion` — when enabled, the animation duration is shortened to 0.15s.
 struct OnboardingScreenWrapper<Content: View>: View {
     @State private var appeared = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion

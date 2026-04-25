@@ -4,15 +4,8 @@ import XCTest
 /// Integration tests for `SettingsStore` + `AppConfig` (data-driven defaults.json system).
 ///
 /// Tests verify the **spec** for first-launch JSON seeding and `resetToDefaults()` behaviour.
-/// Some tests are currently **failing by design** — they document the spec and will pass once
-/// Basher integrates `AppConfig` into `SettingsStore.init()` and adds `resetToDefaults()`.
 ///
-/// ## Test status legend:
-/// - ✅ Compiles and tests current behaviour
-/// - 🔴 Fails until Basher ships SettingsStore ↔ AppConfig integration
-/// - 🔴💬 Commented-out — requires `resetToDefaults()` API that does not exist yet
-///
-/// ## Expected SettingsStore API after integration (per decisions.md):
+/// ## Expected SettingsStore API (per decisions.md):
 /// ```swift
 /// init(store: SettingsPersisting = UserDefaults.standard, config: AppConfig = .load())
 /// func resetToDefaults(config: AppConfig = .load())
@@ -40,57 +33,49 @@ final class SettingsStoreConfigTests: XCTestCase {
 
     // MARK: - First Launch: Defaults Must Come from JSON, Not Hardcode
 
-    /// 🔴 Fails until SettingsStore.init() seeds from AppConfig instead of ReminderSettings.defaultEyes.
-    /// The current code uses ReminderSettings.defaultEyes.interval = 10 (TEST OVERRIDE).
-    /// After integration it must use AppConfig.fallback.defaults.eyeInterval = 1200.
     func test_firstLaunch_eyesInterval_matchesAppConfigFallback() {
         // A fresh store with empty persistence should read from AppConfig, not hardcode.
         let fresh = SettingsStore(store: MockSettingsPersisting())
         XCTAssertEqual(
             fresh.eyesInterval,
             AppConfig.fallback.defaults.eyeInterval,
-            "🔴 First-launch eyesInterval must match AppConfig.fallback.defaults.eyeInterval (1200s). " +
-            "Fails until Basher wires SettingsStore.init() to AppConfig."
+            "First-launch eyesInterval must match AppConfig.fallback.defaults.eyeInterval (1200s) — SettingsStore.init() must seed from AppConfig."
         )
     }
 
-    /// 🔴 Fails until SettingsStore.init() seeds from AppConfig.
     func test_firstLaunch_eyesBreakDuration_matchesAppConfigFallback() {
         let fresh = SettingsStore(store: MockSettingsPersisting())
         XCTAssertEqual(
             fresh.eyesBreakDuration,
             AppConfig.fallback.defaults.eyeBreakDuration,
-            "🔴 First-launch eyesBreakDuration must match AppConfig.fallback (20s)."
+            "First-launch eyesBreakDuration must match AppConfig.fallback (20s)."
         )
     }
 
-    /// 🔴 Fails until SettingsStore.init() seeds from AppConfig.
     func test_firstLaunch_postureInterval_matchesAppConfigFallback() {
         let fresh = SettingsStore(store: MockSettingsPersisting())
         XCTAssertEqual(
             fresh.postureInterval,
             AppConfig.fallback.defaults.postureInterval,
-            "🔴 First-launch postureInterval must match AppConfig.fallback (1800s)."
+            "First-launch postureInterval must match AppConfig.fallback (1800s)."
         )
     }
 
-    /// 🔴 Fails until SettingsStore.init() seeds from AppConfig.
     func test_firstLaunch_postureBreakDuration_matchesAppConfigFallback() {
         let fresh = SettingsStore(store: MockSettingsPersisting())
         XCTAssertEqual(
             fresh.postureBreakDuration,
             AppConfig.fallback.defaults.postureBreakDuration,
-            "🔴 First-launch postureBreakDuration must match AppConfig.fallback (10s)."
+            "First-launch postureBreakDuration must match AppConfig.fallback (10s)."
         )
     }
 
-    /// 🔴 Fails until SettingsStore.init() seeds from AppConfig.
     func test_firstLaunch_globalEnabled_matchesAppConfigFallback() {
         let fresh = SettingsStore(store: MockSettingsPersisting())
         XCTAssertEqual(
             fresh.globalEnabled,
             AppConfig.fallback.features.globalEnabledDefault,
-            "🔴 First-launch globalEnabled must match AppConfig.fallback.features.globalEnabledDefault."
+            "First-launch globalEnabled must match AppConfig.fallback.features.globalEnabledDefault."
         )
     }
 

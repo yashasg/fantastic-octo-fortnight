@@ -100,14 +100,8 @@ struct OverlayView: View {
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel(Text("overlay.countdown.label", bundle: .module))
                 .accessibilityValue(
-                    String.localizedStringWithFormat(
-                        NSLocalizedString(
-                            "overlay.countdown.value",
-                            tableName: "Localizable",
-                            bundle: .module,
-                            value: "",
-                            comment: ""
-                        ),
+                    String(
+                        format: String(localized: "overlay.countdown.value", bundle: .module),
                         secondsRemaining
                     )
                 )
@@ -177,14 +171,20 @@ struct OverlayView: View {
         timer?.invalidate()
         let elapsedS = duration - TimeInterval(secondsRemaining)
         AnalyticsLogger.log(.overlayDismissed(type: type, method: method, elapsedS: elapsedS))
+        if method == .settingsTap {
+            UserDefaults.standard.set(true, forKey: AppStorageKey.openSettingsOnLaunch)
+        }
         if hapticsEnabled { notificationGenerator?.notificationOccurred(.success) }
         if reduceMotion {
             contentOpacity = 0
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { onDismiss() }
         } else {
+            let screenHeight = UIApplication.shared.connectedScenes
+                .compactMap { $0 as? UIWindowScene }
+                .first?.screen.bounds.height ?? 1000
             withAnimation(AppAnimation.overlayDismissCurve) {
                 contentOpacity = 0
-                slideOffset = -UIScreen.main.bounds.height
+                slideOffset = -screenHeight
             }
             DispatchQueue.main.asyncAfter(deadline: .now() + AppAnimation.overlayDismiss) {
                 onDismiss()

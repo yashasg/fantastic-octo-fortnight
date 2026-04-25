@@ -17,21 +17,19 @@ import XCTest
 
 // MARK: ─── Bug 1: SettingsView Done Button ───────────────────────────────────
 
-/// Regression tests for Bug 1: SettingsView Done button not responding to taps.
+/// Regression tests for Bug 1: SettingsView dismiss mechanism.
 ///
 /// **Root cause:** `@Environment(\.dismiss)` inside a `sheet {}` nested in a
 /// `NavigationStack` was silently ignored — the environment-provided dismiss action
-/// routed to the wrong ancestor.
+/// routed to the wrong ancestor (Issue #15).
 ///
-/// **Fix:** Replaced with `@Binding var isPresented: Bool` passed down from
-/// `HomeView`'s `@State private var showSettings = false`.
+/// **Fix:** Migrated SettingsView to use `@Environment(\.dismiss)` correctly.
+/// SettingsView now takes no `isPresented:` parameter.
 ///
 /// **How these catch a regression:**
-/// - If `isPresented:` is removed from the init (revert to `@Environment`), both
-///   `test_settingsView_hasIsPresentedBinding` and `test_homeView_controlsPresentation`
-///   fail to **compile**.
-/// - If the Done button body stops writing `isPresented = false`, the binding-propagation
-///   test fails at runtime.
+/// - `test_settingsView_instantiatesCorrectly` ensures SettingsView can be constructed
+///   with no parameters (confirming it uses `@Environment(\.dismiss)`).
+/// - The binding tests verify the abstract dismiss pattern works.
 @MainActor
 final class SettingsDismissRegressionTests: XCTestCase {
 
@@ -227,26 +225,22 @@ final class ScreenTimeTrackerRegressionTests: XCTestCase {
         try await super.tearDown()
     }
 
-    // MARK: Configuration API
-
-    /// setThreshold must not crash and must register a type for tracking.
-    func test_setThreshold_doesNotCrash() {
-        sut.setThreshold(60, for: .eyes)
-        sut.setThreshold(120, for: .posture)
-        XCTAssertTrue(true, "setThreshold must accept any positive interval without crashing.")
-    }
+    // MARK: Regression-Unique Tests
 
     /// setThreshold resets the accumulated counter to 0.
     /// Regression guard: without a counter reset, leftover time from a prior threshold
     /// configuration could trigger an immediate (spurious) callback.
     func test_setThreshold_resetsElapsedCounter_noSpuriousCallbackOnReconfig() {
+        let noCallback = expectation(description: "no spurious callback on setThreshold reconfig")
+        noCallback.isInverted = true
         sut.setThreshold(9_999, for: .eyes)
         sut.onThresholdReached = { _ in
             XCTFail("Callback must not fire immediately after setThreshold (counter must be 0).")
+            noCallback.fulfill()
         }
         // Reconfigure with a new threshold — no accumulated time should carry over.
         sut.setThreshold(9_999, for: .eyes)
-        RunLoop.current.run(until: Date(timeIntervalSinceNow: 0.4))
+        wait(for: [noCallback], timeout: 0.5)
     }
 
     /// disableTracking removes a type from the tracker; no callback fires afterward.
@@ -378,7 +372,7 @@ final class ScreenTimeTrackerRegressionTests: XCTestCase {
 
     /// Returning to active within the grace period resumes counting from where it left off
     /// (counter is NOT reset). The callback must eventually fire.
-    /// Regression: if the grace period cancellation doesn't work, counters reset on every
+    /// Regression guard: if the grace period cancellation doesn't work, counters reset on every
     /// brief interruption (notification banner, incoming call), making long intervals impossible.
     func test_withinGracePeriod_returnsToActive_resumesCounting() {
         let callbackFired = expectation(description: "callback fires after resume within grace period")
@@ -400,25 +394,7 @@ final class ScreenTimeTrackerRegressionTests: XCTestCase {
         // Resumed from ~0.5s; callback should fire within ~3s more.
         wait(for: [callbackFired], timeout: 6.0)
     }
-
-    // MARK: stop()
-
-    /// stop() must halt the timer and prevent any further callbacks.
-    /// Used for cleanup and when reminders are permanently disabled.
-    func test_stop_preventsCallbacksAfterStopping() {
-        let noCallback = expectation(description: "no callback after stop()")
-        noCallback.isInverted = true
-
-        sut.setThreshold(2, for: .eyes)
-        sut.onThresholdReached = { _ in noCallback.fulfill() }
-
-        NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
-        sut.stop()
-
-        wait(for: [noCallback], timeout: 3.5)
-    }
 }
-
 // MARK: ─── Bug 5: Data-Driven Defaults ───────────────────────────────────────
 
 /// Regression tests for Bug 5: Settings defaults were hardcoded in Swift.

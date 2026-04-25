@@ -11,6 +11,11 @@ import XCTest
 @MainActor
 final class OverlayManagerTests: XCTestCase {
 
+    override func tearDown() {
+        OverlayManager.shared.clearQueue()
+        super.tearDown()
+    }
+
     // MARK: - Singleton
 
     func test_shared_isNotNil() {

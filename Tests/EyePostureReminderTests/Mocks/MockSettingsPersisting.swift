@@ -42,6 +42,15 @@ final class MockSettingsPersisting: SettingsPersisting {
         storage[key] != nil
     }
 
+    /// Removes the stored value for `key`, simulating a key-absent state.
+    ///
+    /// Used when `SettingsStore` clears runtime-state fields (e.g. `snoozedUntil`).
+    /// Without this, `double(forKey:defaultValue:)` cannot distinguish a key that
+    /// was never written from one explicitly set to `0.0`.
+    func removeValue(forKey key: String) {
+        storage.removeValue(forKey: key)
+    }
+
     /// Removes all stored values, simulating a fresh install.
     func clear() {
         storage.removeAll()

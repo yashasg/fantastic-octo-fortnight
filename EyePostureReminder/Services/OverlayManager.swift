@@ -110,6 +110,8 @@ final class OverlayManager: OverlayPresenting {
         audioManager.pauseExternalAudio()
         dismissCallback = onDismiss
 
+        // Do NOT set window.overrideUserInterfaceStyle — the window must inherit the
+        // scene's appearance so the overlay renders correctly in both light and dark mode.
         let window = UIWindow(windowScene: windowScene)
         window.windowLevel = .alert + 1
         window.backgroundColor = .clear
