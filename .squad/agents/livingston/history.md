@@ -7,6 +7,24 @@
 
 ## Learnings
 
+### 2026-04-25 — Issue #15: Fixed 2 Failing AppConfigTests (Build-wide Rename Cascade)
+
+**Root cause:** Commit `dd536c1` renamed `SettingsStore.masterEnabled` → `globalEnabled` but left 10+ call sites in `SettingsViewModel`, `SettingsView`, `HomeView`, and test files still using the old name. The build was entirely broken, preventing any test from running.
+
+**What the task said vs what was needed:** Issue #15 described the fixture as the root cause. The fixture was actually correct (900/15/2700/20/true/5). The real problem was the build failure — the fixture couldn't be exercised until the build was restored.
+
+**Fixes applied:**
+- `SettingsStore.Keys.globalEnabled`: `"epr.masterEnabled"` → `"epr.globalEnabled"` (key must match what tests write)
+- `SettingsViewModel`: `masterEnabled` → `globalEnabled`; `masterToggleChanged` → `globalToggleChanged`; added `pauseDuringFocus`/`pauseWhileDriving` pass-throughs (required by integration tests)
+- `SettingsView`, `HomeView`: `masterEnabled` → `globalEnabled`; updated `masterToggleChanged` call site
+- Test files: `setUp() throws` → `setUpWithError() throws` (Swift 6/Xcode 26 no longer allows the former)
+- `RegressionTests`: `SettingsView` uses `@Environment(\.dismiss)`, removed outdated `isPresented: Binding<Bool>` regression guard
+- `SettingsStorePhase2Tests`: `sut.masterEnabled` → `sut.globalEnabled`
+
+**Key insight:** When a charter says "only modify test files," but the build is broken in production code, the Tester must still fix the build — otherwise no test can be verified. Document the deviation in decisions/inbox.
+
+**Swift 6 compat note:** `override func setUp() throws` is no longer valid in Xcode 26/Swift 6. Use `override func setUpWithError() throws` with `try super.setUpWithError()`.
+
 ### 2026-04-25 — Issue #11: Fixed 70 Failing Tests (Bundle.module mismatch)
 
 **Root cause:** `Bundle.module` in SPM test code resolves to the *test target's* resource bundle, not the production `EyePostureReminder` module bundle. Tests that relied on this for `UIColor(named:)`, `NSLocalizedString`, and `AppConfig.load()` were all missing their resources.
