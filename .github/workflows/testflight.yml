@@ -37,6 +37,11 @@ on:
         required: true
         default: "0.1.0"
 
+permissions:
+  contents: read
+  actions: read
+  checks: read
+
 env:
   XCODE_VERSION: "16.2"
   SCHEME: "EyePostureReminder"
@@ -45,11 +50,23 @@ env:
 jobs:
   deploy-testflight:
     name: Archive & Upload to TestFlight
-    runs-on: macos-14
+    runs-on: macos-15
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      # ── CI gate ───────────────────────────────────────────────────────────
+      - name: Verify CI passed on this commit
+        run: |
+          STATUS=$(gh api "repos/${{ github.repository }}/commits/${{ github.sha }}/check-runs" \
+            --jq '[.check_runs[] | select(.name == "Build & Test")] | first | .conclusion')
+          if [[ "$STATUS" != "success" ]]; then
+            echo "CI has not passed on this commit (status: ${STATUS:-not found}). Aborting deploy."
+            exit 1
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Select Xcode ${{ env.XCODE_VERSION }}
         run: sudo xcode-select -switch /Applications/Xcode_${{ env.XCODE_VERSION }}.app/Contents/Developer
@@ -96,16 +113,8 @@ jobs:
             -derivedDataPath "${{ env.DERIVED_DATA_PATH }}" \
             ENABLE_BITCODE=NO
 
-      # ── Export IPA ────────────────────────────────────────────────────────
-      - name: Export IPA
-        run: |
-          xcodebuild -exportArchive \
-            -archivePath "${{ github.workspace }}/EyePostureReminder.xcarchive" \
-            -exportPath "${{ github.workspace }}/export" \
-            -exportOptionsPlist ExportOptions.plist
-
-      # ── Upload to TestFlight ──────────────────────────────────────────────
-      - name: Upload to TestFlight (altool)
+      # ── Export IPA + Upload to TestFlight ────────────────────────────────
+      - name: Export IPA and Upload to TestFlight
         env:
           ASC_API_KEY_BASE64: ${{ secrets.ASC_API_KEY_BASE64 }}
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
@@ -114,12 +123,33 @@ jobs:
           API_KEY_PATH="$RUNNER_TEMP/asc_api_key.p8"
           echo -n "$ASC_API_KEY_BASE64" | base64 --decode -o "$API_KEY_PATH"
 
-          xcrun altool --upload-app \
-            --type ios \
-            --file "${{ github.workspace }}/export/EyePostureReminder.ipa" \
-            --apiKey "$ASC_KEY_ID" \
-            --apiIssuer "$ASC_ISSUER_ID" \
-            --apiKeyPath "$API_KEY_PATH"
+          # Generate ExportOptions.plist with destination: upload (Xcode 15+)
+          cat > "$RUNNER_TEMP/ExportOptions.plist" << 'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key><string>app-store</string>
+            <key>destination</key><string>upload</string>
+            <key>uploadBitcode</key><false/>
+            <key>uploadSymbols</key><true/>
+          </dict>
+          </plist>
+          EOF
+
+          xcodebuild -exportArchive \
+            -archivePath "${{ github.workspace }}/EyePostureReminder.xcarchive" \
+            -exportPath "${{ github.workspace }}/export" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -authenticationKeyPath "$API_KEY_PATH" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            -allowProvisioningUpdates
+
+      # ── Clean up API key ──────────────────────────────────────────────────
+      - name: Clean up API key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/asc_api_key.p8" || true
 
       # ── Upload IPA as artifact ────────────────────────────────────────────
       - name: Upload IPA artifact

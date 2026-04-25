@@ -15,6 +15,10 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+  actions: read
+
 env:
   XCODE_VERSION: "16.2"
   SCHEME: "EyePostureReminder"
@@ -27,7 +31,7 @@ env:
 jobs:
   build-and-test:
     name: Build & Test
-    runs-on: macos-14
+    runs-on: macos-15
 
     steps:
       - name: Checkout
@@ -60,6 +64,7 @@ jobs:
             echo "MARKETING_VERSION=$MARKETING_VER" >> $GITHUB_ENV
             echo "Injected build=$BUILD_NUMBER commit=$COMMIT_HASH marketing=$MARKETING_VER into $PLIST"
           else
+            echo "MARKETING_VERSION=unknown" >> $GITHUB_ENV
             echo "note: Info.plist not found — versioning will be applied when .xcodeproj is created"
           fi
 
@@ -68,7 +73,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ env.DERIVED_DATA_PATH }}
-          key: derived-data-${{ runner.os }}-${{ hashFiles('**/*.xcodeproj/project.pbxproj', '**/*.swift') }}
+          key: derived-data-${{ runner.os }}-${{ hashFiles('Package.swift', 'Package.resolved') }}
           restore-keys: |
             derived-data-${{ runner.os }}-
 
@@ -81,8 +86,17 @@ jobs:
         run: ./scripts/build.sh test
 
       # ── Lint ─────────────────────────────────────────────────────────────────
+      - name: Install SwiftLint
+        run: brew install swiftlint
+
       - name: Lint (SwiftLint)
         run: ./scripts/build.sh lint
+
+      # ── Coverage ─────────────────────────────────────────────────────────────
+      - name: Report coverage
+        if: always()
+        run: |
+          xcrun xccov view --report TestResults.xcresult || true
 
       # ── Artifacts ────────────────────────────────────────────────────────────
       - name: Collect dSYMs
@@ -105,60 +119,3 @@ jobs:
           name: test-results-${{ env.MARKETING_VERSION }}-build${{ github.run_number }}
           path: TestResults.xcresult
           retention-days: 30
-
-  # ── TestFlight upload (DISABLED — no Apple Developer account yet) ──────────
-  # Uncomment and configure when an Apple Developer account is available.
-  #
-  # upload-testflight:
-  #   name: Upload to TestFlight
-  #   runs-on: macos-14
-  #   needs: build-and-test
-  #   if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-  #   steps:
-  #     - name: Checkout
-  #       uses: actions/checkout@v4
-  #
-  #     - name: Install certificates and provisioning profiles
-  #       # Uses Apple API key stored in GitHub secrets
-  #       env:
-  #         BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
-  #         P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
-  #         BUILD_PROVISION_PROFILE_BASE64: ${{ secrets.BUILD_PROVISION_PROFILE_BASE64 }}
-  #         KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
-  #       run: |
-  #         # Decode and install certificate + provisioning profile
-  #         echo $BUILD_CERTIFICATE_BASE64 | base64 --decode > certificate.p12
-  #         security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
-  #         security import certificate.p12 -k build.keychain -P "$P12_PASSWORD" -T /usr/bin/codesign
-  #
-  #     - name: Archive (device build)
-  #       run: |
-  #         xcodebuild archive \
-  #           -scheme "${{ env.SCHEME }}" \
-  #           -archivePath EyePostureReminder.xcarchive \
-  #           -allowProvisioningUpdates
-  #
-  #     - name: Export IPA
-  #       run: |
-  #         xcodebuild -exportArchive \
-  #           -archivePath EyePostureReminder.xcarchive \
-  #           -exportPath ./export \
-  #           -exportOptionsPlist ExportOptions.plist
-  #
-  #     - name: Upload to TestFlight
-  #       env:
-  #         APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
-  #         APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
-  #         APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
-  #       run: |
-  #         xcrun altool --upload-app \
-  #           --type ios \
-  #           --file ./export/EyePostureReminder.ipa \
-  #           --apiKey "$APP_STORE_CONNECT_KEY_ID" \
-  #           --apiIssuer "$APP_STORE_CONNECT_ISSUER_ID"
-  #
-  #     - name: Tag release
-  #       run: |
-  #         VERSION=$(agvtool mvers -terse1)
-  #         git tag -a "v${VERSION}" -m "Release ${VERSION}, build ${{ github.run_number }}"
-  #         git push origin "v${VERSION}"

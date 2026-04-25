@@ -119,18 +119,8 @@ cmd_build() {
 }
 
 cmd_check() {
-  header "CHECK (syntax)"
-  require_xcodebuild
-  local dest
-  dest=$(detect_destination)
-  info "Destination: $dest"
-
-  run_xcodebuild build \
-    -scheme "$SCHEME" \
-    -destination "$dest" \
-    -derivedDataPath "$DERIVED_DATA_PATH"
-
-  pass "Syntax check passed"
+  warn "check is an alias for build (xcodebuild has no syntax-only mode)"
+  cmd_build
 }
 
 cmd_test() {
@@ -147,7 +137,8 @@ cmd_test() {
     -scheme "$SCHEME" \
     -destination "$dest" \
     -derivedDataPath "$DERIVED_DATA_PATH" \
-    -resultBundlePath "${PACKAGE_PATH}/TestResults.xcresult"
+    -resultBundlePath "${PACKAGE_PATH}/TestResults.xcresult" \
+    -enableCodeCoverage YES
 
   pass "Tests passed"
 }
@@ -244,7 +235,7 @@ usage() {
   echo "  lint               Run SwiftLint (skipped gracefully if not installed)"
   echo "  clean              Remove build artifacts"
   echo "  all                build + lint + test"
-  echo "  check              Quick syntax check (compile only)"
+  echo "  check              Alias for build (xcodebuild has no syntax-only mode)"
   echo "  version            Show current marketing version"
   echo "  version <x.y.z>   Set marketing version in Info.plist"
 }
