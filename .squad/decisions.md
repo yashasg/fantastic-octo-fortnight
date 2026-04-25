@@ -1259,3 +1259,57 @@ App launches cleanly with Focus and Motion detectors operational. Ready for App 
 - `EyePostureReminder/Services/PauseConditionManager.swift` — Complete service (242 lines)
 - `scripts/run.sh` — Fixed plist refresh logic in incremental builds
 
+---
+
+### Decision: PauseConditionManager Settings-at-Callback-Time Contract
+**Filed by:** Livingston (Tester)  
+**Date:** 2026-04-25  
+**Status:** Documented (No Change Needed)
+
+**Context**
+
+While writing `DrivingDetectionExtendedTests` and `FocusModeExtendedTests`, a subtle but important behaviour of `PauseConditionManager` was explicitly tested and documented for the first time.
+
+**Observed Behaviour**
+
+`PauseConditionManager` registers callbacks in `startMonitoring()`:
+
+```swift
+drivingDetector.onDrivingChanged = { [weak self] driving in
+    guard let self else { return }
+    self.update(.driving, isActive: driving && self.settings.pauseWhileDriving)
+}
+```
+
+Settings are read **at callback time**, not at registration time. This means:
+
+- If a user disables `pauseWhileDriving` while actively driving, the `.driving` condition **stays in `activeConditions`** until the next `onDrivingChanged` callback fires.
+- `isPaused` does not immediately update when the setting changes.
+- The condition self-corrects the next time the underlying detector fires.
+
+**Impact**
+
+This is intentional and correct per the existing comment:
+> "Reads `SettingsStore` at callback time so per-condition user toggles are always respected without requiring re-registration."
+
+However, there is a **latency window**: after disabling a pause setting, the app may remain paused until the next hardware event triggers a callback. For driving, this could be seconds; for CarPlay, it depends on the AVAudioSession route change.
+
+**Decision**
+
+Accept the current implementation. The latency window is an acceptable trade-off vs. the complexity of subscribing to `@Published` settings changes and retroactively re-evaluating `activeConditions`.
+
+If this becomes a user-reported issue, the fix would be to observe `settings.$pauseWhileDriving` and `settings.$pauseDuringFocus` in `startMonitoring()` and call `update()` immediately on change.
+
+**Tests Added**
+
+- `test_disablePauseWhileDriving_midDrive_nextCallbackIgnoresDriving()`
+- `test_disablePauseWhileDriving_midCarPlay_nextCarPlayCallbackIgnored()`
+- `test_disablePauseDuringFocus_midMonitoring_nextCallbackIgnoresFocus()`
+- `test_settingsChange_focusPauseDisabledMidMonitoring_newCallbacksIgnored()` (in FocusModeExtendedTests)
+
+**Files Affected**
+
+- `Tests/EyePostureReminderTests/Views/DarkModeTests.swift` — 21 tests
+- `Tests/EyePostureReminderTests/Services/FocusModeExtendedTests.swift` — 21 tests
+- `Tests/EyePostureReminderTests/Services/DrivingDetectionExtendedTests.swift` — 29 tests
+

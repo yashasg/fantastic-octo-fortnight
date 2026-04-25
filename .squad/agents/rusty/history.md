@@ -7,7 +7,17 @@
 
 ## Learnings
 
-<!-- Append new learnings below. Each entry is something lasting about the project. -->
+## Core Context
+
+**Initial Architecture Scaffolding (Rusty Pre-Phase1) — 2026-04-24:**
+Production-quality scaffold pre-built before Phase 1 team work: Models (ReminderType, ReminderSettings), Services (SettingsStore, ReminderScheduler, AppCoordinator, AppDelegate, OverlayManager), ViewModels, DesignSystem (AppColor, AppFont, AppSpacing, AppLayout, AppAnimation, AppSymbol). 
+- SettingsStore uses UserDefaults with `epr.` key prefix; @Published properties automatically notify SwiftUI views.
+- ReminderScheduler schedules UNNotificationRequest via AppDelegate; reschedules on every SettingsStore change via coordinator.
+- OverlayManager creates UIWindow, presents OverlayView via UIHostingController; manages lifecycle independently.
+- Models layer fully complete: ReminderType, notifications properties (categoryIdentifier, title, body, init?(category:)), overlay properties.
+- Services team task (M1.1/M1.3/M1.4): Wire AppCoordinator protocol, seed from defaults.json, fix Info.plist keys.
+- UI team task (M1.2/M1.5): Refactor SettingsView sheet presentation, HomeView navigation stack, OverlayView swipe/haptic fixes.
+- Test team task (M1.7): Add PauseConditionManager tests, dark mode tests, focus/driving detection edge cases.
 
 ### 2025-07-25: Architecture Scaffolding — Models, Services, ViewModels
 

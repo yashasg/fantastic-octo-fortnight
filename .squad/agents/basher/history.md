@@ -7,6 +7,21 @@
 
 ## Learnings
 
+## Core Context
+
+**Phase 1 Services Architecture (M1.1, M1.3, M1.4) — 2026-04-24 to 2026-04-25:**
+App scaffold (SettingsStore, ReminderScheduler, AppCoordinator, AppDelegate, OverlayManager) was production-quality at project start. Phase 1 wiring:
+- SettingsViewModel owns preset interval/breakDuration options as static arrays; ReminderRowView references them (not duplicated).
+- OverlayManager is @MainActor singleton; AppDelegate notification callbacks use `Task { @MainActor in ... }` to reach it.
+- AppCoordinator conforms to ReminderScheduling protocol — all scheduling paths (notifications + fallback timers) sync on every settings change.
+- SettingsStore seeds from `defaults.json` on first launch via AppConfig loader; `resetToDefaults()` clears keys and re-seeds.
+- OverlayView swipe-UP dismiss (translation.height < 0), Settings gear calls onDismiss(), haptic feedback (medium impact) at countdown zero.
+- Info.plist requires NSFocusStatusUsageDescription + NSMotionUsageDescription; omitting either causes crash at first API access.
+- PauseConditionManager reads settings at callback time (not registration) — settings changes do NOT retroactively remove activeConditions; next callback re-evaluates with current setting.
+- String catalog (Localizable.xcstrings) uses screen.element.qualifier convention (73 keys); Text() accepts LocalizedStringKey, format strings use %@ / %d / positional specifiers.
+- AppConfig.load(from:) accepts Bundle parameter for test injection; defaults.json is bundled via Package.swift .process("Resources").
+- Build verified clean: `./scripts/build.sh build` → BUILD SUCCEEDED. Fix `run.sh` Info.plist refresh bug on incremental builds.
+
 ### 2026-04-25 — NSFocusStatusUsageDescription crash fix
 
 - **`EyePostureReminder/Info.plist`** is the source of truth for privacy usage descriptions in this SPM project. `run.sh` reads it at bundle-assembly time via `sed` variable substitution.

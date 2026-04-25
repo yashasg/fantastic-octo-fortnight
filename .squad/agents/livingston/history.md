@@ -7,7 +7,56 @@
 
 ## Learnings
 
-<!-- Append new learnings below. Each entry is something lasting about the project. -->
+## Core Context
+
+**Phase 1 Test Suite (M1.7) — 2026-04-24 to 2026-04-25:**
+Test target depends on executable target in Package.swift (Swift 5.9 supported; `@main` attribute does not conflict). Test patterns:
+- Protocol locations: NotificationScheduling, SettingsPersisting defined inline (not in Protocols/ dir); @testable import accesses them regardless.
+- @MainActor test pattern: Class-level @MainActor on SettingsViewModelTests; async test methods use Task.sleep(nanoseconds: 200_000_000) after action calls.
+- MockNotificationCenter: Two arrays (addedRequests append-only history, pendingRequests live queue); independent assertions on call count vs pending state.
+- DarkModeTests (21 tests): AppColor tokens resolve non-nil/fully opaque in dark trait; WarningOrange higher R in dark; overlayBackground alpha 0.6 via UIColor(AppColor).resolvedColor().getRed(); AppFont.countdown fixed 64pt.
+- FocusModeExtendedTests (21 tests): Rapid toggle parity; duplicate events single callback; focus during background; settings changes don't retroactively remove conditions.
+- DrivingDetectionExtendedTests (29 tests): CarPlay+driving simultaneous; disconnects/stops preserve pause; full clear fires resume once; rapid cycles converge; VM bridge independence.
+- Settings-at-callback-time contract: PauseConditionManager reads settings at callback time, not registration — next callback re-evaluates with current setting.
+- Mock detectors (MockFocusStatusDetector, MockCarPlayDetector, MockDrivingActivityDetector) in PauseConditionManagerTests.swift accessible across test target (same SPM compilation unit).
+- Build verified clean: `./scripts/build.sh build` → BUILD SUCCEEDED.
+
+### 2026-04-25 — Dark Mode / Focus Mode / Driving Detection Extended Test Suite (71 tests)
+
+- Created `Tests/EyePostureReminderTests/Views/DarkModeTests.swift` — 21 tests
+- Created `Tests/EyePostureReminderTests/Services/FocusModeExtendedTests.swift` — 21 tests (2 classes: `FocusModeExtendedTests` non-@MainActor + `FocusModeSettingsViewModelTests` @MainActor)
+- Created `Tests/EyePostureReminderTests/Services/DrivingDetectionExtendedTests.swift` — 29 tests (2 classes: `DrivingDetectionExtendedTests` non-@MainActor + `DrivingSettingsViewModelTests` @MainActor)
+- **DarkModeTests coverage:**
+  - Named AppColor tokens resolve non-nil and are fully opaque in dark UITraitCollection
+  - WarningOrange dark mode has higher R component than light (brightness spec compliance)
+  - PermissionBanner and PermissionBannerText are static (equal in both modes)
+  - `overlayBackground` alpha = 0.6 in both modes via `UIColor(AppColor.overlayBackground).resolvedColor(with:)` + `getRed`
+  - AppFont UIKit equivalents have positive point size in dark mode trait context
+  - Scalable fonts scale up at accessibilityExtraExtraExtraLarge even in dark mode
+  - AppFont.countdown is fixed at 64pt regardless of dark mode
+  - All SF Symbol names load as valid UIImage with dark mode config; tintable with dark-mode AppColor tokens
+- **FocusModeExtendedTests coverage:**
+  - Rapid focus toggle: even cycles = not paused, ends on true = paused, callback count = state flips exactly
+  - Duplicate focus=true events fire only one callback
+  - Focus callbacks during "background" conditions are still processed
+  - Disabling pauseDuringFocus mid-monitoring: existing condition stays until next callback re-evaluates (documented expected behaviour)
+  - Re-enabling pauseDuringFocus mid-monitoring: next callback respects new setting
+  - Focus + another condition: clearing focus while driving keeps paused, no extra callback
+  - SettingsViewModel.pauseDuringFocus getter/setter bridge, persistence round-trip, independence from pauseWhileDriving
+- **DrivingDetectionExtendedTests coverage:**
+  - CarPlay + driving simultaneously: both conditions active, callback fires once only
+  - CarPlay disconnects while driving active: stays paused, no callback
+  - Driving stops while CarPlay active: stays paused, no callback
+  - Full clear: paused → resume callback fires once
+  - Additive conditions (driving → CarPlay connects, driving stops → CarPlay still active)
+  - Disable pauseWhileDriving mid-drive: takes effect on next callback (not retroactively)
+  - Enable pauseWhileDriving mid-monitoring: next callback respects setting
+  - Rapid driving/CarPlay cycles converge correctly
+  - SettingsViewModel.pauseWhileDriving getter/setter bridge, persistence round-trip, independence from pauseDuringFocus
+- **Key implementation insight documented:** PauseConditionManager reads `settings.pauseWhileDriving` / `settings.pauseDuringFocus` at callback time — settings changes do NOT retroactively remove existing activeConditions. The next callback from the detector re-evaluates with the current setting.
+- **UIColor(swiftUIColor)** pattern for overlayBackground opacity: `UIColor(AppColor.overlayBackground).resolvedColor(with:).getRed(...)` extracts alpha=0.6 correctly in iOS 16+ simulator context.
+- **Mock detectors (MockFocusStatusDetector, MockCarPlayDetector, MockDrivingActivityDetector)** are defined in `PauseConditionManagerTests.swift` and accessible from all files in the same test target (same SPM test target = same compilation unit).
+- Build verified clean: `./scripts/build.sh build` → BUILD SUCCEEDED (4s).
 
 ### 2026-04-25 — PauseConditionManager Test Suite Complete (28 tests)
 

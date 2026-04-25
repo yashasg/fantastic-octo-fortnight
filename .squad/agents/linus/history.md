@@ -7,7 +7,20 @@
 
 ## Learnings
 
-<!-- Append new learnings below. Each entry is something lasting about the project. -->
+## Core Context
+
+**Phase 1 UI Layer (M1.2, M1.5) — 2026-04-24 to 2026-04-25:**
+OverlayView lives in UIWindow with no EnvironmentObjects; self-contained via UIHostingController. SettingsView is sheet-presented from HomeView (NavigationStack root). Patterns:
+- Swipe UP to dismiss (translation.height < 0); isDismissing guard ensures onDismiss() called once (manual OR timer, not both).
+- Fade animations use opacity state var; overlayAppearCurve (appear), overlayDismissCurve (manual), overlayFadeCurve (auto-dismiss).
+- @Environment(\.accessibilityReduceMotion) guards animations; opacity set directly + 50ms grace before onDismiss on reduced-motion devices.
+- SettingsViewModel is @State (not @StateObject) — view-only access, no @Published observation.
+- Countdown ZStack uses .accessibilityElement(children: .ignore) + .accessibilityLabel("Countdown timer") + .accessibilityValue("\(n) seconds remaining") + .updatesFrequently.
+- Notification permission warning reads coordinator.notificationAuthStatus and shows deep-link to System Settings.
+- String catalog (73 keys) extracted; Text("key") accepts LocalizedStringKey; %@ (String), %d (Int), positional %1$@/%2$@/%3$@.
+- HomeView status display: icon/color toggled between eyeBreak (blue, active) and "moon.zzz.fill" (secondary, paused); read from settings.masterEnabled directly.
+- UIApplication.openSettingsURLString requires `import UIKit` in SettingsView.swift.
+- Build verified: `./scripts/build.sh build` → BUILD SUCCEEDED.
 
 ### 2026-04-24 — M1.2 + M1.5 Phase 1 UI layer
 
