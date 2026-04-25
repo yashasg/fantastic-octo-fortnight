@@ -133,6 +133,12 @@ final class AppCoordinator: ObservableObject {
             guard let self else { return }
             if isPaused {
                 self.screenTimeTracker.pauseAll()
+                // Dismiss any overlay that is currently on screen and drop queued ones.
+                // CarPlay/driving contexts should never show a break overlay.
+                if self.overlayManager.isOverlayVisible {
+                    self.overlayManager.dismissOverlay()
+                }
+                self.overlayManager.clearQueue()
                 Logger.scheduling.info("PauseConditionManager: pausing reminders (active condition)")
             } else {
                 guard (self.settings.snoozedUntil ?? .distantPast) <= Date() else {
