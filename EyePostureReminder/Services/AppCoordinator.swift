@@ -247,7 +247,7 @@ final class AppCoordinator: ObservableObject {
         AnalyticsLogger.log(.appSessionStart(
             eyeEnabled: settings.isEnabled(for: .eyes),
             postureEnabled: settings.isEnabled(for: .posture),
-            snoozeActive: false
+            snoozeActive: settings.snoozedUntil.map { $0 > Date() } ?? false
         ))
         Logger.scheduling.info("ScreenTimeTracker configured — reminders fire after continuous screen-on time")
     }
@@ -319,6 +319,7 @@ final class AppCoordinator: ObservableObject {
         guard let snoozeEnd = settings.snoozedUntil, snoozeEnd <= Date() else { return }
         settings.snoozedUntil = nil
         settings.snoozeCount  = 0
+        AnalyticsLogger.log(.snoozeExpired)
         Logger.scheduling.info("clearExpiredSnoozeIfNeeded: stale snoozedUntil cleared")
     }
 
@@ -445,6 +446,7 @@ final class AppCoordinator: ObservableObject {
     private func handleSnoozeWake() async {
         settings.snoozedUntil = nil
         settings.snoozeCount  = 0
+        AnalyticsLogger.log(.snoozeExpired)
         await scheduleReminders()
         Logger.scheduling.info("Snooze wake — reminders resumed")
     }
