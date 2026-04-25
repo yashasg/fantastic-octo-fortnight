@@ -21,6 +21,8 @@ Eye & Posture Reminder is a wellness reminder tool for iOS. It monitors screen-o
 - Take short eye breaks using the 20-20-20 guideline (look at something 20 feet away for 20 seconds every 20 minutes)
 - Check and correct your posture
 
+The App also reads device motion activity data (via `CMMotionActivityManager`) in memory, solely to automatically pause reminders while you are driving. This data is never stored or transmitted. See the Privacy Policy for full details.
+
 **The App is a reminder tool only.** It does not monitor, measure, diagnose, or treat any health condition. It does not track your physical state, assess your actual eye health, or evaluate your posture biomechanics. It simply delivers reminders at intervals you configure.
 
 ---

@@ -28,11 +28,11 @@
  │  └ HomeView      │  │                  │  │  │   ├ CarPlayDetector   │
  │     ├ SettingsView│  │                  │  │  │   └ DrivingDetector  │
  │     │  └ Reminder│  │                  │  │  ├ OverlayManager       │
- │     │    RowView │  │                  │  │  └ AudioInterruption-   │
- │     ├ OverlayView│  │                  │  │      Manager            │
- │     ├ DesignSystem│ │                  │  │                          │
- │     └ LegalDoc   │  │                  │  │                          │
- │       View       │  │                  │  │                          │
+ │     │    RowView │  │                  │  │  ├ AudioInterruption-   │
+ │     ├ OverlayView│  │                  │  │  │   Manager            │
+ │     ├ DesignSystem│ │                  │  │  ├ AnalyticsLogger      │
+ │     └ LegalDoc   │  │                  │  │  ├ MetricKitSubscriber  │
+ │       View       │  │                  │  │  └ ServiceLifecycle     │
  └──────────────────┘  └────────┬─────────┘  └──────────────────────────┘
                                 │                       ▲
                                 ▼                       │
@@ -260,7 +260,10 @@ EyePostureReminder/                  (SPM executable target)
 │   ├── ScreenTimeTracker.swift       Continuous screen-on timer; ScreenTimeTracking protocol
 │   ├── PauseConditionManager.swift   Focus/CarPlay/driving aggregation; all detector + PauseConditionProviding protocols
 │   ├── OverlayManager.swift          UIWindow overlay lifecycle; OverlayPresenting protocol
-│   └── AudioInterruptionManager.swift AVAudioSession interruption; MediaControlling protocol
+│   ├── AudioInterruptionManager.swift AVAudioSession interruption; MediaControlling protocol
+│   ├── AnalyticsLogger.swift         Structured event logging via os.Logger (see TELEMETRY.md)
+│   ├── MetricKitSubscriber.swift     MXMetricManager subscriber for OS-level crash/perf diagnostics
+│   └── ServiceLifecycle.swift        Lifecycle protocol (start/stop) for uniform service management
 │
 ├── ViewModels/
 │   └── SettingsViewModel.swift       @ObservableObject; injects ReminderScheduling
@@ -283,7 +286,7 @@ EyePostureReminder/                  (SPM executable target)
 │   └── Logger+App.swift              OSLog subsystem categories: .lifecycle, .scheduling, .overlay, .settings
 │
 └── Resources/
-    ├── Colors.xcassets               6 semantic color tokens with dark/light variants
+    ├── Colors.xcassets               Semantic color tokens (ReminderBlue, ReminderGreen, WarningOrange, PermissionBanner, PermissionBannerText, WarningText) with dark/light variants
     ├── Localizable.xcstrings         ~35 user-facing strings; Xcode 15 String Catalog
     └── defaults.json                 First-launch seed values for intervals + feature flags
 
@@ -401,18 +404,32 @@ Tests/
 
 | Layer | Mechanism | What It Owns |
 |-------|-----------|-------------|
-| **1** | Asset Catalog (`.xcassets`) | 6 semantic color tokens with automatic dark/light variants |
+| **1** | Asset Catalog (`.xcassets`) | Semantic color tokens with automatic dark/light variants |
 | **2** | String Catalog (`.xcstrings`) | ~35 user-facing strings; localization-ready |
 | **3** | `defaults.json` (bundled) | Reminder intervals, break durations, feature flags (~10 values) |
 | **4** | Swift code | Spacing, layout, animations, SF Symbol names, typography |
 
 **Layer 1 — Asset Catalog colors:**
+
+The Asset Catalog defines the following semantic color tokens (each with light/dark variants):
+
+| Token (Asset Catalog) | `AppColor` property | Purpose |
+|---|---|---|
+| `ReminderBlue` | `.reminderBlue` | Eye reminder accent |
+| `ReminderGreen` | `.reminderGreen` | Posture reminder accent |
+| `WarningOrange` | `.warningOrange` | Warning/alert accent |
+| `PermissionBanner` | `.permissionBanner` | Permission banner background |
+| `PermissionBannerText` | `.permissionBannerText` | Permission banner text |
+| `WarningText` | `.warningText` | Warning label text |
+
+Additionally, `AppColor.overlayBackground` is computed in code as `Color(.systemBackground).opacity(0.6)` — not an Asset Catalog entry.
+
 ```swift
 // SwiftUI (automatic dark/light adaptation)
-Color("reminderBlue")
+Color("ReminderBlue")
 
 // UIKit (e.g., UIWindow tint in OverlayManager)
-UIColor(named: "reminderBlue")
+UIColor(named: "ReminderBlue")
 ```
 Replaces all `UIColor(dynamicProvider:)` calls in `DesignSystem.swift`. The OS handles dark/light switching — no Swift logic needed.
 
@@ -1151,3 +1168,4 @@ Establish baselines on the CI runner (not local) to avoid machine-dependent drif
 | 2026-04-24 | Initial architecture definition | Rusty |
 | 2026-04-26 | Added Section 10: Testing Architecture | Rusty |
 | 2026-04-25 | Full codebase audit: updated module graph, all protocol definitions (ScreenTimeTracking, ReminderScheduling, PauseConditionProviding, MediaControlling, detector protocols), project structure (SPM, no Protocols/ folder, new services + views), §4.7 Screen-Time Trigger Model, §4.4 AppConfig.load() (removed DefaultsLoader), build commands (SPM), mock table, test file listing | Rusty |
+| 2026-04-25 | Fix docs drift (#93): added 3 undocumented services (AnalyticsLogger, MetricKitSubscriber, ServiceLifecycle) to module graph + project structure; corrected color token names in §4.4 to match Asset Catalog (ReminderBlue, ReminderGreen, WarningOrange, PermissionBanner, PermissionBannerText, WarningText) | Rusty |
