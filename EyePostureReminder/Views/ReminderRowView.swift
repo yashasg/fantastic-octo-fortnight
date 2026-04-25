@@ -59,11 +59,10 @@ struct ReminderRowView: View {
     // MARK: - Formatting
 
     private func formatInterval(_ seconds: TimeInterval) -> String {
-        "\(Int(seconds) / 60) min"
+        SettingsViewModel.labelForInterval(seconds)
     }
 
     private func formatDuration(_ seconds: TimeInterval) -> String {
-        let secs = Int(seconds)
-        return secs < 60 ? "\(secs) sec" : "\(secs / 60) min"
+        SettingsViewModel.labelForBreakDuration(seconds)
     }
 }

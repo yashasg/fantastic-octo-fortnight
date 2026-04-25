@@ -453,17 +453,6 @@
         }
       }
     },
-    "overlay.dismissButton.hint": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dismisses this reminder"
-          }
-        }
-      }
-    },
     "overlay.settingsButton": {
       "extractionState": "manual",
       "localizations": {
@@ -679,7 +668,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Enable notifications in Settings to receive reminders in the background."
+            "value": "Enable notifications in Settings to receive reminders while the app is open."
           }
         }
       }
@@ -690,7 +679,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Notifications Disabled. Enable notifications in Settings to receive reminders in the background."
+            "value": "Notifications Disabled. Enable notifications in Settings to receive reminders while the app is open."
           }
         }
       }
