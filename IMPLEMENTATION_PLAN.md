@@ -65,23 +65,37 @@ EyePostureApp
 
 ### 4.1 Reminder Scheduling Strategy
 
+> **Current state (as of Phase 2 / Loop fixes):** The original wall-clock timer approach described below was shipped in Phase 1. In Phase 2 it was superseded by `ScreenTimeTracker`, which gates reminders on *actual screen-on time* rather than elapsed wall time. The scheduling infrastructure (`UNUserNotificationCenter`, `ReminderScheduler`) remains unchanged — only the trigger condition evolved.
+
 **Why `UserNotifications` instead of a background timer?**
 
 - A live `Timer` in the background is unreliable – iOS suspends apps after a few seconds of background activity.
 - `UNUserNotificationCenter` is the standard, battery-efficient mechanism for time-based alerts; iOS wakes the app only when necessary.
 - When the user taps the notification (or the app is in the foreground), `OverlayManager` presents the overlay instead.
 
-**Flow:**
+**Phase 2 additions:**
+
+| Component | Role |
+|---|---|
+| `ScreenTimeTracker` | Accumulates continuous screen-on time; replaces wall-clock intervals as the reminder trigger condition (M2.7) |
+| `PauseConditionManager` | Aggregates Smart Pause conditions (Focus Mode, CarPlay, `CMMotionActivityManager` driving detection); automatically suspends scheduling while any condition is active |
+| `ServiceLifecycle` | Uniform `start()` / `stop()` protocol implemented by all services; `AppCoordinator` drives the lifecycle |
+| `AudioInterruptionManager` | Pauses media playback during break overlays when the user has opted in |
+
+**Flow (current):**
 
 ```
-App enters background
+App active (foreground)
         │
         ▼
-ReminderScheduler.scheduleAll()
+ScreenTimeTracker accumulates screen-on seconds
+        │  (PauseConditionManager blocks accumulation
+        │   if Focus / CarPlay / Driving detected)
+        ▼
+Threshold reached → ReminderScheduler.scheduleNext()
   – cancels any pending requests
-  – adds UNTimeIntervalNotificationRequest for .eyes (interval from settings)
-  – adds UNTimeIntervalNotificationRequest for .posture (interval from settings)
-  – requests repeat: true so they re-fire automatically
+  – adds UNTimeIntervalNotificationRequest for .eyes or .posture
+  – repeat: false (ScreenTimeTracker re-arms after each break)
         │
         ▼
 UNUserNotificationCenter fires notification

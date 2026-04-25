@@ -44,6 +44,61 @@ Versioning strategy: `0.x.x` during TestFlight beta, `1.0.0` at App Store launch
 - **Design tokens:** `ReminderType.color` migrated to `AppColor` design system; all colors via Asset Catalog with dark/light variants
 - **Bug fixes:** Overlay double-present guard, notification debounce (300 ms), snooze wake reliability (dual wake mechanism)
 
+### Quality Loops 1–7 (post-Phase-2 fix passes)
+
+These loops represent iterative quality passes applied after the main Phase 2 feature work, hardening analytics, MetricKit, accessibility, localization, test coverage, and CI infrastructure.
+
+#### Loop 1 – Core Service Reliability
+- **Session lifecycle:** `appSessionStart` emitted correctly in foreground; `AppCoordinator` start/stop ordering fixed
+- **Sendable conformance:** `ReminderType`, `ReminderSettings` marked `Sendable`; removed `@unchecked Sendable` workarounds
+- **Analytics wiring:** `snoozeExpired` event emitted from `handleForegroundTransition`; `snoozeCount` reset on new reminder cycle
+- **Snooze-wake reliability:** Dual wake mechanism (in-process `Task` + silent notification); `snoozedUntil` stale state cleared on foreground
+- **CarPlay cold-start:** `PauseConditionManager` re-evaluates conditions on cold start to avoid stuck-pause state
+
+#### Loop 2 – UI & Accessibility Polish
+- **WCAG contrast:** All text/background pairs verified at AA (4.5 : 1); `WarningOrange` and `WarningText` tokens adjusted
+- **Snooze UX:** Action sheet options reordered; `SnoozeOption` formatted labels localised via String Catalog
+- **Overlay animation:** `slideOffset` reset correctly under Reduce Motion; swipe-up dismiss gesture re-added
+- **VoiceOver overlay:** `accessibilityViewIsModal = true` enforced; countdown split into static label + live `.accessibilityValue`; plural forms added (`%lld second` / `%lld seconds`)
+- **StateObject lifecycle:** `SettingsViewModel` promoted to `@StateObject` in root view; eliminated spurious re-inits
+- **Tap target enforcement:** All interactive controls verified ≥ 44 × 44 pt; time-format picker fixed for 24h locales
+
+#### Loop 3 – Localization & Onboarding
+- **String Catalog expansion:** ~35 user-facing strings migrated to `Localizable.xcstrings`; all keys follow `screen.component[.qualifier]` convention
+- **Localised a11y strings:** VoiceOver hints and labels moved from hardcoded English to String Catalog
+- **Onboarding permission view:** `NotificationScheduling` injected for testability; permission card uses catalog strings
+- **Notification copy:** Body strings (`reminder.eyes.notificationBody`, `reminder.posture.notificationBody`) finalised; tautological VoiceOver hints removed
+- **Design-token localization:** `onboarding.setup.card.label` positional format specifiers (`%1$@`, `%2$@`, `%3$@`) for correct word-order in all locales
+
+#### Loop 4 – Analytics & MetricKit
+- **`AnalyticsLogger`:** Structured event schema (`sessionStart`, `overlayShown`, `overlayDismissed`, `snoozed`, `snoozeExpired`, `reminderEnabled`, `reminderDisabled`) logged via `os.Logger`
+- **Two-tier privacy:** Categorical labels (`.public`), user-controlled values (`.private`); `old_value`/`new_value` marked `.private`
+- **`MetricKitSubscriber`:** Registered at app launch for passive OS-level crash + performance payloads; `MXMetricPayload` and `MXDiagnosticPayload` routed to `os.Logger`
+- **`ServiceLifecycle` protocol:** Uniform `start()` / `stop()` interface implemented by `ReminderScheduler`, `OverlayManager`, `PauseConditionManager`, `ScreenTimeTracker`, `MetricKitSubscriber`
+
+#### Loop 5 – Test Coverage
+- **Services layer:** `AnalyticsLoggerTests`, `MetricKitSubscriberTests`, `AudioInterruptionManagerTests`, `PauseConditionManagerTests` added (65+ tests total)
+- **String Catalog tests:** `StringCatalogTests` expanded to cover all ~35 catalog keys; format-specifier syntactic validation added
+- **QA gate tests:** Silent notification path and stale `snoozedUntil` clearing verified by dedicated regression tests
+- **Integration tests:** `MultiServicePipelineIntegrationTests` covers `AppCoordinator` ↔ scheduler ↔ overlay full pipeline
+- **`repeats: false` coverage:** Notification request non-repeating behaviour asserted explicitly
+
+#### Loop 6 – CI Hardening
+- **Timeouts:** `xcodebuild` step capped at 25 min; overall job timeout 40 min
+- **dSYM archiving:** `DWARF_DSYM_FOLDER_PATH` captured as CI artefact for crash symbolication
+- **Coverage thresholds:** Code-coverage report extracted; build fails below baseline
+- **SwiftLint pin:** Version pinned in CI to prevent rule-set drift between local and CI runs
+- **`cron` schedule:** Nightly CI run added to catch regressions from Xcode toolchain updates
+- **Archive flags:** `CODE_SIGNING_ALLOWED=NO` and `SKIP_INSTALL=NO` set for archive step
+
+#### Loop 7 – Quality Pass & Completeness
+- **Legal completeness:** `LegalDocumentView` verified to render TERMS.md, PRIVACY.md, DISCLAIMER.md from bundle; all `legal.*` catalog keys present and tested
+- **Dead-token removal:** Six unused `AppColor` tokens deleted; `overlayBackground` usage replaced by `.ultraThinMaterial`
+- **Reset-to-defaults a11y:** `settings.resetToDefaults.hint` VoiceOver pre-action hint added; destructive confirmation dialog titles and labels fully localized
+- **Inclusive language:** Test method and variable names updated to use `global` / `primary` instead of `master`
+- **Docs drift resolution:** `ARCHITECTURE.md`, `CHANGELOG.md`, and `IMPLEMENTATION_PLAN.md` synchronised to implementation; dead `ReminderScheduler` methods documented or removed
+- **SwiftLint zero violations:** All 120-char line-length and closure-syntax violations resolved; `// swiftlint:disable` directives minimised and scoped
+
 ---
 
 *Build numbers are assigned automatically by CI (`github.run_number`).*  

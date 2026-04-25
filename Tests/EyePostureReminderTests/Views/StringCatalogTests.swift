@@ -970,4 +970,74 @@ final class StringCatalogTests: XCTestCase {
     func test_onboardingWelcomeDisclaimer_resolvesToEnglish() {
         XCTAssertTrue(isTranslated("onboarding.welcome.disclaimer"))
     }
+
+    // MARK: - Format-Specifier Validation
+    //
+    // Critical user-facing strings that contain printf-style format specifiers must
+    // retain those placeholders after any catalog edit. These spot-checks verify that
+    // the compiled English value still contains the expected specifier so callers
+    // (String(format:) and SwiftUI Text interpolation) receive well-formed strings.
+
+    /// `settings.picker.minuteFormat` is used to build countdown and picker labels
+    /// such as "20 min". Requires exactly one `%d` integer placeholder.
+    func test_settingsPickerMinuteFormat_containsIntegerSpecifier() {
+        let value = str("settings.picker.minuteFormat")
+        XCTAssertTrue(
+            value.contains("%d"),
+            "'settings.picker.minuteFormat' must contain %%d — received: \(value)")
+    }
+
+    /// `settings.picker.secondFormat` is used to build countdown and picker labels
+    /// such as "20 sec". Requires exactly one `%d` integer placeholder.
+    func test_settingsPickerSecondFormat_containsIntegerSpecifier() {
+        let value = str("settings.picker.secondFormat")
+        XCTAssertTrue(
+            value.contains("%d"),
+            "'settings.picker.secondFormat' must contain %%d — received: \(value)")
+    }
+
+    /// `onboarding.setup.card.label` is the setup-screen summary card for each
+    /// reminder type. It uses three *positional* string specifiers (`%1$@`, `%2$@`,
+    /// `%3$@`) so word order is locale-safe. All three must be present.
+    func test_onboardingSetupCardLabel_containsThreePositionalSpecifiers() {
+        let value = str("onboarding.setup.card.label")
+        XCTAssertTrue(
+            value.contains("%1$@"),
+            "'onboarding.setup.card.label' must contain %%1$@ — received: \(value)")
+        XCTAssertTrue(
+            value.contains("%2$@"),
+            "'onboarding.setup.card.label' must contain %%2$@ — received: \(value)")
+        XCTAssertTrue(
+            value.contains("%3$@"),
+            "'onboarding.setup.card.label' must contain %%3$@ — received: \(value)")
+    }
+
+    /// `settings.snooze.activeLabel` renders the snooze expiry time in the Settings
+    /// screen ("Snoozed until 3:00 PM"). Requires one `%@` object placeholder for the
+    /// formatted `Date` string.
+    func test_settingsSnoozeActiveLabel_containsStringSpecifier() {
+        let value = str("settings.snooze.activeLabel")
+        XCTAssertTrue(
+            value.contains("%@"),
+            "'settings.snooze.activeLabel' must contain %%@ — received: \(value)")
+    }
+
+    /// `settings.about.versionFormat` renders the build info in the About section
+    /// ("v1.0.0 (build 42)"). Requires two `%@` object placeholders.
+    func test_settingsAboutVersionFormat_containsTwoStringSpecifiers() {
+        let value = str("settings.about.versionFormat")
+        let count = value.components(separatedBy: "%@").count - 1
+        XCTAssertEqual(
+            count, 2,
+            "'settings.about.versionFormat' must contain exactly 2 %%@ specifiers — received: \(value)")
+    }
+
+    /// `settings.reminder.durationPicker.hint` VoiceOver hint contains one `%@`
+    /// placeholder for the reminder-type name (e.g., "eye" / "posture").
+    func test_settingsReminderDurationPickerHint_containsStringSpecifier() {
+        let value = str("settings.reminder.durationPicker.hint")
+        XCTAssertTrue(
+            value.contains("%@"),
+            "'settings.reminder.durationPicker.hint' must contain %%@ — received: \(value)")
+    }
 }
