@@ -120,6 +120,7 @@ final class OverlayManager: OverlayPresenting {
             }
         )
         hostingController.view.backgroundColor = .clear
+        hostingController.view.accessibilityViewIsModal = true
         window.rootViewController = hostingController
         window.makeKeyAndVisible()
 

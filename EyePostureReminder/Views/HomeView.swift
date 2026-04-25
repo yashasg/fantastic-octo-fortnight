@@ -6,6 +6,7 @@ struct HomeView: View {
     @EnvironmentObject var coordinator: AppCoordinator
 
     @State private var showSettings = false
+    @AppStorage("openSettingsOnLaunch") private var openSettingsOnLaunch = false
 
     private var statusLabel: String {
         if settings.globalEnabled {
@@ -65,6 +66,12 @@ struct HomeView: View {
                 SettingsView()
                     .environmentObject(settings)
                     .environmentObject(coordinator)
+            }
+        }
+        .onAppear {
+            if openSettingsOnLaunch {
+                openSettingsOnLaunch = false
+                showSettings = true
             }
         }
         .accessibilityElement(children: .contain)

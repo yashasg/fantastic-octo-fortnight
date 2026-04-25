@@ -16,7 +16,7 @@ struct OnboardingView: View {
                 .tag(1)
             OnboardingSetupView(
                 onGetStarted: finishOnboarding,
-                onCustomize: finishOnboarding
+                onCustomize: finishOnboardingAndCustomize
             )
             .tag(2)
         }
@@ -26,6 +26,11 @@ struct OnboardingView: View {
     }
 
     private func finishOnboarding() {
+        UserDefaults.standard.set(true, forKey: "hasSeenOnboarding")
+    }
+
+    private func finishOnboardingAndCustomize() {
+        UserDefaults.standard.set(true, forKey: "openSettingsOnLaunch")
         UserDefaults.standard.set(true, forKey: "hasSeenOnboarding")
     }
 }

@@ -23,8 +23,8 @@ enum ReminderType: String, CaseIterable, Identifiable {
     /// Human-readable title shown in Settings and on the overlay.
     var title: String {
         switch self {
-        case .eyes:    return "Eye Break"
-        case .posture: return "Posture Check"
+        case .eyes:    return String(localized: "reminder.eyes.title", bundle: .module)
+        case .posture: return String(localized: "reminder.posture.title", bundle: .module)
         }
     }
 
@@ -42,8 +42,8 @@ enum ReminderType: String, CaseIterable, Identifiable {
     /// Sentence shown as the headline on the full-screen break overlay.
     var overlayTitle: String {
         switch self {
-        case .eyes:    return "Time to rest your eyes"
-        case .posture: return "Time to check your posture"
+        case .eyes:    return String(localized: "reminder.eyes.overlayTitle", bundle: .module)
+        case .posture: return String(localized: "reminder.posture.overlayTitle", bundle: .module)
         }
     }
 
@@ -60,16 +60,16 @@ enum ReminderType: String, CaseIterable, Identifiable {
     /// Human-readable notification title (shown in banners / lock screen).
     var notificationTitle: String {
         switch self {
-        case .eyes:    return "👁 Eye Break"
-        case .posture: return "🧍 Posture Check"
+        case .eyes:    return String(localized: "reminder.eyes.notificationTitle", bundle: .module)
+        case .posture: return String(localized: "reminder.posture.notificationTitle", bundle: .module)
         }
     }
 
     /// Notification body copy.
     var notificationBody: String {
         switch self {
-        case .eyes:    return "Look 20 ft away for 20 seconds."
-        case .posture: return "Sit up straight and roll your shoulders."
+        case .eyes:    return String(localized: "reminder.eyes.notificationBody", bundle: .module)
+        case .posture: return String(localized: "reminder.posture.notificationBody", bundle: .module)
         }
     }
 
