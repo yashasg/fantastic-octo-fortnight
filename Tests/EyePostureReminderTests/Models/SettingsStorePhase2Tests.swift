@@ -51,7 +51,7 @@ final class SettingsStorePhase2Tests: XCTestCase {
 
     func test_hapticsEnabled_independentOfOtherSettings() {
         sut.hapticsEnabled = false
-        XCTAssertTrue(sut.masterEnabled, "Changing hapticsEnabled must not affect masterEnabled")
+        XCTAssertTrue(sut.globalEnabled, "Changing hapticsEnabled must not affect globalEnabled")
         XCTAssertFalse(sut.pauseMediaDuringBreaks, "Changing hapticsEnabled must not affect pauseMediaDuringBreaks")
     }
 

@@ -22,3 +22,47 @@
 - **dSYMs critical:** Unsymbolicated crash reports in Xcode Organizer are near-useless. CI/CD must set `ENABLE_BITCODE = NO` and upload dSYMs on every TestFlight build.
 - **Tess signal:** Swipe dismiss rate vs. manual dismiss rate reveals close button discoverability.
 - **Reuben signal:** Snooze duration distribution validates preset choices and default value.
+
+### 2025-07-25 — Analytics & Observability Audit (Ralph quality pass)
+
+- **Codebase has zero analytics instrumentation** — only debug/info os.Logger calls already in `Logger.scheduling`, `Logger.overlay`, `Logger.settings`, `Logger.lifecycle`. No analytics events emitted.
+- **Key event emission points identified:**
+  - `ScreenTimeTracker.tick()` → `onThresholdReached?(type)` callback in AppCoordinator (~line 126): reminder_triggered
+  - `OverlayView.performDismiss()` (~line 159): overlay_dismissed with method (button vs swipe vs settings_tap) — no method discrimination currently
+  - `OverlayView.performAutoDismiss()` (~line 179): overlay_auto_dismissed
+  - `SettingsViewModel.snooze(option:)` (~line 142): snooze_applied, snooze_limit_hit
+  - `AppCoordinator.handleSnoozeWake()` (~line 401): snooze_expired
+  - `PauseConditionManager.update(_:isActive:)` (~line 239): pause_condition_activated/cleared
+  - `OnboardingView.finishOnboarding()` (~line 28): onboarding_completed
+  - `OnboardingPermissionView.requestNotificationPermission()` (~line 72): onboarding_permission_tapped/skipped
+- **Onboarding has no funnel instrumentation** — `OnboardingView.currentPage` changes fire no events. Cannot determine drop-off screen.
+- **Overlay dismiss method is not differentiated** — `performDismiss()` handles × button, swipe, and settings gear tap identically. Must add `method` parameter to distinguish for Tess's discoverability analysis.
+- **MetricKit not integrated** — `MXCrashDiagnostic` and `MXHangDiagnostic` are P0 for overlay UIWindow correctness. `MXAppExitMetric` jetsam count is the memory health signal.
+- **Timer drift not tracked** — `ScreenTimeTracker.tick()` has 0.5s tolerance but no drift measurement. Recommend wall-clock delta check per tick.
+- **Provider recommendation:** App Store Connect + MetricKit only for Phase 1–2 TestFlight. TelemetryDeck for Phase 3 if gaps remain. No Firebase/Google Analytics — "Data Not Collected" label must be maintained.
+- **Issues created:** #31 (event schema), #34 (MetricKit/os.Logger), #37 (provider recommendation) — all under TestFlight milestone with `squad` label.
+
+### 2026-04-25: Analytics & Observability Audit — Spawn Wave Quality Pass
+
+**Scope:** Post-Phase-2 audit of telemetry infrastructure, event instrumentation coverage, and provider selection
+
+**Three issues filed (#31, #34, #37):**
+
+1. **#31: Core event schema + instrumentation** — 9 key events unmapped (reminder_triggered, overlay_dismissed, snooze_applied, pause_condition state changes, onboarding funnel, etc.). Onboarding has zero funnel tracking; overlay dismiss method not differentiated (button vs swipe). Post-Phase-2 enhancement.
+
+2. **#34: MetricKit + os.Logger integration** — MetricKit is P0 for TestFlight (crashes, hangs, exits, battery). os.Logger categories already defined (4 subsystems); dSYM upload critical for crash symbolication. Ready for Phase 2 implementation.
+
+3. **#37: Provider recommendation** — Use App Store Connect + MetricKit only; TelemetryDeck optional Phase 3. Maintain "Data Not Collected" privacy posture. No Firebase/Google Analytics. Rationale: privacy compliance, zero overhead, Apple native tools proven at scale.
+
+**Key interaction with other audits:**
+- Complements Saul's code review: P1 bugs (#22 snooze reset, #23 overlay stall) now traceable via MetricKit hangs/crashes
+- Validates Rusty's edge cases: MetricKit provides hang diagnostics for #26 state machine, #27 overlay race
+- Informs Livingston's test strategy: event schema defines what test coverage needs
+- Enables Tess's UX validation: snooze button discoverability measurable once overlay_dismissed method differentiation implemented
+
+**Signal gaps identified:**
+- Timer drift measurement missing (Rusty's #28 counter reset validation)
+- Snooze preset effectiveness unmeasured (Reuben cannot validate defaults)
+- Onboarding drop-off not tracked (cannot identify funnel leak screens)
+
+**Quality note:** Zero analytics instrumentation in Phase 1–2 is acceptable — base telemetry (App Store Connect + MetricKit) provides sufficient diagnostic surface for TestFlight quality gate.

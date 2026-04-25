@@ -8,7 +8,7 @@ struct HomeView: View {
     @State private var showSettings = false
 
     private var statusLabel: String {
-        if settings.masterEnabled {
+        if settings.globalEnabled {
             return String(localized: "home.status.active", bundle: .module)
         } else {
             return String(localized: "home.status.paused", bundle: .module)
@@ -16,11 +16,11 @@ struct HomeView: View {
     }
 
     private var statusIcon: String {
-        settings.masterEnabled ? AppSymbol.eyeBreak : "moon.zzz.fill"
+        settings.globalEnabled ? AppSymbol.eyeBreak : "moon.zzz.fill"
     }
 
     private var statusColor: Color {
-        settings.masterEnabled ? AppColor.reminderBlue : .secondary
+        settings.globalEnabled ? AppColor.reminderBlue : .secondary
     }
 
     var body: some View {

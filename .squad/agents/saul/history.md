@@ -32,3 +32,15 @@
   3. OnboardingPermissionView hardcodes `UNUserNotificationCenter.current()` — bypasses injected protocol
 - **Positives:** Dual snooze-wake mechanism is robust, haptic generator lifecycle correct, onboarding spec-compliant, 36+ new Phase 2 tests, accessibility thorough across all views, no retain cycles, thread safety sound
 - **Key learning:** When reviewing a new UI module (onboarding), check that it uses the same design system tokens and dependency injection patterns established in the rest of the codebase — visual consistency and testability gaps often appear at module boundaries
+
+### 2026-04-25: Post-Phase-1 Quality Audit (Spawn Wave)
+- **Scope:** Code quality review across all 20 source files post-Phase 2 implementation
+- **Verdict:** 2 P1 bugs + 2 P2 issues filed (#22–#25)
+- **P1s identified:**
+  1. **#22 — ScreenTimeTracker path skips snooze reset.** Notification path resets count; primary trigger path doesn't. Users hit snooze cap in normal use.
+  2. **#23 — OverlayView stalls during ScreenTime trigger.** Likely race condition between ScreenTimeTracker callback thread and @MainActor UI update.
+- **P2s identified:**
+  1. **#24 — SettingsView snooze buttons bypass DST-aware API.** Legacy `snooze(for:)` breaks during DST transitions (flagged in Phase 2 review, unfixed).
+  2. **#25 — OnboardingPermissionView hardcodes system framework.** Direct `UNUserNotificationCenter.current()` call; couples to system, untestable; violates DI pattern.
+- **Pattern observation:** All 4 issues originated from Phase 1 or early Phase 2. Onboarding module (#25) shows same integration gaps flagged in Phase 2 review.
+- **Quality note:** Phase 1 P1 fixes were solid (snooze guard, DI injection for NotificationScheduling/OverlayPresenting). Phase 2 onboarding adhered to spec but didn't fully adopt established patterns — #25 is endemic to that module boundary gap.

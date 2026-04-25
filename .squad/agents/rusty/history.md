@@ -7,6 +7,40 @@
 
 ## Learnings
 
+### 2026-04-26: Edge Case Analysis — Quality Pass (Issues #26–#29)
+
+**Scope:** Full read of AppCoordinator, ScreenTimeTracker, OverlayManager, PauseConditionManager, ReminderScheduler, SettingsStore, AppDelegate, EyePostureReminderApp.
+
+**Four confirmed bugs filed:**
+
+| # | Issue | Severity | Root cause |
+|---|---|---|---|
+| #26 | PauseConditionManager stale state when pause-setting toggled mid-condition | High | `update()` only called on detector callbacks, not on settings changes — `activeConditions` never re-evaluated when `pauseDuringFocus`/`pauseWhileDriving` flips |
+| #27 | Active overlay stays visible when driving/CarPlay pause fires | Medium-High | `onPauseStateChanged(true)` only calls `screenTimeTracker.pauseAll()`, never `overlayManager.dismissOverlay()` |
+| #28 | ScreenTimeTracker elapsed counter wiped on break-duration change | Medium | `setThreshold` always resets `elapsed[type] = 0` — called for all reminder settings changes, not just interval changes |
+| #29 | Snooze-wake notification is user-visible banner; dismissed banner = dead snooze on killed app | Low-Medium | `scheduleSnoozeWakeNotification` sets title/body; `didReceive` never fires if user swipes banner away; killed-app self-heals only on next manual open |
+
+**Key architecture invariants confirmed safe:**
+- `ScreenTimeTracker` grace period (5s) correctly handles notification banners, incoming calls, Control Center pulls.
+- `OverlayManager` overlay queue handles concurrent eye+posture threshold hits.
+- `AppCoordinator.onPauseStateChanged(false)` correctly checks snooze state before resuming.
+- `wasInBackground` flag correctly gates `handleForegroundTransition` to genuine background→foreground only.
+- `OverlayView` uses `Timer.scheduledTimer` which auto-pauses on `willResignActive` — device-sleep countdown drift is NOT an issue.
+- `scenePhase .active` calls `presentPendingOverlayIfNeeded()` safely — `pendingOverlay` is nil-checked and cleared on first use.
+- Periodic `UNNotificationTrigger` (legacy scheduler path) is dead code post-ScreenTimeTracker migration — the 60s minimum trigger interval constraint cannot be hit.
+
+**Findings ruled out (not bugs):**
+- Force-quit during overlay: all `onDismiss` callbacks are `{}` — no state to corrupt. Self-heals on relaunch.
+- Clock/DST changes: snooze uses `date.timeIntervalSinceNow` at schedule time, not stored interval. `max(0, ...)` handles forward time jumps. Backward jumps extend snooze — acceptable edge case.
+- Short intervals (<60s): blocked by ScreenTimeTracker's `threshold > 0` guard. UNTimeIntervalTrigger min is not hit.
+- CarPlay raw port string `"CarPlay"`: matches Apple's SDK raw value. Fragile but not wrong.
+
+### 2026-04-25: Architecture Review — Updated ARCHITECTURE.md (04:35 spawn)
+- **Deliverable:** ARCHITECTURE.md rewritten with 6 major corrections
+- **Corrections:** Module graph accuracy, protocol definitions, SPM structure, trigger model, AppConfig initialization, onboarding state machine
+- **Impact:** New authority for impl team; resolved ambiguities in Services/Views boundaries; informed Basher's DI protocol design (#13, #14)
+- **Quality note:** Corrections validate Rusty's edge case analysis (#26–#29) — state machine invariants properly documented post-review.
+
 ## Core Context
 
 **Initial Architecture Scaffolding (Rusty Pre-Phase1) — 2026-04-24:**
