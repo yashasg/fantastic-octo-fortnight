@@ -551,3 +551,157 @@ Colors and Strings from catalogs have no UserDefaults override layer — the pla
 
 Generated: 2026-04-24T21:37:05Z  
 Scribe: Merged 4 Phase 3 decision files (danny, rusty, tess, basher) from inbox; no duplicates; inbox files ready for deletion
+
+---
+
+## Marathon Session Decisions — 2026-04-25T06:20Z
+
+### Decision 3.7: DI Protocols for AppCoordinator (Basher)
+**Date:** 2026-04-24  
+**Issues:** #13, #14  
+**PR:** #17  
+**Status:** ✅ IMPLEMENTED
+
+#### 1. ScreenTimeTracking protocol placement
+**Decision:** Define `ScreenTimeTracking` protocol in the same file as `ScreenTimeTracker` (ScreenTimeTracker.swift), above the class definition.  
+**Rationale:** Keeps protocol and conformance co-located. The codebase has no separate Protocols/ directory — `PauseConditionProviding` is also defined in its own service file. Consistent pattern.
+
+#### 2. Optional injection with nil-default pattern
+**Decision:** AppCoordinator.init() uses `screenTimeTracker: ScreenTimeTracking? = nil` (optional, default `ScreenTimeTracker()`) rather than `screenTimeTracker: ScreenTimeTracking = ScreenTimeTracker()` (non-optional with concrete default).  
+**Rationale:** Avoids instantiating real tracker/detector objects in the function default parameter (which would run before init body). The `?? ScreenTimeTracker()` inside the init body ensures clean construction order.
+
+#### 3. Bundle.module shadowing is a known test risk
+**Decision:** Documented that `@testable import` of a module with resources causes its `Bundle.module` to shadow the test target's accessor. Test files that need their own resources must use explicit bundle path construction via `Bundle(for: Self.self).bundleURL`.  
+**Rationale:** This caught a real bug (AppConfigTests was silently loading production defaults, failing fixture assertions). All future test files with resources should follow this pattern.
+
+#### 4. JSON keys must be kept in sync with Codable properties
+**Decision:** When renaming a `Codable` struct property, always update all JSON files that feed it.  
+**Rationale:** Livingston renamed `masterEnabledDefault` → `globalEnabledDefault` in AppConfig.swift but forgot both JSON files, causing silent fallback to hardcoded values. Added to team checklist.
+
+---
+
+### Decision 3.8: User Directives & Team Policy (2026-04-25)
+
+#### Directive 1: Production Code Routing (2026-04-25T04:15Z)
+**Authority:** Yashasg (via Copilot)  
+**Policy:** Production code changes (protocol extraction, DI wiring, service modifications) must be routed to Swift developers (Basher for services, Linus for UI), NOT to Livingston (Tester). Livingston's scope is tests, mocks, and test infrastructure only.  
+**Trigger:** Auto-triage incorrectly matched "testing/QA keywords" on issues #13/#14 which are actually service-layer code changes.  
+**Action:** Captured for team memory and routing correction.
+
+#### Directive 2: Quality Pass Autonomy (2026-04-25T04:41Z)
+**Authority:** Yashasg (via Copilot)  
+**Policy:** When Ralph's GitHub board is clear (no open issues to work), run quality passes: tests, linter, code coverage, edge case analysis. Create new GitHub issues under the TestFlight milestone from any findings, so Ralph can pick them up and keep working autonomously.  
+**Rationale:** Keeps the pipeline self-sustaining. Ralph generates its own work from quality analysis rather than idling.
+
+#### Directive 3: Always Rebase Before PR Work (2026-04-25T05:04Z)
+**Authority:** Yashasg (via Copilot)  
+**Policy:** When working on PRs, always work off of the latest version in origin main. Run `git fetch origin main && git rebase origin/main` (or branch from `origin/main`) before starting any PR work.  
+**Rationale:** Ensures PRs are always based on the latest code and avoids stale branch conflicts.
+
+#### Directive 4: Commit Directly to Main (2026-04-25T06:24Z)
+**Authority:** Yashasg (via Copilot)  
+**Policy:** Don't create new branches. Commit directly to main and push. No PRs — just commit to main.  
+**Rationale:** Simplifies workflow, avoids PR overhead for this project.
+
+---
+
+### Decision 3.9: Roadmap Status & v1.0 Scope Closure (Danny)
+**Date:** 2026-04-25  
+**Status:** READY FOR TEAM REVIEW  
+**Author:** Danny (Product Manager)
+
+#### Summary
+ROADMAP.md has been audited and updated to reflect actual project state. **Phase 1 (MVP) is fully shipped. Phase 2 (Polish) is ~80% complete** with all major features delivered except final App Store submission sign-off. **Phase 3 (Advanced) is partially started** with dependency injection refactoring work in progress (issues #13-14).
+
+**Recommendation:** Close v1.0 scope to Phase 1+2 (no Phase 3 changes). Defer iCloud sync, widgets, and watchOS to v1.1 post-launch. This allows focused App Store submission without scope creep.
+
+#### Phases Delivered
+- **Phase 0:** ✅ Foundation complete; scaffolding, SPM, CI/CD, MVVM, design system
+- **Phase 1:** ✅ MVP complete; settings, notifications, overlay, countdown, haptics, snooze, 65+ tests
+- **Phase 2:** 🔄 ~80% complete; onboarding, smart pause, screen-time triggers, accessibility, data-driven config, legal docs
+- **Phase 3:** 🔄 Partially started; DI refactoring, XCUITest scaffold in progress
+
+#### Deferred to v1.1
+- iCloud sync
+- Home Screen widget
+- watchOS companion
+
+---
+
+### Decision 3.10: Test Resource Access Pattern (Livingston)
+**Date:** 2026-04-25  
+**Issues:** #11  
+**Status:** ✅ IMPLEMENTED
+
+#### AppConfigTests Fixture Mismatch Root Cause
+Root cause: AppConfigTests was loading production bundle resources via `@testable import` shadowing, failing fixture assertions with stale/mismatched defaults. Implemented `TestBundle.module` pattern for reliable production resource access from test targets.
+
+#### Coverage Report Findings
+- **Total Coverage:** 85%+ (exceeds 80% target)
+- **Gaps identified:**
+  - AppCoordinator: 37% — scheduling tests missing (high-risk path)
+  - OverlayManager: 14% — queue + presentation pipeline untested (core UX)
+  - Live*Detectors: 0% — requires mocking of system frameworks
+- **Recommendations:**
+  1. Add AppCoordinator scheduling tests immediately (CI dependency)
+  2. Add OverlayManager integration tests (UX trust)
+  3. Extract Live*Detector dependencies behind protocols (enables full coverage)
+  4. Consider ViewInspector for SwiftUI render testing (all 2,747 lines currently dark)
+
+---
+
+### Decision 3.11: Protocol Co-Location Convention (Rusty)
+**Date:** 2026-04-25  
+**Status:** Documenting existing convention
+
+#### Decision
+Protocols are co-located with their primary implementation file — there is no `Protocols/` folder. ARCHITECTURE.md has been updated to reflect this. The team should treat this as the canonical convention going forward.
+
+#### Current Protocol Mapping
+- `SettingsPersisting` → `SettingsStore.swift`
+- `NotificationScheduling`, `ReminderScheduling` → `ReminderScheduler.swift`
+- `ScreenTimeTracking` → `ScreenTimeTracker.swift`
+- `OverlayPresenting` → `OverlayManager.swift`
+- `MediaControlling` → `AudioInterruptionManager.swift`
+- `PauseConditionProviding`, `FocusStatusDetecting`, `CarPlayDetecting`, `DrivingActivityDetecting` → `PauseConditionManager.swift`
+
+#### Rationale
+For a codebase at this size, co-location reduces file-hop friction when reading a service. The protocol immediately precedes (or follows) its concrete implementation — no need to jump to a separate file to understand the contract. A `Protocols/` folder makes more sense when protocols are shared across multiple modules or when the protocol is the public API of a framework.
+
+#### Trigger Model Convention
+`ReminderScheduler` is now narrowed to **snooze-wake notifications only**. The regular reminder cadence is owned entirely by `ScreenTimeTracker`. Any future work that touches reminder scheduling must account for this split — do not add repeating `UNNotificationTrigger` back to `ReminderScheduler`.
+
+#### ARCHITECTURE.md as Living Document
+ARCHITECTURE.md should be included in PR diffs for any service-layer change. It drifted significantly from the codebase because there was no norm requiring updates. Recommend adding a PR checklist item: "Does this change require an ARCHITECTURE.md update?"
+
+---
+
+### Decision 3.12: CI Build Robustness (Virgil)
+**Date:** 2026-04-24  
+**Branch:** squad/15-fix-appconfig-tests  
+**Commit:** 72f1088  
+**Status:** ✅ IMPLEMENTED
+
+#### Decision
+`scripts/build.sh detect_destination()` now checks the `$SIMULATOR` environment variable first. When set, it is used verbatim as the xcodebuild destination. Dynamic simulator detection is only used when `$SIMULATOR` is unset (local developer workflow).
+
+#### Rationale
+The CI workflow (`.github/workflows/ci.yml`) exports:
+```
+SIMULATOR: "platform=iOS Simulator,name=iPhone 16,OS=latest"
+```
+
+But `build.sh` was ignoring it — dynamically picking the first available iPhone from `xcrun simctl list devices available` and appending `,OS=latest`. On the CI runner (Xcode 16.2, macos-14), this produced `iPhone 15 Pro,OS=latest`, which didn't match any available device. Build exited with code 70.
+
+#### Impact
+- CI builds now use the configured simulator consistently
+- Local builds still auto-detect (no developer workflow change)
+- `,OS=latest` removed from dynamic fallback — fragile when paired with arbitrary device names
+
+#### Rule Going Forward
+Never add `,OS=latest` to a dynamically discovered device name. If you need a specific OS, set `$SIMULATOR` explicitly in the workflow env block.
+
+---
+
+Generated: 2026-04-25T06:20:00Z  
+Scribe: Merged 11 decision files from inbox (basher DI, 4 copilot directives, danny roadmap, livingston tests, rusty architecture, virgil build); inbox ready for deletion
