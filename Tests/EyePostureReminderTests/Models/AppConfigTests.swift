@@ -435,15 +435,24 @@ final class AppConfigTests: XCTestCase { // swiftlint:disable:this type_body_len
 
     func test_defaults_hasEyeInterval() {
         // Structural: AppConfig.Defaults must expose eyeInterval (epr.eyes.interval mapping)
-        XCTAssertNotNil(AppConfig.fallback.defaults.eyeInterval as TimeInterval?, "eyeInterval must be a non-nil TimeInterval on AppConfig.Defaults")
+        XCTAssertNotNil(
+            AppConfig.fallback.defaults.eyeInterval as TimeInterval?,
+            "eyeInterval must be a non-nil TimeInterval on AppConfig.Defaults"
+        )
     }
 
     func test_defaults_hasEyeBreakDuration() {
-        XCTAssertNotNil(AppConfig.fallback.defaults.eyeBreakDuration as TimeInterval?, "eyeBreakDuration must be a non-nil TimeInterval on AppConfig.Defaults")
+        XCTAssertNotNil(
+            AppConfig.fallback.defaults.eyeBreakDuration as TimeInterval?,
+            "eyeBreakDuration must be a non-nil TimeInterval on AppConfig.Defaults"
+        )
     }
 
     func test_defaults_hasPostureInterval() {
-        XCTAssertNotNil(AppConfig.fallback.defaults.postureInterval as TimeInterval?, "postureInterval must be a non-nil TimeInterval on AppConfig.Defaults")
+        XCTAssertNotNil(
+            AppConfig.fallback.defaults.postureInterval as TimeInterval?,
+            "postureInterval must be a non-nil TimeInterval on AppConfig.Defaults"
+        )
     }
 
     func test_defaults_hasPostureBreakDuration() {
@@ -460,6 +469,10 @@ final class AppConfigTests: XCTestCase { // swiftlint:disable:this type_body_len
     }
 
     func test_features_hasMaxSnoozeCount() {
-        XCTAssertGreaterThanOrEqual(AppConfig.fallback.features.maxSnoozeCount, 0, "maxSnoozeCount must be an Int on AppConfig.Features")
+        XCTAssertGreaterThanOrEqual(
+            AppConfig.fallback.features.maxSnoozeCount,
+            0,
+            "maxSnoozeCount must be an Int on AppConfig.Features"
+        )
     }
 }

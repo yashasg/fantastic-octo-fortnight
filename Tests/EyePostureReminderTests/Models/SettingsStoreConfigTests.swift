@@ -39,7 +39,8 @@ final class SettingsStoreConfigTests: XCTestCase {
         XCTAssertEqual(
             fresh.eyesInterval,
             AppConfig.fallback.defaults.eyeInterval,
-            "First-launch eyesInterval must match AppConfig.fallback.defaults.eyeInterval (1200s) — SettingsStore.init() must seed from AppConfig."
+            "First-launch eyesInterval must match AppConfig.fallback.defaults.eyeInterval (1200s)" +
+            " — SettingsStore.init() must seed from AppConfig."
         )
     }
 
