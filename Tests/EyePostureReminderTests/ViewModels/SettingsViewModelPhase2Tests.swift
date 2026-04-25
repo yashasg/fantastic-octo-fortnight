@@ -1,6 +1,6 @@
-import XCTest
 import Combine
 @testable import EyePostureReminder
+import XCTest
 
 /// Phase 2 unit tests for `SettingsViewModel`.
 ///
@@ -43,7 +43,7 @@ final class SettingsViewModelPhase2Tests: XCTestCase {
 
     // MARK: - snooze(option: .fiveMinutes)
 
-    func test_snoozeOptionFiveMinutes_setsSnoozedUntilApproximately5MinFromNow() {
+    func test_snoozeOptionFiveMinutes_setsSnoozedUntilApproximately5MinFromNow() throws {
         let before = Date()
         sut.snooze(option: .fiveMinutes)
         let after = Date()
@@ -51,13 +51,13 @@ final class SettingsViewModelPhase2Tests: XCTestCase {
         let expectedMin = before.addingTimeInterval(5 * 60)
         let expectedMax = after.addingTimeInterval(5 * 60)
 
-        XCTAssertNotNil(settings.snoozedUntil)
+        let snoozedUntil = try XCTUnwrap(settings.snoozedUntil)
         XCTAssertGreaterThanOrEqual(
-            settings.snoozedUntil!.timeIntervalSince1970,
+            snoozedUntil.timeIntervalSince1970,
             expectedMin.timeIntervalSince1970 - 1
         )
         XCTAssertLessThanOrEqual(
-            settings.snoozedUntil!.timeIntervalSince1970,
+            snoozedUntil.timeIntervalSince1970,
             expectedMax.timeIntervalSince1970 + 1
         )
     }
@@ -79,13 +79,13 @@ final class SettingsViewModelPhase2Tests: XCTestCase {
 
     // MARK: - snooze(option: .oneHour)
 
-    func test_snoozeOptionOneHour_setsSnoozedUntilApproximately1HourFromNow() {
+    func test_snoozeOptionOneHour_setsSnoozedUntilApproximately1HourFromNow() throws {
         let before = Date()
         sut.snooze(option: .oneHour)
 
-        XCTAssertNotNil(settings.snoozedUntil)
+        let snoozedUntil = try XCTUnwrap(settings.snoozedUntil)
         XCTAssertEqual(
-            settings.snoozedUntil!.timeIntervalSince1970,
+            snoozedUntil.timeIntervalSince1970,
             before.addingTimeInterval(60 * 60).timeIntervalSince1970,
             accuracy: 2.0
         )
@@ -103,28 +103,28 @@ final class SettingsViewModelPhase2Tests: XCTestCase {
 
     // MARK: - snooze(option: .restOfDay)
 
-    func test_snoozeOptionRestOfDay_setsSnoozedUntilToStartOfNextDay() {
+    func test_snoozeOptionRestOfDay_setsSnoozedUntilToStartOfNextDay() throws {
         sut.snooze(option: .restOfDay)
 
         let calendar = Calendar.current
-        let expectedMidnight = calendar.date(
-            byAdding: .day, value: 1,
-            to: calendar.startOfDay(for: Date())
-        )!
+        let expectedMidnight = try XCTUnwrap(calendar.date(
+            byAdding: .day,
+            value: 1,
+            to: calendar.startOfDay(for: Date())))
 
-        XCTAssertNotNil(settings.snoozedUntil)
+        let snoozedUntil = try XCTUnwrap(settings.snoozedUntil)
         XCTAssertEqual(
-            settings.snoozedUntil!.timeIntervalSince1970,
+            snoozedUntil.timeIntervalSince1970,
             expectedMidnight.timeIntervalSince1970,
             accuracy: 5.0,
             "restOfDay snooze must expire at the start of the next calendar day (midnight tonight)"
         )
     }
 
-    func test_snoozeOptionRestOfDay_setsSnoozedUntilInFuture() {
+    func test_snoozeOptionRestOfDay_setsSnoozedUntilInFuture() throws {
         sut.snooze(option: .restOfDay)
-        XCTAssertNotNil(settings.snoozedUntil)
-        XCTAssertGreaterThan(settings.snoozedUntil!, Date())
+        let snoozedUntil = try XCTUnwrap(settings.snoozedUntil)
+        XCTAssertGreaterThan(snoozedUntil, Date())
     }
 
     func test_snoozeOptionRestOfDay_callsCancelAllRemindersOnce() {
@@ -286,9 +286,9 @@ final class SettingsViewModelPhase2Tests: XCTestCase {
 
     // MARK: - Integration: Snooze survives settings-change reschedule
 
-    func test_snooze_survivesReminderSettingChange() async {
+    func test_snooze_survivesReminderSettingChange() async throws {
         sut.snooze(option: .oneHour)
-        let snoozeEnd = settings.snoozedUntil!
+        let snoozeEnd = try XCTUnwrap(settings.snoozedUntil)
 
         // Changing a reminder setting calls rescheduleReminder, not cancelAllReminders.
         settings.eyesInterval = 600
@@ -296,9 +296,9 @@ final class SettingsViewModelPhase2Tests: XCTestCase {
 
         try? await Task.sleep(nanoseconds: 200_000_000)
 
-        XCTAssertNotNil(settings.snoozedUntil, "snoozedUntil must not be cleared by a settings-change reschedule")
+        let snoozedUntilAfter = try XCTUnwrap(settings.snoozedUntil, "snoozedUntil must not be cleared by a settings-change reschedule")
         XCTAssertEqual(
-            settings.snoozedUntil!.timeIntervalSince1970,
+            snoozedUntilAfter.timeIntervalSince1970,
             snoozeEnd.timeIntervalSince1970,
             accuracy: 1.0
         )
@@ -317,18 +317,18 @@ final class SettingsViewModelPhase2Tests: XCTestCase {
         XCTAssertNotNil(settings.snoozedUntil, "snoozedUntil must persist across multiple settings-change reschedules")
     }
 
-    func test_masterToggle_doesNotClearSnoozedUntil() async {
+    func test_globalToggle_doesNotClearSnoozedUntil() async {
         sut.snooze(option: .fiveMinutes)
         XCTAssertNotNil(settings.snoozedUntil)
 
         // Flipping master toggle off calls cancelAllReminders() on the scheduler
         // but must not touch snoozedUntil — snooze state is owned by snooze/cancelSnooze.
-        settings.masterEnabled = false
-        sut.masterToggleChanged()
+        settings.globalEnabled = false
+        sut.globalToggleChanged()
 
         try? await Task.sleep(nanoseconds: 200_000_000)
 
-        XCTAssertNotNil(settings.snoozedUntil, "masterToggleChanged must not clear an active snooze")
+        XCTAssertNotNil(settings.snoozedUntil, "globalToggleChanged must not clear an active snooze")
     }
 
     // MARK: - Integration: snoozeCount resets after a reminder fires

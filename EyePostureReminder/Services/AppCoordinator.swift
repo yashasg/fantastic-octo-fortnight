@@ -1,6 +1,6 @@
+import os
 import UIKit
 import UserNotifications
-import os
 
 /// Central dependency owner and app-lifecycle coordinator.
 ///
@@ -66,6 +66,13 @@ final class AppCoordinator: ObservableObject {
     /// periodic triggers and the legacy foreground fallback timers.
     private let screenTimeTracker: ScreenTimeTracker
 
+    // MARK: - Pause Condition Manager
+
+    /// Aggregates Focus mode, CarPlay, and driving-activity signals. When any
+    /// condition becomes active (and its corresponding setting is enabled) the
+    /// screen-time tracker is paused until all conditions clear AND snooze is clear.
+    private let pauseConditionManager: PauseConditionManager
+
     // MARK: - Published State
 
     /// Current notification authorization status, refreshed on every
@@ -104,6 +111,7 @@ final class AppCoordinator: ObservableObject {
         self.notificationCenter = notificationCenter
         self.overlayManager = overlayManager ?? OverlayManager.shared
         self.screenTimeTracker = ScreenTimeTracker()
+        self.pauseConditionManager = PauseConditionManager(settings: settings)
         Logger.lifecycle.info("AppCoordinator initialised")
 
         // Wire ScreenTimeTracker callback — fires on main thread when a type's
@@ -114,6 +122,25 @@ final class AppCoordinator: ObservableObject {
             self.overlayManager.showOverlay(for: type, duration: duration, hapticsEnabled: self.settings.hapticsEnabled) {}
             Logger.scheduling.info("Reminder triggered by screen-time threshold: \(type.rawValue)")
         }
+
+        // Wire PauseConditionManager — pauses/resumes tracker when conditions change.
+        // Critical invariant: only call resumeAll() if BOTH snooze is clear AND no
+        // pause conditions are active.
+        pauseConditionManager.onPauseStateChanged = { [weak self] isPaused in
+            guard let self else { return }
+            if isPaused {
+                self.screenTimeTracker.pauseAll()
+                Logger.scheduling.info("PauseConditionManager: pausing reminders (active condition)")
+            } else {
+                guard self.settings.snoozedUntil == nil || self.settings.snoozedUntil.map({ $0 <= Date() }) == true else {
+                    Logger.scheduling.debug("PauseConditionManager: pause cleared but snooze still active — not resuming")
+                    return
+                }
+                self.screenTimeTracker.resumeAll()
+                Logger.scheduling.info("PauseConditionManager: resuming reminders (no active conditions)")
+            }
+        }
+        pauseConditionManager.startMonitoring()
     }
 
     // MARK: - Notification Permission
@@ -397,8 +424,10 @@ final class AppCoordinator: ObservableObject {
     /// Configure all `ScreenTimeTracker` thresholds from current settings
     /// and start counting if the app is active.
     ///
-    /// Called from `scheduleReminders()` after the snooze guard clears, so
-    /// `resumeAll()` is always safe here.
+    /// Called from `scheduleReminders()` after the snooze guard clears.
+    /// Only calls `resumeAll()` if no pause condition is currently active —
+    /// preserves the invariant that PauseConditionManager and snooze are
+    /// independent pause axes.
     private func configureScreenTimeTracker() {
         for type in ReminderType.allCases {
             if settings.isEnabled(for: type) {
@@ -407,6 +436,10 @@ final class AppCoordinator: ObservableObject {
             } else {
                 screenTimeTracker.disableTracking(for: type)
             }
+        }
+        guard !pauseConditionManager.isPaused else {
+            Logger.scheduling.debug("configureScreenTimeTracker: pause condition active — skipping resumeAll")
+            return
         }
         screenTimeTracker.resumeAll()
         screenTimeTracker.startIfActive()

@@ -1,5 +1,5 @@
-import XCTest
 @testable import EyePostureReminder
+import XCTest
 
 final class SettingsStoreTests: XCTestCase {
 
@@ -20,8 +20,8 @@ final class SettingsStoreTests: XCTestCase {
 
     // MARK: - Default Values (first-run, empty store)
 
-    func test_defaults_masterEnabled_isTrue() {
-        XCTAssertTrue(sut.masterEnabled)
+    func test_defaults_globalEnabled_isTrue() {
+        XCTAssertTrue(sut.globalEnabled)
     }
 
     func test_defaults_eyesEnabled_isTrue() {
@@ -58,10 +58,10 @@ final class SettingsStoreTests: XCTestCase {
 
     // MARK: - Persistence: Booleans
 
-    func test_setMasterEnabled_false_persistsAndLoads() {
-        sut.masterEnabled = false
+    func test_setGlobalEnabled_false_persistsAndLoads() {
+        sut.globalEnabled = false
         let reloaded = SettingsStore(store: mockPersistence)
-        XCTAssertFalse(reloaded.masterEnabled)
+        XCTAssertFalse(reloaded.globalEnabled)
     }
 
     func test_setEyesEnabled_false_persistsAndLoads() {
@@ -132,44 +132,44 @@ final class SettingsStoreTests: XCTestCase {
 
     // MARK: - isEnabled(for:) — master + per-type gate
 
-    func test_isEnabled_masterOn_eyesOn_returnsTrue() {
-        sut.masterEnabled = true
+    func test_isEnabled_globalOn_eyesOn_returnsTrue() {
+        sut.globalEnabled = true
         sut.eyesEnabled = true
         XCTAssertTrue(sut.isEnabled(for: .eyes))
     }
 
-    func test_isEnabled_masterOn_eyesOff_returnsFalse() {
-        sut.masterEnabled = true
+    func test_isEnabled_globalOn_eyesOff_returnsFalse() {
+        sut.globalEnabled = true
         sut.eyesEnabled = false
         XCTAssertFalse(sut.isEnabled(for: .eyes))
     }
 
-    func test_isEnabled_masterOff_eyesOn_returnsFalse() {
-        sut.masterEnabled = false
+    func test_isEnabled_globalOff_eyesOn_returnsFalse() {
+        sut.globalEnabled = false
         sut.eyesEnabled = true
-        XCTAssertFalse(sut.isEnabled(for: .eyes), "Master toggle must gate per-type toggle")
+        XCTAssertFalse(sut.isEnabled(for: .eyes), "Global toggle must gate per-type toggle")
     }
 
-    func test_isEnabled_masterOn_postureOn_returnsTrue() {
-        sut.masterEnabled = true
+    func test_isEnabled_globalOn_postureOn_returnsTrue() {
+        sut.globalEnabled = true
         sut.postureEnabled = true
         XCTAssertTrue(sut.isEnabled(for: .posture))
     }
 
-    func test_isEnabled_masterOn_postureOff_returnsFalse() {
-        sut.masterEnabled = true
+    func test_isEnabled_globalOn_postureOff_returnsFalse() {
+        sut.globalEnabled = true
         sut.postureEnabled = false
         XCTAssertFalse(sut.isEnabled(for: .posture))
     }
 
-    func test_isEnabled_masterOff_postureOn_returnsFalse() {
-        sut.masterEnabled = false
+    func test_isEnabled_globalOff_postureOn_returnsFalse() {
+        sut.globalEnabled = false
         sut.postureEnabled = true
-        XCTAssertFalse(sut.isEnabled(for: .posture), "Master toggle must gate per-type toggle")
+        XCTAssertFalse(sut.isEnabled(for: .posture), "Global toggle must gate per-type toggle")
     }
 
     func test_isEnabled_bothOff_returnsFalseForAll() {
-        sut.masterEnabled = false
+        sut.globalEnabled = false
         sut.eyesEnabled = false
         sut.postureEnabled = false
         XCTAssertFalse(sut.isEnabled(for: .eyes))
@@ -210,13 +210,13 @@ final class SettingsStoreTests: XCTestCase {
 
     // MARK: - Snooze
 
-    func test_setSnoozedUntil_persistsAndLoads() {
+    func test_setSnoozedUntil_persistsAndLoads() throws {
         let targetDate = Date(timeIntervalSince1970: 1_700_000_000)
         sut.snoozedUntil = targetDate
         let reloaded = SettingsStore(store: mockPersistence)
-        XCTAssertNotNil(reloaded.snoozedUntil)
+        let snoozedUntil = try XCTUnwrap(reloaded.snoozedUntil)
         XCTAssertEqual(
-            reloaded.snoozedUntil!.timeIntervalSince1970,
+            snoozedUntil.timeIntervalSince1970,
             targetDate.timeIntervalSince1970,
             accuracy: 0.001
         )
@@ -238,7 +238,7 @@ final class SettingsStoreTests: XCTestCase {
     // MARK: - App Restart Simulation
 
     func test_allSettings_persistAcrossSimulatedRestart() {
-        sut.masterEnabled = false
+        sut.globalEnabled = false
         sut.eyesEnabled = false
         sut.postureEnabled = false
         sut.eyesInterval = 600
@@ -248,7 +248,7 @@ final class SettingsStoreTests: XCTestCase {
 
         let restarted = SettingsStore(store: mockPersistence)
 
-        XCTAssertFalse(restarted.masterEnabled)
+        XCTAssertFalse(restarted.globalEnabled)
         XCTAssertFalse(restarted.eyesEnabled)
         XCTAssertFalse(restarted.postureEnabled)
         XCTAssertEqual(restarted.eyesInterval, 600)

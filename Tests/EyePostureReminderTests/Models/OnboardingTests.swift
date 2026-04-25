@@ -1,5 +1,5 @@
-import XCTest
 @testable import EyePostureReminder
+import XCTest
 
 /// Tests for the `hasSeenOnboarding` UserDefaults flag that gates
 /// the first-launch vs. returning-user flow in `ContentView`.
@@ -23,9 +23,9 @@ final class OnboardingTests: XCTestCase {
     let testSuiteName = "com.yashasg.epr.test.onboarding"
     var testDefaults: UserDefaults!
 
-    override func setUp() {
-        super.setUp()
-        testDefaults = UserDefaults(suiteName: testSuiteName)!
+    override func setUp() throws {
+        try super.setUp()
+        testDefaults = try XCTUnwrap(UserDefaults(suiteName: testSuiteName))
         testDefaults.removePersistentDomain(forName: testSuiteName)
     }
 
@@ -38,7 +38,9 @@ final class OnboardingTests: XCTestCase {
     // MARK: - Key Correctness (contract with ContentView)
 
     func test_hasSeenOnboardingKey_exactString() {
-        XCTAssertEqual(Self.hasSeenOnboardingKey, "hasSeenOnboarding",
+        XCTAssertEqual(
+            Self.hasSeenOnboardingKey,
+            "hasSeenOnboarding",
             "Key must match the @AppStorage key used in ContentView and OnboardingView")
     }
 
@@ -46,7 +48,8 @@ final class OnboardingTests: XCTestCase {
 
     func test_firstLaunch_hasSeenOnboarding_isAbsentInFreshDefaults() {
         let value = testDefaults.object(forKey: Self.hasSeenOnboardingKey)
-        XCTAssertNil(value,
+        XCTAssertNil(
+            value,
             "hasSeenOnboarding key must not be pre-set on a fresh install (first launch)")
     }
 
@@ -63,7 +66,8 @@ final class OnboardingTests: XCTestCase {
         // Simulates OnboardingView.finishOnboarding():
         // UserDefaults.standard.set(true, forKey: "hasSeenOnboarding")
         testDefaults.set(true, forKey: Self.hasSeenOnboardingKey)
-        XCTAssertTrue(testDefaults.bool(forKey: Self.hasSeenOnboardingKey),
+        XCTAssertTrue(
+            testDefaults.bool(forKey: Self.hasSeenOnboardingKey),
             "After onboarding completes, hasSeenOnboarding must be true (returning user)")
     }
 
@@ -75,12 +79,13 @@ final class OnboardingTests: XCTestCase {
         )
     }
 
-    func test_hasSeenOnboarding_persistsAfterSynchronize() {
+    func test_hasSeenOnboarding_persistsAfterSynchronize() throws {
         testDefaults.set(true, forKey: Self.hasSeenOnboardingKey)
         testDefaults.synchronize()
 
-        let freshQuery = UserDefaults(suiteName: testSuiteName)!
-        XCTAssertTrue(freshQuery.bool(forKey: Self.hasSeenOnboardingKey),
+        let freshQuery = try XCTUnwrap(UserDefaults(suiteName: testSuiteName))
+        XCTAssertTrue(
+            freshQuery.bool(forKey: Self.hasSeenOnboardingKey),
             "hasSeenOnboarding must persist (returning user across launches)")
     }
 
@@ -89,14 +94,16 @@ final class OnboardingTests: XCTestCase {
     func test_hasSeenOnboarding_canBeResetToFalse() {
         testDefaults.set(true, forKey: Self.hasSeenOnboardingKey)
         testDefaults.set(false, forKey: Self.hasSeenOnboardingKey)
-        XCTAssertFalse(testDefaults.bool(forKey: Self.hasSeenOnboardingKey),
+        XCTAssertFalse(
+            testDefaults.bool(forKey: Self.hasSeenOnboardingKey),
             "hasSeenOnboarding must be resettable to false (e.g. for testing or reset flow)")
     }
 
     func test_removePersistentDomain_clearsOnboardingFlag() {
         testDefaults.set(true, forKey: Self.hasSeenOnboardingKey)
         testDefaults.removePersistentDomain(forName: testSuiteName)
-        XCTAssertFalse(testDefaults.bool(forKey: Self.hasSeenOnboardingKey),
+        XCTAssertFalse(
+            testDefaults.bool(forKey: Self.hasSeenOnboardingKey),
             "Removing persistent domain must clear the onboarding flag")
     }
 }

@@ -1,6 +1,6 @@
-import XCTest
 import Combine
 @testable import EyePostureReminder
+import XCTest
 
 /// Tests for `SettingsViewModel`.
 ///
@@ -34,51 +34,52 @@ final class SettingsViewModelTests: XCTestCase {
         try await super.tearDown()
     }
 
-    // MARK: - masterToggleChanged: enabled
+    // MARK: - globalToggleChanged: enabled
 
-    func test_masterToggleChanged_whenEnabled_callsScheduleReminders() async {
-        settings.masterEnabled = true
+    func test_globalToggleChanged_whenEnabled_callsScheduleReminders() async {
+        settings.globalEnabled = true
 
-        sut.masterToggleChanged()
+        sut.globalToggleChanged()
 
         try? await Task.sleep(nanoseconds: 200_000_000) // 200ms for inner Task
         XCTAssertEqual(mockScheduler.scheduleRemindersCallCount, 1)
     }
 
-    func test_masterToggleChanged_whenEnabled_passesCorrectSettings() async {
-        settings.masterEnabled = true
+    func test_globalToggleChanged_whenEnabled_passesCorrectSettings() async {
+        settings.globalEnabled = true
 
-        sut.masterToggleChanged()
+        sut.globalToggleChanged()
 
         try? await Task.sleep(nanoseconds: 200_000_000)
-        XCTAssertTrue(mockScheduler.lastScheduledSettings === settings,
+        XCTAssertTrue(
+            mockScheduler.lastScheduledSettings === settings,
             "scheduleReminders must be called with the same SettingsStore instance")
     }
 
-    func test_masterToggleChanged_whenEnabled_doesNotCallCancelAll() async {
-        settings.masterEnabled = true
+    func test_globalToggleChanged_whenEnabled_doesNotCallCancelAll() async {
+        settings.globalEnabled = true
 
-        sut.masterToggleChanged()
+        sut.globalToggleChanged()
 
         try? await Task.sleep(nanoseconds: 200_000_000)
         XCTAssertEqual(mockScheduler.cancelAllCallCount, 0)
     }
 
-    // MARK: - masterToggleChanged: disabled
+    // MARK: - globalToggleChanged: disabled
 
-    func test_masterToggleChanged_whenDisabled_callsCancelAll() async {
-        settings.masterEnabled = false
+    func test_globalToggleChanged_whenDisabled_callsCancelAll() async {
+        settings.globalEnabled = false
 
-        sut.masterToggleChanged()
+        sut.globalToggleChanged()
 
         try? await Task.sleep(nanoseconds: 200_000_000)
         XCTAssertEqual(mockScheduler.cancelAllCallCount, 1)
     }
 
-    func test_masterToggleChanged_whenDisabled_doesNotCallScheduleReminders() async {
-        settings.masterEnabled = false
+    func test_globalToggleChanged_whenDisabled_doesNotCallScheduleReminders() async {
+        settings.globalEnabled = false
 
-        sut.masterToggleChanged()
+        sut.globalToggleChanged()
 
         try? await Task.sleep(nanoseconds: 200_000_000)
         XCTAssertEqual(mockScheduler.scheduleRemindersCallCount, 0)
@@ -131,28 +132,28 @@ final class SettingsViewModelTests: XCTestCase {
 
     // MARK: - Toggle enable/disable affects scheduler
 
-    func test_disablingMasterToggle_triggersCancel_notSchedule() async {
-        settings.masterEnabled = true
-        sut.masterToggleChanged()
+    func test_disablingGlobalToggle_triggersCancel_notSchedule() async {
+        settings.globalEnabled = true
+        sut.globalToggleChanged()
         try? await Task.sleep(nanoseconds: 200_000_000)
         mockScheduler.reset()
 
-        settings.masterEnabled = false
-        sut.masterToggleChanged()
+        settings.globalEnabled = false
+        sut.globalToggleChanged()
         try? await Task.sleep(nanoseconds: 200_000_000)
 
         XCTAssertEqual(mockScheduler.cancelAllCallCount, 1)
         XCTAssertEqual(mockScheduler.scheduleRemindersCallCount, 0)
     }
 
-    func test_enablingMasterToggle_triggersSchedule_notCancel() async {
-        settings.masterEnabled = false
-        sut.masterToggleChanged()
+    func test_enablingGlobalToggle_triggersSchedule_notCancel() async {
+        settings.globalEnabled = false
+        sut.globalToggleChanged()
         try? await Task.sleep(nanoseconds: 200_000_000)
         mockScheduler.reset()
 
-        settings.masterEnabled = true
-        sut.masterToggleChanged()
+        settings.globalEnabled = true
+        sut.globalToggleChanged()
         try? await Task.sleep(nanoseconds: 200_000_000)
 
         XCTAssertEqual(mockScheduler.scheduleRemindersCallCount, 1)
@@ -171,13 +172,13 @@ final class SettingsViewModelTests: XCTestCase {
         XCTAssertEqual(mockScheduler.cancelAllCallCount, 1)
     }
 
-    func test_snooze_setsSnoozedUntilInFuture() {
+    func test_snooze_setsSnoozedUntilInFuture() throws {
         sut.snooze(for: 5)
-        XCTAssertNotNil(settings.snoozedUntil)
-        XCTAssertGreaterThan(settings.snoozedUntil!, Date())
+        let snoozedUntil = try XCTUnwrap(settings.snoozedUntil)
+        XCTAssertGreaterThan(snoozedUntil, Date())
     }
 
-    func test_snooze_5min_setsCorrectDuration() {
+    func test_snooze_5min_setsCorrectDuration() throws {
         let before = Date()
         sut.snooze(for: 5)
         let after = Date()
@@ -185,18 +186,22 @@ final class SettingsViewModelTests: XCTestCase {
         let expectedMin = before.addingTimeInterval(5 * 60)
         let expectedMax = after.addingTimeInterval(5 * 60)
 
-        XCTAssertGreaterThanOrEqual(settings.snoozedUntil!.timeIntervalSince1970,
-                                    expectedMin.timeIntervalSince1970 - 1)
-        XCTAssertLessThanOrEqual(settings.snoozedUntil!.timeIntervalSince1970,
-                                  expectedMax.timeIntervalSince1970 + 1)
+        let snoozedUntil = try XCTUnwrap(settings.snoozedUntil)
+        XCTAssertGreaterThanOrEqual(
+            snoozedUntil.timeIntervalSince1970,
+            expectedMin.timeIntervalSince1970 - 1)
+        XCTAssertLessThanOrEqual(
+            snoozedUntil.timeIntervalSince1970,
+            expectedMax.timeIntervalSince1970 + 1)
     }
 
-    func test_snooze_60min_setsCorrectDuration() {
+    func test_snooze_60min_setsCorrectDuration() throws {
         let before = Date()
         sut.snooze(for: 60)
 
+        let snoozedUntil = try XCTUnwrap(settings.snoozedUntil)
         XCTAssertEqual(
-            settings.snoozedUntil!.timeIntervalSince1970,
+            snoozedUntil.timeIntervalSince1970,
             before.addingTimeInterval(60 * 60).timeIntervalSince1970,
             accuracy: 1.0
         )
@@ -260,7 +265,9 @@ final class SettingsViewModelTests: XCTestCase {
         sut.reminderSettingChanged(for: .posture)
 
         try? await Task.sleep(nanoseconds: 400_000_000)
-        XCTAssertEqual(mockScheduler.rescheduleCallCount, 4,
+        XCTAssertEqual(
+            mockScheduler.rescheduleCallCount,
+            4,
             "Every setting change must trigger a reschedule, even when called rapidly")
     }
 }
