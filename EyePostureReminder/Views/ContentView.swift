@@ -2,15 +2,21 @@ import SwiftUI
 
 struct ContentView: View {
     @AppStorage(AppStorageKey.hasSeenOnboarding) private var hasSeenOnboarding = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        if hasSeenOnboarding {
-            NavigationStack {
-                HomeView()
+        ZStack {
+            if hasSeenOnboarding {
+                NavigationStack {
+                    HomeView()
+                }
+                .transition(.opacity)
+            } else {
+                OnboardingView()
+                    .transition(.opacity)
             }
-        } else {
-            OnboardingView()
         }
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.4), value: hasSeenOnboarding)
     }
 }
 

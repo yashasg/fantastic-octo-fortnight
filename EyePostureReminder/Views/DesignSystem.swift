@@ -143,4 +143,8 @@ enum AppLayout {
     static let cardCornerRadius: CGFloat = 16
     /// Onboarding hero illustration icon size
     static let onboardingIllustrationSize: CGFloat = 72
+    // AppLayout.overlayIconSize / onboardingIllustrationSize / settingsRowIconWidth are
+    // intentionally fixed-size (decorative, accessibility-hidden). See AppFont.countdown for precedent.
+    /// Setup preview card icon column width (decorative icon frame)
+    static let settingsRowIconWidth: CGFloat = 40
 }

@@ -1329,7 +1329,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "We do not collect personal information or any data that leaves your device. Motion activity data is accessed transiently in memory to pause reminders while driving and is never stored or transmitted. Diagnostic events are logged locally via Apple’s os.Logger with behavioral values redacted."
+            "value": "We do not collect personal information or any data that leaves your device. Motion activity data is accessed transiently in memory to pause reminders while driving and is never stored or transmitted. Diagnostic events are logged locally via Apple’s os.Logger: setting values (old and new) are marked private and redacted in exported logs; timing and duration measurements (session lengths, elapsed countdown time, threshold intervals) are non-identifying operational metrics and are not redacted."
           }
         }
       }
@@ -1351,7 +1351,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "You can reset all app data by deleting the app. Settings may be included in your device's iCloud backup if you have iCloud backup enabled. This is controlled by your iOS settings."
+            "value": "Since we do not collect personal data, most data subject rights are satisfied by default. To delete all App data, simply delete the App from your device. Settings may be included in your device’s iCloud backup if iCloud backup is enabled.\n\nGDPR (EU/EEA users): We do not act as a data controller for personal data as defined under GDPR. No personal data is collected or processed.\n\nCCPA (California users): We do not sell personal information. We do not collect personal information as defined under the CCPA."
           }
         }
       }
@@ -1418,6 +1418,226 @@
           "stringUnit": {
             "state": "translated",
             "value": "v%@ (build %@)"
+          }
+        }
+      }
+    },
+    "legal.terms.userResponsibilities.heading": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "User Responsibilities"
+          }
+        }
+      }
+    },
+    "legal.terms.userResponsibilities.body": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "By using the App, you agree that you are solely responsible for your health and wellness decisions, you will consult a healthcare professional if you have any medical concerns, and you will not use the App as a substitute for professional medical care. You are responsible for ensuring the App is appropriate for your individual situation and that your use complies with applicable law."
+          }
+        }
+      }
+    },
+    "legal.terms.intellectualProperty.heading": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Intellectual Property"
+          }
+        }
+      }
+    },
+    "legal.terms.intellectualProperty.body": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All content, design, code, and assets within Eye & Posture Reminder are the intellectual property of the developer and protected by applicable copyright and intellectual property laws. You are granted a limited, non-exclusive, non-transferable license to use the App on your personal iOS device for personal, non-commercial purposes. You may not copy, modify, distribute, sell, reverse-engineer, or create derivative works from the App."
+          }
+        }
+      }
+    },
+    "legal.terms.thirdPartyServices.heading": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Third-Party Services"
+          }
+        }
+      }
+    },
+    "legal.terms.thirdPartyServices.body": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eye & Posture Reminder does not integrate with third-party analytics, advertising, or data platforms. The App operates entirely on your device and does not transmit data to external services. The App is distributed through the Apple App Store. Apple’s own terms govern the download and installation process."
+          }
+        }
+      }
+    },
+    "legal.terms.termination.heading": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Termination"
+          }
+        }
+      }
+    },
+    "legal.terms.termination.body": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You may stop using the App at any time by deleting it from your device. The developer reserves the right to discontinue the App or modify its functionality at any time without notice. The Health Disclaimer, Limitation of Liability, Warranty Disclaimer, and Intellectual Property sections survive termination."
+          }
+        }
+      }
+    },
+    "legal.terms.governingLaw.heading": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Governing Law"
+          }
+        }
+      }
+    },
+    "legal.terms.governingLaw.body": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "These Terms are governed by applicable law. Any disputes arising from these Terms or your use of the App shall be subject to the jurisdiction agreed between you and the developer at the time of any such dispute."
+          }
+        }
+      }
+    },
+    "legal.terms.changesToTerms.heading": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Changes to These Terms"
+          }
+        }
+      }
+    },
+    "legal.terms.changesToTerms.body": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The developer may update these Terms at any time. Continued use of the App after changes are posted constitutes your acceptance of the updated Terms. We encourage you to review these Terms periodically."
+          }
+        }
+      }
+    },
+    "legal.privacy.localStorageOnly.heading": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Local Storage Only"
+          }
+        }
+      }
+    },
+    "legal.privacy.localStorageOnly.body": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All data stored by the App lives exclusively in Apple’s UserDefaults, within the App’s sandboxed storage on your device. This data may be included in your device’s iCloud backup if iCloud backup is enabled — this is controlled by your iOS settings, not by us. All locally stored data is deleted when you delete the App."
+          }
+        }
+      }
+    },
+    "legal.privacy.appleAppStore.heading": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple App Store"
+          }
+        }
+      }
+    },
+    "legal.privacy.appleAppStore.body": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The App is distributed through the Apple App Store. Apple may collect certain data as part of the download and installation process, governed by Apple’s Privacy Policy. The developer has no control over or access to data collected by Apple."
+          }
+        }
+      }
+    },
+    "legal.privacy.childrenPrivacy.heading": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Children’s Privacy"
+          }
+        }
+      }
+    },
+    "legal.privacy.childrenPrivacy.body": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eye & Posture Reminder does not knowingly collect personal information from children under the age of 13. Since the App collects no personal information from any user, it presents no unique risk to children’s privacy."
+          }
+        }
+      }
+    },
+    "legal.privacy.changesToPolicy.heading": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Changes to This Policy"
+          }
+        }
+      }
+    },
+    "legal.privacy.changesToPolicy.body": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The developer may update this Privacy Policy from time to time. When changes are made, continued use of the App after changes are posted constitutes your acceptance of the revised policy. We encourage you to review this policy periodically."
           }
         }
       }

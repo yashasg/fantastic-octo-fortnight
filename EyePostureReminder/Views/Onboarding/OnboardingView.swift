@@ -45,6 +45,7 @@ struct OnboardingView: View {
 /// Respects `accessibilityReduceMotion` — when enabled, the animation duration is shortened to 0.15s.
 struct OnboardingScreenWrapper<Content: View>: View {
     @State private var appeared = false
+    @State private var hasEverAppeared = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     let content: Content
@@ -57,15 +58,14 @@ struct OnboardingScreenWrapper<Content: View>: View {
         content
             .opacity(appeared ? 1 : 0)
             .onAppear {
+                guard !hasEverAppeared else { appeared = true; return }
+                hasEverAppeared = true
                 let animation: Animation = reduceMotion
                     ? .linear(duration: 0.15)
                     : .easeOut(duration: 0.4).delay(0.1)
                 withAnimation(animation) {
                     appeared = true
                 }
-            }
-            .onDisappear {
-                appeared = false
             }
     }
 }

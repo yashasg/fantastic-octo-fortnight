@@ -71,6 +71,30 @@ struct LegalDocumentView: View {
                 content: Text("legal.terms.warranty.body", bundle: .module)
             )
             LegalSection(
+                heading: Text("legal.terms.userResponsibilities.heading", bundle: .module),
+                content: Text("legal.terms.userResponsibilities.body", bundle: .module)
+            )
+            LegalSection(
+                heading: Text("legal.terms.intellectualProperty.heading", bundle: .module),
+                content: Text("legal.terms.intellectualProperty.body", bundle: .module)
+            )
+            LegalSection(
+                heading: Text("legal.terms.thirdPartyServices.heading", bundle: .module),
+                content: Text("legal.terms.thirdPartyServices.body", bundle: .module)
+            )
+            LegalSection(
+                heading: Text("legal.terms.termination.heading", bundle: .module),
+                content: Text("legal.terms.termination.body", bundle: .module)
+            )
+            LegalSection(
+                heading: Text("legal.terms.governingLaw.heading", bundle: .module),
+                content: Text("legal.terms.governingLaw.body", bundle: .module)
+            )
+            LegalSection(
+                heading: Text("legal.terms.changesToTerms.heading", bundle: .module),
+                content: Text("legal.terms.changesToTerms.body", bundle: .module)
+            )
+            LegalSection(
                 heading: Text("legal.terms.contact.heading", bundle: .module),
                 content: Text("legal.terms.contact.body", bundle: .module)
             )
@@ -90,8 +114,24 @@ struct LegalDocumentView: View {
                 content: Text("legal.privacy.noCollect.body", bundle: .module)
             )
             LegalSection(
+                heading: Text("legal.privacy.localStorageOnly.heading", bundle: .module),
+                content: Text("legal.privacy.localStorageOnly.body", bundle: .module)
+            )
+            LegalSection(
+                heading: Text("legal.privacy.appleAppStore.heading", bundle: .module),
+                content: Text("legal.privacy.appleAppStore.body", bundle: .module)
+            )
+            LegalSection(
+                heading: Text("legal.privacy.childrenPrivacy.heading", bundle: .module),
+                content: Text("legal.privacy.childrenPrivacy.body", bundle: .module)
+            )
+            LegalSection(
                 heading: Text("legal.privacy.rights.heading", bundle: .module),
                 content: Text("legal.privacy.rights.body", bundle: .module)
+            )
+            LegalSection(
+                heading: Text("legal.privacy.changesToPolicy.heading", bundle: .module),
+                content: Text("legal.privacy.changesToPolicy.body", bundle: .module)
             )
             LegalSection(
                 heading: Text("legal.privacy.contact.heading", bundle: .module),

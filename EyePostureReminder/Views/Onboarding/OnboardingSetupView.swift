@@ -90,7 +90,7 @@ struct OnboardingSetupView: View {
 // MARK: - Setup Preview Card
 
 /// Read-only display card showing a reminder type's default configuration.
-struct SetupPreviewCard: View {
+private struct SetupPreviewCard: View {
     let icon: String
     let color: Color
     let title: String
@@ -100,9 +100,9 @@ struct SetupPreviewCard: View {
     var body: some View {
         HStack(spacing: AppSpacing.md) {
             Image(systemName: icon)
-                .font(.title2)
+                .font(.title2) // decorative — intentional .title2, not in AppFont
                 .foregroundStyle(color)
-                .frame(width: 40)
+                .frame(width: AppLayout.settingsRowIconWidth)
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: AppSpacing.xs) {
                 Text(title)

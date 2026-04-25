@@ -48,6 +48,7 @@ struct SettingsView: View {
                 }
                     .tint(AppColor.reminderBlue)
                     .onChange(of: settings.globalEnabled) {
+                        withAnimation(reduceMotion ? nil : AppAnimation.settingsExpandCurve) {}
                         viewModel?.globalToggleChanged()
                     }
                     .accessibilityHint(Text("settings.masterToggle.hint", bundle: .module))
@@ -299,7 +300,7 @@ struct SettingsView: View {
             }
         }
         .navigationTitle(Text("settings.navTitle", bundle: .module))
-        .navigationBarTitleDisplayMode(.large)
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button(String(localized: "settings.doneButton", bundle: .module)) {
@@ -316,7 +317,6 @@ struct SettingsView: View {
         .sheet(isPresented: $showPrivacy) {
             LegalDocumentView(document: .privacy)
         }
-        .animation(reduceMotion ? nil : AppAnimation.settingsExpandCurve, value: settings.globalEnabled)
         .animation(reduceMotion ? nil : AppAnimation.settingsExpandCurve, value: isSnoozed)
         .onAppear {
             if vmBox.inner == nil {
