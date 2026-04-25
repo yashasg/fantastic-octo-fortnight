@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct ContentView: View {
-    @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
+    @AppStorage(AppStorageKey.hasSeenOnboarding) private var hasSeenOnboarding = false
 
     var body: some View {
         if hasSeenOnboarding {

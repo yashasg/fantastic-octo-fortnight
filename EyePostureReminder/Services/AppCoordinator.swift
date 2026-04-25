@@ -53,7 +53,9 @@ final class AppCoordinator: ObservableObject {
 
     /// Injected notification center — used for auth checks and snooze-wake
     /// scheduling. Defaults to `UNUserNotificationCenter.current()` in production.
-    private let notificationCenter: NotificationScheduling
+    /// `internal` (not `private`) so `OnboardingView` can pass it to
+    /// `OnboardingPermissionView` for DI-friendly onboarding permission requests.
+    let notificationCenter: NotificationScheduling
 
     /// Injected overlay manager — used to show overlays and clear the queue.
     /// Defaults to `OverlayManager.shared` in production.
@@ -412,6 +414,16 @@ final class AppCoordinator: ObservableObject {
             await self?.handleSnoozeWake()
         }
         Logger.scheduling.debug("Snooze wake task armed for \(date)")
+    }
+
+    /// Cancel the in-process snooze wake task without removing the pending
+    /// notification. Called by `AppDelegate` when the snooze-wake notification
+    /// is delivered while the app is in the foreground, so the task and the
+    /// notification delivery path don't both call `handleSnoozeWake()` and
+    /// double-fire `.snoozeExpired` analytics + double-reschedule.
+    func cancelSnoozeWakeTaskIfNeeded() {
+        snoozeWakeTask?.cancel()
+        snoozeWakeTask = nil
     }
 
     /// Cancel both the in-process wake task and the one-time wake notification.

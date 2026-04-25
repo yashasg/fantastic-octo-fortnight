@@ -27,10 +27,10 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     private func applyUITestLaunchArguments() {
         let args = CommandLine.arguments
         if args.contains("--skip-onboarding") {
-            UserDefaults.standard.set(true, forKey: "hasSeenOnboarding")
+            UserDefaults.standard.set(true, forKey: AppStorageKey.hasSeenOnboarding)
         }
         if args.contains("--reset-onboarding") {
-            UserDefaults.standard.removeObject(forKey: "hasSeenOnboarding")
+            UserDefaults.standard.removeObject(forKey: AppStorageKey.hasSeenOnboarding)
         }
     }
 
@@ -40,6 +40,11 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         // first scheduleReminders() call (via EyePostureReminderApp .task) sees a
         // clean slate. handleForegroundTransition() handles the background→foreground
         // path; this covers cold-launch after a dismissed snooze-wake notification.
+        //
+        // ⚠️ On the very first cold launch, `coordinator` is nil here because
+        // SwiftUI's `.onAppear` (which sets it) has not fired yet. The optional-
+        // chain silently exits — this is safe because `scheduleReminders()` in
+        // `.task` also checks for and clears expired snooze state.
         Task { @MainActor [weak self] in
             await self?.coordinator?.clearExpiredSnoozeIfNeeded()
         }
@@ -59,8 +64,10 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
                 self?.coordinator?.handleNotification(for: type)
             }
         } else if categoryID == AppCoordinator.snoozeWakeCategory {
-            // Snooze has expired — resume normal scheduling instead of showing an overlay.
+            // Snooze has expired — cancel the in-process wake Task first so it
+            // doesn't also call handleSnoozeWake() and double-fire analytics.
             Task { @MainActor [weak self] in
+                self?.coordinator?.cancelSnoozeWakeTaskIfNeeded()
                 await self?.coordinator?.scheduleReminders()
             }
         }
@@ -80,8 +87,10 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
                 self?.coordinator?.handleNotification(for: type)
             }
         } else if categoryID == AppCoordinator.snoozeWakeCategory {
-            // Snooze notification tapped (or delivered silently) — resume scheduling.
+            // Snooze notification tapped (or delivered silently) — cancel the in-process
+            // wake Task before resuming so the two paths don't double-reschedule.
             Task { @MainActor [weak self] in
+                self?.coordinator?.cancelSnoozeWakeTaskIfNeeded()
                 await self?.coordinator?.scheduleReminders()
             }
         }

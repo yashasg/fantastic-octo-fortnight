@@ -16,17 +16,19 @@ struct ReminderSettings: Equatable {
 
 extension ReminderSettings {
     /// 20-20-20 rule defaults driven by `AppConfig` (reads `defaults.json`).
-    static var defaultEyes: ReminderSettings {
+    /// `static let` ensures `AppConfig.load()` is called at most once.
+    static let defaultEyes: ReminderSettings = {
         let config = AppConfig.load()
         return ReminderSettings(interval: config.defaults.eyeInterval, breakDuration: config.defaults.eyeBreakDuration)
-    }
+    }()
 
     /// Posture check defaults driven by `AppConfig` (reads `defaults.json`).
-    static var defaultPosture: ReminderSettings {
+    /// `static let` ensures `AppConfig.load()` is called at most once.
+    static let defaultPosture: ReminderSettings = {
         let config = AppConfig.load()
         return ReminderSettings(
             interval: config.defaults.postureInterval,
             breakDuration: config.defaults.postureBreakDuration
         )
-    }
+    }()
 }

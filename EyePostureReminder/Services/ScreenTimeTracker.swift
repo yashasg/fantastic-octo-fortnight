@@ -58,6 +58,12 @@ final class ScreenTimeTracker: ScreenTimeTracking {
     private var paused: Set<ReminderType> = []
     private var tickTimer: Timer?
 
+    /// Records the `CACurrentMediaTime()` at each tick to compute the actual
+    /// elapsed delta instead of assuming a constant 1.0 s per tick.
+    /// `Timer` with `tolerance = 0.5` can fire significantly late; accumulating
+    /// the real delta prevents drift over long sessions.
+    private var lastTickTime: CFTimeInterval = 0
+
     /// Non-nil while we are within the grace period after `willResignActive`.
     /// Cancelled if the app returns to active before the grace period expires.
     private var resetTask: Task<Void, Never>?
@@ -88,6 +94,10 @@ final class ScreenTimeTracker: ScreenTimeTracking {
     /// Set the threshold (seconds of continuous screen-on time) for a reminder type.
     /// Resets the elapsed counter for the type.
     func setThreshold(_ interval: TimeInterval, for type: ReminderType) {
+        guard interval > 0 else {
+            Logger.scheduling.warning("ScreenTimeTracker: ignoring zero/negative threshold for \(type.rawValue) — type will not fire")
+            return
+        }
         thresholds[type] = interval
         elapsed[type] = 0
     }
@@ -225,6 +235,7 @@ final class ScreenTimeTracker: ScreenTimeTracking {
 
     private func startTicking() {
         guard tickTimer == nil else { return }
+        lastTickTime = 0  // reset so first tick uses default delta of 1.0
         tickTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
             self?.tick()
         }
@@ -241,12 +252,19 @@ final class ScreenTimeTracker: ScreenTimeTracking {
     private func stopTicking() {
         tickTimer?.invalidate()
         tickTimer = nil
+        lastTickTime = 0  // reset so the next tick after resume uses default delta
     }
 
     private func tick() {
+        let now = CACurrentMediaTime()
+        // Use real elapsed time since the last tick rather than the nominal 1.0 s.
+        // Cap at 2.0 s to avoid large jumps after device sleep or backgrounding.
+        let delta: TimeInterval = lastTickTime > 0 ? min(now - lastTickTime, 2.0) : 1.0
+        lastTickTime = now
+
         for type in ReminderType.allCases {
             guard !paused.contains(type), let threshold = thresholds[type], threshold > 0 else { continue }
-            elapsed[type, default: 0] += 1.0
+            elapsed[type, default: 0] += delta
             if elapsed[type, default: 0] >= threshold {
                 elapsed[type] = 0
                 Logger.scheduling.info("ScreenTimeTracker: \(type.rawValue) threshold reached (\(threshold)s continuous screen-on time)")

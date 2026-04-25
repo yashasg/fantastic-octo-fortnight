@@ -271,14 +271,6 @@ final class PauseConditionManager: PauseConditionProviding {
         Logger.scheduling.debug("PauseConditionManager: monitoring stopped")
     }
 
-    /// Re-evaluates all three conditions against current detector state and settings.
-    /// Called when a pause-related setting changes so the paused state stays consistent.
-    private func reevaluate() {
-        update(.focusMode, isActive: focusDetector.isFocused && settings.pauseDuringFocus)
-        update(.carPlay, isActive: carPlayDetector.isCarPlayActive && settings.pauseWhileDriving)
-        update(.driving, isActive: drivingDetector.isDriving && settings.pauseWhileDriving)
-    }
-
     private func update(_ source: PauseConditionSource, isActive: Bool) {
         if isActive { activeConditions.insert(source) } else { activeConditions.remove(source) }
         isPaused = !activeConditions.isEmpty

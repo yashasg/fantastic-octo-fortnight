@@ -40,12 +40,23 @@ final class SettingsViewModel: ObservableObject {
                 return Date().addingTimeInterval(60 * 60)
             case .restOfDay:
                 // End of the current calendar day (midnight tonight).
+                // `calendar.date(byAdding:)` never returns nil for valid inputs,
+                // so no fallback is needed — a fallback of `+24h` would be wrong
+                // on DST transition days (23 or 25 hours, not midnight).
                 let calendar = Calendar.current
                 return calendar.date(
                     byAdding: .day,
                     value: 1,
                     to: calendar.startOfDay(for: Date())
-                ) ?? Date().addingTimeInterval(24 * 60 * 60)
+                ) ?? {
+                    // Unreachable in practice; guard against unexpected nil with a
+                    // warning rather than silently computing the wrong end time.
+                    Logger.settings.warning("SnoozeOption.restOfDay: calendar.date returned nil — falling back to DateComponents midnight")
+                    var comps = calendar.dateComponents([.year, .month, .day], from: Date())
+                    comps.day = (comps.day ?? 0) + 1
+                    comps.hour = 0; comps.minute = 0; comps.second = 0
+                    return calendar.date(from: comps) ?? Date().addingTimeInterval(86400)
+                }()
             }
         }
 
@@ -61,6 +72,9 @@ final class SettingsViewModel: ObservableObject {
 
     /// Maximum number of consecutive snoozes allowed before a reminder must fire.
     /// Sourced from `AppConfig.features.maxSnoozeCount` at initialisation time.
+    /// Note: captured once at init — changes to `defaults.json` between launches
+    /// are not reflected until the ViewModel is re-created (next cold launch).
+    /// This is acceptable in production; only observable in dev/test environments.
     let maxConsecutiveSnoozes: Int
 
     /// All available snooze options in display order.
@@ -173,17 +187,27 @@ final class SettingsViewModel: ObservableObject {
             Logger.settings.info("Snooze limit reached — ignoring snooze request")
             return
         }
-        settings.snoozedUntil = option.endDate
+        let endDate = option.endDate
+        guard endDate > Date() else {
+            // Guard against clock skew or NTP drift producing a past end date;
+            // applying a past snoozedUntil would be cleared immediately by
+            // scheduleReminders() making snooze appear broken.
+            Logger.settings.warning("snooze(option:) computed end date is in the past — ignoring")
+            return
+        }
+        settings.snoozedUntil = endDate
         settings.snoozeCount += 1
         scheduler.cancelAllReminders()
         AnalyticsLogger.log(.snoozeActivated(durationOption: option.label))
-        Logger.settings.info("Snoozed until \(option.endDate) via option: \(option.label) (count: \(self.settings.snoozeCount))")
+        Logger.settings.info("Snoozed until \(endDate) via option: \(option.label) (count: \(self.settings.snoozeCount))")
     }
 
     /// Apply a snooze for an arbitrary number of minutes.
     ///
-    /// Preserves backward-compatibility with existing call sites and tests.
-    /// For new code, prefer `snooze(option:)`.
+    /// Legacy bridge — no production callers remain after `snooze(option:)` was
+    /// introduced. Retained for test compatibility only; new code should use
+    /// `snooze(option:)`.
+    @available(*, deprecated, renamed: "snooze(option:)")
     func snooze(for minutes: Int) {
         guard canSnooze else {
             Logger.settings.info("Snooze limit reached — ignoring snooze request")
