@@ -48,6 +48,18 @@ struct OnboardingWelcomeView: View {
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, AppSpacing.sm)
+
+                    // Legal disclaimer
+                    Text("onboarding.welcome.disclaimer", bundle: .module)
+                        .font(AppFont.caption)
+                        .foregroundStyle(.tertiary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, AppSpacing.lg)
+                        .padding(.vertical, AppSpacing.xs)
+                        .background(
+                            .quaternary.opacity(0.5),
+                            in: RoundedRectangle(cornerRadius: AppLayout.cardCornerRadius)
+                        )
                         .accessibilityIdentifier("onboarding.welcome.disclaimer")
 
                     Spacer(minLength: AppSpacing.lg)

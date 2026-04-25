@@ -420,6 +420,17 @@
         }
       }
     },
+    "onboarding.welcome.disclaimer": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This app supports healthy screen habits. It is not medical advice. Consult a healthcare professional for eye or posture concerns."
+          }
+        }
+      }
+    },
     "overlay.countdown.label": {
       "extractionState": "manual",
       "localizations": {
@@ -1136,6 +1147,17 @@
         }
       }
     },
+    "settings.legal.terms.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opens Terms and Conditions document"
+          }
+        }
+      }
+    },
     "settings.legal.privacy": {
       "extractionState": "manual",
       "localizations": {
@@ -1143,6 +1165,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Privacy Policy"
+          }
+        }
+      }
+    },
+    "settings.legal.privacy.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opens Privacy Policy document"
           }
         }
       }
@@ -1385,6 +1418,72 @@
           "stringUnit": {
             "state": "translated",
             "value": "About"
+          }
+        }
+      }
+    },
+    "settings.section.advanced": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Advanced"
+          }
+        }
+      }
+    },
+    "settings.resetToDefaults": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reset to Defaults"
+          }
+        }
+      }
+    },
+    "settings.resetToDefaults.confirmTitle": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reset to Defaults?"
+          }
+        }
+      }
+    },
+    "settings.resetToDefaults.confirmMessage": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This will restore all settings to their original values. Your snooze history will also be cleared."
+          }
+        }
+      }
+    },
+    "settings.resetToDefaults.confirmAction": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reset to Defaults"
+          }
+        }
+      }
+    },
+    "settings.resetToDefaults.cancel": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancel"
           }
         }
       }

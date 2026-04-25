@@ -26,6 +26,7 @@ struct SettingsView: View {
 
     @State private var showTerms = false
     @State private var showPrivacy = false
+    @State private var showResetConfirm = false
 
     // MARK: - Snooze helpers
 
@@ -48,7 +49,6 @@ struct SettingsView: View {
                 }
                     .tint(AppColor.reminderBlue)
                     .onChange(of: settings.globalEnabled) {
-                        withAnimation(reduceMotion ? nil : AppAnimation.settingsExpandCurve) {}
                         viewModel?.globalToggleChanged()
                     }
                     .accessibilityHint(Text("settings.masterToggle.hint", bundle: .module))
@@ -124,7 +124,11 @@ struct SettingsView: View {
                     ))
 
                     Button(
-                        action: { viewModel?.cancelSnooze() },
+                        action: {
+                            withAnimation(reduceMotion ? nil : AppAnimation.settingsExpandCurve) {
+                                viewModel?.cancelSnooze()
+                            }
+                        },
                         label: {
                             Label {
                                 Text("settings.snooze.cancelButton", bundle: .module)
@@ -138,7 +142,11 @@ struct SettingsView: View {
                     .accessibilityHint(Text("settings.snooze.cancelButton.hint", bundle: .module))
                 } else {
                     Button(
-                        action: { viewModel?.snooze(option: .fiveMinutes) },
+                        action: {
+                            withAnimation(reduceMotion ? nil : AppAnimation.settingsExpandCurve) {
+                                viewModel?.snooze(option: .fiveMinutes)
+                            }
+                        },
                         label: { Text("settings.snooze.5min", bundle: .module) }
                     )
                     .font(AppFont.body)
@@ -150,7 +158,11 @@ struct SettingsView: View {
                     .accessibilityIdentifier("settings.snooze.5min")
 
                     Button(
-                        action: { viewModel?.snooze(option: .oneHour) },
+                        action: {
+                            withAnimation(reduceMotion ? nil : AppAnimation.settingsExpandCurve) {
+                                viewModel?.snooze(option: .oneHour)
+                            }
+                        },
                         label: { Text("settings.snooze.1hour", bundle: .module) }
                     )
                     .font(AppFont.body)
@@ -161,7 +173,11 @@ struct SettingsView: View {
                         : Text("settings.snooze.limitReached.hint", bundle: .module))
 
                     Button(
-                        action: { viewModel?.snooze(option: .restOfDay) },
+                        action: {
+                            withAnimation(reduceMotion ? nil : AppAnimation.settingsExpandCurve) {
+                                viewModel?.snooze(option: .restOfDay)
+                            }
+                        },
                         label: { Text("settings.snooze.restOfDay", bundle: .module) }
                     )
                     .font(AppFont.body)
@@ -261,14 +277,47 @@ struct SettingsView: View {
                 Button(action: { showTerms = true },
                        label: { Text("settings.legal.terms", bundle: .module) })
                 .font(AppFont.body)
+                .accessibilityHint(Text("settings.legal.terms.hint", bundle: .module))
                 .accessibilityIdentifier("settings.legal.terms")
 
                 Button(action: { showPrivacy = true },
                        label: { Text("settings.legal.privacy", bundle: .module) })
                 .font(AppFont.body)
+                .accessibilityHint(Text("settings.legal.privacy.hint", bundle: .module))
                 .accessibilityIdentifier("settings.legal.privacy")
             } header: {
                 Text("settings.section.legal", bundle: .module)
+            }
+
+            // MARK: Advanced
+            Section {
+                Button(role: .destructive) {
+                    showResetConfirm = true
+                } label: {
+                    Text("settings.resetToDefaults", bundle: .module)
+                }
+                .font(AppFont.body)
+                .accessibilityIdentifier("settings.resetToDefaults")
+            } header: {
+                Text("settings.section.advanced", bundle: .module)
+            }
+            .confirmationDialog(
+                Text("settings.resetToDefaults.confirmTitle", bundle: .module),
+                isPresented: $showResetConfirm,
+                titleVisibility: .visible
+            ) {
+                Button(role: .destructive) {
+                    settings.resetToDefaults()
+                } label: {
+                    Text("settings.resetToDefaults.confirmAction", bundle: .module)
+                }
+                Button(role: .cancel) {
+                    showResetConfirm = false
+                } label: {
+                    Text("settings.resetToDefaults.cancel", bundle: .module)
+                }
+            } message: {
+                Text("settings.resetToDefaults.confirmMessage", bundle: .module)
             }
 
             // MARK: About — feedback + version
@@ -296,7 +345,6 @@ struct SettingsView: View {
                     )
                 )
                 .font(AppFont.caption)
-                .accessibilityLabel("Version \(version), build \(build)")
             }
         }
         .navigationTitle(Text("settings.navTitle", bundle: .module))
@@ -317,7 +365,6 @@ struct SettingsView: View {
         .sheet(isPresented: $showPrivacy) {
             LegalDocumentView(document: .privacy)
         }
-        .animation(reduceMotion ? nil : AppAnimation.settingsExpandCurve, value: isSnoozed)
         .onAppear {
             if vmBox.inner == nil {
                 vmBox.inner = SettingsViewModel(

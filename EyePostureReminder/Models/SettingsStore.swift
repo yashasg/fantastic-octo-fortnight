@@ -159,6 +159,26 @@ final class SettingsStore: ObservableObject {
 
         Logger.settings.debug("SettingsStore initialised")
     }
+
+    // MARK: - Reset to Defaults
+
+    /// Restores all user-configurable settings to the values specified in `defaults.json`.
+    func resetToDefaults(config: AppConfig = AppConfig.load()) {
+        globalEnabled        = config.features.globalEnabledDefault
+        eyesEnabled          = true
+        postureEnabled       = true
+        eyesInterval         = config.defaults.eyeInterval
+        eyesBreakDuration    = config.defaults.eyeBreakDuration
+        postureInterval      = config.defaults.postureInterval
+        postureBreakDuration = config.defaults.postureBreakDuration
+        hapticsEnabled       = true
+        pauseMediaDuringBreaks = false
+        pauseDuringFocus     = true
+        pauseWhileDriving    = true
+        snoozedUntil         = nil
+        snoozeCount          = 0
+        Logger.settings.debug("SettingsStore reset to defaults")
+    }
 }
 
 // MARK: - Keys
