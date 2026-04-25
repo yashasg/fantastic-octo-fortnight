@@ -16,7 +16,7 @@ struct ReminderRowView: View {
                 Label(type.title, systemImage: type.symbolName)
             }
             .tint(type.color)
-            .onChange(of: isEnabled) { onChanged() }
+            .onChange(of: isEnabled) { _ in onChanged() }
             .accessibilityHint(
                 isEnabled
                     ? String(
@@ -33,7 +33,7 @@ struct ReminderRowView: View {
                         Text(formatInterval(seconds)).tag(seconds)
                     }
                 }
-                .onChange(of: interval) { onChanged() }
+                .onChange(of: interval) { _ in onChanged() }
                 .accessibilityHint(
                     String(
                         format: String(localized: "settings.reminder.intervalPicker.hint", bundle: .module),
@@ -49,7 +49,7 @@ struct ReminderRowView: View {
                         Text(formatDuration(seconds)).tag(seconds)
                     }
                 }
-                .onChange(of: breakDuration) { onChanged() }
+                .onChange(of: breakDuration) { _ in onChanged() }
                 .accessibilityHint(
                     String(
                         format: String(localized: "settings.reminder.durationPicker.hint", bundle: .module),

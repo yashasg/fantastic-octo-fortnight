@@ -3,6 +3,7 @@ import XCTest
 
 /// Tests for `SettingsViewModel` static formatting helpers.
 /// These are pure functions with branching logic used for user-visible picker labels.
+@MainActor
 final class SettingsViewModelFormatterTests: XCTestCase {
 
     // MARK: - labelForInterval

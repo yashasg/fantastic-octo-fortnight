@@ -72,9 +72,13 @@ final class OverlayManager: OverlayPresenting {
     private var dismissCallback: (() -> Void)?
 
     /// Pending show requests queued while an overlay is already on screen.
-    private var overlayQueue: [
-        (type: ReminderType, duration: TimeInterval, hapticsEnabled: Bool, pauseMediaEnabled: Bool, onDismiss: () -> Void)
-    ] = []
+    private var overlayQueue: [(
+        type: ReminderType,
+        duration: TimeInterval,
+        hapticsEnabled: Bool,
+        pauseMediaEnabled: Bool,
+        onDismiss: () -> Void
+    )] = []
 
     var isOverlayVisible: Bool {
         overlayWindow != nil && overlayWindow?.isHidden == false
@@ -97,7 +101,12 @@ final class OverlayManager: OverlayPresenting {
     ) {
         guard !isOverlayVisible else {
             // Queue instead of stacking windows — dequeued after current overlay dismisses.
-            overlayQueue.append((type: type, duration: duration, hapticsEnabled: hapticsEnabled, pauseMediaEnabled: pauseMediaEnabled, onDismiss: onDismiss))
+            overlayQueue.append((
+                type: type,
+                duration: duration,
+                hapticsEnabled: hapticsEnabled,
+                pauseMediaEnabled: pauseMediaEnabled,
+                onDismiss: onDismiss))
             Logger.overlay.info("Overlay for \(type.rawValue) queued (overlay already visible). Queue depth: \(self.overlayQueue.count)")
             return
         }

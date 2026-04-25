@@ -77,7 +77,7 @@ struct HomeView: View {
                 showSettings = true
             }
         }
-        .onChange(of: openSettingsOnLaunch) { _, newValue in
+        .onChange(of: openSettingsOnLaunch) { newValue in
             if newValue {
                 openSettingsOnLaunch = false
                 showSettings = true

@@ -8,11 +8,9 @@ import XCTest
 // **Coverage (distinct from ColorTokenTests and DesignSystemTests):**
 // - AppColor tokens resolve with explicit `UITraitCollection` overrides (not just "resolves non-nil")
 // - Color component values are checked against the documented spec (brightness, opacity)
-// - `overlayBackground` alpha value is validated against the 0.6 spec
 // - Static colors (`PermissionBanner`, `PermissionBannerText`) are equal in both modes
 // - AppFont text styles scale with Dynamic Type even in dark mode trait contexts
 // - All SF Symbol names load as valid `UIImage` instances in dark mode
-// swiftlint:disable:next type_body_length
 final class DarkModeTests: XCTestCase {
 
     private let lightTraits = UITraitCollection(userInterfaceStyle: .light)
@@ -174,60 +172,6 @@ final class DarkModeTests: XCTestCase {
         }
     }
 
-    // MARK: - overlayBackground Opacity
-
-    /// AppColor.overlayBackground = Color(.systemBackground).opacity(0.6)
-    /// Converting to UIColor must yield alpha ≈ 0.6 in light mode.
-    func test_overlayBackground_hasAlpha0point6_inLightMode() {
-        let uiKitColor = UIColor(AppColor.overlayBackground).resolvedColor(with: lightTraits)
-        guard let (_, _, _, alpha) = rgba(of: uiKitColor) else {
-            XCTFail("overlayBackground must be expressible in RGB space")
-            return
-        }
-        XCTAssertEqual(
-            alpha,
-            0.6,
-            accuracy: 0.01,
-            "overlayBackground must have alpha=0.6 in light mode (spec: .opacity(0.6))")
-    }
-
-    /// The 0.6 opacity spec applies in dark mode too — only the base color changes.
-    func test_overlayBackground_hasAlpha0point6_inDarkMode() {
-        let uiKitColor = UIColor(AppColor.overlayBackground).resolvedColor(with: darkTraits)
-        guard let (_, _, _, alpha) = rgba(of: uiKitColor) else {
-            XCTFail("overlayBackground must be expressible in RGB space in dark mode")
-            return
-        }
-        XCTAssertEqual(
-            alpha,
-            0.6,
-            accuracy: 0.01,
-            "overlayBackground must have alpha=0.6 in dark mode (spec: .opacity(0.6))")
-    }
-
-    /// The alpha is identical across modes — only the base systemBackground colour changes.
-    func test_overlayBackground_alphaIsIdenticalInLightAndDark() {
-        let lightAlpha: CGFloat
-        let darkAlpha: CGFloat
-
-        let lightResolved = UIColor(AppColor.overlayBackground).resolvedColor(with: lightTraits)
-        let darkResolved  = UIColor(AppColor.overlayBackground).resolvedColor(with: darkTraits)
-
-        guard let (_, _, _, lA) = rgba(of: lightResolved),
-              let (_, _, _, dA) = rgba(of: darkResolved) else {
-            XCTFail("overlayBackground must resolve in both modes")
-            return
-        }
-        lightAlpha = lA
-        darkAlpha  = dA
-
-        XCTAssertEqual(
-            lightAlpha,
-            darkAlpha,
-            accuracy: 0.01,
-            "overlayBackground opacity must be mode-independent — only systemBackground's base colour adapts")
-    }
-
     // MARK: - AppFont: Point Sizes in Dark Mode Trait Context
 
     /// Verifies that UIFont equivalents of each AppFont text style load with positive
@@ -374,13 +318,12 @@ final class DarkModeTests: XCTestCase {
 
     // MARK: - AppColor: All Tokens Are Accessible Without Crash in Dark Context
 
-    /// Access all 7 AppColor tokens in a simulated dark context — no crash is the contract.
+    /// Access all 6 AppColor tokens in a simulated dark context — no crash is the contract.
     func test_allAppColorTokens_accessibleWithoutCrash_inDarkContext() {
         // Verifying the AppColor constants are accessible from dark-mode test code.
         let tokens: [Color] = [
             AppColor.reminderBlue,
             AppColor.reminderGreen,
-            AppColor.overlayBackground,
             AppColor.warningOrange,
             AppColor.permissionBanner,
             AppColor.permissionBannerText,

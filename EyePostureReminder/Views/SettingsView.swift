@@ -10,6 +10,7 @@ private final class SettingsViewModelBox: ObservableObject {
     var inner: SettingsViewModel?
 }
 
+// swiftlint:disable:next type_body_length
 struct SettingsView: View {
 
     @EnvironmentObject var settings: SettingsStore
@@ -48,7 +49,7 @@ struct SettingsView: View {
                     Text("settings.masterToggle", bundle: .module)
                 }
                     .tint(AppColor.reminderBlue)
-                    .onChange(of: settings.globalEnabled) {
+                    .onChange(of: settings.globalEnabled) { _ in
                         viewModel?.globalToggleChanged()
                     }
                     .accessibilityHint(Text("settings.masterToggle.hint", bundle: .module))
@@ -215,7 +216,7 @@ struct SettingsView: View {
                 .tint(AppColor.reminderBlue)
                 .accessibilityHint(Text("settings.smartPause.pauseDuringFocus.hint", bundle: .module))
                 .accessibilityIdentifier("settings.smartPause.pauseDuringFocus")
-                .onChange(of: settings.pauseDuringFocus) { _, newValue in
+                .onChange(of: settings.pauseDuringFocus) { newValue in
                     // Route through ViewModel so the analytics setter fires.
                     viewModel?.pauseDuringFocus = newValue
                 }
@@ -229,7 +230,7 @@ struct SettingsView: View {
                 .tint(AppColor.reminderBlue)
                 .accessibilityHint(Text("settings.smartPause.pauseWhileDriving.hint", bundle: .module))
                 .accessibilityIdentifier("settings.smartPause.pauseWhileDriving")
-                .onChange(of: settings.pauseWhileDriving) { _, newValue in
+                .onChange(of: settings.pauseWhileDriving) { newValue in
                     // Route through ViewModel so the analytics setter fires.
                     viewModel?.pauseWhileDriving = newValue
                 }

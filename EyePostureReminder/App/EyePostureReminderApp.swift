@@ -20,7 +20,7 @@ struct EyePostureReminderApp: App {
                 .task {
                     await coordinator.scheduleReminders()
                 }
-                .onChange(of: scenePhase) { _, phase in
+                .onChange(of: scenePhase) { phase in
                     switch phase {
                     case .active:
                         coordinator.presentPendingOverlayIfNeeded()

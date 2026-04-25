@@ -134,7 +134,9 @@ final class AppCoordinator: ObservableObject {
             let duration = self.settings.settings(for: type).breakDuration
             let thresholdS = self.settings.settings(for: type).interval
             self.overlayManager.showOverlay(
-                for: type, duration: duration, hapticsEnabled: self.settings.hapticsEnabled,
+                for: type,
+                duration: duration,
+                hapticsEnabled: self.settings.hapticsEnabled,
                 pauseMediaEnabled: self.settings.pauseMediaDuringBreaks) {}
             AnalyticsLogger.log(.reminderTriggered(type: type, thresholdS: thresholdS))
             Logger.scheduling.info("Reminder triggered by screen-time threshold: \(type.rawValue)")
@@ -300,8 +302,11 @@ final class AppCoordinator: ObservableObject {
             .contains { $0.activationState == .foregroundActive }
 
         if hasActiveScene {
-            overlayManager.showOverlay(for: type, duration: duration, hapticsEnabled: settings.hapticsEnabled,
-                                       pauseMediaEnabled: settings.pauseMediaDuringBreaks) {}
+            overlayManager.showOverlay(
+                for: type,
+                duration: duration,
+                hapticsEnabled: settings.hapticsEnabled,
+                pauseMediaEnabled: settings.pauseMediaDuringBreaks) {}
         } else {
             pendingOverlay = (type: type, duration: duration)
             Logger.lifecycle.info("Queued pending overlay for \(type.rawValue) (no active scene)")
@@ -315,7 +320,9 @@ final class AppCoordinator: ObservableObject {
         pendingOverlay = nil
         Logger.lifecycle.info("Presenting queued overlay for \(pending.type.rawValue)")
         overlayManager.showOverlay(
-            for: pending.type, duration: pending.duration, hapticsEnabled: settings.hapticsEnabled,
+            for: pending.type,
+            duration: pending.duration,
+            hapticsEnabled: settings.hapticsEnabled,
             pauseMediaEnabled: settings.pauseMediaDuringBreaks) {}
     }
 

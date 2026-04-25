@@ -194,7 +194,6 @@ final class DesignSystemTests: XCTestCase {
     func test_appColor_allTokensAreAccessible() {
         _ = AppColor.reminderBlue
         _ = AppColor.reminderGreen
-        _ = AppColor.overlayBackground
         _ = AppColor.warningOrange
         _ = AppColor.permissionBanner
         _ = AppColor.permissionBannerText
