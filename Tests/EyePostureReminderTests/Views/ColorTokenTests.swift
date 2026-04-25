@@ -230,6 +230,179 @@ final class ColorTokenTests: XCTestCase {
             "All 6 named color tokens must resolve from the asset catalog")
     }
 
+    // MARK: - Regression: Colors Load from Module Bundle, Not Bundle.main
+
+    /// Regression guard for the bundle: .module fix.
+    /// Asset catalog colors live in the EyePostureReminder module bundle, NOT Bundle.main.
+    /// If `Color("name", bundle: .module)` is reverted to `bundle: .main`, every token
+    /// will silently resolve to clear/nil and these assertions will catch the regression.
+    func test_allTokens_resolveFromModuleBundle() {
+        let tokenNames = [
+            "ReminderBlue", "ReminderGreen", "WarningOrange",
+            "PermissionBanner", "PermissionBannerText", "WarningText"
+        ]
+        for name in tokenNames {
+            XCTAssertNotNil(
+                UIColor(named: name, in: TestBundle.module, compatibleWith: nil),
+                "\(name) must resolve from the EyePostureReminder module bundle. "
+                + "Regression: Color(\"name\", bundle: .module) is required — bundle: .main will return nil.")
+        }
+    }
+
+    /// Verifies the asset catalog colors are NOT present in the host app's main bundle.
+    /// This is the complementary check to `test_allTokens_resolveFromModuleBundle`:
+    /// if colors were erroneously copied into the main bundle, the regression would be silent.
+    func test_allTokens_areAbsentFromMainBundle() {
+        let tokenNames = [
+            "ReminderBlue", "ReminderGreen", "WarningOrange",
+            "PermissionBanner", "PermissionBannerText", "WarningText"
+        ]
+        for name in tokenNames {
+            XCTAssertNil(
+                UIColor(named: name, in: Bundle.main, compatibleWith: nil),
+                "\(name) must NOT be in Bundle.main — it belongs to the module asset catalog. "
+                + "Regression: using bundle: .main instead of bundle: .module causes all colors to resolve as nil/clear.")
+        }
+    }
+
+    // MARK: - Regression: All Tokens Have Non-Zero Alpha (Non-Clear)
+
+    /// Verifies each of the 6 AppColor tokens resolves to a fully-opaque color (alpha == 1.0).
+    /// A clear/nil color (alpha == 0) is the visible symptom of the bundle: .main regression —
+    /// SwiftUI silently falls back to `.clear` when `Color(named:bundle:)` can't find the asset.
+    func test_allTokens_haveNonZeroAlpha() {
+        let tokenNames = [
+            "ReminderBlue", "ReminderGreen", "WarningOrange",
+            "PermissionBanner", "PermissionBannerText", "WarningText"
+        ]
+        for name in tokenNames {
+            guard let uiColor = TestBundle.testColor(named: name) else {
+                XCTFail("\(name) missing from module bundle — cannot check alpha"); continue
+            }
+            let resolvedLight = uiColor.resolvedColor(with: lightTraits)
+            var alpha: CGFloat = 0
+            resolvedLight.getRed(nil, green: nil, blue: nil, alpha: &alpha)
+            XCTAssertGreaterThan(
+                alpha, 0,
+                "\(name) must have alpha > 0 in light mode. "
+                + "Regression: alpha == 0 means bundle: .main was used and the color resolved to clear.")
+        }
+    }
+
+    func test_reminderBlue_lightMode_hasNonZeroAlpha() {
+        guard let color = resolvedLight(named: "ReminderBlue") else {
+            XCTFail("ReminderBlue must resolve from module bundle"); return
+        }
+        var alpha: CGFloat = 0
+        color.getRed(nil, green: nil, blue: nil, alpha: &alpha)
+        XCTAssertGreaterThan(alpha, 0, "ReminderBlue light-mode alpha must be > 0 (non-clear)")
+    }
+
+    func test_reminderGreen_lightMode_hasNonZeroAlpha() {
+        guard let color = resolvedLight(named: "ReminderGreen") else {
+            XCTFail("ReminderGreen must resolve from module bundle"); return
+        }
+        var alpha: CGFloat = 0
+        color.getRed(nil, green: nil, blue: nil, alpha: &alpha)
+        XCTAssertGreaterThan(alpha, 0, "ReminderGreen light-mode alpha must be > 0 (non-clear)")
+    }
+
+    func test_warningOrange_lightMode_hasNonZeroAlpha() {
+        guard let color = resolvedLight(named: "WarningOrange") else {
+            XCTFail("WarningOrange must resolve from module bundle"); return
+        }
+        var alpha: CGFloat = 0
+        color.getRed(nil, green: nil, blue: nil, alpha: &alpha)
+        XCTAssertGreaterThan(alpha, 0, "WarningOrange light-mode alpha must be > 0 (non-clear)")
+    }
+
+    func test_permissionBanner_lightMode_hasNonZeroAlpha() {
+        guard let color = resolvedLight(named: "PermissionBanner") else {
+            XCTFail("PermissionBanner must resolve from module bundle"); return
+        }
+        var alpha: CGFloat = 0
+        color.getRed(nil, green: nil, blue: nil, alpha: &alpha)
+        XCTAssertGreaterThan(alpha, 0, "PermissionBanner light-mode alpha must be > 0 (non-clear)")
+    }
+
+    func test_permissionBannerText_lightMode_hasNonZeroAlpha() {
+        guard let color = resolvedLight(named: "PermissionBannerText") else {
+            XCTFail("PermissionBannerText must resolve from module bundle"); return
+        }
+        var alpha: CGFloat = 0
+        color.getRed(nil, green: nil, blue: nil, alpha: &alpha)
+        XCTAssertGreaterThan(alpha, 0, "PermissionBannerText light-mode alpha must be > 0 (non-clear)")
+    }
+
+    func test_warningText_lightMode_hasNonZeroAlpha() {
+        guard let color = resolvedLight(named: "WarningText") else {
+            XCTFail("WarningText must resolve from module bundle"); return
+        }
+        var alpha: CGFloat = 0
+        color.getRed(nil, green: nil, blue: nil, alpha: &alpha)
+        XCTAssertGreaterThan(alpha, 0, "WarningText light-mode alpha must be > 0 (non-clear)")
+    }
+
+    // MARK: - Regression: All 6 Tokens Resolve to Distinct Colors
+
+    /// Verifies that no two AppColor tokens resolve to the same color in light mode.
+    /// If bundle: .module is broken and all colors fall back to `.clear`, every token
+    /// would be identical — this test catches that mass-collapse regression.
+    func test_allTokens_areDistinctInLightMode() {
+        let tokenNames = [
+            "ReminderBlue", "ReminderGreen", "WarningOrange",
+            "PermissionBanner", "PermissionBannerText", "WarningText"
+        ]
+        var resolved: [(String, UIColor)] = []
+        for name in tokenNames {
+            guard let color = resolvedLight(named: name) else {
+                XCTFail("\(name) missing — cannot run distinctness check"); return
+            }
+            resolved.append((name, color))
+        }
+        for i in 0..<resolved.count {
+            for j in (i + 1)..<resolved.count {
+                let (nameA, colorA) = resolved[i]
+                let (nameB, colorB) = resolved[j]
+                XCTAssertFalse(
+                    colorsAreEqual(colorA, colorB),
+                    "'\(nameA)' and '\(nameB)' must not resolve to the same color. "
+                    + "Regression: if all tokens resolve to clear (alpha=0), all are identical.")
+            }
+        }
+    }
+
+    // MARK: - Regression: AppColor.reminderBlue Tint Is Visible
+
+    /// Verifies `AppColor.reminderBlue` — the primary tint applied via `.tint(AppColor.reminderBlue)` —
+    /// is a visible, non-clear color when resolved from the module bundle.
+    /// This is the most user-facing regression: every tinted control (toggles, buttons) goes
+    /// invisible when the bundle: .main bug is present.
+    func test_reminderBlue_swiftUIColor_isVisible() {
+        let swiftUIColor = AppColor.reminderBlue
+        let uiColor = UIColor(swiftUIColor)
+        let resolved = uiColor.resolvedColor(with: lightTraits)
+        var alpha: CGFloat = 0
+        resolved.getRed(nil, green: nil, blue: nil, alpha: &alpha)
+        XCTAssertGreaterThan(
+            alpha, 0,
+            "AppColor.reminderBlue must produce a visible tint (alpha > 0 in light mode). "
+            + "Regression: bundle: .main causes Color(named:bundle:) to return clear, "
+            + "making every .tint(AppColor.reminderBlue) control invisible.")
+    }
+
+    func test_reminderBlue_darkMode_isVisible() {
+        let swiftUIColor = AppColor.reminderBlue
+        let uiColor = UIColor(swiftUIColor)
+        let resolved = uiColor.resolvedColor(with: darkTraits)
+        var alpha: CGFloat = 0
+        resolved.getRed(nil, green: nil, blue: nil, alpha: &alpha)
+        XCTAssertGreaterThan(
+            alpha, 0,
+            "AppColor.reminderBlue must be visible in dark mode (alpha > 0). "
+            + "Regression: bundle: .module is required for both light and dark appearances.")
+    }
+
     // MARK: - Missing Color: Graceful Handling
 
     func test_unknownColorName_returnsNil() {
