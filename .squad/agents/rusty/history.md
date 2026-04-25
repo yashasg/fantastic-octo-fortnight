@@ -303,3 +303,30 @@ Livingston will implement ScreenTimeTracker unit tests using mock factories + mo
 ### Next Phase
 
 Testing infrastructure documented and ready. XCUITest blocker (Phase 2) documented in decisions.md.
+
+## Learnings
+
+### 2026-04-25 — ARCHITECTURE.md Codebase Audit
+
+Performed a full audit of the production codebase vs ARCHITECTURE.md (which was written early and had drifted significantly). Key findings:
+
+**Structural deltas from early doc:**
+- No `Protocols/` folder exists — all protocols are co-located with their primary implementation file. This is actually a better DX than a separate folder for a project at this scale.
+- Project is SPM (`Package.swift`), not `.xcodeproj`. Build commands in the doc referenced `-project` flags that don't work.
+- `DefaultsLoader` was documented but never existed — the real class is `AppConfig` with a static `AppConfig.load(from:)` factory. The design is cleaner than the doc described (Codable struct + `fallback` static, no separate loader type needed).
+
+**Net-new services not documented at all:**
+- `ScreenTimeTracker` — the entire trigger model changed from periodic `UNNotification` repeating triggers to a continuous screen-on timer. This is a big architectural shift: `ReminderScheduler` is now narrowed to snooze-wake notifications only.
+- `AudioInterruptionManager` — `MediaControlling` protocol + `AVAudioSession.soloAmbient` approach, with the invariant that `resumeExternalAudio()` must be called in every dismiss path.
+- `AppCoordinator` now conforms to `ReminderScheduling` — this is the injection point for `SettingsViewModel`, not the raw `ReminderScheduler`.
+
+**Onboarding:** Fully implemented (4 files, 3-screen PageTabView), `hasSeenOnboarding` gate in `ContentView`, `OnboardingScreenWrapper` animation helper with reduced-motion support.
+
+**Phase 2 features shipped:**
+- Haptics (`hapticsEnabled` in SettingsStore)
+- Snooze (full snooze state machine in SettingsStore + AppCoordinator)
+- Smart Pause (PauseConditionManager + three live detectors, all tested)
+
+**Protocol signature update:** `SettingsPersisting` now requires explicit `defaultValue:` parameters on all read methods — this eliminates the silent-zero/false class of bug that bit us before. The old doc showed the pre-fix signature.
+
+**Lesson:** Architecture docs written at project start become actively misleading within a few sprints. Consider requiring ARCHITECTURE.md to be in the PR diff for any service-layer change.

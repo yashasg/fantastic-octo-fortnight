@@ -1313,3 +1313,631 @@ If this becomes a user-reported issue, the fix would be to observe `settings.$pa
 - `Tests/EyePostureReminderTests/Services/FocusModeExtendedTests.swift` — 21 tests
 - `Tests/EyePostureReminderTests/Services/DrivingDetectionExtendedTests.swift` — 29 tests
 
+
+### 2026-04-25T03:14:07Z: User directive
+**By:** yashasg (via Copilot)
+**What:** When running tests, always delete the previous TestResults.xcresult before starting a new run
+**Why:** User request — xcodebuild fails with "Existing file at -resultBundlePath" if stale results exist
+
+# Decision: Legal UI Patterns
+
+**Author:** Linus (iOS Dev — UI)  
+**Date:** 2026-04-28  
+**Status:** Implemented
+
+## Context
+
+Legal disclaimer text (from Frank's `docs/legal/`) needed wiring into the app UI in two places:
+1. Onboarding (first launch)
+2. Settings screen (permanent access)
+
+## Decisions
+
+### 1. Disclaimer placement in Onboarding
+- Added to `OnboardingWelcomeView` below the body copy, above the Next CTA
+- No formal acceptance gate — just visible, non-blocking
+- Styled as a small caption badge (`.caption` font, `.tertiary` color, `.quaternary` background)
+- Rationale: Non-invasive, but user definitely sees it before tapping "Get Started"
+
+### 2. Legal section placement in Settings
+- Added as the last `Section` in `SettingsView`, below notification permission warning
+- Two rows: "Terms & Conditions" and "Privacy Policy"
+- Each taps to present `LegalDocumentView` in a sheet
+
+### 3. `LegalDocumentView` — reusable legal sheet component
+- Lives at `EyePostureReminder/Views/LegalDocumentView.swift`
+- Takes `LegalDocument` enum (`.terms` / `.privacy`)
+- `NavigationStack` wrapper with large-title, `Done` dismiss button
+- `LegalSection` sub-view: `heading` (bodyEmphasized) + `content` (body, secondary color)
+- `.accessibilityElement(children: .combine)` on each section
+- All strings in `Localizable.xcstrings` via `bundle: .module`
+
+### 4. Key naming for legal content
+- `legal.<document>.<section>.heading` / `legal.<document>.<section>.body`  
+  e.g. `legal.terms.notMedical.heading`, `legal.privacy.collect.body`
+- Separate from `settings.legal.*` (row labels) and `legal.*` (sheet content)
+
+## Impact
+- 31 new xcstrings keys added (total ~108)
+- No existing behavior changed
+- Build: `./scripts/build.sh build` → BUILD SUCCEEDED
+
+# Decision: SettingsStore Duplicate Pause Property Declarations Removed
+
+**Filed by:** Livingston  
+**Date:** 2026-04-25  
+**Status:** Resolved (fixed)
+
+## Problem
+
+`SettingsStore.swift` contained duplicate `@Published var pauseDuringFocus` and `@Published var pauseWhileDriving` declarations. The first pair (under `// MARK: - Smart Pause`) had incorrect documentation saying "Default is `false`" — Basher's partial draft was accidentally left in. The second pair (under `// MARK: - Pause Conditions`) was the correct version with "Default is `true`" matching the architecture spec.
+
+This caused a Swift compiler error: duplicate stored properties cannot be declared in the same class.
+
+## Fix
+
+Removed the erroneous first pair (`// MARK: - Smart Pause` block). The surviving declarations are:
+
+```swift
+// MARK: - Pause Conditions
+
+/// When `true`, pauses reminders while a Focus mode is active.
+/// Default is `true`. Requires `NSFocusStatusUsageDescription` in Info.plist.
+@Published var pauseDuringFocus: Bool { ... }
+
+/// When `true`, pauses reminders while driving or CarPlay is connected.
+/// Default is `true`. Requires `NSMotionUsageDescription` in Info.plist.
+@Published var pauseWhileDriving: Bool { ... }
+```
+
+The `init` already had `defaultValue: true` for both — this is consistent with the architecture spec ("default true, opt-in").
+
+## Impact
+
+- Build was broken before this fix.
+- `testPauseDuringFocusDefault_IsTrue` and `testPauseWhileDrivingDefault_IsTrue` confirm both properties default to `true`.
+- No behaviour change — only the duplicate declaration was removed.
+
+# Readability Audit — Decisions & Findings
+
+**Author:** Rusty (iOS Architect)
+**Date:** 2025-07-14
+**Scope:** Full read of all 25 production Swift files under `EyePostureReminder/`
+
+---
+
+## Issues Found & Fixed
+
+### 1. Dead Property: `SnoozeOption.minutes`
+**File:** `ViewModels/SettingsViewModel.swift`
+**Problem:** `SnoozeOption.minutes` (Int) had a doc-comment claiming it was "used by legacy `snooze(for:)` bridge" but `snooze(for:)` never accessed it. Zero usages in the entire codebase.
+**Fix:** Removed the property entirely.
+
+### 2. Duplicate Constants in `ReminderRowView`
+**Files:** `Views/ReminderRowView.swift` vs `ViewModels/SettingsViewModel.swift`
+**Problem:** `ReminderRowView` defined private `intervalOptions: [TimeInterval]` and `durationOptions: [TimeInterval]` that were byte-for-byte copies of `SettingsViewModel.intervalOptions` and `SettingsViewModel.breakDurationOptions`. Any future change to the option set would require updating two places.
+**Fix:** Removed the private arrays. `ReminderRowView` now references `SettingsViewModel.intervalOptions` and `SettingsViewModel.breakDurationOptions` directly.
+
+### 3. Duplicate Formatting Functions in `ReminderRowView`
+**Files:** `Views/ReminderRowView.swift` vs `ViewModels/SettingsViewModel.swift`
+**Problem:** `formatInterval(_:)` and `formatDuration(_:)` in `ReminderRowView` were functionally identical to `SettingsViewModel.labelForInterval(_:)` and `SettingsViewModel.labelForBreakDuration(_:)`.
+**Fix:** Removed private format methods from `ReminderRowView`. Now delegates to `SettingsViewModel` static methods.
+
+### 4. `SettingsView` Snooze Calls Bypassed Typed API
+**File:** `Views/SettingsView.swift`
+**Problem:** The snooze section called the raw-integer `snooze(for:)` bridge with magic numbers (`5`, `60`) and computed "rest of day" inline using `addingTimeInterval(24 * 3600)` — which ignores DST. `SnoozeOption.restOfDay.endDate` correctly uses `Calendar.date(byAdding:)`.
+**Fix:** Replaced all three calls with `snooze(option: .fiveMinutes)`, `snooze(option: .oneHour)`, and `snooze(option: .restOfDay)`. The `snooze(for:)` method is retained for backward-compatibility (tests use it).
+
+### 5. `SetupPreviewCard` Not Private
+**File:** `Views/Onboarding/OnboardingSetupView.swift`
+**Problem:** `SetupPreviewCard` was declared `struct` (internal) but is only used within the same file. Unnecessary API surface.
+**Fix:** Changed to `private struct SetupPreviewCard`.
+
+### 6. Hardcoded "Break duration" Picker Label
+**File:** `Views/ReminderRowView.swift`
+**Problem:** The interval picker used a localized string (`settings.reminder.intervalPicker`) but the break-duration picker used a hardcoded English string `"Break duration"`.
+**Fix:** Added `settings.reminder.breakDurationPicker` key to `Localizable.xcstrings` (value: "Break duration") and updated the picker to use it.
+
+---
+
+## Issues Reviewed — No Change Required
+
+- **`startFallbackTimers()` / `stopFallbackTimers()`:** Shims are used extensively in tests (`AppCoordinatorTests`). Kept.
+- **`resumeTicking()` in `ScreenTimeTracker`:** One-line delegate to `startTicking()`, kept for semantic clarity at the call site.
+- **`AppCoordinator.scheduler`:** Internal (not private) because `AppCoordinatorTests` accesses `sut.scheduler` directly.
+- **`SettingsViewModel.settings`:** Internal because integration tests access `viewModel.settings` directly.
+- **UIKit imports in `SettingsView` / `OverlayView`:** Both use UIKit APIs (`UIApplication`, `UIImpactFeedbackGenerator`). Imports are correct.
+- **`SnoozeOption` / `snooze(for:)` in tests:** Not removed. The bridge method is a legitimate test surface.
+
+# Pause Status Indicator UX Spec
+
+> **Author:** Tess (UI/UX Designer)  
+> **Date:** 2026-04-27  
+> **Related:** PauseConditionManager (Linus / Basher implementation)  
+> **Ref:** [ARCHITECTURE.md § New Component: PauseConditionManager](../../ARCHITECTURE.md#new-component-pauseconditionmanager)  
+> **Status:** Ready for implementation
+
+---
+
+## Executive Summary
+
+When `PauseConditionManager` detects an active pause condition (Focus Mode, driving, or both), the app must communicate this state clearly and accessibly. This spec defines the visual treatment, copy, interactions, and accessibility for pause-state indicators across HomeView, SettingsView, and the app's mental model.
+
+---
+
+## 1. HomeView Indicator
+
+### 1.1 Visual Treatment
+
+The pause indicator replaces the "Reminders Active" status when `isPaused == true`.
+
+**Layout:** Status banner below the hero icon, replacing the dynamic status text.
+
+```
+┌──────────────────────────────┐
+│                              │
+│           👁 (or icon)        │  ← status icon (80pt) — unchanged color
+│                              │
+│  Eye & Posture Reminder       │  ← title — unchanged
+│                              │
+│  ⏸ Paused — Focus Mode       │  ← NEW: pause banner (secondary color)
+│                              │
+│                              │
+└──────────────────────────────┘
+```
+
+**Visual Details:**
+- **Banner component:** Horizontal stack, center-aligned
+- **Leading icon:** `pause.fill` (12pt SF Symbol), `.secondary` color
+- **Text:** Localized pause reason (see §1.2 for copy), `AppFont.body`, `.secondary` color
+- **Background:** Transparent (no background fill)
+- **Animation:** Fade in/out when pause state changes (see §3)
+- **Accessibility:** Entire banner is an `accessibilityElement` with custom label (see §4)
+
+### 1.2 Pause Reason Text
+
+The app must communicate **why** reminders are paused, not just that they are.
+
+| Condition | Display Text | Notes |
+|---|---|---|
+| Focus Mode only | "Paused — Focus Mode active" | When just focus is active |
+| Driving only | "Paused — Driving detected" | When just driving is active |
+| Both active | "Paused — Focus Mode + Driving" | When both sources are active (rare but possible) |
+
+**Implementation:**
+- Store the active pause conditions in a computed property on `AppCoordinator` or similar
+- `PauseConditionManager` exposes the active sources (`.focusMode`, `.driving`, `.carPlay`)
+- Derive the display text from the active set (prioritize Focus Mode first, then driving, then show "+")
+- All strings in `Localizable.xcstrings` with keys like:
+  - `home.status.pausedFocusMode`
+  - `home.status.pausedDriving`
+  - `home.status.pausedFocusDriving`
+
+**Rationale:**
+- Users need to know why they're not getting reminders (trust and understanding)
+- Prevents confusion: "Why is my reminder not firing? Oh, Focus Mode is on."
+- Pairs well with iOS Settings → Focus Modes, which are highly discoverable
+
+### 1.3 Visual State Transitions
+
+The HomeView status responds to `AppCoordinator.pauseConditionManager.isPaused`:
+
+| State | Icon | Text Color | Text Content |
+|---|---|---|---|
+| Paused (any reason) | Changes to `pause.fill` (12pt) | `.secondary` | Pause reason |
+| Active | `eye.fill` or `figure.stand` (80pt) | `AppColor.reminderBlue` or `reminderGreen` | "Reminders Active" |
+
+**Transition behavior:**
+- When `isPaused` transitions from `false` → `true`: status text fades out, pause banner fades in (200ms, `.easeInOut`)
+- When `isPaused` transitions from `true` → `false`: pause banner fades out, status text fades in (200ms, `.easeInOut`)
+- The 80pt hero icon remains visible in both states (no visual "break" in the UI)
+
+---
+
+## 2. Settings Screen Integration
+
+### 2.1 Smart Pause Section (New)
+
+Add a new section in `SettingsView` below the master toggle and above the per-type reminder sections.
+
+**Location:** Between master toggle section and eye/posture sections, visible only when master is enabled.
+
+```
+Form {
+    // Master toggle section (existing)
+    Section {
+        Toggle(isOn: $settings.masterEnabled) { ... }
+    }
+    
+    // NEW: Smart Pause section
+    if settings.masterEnabled {
+        Section {
+            // Read-only indicator of which conditions are active
+            if coordinator.pauseConditionManager.isPaused {
+                Label(pauseReasonText, systemImage: "pause.fill")
+                    .foregroundStyle(.secondary)
+            } else {
+                Label("Reminders Active", systemImage: "play.fill")
+                    .foregroundStyle(AppColor.reminderBlue)
+            }
+        } header: {
+            Text("settings.section.smartPause")
+        } footer: {
+            Text("settings.smartPause.footer")
+        }
+    }
+    
+    // Eye/Posture sections (existing)
+    ...
+}
+```
+
+### 2.2 Smart Pause Section Content
+
+**Header:** `"settings.section.smartPause"` → "Smart Pause"
+
+**Body:** One read-only status row showing current pause state:
+- If paused: Label with `pause.fill` icon and pause reason text (same as HomeView)
+- If active: Label with `play.fill` icon and "Reminders Active"
+
+**Footer Text:** `settings.smartPause.footer`
+
+```
+"Smart Pause automatically pauses reminders when you're 
+in Focus Mode or driving. This helps you stay focused 
+and safe."
+```
+
+**Rationale:**
+- This section informs users about the Smart Pause feature without requiring toggles (no per-condition opt-out)
+- Provides a "why am I paused?" quick reference within Settings
+- The footer explains the "why" behind the feature (safety, focus)
+- Read-only status prevents user confusion ("Can I turn off Focus Mode pause independently?")
+
+### 2.3 Section Visibility
+
+- **Show when:** `settings.masterEnabled == true` (reminders must be on to have pause conditions)
+- **Hide when:** `settings.masterEnabled == false` (pause is irrelevant if reminders are off)
+
+---
+
+## 3. Resume Behavior
+
+### 3.1 Animation on Resume
+
+When a pause condition clears (e.g., user exits Focus Mode):
+
+1. **200ms fade transition:** Pause banner fades out, status text fades in
+2. **Icon remains stable** — no jump or scale change
+3. **VoiceOver announcement:** "Reminders resumed" (see §4)
+
+### 3.2 Persistence Duration
+
+The status indicators are **persistent** — they remain visible for as long as the condition is active:
+
+- User opens Settings while paused → Smart Pause section shows active pause reason
+- User closes Settings and comes back → pause banner is still visible if condition persists
+- User exits Focus Mode → pause banner immediately fades out and status returns to "Reminders Active"
+
+**No countdown, no timeout.** The indicator persists until the actual pause condition clears.
+
+### 3.3 Edge Case: Rapid Toggle
+
+If a pause condition rapidly activates and deactivates (e.g., interrupted network glitch on DrivingActivityDetector):
+
+- Allow the fade animations to complete naturally
+- No debounce needed — the UI is responsive to the actual state
+- VoiceOver reads state changes as they occur (see §4.3)
+
+---
+
+## 4. Accessibility
+
+### 4.1 VoiceOver: HomeView Pause Banner
+
+**Current (Active) behavior:**
+```swift
+Text("Reminders Active")
+    .accessibilityLabel("Reminders Active")
+```
+
+**Paused behavior:**
+```swift
+HStack {
+    Image(systemName: "pause.fill")
+        .accessibilityHidden(true)
+    Text(pauseReasonText)
+}
+.accessibilityLabel(pauseReasonText)
+// Example: "Paused — Focus Mode active"
+```
+
+**VoiceOver reads:** "Paused — Focus Mode active"
+
+### 4.2 VoiceOver: Settings Smart Pause Section
+
+**Header announcement:** "Smart Pause section"
+
+**Status row (when paused):**
+```swift
+Label("Paused — Focus Mode active", systemImage: "pause.fill")
+    .accessibilityLabel("Smart Pause status: Paused — Focus Mode active")
+```
+
+**Status row (when active):**
+```swift
+Label("Reminders Active", systemImage: "play.fill")
+    .accessibilityLabel("Smart Pause status: Reminders Active")
+```
+
+### 4.3 State Change Announcements
+
+When pause state changes while VoiceOver is active:
+
+**On transition to paused:**
+```
+"Reminders paused. Focus Mode active."
+```
+
+**On transition to resumed:**
+```
+"Reminders resumed. Reminders active."
+```
+
+**Implementation:**
+- Use `AccessibilityNotification.announcement` when `isPaused` changes
+- Post to the UI layer (likely in `AppCoordinator` after `isPaused` transitions)
+- Example:
+```swift
+pauseConditionManager.onPauseStateChanged = { [weak self] isPaused in
+    if isPaused {
+        UIAccessibility.post(
+            notification: .announcement,
+            argument: NSLocalizedString("accessibility.reminders.paused", bundle: .module)
+        )
+    } else {
+        UIAccessibility.post(
+            notification: .announcement,
+            argument: NSLocalizedString("accessibility.reminders.resumed", bundle: .module)
+        )
+    }
+}
+```
+
+### 4.4 Touch Targets
+
+- Pause banner on HomeView: Not interactive (read-only status)
+- Smart Pause row in Settings: Not interactive (read-only status, ~50pt height inherited from List row)
+
+No new touch target requirements — existing sizes (44pt list rows) are sufficient.
+
+### 4.5 Dynamic Type
+
+- Pause reason text uses `AppFont.body` (17pt, scales with Dynamic Type)
+- Pause banner icon `pause.fill` (12pt) maintains proportional size at all scales
+- Settings Smart Pause row uses standard form row sizing (automatic scaling)
+
+**Test at:** Default, Large (iOS default), Accessibility Extra Large
+
+### 4.6 Reduce Motion
+
+When `UIAccessibility.isReduceMotionEnabled`:
+- Pause banner appears/disappears instantly (no fade)
+- No animation curve applied
+- Status icon remains visible in both states
+
+**Implementation in HomeView:**
+```swift
+@Environment(\.accessibilityReduceMotion) var reduceMotion
+
+if reduceMotion {
+    // Instant appearance/disappearance
+    if coordinator.pauseConditionManager.isPaused {
+        pauseBanner
+    } else {
+        statusText
+    }
+} else {
+    // Fade animation
+    if coordinator.pauseConditionManager.isPaused {
+        pauseBanner.transition(.opacity)
+    } else {
+        statusText.transition(.opacity)
+    }
+}
+```
+
+---
+
+## 5. Implementation Checklist for Linus / Basher
+
+### 5.1 Strings to Add to `Localizable.xcstrings`
+
+```
+// Pause reason display
+"home.status.pausedFocusMode" = "Paused — Focus Mode active"
+"home.status.pausedDriving" = "Paused — Driving detected"
+"home.status.pausedFocusDriving" = "Paused — Focus Mode + Driving"
+
+// Settings section
+"settings.section.smartPause" = "Smart Pause"
+"settings.smartPause.footer" = "Smart Pause automatically pauses reminders when you're in Focus Mode or driving. This helps you stay focused and safe."
+"settings.smartPause.status.active" = "Reminders Active"
+"settings.smartPause.status.paused" = "Paused"
+
+// Accessibility announcements
+"accessibility.reminders.paused" = "Reminders paused. Focus Mode active."
+"accessibility.reminders.resumed" = "Reminders resumed. Reminders active."
+```
+
+### 5.2 AppCoordinator Changes
+
+1. **Add computed property** to derive pause reason text from active conditions:
+```swift
+var pauseReasonText: String {
+    let conditions = pauseConditionManager.activeConditions
+    // Return localized string based on active set
+}
+```
+
+2. **Hook pause state change to VoiceOver announcements:**
+```swift
+pauseConditionManager.onPauseStateChanged = { [weak self] isPaused in
+    // Post accessibility announcement
+}
+```
+
+3. **Expose pauseConditionManager** to views via environment object (likely already exists).
+
+### 5.3 HomeView Changes
+
+1. Replace the dynamic status text with conditional logic:
+```swift
+private var statusLabel: String {
+    if coordinator.pauseConditionManager.isPaused {
+        return coordinator.pauseReasonText
+    } else if settings.masterEnabled {
+        return String(localized: "home.status.active", bundle: .module)
+    } else {
+        return String(localized: "home.status.paused", bundle: .module)
+    }
+}
+```
+
+2. Update the status icon:
+```swift
+private var statusIcon: String {
+    if coordinator.pauseConditionManager.isPaused {
+        return "pause.fill"  // 12pt in implementation, scaled
+    } else if settings.masterEnabled {
+        return AppSymbol.eyeBreak  // or posture, or mix
+    } else {
+        return "moon.zzz.fill"
+    }
+}
+```
+
+3. Add Reduce Motion support to fade transitions.
+
+### 5.4 SettingsView Changes
+
+1. Add the Smart Pause section after the master toggle:
+```swift
+if settings.masterEnabled && coordinator.pauseConditionManager.isPaused {
+    Section {
+        Label(coordinator.pauseReasonText, systemImage: "pause.fill")
+            .foregroundStyle(.secondary)
+    } header: {
+        Text("settings.section.smartPause", bundle: .module)
+    } footer: {
+        Text("settings.smartPause.footer", bundle: .module)
+    }
+}
+```
+
+2. Alternatively, always show Smart Pause status (even if active):
+```swift
+if settings.masterEnabled {
+    Section {
+        if coordinator.pauseConditionManager.isPaused {
+            Label(coordinator.pauseReasonText, systemImage: "pause.fill")
+                .foregroundStyle(.secondary)
+        } else {
+            Label(String(localized: "settings.smartPause.status.active", bundle: .module), systemImage: "play.fill")
+                .foregroundStyle(AppColor.reminderBlue)
+        }
+    } header: {
+        Text("settings.section.smartPause", bundle: .module)
+    } footer: {
+        Text("settings.smartPause.footer", bundle: .module)
+    }
+}
+```
+
+### 5.5 Color & Animation Tokens
+
+- **Icon color:** `.secondary` for pause icon (muted, not alarming)
+- **Text color:** `.secondary` for pause reason text
+- **Fade animation:** 200ms, `.easeInOut` curve
+- **Respect Reduce Motion:** No animation when enabled
+
+---
+
+## 6. Design Rationale
+
+### Why a pause banner on HomeView?
+
+- **Visibility:** Main screen shows the app's state at a glance
+- **Mental model:** Users expect "Reminders?" → "Oh, Focus Mode is on" to be instant
+- **Reduces support burden:** Clear answer to "Why isn't my reminder firing?"
+
+### Why read-only Smart Pause in Settings?
+
+- **Prevents confusion:** Users won't ask "Can I turn off Focus Mode pause?" if they see it's detected, not configurable
+- **Trust:** Showing the active condition builds confidence ("Yes, the app knows I'm driving")
+- **Low friction:** No new toggles, no new settings to learn
+
+### Why no countdown to resume?
+
+- **Predictability:** Reminders resume when the condition actually clears, not after an arbitrary delay
+- **Simplicity:** Don't surface implementation details (PauseConditionManager monitoring) to users
+- **Accuracy:** If user is in Focus Mode for 2 hours, showing "5 min until resume" after 1h 55m would be confusing
+
+### Why fade animation, not slide?
+
+- **Calm UX:** Fade is subtle and non-disruptive (aligns with app's philosophy)
+- **Respect Reduce Motion:** Easier to disable completely if needed
+- **Alignment:** Consistent with snooze sheet transitions in existing design
+
+---
+
+## 7. Edge Cases & Future Considerations
+
+### CarPlay Detection
+
+The current spec treats CarPlay + Driving as a combined "driving" state. If CarPlay alone (e.g., parked with CarPlay active) should display differently, that's a separate decision. Current implementation: CarPlay → pause. Future decision point if needed.
+
+### Multiple Focus Modes
+
+If user has multiple focus modes (e.g., "Work" + "Sleep"), should the pause reason show the specific mode name? Current decision: Generic "Focus Mode active" avoids API churn if user's focus modes change. If specificity becomes a request, migrate to a more granular system later.
+
+### Accessibility Size Category: XXL
+
+At the largest Dynamic Type size (Accessibility XXL), the pause banner might wrap. Allow for this — no truncation.
+
+```
+⏸ Paused — Focus Mode
+   active
+```
+
+---
+
+## 8. Testing Checklist
+
+- [ ] **Pause on Focus Mode change** — Pause banner appears when Focus Mode is enabled, disappears when disabled
+- [ ] **Pause on Driving detection** — Pause banner appears when DrivingActivityDetector activates
+- [ ] **Rapid state toggles** — No visual glitches when pause state flips quickly
+- [ ] **VoiceOver pause banner** — VoiceOver reads pause reason correctly
+- [ ] **VoiceOver state change** — Announcement fires when pause state changes
+- [ ] **Reduce Motion enabled** — Pause banner appears instantly, no fade
+- [ ] **Settings Smart Pause section** — Visible only when master enabled, shows current pause state
+- [ ] **Settings Smart Pause footer** — Footer text is clear and helpful
+- [ ] **Dark Mode** — Pause icons and text adapt to Dark Mode correctly (use `.secondary` color)
+- [ ] **Dynamic Type @ XL** — Text scales and wraps correctly at all sizes
+- [ ] **HomeView → Settings transition** — Smart Pause section reflects current pause state when settings are opened
+
+---
+
+## 9. Reference
+
+| File | Purpose |
+|---|---|
+| `EyePostureReminder/Views/HomeView.swift` | Pause banner implementation |
+| `EyePostureReminder/Views/SettingsView.swift` | Smart Pause section implementation |
+| `EyePostureReminder/Services/AppCoordinator.swift` | Pause reason derivation & accessibility announcements |
+| `EyePostureReminder/Resources/Localizable.xcstrings` | All pause-related strings |
+| `docs/DESIGN_SYSTEM.md` | Color, font, spacing, animation tokens |
+
+---
+
+*Spec by Tess. Questions → Yashas or the squad.*
