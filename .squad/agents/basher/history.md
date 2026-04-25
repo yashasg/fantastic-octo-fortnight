@@ -7,6 +7,14 @@
 
 ## Learnings
 
+### 2026-04-25 — NSFocusStatusUsageDescription crash fix
+
+- **`EyePostureReminder/Info.plist`** is the source of truth for privacy usage descriptions in this SPM project. `run.sh` reads it at bundle-assembly time via `sed` variable substitution.
+- **`run.sh` had a bug in `assemble_app_bundle()`**: the "refresh existing bundle" fast-path only updated the binary, not the Info.plist — so Info.plist edits were silently ignored on incremental runs. Fixed to always re-process Info.plist on refresh.
+- **`NSFocusStatusUsageDescription`** and **`NSMotionUsageDescription`** added to Info.plist. These are required for `INFocusStatusCenter` and `CMMotionActivityManager` respectively — omitting either causes an immediate crash at first API access.
+- **`LiveFocusStatusDetector.startMonitoring()`** refactored: KVO on `focusStatus` is now set up **inside** the `requestAuthorization` callback, and only when `status == .authorized`. Previously, the KVO was wired before auth completed, which accessed `focusStatus` prematurely — a defense-in-depth crash vector even with the plist key present.
+- **Build verification pattern**: after editing Info.plist, always run `./scripts/run.sh` (not just `./scripts/build.sh build`) to ensure the plist is re-processed into the `.app` bundle. Then confirm with `xcrun simctl spawn booted log show` grep.
+
 ### 2026-04-25 — AppConfig ↔ SettingsStore Integration (Livingston test fix)
 
 - **`SettingsStore.init()` now accepts `config: AppConfig = AppConfig.load()`** and seeds `eyesInterval`, `eyesBreakDuration`, `postureInterval`, `postureBreakDuration`, and `masterEnabled` from `config` instead of `ReminderSettings.defaultEyes/defaultPosture` hardcoded statics. This was the root cause of 4 failing `SettingsStoreConfigTests`.

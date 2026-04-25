@@ -202,15 +202,26 @@ assemble_app_bundle() {
     exit 1
   fi
 
-  # If the .app bundle already exists, refresh the binary and skip Info.plist regeneration
+  # If the .app bundle already exists, refresh the binary and Info.plist
   if [[ -d "$app_path" ]]; then
     header "REFRESHING APP BUNDLE"
-    info "Updating binary in existing bundle…"
+    info "Updating binary and Info.plist in existing bundle…"
     cp "$exe_path" "$app_path/${SCHEME}"
     chmod +x "$app_path/${SCHEME}"
+
+    # Always re-process Info.plist so new keys (privacy descriptions etc.) are picked up
+    local workspace_name
+    workspace_name=$(basename "$PACKAGE_PATH")
+    local bundle_id="${workspace_name}.${SCHEME}"
+    sed \
+      -e "s/\$(PRODUCT_BUNDLE_IDENTIFIER)/${bundle_id}/g" \
+      -e "s/\$(EXECUTABLE_NAME)/${SCHEME}/g" \
+      -e "s/\$(PRODUCT_NAME)/${SCHEME}/g" \
+      "$src_plist" > "$app_path/Info.plist"
+
     # Re-embed the SPM resource bundle so Bundle.module resolves at runtime
     embed_resource_bundle "$app_path"
-    pass "Binary refreshed: ${SCHEME}.app"
+    pass "Bundle refreshed: ${SCHEME}.app"
     return
   fi
 

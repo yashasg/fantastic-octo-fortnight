@@ -26,5 +26,9 @@
 	</array>
 	<key>NSUserNotificationsUsageDescription</key>
 	<string>Eye &amp; Posture Reminder needs notification access to deliver break reminders.</string>
+	<key>NSFocusStatusUsageDescription</key>
+	<string>Eye &amp; Posture Reminder pauses notifications when you have a Focus mode active.</string>
+	<key>NSMotionUsageDescription</key>
+	<string>Eye &amp; Posture Reminder uses motion data to pause reminders while driving.</string>
 </dict>
 </plist>
