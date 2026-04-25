@@ -1217,3 +1217,45 @@ Add an `.xcodeproj`. The project is already iOS-only and App Store-bound — an 
 
 **Blocking:** Yes — Phase 2 full test coverage depends on this.
 
+---
+
+### Decision: Info.plist Keys for Focus and Motion APIs
+**Filed by:** Basher (iOS Dev — Services)  
+**Date:** 2026-04-25  
+**Status:** ✅ Implemented & Completed  
+**Related commit:** f14cc85 — "fix: add NSFocusStatusUsageDescription & NSMotionUsageDescription; defer Focus KVO until authorized"
+
+**Problem**
+
+The `PauseConditionManager` service integrates two system APIs:
+- `INFocusStatusCenter.requestAuthorization` (Focus mode detection)
+- `CMMotionActivityManager.startActivityUpdates` (driving activity detection)
+
+Both APIs require corresponding usage description keys in `Info.plist`. Without them:
+- **Focus API**: Fails silently (auth stays `.notDetermined`) on some OS versions; crashes on others
+- **Motion API**: Crashes at call site on real device with "CMMotionActivityManager is not available"
+
+**Solution Implemented**
+
+1. **Added Info.plist Keys**
+   - `NSFocusStatusUsageDescription`: "Eye & Posture Reminder pauses notifications when you have a Focus mode active."
+   - `NSMotionUsageDescription`: "Eye & Posture Reminder uses motion data to pause reminders while driving."
+
+2. **Defense-in-Depth: KVO Deferral**
+   - Moved `focusStatus` KVO setup inside `requestAuthorization` callback, guarded by `status == .authorized`
+   - Prevents premature property access that could trigger crash on edge-case OS versions
+
+3. **Fixed Build Script Bug**
+   - `run.sh` `assemble_app_bundle()` incremental refresh was only updating binary; Info.plist was skipped
+   - Now always re-processes Info.plist on bundle refresh
+   - Ensures new keys appear in incremental builds
+
+**Outcome**
+
+App launches cleanly with Focus and Motion detectors operational. Ready for App Store review.
+
+**Files Modified**
+- `EyePostureReminder/Info.plist` — Added 2 required keys
+- `EyePostureReminder/Services/PauseConditionManager.swift` — Complete service (242 lines)
+- `scripts/run.sh` — Fixed plist refresh logic in incremental builds
+
