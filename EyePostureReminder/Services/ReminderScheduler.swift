@@ -76,6 +76,16 @@ final class ReminderScheduler: ReminderScheduling {
 
     // MARK: - ReminderScheduling
 
+    // MARK: Superseded scheduling methods
+    //
+    // `scheduleReminders(using:)` and `rescheduleReminder(for:using:)` are retained
+    // to satisfy `ReminderScheduling` protocol conformance and for unit-test coverage,
+    // but are **never called in production**. Since the trigger model moved to
+    // `ScreenTimeTracker`, all scheduling is driven by elapsed-time callbacks in
+    // that service. `AppCoordinator` (the concrete `ReminderScheduling` used at
+    // runtime) routes these protocol calls through its own auth-aware
+    // `scheduleReminders()` path without delegating to this class.
+
     func scheduleReminders(using settings: SettingsStore) async {
         Logger.scheduling.info("Scheduling all reminders")
         for type in ReminderType.allCases {

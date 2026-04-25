@@ -126,8 +126,8 @@ enum AnalyticsLogger {
             logger.info("""
                 event=setting_changed \
                 setting=\(setting, privacy: .public) \
-                old_value=\(oldValue, privacy: .public) \
-                new_value=\(newValue, privacy: .public)
+                old_value=\(oldValue, privacy: .private) \
+                new_value=\(newValue, privacy: .private)
                 """)
 
         case let .pauseActivated(conditionType):
