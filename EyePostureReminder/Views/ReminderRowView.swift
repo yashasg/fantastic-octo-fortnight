@@ -8,7 +8,7 @@ struct ReminderRowView: View {
     @Binding var breakDuration: TimeInterval
     let onChanged: () -> Void
 
-    private let intervalOptions: [TimeInterval] = [10*60, 20*60, 30*60, 45*60, 60*60]
+    private let intervalOptions: [TimeInterval] = [10 * 60, 20 * 60, 30 * 60, 45 * 60, 60 * 60]
     private let durationOptions: [TimeInterval] = [10, 20, 30, 60]
 
     var body: some View {
@@ -17,7 +17,11 @@ struct ReminderRowView: View {
         }
         .tint(type.color)
         .onChange(of: isEnabled) { _ in onChanged() }
-        .accessibilityHint(isEnabled ? "Tap to disable \(type.title) reminders" : "Tap to enable \(type.title) reminders")
+        .accessibilityHint(
+            isEnabled
+                ? "Tap to disable \(type.title) reminders"
+                : "Tap to enable \(type.title) reminders"
+        )
 
         if isEnabled {
             Picker(String(localized: "settings.reminder.intervalPicker", bundle: .module), selection: $interval) {
@@ -26,7 +30,12 @@ struct ReminderRowView: View {
                 }
             }
             .onChange(of: interval) { _ in onChanged() }
-            .accessibilityHint(String(format: String(localized: "settings.reminder.intervalPicker.hint", bundle: .module), type.title))
+            .accessibilityHint(
+                String(
+                    format: String(localized: "settings.reminder.intervalPicker.hint", bundle: .module),
+                    type.title
+                )
+            )
 
             Picker("Break duration", selection: $breakDuration) {
                 ForEach(durationOptions, id: \.self) { seconds in
@@ -45,7 +54,7 @@ struct ReminderRowView: View {
     }
 
     private func formatDuration(_ seconds: TimeInterval) -> String {
-        let s = Int(seconds)
-        return s < 60 ? "\(s) sec" : "\(s / 60) min"
+        let secs = Int(seconds)
+        return secs < 60 ? "\(secs) sec" : "\(secs / 60) min"
     }
 }

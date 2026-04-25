@@ -94,14 +94,22 @@ struct OverlayView: View {
                 )
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel(Text("overlay.countdown.label", bundle: .module))
-                .accessibilityValue(String(format: String(localized: "overlay.countdown.value", bundle: .module), secondsRemaining))
+                .accessibilityValue(
+                    String(
+                        format: String(localized: "overlay.countdown.value", bundle: .module),
+                        secondsRemaining
+                    )
+                )
                 .accessibilityAddTraits(.updatesFrequently)
 
                 Spacer()
 
                 // Settings gear — dismisses overlay, revealing SettingsView underneath
                 Button(action: performDismiss) {
-                    Label(title: { Text("overlay.settingsLabel", bundle: .module) }, icon: { Image(systemName: AppSymbol.settings) })
+                    Label(
+                        title: { Text("overlay.settingsLabel", bundle: .module) },
+                        icon: { Image(systemName: AppSymbol.settings) }
+                    )
                         .font(AppFont.body)
                         .foregroundStyle(.secondary)
                 }
@@ -207,9 +215,9 @@ struct OverlayView: View {
 }
 
 #Preview {
-    OverlayView(type: .eyes, duration: 20, onDismiss: {})
+    OverlayView(type: .eyes, duration: 20) {}
 }
 
 #Preview("Posture") {
-    OverlayView(type: .posture, duration: 10, onDismiss: {})
+    OverlayView(type: .posture, duration: 10) {}
 }
