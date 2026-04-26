@@ -110,6 +110,7 @@ private struct UIKitSwitchView: UIViewRepresentable {
     }
 
     func updateUIView(_ uiView: UISwitch, context: Context) {
+        context.coordinator.parent = self
         uiView.onTintColor = tint
         if uiView.isOn != isOn {
             uiView.setOn(isOn, animated: false)
