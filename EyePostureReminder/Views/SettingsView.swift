@@ -96,11 +96,14 @@ struct SettingsView: View {
 
             // MARK: Preferences
             Section {
-                Toggle(isOn: $settings.hapticsEnabled) {
+                AccessibleToggle(
+                    isOn: $settings.hapticsEnabled,
+                    tint: AppColor.reminderBlue,
+                    accessibilityIdentifier: "settings.hapticFeedback",
+                    accessibilityHint: Text("settings.hapticFeedback.hint", bundle: .module)
+                ) {
                     Text("settings.hapticFeedback", bundle: .module)
                 }
-                    .tint(AppColor.reminderBlue)
-                    .accessibilityHint(Text("settings.hapticFeedback.hint", bundle: .module))
             } header: {
                 Text("settings.section.preferences", bundle: .module)
             }
