@@ -13,6 +13,21 @@
 // ACCESSIBILITY IDENTIFIERS IN PLACE:
 //   OverlayView:
 //     - × dismiss button  → .accessibilityIdentifier("overlay.dismissButton")
+//
+// REMOVED TESTS (false positives, Fixes #154):
+//   - test_overlay_dismissButton_identifierIsCorrect: asserted XCTAssertFalse on a
+//     hardcoded non-empty string literal — always passed, verified nothing. The
+//     identifier "overlay.dismissButton" is implicitly exercised by
+//     test_overlay_onNormalLaunch_notPresent and test_overlay_onNormalLaunch_homeScreenIsVisible.
+//
+//   - test_overlay_countdown_accessibilityLabelKeyIsCorrect: asserted
+//     XCTAssertEqual("overlay.countdown.label", "overlay.countdown.label") —
+//     compared a string literal to itself, always passed. The countdown element is
+//     only present when the overlay is visible. Because XCUITests run in a separate
+//     process, they cannot import the app module or its resource bundle to validate
+//     localization keys, and the overlay trigger launch arguments are not yet
+//     implemented. A meaningful replacement requires TestLaunchArguments.showOverlayEyes
+//     or showOverlayPosture to be wired up so the element can be queried live.
 
 import XCTest
 
@@ -28,18 +43,6 @@ final class OverlayTests: XCTestCase {
 
     override func tearDownWithError() throws {
         app = nil
-    }
-
-    // MARK: - test_overlay_dismissButton_identifierIsCorrect
-
-    /// Verifies that the overlay dismiss button's accessibility identifier constant
-    /// matches the expected value that tests should reference.
-    func test_overlay_dismissButton_identifierIsCorrect() throws {
-        let expectedIdentifier = "overlay.dismissButton"
-        XCTAssertFalse(
-            expectedIdentifier.isEmpty,
-            "Overlay dismiss button accessibility identifier must be non-empty."
-        )
     }
 
     // MARK: - test_overlay_onNormalLaunch_notPresent
@@ -71,16 +74,4 @@ final class OverlayTests: XCTestCase {
         )
     }
 
-    // MARK: - test_overlay_countdown_accessibilityLabelKeyIsCorrect
-
-    /// Documents the expected accessibility structure of the overlay countdown element.
-    /// The countdown ZStack is exposed as a single element with label "Countdown" and
-    /// value "%d seconds remaining". Identifier keys are in Localizable.xcstrings.
-    func test_overlay_countdown_accessibilityLabelKeyIsCorrect() throws {
-        XCTAssertEqual(
-            "overlay.countdown.label",
-            "overlay.countdown.label",
-            "Overlay countdown accessibility label key must be 'overlay.countdown.label'."
-        )
-    }
 }
