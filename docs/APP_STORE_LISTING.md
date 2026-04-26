@@ -172,7 +172,7 @@ All App Store age rating questionnaire answers are "No" / "None".
 
 | Field | Value |
 |---|---|
-| **Bundle ID** | com.yashasg.eye-posture-reminder |
+| **Bundle ID** | com.yashasg.eyeposturereminder |
 | **SKU** | eye-posture-reminder |
 | **Copyright** | © 2026 Yashasg |
 | **Support URL** | https://github.com/yashasg/fantastic-octo-fortnight |
@@ -204,7 +204,7 @@ Complete every item before submitting for App Review.
 
 ### App Store Connect Configuration
 
-- [ ] Bundle ID finalized: `com.yashasg.eye-posture-reminder`
+- [ ] Bundle ID finalized: `com.yashasg.eyeposturereminder`
 - [ ] Support URL set: `https://github.com/yashasg/fantastic-octo-fortnight`
 - [ ] App name, subtitle, keywords, and description finalized (Sections 1–4 above)
 - [ ] Age rating questionnaire completed (all answers "No" / "None" → 4+)
