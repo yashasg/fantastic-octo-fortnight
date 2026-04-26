@@ -278,7 +278,7 @@ private struct SettingsSnoozeSection: View {
                         Label {
                             Text("settings.snooze.cancelButton", bundle: .module)
                         } icon: {
-                            Image(systemName: "bell.fill")
+                            Image(systemName: AppSymbol.bell)
                         }
                         .font(AppFont.body)
                     }

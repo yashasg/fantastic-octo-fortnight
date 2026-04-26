@@ -125,6 +125,8 @@ enum AppSymbol {
     static let warning       = "exclamationmark.triangle.fill"
     /// Snoozed / paused state icon
     static let snoozed       = "moon.zzz.fill"
+    /// Bell / snooze-cancel icon
+    static let bell          = "bell.fill"
 }
 
 // MARK: - Layout Constants
