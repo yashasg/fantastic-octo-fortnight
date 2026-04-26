@@ -10,6 +10,47 @@ private final class SettingsViewModelBox: ObservableObject {
     var inner: SettingsViewModel?
 }
 
+// MARK: - Icon Container
+
+/// Circular tinted icon badge used in section rows and headers.
+private struct SettingsRowIcon: View {
+    let systemName: String
+    let tint: Color
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(AppColor.surfaceTint)
+                .frame(width: 32, height: 32)
+            Image(systemName: systemName)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(tint)
+        }
+        .accessibilityHidden(true)
+    }
+}
+
+// MARK: - Section Header
+
+/// Section header with optional tinted icon and styled caption text.
+private struct SettingsSectionHeader: View {
+    let titleKey: String.LocalizationValue
+    var iconName: String? = nil
+    var iconTint: Color = AppColor.primaryRest
+
+    var body: some View {
+        HStack(spacing: AppSpacing.xs) {
+            if let iconName {
+                SettingsRowIcon(systemName: iconName, tint: iconTint)
+            }
+            Text(String(localized: titleKey, bundle: .module))
+                .font(AppFont.caption)
+                .foregroundStyle(AppColor.textSecondary)
+                .textCase(nil)
+        }
+    }
+}
+
 struct SettingsView: View {
 
     @EnvironmentObject var settings: SettingsStore
@@ -34,20 +75,28 @@ struct SettingsView: View {
             Section {
                 AccessibleToggle(
                     isOn: $settings.globalEnabled,
-                    tint: AppColor.reminderBlue,
+                    tint: AppColor.primaryRest,
                     accessibilityHint: Text("settings.masterToggle.hint", bundle: .module),
                     onChange: { _ in viewModel?.globalToggleChanged() }
                 ) {
-                    Text("settings.masterToggle", bundle: .module)
+                    HStack(spacing: AppSpacing.sm) {
+                        SettingsRowIcon(systemName: "power", tint: AppColor.primaryRest)
+                        Text("settings.masterToggle", bundle: .module)
+                            .foregroundStyle(AppColor.textPrimary)
+                    }
                 }
+                .listRowBackground(AppColor.surface)
+                .listRowSeparatorTint(AppColor.separatorSoft)
             } footer: {
-                if settings.globalEnabled {
-                    Text("settings.masterToggle.footer", bundle: .module)
-                        .font(AppFont.caption)
-                } else {
-                    Text("settings.pausedBanner", bundle: .module)
-                        .font(AppFont.caption)
+                Group {
+                    if settings.globalEnabled {
+                        Text("settings.masterToggle.footer", bundle: .module)
+                    } else {
+                        Text("settings.pausedBanner", bundle: .module)
+                    }
                 }
+                .font(AppFont.caption)
+                .foregroundStyle(AppColor.textSecondary)
             }
 
             // MARK: Per-type sections (only shown when master is on)
@@ -61,12 +110,19 @@ struct SettingsView: View {
                     ) {
                         viewModel?.reminderSettingChanged(for: .eyes)
                     }
+                    .listRowBackground(AppColor.surface)
+                    .listRowSeparatorTint(AppColor.separatorSoft)
                 } header: {
-                    Text("settings.section.eyes", bundle: .module)
+                    SettingsSectionHeader(
+                        titleKey: "settings.section.eyes",
+                        iconName: AppSymbol.eyeBreak,
+                        iconTint: AppColor.primaryRest
+                    )
                 } footer: {
                     if settings.eyesEnabled {
                         Text("settings.reminder.section.footer", bundle: .module)
                             .font(AppFont.caption)
+                            .foregroundStyle(AppColor.textSecondary)
                     }
                 }
 
@@ -79,12 +135,19 @@ struct SettingsView: View {
                     ) {
                         viewModel?.reminderSettingChanged(for: .posture)
                     }
+                    .listRowBackground(AppColor.surface)
+                    .listRowSeparatorTint(AppColor.separatorSoft)
                 } header: {
-                    Text("settings.section.posture", bundle: .module)
+                    SettingsSectionHeader(
+                        titleKey: "settings.section.posture",
+                        iconName: AppSymbol.postureCheck,
+                        iconTint: AppColor.secondaryCalm
+                    )
                 } footer: {
                     if settings.postureEnabled {
                         Text("settings.reminder.section.footer", bundle: .module)
                             .font(AppFont.caption)
+                            .foregroundStyle(AppColor.textSecondary)
                     }
                 }
             }
@@ -98,14 +161,20 @@ struct SettingsView: View {
             Section {
                 AccessibleToggle(
                     isOn: $settings.hapticsEnabled,
-                    tint: AppColor.reminderBlue,
+                    tint: AppColor.primaryRest,
                     accessibilityIdentifier: "settings.hapticFeedback",
                     accessibilityHint: Text("settings.hapticFeedback.hint", bundle: .module)
                 ) {
-                    Text("settings.hapticFeedback", bundle: .module)
+                    HStack(spacing: AppSpacing.sm) {
+                        SettingsRowIcon(systemName: "hand.tap.fill", tint: AppColor.primaryRest)
+                        Text("settings.hapticFeedback", bundle: .module)
+                            .foregroundStyle(AppColor.textPrimary)
+                    }
                 }
+                .listRowBackground(AppColor.surface)
+                .listRowSeparatorTint(AppColor.separatorSoft)
             } header: {
-                Text("settings.section.preferences", bundle: .module)
+                SettingsSectionHeader(titleKey: "settings.section.preferences")
             }
 
             // MARK: Smart Pause
@@ -119,16 +188,22 @@ struct SettingsView: View {
                 Button(action: { showTerms = true },
                        label: { Text("settings.legal.terms", bundle: .module) })
                 .font(AppFont.body)
+                .foregroundStyle(AppColor.primaryRest)
                 .accessibilityHint(Text("settings.legal.terms.hint", bundle: .module))
                 .accessibilityIdentifier("settings.legal.terms")
+                .listRowBackground(AppColor.surface)
+                .listRowSeparatorTint(AppColor.separatorSoft)
 
                 Button(action: { showPrivacy = true },
                        label: { Text("settings.legal.privacy", bundle: .module) })
                 .font(AppFont.body)
+                .foregroundStyle(AppColor.primaryRest)
                 .accessibilityHint(Text("settings.legal.privacy.hint", bundle: .module))
                 .accessibilityIdentifier("settings.legal.privacy")
+                .listRowBackground(AppColor.surface)
+                .listRowSeparatorTint(AppColor.separatorSoft)
             } header: {
-                Text("settings.section.legal", bundle: .module)
+                SettingsSectionHeader(titleKey: "settings.section.legal")
             }
 
             // MARK: Advanced
@@ -141,8 +216,10 @@ struct SettingsView: View {
                 .font(AppFont.body)
                 .accessibilityHint(Text("settings.resetToDefaults.hint", bundle: .module))
                 .accessibilityIdentifier("settings.resetToDefaults")
+                .listRowBackground(AppColor.surface)
+                .listRowSeparatorTint(AppColor.separatorSoft)
             } header: {
-                Text("settings.section.advanced", bundle: .module)
+                SettingsSectionHeader(titleKey: "settings.section.advanced")
             }
             .confirmationDialog(
                 Text("settings.resetToDefaults.confirmTitle", bundle: .module),
@@ -180,10 +257,13 @@ struct SettingsView: View {
                     Text("settings.feedback.sendFeedback", bundle: .module)
                 }
                 .font(AppFont.body)
+                .foregroundStyle(AppColor.primaryRest)
                 .accessibilityHint(Text("settings.feedback.sendFeedback.hint", bundle: .module))
                 .accessibilityIdentifier("settings.feedback.sendFeedback")
+                .listRowBackground(AppColor.surface)
+                .listRowSeparatorTint(AppColor.separatorSoft)
             } header: {
-                Text("settings.section.about", bundle: .module)
+                SettingsSectionHeader(titleKey: "settings.section.about")
             } footer: {
                 let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—"
                 let build   = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "—"
@@ -195,8 +275,11 @@ struct SettingsView: View {
                     )
                 )
                 .font(AppFont.caption)
+                .foregroundStyle(AppColor.textSecondary)
             }
         }
+        .scrollContentBackground(.hidden)
+        .background(AppColor.background)
         .navigationTitle(Text("settings.navTitle", bundle: .module))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -205,6 +288,7 @@ struct SettingsView: View {
                     isPresented = false
                 }
                 .fontWeight(.semibold)
+                .foregroundStyle(AppColor.primaryRest)
                 .accessibilityHint(Text("settings.doneButton.hint", bundle: .module))
                 .accessibilityIdentifier("settings.doneButton")
             }
@@ -266,6 +350,8 @@ private struct SettingsSnoozeSection: View {
                     format: String(localized: "settings.snooze.activeLabel.accessibility", bundle: .module),
                     snoozeUntilFormatted
                 ))
+                .listRowBackground(AppColor.surface)
+                .listRowSeparatorTint(AppColor.separatorSoft)
 
                 Button(
                     action: {
@@ -286,9 +372,11 @@ private struct SettingsSnoozeSection: View {
                         .font(AppFont.body)
                     }
                 )
-                .foregroundStyle(AppColor.reminderBlue)
+                .foregroundStyle(AppColor.primaryRest)
                 .accessibilityHint(Text("settings.snooze.cancelButton.hint", bundle: .module))
                 .accessibilityIdentifier("settings.snooze.cancelButton")
+                .listRowBackground(AppColor.surface)
+                .listRowSeparatorTint(AppColor.separatorSoft)
             } else {
                 Button(
                     action: {
@@ -303,12 +391,15 @@ private struct SettingsSnoozeSection: View {
                     label: { Text("settings.snooze.5min", bundle: .module) }
                 )
                 .font(AppFont.body)
+                .foregroundStyle(AppColor.primaryRest)
                 .disabled(!(viewModel?.canSnooze ?? false))
                 .accessibilityLabel(Text("settings.snooze.5min.label", bundle: .module))
                 .accessibilityHint(viewModel?.canSnooze ?? false
                     ? Text("settings.snooze.5min.hint", bundle: .module)
                     : Text("settings.snooze.limitReached.hint", bundle: .module))
                 .accessibilityIdentifier("settings.snooze.5min")
+                .listRowBackground(AppColor.surface)
+                .listRowSeparatorTint(AppColor.separatorSoft)
 
                 Button(
                     action: {
@@ -323,12 +414,15 @@ private struct SettingsSnoozeSection: View {
                     label: { Text("settings.snooze.1hour", bundle: .module) }
                 )
                 .font(AppFont.body)
+                .foregroundStyle(AppColor.primaryRest)
                 .disabled(!(viewModel?.canSnooze ?? false))
                 .accessibilityLabel(Text("settings.snooze.1hour.label", bundle: .module))
                 .accessibilityHint(viewModel?.canSnooze ?? false
                     ? Text("settings.snooze.1hour.hint", bundle: .module)
                     : Text("settings.snooze.limitReached.hint", bundle: .module))
                 .accessibilityIdentifier("settings.snooze.1hour")
+                .listRowBackground(AppColor.surface)
+                .listRowSeparatorTint(AppColor.separatorSoft)
 
                 Button(
                     action: {
@@ -350,9 +444,15 @@ private struct SettingsSnoozeSection: View {
                     ? Text("settings.snooze.restOfDay.hint", bundle: .module)
                     : Text("settings.snooze.limitReached.hint", bundle: .module))
                 .accessibilityIdentifier("settings.snooze.restOfDay")
+                .listRowBackground(AppColor.surface)
+                .listRowSeparatorTint(AppColor.separatorSoft)
             }
         } header: {
-            Text("settings.section.snooze", bundle: .module)
+            SettingsSectionHeader(
+                titleKey: "settings.section.snooze",
+                iconName: AppSymbol.snoozed,
+                iconTint: AppColor.accentWarm
+            )
         }
     }
 }
@@ -367,7 +467,7 @@ private struct SettingsSmartPauseSection: View {
         Section {
             AccessibleToggle(
                 isOn: $settings.pauseDuringFocus,
-                tint: AppColor.reminderBlue,
+                tint: AppColor.primaryRest,
                 accessibilityIdentifier: "settings.smartPause.pauseDuringFocus",
                 accessibilityHint: Text("settings.smartPause.pauseDuringFocus.hint", bundle: .module),
                 onChange: { newValue in viewModel?.pauseDuringFocus = newValue }
@@ -376,11 +476,14 @@ private struct SettingsSmartPauseSection: View {
                     String(localized: "settings.smartPause.pauseDuringFocus", bundle: .module),
                     systemImage: AppSymbol.pauseDuringFocus
                 )
+                .foregroundStyle(AppColor.textPrimary)
             }
+            .listRowBackground(AppColor.surface)
+            .listRowSeparatorTint(AppColor.separatorSoft)
 
             AccessibleToggle(
                 isOn: $settings.pauseWhileDriving,
-                tint: AppColor.reminderBlue,
+                tint: AppColor.primaryRest,
                 accessibilityIdentifier: "settings.smartPause.pauseWhileDriving",
                 accessibilityHint: Text("settings.smartPause.pauseWhileDriving.hint", bundle: .module),
                 onChange: { newValue in viewModel?.pauseWhileDriving = newValue }
@@ -389,12 +492,20 @@ private struct SettingsSmartPauseSection: View {
                     String(localized: "settings.smartPause.pauseWhileDriving", bundle: .module),
                     systemImage: AppSymbol.pauseWhileDriving
                 )
+                .foregroundStyle(AppColor.textPrimary)
             }
+            .listRowBackground(AppColor.surface)
+            .listRowSeparatorTint(AppColor.separatorSoft)
         } header: {
-            Text("settings.section.smartPause", bundle: .module)
+            SettingsSectionHeader(
+                titleKey: "settings.section.smartPause",
+                iconName: AppSymbol.pauseDuringFocus,
+                iconTint: AppColor.primaryRest
+            )
         } footer: {
             Text("settings.smartPause.footer", bundle: .module)
                 .font(AppFont.caption)
+                .foregroundStyle(AppColor.textSecondary)
         }
     }
 }
@@ -408,20 +519,29 @@ private struct SettingsNotificationWarningSection: View {
         if coordinator.notificationAuthStatus == .denied {
             Section {
                 HStack(spacing: AppSpacing.sm) {
-                    Image(systemName: AppSymbol.warning)
-                        .foregroundStyle(AppColor.warningOrange)
-                        .accessibilityHidden(true)
+                    ZStack {
+                        Circle()
+                            .fill(AppColor.accentWarm.opacity(0.18))
+                            .frame(width: 36, height: 36)
+                        Image(systemName: AppSymbol.warning)
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(AppColor.accentWarm)
+                    }
+                    .accessibilityHidden(true)
                     VStack(alignment: .leading, spacing: AppSpacing.xs) {
                         Text("settings.notifications.disabledTitle", bundle: .module)
                             .font(AppFont.bodyEmphasized)
+                            .foregroundStyle(AppColor.textPrimary)
                         Text("settings.notifications.disabledBody", bundle: .module)
                             .font(AppFont.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(AppColor.textSecondary)
                     }
                 }
                 .padding(.vertical, AppSpacing.xs)
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel(Text("settings.notifications.disabledLabel", bundle: .module))
+                .listRowBackground(AppColor.accentWarm.opacity(0.10))
+                .listRowSeparatorTint(AppColor.accentWarm.opacity(0.25))
 
                 Button(
                     action: {
@@ -432,7 +552,10 @@ private struct SettingsNotificationWarningSection: View {
                     label: { Text("settings.notifications.openSettings", bundle: .module) }
                 )
                 .font(AppFont.body)
+                .foregroundStyle(AppColor.accentWarm)
                 .accessibilityHint(Text("settings.notifications.openSettings.hint", bundle: .module))
+                .listRowBackground(AppColor.accentWarm.opacity(0.10))
+                .listRowSeparatorTint(AppColor.accentWarm.opacity(0.25))
             }
         }
     }
