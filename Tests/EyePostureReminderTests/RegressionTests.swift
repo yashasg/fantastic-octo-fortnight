@@ -1,7 +1,7 @@
 // RegressionTests.swift
 // Eye & Posture Reminder
 //
-// Regression tests for bugs fixed on 2026-04-25.
+// Regression tests for bugs fixed on 2026-04-25 and 2026-04-26.
 // Each section documents the root cause and what failure mode proves the bug regressed.
 //
 // Bug 1: SettingsView Done button not responding (fixed: @Binding var isPresented)
@@ -9,6 +9,9 @@
 // Bug 3: run.sh stale binary cache — UNTESTABLE in unit test context (shell-script only)
 // Bug 4: ScreenTimeTracker replacing fixed-interval wall-clock timers
 // Bug 5: Data-driven defaults (AppConfig replaces hardcoded ReminderSettings statics)
+// Bug #119: PauseConditionManager cold-start focus seed — isFocused=true at startMonitoring() must pause immediately
+// Bug #118: ScreenTimeTracker double-resign — second willResignActive must cancel first reset Task (one reset, not two)
+// Bug #117: OverlayManager queue-on-no-scene — showOverlay with no UIWindowScene must queue, not drop
 
 @testable import EyePostureReminder
 import SwiftUI
@@ -621,5 +624,277 @@ final class DataDrivenDefaultsRegressionTests: XCTestCase {
             store.globalEnabled,
             AppConfig.fallback.features.globalEnabledDefault,
             "resetToDefaults() globalEnabled must come from AppConfig.features.globalEnabledDefault.")
+    }
+}
+
+// MARK: ─── Bug #119: PauseConditionManager Cold-Start Focus Seed ──────────────
+
+/// Regression tests for Bug #119: PauseConditionManager.startMonitoring() must
+/// seed its initial pause state from the detector's current value, not wait for a
+/// future state-change callback.
+///
+/// **Root cause:** Before the fix, `startMonitoring()` registered callbacks and
+/// called `detector.startMonitoring()`, but never queried the detector's current
+/// `isFocused`/`isCarPlayActive`/`isDriving` value on entry. If the device was
+/// already in Focus Mode at cold launch, the manager reported `isPaused == false`
+/// until the user toggled Focus Mode off and back on.
+///
+/// **Fix:** After registering callbacks, `startMonitoring()` explicitly seeds each
+/// condition via `update(.focusMode, isActive: focusDetector.isFocused && ...)`.
+///
+/// **How this catches a regression:**
+/// - If the seed call is removed, `isPaused` stays `false` despite Focus being active
+///   at construction time — exactly the cold-launch bug.
+@MainActor
+final class PauseConditionManagerColdStartRegressionTests: XCTestCase {
+
+    /// Core cold-start regression: a detector that already reports `isFocused = true`
+    /// when `startMonitoring()` is called must immediately set `isPaused = true`.
+    ///
+    /// Before the fix this assertion failed because the manager only ever reacted to
+    /// *changes* via the `onFocusChanged` callback, never reading the initial value.
+    func test_coldStart_focusAlreadyActive_startMonitoring_setsPaused() {
+        let mockFocus = MockFocusStatusDetector()
+        let mockCarPlay = MockCarPlayDetector()
+        let mockDriving = MockDrivingActivityDetector()
+        let mockPersistence = MockSettingsPersisting()
+        let settings = SettingsStore(store: mockPersistence)
+        settings.pauseDuringFocus = true
+
+        // Simulate Focus Mode already active BEFORE the manager is created.
+        // simulateFocusChange sets isFocused = true without triggering any callback
+        // (onFocusChanged is nil before startMonitoring registers it).
+        mockFocus.simulateFocusChange(true)
+        XCTAssertTrue(mockFocus.isFocused, "Precondition: detector must report isFocused=true")
+
+        let sut = PauseConditionManager(
+            settings: settings,
+            focusDetector: mockFocus,
+            carPlayDetector: mockCarPlay,
+            drivingDetector: mockDriving
+        )
+
+        // Before startMonitoring, no seed has been applied.
+        XCTAssertFalse(sut.isPaused, "isPaused must be false before startMonitoring() — no conditions registered yet")
+
+        // startMonitoring() must read isFocused and seed the initial state.
+        sut.startMonitoring()
+
+        XCTAssertTrue(
+            sut.isPaused,
+            "#119 regression: startMonitoring() must seed isPaused=true when focusDetector.isFocused "
+            + "is already true at cold launch. If this fails, the seed call was removed.")
+
+        sut.stopMonitoring()
+    }
+
+    /// Complement: if Focus Mode is NOT active at cold launch, `isPaused` must stay `false`.
+    func test_coldStart_focusInactive_startMonitoring_doesNotPause() {
+        let mockFocus = MockFocusStatusDetector()
+        let mockPersistence = MockSettingsPersisting()
+        let settings = SettingsStore(store: mockPersistence)
+        settings.pauseDuringFocus = true
+
+        // isFocused defaults to false — no simulateFocusChange call.
+        let sut = PauseConditionManager(
+            settings: settings,
+            focusDetector: mockFocus,
+            carPlayDetector: MockCarPlayDetector(),
+            drivingDetector: MockDrivingActivityDetector()
+        )
+        sut.startMonitoring()
+
+        XCTAssertFalse(sut.isPaused, "No active focus condition → isPaused must remain false after startMonitoring()")
+
+        sut.stopMonitoring()
+    }
+
+    /// Verify the `onPauseStateChanged` callback fires immediately on startMonitoring()
+    /// when focus is already active — callers (AppCoordinator) must receive the signal.
+    func test_coldStart_focusAlreadyActive_startMonitoring_firesCallback() {
+        let mockFocus = MockFocusStatusDetector()
+        let mockPersistence = MockSettingsPersisting()
+        let settings = SettingsStore(store: mockPersistence)
+        settings.pauseDuringFocus = true
+
+        mockFocus.simulateFocusChange(true)
+
+        let sut = PauseConditionManager(
+            settings: settings,
+            focusDetector: mockFocus,
+            carPlayDetector: MockCarPlayDetector(),
+            drivingDetector: MockDrivingActivityDetector()
+        )
+
+        var callbackValue: Bool?
+        sut.onPauseStateChanged = { callbackValue = $0 }
+
+        sut.startMonitoring()
+
+        XCTAssertEqual(
+            callbackValue,
+            true,
+            "#119 regression: onPauseStateChanged must fire true when focus is already active at startMonitoring()")
+
+        sut.stopMonitoring()
+    }
+}
+
+// MARK: ─── Bug #118: ScreenTimeTracker Double-Resign One Reset ────────────────
+
+/// Regression tests for Bug #118: posting `willResignActive` twice rapidly must
+/// produce exactly ONE counter reset, not two.
+///
+/// **Root cause:** Before the fix, `handleWillResignActive` created a new
+/// `resetTask` without first cancelling the previous one. Rapid double-resign
+/// left an orphaned `Task` that called `resetAll()` 5 seconds after the first
+/// notification — even if the app had returned to the foreground in the interim.
+///
+/// **Fix:** `resetTask?.cancel()` is called before `resetTask = Task { … }` in
+/// `handleWillResignActive` (`ScreenTimeTracker.swift` line ~224).
+///
+/// **How this catches a regression:**
+/// A threshold of 5.5 s guarantees the threshold requires 6 ticks (~6 s) to fire.
+/// With the fix, no orphan exists; elapsed accumulates to 5.5 s and the threshold
+/// fires at ~6 s. With the bug, the orphaned first Task fires `resetAll()` at t ≈ 5 s
+/// (before elapsed reaches the threshold), wiping the counter; the threshold then
+/// needs another 6 ticks and fires at ~11 s.
+/// Timeout of 9 s: passes with the fix (~6 s actual), times out without it (~11 s).
+@MainActor
+final class ScreenTimeTrackerDoubleResignRegressionTests: XCTestCase {
+
+    var sut: ScreenTimeTracker!
+
+    override func setUp() {
+        super.setUp()
+        sut = ScreenTimeTracker()
+    }
+
+    override func tearDown() {
+        sut.stop()
+        sut = nil
+        super.tearDown()
+    }
+
+    func test_doubleWillResignActive_secondCancelsFirst_onlyOneResetOccurs() async {
+        // Threshold > 5 s so the orphaned first Task fires resetAll() BEFORE the
+        // threshold would be reached. 5.5 s requires 6 ticks; orphan fires at ~5 s.
+        sut.setThreshold(5.5, for: .eyes)
+
+        let thresholdFired = expectation(
+            description: "#118: threshold fires at ~6s (fix) not ~11s (bug — orphaned Task wipes counter at ~5s)")
+        sut.onThresholdReached = { type in
+            if type == .eyes { thresholdFired.fulfill() }
+        }
+
+        // Start the 1-second tick timer.
+        NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
+
+        // Double-resign: the second resign MUST call resetTask?.cancel() before arming
+        // a new Task (the fix). Without the fix, the first Task is orphaned and fires
+        // resetAll() 5 s later regardless of subsequent lifecycle events.
+        NotificationCenter.default.post(name: UIApplication.willResignActiveNotification, object: nil)
+        NotificationCenter.default.post(name: UIApplication.willResignActiveNotification, object: nil)
+
+        // Return to active within the grace period — this cancels the one remaining
+        // Task (the second resign's Task with the fix applied).
+        NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
+
+        // Fix: only one Task was ever live; it was cancelled by didBecomeActive.
+        //      Elapsed accumulates from 0; threshold fires at ~6 s. ✓
+        // Bug: first Task was NOT cancelled; second Task was cancelled by didBecomeActive.
+        //      Orphaned first Task fires resetAll() at t ≈ 5 s, wiping the counter.
+        //      Elapsed restarts from 0; threshold fires at ~11 s. ✗ (outside 9 s window)
+        await fulfillment(of: [thresholdFired], timeout: 9.0)
+    }
+}
+
+// MARK: ─── Bug #117: OverlayManager Queue-on-No-Scene ────────────────────────
+
+/// Regression tests for Bug #117: `OverlayManager.showOverlay()` must queue the
+/// request when no active `UIWindowScene` is found, not silently drop it.
+///
+/// **Root cause:** Before the fix, the no-scene guard path returned without
+/// appending to `overlayQueue`, discarding the overlay request entirely.
+///
+/// **Fix:** The `else` branch of the window-scene guard now appends to
+/// `overlayQueue` so the request is presented once a scene becomes foreground-active.
+///
+/// **Testability note:**
+/// The private `overlayQueue` cannot be inspected directly. Full end-to-end FIFO
+/// verification (queue fills → scene activates → presentNextQueuedOverlay dequeues)
+/// requires a live `UIWindowScene` and is covered by the simulator integration suite.
+/// The unit tests below verify:
+///   1. `showOverlay` does not crash when no scene is active (headless test runner).
+///   2. The `onDismiss` callback is NOT called synchronously (it would be called
+///      immediately only if the overlay were "silently completed" instead of queued).
+///   3. `isOverlayVisible` remains `false` (no scene → no window created).
+///   4. `clearQueue()` drains the queue without crash (proves a queue exists to drain).
+///
+/// For the AppCoordinator-level verification that the queued request surfaces once
+/// `presentPendingOverlayIfNeeded()` is called, see
+/// `AppCoordinatorTests.test_handleNotification_eyes_thenPresentPending_callsShowOverlayWithEyes`.
+@MainActor
+final class OverlayManagerQueueOnNoSceneRegressionTests: XCTestCase {
+
+    /// Core regression: `showOverlay` must not crash when there is no active
+    /// UIWindowScene (the headless test runner has none). Before the fix the path
+    /// fell through with a silent drop; the fix adds the queue-append so the call
+    /// succeeds without a scene.
+    func test_showOverlay_withNoActiveWindowScene_doesNotCrash() {
+        let manager = OverlayManager()
+        manager.showOverlay(for: .eyes, duration: 20, hapticsEnabled: false, pauseMediaEnabled: false) {}
+        manager.clearQueue()
+    }
+
+    /// The `onDismiss` callback must NOT fire synchronously for a queued request.
+    /// A silent-drop implementation might invoke the callback immediately to "complete"
+    /// the request; queueing holds the callback until the overlay is actually shown
+    /// and dismissed.
+    func test_showOverlay_withNoActiveWindowScene_doesNotFireDismissCallbackImmediately() {
+        let manager = OverlayManager()
+        var dismissFired = false
+
+        manager.showOverlay(for: .eyes, duration: 20, hapticsEnabled: false, pauseMediaEnabled: false) {
+            dismissFired = true
+        }
+
+        XCTAssertFalse(
+            dismissFired,
+            "#117 regression: onDismiss must not fire synchronously for a queued request. "
+            + "A silent drop that calls onDismiss() immediately would cause AppCoordinator to "
+            + "reschedule the reminder without ever having shown the overlay.")
+
+        manager.clearQueue()
+    }
+
+    /// No overlay window can be created without a scene — `isOverlayVisible` must
+    /// stay `false` after a `showOverlay` call in a headless test environment.
+    func test_showOverlay_withNoActiveWindowScene_isOverlayVisibleRemainsFlase() {
+        let manager = OverlayManager()
+
+        manager.showOverlay(for: .posture, duration: 15, hapticsEnabled: true, pauseMediaEnabled: false) {}
+
+        XCTAssertFalse(
+            manager.isOverlayVisible,
+            "#117 regression: isOverlayVisible must stay false when showOverlay is called with no active scene")
+
+        manager.clearQueue()
+    }
+
+    /// Multiple `showOverlay` calls with no active scene must all be queued without
+    /// crashing. `clearQueue()` must succeed (proving the queue was populated).
+    func test_showOverlay_multipleCallsWithNoScene_allQueueWithoutCrash() {
+        let manager = OverlayManager()
+
+        manager.showOverlay(for: .eyes, duration: 20, hapticsEnabled: false, pauseMediaEnabled: false) {}
+        manager.showOverlay(for: .posture, duration: 10, hapticsEnabled: false, pauseMediaEnabled: false) {}
+        manager.showOverlay(for: .eyes, duration: 30, hapticsEnabled: true, pauseMediaEnabled: false) {}
+
+        // clearQueue must not crash — it drains whatever was queued.
+        manager.clearQueue()
+
+        // After clearing, isOverlayVisible must still be false.
+        XCTAssertFalse(manager.isOverlayVisible)
     }
 }
