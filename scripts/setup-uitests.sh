@@ -6,10 +6,6 @@
 #
 # Installs xcodegen (via Homebrew, if not already present) and generates:
 #   UITests/EyePostureReminderUITests.xcodeproj
-#   UITests/EyePostureReminderUITests.xcworkspace
-#
-# The .xcworkspace includes both the UITest target and the local Package.swift,
-# so xcodebuild can build the EyePostureReminder app when running UI tests.
 #
 # Run once before:
 #   ./scripts/build.sh uitest

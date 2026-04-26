@@ -158,32 +158,7 @@ jobs:
         run: xcrun simctl boot "iPhone 16" 2>/dev/null || true
 
       - name: Run UI Tests
-        run: |
-          xcodebuild test \
-            -workspace UITests/EyePostureReminderUITests.xcworkspace \
-            -scheme EyePostureReminderUITests \
-            -destination '${{ env.SIMULATOR }}' \
-            -derivedDataPath "${{ env.DERIVED_DATA_PATH }}" \
-            -resultBundlePath UITestResults.xcresult \
-            -parallel-testing-enabled YES \
-            -maximum-concurrent-test-simulator-destinations 3 \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO \
-            ENABLE_BITCODE=NO \
-            | xcpretty || \
-          xcodebuild test \
-            -workspace UITests/EyePostureReminderUITests.xcworkspace \
-            -scheme EyePostureReminderUITests \
-            -destination '${{ env.SIMULATOR }}' \
-            -derivedDataPath "${{ env.DERIVED_DATA_PATH }}" \
-            -resultBundlePath UITestResults.xcresult \
-            -parallel-testing-enabled YES \
-            -maximum-concurrent-test-simulator-destinations 3 \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO \
-            ENABLE_BITCODE=NO
+        run: ./scripts/build.sh uitest
 
       - name: Upload UI test results
         uses: actions/upload-artifact@v4
