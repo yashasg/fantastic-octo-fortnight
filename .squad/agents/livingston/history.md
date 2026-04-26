@@ -7,6 +7,31 @@
 
 ## Learnings
 
+### 2026-04-26 — Issue #169: Update UI Tests for Restful Grove Redesign
+
+**Baseline:** 889/889 unit tests pass; UI test suite passes (all pre-existing tests green).
+
+**Redesign changes that required UI test updates:**
+- `OverlayView` gained a primary "Done" `PrimaryButton` (`.accessibilityIdentifier("overlay.doneButton")`) and a supportive subtitle text — both new elements needing coverage.
+- `OnboardingPrimaryButtonStyle` removed; `PrimaryButtonStyle` from `Components.swift` used everywhere — existing accessibility identifiers unchanged, no test breakage.
+- `--show-overlay-eyes` / `--show-overlay-posture` launch arguments were previously stubs ("reserved for future test-mode support"); wired up for this task.
+
+**Implementation approach for overlay trigger in UI tests:**
+- `AppDelegate.applyUITestLaunchArguments()` stores the desired `ReminderType.rawValue` in `UserDefaults` under `AppStorageKey.uiTestOverlayType` (+ skips onboarding + resets settings).
+- `EyePostureReminderApp.body`'s `.task` reads the key after `scheduleReminders()` returns and calls `coordinator.handleNotification(for:)`, then clears the key.
+- `AppCoordinator.isUITestMode` extended to include the two new args so `ScreenTimeTracker` stays a no-op stub (prevents accessibility tree churn during overlay tests).
+
+**New accessibility identifier added to production code:**
+- `overlay.supportiveText` → `OverlayView`'s subtitle `Text(type.overlaySupportiveText)`.
+
+**New test files / classes added:**
+- `OverlayPresentationTests` (in `OverlayTests.swift`): 4 tests — dismiss button present, Done button present + hittable, supportive text present, Done button dismisses overlay.
+- `DarkModeUITests.swift` (new file): 5 tests — home screen, settings, and overlay in dark mode via `-AppleInterfaceStyle Dark` system argument.
+
+**Key insight:** The clean seam for triggering UI-only test states (like overlay display) is a two-step relay: `AppDelegate` → `UserDefaults` flag → `App.task` → coordinator call. This keeps `AppDelegate` free of coordinator coupling (coordinator is nil at `didFinishLaunching`) while still executing the real production code path (`handleNotification`), not a test-only shortcut.
+
+**Key insight:** `AppCoordinator.isUITestMode` must include every XCUITest launch argument that starts the app in a "test mode" — including new overlay-trigger arguments — otherwise `ScreenTimeTracker` will not be a no-op and its 1-second timer will prevent the accessibility tree from settling between test interactions, causing flaky element reads.
+
 ### 2026-04-26 — Restful Grove: Test Coverage for Design Tokens and Components
 
 **Baseline:** 860/860 tests (0 failures) before this task.
