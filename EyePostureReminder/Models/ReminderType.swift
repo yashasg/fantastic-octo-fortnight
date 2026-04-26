@@ -47,6 +47,14 @@ enum ReminderType: String, CaseIterable, Identifiable {
         }
     }
 
+    /// Supportive one-liner shown below the headline to guide the user during their break.
+    var overlaySupportiveText: String {
+        switch self {
+        case .eyes:    return String(localized: "reminder.eyes.overlaySupportiveText", bundle: .module)
+        case .posture: return String(localized: "reminder.posture.overlaySupportiveText", bundle: .module)
+        }
+    }
+
     // MARK: - Notification Identity
 
     /// Category identifier registered with `UNUserNotificationCenter`.

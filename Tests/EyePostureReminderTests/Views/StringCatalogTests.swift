@@ -145,7 +145,7 @@ final class StringCatalogTests: XCTestCase {
             "settings.notifications.disabledTitle", "settings.notifications.disabledBody",
             "settings.notifications.openSettings",
             "overlay.dismissButton", "overlay.countdown.label", "overlay.settingsLabel",
-            "overlay.settingsButton",
+            "overlay.settingsButton", "overlay.doneButton",
             "onboarding.welcome.title", "onboarding.welcome.subtitle",
             "onboarding.welcome.nextButton",
             "onboarding.permission.title", "onboarding.permission.enableButton",
@@ -209,11 +209,15 @@ final class StringCatalogTests: XCTestCase {
             "settings.smartPause.pauseDuringFocus.hint",
             "settings.smartPause.pauseWhileDriving",
             "settings.smartPause.pauseWhileDriving.hint",
-            // reminder.* keys (8) — notification/overlay text used in system banners
+            // reminder.* keys — notification/overlay text and supportive subtitles
             "reminder.eyes.title", "reminder.eyes.overlayTitle",
             "reminder.eyes.notificationTitle", "reminder.eyes.notificationBody",
+            "reminder.eyes.overlaySupportiveText",
             "reminder.posture.title", "reminder.posture.overlayTitle",
-            "reminder.posture.notificationTitle", "reminder.posture.notificationBody"
+            "reminder.posture.notificationTitle", "reminder.posture.notificationBody",
+            "reminder.posture.overlaySupportiveText",
+            // overlay.doneButton — primary CTA on redesigned overlay
+            "overlay.doneButton"
         ]
         for key in expectedKeys {
             XCTAssertFalse(str(key).isEmpty, "Key '\(key)' must resolve to a non-empty string")
@@ -276,7 +280,8 @@ final class StringCatalogTests: XCTestCase {
     func test_noDuplicateKeys_overlayScreen() {
         let keys = [
             "overlay.dismissButton", "overlay.countdown.label", "overlay.countdown.value",
-            "overlay.settingsLabel", "overlay.settingsButton", "overlay.settingsButton.hint"
+            "overlay.settingsLabel", "overlay.settingsButton", "overlay.settingsButton.hint",
+            "overlay.doneButton"
         ]
         XCTAssertEqual(Set(keys).count, keys.count, "Overlay screen keys must be unique")
     }
@@ -303,6 +308,7 @@ final class StringCatalogTests: XCTestCase {
             "settings.notifications.openSettings.hint",
             "overlay.dismissButton", "overlay.countdown.label", "overlay.countdown.value",
             "overlay.settingsLabel", "overlay.settingsButton", "overlay.settingsButton.hint",
+            "overlay.doneButton",
             "onboarding.welcome.illustrationLabel", "onboarding.welcome.title",
             "onboarding.welcome.subtitle", "onboarding.welcome.body",
             "onboarding.welcome.nextButton", "onboarding.welcome.nextButton.hint",
@@ -370,11 +376,13 @@ final class StringCatalogTests: XCTestCase {
             "overlay.dismissButton.hint", "home.settingsButton.hint",
             // onboarding.welcome.disclaimer
             "onboarding.welcome.disclaimer",
-            // reminder.* keys (8) — notification/overlay text
+            // reminder.* keys — notification/overlay text and supportive subtitles
             "reminder.eyes.title", "reminder.eyes.overlayTitle",
             "reminder.eyes.notificationTitle", "reminder.eyes.notificationBody",
+            "reminder.eyes.overlaySupportiveText",
             "reminder.posture.title", "reminder.posture.overlayTitle",
-            "reminder.posture.notificationTitle", "reminder.posture.notificationBody"
+            "reminder.posture.notificationTitle", "reminder.posture.notificationBody",
+            "reminder.posture.overlaySupportiveText"
         ]
         XCTAssertEqual(
             Set(allKeys).count,

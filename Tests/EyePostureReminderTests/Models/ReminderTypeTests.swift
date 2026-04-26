@@ -133,6 +133,18 @@ final class ReminderTypeTests: XCTestCase {
         XCTAssertNotEqual(ReminderType.eyes.overlayTitle, ReminderType.posture.overlayTitle)
     }
 
+    func test_eyes_overlaySupportiveText_isNonEmpty() {
+        XCTAssertFalse(ReminderType.eyes.overlaySupportiveText.isEmpty)
+    }
+
+    func test_posture_overlaySupportiveText_isNonEmpty() {
+        XCTAssertFalse(ReminderType.posture.overlaySupportiveText.isEmpty)
+    }
+
+    func test_overlaySupportiveTexts_areDistinct() {
+        XCTAssertNotEqual(ReminderType.eyes.overlaySupportiveText, ReminderType.posture.overlaySupportiveText)
+    }
+
     // MARK: - Init from categoryIdentifier
 
     func test_initFromCategoryIdentifier_eyeReminder_returnsEyes() {

@@ -1751,6 +1751,39 @@
           }
         }
       }
+    },
+    "overlay.doneButton": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Done"
+          }
+        }
+      }
+    },
+    "reminder.eyes.overlaySupportiveText": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Look away and soften your focus."
+          }
+        }
+      }
+    },
+    "reminder.posture.overlaySupportiveText": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Roll your shoulders and reset."
+          }
+        }
+      }
     }
   }
 }

@@ -30,18 +30,21 @@ struct OverlayView: View {
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
-            // MARK: Blur background
-            Color.clear
-                .background(.ultraThinMaterial)
-                .ignoresSafeArea()
+            // MARK: Restful gradient background
+            LinearGradient(
+                colors: [AppColor.background, AppColor.surfaceTint],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
 
-            // MARK: × Dismiss — fixed top-right corner
+            // MARK: × Dismiss — fixed top-right corner (secondary escape)
             Button(
                 action: { performDismiss(method: .button) },
                 label: {
                     Image(systemName: AppSymbol.dismiss)
                         .font(AppFont.overlayDismiss)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(AppColor.textSecondary)
                         .frame(minWidth: AppLayout.minTapTarget, minHeight: AppLayout.minTapTarget)
                         .contentShape(Rectangle())
                 }
@@ -56,22 +59,39 @@ struct OverlayView: View {
             VStack(spacing: AppSpacing.lg) {
                 Spacer()
 
-                // Icon — decorative; headline conveys the meaning for VoiceOver
-                Image(systemName: type.symbolName)
-                    .font(.system(size: AppLayout.overlayIconSize))
-                    .foregroundStyle(type.color)
-                    .accessibilityHidden(true)
+                // Icon with soft circular aura — decorative; headline conveys meaning for VoiceOver
+                ZStack {
+                    Circle()
+                        .fill(type.color.opacity(0.12))
+                    Image(systemName: type.symbolName)
+                        .symbolRenderingMode(.hierarchical)
+                        .font(.system(size: AppLayout.overlayIconSize))
+                        .foregroundStyle(type.color)
+                }
+                .frame(
+                    width: AppLayout.overlayIconSize * 1.75,
+                    height: AppLayout.overlayIconSize * 1.75
+                )
+                .accessibilityHidden(true)
 
                 // Headline
                 Text(type.overlayTitle)
                     .font(AppFont.headline)
+                    .foregroundStyle(AppColor.textPrimary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, AppSpacing.xl)
+
+                // Supportive subtitle
+                Text(type.overlaySupportiveText)
+                    .font(AppFont.body)
+                    .foregroundStyle(AppColor.textSecondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, AppSpacing.xl)
 
                 // Circular countdown ring
                 ZStack {
                     Circle()
-                        .stroke(Color.secondary.opacity(0.3), lineWidth: AppLayout.countdownRingStroke)
+                        .stroke(AppColor.separatorSoft, lineWidth: AppLayout.countdownRingStroke)
                         .accessibilityHidden(true)
 
                     Circle()
@@ -89,6 +109,7 @@ struct OverlayView: View {
 
                     Text("\(secondsRemaining)")
                         .font(AppFont.countdown)
+                        .foregroundStyle(AppColor.textPrimary)
                         .monospacedDigit()
                         .contentTransition(
                             reduceMotion ? .identity : .numericText(countsDown: true)
@@ -110,7 +131,16 @@ struct OverlayView: View {
 
                 Spacer()
 
-                // Settings gear — dismisses overlay, revealing SettingsView underneath
+                // Primary "Done" CTA — styled pill button
+                Button(
+                    action: { performDismiss(method: .button) },
+                    label: { Text("overlay.doneButton", bundle: .module) }
+                )
+                .buttonStyle(.primary)
+                .frame(minHeight: AppLayout.minTapTarget)
+                .accessibilityIdentifier("overlay.doneButton")
+
+                // Settings gear — low-prominence link; dismisses overlay and opens Settings
                 Button(
                     action: { performDismiss(method: .settingsTap) },
                     label: {
@@ -118,13 +148,15 @@ struct OverlayView: View {
                             title: { Text("overlay.settingsLabel", bundle: .module) },
                             icon: { Image(systemName: AppSymbol.settings) }
                         )
-                            .font(AppFont.body)
-                            .foregroundStyle(.secondary)
+                        .font(AppFont.body)
+                        .foregroundStyle(AppColor.textSecondary)
                     }
                 )
                 .frame(minHeight: AppLayout.minTapTarget)
                 .accessibilityLabel(Text("overlay.settingsButton", bundle: .module))
                 .accessibilityHint(Text("overlay.settingsButton.hint", bundle: .module))
+
+                Spacer(minLength: AppSpacing.lg)
             }
             .padding(AppSpacing.xl)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
