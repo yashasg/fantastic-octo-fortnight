@@ -217,6 +217,7 @@ struct OverlayView: View {
     // MARK: - Timer
 
     private func startTimer() {
+        guard timer == nil else { return }
         let newTimer = Timer(timeInterval: 1, repeats: true) { _ in
             if secondsRemaining > 1 {
                 secondsRemaining -= 1
