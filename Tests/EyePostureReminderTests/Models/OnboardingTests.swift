@@ -4,8 +4,8 @@ import XCTest
 /// Tests for the `hasSeenOnboarding` UserDefaults flag that gates
 /// the first-launch vs. returning-user flow in `ContentView`.
 ///
-/// `ContentView` reads the flag via `@AppStorage("hasSeenOnboarding")` which
-/// defaults to `false`. `OnboardingView.finishOnboarding()` writes `true` to
+/// `ContentView` reads the flag via `@AppStorage(AppStorageKey.hasSeenOnboarding)`
+/// which defaults to `false`. `OnboardingView.finishOnboarding()` writes `true` to
 /// `UserDefaults.standard` when the user completes onboarding.
 ///
 /// Tests use an isolated `UserDefaults` suite to avoid polluting the real
@@ -15,8 +15,9 @@ final class OnboardingTests: XCTestCase {
     // MARK: - Constants
 
     /// Key used by `ContentView`'s `@AppStorage` binding and by
-    /// `OnboardingView.finishOnboarding()`. Must stay in sync with both callers.
-    static let hasSeenOnboardingKey = "hasSeenOnboarding"
+    /// `OnboardingView.finishOnboarding()`. Sourced from `AppStorageKey` to
+    /// guarantee tests exercise the same key as production code.
+    static let hasSeenOnboardingKey = AppStorageKey.hasSeenOnboarding
 
     // MARK: - Isolated UserDefaults
 
@@ -40,7 +41,7 @@ final class OnboardingTests: XCTestCase {
     func test_hasSeenOnboardingKey_exactString() {
         XCTAssertEqual(
             Self.hasSeenOnboardingKey,
-            "hasSeenOnboarding",
+            "epr.hasSeenOnboarding",
             "Key must match the @AppStorage key used in ContentView and OnboardingView")
     }
 
@@ -64,7 +65,7 @@ final class OnboardingTests: XCTestCase {
 
     func test_finishOnboarding_setsKeyToTrue() {
         // Simulates OnboardingView.finishOnboarding():
-        // UserDefaults.standard.set(true, forKey: "hasSeenOnboarding")
+        // UserDefaults.standard.set(true, forKey: AppStorageKey.hasSeenOnboarding)
         testDefaults.set(true, forKey: Self.hasSeenOnboardingKey)
         XCTAssertTrue(
             testDefaults.bool(forKey: Self.hasSeenOnboardingKey),
