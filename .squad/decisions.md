@@ -21076,3 +21076,91 @@ After starting all detectors, `PauseConditionManager.startMonitoring()` must see
 - New tokens added: `AppFont.overlayDismiss`, `AppSymbol.snoozed`, `AppAnimation.onboardingTransition`, `AppAnimation.onboardingFadeInCurve`, `AppLayout.onboardingMaxContentWidth`.
 - When adding a new view: check DesignSystem for an existing token before using a literal.
 
+---
+
+## Round 2 Fixes & Quality Review (2026-04-26)
+
+### Decision: Round 2 Architecture Quality Remediation
+
+**Author:** Rusty (iOS Architect)  
+**Date:** 2026-04-26  
+**Status:** Implemented
+
+#### Context
+
+Post-Phase-1-launch quality review identified 4 warnings (W1–W4) and 3 suggestions (S1–S3) in architecture. Round 2 sprint remediates W1 and refines service layer/UI consistency across 6 related issues (#126–135).
+
+#### Decisions
+
+##### W1: Smart Pause Toggle — Double-Write Elimination
+
+**Issue:** `SettingsView` bound Smart Pause toggle to both `$settings.pauseDuringFocus` (SwiftUI binding) AND `.onChange` handler routing through ViewModel. This caused idempotent double-write: `SettingsStore.didSet` fired twice per toggle flip.
+
+**Fix:** Refactored to single ownership path via ViewModel-owned computed property, matching pattern used for other settings toggles (haptics, per-type enables). Removed dual-route inconsistency.
+
+**Impact:** Cleaner architecture; one binding path per setting. Prevents pattern spread to future toggles.
+
+---
+
+##### W2–W4: Deferred to Phase 2
+
+- **W2:** OnboardingPermissionView parameter ordering (swaps dependency/closure for convention consistency) — low priority; no functional impact.
+- **W3:** OverlayManager unconditional resume logging noise — low priority hygiene; audio session cleanup correct but generates harmless error.
+- **W4:** MetricKitSubscriber singleton vs. DI pattern — low priority consistency; not affecting testability.
+
+Flagged for Phase 2 planning; no ship-blocker.
+
+---
+
+##### Regression Tests for Service Layer Bugs (#117–119)
+
+Livingston implemented 8 regression tests covering:
+- Overlay queue behavior under no-active-scene conditions
+- Task cancellation on willResignActive path
+- Pause condition initial seeding (focusMode, carPlay, driving)
+
+All tests passing; no flakiness observed.
+
+---
+
+##### UI Consistency Fixes (Linus)
+
+1. **Hardcoded 44 (grid dimension)** → `DesignSystem.spacing.grid44` — replaced with design token
+2. **Reduce Motion enforcement** → disables animation entirely (not shortened duration) — consistent application
+3. **Bell icon state** → `bell` (muted) vs. `bell.fill` (active) — aligned with SF Symbols standard
+4. **Smart Pause double-write** — removed as part of W1 fix
+
+---
+
+##### Overlay Queue Race Condition Fix (Basher)
+
+`showOverlay()` could drop reminders on rapid dismiss sequences due to concurrent drain calls. Added atomic guard flag `isProcessingQueue` to prevent concurrent drain paths. Queue now maintains FIFO guarantees even under stress test.
+
+---
+
+#### Metrics
+
+- **Issues Closed:** 6 (CI swiftlint #126, legal docs #127, impl docs #128/#135, regression tests #129, UI fixes #130–132/#134, queue race #133)
+- **Tests Added:** 8 regression tests
+- **Warnings Resolved:** 1 (W1 double-write)
+- **Production Status:** Ready for TestFlight
+
+---
+
+#### S1–S3 Suggestions (No Action Required)
+
+**S1:** SettingsViewModelBox optional chaining can be simplified via eager init — readability note; not a bug.
+
+**S2:** ScreenTimeTracker deinit accesses @MainActor properties from non-main context — safe in practice (AppCoordinator owner ensures main-thread dealloc); compiler doesn't enforce; consider explicit cleanup via stopMonitoring().
+
+**S3:** ReminderScheduler dead code paths exist by design for test coverage — documented and intentional; extraction to ReminderCleaner deferred to Phase 2 cleanup.
+
+---
+
+#### Next Steps
+
+- Merge Round 2 decisions into main decisions.md (complete)
+- Prepare TestFlight build from main branch
+- Archive orchestration/session logs
+- Schedule Phase 2 planning to address W2–W4 + suggestions
+
