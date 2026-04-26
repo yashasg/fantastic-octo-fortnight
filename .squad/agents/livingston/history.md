@@ -283,3 +283,34 @@ ContentView, HomeView, SettingsView, OverlayView, ReminderRowView, LegalDocument
 **Learnings:**
 - When tasks are bundled in team commits, a subsequent agent editing the same stubs writes a no-diff change — `git diff` correctly shows 0 lines because HEAD already contains the implementations.
 - Always verify `git show HEAD:file` to confirm committed content before assuming changes need to be made.
+
+---
+
+### 2026-04-26 — Issue #129: Regression Tests for Round 1 Service Fixes (#117-#119)
+
+**Status:** RESOLVED — 8 new regression tests added in `RegressionTests.swift`, committed as `c27b2e0`.
+
+**Tests added:**
+
+**#119 — PauseConditionManager cold-start focus seed (3 tests):**
+- `test_coldStart_focusAlreadyActive_startMonitoring_setsPaused`: MockFocusStatusDetector with `isFocused=true` (via `simulateFocusChange(true)` before PCM creation) → `startMonitoring()` → assert `isPaused == true`. Catches regression if the seed call (`update(.focusMode, isActive: focusDetector.isFocused && ...)`) is removed from `startMonitoring()`.
+- `test_coldStart_focusInactive_startMonitoring_doesNotPause`: complement test — `isFocused=false` → `isPaused` stays false.
+- `test_coldStart_focusAlreadyActive_startMonitoring_firesCallback`: verifies `onPauseStateChanged` fires true immediately on `startMonitoring()` when focus was already active.
+
+**#118 — ScreenTimeTracker double-resign one-reset (1 async test, ~6s):**
+- `test_doubleWillResignActive_secondCancelsFirst_onlyOneResetOccurs`: threshold=5.5s. Posts `willResignActive` twice + immediate `didBecomeActive`. With fix, Task1 cancelled by Task2, then Task2 cancelled by `didBecomeActive` → no reset → threshold fires at ~6s. With bug, Task1 orphaned, fires `resetAll()` at ~5s, wiping counter → threshold fires at ~11s. 9s timeout catches the regression.
+
+**#117 — OverlayManager queue-on-no-scene (4 tests):**
+- `test_showOverlay_withNoActiveWindowScene_doesNotCrash`: no crash with no scene.
+- `test_showOverlay_withNoActiveWindowScene_doesNotFireDismissCallbackImmediately`: `onDismiss` must NOT fire synchronously for a queued request.
+- `test_showOverlay_withNoActiveWindowScene_isOverlayVisibleRemainsFlase`: `isOverlayVisible` stays false.
+- `test_showOverlay_multipleCallsWithNoScene_allQueueWithoutCrash`: three queued calls + `clearQueue()` without crash.
+- **Documented gap**: full FIFO queue → scene-activation → dequeue test requires UIWindowScene (simulator integration suite). Comment in test class explains the gap and points to `AppCoordinatorTests.test_handleNotification_eyes_thenPresentPending_callsShowOverlayWithEyes` for coordinator-level verification.
+
+**Also fixed (pre-existing build failure):**
+- `SettingsView.swift` lines 374/388: commit `ab78b19` used iOS 17+ `.onChange(of:){ _, newValue in }` syntax. Reverted to iOS 16-compatible single-parameter form `{ newValue in }`.
+
+**Learnings:**
+- `MockFocusStatusDetector.simulateFocusChange()` before PCM construction is the correct pattern to seed pre-existing detector state — `onFocusChanged` is nil before registration so the callback is a no-op, but `isFocused` is correctly set.
+- Detecting "only one reset" for ScreenTimeTracker requires threshold > grace period (5s) so the orphaned Task fires *before* the threshold would naturally be reached. With threshold < 5s, both fix and bug paths fire the threshold before the orphan fires (no observable difference).
+- `.onChange(of:){ _, newValue in }` is iOS 17+ API. The iOS 16-compatible form is `.onChange(of:){ newValue in }`. Always use single-parameter form in this project (iOS 16+ target).
