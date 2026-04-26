@@ -7,6 +7,36 @@
 
 ## Learnings
 
+### 2026-04-28 — Phase 2C: Reusable Component Library (Issue #164)
+
+- **File created:** `EyePostureReminder/Views/Components.swift` — new standalone file, not appended to DesignSystem.swift, to keep token definitions separate from composed UI components.
+- **WellnessCard ViewModifier** — `surface` background + `radiusCard` clip + `separatorSoft` strokeBorder overlay. Optional `elevated: Bool` flag applies `SoftElevation` via an internal `applyIf` helper instead of duplicating the modifier chain; keeps the public API clean (`.wellnessCard(elevated: true)`).
+- **StatusPill View** — `Capsule()` clip (not `radiusPill` literal) is semantically clearer for full-pill shapes. `surfaceTint` background + `primaryRest` foreground. Inner HStack with `xs` spacing, `caption` font.
+- **PrimaryButtonStyle** — adopts `ButtonStyle` (not `ViewModifier`) so it integrates naturally with `.buttonStyle(.primary)` syntax. `radiusPill` corner radius, `primaryRest` fill, `.white` foreground, 0.98 scale on press animated with a fast `.easeOut(0.12s)`.
+- **`extension ButtonStyle where Self == PrimaryButtonStyle`** — enables the ergonomic `.buttonStyle(.primary)` callsite without extra imports. Swift `where Self ==` static accessor is the idiomatic pattern.
+- **IconContainer View** — icon size computed as `size * 0.44` to maintain optical balance inside the circular frame. Defaults: size = 36pt, color = `primaryRest`. Consumers can override color for secondary/accent icons.
+- **SectionHeader View** — `.uppercased()` + `caption` + `.semibold` weight + `textSecondary` foreground. Max-width leading alignment with `md` horizontal padding keeps it consistent with List section headers.
+- **`applyIf` helper** — `@ViewBuilder` conditional transform avoids force-unwrapping or AnyView erasure when optionally chaining modifiers. Marked `private extension View` to avoid polluting the global namespace.
+- **Build verified clean** — `** BUILD SUCCEEDED **` on `xcodebuild build -scheme EyePostureReminder -destination 'platform=iOS Simulator,name=iPhone 17 Pro'`.
+- **Commit:** `671d8c0` on `feature/restful-grove`.
+
+### 2026-04-28 — Phase 1B: Radius, Elevation, and xxl Spacing Tokens (Issue #160)
+
+- **xxl spacing added** — `AppSpacing.xxl = 40` appended to the existing 4pt-grid enum. Keeps the existing xs/sm/md/lg/xl sequence consistent; xxl fills the gap above 32pt used by hero/screen-level spacing.
+- **Corner radius tokens** — Added four static constants directly inside `AppLayout` (same enum, new `// MARK: Corner Radii` sub-section):
+  - `radiusSmall = 12` — compact controls (chips, tags)
+  - `radiusCard = 20` — content cards, modals
+  - `radiusLarge = 28` — large surfaces, hero cards
+  - `radiusPill = 999` — pill/capsule shape (large enough for any reasonable control)
+  - Rationale: kept inside `AppLayout` rather than a new struct to avoid over-fragmenting the namespace; a sub-comment block is sufficient at this token count.
+- **SoftElevation ViewModifier** — `struct SoftElevation: ViewModifier` + `View.softElevation()` convenience extension added at the bottom of DesignSystem.swift.
+  - Light mode: `.shadow(color: green-gray at 10% opacity, radius: 8, x: 0, y: 3)` — soft, directional, low chroma so it doesn't clash with brand colours.
+  - Dark mode: `.overlay(RoundedRectangle(cornerRadius: AppLayout.radiusCard).strokeBorder(Color.primary.opacity(0.10), lineWidth: 0.5))` — no shadow (would be invisible anyway on dark backgrounds); thin system-adaptive border provides surface separation.
+  - `@Environment(\.colorScheme)` is the correct hook — adapts immediately to system/per-view appearance overrides without any additional Combine plumbing.
+- **AppColor untouched** — Linus owns all color assets; the shadow colour in SoftElevation uses a raw `Color(red:green:blue:)` literal (neutral warm-grey) rather than an AppColor token to stay out of his namespace.
+- **Build verified clean** — `xcodebuild build` succeeded with `** BUILD SUCCEEDED **` before commit.
+- **Commit:** `1a9e1a2` on `feature/restful-grove`.
+
 ### 2026-04-27 — App Store submission blockers: Info.plist + Entitlements
 
 - **NSMotionUsageDescription already existed** in `EyePostureReminder/Info.plist` (line 31) with a short value. Updated to a more specific, safety-focused string: "Eye & Posture Reminder uses motion data to detect when you're driving and automatically pause reminders for your safety." This satisfies Apple's requirement for CMMotionActivityManager usage.
