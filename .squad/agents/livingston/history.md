@@ -343,3 +343,33 @@ Three cold-start regression tests exist for Focus Mode, but CarPlay and Driving 
 Only the double-resign path is tested. A single resign followed by return-to-active (the normal flow) has no dedicated test in this class. This is covered tangentially by `ScreenTimeTrackerTests` but not as an explicit regression guard for #118.
 
 **Summary:** Suite is fully green at 857 tests. Round 2 tests are logically correct and well-documented. Two new warnings (method typo + timing fragility), two low-priority suggestions (missing cold-start guard for CarPlay/Driving, missing #118 complement test).
+
+---
+
+### 2026-04-26 — Issue #110: UI Test File Preparation for xcodeproj Integration
+
+**Status:** RESOLVED — all 4 UI test files prepared for the xcodeproj UITest target.
+
+**Inventory (31 tests across 4 files):**
+
+| File | Tests | What It Tests |
+|---|---|---|
+| `HomeScreenTests.swift` | 7 | Home screen elements present on launch, snooze button via settings, nav bar title, settings button hittability, global toggle status label change, status label non-empty, settings sheet open/close cycle |
+| `OnboardingFlowTests.swift` | 7 | Welcome screen disclaimer visibility, full onboarding flow completion, welcome title visible, Next→Permission screen navigation, skip permission→setup screen, customize button exists, customize button completes onboarding |
+| `SettingsFlowTests.swift` | 13 | Settings sheet open from home, Done button dismissal, legal section existence, Terms/Privacy sheet open + dismiss, Smart Pause toggles exist + can be tapped, global toggle visible + state change, preferences toggle count, haptics toggle count |
+| `OverlayTests.swift` | 4 | Dismiss button identifier correct, overlay not shown on normal launch (2 tests), countdown accessibility label key documented |
+
+**XCUITest compatibility:** All 4 files are fully compatible — `import XCTest` only (no SPM-specific imports), all use `XCUIApplication`, `app.launchArguments`, and standard XCUI element queries. No references to unit test target helpers. Zero compilation issues expected once the xcodeproj UITest bundle target exists.
+
+**App launch argument support:** Already wired in `AppDelegate.applyUITestLaunchArguments()` for `--skip-onboarding` and `--reset-onboarding`. No app-side changes needed.
+
+**Changes made:**
+- Removed `⚠️ SPM LIMITATION` comment blocks from all 4 files (infrastructure decision resolved by Rusty/Basher in #110)
+- Created `UITestHelpers.swift` with `TestLaunchArguments` enum (string constants for all 4 launch args) and `XCUIApplication` extension helpers (`launchWithSkippedOnboarding()`, `launchWithOnboarding()`)
+- Updated all `setUpWithError()` methods to use `app.launchWithSkippedOnboarding()` / `app.launchWithOnboarding()` instead of raw strings
+- Renamed all 31 test methods from camelCase (`testHomeScreenLoads`) to `test_screen_action_expectedResult` pattern (`test_homeScreen_onLaunch_displaysRequiredElements`), consistent with the unit test suite
+- Updated `README.md`: removed "not yet runnable" caveat, added `TestLaunchArguments` table with all 4 constants, documented helper extension usage, updated all 31 method names
+
+**Key insight:** When multiple squad agents work the same issue concurrently (Rusty/Basher on xcodeproj infrastructure, Livingston on test files), the infrastructure commit (`fe241ac`) may include the test file changes already. Always run `git show HEAD:file` or `git diff HEAD~1 -- file` before making changes to confirm whether a previous agent has already applied them. An empty commit is the result of writing identical content to files that were already in that state.
+
+**Test naming convention confirmed:** All UI tests now follow `test_screen_action_expectedResult` (underscores, not camelCase). `screen` is the XCUITest concept level (homeScreen, onboarding, settings, overlay).
