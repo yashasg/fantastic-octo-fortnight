@@ -365,7 +365,7 @@ private struct SettingsSmartPauseSection: View {
             Toggle(isOn: $settings.pauseDuringFocus) {
                 Label(
                     String(localized: "settings.smartPause.pauseDuringFocus", bundle: .module),
-                    systemImage: "moon.fill"
+                    systemImage: AppSymbol.pauseDuringFocus
                 )
             }
             .tint(AppColor.reminderBlue)
@@ -379,7 +379,7 @@ private struct SettingsSmartPauseSection: View {
             Toggle(isOn: $settings.pauseWhileDriving) {
                 Label(
                     String(localized: "settings.smartPause.pauseWhileDriving", bundle: .module),
-                    systemImage: "car.fill"
+                    systemImage: AppSymbol.pauseWhileDriving
                 )
             }
             .tint(AppColor.reminderBlue)

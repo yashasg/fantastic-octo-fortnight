@@ -108,10 +108,10 @@ private struct SetupPreviewCard: View {
                 Text(title)
                     .font(AppFont.bodyEmphasized)
                 HStack(spacing: AppSpacing.sm) {
-                    Label(interval, systemImage: "clock")
+                    Label(interval, systemImage: AppSymbol.clock)
                         .font(AppFont.caption)
                         .foregroundStyle(.secondary)
-                    Label(duration, systemImage: "timer")
+                    Label(duration, systemImage: AppSymbol.timer)
                         .font(AppFont.caption)
                         .foregroundStyle(.secondary)
                 }

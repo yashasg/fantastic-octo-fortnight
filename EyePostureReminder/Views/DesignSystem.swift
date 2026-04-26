@@ -126,7 +126,15 @@ enum AppSymbol {
     /// Snoozed / paused state icon
     static let snoozed       = "moon.zzz.fill"
     /// Bell / snooze-cancel icon
-    static let bell          = "bell.fill"
+    static let bell              = "bell.fill"
+    /// Smart Pause — pause during Focus mode
+    static let pauseDuringFocus  = "moon.fill"
+    /// Smart Pause — pause while driving
+    static let pauseWhileDriving = "car.fill"
+    /// Interval / clock icon
+    static let clock             = "clock"
+    /// Break duration / timer icon
+    static let timer             = "timer"
 }
 
 // MARK: - Layout Constants
