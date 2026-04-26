@@ -7,6 +7,13 @@
 
 ## Learnings
 
+### 2026-04-25: Fix #128 and #135 — IMPLEMENTATION_PLAN.md Stale Content
+
+- **#128 (§4.2):** Changed "swipe-down gesture" to "swipe-up gesture" per Decision #2 (team decided swipe-UP for overlay dismiss).
+- **#135 (§9):** Replaced old wall-clock data flow diagram (showing `ReminderScheduler.reschedule()`, `repeat: true`, foreground/background notification paths) with ScreenTimeTracker-based flow: accumulate screen-on time → threshold → `AppCoordinator` → `OverlayManager` → dismiss → `ScreenTimeTracker.reset()` re-arms.
+- **#135 (§12):** Updated phased delivery from stale 3-phase table to 4-phase table matching ROADMAP.md: Phase 0 (Foundation ✅), Phase 1 (MVP ✅), Phase 2 (Polish 🔄), Phase 3 (Advanced 🔄). Added status indicators and expanded scope descriptions.
+- **Commits:** Two separate commits, one per issue.
+
 ### 2026-04-25: Roadmap Audit & Status Update
 
 - **Context:** Project evolved significantly from initial Phase 0 planning. Phase 1 (MVP) fully shipped. Phase 2 (Polish) ~80% complete with screen-time triggers, smart pause (Focus/CarPlay/driving), onboarding, snooze, haptics, accessibility, and data-driven config all delivered or in final QA.
