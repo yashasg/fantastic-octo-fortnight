@@ -386,3 +386,25 @@ Early architecture foundational work: Models, Services, ViewModels, DesignSystem
 - Rewrote `OverlayManagerTests` to use `makeManager()` factory instead of `.shared`. Removed 2 singleton-identity tests (`test_shared_isNotNil`, `test_shared_returnsSameInstance`) that no longer apply. Eliminated `tearDown` that cleaned shared state.
 - Updated doc comments in `AppCoordinator.swift` and `AppCoordinatorTests.swift`.
 - All 38 OverlayManager + AppCoordinator tests pass. Build clean, zero warnings on changed files.
+
+### 2026-04-26 — Issue #110: UI Test Architecture Proposal
+
+**What I did:**
+- Analyzed all 31 XCUITest methods across 4 files (`HomeScreenTests`, `OnboardingFlowTests`, `SettingsFlowTests`, `OverlayTests`) — all use `XCUIApplication` launch/query patterns incompatible with SPM test targets.
+- Evaluated 5 options: minimal xcodeproj, full xcodeproj, ViewInspector, Xcode-generated project, Swift Testing macros.
+- **Recommended Option 1: Minimal .xcodeproj containing only the UITest bundle target.** App and unit tests stay in Package.swift. Zero changes to existing test files.
+- Ruled out ViewInspector — cannot test app launch, multi-view flows, overlay window presentation, or accessibility in rendered context. Would require full rewrite of all 31 tests.
+- Ruled out Swift Testing — no XCUITest equivalent; irrelevant to the problem.
+- Ruled out `swift package generate-xcodeproj` — deprecated/removed; Xcode's transient workspace doesn't support adding targets.
+- Proposed CI integration: separate `ui-test` job in ci.yml (UI tests are slower and flakier than unit tests).
+- Proposed `uitest` subcommand for `scripts/build.sh`.
+- Estimated effort: 3-4 hours total across team.
+
+**Documentation:** `.squad/decisions/inbox/rusty-ui-test-architecture.md`
+
+## Learnings
+
+- **SPM fundamentally cannot host XCUITest targets.** SPM's `.testTarget` creates XCTest unit test bundles only. XCUITest requires a UITest bundle target type (`com.apple.product-type.bundle.ui-testing`), which is an Xcode project concept with no SPM equivalent. This is an Apple toolchain limitation, not a configuration issue.
+- **Minimal xcodeproj is the pragmatic bridge.** When an SPM-first project needs XCUITest, the lowest-maintenance solution is an xcodeproj that contains ONLY the UITest target, referencing the SPM-built app. Drift risk is minimal because the xcodeproj has no app target to keep in sync.
+- **ViewInspector tests view structure, not rendered behavior.** It's a complement for view-level unit tests, not a replacement for flow-based UI tests that verify navigation, accessibility, and multi-screen interactions.
+- **`swift package generate-xcodeproj` is dead.** Deprecated since Swift 5.6. Not a viable path for any tooling decisions going forward.
