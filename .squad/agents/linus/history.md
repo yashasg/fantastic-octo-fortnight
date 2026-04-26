@@ -7,6 +7,57 @@
 
 ## Learnings
 
+### 2026-04-27 — UI Code Quality & Readability Audit
+
+**SettingsView.swift — SettingsViewModelBox pattern:**
+- The `@StateObject private var vmBox = SettingsViewModelBox()` wrapper exists to give `SettingsViewModel` a SwiftUI-managed lifecycle without `@Published` observation triggering re-renders. The code comment at the top of the class is the only explanation — new devs will find this confusing. The intent should be documented inline more directly: "we need `@StateObject` lifecycle but no reactive observation."
+
+**SettingsView.swift — body length:**
+- `swiftlint:disable:next type_body_length` at line 13 is a canary. The `body` spans ~350 lines with 8 Sections inline. At minimum, the Snooze section (~90 lines) and the Smart Pause section warrant extraction as private subviews. This is the single biggest readability gap.
+
+**Missing AppFont token — OverlayView dismiss button:**
+- `OverlayView.swift` line 43: `.font(.system(.title).weight(.medium))` for the × dismiss button is a one-off, not using `AppFont`. The closest existing token is `AppFont.headline` (`.title.weight(.bold)`) — this should either use that or get a new `AppFont.overlayDismiss` token.
+
+**UIKit screen height in SwiftUI — OverlayView:**
+- `OverlayView.swift` lines 184-186: The manual dismiss slide animation queries `UIApplication.shared.connectedScenes...screen.bounds.height` and falls back to `1000`. This UIKit call inside a SwiftUI view is fragile — prefer a `GeometryReader` or `@Environment(\.displayScale)` + `UIScreen.main.bounds` approach. The magic `1000` fallback is arbitrary.
+
+**Hardcoded animation durations outside AppAnimation:**
+- `ContentView.swift` line 19: `.easeInOut(duration: 0.4)` — onboarding transition not in `AppAnimation`.
+- `OnboardingView.swift` line 65: `.easeOut(duration: 0.4).delay(0.1)` — not in `AppAnimation`.
+- `OnboardingView.swift` line 64: `.linear(duration: 0.15)` — reduce-motion variant not in `AppAnimation`.
+- `OverlayView.swift` lines 182, 205: `0.05` grace delay constant repeated twice — should be `AppAnimation.reduceMotionGraceDuration`.
+
+**AppSymbol gaps:**
+- `"moon.zzz.fill"` appears in both `HomeView.swift` line 22 and `SettingsView.swift` line 115 — a literal in two places. Should be `AppSymbol.snoozed` (or similar).
+- `"bell.fill"` (SettingsView line 137), `"moon.fill"` (line 216), `"car.fill"` (line 232) are all one-offs inline in SettingsView; should be added to `AppSymbol`.
+
+**AppLayout gap — onboarding content width:**
+- `maxWidth: 540` iPad constraint appears in three separate onboarding views (Welcome, Permission, Setup). Should be `AppLayout.onboardingMaxContentWidth`.
+
+**Consistency — minTapTarget:**
+- `OnboardingPermissionView.swift` line 65 uses `.frame(minHeight: 44)` instead of `.frame(minHeight: AppLayout.minTapTarget)`. Small inconsistency.
+
+**Missing preview — ReminderRowView:**
+- `ReminderRowView.swift` is the only view file with no `#Preview`. The expand/collapse picker logic makes it the hardest to develop without one.
+
+**Snooze section indentation cosmetic bug — SettingsView.swift:**
+- Lines 106-107: The `Section {` body is not indented under `if settings.globalEnabled {`. The closing `}` has an explanatory comment but the opener is visually confusing.
+
+**Timer pattern in OverlayView:**
+- `Timer(timeInterval:repeats:block:)` + `RunLoop.main.add` is correct but old-style. Modern equivalent using `Task { for _ in 1... { try await Task.sleep(for: .seconds(1)); ... } }` would be more idiomatic for iOS 16+ / Swift 5.9+. Not a bug, a style note.
+
+**OnboardingScreenWrapper placement:**
+- Defined at the bottom of `OnboardingView.swift` but used by all 3 sibling onboarding views. As it grows (e.g., if entrance animation variations are added), it should live in its own file.
+
+**What is solid:**
+- UIKit bridge (`OverlayManager.swift`) is clean: `[weak self]`, window nil'd after dismiss, `@MainActor` throughout, no retain cycles detected.
+- `reduceMotion` respected in every animated view (`OverlayView`, `SettingsView`, `ContentView`, `OnboardingScreenWrapper`).
+- Design system (`DesignSystem.swift`) is comprehensive and well-documented with WCAG ratios.
+- `@Binding` usage in `ReminderRowView` is correct and idiomatic.
+- Preview providers exist on all views except `ReminderRowView`.
+- String catalog usage is consistent; no hardcoded user-facing strings found.
+- Accessibility (labels, hints, identifiers, `accessibilityElement`, `accessibilityHidden`) is thorough across all views.
+
 ## Core Context
 
 **Phase 1 UI Layer (M1.2, M1.5) — 2026-04-24 to 2026-04-25:**
@@ -270,3 +321,43 @@ UI layer ready for Phase 2 expansion. Legal content handoff to human team.
 ### 2026-04-24 — UI Layer Phase 1 (M1.2, M1.5)
 
 Early phase 1 UI implementation decisions (OverlayView lifecycle, swipe gestures, animations, accessibility, SettingsViewModel patterns, string catalog) and legal/disclaimer/settings integration completed. All build verified and tests passing. Preserved for reference; current active work continues in Phase 2 Views expansion.
+
+### 2026-04-26 — Quality Sweep: UI Code Quality Audit
+
+**Quality sweep findings from 8-agent parallel audit:**
+
+**7 Warnings (should fix before Phase 2 UI work):**
+
+1. **W-1: SettingsView.body too long (~350 lines)** — Snooze section alone ~90 lines. Linter suppression (`type_body_length`) masks structural debt. **Action:** Extract `SnoozeSectionView`, `SmartPauseSectionView`, `NotificationWarningSection` as private subviews or extension file. Coordinate with Saul's long-method threshold audit (40-line max).
+
+2. **W-2: OverlayView dismiss button font is one-off** — Uses `Font.system(.title).weight(.medium)`, not AppFont token. **Action:** Add `AppFont.overlayDismiss` or reuse `AppFont.headline` if weight difference acceptable.
+
+3. **W-3: Magic `1000` fallback for screen height** — `UIApplication.shared.connectedScenes...screen.bounds.height ?? 1000` is arbitrary, too short for large screens. **Action:** Use `GeometryReader` or `UIScreen.main.nativeBounds.height`.
+
+4. **W-4: Hardcoded `"moon.zzz.fill"` in 2 files** — Appears in `HomeView.swift` L22 and `SettingsView.swift` L115. Symbol rename will miss one. **Action:** Add `AppSymbol.snoozed = "moon.zzz.fill"`.
+
+5. **W-5: Hardcoded animation durations not in AppAnimation** — `ContentView` 0.4s, `OnboardingView` 0.4s + 0.1s delay, `OverlayView` 0.05s grace delays. **Action:** Add `AppAnimation.onboardingTransition`, `AppAnimation.reduceMotionGraceDuration`.
+
+6. **W-6: ReminderRowView missing #Preview** — Only view file without one. Expand/collapse Picker logic needs preview. **Action:** Add two previews (enabled/disabled states).
+
+7. **W-7: OnboardingPermissionView uses raw `44`** — Should use `AppLayout.minTapTarget`. **Action:** Replace hardcoded value.
+
+**1 Warning from accessibility sweep (Tess):**
+- **OnboardingScreenWrapper deviates from Reduce Motion pattern** — Currently uses `.linear(duration: 0.15)` fade. Team pattern (OverlayView, SettingsView, ReminderRowView) is `nil` (no animation). **Action:** Use `if reduceMotion { appeared = true } else { withAnimation(...) }`.
+
+**6 Suggestions (lower urgency):**
+- S-1: AppSymbol gaps (`snoozeCancel`, `focusPause`, `drivingPause`)
+- S-2: `maxWidth: 540` iPad constraint duplicated across 3 onboarding screens → add `AppLayout.onboardingMaxContentWidth`
+- S-3: Snooze section indentation in SettingsView (cosmetic)
+- S-4: OnboardingScreenWrapper placement (consider separate file if grows)
+- S-5: SetupPreviewCard `.title2` font — add AppFont token or confirm intentional
+- S-6: OverlayView Timer → async Task alternative for iOS 16+ idiom
+
+**Accessibility: Clean** — All interactive elements have labels/hints, VoiceOver navigation solid, Dynamic Type correct, color contrast ✅, design system consistent, HIG compliant, Reduce Motion respected (except W above), Dark mode ✅.
+
+**Cross-cutting impacts:**
+- SettingsView body decomposition (W-1) affects Saul's long-method audit and Rusty's ViewModel box pattern. Coordinate strategy.
+- AppFont/AppAnimation token gaps (W-2, W-5) affect design system completeness. Batch as one extension task.
+- Reduce Motion inconsistency (OnboardingScreenWrapper) requires alignment — Tess flags it, Linus owns fix.
+
+**Next owner action:** Prioritize W-1 (SettingsView decomposition) and token extensions (W-2/4/5) before Phase 2 UI work.

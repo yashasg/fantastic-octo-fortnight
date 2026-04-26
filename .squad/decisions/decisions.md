@@ -705,3 +705,231 @@ Never add `,OS=latest` to a dynamically discovered device name. If you need a sp
 
 Generated: 2026-04-25T06:20:00Z  
 Scribe: Merged 11 decision files from inbox (basher DI, 4 copilot directives, danny roadmap, livingston tests, rusty architecture, virgil build); inbox ready for deletion
+
+---
+
+# Quality Sweep — 2026-04-26 — 8-Agent Audit Findings
+
+## Rusty: Architecture Quality Review
+
+**Status:** A grade (informational)
+
+### Finding 1: OverlayManager singleton is dead code
+`static let shared` (line 63) duplicates DI protocol injection. **Action:** Remove singleton, let coordinator be the only owner.
+
+### Finding 2: SettingsView ViewModel box pattern needs refactoring
+`@StateObject` wrapping optional `SettingsViewModel?` means `viewModel` is `nil` during first render. **Action:** Construct in init or pass as parameter.
+
+### Finding 3: Protocol extraction per ARCHITECTURE.md
+`SettingsPersisting`, `NotificationScheduling`, `MediaControlling` scattered across service files. **Recommendation:** Extract to `Protocols/` directory for discoverability (future work).
+
+### Finding 4: Timer.publish more idiomatic than Timer + RunLoop
+`OverlayView` uses `Timer(timeInterval: 1)` + `RunLoop.main`. **Suggestion:** Consider `Timer.publish(...).onReceive` pattern.
+
+---
+
+## Saul: Code Quality & Readability Review
+
+**Status:** No criticals; 1 warning; 6 suggestions
+
+### Decision 1: Long-method threshold (40 lines max)
+- `AnalyticsLogger.log()` — 72 lines
+- `AppCoordinator.scheduleReminders()` — 52 lines
+- `SettingsView.body` — 347 lines (suppressed via linter)
+**Rule:** Methods >40 lines require refactoring before merge.
+
+### Decision 2: Consistent `[weak self]` in Task closures
+AppCoordinator line 587 uses strong `self` (inconsistent). **Rule:** All Task closures on reference types must use `[weak self]` unless provably short-lived and documented.
+
+### Decision 3: Linter suppressions require tracking
+`SettingsView` line 13 suppresses `type_body_length`. **Rule:** Suppressions must have tracking issue.
+
+### Decision 4: Test file split threshold
+`StringCatalogTests.swift` (1046 lines) too large. **Rule:** Test files >300 lines should split into focused categories.
+
+---
+
+## Livingston: Test Quality & Coverage Audit
+
+**Status:** 3 criticals, 7 warnings
+
+### Critical 1: OnboardingTests uses wrong UserDefaults key
+**File:** `Tests/EyePostureReminderTests/Models/OnboardingTests.swift` L19  
+Tests use `"hasSeenOnboarding"` but production uses `"epr.hasSeenOnboarding"`. Entire test is false-positive green.  
+**Action:** Fix key to match production `AppStorageKey.hasSeenOnboarding`.
+
+### Critical 2: SettingsStore.resetToDefaults() untested
+Destructive operation (clears + re-seeds all settings) has zero automated tests.  
+**Action:** Implement pending tests before Phase 2 ships.
+
+### Critical 3: UI tests cannot run (SPM limitation)
+31 UITest files require `.xcodeproj` UITest target (SPM doesn't support). Onboarding flow, overlay dismiss, settings navigation have zero end-to-end coverage.  
+**Action:** Team decision on `.xcodeproj` strategy or accept gap.
+
+### Warning: Flakiness risks
+- 200ms sleep in SettingsViewModelTests (recommend 500ms for CI)
+- ScreenTimeTracker 8s timeout marginal for 2-tick sequence
+
+---
+
+## Linus: UI Code Quality Audit
+
+**Status:** 0 criticals; 7 warnings; 6 suggestions
+
+### W-1: SettingsView body too long
+~350 lines; Snooze section alone is ~90 lines. **Fix:** Extract `SnoozeSectionView`, `SmartPauseSectionView`, `NotificationWarningSection`.
+
+### W-2: OverlayView dismiss button font is one-off
+`Font.system(.title).weight(.medium)` bypasses `AppFont`. **Fix:** Add `AppFont.overlayDismiss` token or reuse `AppFont.headline`.
+
+### W-3: Magic `1000` fallback for screen height
+`UIApplication.shared...screen.bounds.height ?? 1000` is arbitrary. **Fix:** Use `GeometryReader` or `UIScreen.main.nativeBounds.height`.
+
+### W-4: Hardcoded `"moon.zzz.fill"` in 2 files
+Appears in `HomeView.swift` L22 and `SettingsView.swift` L115. **Fix:** Add `AppSymbol.snoozed = "moon.zzz.fill"`.
+
+### W-5: Hardcoded animation durations
+- `ContentView` 0.4s easeInOut
+- `OnboardingView` 0.4s easeOut + 0.1s delay
+- `OverlayView` 0.05s grace delays
+**Fix:** Add `AppAnimation.onboardingTransition`, `AppAnimation.reduceMotionGraceDuration`.
+
+### W-6: ReminderRowView missing #Preview
+Only view file without preview. Expand/collapse Picker logic needs one.
+
+### W-7: OnboardingPermissionView uses raw `44` instead of `AppLayout.minTapTarget`
+
+---
+
+## Basher: Service Layer Quality Audit
+
+**Status:** 0 criticals; 4 warnings; 5 suggestions
+
+### Warning 1: OverlayManager.showOverlay() silently drops requests
+When `isOverlayVisible == false` and no active UIWindowScene, request returns early without queueing or callback.  
+**Fix:** Queue request and drain from `presentNextQueuedOverlay()`.
+
+### Warning 2: ScreenTimeTracker.handleWillResignActive() doesn't cancel prior resetTask
+Two Tasks can both survive and call `resetAll()` if notification fires twice.  
+**Fix:** Add `resetTask?.cancel()` before assignment.
+
+### Warning 3: AppCoordinator.cancelAllReminders() reads stale auth status
+Snooze-wake notification gated on `notificationAuthStatus == .authorized`, which may be stale `.notDetermined` on first snooze.  
+**Fix:** Refresh auth status or remove gate.
+
+### Warning 4: PauseConditionManager.focusMode initial state not seeded
+`LiveFocusStatusDetector` only fires on transitions, not initial state. Focus mode already active at launch won't pause until change.  
+**Fix:** Seed initial state after `focusDetector.startMonitoring()`.
+
+---
+
+## Danny: Documentation Audit
+
+**Status:** 2 criticals, 4 warnings
+
+### Critical 1: Legal placeholders in TERMS.md and PRIVACY.md
+`[Date]` and `[Your Company Name]` must be filled before App Store submission.  
+**Owner:** Frank
+
+### Critical 2: UX_FLOWS.md stale (pre-onboarding path)
+Section 2.1 describes Settings + permission prompt path. Actual app has 3-screen onboarding.  
+**Owner:** Reuben
+
+### Warning: IMPLEMENTATION_PLAN.md stale
+Section 9 Data Flow says `repeat: true` (pre-ScreenTimeTracker). Section 1 says "runs timers in background" (inaccurate).  
+**Owner:** Rusty
+
+### Warning: ARCHITECTURE.md stale
+Section 3 says "swift build / swift test" (contradicts README: xcodebuild required). Status header "Foundation" outdated.  
+**Owner:** Rusty
+
+---
+
+## Tess: Accessibility & Design System Audit Pass 3
+
+**Status:** 9/10 health; 0 criticals; 1 warning; 3 suggestions (previously 5 criticals resolved)
+
+### Resolved Issues
+✅ Issue #32 — Onboarding design token violations  
+✅ Issue #33 — ReminderRowView hardcoded a11y strings  
+✅ Issue #35 — Sub-44pt tap targets  
+✅ Issue #36 — 24h time format  
+✅ P0 — `accessibilityViewIsModal` on overlay  
+✅ P0 — ReminderType hardcoded English  
+
+### Warning: OnboardingScreenWrapper deviates from Reduce Motion pattern
+Currently uses `.linear(duration: 0.15)` fade. Team pattern elsewhere is `nil` (no animation).  
+**Fix:** Use `nil` animation, align with OverlayView, SettingsView, ReminderRowView.  
+**Owner:** Linus
+
+### Suggestion 1: LegalDocumentView dismiss button missing `.accessibilityHint`
+VoiceOver announces "Done, button" with no context. Add hint: "Closes this document and returns to Settings".
+
+### Suggestion 2: OverlayView dismiss icon font not a token
+Uses `Font.system(.title).weight(.medium)` instead of AppFont. Add token or comment explaining deviation.
+
+---
+
+## Virgil: CI/CD & Build Config Quality Audit
+
+**Status:** 1 critical; 5 warnings; 4 suggestions
+
+### Critical: Doubled path in scripts/set-build-info.sh L34
+```bash
+# Wrong:
+PLIST_PATH="${SCRIPT_DIR}/../EyePostureReminder/EyePostureReminder/Info.plist"
+# Right:
+PLIST_PATH="${SCRIPT_DIR}/../EyePostureReminder/Info.plist"
+```
+Fallback fires when `INFOPLIST_FILE`/`SRCROOT`/`BUILT_PRODUCTS_DIR`/`PRODUCT_NAME` unset. Latent bug.  
+**Action:** Fix line 34.
+
+### Warning 1: Stale audit scripts committed
+6 one-off scripts from review session:  
+`audit_workflows.sh`, `detailed_audit.py`, `detailed_manual_audit.sh`, `edge_case_audit.sh`, `final_audit.sh`, `script_validation.sh`  
+**Action:** `git rm` all six.
+
+### Warning 2: No concurrency group in ci.yml
+Rapid commits trigger parallel runs, wasting CI minutes on stale jobs.  
+**Fix:** Add concurrency group with `cancel-in-progress: true`.
+
+### Warning 3: Coverage threshold 50% vs stated target 80%
+CI gate too lenient. **Fix:** Raise to 75% with stretch goal 80%.
+
+### Warning 4: deploy-testflight job has no timeout-minutes
+Can hang indefinitely during Apple delays. **Fix:** Add `timeout-minutes: 45`.
+
+### Warning 5: Untracked build artifacts
+`audit_check`, `build_check.log`, `build_output.log` not in `.gitignore`.  
+**Fix:** Add to `.gitignore`.
+
+---
+
+## Cross-Cutting Themes
+
+### Theme 1: SettingsView Decomposition (Saul + Linus + Rusty)
+- Saul: Method length threshold exceeded
+- Linus: W-1 recommends section extraction
+- Rusty: ViewModel box pattern debt
+**Consolidated Action:** Decompose SettingsView.body into extracted subviews.
+
+### Theme 2: AppFont/AppAnimation Token Gaps (Linus + Tess)
+- Linus: W-2, W-5 identify missing tokens
+- Tess: S2 flags OverlayView font deviation
+**Consolidated Action:** Extend AppFont, AppAnimation, AppSymbol for coverage.
+
+### Theme 3: Reduce Motion Consistency (Tess + Linus)
+- Tess: W1 flags OnboardingScreenWrapper 0.15s fade
+- Linus: S-6 suggests async timer pattern
+**Consolidated Action:** Align OnboardingScreenWrapper to `nil` pattern.
+
+### Theme 4: Documentation Stale (Danny + Rusty)
+- Danny: Legal, UX flows, IMPLEMENTATION_PLAN blockers
+- Rusty: ARCHITECTURE.md build instructions
+**Owners Assigned:** Frank (legal), Reuben (UX), Rusty (impl/arch).
+
+### Theme 5: Test Coverage Critical Path (Livingston + Basher)
+- Livingston: 3 criticals (key mismatch, untested method, dead code)
+- Basher: Service layer edge cases identified
+**Action:** Fix OnboardingTests, add resetToDefaults tests, evaluate UI test strategy.
+

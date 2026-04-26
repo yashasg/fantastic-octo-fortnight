@@ -44,3 +44,20 @@
   2. **#25 — OnboardingPermissionView hardcodes system framework.** Direct `UNUserNotificationCenter.current()` call; couples to system, untestable; violates DI pattern.
 - **Pattern observation:** All 4 issues originated from Phase 1 or early Phase 2. Onboarding module (#25) shows same integration gaps flagged in Phase 2 review.
 - **Quality note:** Phase 1 P1 fixes were solid (snooze guard, DI injection for NotificationScheduling/OverlayPresenting). Phase 2 onboarding adhered to spec but didn't fully adopt established patterns — #25 is endemic to that module boundary gap.
+
+### 2025-07-18: Comprehensive Code Quality & Readability Audit
+- **Scope:** Full codebase — 28 source files, 41 test files (all Swift in EyePostureReminder/ and Tests/)
+- **Verdict:** Strong codebase — 0 P0, 1 P1 (consistency), 6 P2 (readability/maintenance)
+- **P1 finding:**
+  1. AppCoordinator.swift line 587: Strong `self` capture in Task closure — inconsistent with every other Task closure in the class which uses `[weak self]`. Not a practical leak (short-lived Task) but violates the project's own established pattern.
+- **P2 findings:**
+  1. `AnalyticsLogger.log()` is 72 lines (single switch) — exceeds 40-line method threshold; extract per-event helpers
+  2. `AppCoordinator.scheduleReminders()` is 52 lines — extract snooze-guard and analytics-session sub-methods
+  3. `SettingsView.body` is 347 lines with a swiftlint suppression (`type_body_length`) — should decompose into extracted subviews
+  4. `StringCatalogTests.swift` is 1046 lines — split into 3–4 focused test files
+  5. `ColorTokenTests.swift` line 363: O(n²) distinctness check — replace with Set-based O(n) approach
+  6. `OverlayManager` uses tuple for queued overlays — should be a named struct for type safety
+- **No issues found in:** Naming conventions (excellent), documentation (thorough on public APIs), force unwraps (zero), error handling (proper throughout), dead code (minimal — deprecated `snooze(for:)` properly marked), Swift idioms (strong guard/optional patterns)
+- **Test suite quality:** 9/10 — zero force unwraps, robust mocking infrastructure, MainActor safety, clear BDD naming, comprehensive coverage
+- **Key patterns confirmed healthy:** Protocol-driven DI, @MainActor isolation, design system tokens, SettingsPersisting abstraction, MVVM boundaries
+- **Key learning:** SwiftUI struct views (OverlayView, ReminderRowView) don't need `[weak self]` in closures — structs are value types. Only flag weak-capture issues on class types (AppCoordinator, SettingsStore, etc.)

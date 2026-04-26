@@ -80,6 +80,23 @@
 **Verification:** ✅ Build succeeded; no raw keys visible; light/dark modes verified  
 **Decision Filed:** `.squad/decisions.md` → SPM Localization Bundle Strategy
 
+## Wave 9 — CI/CD Quality Audit (Read-Only) (2026-04-25)
+
+**Task:** Full CI/CD and build configuration quality review  
+**Outcome:** ✅ Audit complete — 1 critical bug, 5 warnings, 6 suggestions
+
+**Key findings:**
+- **🔴 P0 — `scripts/set-build-info.sh` line 34:** Fallback Info.plist path is `EyePostureReminder/EyePostureReminder/Info.plist` (doubled segment). Should be `EyePostureReminder/Info.plist`. Only fires in standalone-execution edge cases, but is a latent bug.
+- **🟡 P1 — Stale audit scripts committed to git:** `audit_workflows.sh`, `detailed_audit.py`, `detailed_manual_audit.sh`, `edge_case_audit.sh`, `final_audit.sh`, `script_validation.sh` are all tracked by git in the repo root. These are one-off review artifacts from a past audit session and should be removed.
+- **🟡 P1 — No `concurrency` group in `ci.yml`:** Parallel PR runs are not cancelled when new commits are pushed, wasting CI minutes. Should add `concurrency: group: ci-${{ github.ref }}, cancel-in-progress: true`.
+- **🟡 P1 — Coverage threshold is 50%** (`ci.yml` line 107): The team's stated 80%+ coverage target is not enforced. The CI gate will pass with much lower coverage.
+- **🟡 P1 — `testflight.yml` missing `timeout-minutes`** on `deploy-testflight` job: Job can hang indefinitely during archive/upload if Apple's servers are slow.
+- **🟡 P2 — Untracked `audit_check` binary + log files** in working tree not in `.gitignore`: `audit_check`, `build_check.log`, `build_output.log` could be accidentally committed. Add to `.gitignore`.
+- **🟢 Suggestion — SwiftLint brew install not cached:** `brew install swiftlint@0.57.0` in CI is not cached. Wrapping in `actions/cache` would save ~30-60s per run.
+- **Positive:** Package.swift is minimal and correct. All three scripts use `set -euo pipefail`. xcpretty fallback with pipefail is safe. `testflight.yml` uses modern Xcode 15+ export API. All action versions are pinned at v4/v7.
+
+---
+
 ## Wave 8 — CI/CD Full Audit Fix #66 (2026-04-25)
 
 **Task:** Fix all P0/P1/P2 issues from `.squad/decisions/inbox/virgil-full-audit.md`  
@@ -98,3 +115,57 @@
 - **P2-4:** Removed the broken commented-out `upload-testflight` job block from `ci.yml`
 - **P2-5:** Collapsed `cmd_check` in `build.sh` to an explicit alias for `cmd_build` with a warning message
 
+
+### 2026-04-26 — Quality Sweep: CI/CD & Build Config Quality Audit
+
+**Quality sweep findings from 8-agent parallel audit (read-only, no changes made):**
+
+**1 Critical Issue:**
+
+1. **Doubled path in scripts/set-build-info.sh L34** — Fallback path resolves to `EyePostureReminder/EyePostureReminder/Info.plist` (doubled segment). Should be `EyePostureReminder/Info.plist`. Low probability in current usage (fires when `INFOPLIST_FILE`/`SRCROOT`/`BUILT_PRODUCTS_DIR`/`PRODUCT_NAME` all unset), but latent bug. Script exits `warning:` with code 0, masking misconfiguration. **Action:** Fix line 34.
+
+**5 Warnings (Config Hygiene):**
+
+1. **Stale audit scripts committed** — 6 one-off audit scripts from review session pollute repo root. Not project build/run tools: `audit_workflows.sh`, `detailed_audit.py`, `detailed_manual_audit.sh`, `edge_case_audit.sh`, `final_audit.sh`, `script_validation.sh`. **Action:** `git rm` all six.
+
+2. **No concurrency group in `.github/workflows/ci.yml`** — Rapid commits to PR branch trigger parallel runs, wasting CI minutes on stale jobs. **Action:** Add concurrency group with `cancel-in-progress: true`.
+
+3. **Coverage enforcement threshold 50% vs stated target 80%+** — CI gate too lenient. decisions.md records 80%+ coverage across all modules. **Action:** Raise threshold to 75% (headroom for new untested code), stretch goal 80%.
+
+4. **deploy-testflight job has no timeout-minutes** — Archive + App Store Connect upload can hang indefinitely during Apple delays. Job consumes macOS runner slot until GitHub's 6-hour limit kills it. **Action:** Add `timeout-minutes: 45`.
+
+5. **Untracked build artifacts not in .gitignore** — `audit_check` (compiled Mach-O), `build_check.log`, `build_output.log` in working tree. Risk accidental future commits. **Action:** Add to `.gitignore`.
+
+**4 Suggestions (Optimization/Safety):**
+
+1. **Cache SwiftLint brew install** — `brew install swiftlint@0.57.0` takes 30-60s per run. Wrap with `actions/cache` keyed on version to skip re-download.
+
+2. **Poll instead of fixed sleep for simulator boot** — `ensure_booted()` sleeps 2s after `xcrun simctl boot`. Too short on cold CI. Consider polling `xcrun simctl list devices | grep Booted` in loop.
+
+3. **Consider exit 1 (not exit 0) on missing plist** — `set-build-info.sh` L39 exits 0 when plist not found. Future Xcode setup would silently no-op during build phase, masking config error. Non-zero exit safer.
+
+4. **Consider force_try: error (not warning)** — `.swiftlint.yml` allows `try!` in app code. Consider `error` severity for non-test code (or use custom rules to exclude tests).
+
+**What's Working Well:**
+- Package.swift clean and minimal
+- All scripts use `set -euo pipefail`
+- xcpretty fallback correct with pipefail
+- GitHub Actions versions pinned at v4/v7
+- testflight.yml uses modern xcodebuild API (not deprecated altool)
+- Permissions scoped (`contents: read`, not `write-all`)
+- DerivedData cache key uses Package.swift + Package.resolved
+- .swiftlint.yml SwiftUI-appropriate with well-reasoned rules
+- API key and keychain cleanup use `if: always()` guards
+
+**Immediate actions (ASAP):**
+1. Fix doubled path in set-build-info.sh L34
+2. git rm 6 stale audit scripts
+3. Add concurrency group to ci.yml
+4. Add `.gitignore` entries for build artifacts
+
+**Next priority (before Phase 2):**
+1. Raise coverage threshold to 75%
+2. Add timeout-minutes to deploy-testflight
+3. Cache SwiftLint install
+
+**Next owner action:** Address critical path bug and remove stale scripts this week.

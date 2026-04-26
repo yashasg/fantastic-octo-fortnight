@@ -113,3 +113,145 @@
 - Edge case test patterns ready for Rusty's 4 bugs (#26–#29)
 - Coverage baseline provides Phase 2 target (Views coverage focus)
 - All Basher DI protocols (#17) integrate cleanly with test structure
+
+---
+
+### 2026-04-25 — Comprehensive Test Quality & Coverage Audit
+
+**Scope:** READ-ONLY audit of all files in `Tests/` cross-referenced against `EyePostureReminder/`.
+
+---
+
+#### 🔴 Critical Findings
+
+**C1. OnboardingTests test the WRONG UserDefaults key** (`Tests/EyePostureReminderTests/Models/OnboardingTests.swift`, line 19)  
+`OnboardingTests.hasSeenOnboardingKey` is hardcoded to `"hasSeenOnboarding"` but the production constant `AppStorageKey.hasSeenOnboarding` = `"epr.hasSeenOnboarding"`. Every test in that suite exercises a key that no production code ever reads or writes. The entire `OnboardingTests` class is a false green — it would pass even if onboarding was completely broken.  
+**Fix needed:** Change `hasSeenOnboardingKey = "hasSeenOnboarding"` → `AppStorageKey.hasSeenOnboarding`, and rewrite `test_hasSeenOnboardingKey_exactString` to assert `AppStorageKey.hasSeenOnboarding == "epr.hasSeenOnboarding"`.
+
+**C2. `SettingsStore.resetToDefaults()` has NO tests** (`Tests/EyePostureReminderTests/Models/SettingsStoreConfigTests.swift`, line 203–207; also `RegressionTests.swift` line 587–591)  
+Both files contain a comment block that says `// MARK: - resetToDefaults() — PENDING IMPLEMENTATION`. This is a documented intent but never executed. `resetToDefaults()` is a destructive public API called on a "Reset all settings" action. Untested.
+
+**C3. UI tests are structurally dead (SPM limitation)** (`Tests/EyePostureReminderUITests/` — all 4 files)  
+All 31 UI tests in `HomeScreenTests`, `OnboardingFlowTests`, `OverlayTests`, and `SettingsFlowTests` have a `⚠️ SPM LIMITATION` banner stating they require an `.xcodeproj` UITest target that does not exist. These tests exist in the repo and claim to document required `accessibilityIdentifier` values, but they literally cannot run. They are not tested anywhere. This means the onboarding flow, overlay dismissal, and settings navigation have zero automated test coverage of any kind.
+
+---
+
+#### 🟡 Warnings
+
+**W1. SettingsViewModelTests use `try? await Task.sleep(nanoseconds: 200_000_000)` in 20 tests** (`Tests/EyePostureReminderTests/ViewModels/SettingsViewModelTests.swift`)  
+The 200ms sleep is a heuristic to allow inner `Task {}` dispatches in `SettingsViewModel` to complete. If CI runs hot, the ViewModel's internal task may not finish in 200ms, causing false negatives. Decision log notes this risk but recommends 500ms for CI — this change has NOT been applied. `try?` silently swallows cancellation errors too.
+
+**W2. ScreenTimeTrackerTests timer-driven tests have flakiness risk** (`Tests/EyePostureReminderTests/Services/ScreenTimeTrackerTests.swift`)  
+`test_thresholdReached_elapsedResets_allowsSubsequentCallbacks` (line ~262) waits for `await fulfillment(of:timeout: 8.0)` for a double-fire sequence at 2s threshold. Under CPU load the 1s `Timer` can drift; the 8s ceiling gives only 4s headroom. The 3.5s "negative" test (`test_pausedType_doesNotFireCallback`) could also produce false positives if the timer fires earlier than expected on a fast machine.
+
+**W3. `AnalyticsEvent.snoozeCancelled` has NO test** (`Tests/EyePostureReminderTests/Services/AnalyticsLoggerTests.swift`)  
+The enum case exists in production (`AnalyticsLogger.swift`), has a matching `case .snoozeCancelled: logger.info("event=snooze_cancelled")` log path, but is not exercised in `AnalyticsLoggerTests`. Every other event case has both a construction test and a logging test; this one is missing. Low severity in isolation but breaks the completeness invariant.
+
+**W4. `AppCoordinator.requestNotificationPermission()` and `refreshAuthStatus()` have no behavioral tests** (`EyePostureReminder/Services/AppCoordinator.swift`, lines 179, 191)  
+These async methods update `notificationAuthStatus` — the property that drives the UI permission banner. The test suite only calls `handleForegroundTransition()` (which calls both internally) with a crash-safety assertion. `MockNotificationCenter.authorizationGranted` is wired up but no test verifies that setting `.authorizationGranted = false` results in `notificationAuthStatus == .denied` being published.
+
+**W5. `AppDelegate` `willPresent`/`didReceive` delegate methods have zero coverage**  
+`AppDelegateTests.swift` explicitly documents at line 14 why these aren't called directly and lists `ReminderType(categoryIdentifier:)` parsing as equivalent coverage. The parse logic is tested, but the actual delegate dispatch table (what happens when a foreground notification fires while the overlay is already showing) is untested.
+
+**W6. `EyePostureReminderApp.swift` `scenePhase` lifecycle is completely untested**  
+The `.onChange(of: scenePhase)` block in `EyePostureReminderApp` contains the `wasInBackground` guard that prevents spurious reschedule on brief `.inactive` phases. This logic has no tests. A regression here would cause repeated reschedule on task-switcher open.
+
+**W7. `SettingsViewModelFormatterTests` has no edge case coverage** (`Tests/EyePostureReminderTests/ViewModels/SettingsViewModelFormatterTests.swift`)  
+`labelForInterval(0)`, `labelForInterval(-1)`, `labelForBreakDuration(0)`, `labelForBreakDuration(1)` — all missing. If formatting uses integer division or modulo, these boundary inputs could produce garbage labels ("0 min", "-1 min", division by zero). Only 3 happy-path intervals and 5 break durations are tested.
+
+---
+
+#### 🟢 Suggestions
+
+**S1. DesignSystemTests `AppFont` assertions are always-true**  
+`XCTAssertFalse(String(describing: font).isEmpty)` will always pass because Swift's `Font` description is never empty. These tests serve as compile-time regression guards (the comment correctly acknowledges this), but they give false confidence at runtime. Consider adding a `@available` check or a documentation comment clarifying they are compile-time guards only, not runtime assertions.
+
+**S2. `RegressionTests.swift` contains 4 unrelated test classes in one file**  
+`SettingsDismissRegressionTests`, `LocalizationBundleRegressionTests`, `ScreenTimeTrackerRegressionTests`, and `DataDrivenDefaultsRegressionTests` all share one file. This makes the file hard to navigate and violates the one-class-per-file convention followed elsewhere. Split into 4 files.
+
+**S3. `MockReminderScheduler` conflates `scheduleReminders` and `rescheduleReminder` into one `lastScheduledSettings` property**  
+If a test calls both methods in sequence, `lastScheduledSettings` only retains the settings from the last call. A test that needs to distinguish "scheduleReminders was called with settings X, then rescheduleReminder was called with settings Y" cannot do so. Add a separate `lastRescheduledSettings` property.
+
+**S4. `AppCoordinatorTests.makeCoordinator()` nonisolated limitation produces verbose call sites**  
+Every test that needs behavioral assertions creates a coordinator via `makeCoordinator()` locally (not in `setUp`), leading to repetitive `let (coordinator, mockOverlay, _) = makeCoordinator(...)` + `defer { coordinator.stopFallbackTimers() }` boilerplate in 12+ tests. Consider splitting behavioral tests into a separate class with the injected coordinator in `setUp`.
+
+**S5. No performance tests exist anywhere**  
+Zero `measure {}` blocks in the entire suite. The 1-second `ScreenTimeTracker` tick cycle, `SettingsStore` serialization under rapid slider changes, and notification scheduling under repeated reschedule calls are all untested for performance regressions.
+
+**S6. Views layer: 0% unit test coverage (known, documented gap)**  
+ContentView, HomeView, SettingsView, OverlayView, ReminderRowView, LegalDocumentView, and all 4 Onboarding views have no unit tests. The `OnboardingTests` class only exercises a UserDefaults key (and the wrong one — see C1). Phase 2 must prioritize at minimum: `OverlayView.performDismiss()` guard logic, `HomeView.statusLabel` computed property, and `SettingsView` notification-denied banner visibility.
+
+**S7. `OverlayManager.showOverlay()` queue behavior (FIFO when `isOverlayVisible = true`) has no real test**  
+`OverlayManagerTests` explicitly acknowledges this in a comment. The queue fills only when `isOverlayVisible = true`, which requires a UIWindowScene. The unit-level verification uses `MockOverlayPresenting` (which tests the mock itself, not the real manager). Consider adding a `OverlayManager(audioManager:)` init test that programmatically sets `isOverlayVisible = true` before calling `showOverlay` to exercise the queue path without a scene.
+
+---
+
+#### Test Quality Summary
+
+| Area | Verdict |
+|------|---------|
+| Mock design | ✅ Excellent — dual-array history/queue, simulation helpers, `@MainActor` isolation |
+| Test naming | ✅ Consistent `test_subject_condition_expectedOutcome` pattern |
+| Test setup/teardown | ✅ Proper `setUp/tearDown` with DI, isolated UserDefaults suites in integration tests |
+| Services unit tests | ✅ Good behavior coverage, appropriate crash-safety tests for AVAudioSession/MetricKit |
+| ViewModel tests | 🟡 200ms sleep pattern works but is fragile on CI |
+| Model tests | 🔴 OnboardingTests test wrong key; `resetToDefaults()` untested |
+| Views unit tests | 🔴 0% — documented gap, Phase 2 priority |
+| UI tests | 🔴 Dead code — SPM limitation blocks execution |
+| Integration tests | ✅ Multi-service pipeline and settings↔UserDefaults round-trip well covered |
+| Edge cases | 🟡 Formatter boundaries, `snoozeCancelled` event, `resetToDefaults()` all missing |
+| Flakiness risk | 🟡 Timer-based tests and 200ms sleeps are the main risk |
+
+### 2026-04-26 — Quality Sweep: Test Quality & Coverage Audit
+
+**Quality sweep findings from 8-agent parallel audit:**
+
+**3 Critical Issues Requiring Immediate Action:**
+
+1. **OnboardingTests uses wrong UserDefaults key (FALSE-POSITIVE GREEN)**
+   - **File:** `Tests/EyePostureReminderTests/Models/OnboardingTests.swift` L19
+   - **Bug:** Tests use `hasSeenOnboarding = "hasSeenOnboarding"` but production uses `AppStorageKey.hasSeenOnboarding = "epr.hasSeenOnboarding"` (with `epr.` prefix)
+   - **Impact:** Entire test is false-positive — all greens while testing a key that production never touches. Onboarding could be permanently broken and these tests would NOT catch it.
+   - **Action:** Fix key to match production. Use `AppStorageKey.hasSeenOnboarding` and assert `"epr.hasSeenOnboarding"`.
+   - **Owner:** Livingston (test fix); coordinate with Linus on production key history.
+
+2. **SettingsStore.resetToDefaults() has no tests**
+   - **Files:** `SettingsStoreConfigTests.swift` L203; `RegressionTests.swift` L587
+   - **Issue:** Two `// MARK: - resetToDefaults() — PENDING IMPLEMENTATION` comment blocks. Function is implemented in production but zero automated tests verify it.
+   - **Impact:** Destructive operation (clears + re-seeds all settings) with zero coverage. Phase 2 UI changes could break this without detection.
+   - **Action:** Implement the pending tests before Phase 2 UI ships.
+   - **Owner:** Livingston
+
+3. **UI tests cannot run (SPM limitation)**
+   - **Files:** All 4 files in `Tests/EyePostureReminderUITests/`
+   - **Issue:** 31 UITests are dead code. UITest target requires `.xcodeproj` bundle target that SPM does not support. Onboarding flow, overlay dismiss, settings navigation have ZERO end-to-end automated coverage.
+   - **Impact:** Structural gap. UITest logic is written but infrastructure missing.
+   - **Action:** Team decision needed: (a) create `.xcodeproj` to host UITest target, or (b) accept gap and document risk.
+   - **Owners:** Basher (project setup), Linus (accessibility identifiers), Livingston (test logic already written)
+
+**7 Warnings:**
+
+1. **200ms sleep in SettingsViewModelTests** — 20 tests use `try? await Task.sleep(nanoseconds: 200_000_000)`. Decision log (Phase 1 M1.7) recommends 500ms for CI. Not yet implemented. **Action:** Consider "return Task from SettingsViewModel" alternative before Phase 2 adds more ViewModel tests.
+
+2. **ScreenTimeTracker 8s timeout double-fire test** — `test_thresholdReached_elapsedResets_allowsSubsequentCallbacks` has `timeout: 8.0` for sequence requiring 1s timer to fire twice. Under CPU pressure this is marginal. **Action:** Consider pinning timer interval to test-injectable clock.
+
+3-7. Documented coverage gaps (see orchestration log for Phase 2 priority order).
+
+**Documented Coverage Gaps (Phase 2 Priority):**
+
+| Priority | Gap | File/Location |
+|----------|-----|---|
+| 🔴 Critical | OnboardingTests key fix | `OnboardingTests.swift` L19 |
+| 🔴 Critical | resetToDefaults() tests | `SettingsStoreConfigTests.swift` L203 |
+| 🔴 Structural | UI test infrastructure decision | `Tests/EyePostureReminderUITests/` |
+| 🟡 High | AnalyticsEvent.snoozeCancelled test | Missing case |
+| 🟡 High | labelForInterval(0), labelForBreakDuration(0) boundary tests | Boundary coverage |
+| 🟡 High | Views layer unit tests (OverlayView dismiss guard, HomeView.statusLabel) | Views layer |
+| 🟡 Medium | AppCoordinator.notificationAuthStatus behavioral test | Behavioral |
+| 🟢 Low | Performance measure {} blocks for scheduler and ScreenTimeTracker | Performance |
+
+**Cross-cutting impacts:**
+- Basher audit flagged service-layer edge cases (ScreenTimeTracker, AppCoordinator, PauseConditionManager) that should have complementary tests.
+- Saul audit flagged StringCatalogTests (1046 lines) should split — coordinate with split strategy.
+
+**Next owner action:** Fix OnboardingTests key this week. Implement resetToDefaults() tests before Phase 2 UI ships. Schedule team discussion on UI test infrastructure.

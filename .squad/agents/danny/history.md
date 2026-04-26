@@ -241,3 +241,19 @@ Documentation ready for Phase 2 planning cycle.
 **Initial Roadmap Planning, M2.7 App Store Preparation, Data-Driven Config Spec, Dark Mode Feature Scoping, App Store Metadata, Wave 4 Native-First Config**
 
 Consolidated 2026-04-24 planning entries covering early architecture decisions (MVVM + UNUserNotificationCenter), app store listing metadata, privacy policy, data-driven configuration exploration, dark mode feature scope, and final 4-layer config architecture (Asset Catalog + String Catalog + defaults.json + Swift code). All decisions have been implemented and verified; legacy planning notes preserved for reference. Phase 0 foundation complete; Phase 1-2 implementation active.
+
+### 2026-04-25: Documentation Completeness & Quality Audit (READ-ONLY)
+
+- **Context:** Full audit of all project documentation — root markdown files, docs/ directory, and inline source comments.
+- **Key Findings:**
+  1. **Legal placeholders are the top blocker:** TERMS.md and PRIVACY.md still have `[Date]` and `[Your Company Name]` placeholder text — must be fixed before App Store submission.
+  2. **UX_FLOWS.md is stale:** Describes pre-onboarding first-launch flow (straight to Settings + system permission prompt). Actual app uses 3-screen onboarding (Welcome → Permissions → Setup). Snooze UI described as "in Settings only" but may have evolved.
+  3. **IMPLEMENTATION_PLAN.md partially outdated:** Section 9 Data Flow diagram still says `repeat: true` (Phase 1 behavior); Phase 2 uses `repeat: false` with ScreenTimeTracker re-arm. Section 1 says "runs timers in the background" — no longer accurate (foreground screen-time tracking).
+  4. **ARCHITECTURE.md build instructions wrong:** Section 3 says "Build via `swift build` / `swift test`" but README correctly notes these don't work (iOS-only frameworks require xcodebuild). Contradicts README.
+  5. **ARCHITECTURE.md status tag stale:** Header says "Status: Foundation" — should be "Phase 2" or later.
+  6. **CHANGELOG.md well-maintained:** Follows Keep a Changelog-adjacent format; covers all 7 quality loops. No version entries beyond v0.1.0-beta.
+  7. **README.md is solid:** Build instructions, feature list, legal links all present and accurate.
+  8. **Inline code docs excellent:** Every service and model file has file-level doc comments explaining purpose, behavior, and design rationale.
+  9. **docs/ directory well-organized:** APP_STORE_LISTING, DESIGN_SYSTEM, ONBOARDING_SPEC, TELEMETRY, TEST_REPORT, TEST_STRATEGY, legal/ subdirectory — comprehensive.
+  10. **ROADMAP.md is thorough and current:** Phase 0-3 status accurately reflects implementation state.
+- **Recommendation:** Fix legal placeholders (blocker), update UX_FLOWS.md for onboarding, reconcile IMPLEMENTATION_PLAN.md data flow diagram, fix ARCHITECTURE.md build instructions and status tag.
