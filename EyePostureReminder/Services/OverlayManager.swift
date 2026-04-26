@@ -40,6 +40,10 @@ protocol OverlayPresenting: AnyObject {
 
     /// Drop all queued overlays (e.g. on snooze or master-toggle-off).
     func clearQueue()
+
+    /// Drop all queued overlays for a specific reminder type (e.g. when a single
+    /// reminder type is cancelled without affecting other queued types).
+    func clearQueue(for type: ReminderType)
 }
 
 // MARK: - OverlayManager
@@ -191,6 +195,16 @@ final class OverlayManager: OverlayPresenting {
     func clearQueue() {
         overlayQueue.removeAll()
         Logger.overlay.info("Overlay queue cleared")
+    }
+
+    /// Drop all queued overlays for a specific reminder type.
+    func clearQueue(for type: ReminderType) {
+        let before = overlayQueue.count
+        overlayQueue.removeAll { $0.type == type }
+        let removed = before - overlayQueue.count
+        if removed > 0 {
+            Logger.overlay.info("Overlay queue: removed \(removed) queued item(s) for \(type.rawValue). Remaining: \(self.overlayQueue.count)")
+        }
     }
 
     // MARK: - Private
