@@ -220,7 +220,8 @@ final class ScreenTimeTracker: ScreenTimeTracking {
         stopTicking()
         Logger.scheduling.debug("ScreenTimeTracker: resigned active — starting \(self.resetGracePeriod)s grace period")
 
-        // Arm the grace-period reset. Cancelled if the app becomes active again in time.
+        // Cancel any in-flight grace-period task before arming a new one.
+        resetTask?.cancel()
         resetTask = Task { [weak self] in
             guard let self else { return }
             try? await Task.sleep(nanoseconds: UInt64(self.resetGracePeriod * 1_000_000_000))
