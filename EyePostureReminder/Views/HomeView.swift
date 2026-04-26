@@ -17,7 +17,7 @@ struct HomeView: View {
     }
 
     private var statusIcon: String {
-        settings.globalEnabled ? AppSymbol.eyeBreak : "moon.zzz.fill"
+        settings.globalEnabled ? AppSymbol.eyeBreak : AppSymbol.snoozed
     }
 
     private var statusColor: Color {

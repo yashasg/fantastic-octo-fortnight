@@ -53,6 +53,9 @@ enum AppFont {
     /// Secondary action buttons (onboarding, secondary CTAs) — scales with Dynamic Type (base: 15pt regular).
     static let secondaryAction: Font = .system(.subheadline)
 
+    /// Overlay dismiss button — scales with Dynamic Type (base: 28pt medium).
+    static let overlayDismiss: Font = .system(.title).weight(.medium)
+
     /// Countdown digits — fixed 64pt monospaced bold (decorative; not scaled).
     /// VoiceOver exposes a labelled accessibility element instead of reading this text directly.
     static let countdown: Font = .system(size: 64, weight: .bold, design: .monospaced)
@@ -84,6 +87,10 @@ enum AppAnimation {
     static let overlayAutoDismiss: Double = 0.3
     /// Settings row inline expansion — 0.2s ease-in-out
     static let settingsExpand: Double = 0.2
+    /// Onboarding screen fade-in entrance — 0.4s
+    static let onboardingFadeIn: Double = 0.4
+    /// Onboarding screen fade-in entrance delay — 0.1s
+    static let onboardingFadeInDelay: Double = 0.1
     /// Countdown ring — continuous, driven by a 1-second timer tick
     static let countdownRingTick: Double = 1.0
 
@@ -93,6 +100,10 @@ enum AppAnimation {
     static let overlayFadeCurve: Animation    = .linear(duration: overlayAutoDismiss)
     static let settingsExpandCurve: Animation = .easeInOut(duration: settingsExpand)
     static let countdownRingCurve: Animation  = .linear(duration: countdownRingTick)
+    /// Onboarding transition used in ContentView (hasSeenOnboarding toggle)
+    static let onboardingTransition: Animation = .easeInOut(duration: onboardingFadeIn)
+    /// Onboarding screen fade-in entrance animation (easeOut + delay)
+    static let onboardingFadeInCurve: Animation = .easeOut(duration: onboardingFadeIn).delay(onboardingFadeInDelay)
 }
 
 // MARK: - SF Symbol Names
@@ -112,6 +123,8 @@ enum AppSymbol {
     static let chevronUp     = "chevron.up"
     /// Permission warning banner icon
     static let warning       = "exclamationmark.triangle.fill"
+    /// Snoozed / paused state icon
+    static let snoozed       = "moon.zzz.fill"
 }
 
 // MARK: - Layout Constants
@@ -129,6 +142,8 @@ enum AppLayout {
     static let overlayCornerRadius: CGFloat = 24
     /// Card / small-surface corner radius (onboarding cards, preview tiles)
     static let cardCornerRadius: CGFloat = 16
+    /// Onboarding content max width for iPad-friendly layout
+    static let onboardingMaxContentWidth: CGFloat = 540
     /// Onboarding hero illustration icon size
     static let onboardingIllustrationSize: CGFloat = 72
     // AppLayout.overlayIconSize / onboardingIllustrationSize / settingsRowIconWidth are

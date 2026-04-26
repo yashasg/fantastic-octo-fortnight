@@ -62,7 +62,7 @@ struct OnboardingPermissionView: View {
                     // Secondary option — no system prompt, just advance
                     Button(action: onNext) {
                         Text("onboarding.permission.skipButton", bundle: .module)
-                            .frame(minHeight: 44)
+                            .frame(minHeight: AppLayout.minTapTarget)
                     }
                         .foregroundStyle(.secondary)
                         .font(AppFont.secondaryAction)
@@ -71,7 +71,7 @@ struct OnboardingPermissionView: View {
                         .accessibilityIdentifier("onboarding.permission.nextButton")
                 }
                 .padding()
-                .frame(maxWidth: 540)
+                .frame(maxWidth: AppLayout.onboardingMaxContentWidth)
                 .frame(maxWidth: .infinity)
                 // Use highPriorityGesture so this view consumes horizontal drags
                 // before the parent TabView sees them, preventing accidental swipe

@@ -40,7 +40,7 @@ struct OverlayView: View {
                 action: { performDismiss(method: .button) },
                 label: {
                     Image(systemName: AppSymbol.dismiss)
-                        .font(.system(.title).weight(.medium))
+                        .font(AppFont.overlayDismiss)
                         .foregroundStyle(.secondary)
                         .frame(minWidth: AppLayout.minTapTarget, minHeight: AppLayout.minTapTarget)
                         .contentShape(Rectangle())

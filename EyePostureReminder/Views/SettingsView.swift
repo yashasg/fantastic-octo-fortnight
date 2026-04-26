@@ -252,7 +252,7 @@ private struct SettingsSnoozeSection: View {
                             format: String(localized: "settings.snooze.activeLabel", bundle: .module),
                             snoozeUntilFormatted
                         ),
-                        systemImage: "moon.zzz.fill"
+                        systemImage: AppSymbol.snoozed
                     )
                     .font(AppFont.body)
                     .foregroundStyle(AppColor.warningText)

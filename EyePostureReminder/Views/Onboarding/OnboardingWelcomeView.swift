@@ -78,7 +78,7 @@ struct OnboardingWelcomeView: View {
                     .accessibilityIdentifier("onboarding.welcome.nextButton")
                 }
                 .padding()
-                .frame(maxWidth: 540)
+                .frame(maxWidth: AppLayout.onboardingMaxContentWidth)
                 .frame(maxWidth: .infinity)
             }
         }

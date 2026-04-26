@@ -63,7 +63,7 @@ struct OnboardingScreenWrapper<Content: View>: View {
                 if reduceMotion {
                     appeared = true
                 } else {
-                    withAnimation(.easeOut(duration: 0.4).delay(0.1)) {
+                    withAnimation(AppAnimation.onboardingFadeInCurve) {
                         appeared = true
                     }
                 }

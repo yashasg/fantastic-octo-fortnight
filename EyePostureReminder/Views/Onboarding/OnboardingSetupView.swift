@@ -80,7 +80,7 @@ struct OnboardingSetupView: View {
                         .accessibilityHint(Text("onboarding.setup.customizeButton.hint", bundle: .module))
                 }
                 .padding()
-                .frame(maxWidth: 540)
+                .frame(maxWidth: AppLayout.onboardingMaxContentWidth)
                 .frame(maxWidth: .infinity)
             }
         }
