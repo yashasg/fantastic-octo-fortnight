@@ -23,7 +23,7 @@ import UserNotifications
 /// **P1-2:** Uses injected `NotificationScheduling` for all auth management
 /// instead of calling `UNUserNotificationCenter.current()` directly.
 ///
-/// **P1-3:** Uses injected `OverlayPresenting` instead of `OverlayManager.shared` directly.
+/// **P1-3:** Uses injected `OverlayPresenting` instead of a shared singleton.
 ///
 /// `AppCoordinator` conforms to `ReminderScheduling` so Views can pass it
 /// directly to `SettingsViewModel`. The conformance routes every call through
@@ -58,7 +58,7 @@ final class AppCoordinator: ObservableObject {
     let notificationCenter: NotificationScheduling
 
     /// Injected overlay manager — used to show overlays and clear the queue.
-    /// Defaults to `OverlayManager.shared` in production.
+    /// Defaults to a fresh `OverlayManager()` in production.
     private let overlayManager: OverlayPresenting
 
     // MARK: - Screen-Time Tracker
@@ -119,7 +119,7 @@ final class AppCoordinator: ObservableObject {
         self.settings = settings ?? SettingsStore()
         self.scheduler = scheduler ?? ReminderScheduler()
         self.notificationCenter = notificationCenter
-        self.overlayManager = overlayManager ?? OverlayManager.shared
+        self.overlayManager = overlayManager ?? OverlayManager()
         self.screenTimeTracker = screenTimeTracker ?? ScreenTimeTracker()
         self.pauseConditionManager = pauseConditionProvider ?? PauseConditionManager(settings: self.settings)
         Logger.lifecycle.info("AppCoordinator initialised")

@@ -9,7 +9,7 @@ import XCTest
 /// simulator integration suite, not here.
 ///
 /// Two test configurations are used:
-/// 1. `sut` — default init with real `UNUserNotificationCenter` and `OverlayManager.shared`
+/// 1. `sut` — default init with real `UNUserNotificationCenter` and a fresh `OverlayManager`
 ///    (safe for crash-proof and public-API path tests).
 /// 2. Helper factory `makeCoordinator(overlay:notifCenter:)` — fully injected with
 ///    `MockOverlayPresenting` + `MockNotificationCenter` for behavioral assertions.

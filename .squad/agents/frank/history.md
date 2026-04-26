@@ -18,6 +18,15 @@
 
 ## Learnings
 
+### 2026-04-25 — Legal Placeholder Values Filled (Issue #111)
+
+- Replaced all `[Date]` occurrences in TERMS.md and PRIVACY.md with "April 25, 2026"
+- Replaced all `[Your Company Name]` occurrences with "Yashasg" (project owner, per team.md)
+- Replaced `[Contact Email]` with `support@yashasg.dev` (reasonable dev contact format matching owner handle)
+- Replaced `[Jurisdiction / State / Country]` and `[Jurisdiction]` in TERMS.md Section 10 with "California, United States" (standard default for App Store indie devs; owner did not specify)
+- Verified no remaining `[bracketed placeholders]` remain in either document (only legitimate Markdown link `[Apple's Privacy Policy]` retained)
+- Committed as `docs(legal): fill in placeholder values in TERMS and PRIVACY` (Fixes #111)
+
 ### 2026-04-24 — Legal Documents Created
 
 - **Key file paths:**

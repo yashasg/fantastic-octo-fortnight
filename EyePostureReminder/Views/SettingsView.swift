@@ -10,7 +10,6 @@ private final class SettingsViewModelBox: ObservableObject {
     var inner: SettingsViewModel?
 }
 
-// swiftlint:disable:next type_body_length
 struct SettingsView: View {
 
     @EnvironmentObject var settings: SettingsStore
@@ -28,18 +27,6 @@ struct SettingsView: View {
     @State private var showTerms = false
     @State private var showPrivacy = false
     @State private var showResetConfirm = false
-
-    // MARK: - Snooze helpers
-
-    private var isSnoozed: Bool {
-        guard let until = settings.snoozedUntil else { return false }
-        return until > Date()
-    }
-
-    private var snoozeUntilFormatted: String {
-        guard let until = settings.snoozedUntil, until > Date() else { return "" }
-        return until.formatted(date: .omitted, time: .shortened)
-    }
 
     var body: some View {
         Form {
@@ -104,98 +91,8 @@ struct SettingsView: View {
 
             // MARK: Snooze (only meaningful when reminders are globally enabled)
             if settings.globalEnabled {
-            Section {
-                if isSnoozed {
-                    HStack {
-                        Label(
-                            String(
-                                format: String(localized: "settings.snooze.activeLabel", bundle: .module),
-                                snoozeUntilFormatted
-                            ),
-                            systemImage: "moon.zzz.fill"
-                        )
-                            .font(AppFont.body)
-                            .foregroundStyle(AppColor.warningText)
-                        Spacer()
-                    }
-                    .accessibilityElement(children: .ignore)
-                    .accessibilityLabel(String(
-                        format: String(localized: "settings.snooze.activeLabel.accessibility", bundle: .module),
-                        snoozeUntilFormatted
-                    ))
-
-                    Button(
-                        action: {
-                            withAnimation(reduceMotion ? nil : AppAnimation.settingsExpandCurve) {
-                                viewModel?.cancelSnooze()
-                            }
-                        },
-                        label: {
-                            Label {
-                                Text("settings.snooze.cancelButton", bundle: .module)
-                            } icon: {
-                                Image(systemName: "bell.fill")
-                            }
-                                .font(AppFont.body)
-                        }
-                    )
-                    .foregroundStyle(AppColor.reminderBlue)
-                    .accessibilityHint(Text("settings.snooze.cancelButton.hint", bundle: .module))
-                    .accessibilityIdentifier("settings.snooze.cancelButton")
-                } else {
-                    Button(
-                        action: {
-                            withAnimation(reduceMotion ? nil : AppAnimation.settingsExpandCurve) {
-                                viewModel?.snooze(option: .fiveMinutes)
-                            }
-                        },
-                        label: { Text("settings.snooze.5min", bundle: .module) }
-                    )
-                    .font(AppFont.body)
-                    .disabled(!(viewModel?.canSnooze ?? false))
-                    .accessibilityLabel(Text("settings.snooze.5min.label", bundle: .module))
-                    .accessibilityHint(viewModel?.canSnooze ?? false
-                        ? Text("settings.snooze.5min.hint", bundle: .module)
-                        : Text("settings.snooze.limitReached.hint", bundle: .module))
-                    .accessibilityIdentifier("settings.snooze.5min")
-
-                    Button(
-                        action: {
-                            withAnimation(reduceMotion ? nil : AppAnimation.settingsExpandCurve) {
-                                viewModel?.snooze(option: .oneHour)
-                            }
-                        },
-                        label: { Text("settings.snooze.1hour", bundle: .module) }
-                    )
-                    .font(AppFont.body)
-                    .disabled(!(viewModel?.canSnooze ?? false))
-                    .accessibilityLabel(Text("settings.snooze.1hour.label", bundle: .module))
-                    .accessibilityHint(viewModel?.canSnooze ?? false
-                        ? Text("settings.snooze.1hour.hint", bundle: .module)
-                        : Text("settings.snooze.limitReached.hint", bundle: .module))
-                    .accessibilityIdentifier("settings.snooze.1hour")
-
-                    Button(
-                        action: {
-                            withAnimation(reduceMotion ? nil : AppAnimation.settingsExpandCurve) {
-                                viewModel?.snooze(option: .restOfDay)
-                            }
-                        },
-                        label: { Text("settings.snooze.restOfDay", bundle: .module) }
-                    )
-                    .font(AppFont.body)
-                    .foregroundStyle(AppColor.warningText)
-                    .disabled(!(viewModel?.canSnooze ?? false))
-                    .accessibilityLabel(Text("settings.snooze.restOfDay.label", bundle: .module))
-                    .accessibilityHint(viewModel?.canSnooze ?? false
-                        ? Text("settings.snooze.restOfDay.hint", bundle: .module)
-                        : Text("settings.snooze.limitReached.hint", bundle: .module))
-                    .accessibilityIdentifier("settings.snooze.restOfDay")
-                }
-            } header: {
-                Text("settings.section.snooze", bundle: .module)
+                SettingsSnoozeSection(viewModel: viewModel, reduceMotion: reduceMotion)
             }
-            } // end if settings.globalEnabled (snooze only meaningful when reminders are on)
 
             // MARK: Preferences
             Section {

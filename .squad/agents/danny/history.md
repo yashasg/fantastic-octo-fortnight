@@ -257,3 +257,15 @@ Consolidated 2026-04-24 planning entries covering early architecture decisions (
   9. **docs/ directory well-organized:** APP_STORE_LISTING, DESIGN_SYSTEM, ONBOARDING_SPEC, TELEMETRY, TEST_REPORT, TEST_STRATEGY, legal/ subdirectory — comprehensive.
   10. **ROADMAP.md is thorough and current:** Phase 0-3 status accurately reflects implementation state.
 - **Recommendation:** Fix legal placeholders (blocker), update UX_FLOWS.md for onboarding, reconcile IMPLEMENTATION_PLAN.md data flow diagram, fix ARCHITECTURE.md build instructions and status tag.
+
+### 2026-04-25: UX_FLOWS.md Onboarding Correction (Issue #112)
+
+- **Context:** UX_FLOWS.md Section 2.1 described first-launch as "App opens directly to Settings Screen" with an immediate system permission prompt. The actual app uses a 3-screen onboarding flow (Welcome → Permissions → Setup) implemented via `ContentView` → `OnboardingView`.
+- **Root cause:** UX_FLOWS.md was written during Phase 1 planning (pre-onboarding). The onboarding flow was added in Phase 2 (M2.1) but UX_FLOWS.md was never updated to match.
+- **Sections rewritten:**
+  1. **Section 2.1** — Complete rewrite: documents the 3-screen `OnboardingView` flow with accurate screen descriptions, navigation behavior (swipe blocked on Screen 2), two completion paths ("Get Started" / "Customize Settings"), and `hasSeenOnboarding` gating logic.
+  2. **Section 3.3** — Updated trigger: permission prompt is user-initiated on Screen 2, not automatic on launch.
+  3. **Section 5** — Replaced "Minimal Onboarding / No multi-screen flow" philosophy with "Educate, Then Ask" philosophy describing the actual 3-screen implementation.
+  4. **Section 10 Summary** — Updated onboarding bullet to reflect the 3-screen flow.
+- **Key learning:** When a Phase 2 feature replaces Phase 1 behavior, all doc sections referencing the old behavior must be audited — not just the primary section. UX_FLOWS.md had 4 separate sections describing the old first-launch flow.
+- **Commit:** `docs: update UX_FLOWS.md to reflect actual onboarding flow` (Fixes #112)

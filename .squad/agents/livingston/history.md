@@ -7,6 +7,16 @@
 
 ## Learnings
 
+### Issue #108: Fixed OnboardingTests using wrong UserDefaults key
+
+**Root cause:** `OnboardingTests` hardcoded `hasSeenOnboardingKey = "hasSeenOnboarding"` — a key no production code touches. Production code uses `AppStorageKey.hasSeenOnboarding = "epr.hasSeenOnboarding"`. Every test passed silently while exercising a phantom key.
+
+**Fix:** Changed `static let hasSeenOnboardingKey = "hasSeenOnboarding"` → `static let hasSeenOnboardingKey = AppStorageKey.hasSeenOnboarding`. Updated `test_hasSeenOnboardingKey_exactString` to assert against `"epr.hasSeenOnboarding"`. Fixed the inline comment in `test_finishOnboarding_setsKeyToTrue` to reference `AppStorageKey.hasSeenOnboarding`.
+
+**Key insight:** Tests that hardcode string literals for UserDefaults keys can pass with 100% green while testing a completely inert key. Always source key constants from the same `AppStorageKey` (or equivalent) enum that production code uses — never re-declare them as raw strings in test files.
+
+---
+
 ### 2026-04-25 — Issue #15: Fixed 2 Failing AppConfigTests (Build-wide Rename Cascade)
 
 **Root cause:** Commit `dd536c1` renamed `SettingsStore.masterEnabled` → `globalEnabled` but left 10+ call sites in `SettingsViewModel`, `SettingsView`, `HomeView`, and test files still using the old name. The build was entirely broken, preventing any test from running.

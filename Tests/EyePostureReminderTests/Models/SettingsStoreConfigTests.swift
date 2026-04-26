@@ -200,9 +200,131 @@ final class SettingsStoreConfigTests: XCTestCase {
             "snoozedUntil is runtime state — AppConfig seeding must not clear it")
     }
 
-    // MARK: - resetToDefaults() — PENDING IMPLEMENTATION
-    //
-    // Tests for `SettingsStore.resetToDefaults(config:)` will be added once
-    // Basher implements the method. Expected API:
-    //   func resetToDefaults(config: AppConfig = AppConfig.load())
+    // MARK: - resetToDefaults()
+
+    func test_resetToDefaults_eyesInterval_matchesConfig() {
+        let store = SettingsStore(store: mockPersistence, config: testConfig)
+        store.eyesInterval = 999
+        store.resetToDefaults(config: testConfig)
+        XCTAssertEqual(store.eyesInterval, testConfig.defaults.eyeInterval,
+                       "resetToDefaults() must restore eyesInterval from config")
+    }
+
+    func test_resetToDefaults_eyesBreakDuration_matchesConfig() {
+        let store = SettingsStore(store: mockPersistence, config: testConfig)
+        store.eyesBreakDuration = 999
+        store.resetToDefaults(config: testConfig)
+        XCTAssertEqual(store.eyesBreakDuration, testConfig.defaults.eyeBreakDuration,
+                       "resetToDefaults() must restore eyesBreakDuration from config")
+    }
+
+    func test_resetToDefaults_postureInterval_matchesConfig() {
+        let store = SettingsStore(store: mockPersistence, config: testConfig)
+        store.postureInterval = 999
+        store.resetToDefaults(config: testConfig)
+        XCTAssertEqual(store.postureInterval, testConfig.defaults.postureInterval,
+                       "resetToDefaults() must restore postureInterval from config")
+    }
+
+    func test_resetToDefaults_postureBreakDuration_matchesConfig() {
+        let store = SettingsStore(store: mockPersistence, config: testConfig)
+        store.postureBreakDuration = 999
+        store.resetToDefaults(config: testConfig)
+        XCTAssertEqual(store.postureBreakDuration, testConfig.defaults.postureBreakDuration,
+                       "resetToDefaults() must restore postureBreakDuration from config")
+    }
+
+    func test_resetToDefaults_globalEnabled_matchesConfig() {
+        let store = SettingsStore(store: mockPersistence, config: testConfig)
+        store.globalEnabled = false
+        store.resetToDefaults(config: testConfig)
+        XCTAssertEqual(store.globalEnabled, testConfig.features.globalEnabledDefault,
+                       "resetToDefaults() must restore globalEnabled from config")
+    }
+
+    func test_resetToDefaults_eyesEnabled_isTrue() {
+        let store = SettingsStore(store: mockPersistence, config: testConfig)
+        store.eyesEnabled = false
+        store.resetToDefaults(config: testConfig)
+        XCTAssertTrue(store.eyesEnabled, "resetToDefaults() must restore eyesEnabled to true")
+    }
+
+    func test_resetToDefaults_postureEnabled_isTrue() {
+        let store = SettingsStore(store: mockPersistence, config: testConfig)
+        store.postureEnabled = false
+        store.resetToDefaults(config: testConfig)
+        XCTAssertTrue(store.postureEnabled, "resetToDefaults() must restore postureEnabled to true")
+    }
+
+    func test_resetToDefaults_snoozedUntil_clearedToNil() {
+        let store = SettingsStore(store: mockPersistence, config: testConfig)
+        store.snoozedUntil = Date().addingTimeInterval(3600)
+        store.resetToDefaults(config: testConfig)
+        XCTAssertNil(store.snoozedUntil, "resetToDefaults() must clear snoozedUntil to nil")
+    }
+
+    func test_resetToDefaults_snoozeCount_clearedToZero() {
+        let store = SettingsStore(store: mockPersistence, config: testConfig)
+        store.snoozeCount = 5
+        store.resetToDefaults(config: testConfig)
+        XCTAssertEqual(store.snoozeCount, 0, "resetToDefaults() must reset snoozeCount to 0")
+    }
+
+    func test_resetToDefaults_hapticsEnabled_isTrue() {
+        let store = SettingsStore(store: mockPersistence, config: testConfig)
+        store.hapticsEnabled = false
+        store.resetToDefaults(config: testConfig)
+        XCTAssertTrue(store.hapticsEnabled, "resetToDefaults() must restore hapticsEnabled to true")
+    }
+
+    func test_resetToDefaults_pauseMediaDuringBreaks_isFalse() {
+        let store = SettingsStore(store: mockPersistence, config: testConfig)
+        store.pauseMediaDuringBreaks = true
+        store.resetToDefaults(config: testConfig)
+        XCTAssertFalse(store.pauseMediaDuringBreaks,
+                       "resetToDefaults() must restore pauseMediaDuringBreaks to false")
+    }
+
+    func test_resetToDefaults_pauseDuringFocus_isTrue() {
+        let store = SettingsStore(store: mockPersistence, config: testConfig)
+        store.pauseDuringFocus = false
+        store.resetToDefaults(config: testConfig)
+        XCTAssertTrue(store.pauseDuringFocus, "resetToDefaults() must restore pauseDuringFocus to true")
+    }
+
+    func test_resetToDefaults_pauseWhileDriving_isTrue() {
+        let store = SettingsStore(store: mockPersistence, config: testConfig)
+        store.pauseWhileDriving = false
+        store.resetToDefaults(config: testConfig)
+        XCTAssertTrue(store.pauseWhileDriving, "resetToDefaults() must restore pauseWhileDriving to true")
+    }
+
+    func test_resetToDefaults_doesNotAffectUnrelatedKeys() {
+        // An unrelated key written before reset must survive the reset unchanged.
+        mockPersistence.set(42, forKey: "unrelated.key")
+        let store = SettingsStore(store: mockPersistence, config: testConfig)
+        store.resetToDefaults(config: testConfig)
+        XCTAssertTrue(mockPersistence.hasValue(forKey: "unrelated.key"),
+                      "resetToDefaults() must not remove unrelated UserDefaults keys")
+        XCTAssertEqual(mockPersistence.integer(forKey: "unrelated.key", defaultValue: 0), 42,
+                       "resetToDefaults() must not modify unrelated UserDefaults values")
+    }
+
+    func test_resetToDefaults_persistsAllValuesToStore() {
+        // After reset, a new store reading the same persistence must see default values —
+        // confirming that resetToDefaults() writes through to the backing store.
+        let store = SettingsStore(store: mockPersistence, config: testConfig)
+        store.eyesInterval = 999
+        store.postureInterval = 999
+        store.snoozeCount = 7
+        store.resetToDefaults(config: testConfig)
+
+        let reloaded = SettingsStore(store: mockPersistence, config: testConfig)
+        XCTAssertEqual(reloaded.eyesInterval, testConfig.defaults.eyeInterval,
+                       "Reset eyesInterval must be persisted so a new SettingsStore reads the correct value")
+        XCTAssertEqual(reloaded.postureInterval, testConfig.defaults.postureInterval,
+                       "Reset postureInterval must be persisted")
+        XCTAssertEqual(reloaded.snoozeCount, 0,
+                       "Reset snoozeCount must be persisted as 0")
+    }
 }

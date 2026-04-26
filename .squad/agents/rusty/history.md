@@ -376,4 +376,13 @@ Early architecture foundational work: Models, Services, ViewModels, DesignSystem
 
 6. **Documentation stale:** ARCHITECTURE.md build instructions ("swift build / swift test") contradict README (xcodebuild required). Update Section 3 pre-submission.
 
-**Next owner action:** Post-Phase-1, remove OverlayManager singleton and refactor SettingsView ViewModel pattern.
+**Next owner action:** Post-Phase-1, ~~remove OverlayManager singleton~~ ✅ Done (Issue #114) and refactor SettingsView ViewModel pattern.
+
+### 2025-07-25 — Issue #114: Removed OverlayManager.shared singleton
+
+**What I did:**
+- Deleted `static let shared = OverlayManager()` from `OverlayManager.swift` (was line 63).
+- Changed `AppCoordinator.init` default from `OverlayManager.shared` to `OverlayManager()` — each coordinator now owns a fresh instance, proper DI.
+- Rewrote `OverlayManagerTests` to use `makeManager()` factory instead of `.shared`. Removed 2 singleton-identity tests (`test_shared_isNotNil`, `test_shared_returnsSameInstance`) that no longer apply. Eliminated `tearDown` that cleaned shared state.
+- Updated doc comments in `AppCoordinator.swift` and `AppCoordinatorTests.swift`.
+- All 38 OverlayManager + AppCoordinator tests pass. Build clean, zero warnings on changed files.

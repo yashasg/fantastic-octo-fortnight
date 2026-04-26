@@ -584,9 +584,42 @@ final class DataDrivenDefaultsRegressionTests: XCTestCase {
         )
     }
 
-    // MARK: resetToDefaults() — PENDING IMPLEMENTATION
-    //
-    // Tests for `SettingsStore.resetToDefaults(config:)` will be added once
-    // Basher implements the method. Expected signature:
-    //   func resetToDefaults(config: AppConfig = AppConfig.load())
+    // MARK: resetToDefaults() — Regression: Must Use AppConfig, Not Hardcoded Literals
+
+    /// Regression guard: resetToDefaults() must derive interval values from the
+    /// supplied AppConfig, not from hardcoded Swift literals. If a future developer
+    /// changes defaults.json, resetToDefaults() must pick up the new values.
+    func test_resetToDefaults_eyesInterval_comesFromAppConfig_notHardcode() {
+        let persistence = MockSettingsPersisting()
+        let store = SettingsStore(store: persistence, config: AppConfig.fallback)
+        store.eyesInterval = 9999
+        store.resetToDefaults(config: AppConfig.fallback)
+        XCTAssertEqual(
+            store.eyesInterval,
+            AppConfig.fallback.defaults.eyeInterval,
+            "resetToDefaults() eyesInterval must come from AppConfig, not a hardcoded literal. " +
+            "Regression: hardcoded value ignores defaults.json changes.")
+    }
+
+    func test_resetToDefaults_postureInterval_comesFromAppConfig_notHardcode() {
+        let persistence = MockSettingsPersisting()
+        let store = SettingsStore(store: persistence, config: AppConfig.fallback)
+        store.postureInterval = 9999
+        store.resetToDefaults(config: AppConfig.fallback)
+        XCTAssertEqual(
+            store.postureInterval,
+            AppConfig.fallback.defaults.postureInterval,
+            "resetToDefaults() postureInterval must come from AppConfig, not a hardcoded literal.")
+    }
+
+    func test_resetToDefaults_globalEnabled_comesFromAppConfig_notHardcode() {
+        let persistence = MockSettingsPersisting()
+        let store = SettingsStore(store: persistence, config: AppConfig.fallback)
+        store.globalEnabled = false
+        store.resetToDefaults(config: AppConfig.fallback)
+        XCTAssertEqual(
+            store.globalEnabled,
+            AppConfig.fallback.features.globalEnabledDefault,
+            "resetToDefaults() globalEnabled must come from AppConfig.features.globalEnabledDefault.")
+    }
 }
