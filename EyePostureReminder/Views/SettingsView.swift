@@ -355,7 +355,7 @@ private struct SettingsSmartPauseSection: View {
             .tint(AppColor.reminderBlue)
             .accessibilityHint(Text("settings.smartPause.pauseDuringFocus.hint", bundle: .module))
             .accessibilityIdentifier("settings.smartPause.pauseDuringFocus")
-            .onChange(of: settings.pauseDuringFocus) { newValue in
+            .onChange(of: settings.pauseDuringFocus) { _, newValue in
                 // Route through ViewModel so the analytics setter fires.
                 viewModel?.pauseDuringFocus = newValue
             }
@@ -369,7 +369,7 @@ private struct SettingsSmartPauseSection: View {
             .tint(AppColor.reminderBlue)
             .accessibilityHint(Text("settings.smartPause.pauseWhileDriving.hint", bundle: .module))
             .accessibilityIdentifier("settings.smartPause.pauseWhileDriving")
-            .onChange(of: settings.pauseWhileDriving) { newValue in
+            .onChange(of: settings.pauseWhileDriving) { _, newValue in
                 // Route through ViewModel so the analytics setter fires.
                 viewModel?.pauseWhileDriving = newValue
             }
