@@ -870,7 +870,7 @@ final class OverlayManagerQueueOnNoSceneRegressionTests: XCTestCase {
 
     /// No overlay window can be created without a scene — `isOverlayVisible` must
     /// stay `false` after a `showOverlay` call in a headless test environment.
-    func test_showOverlay_withNoActiveWindowScene_isOverlayVisibleRemainsFlase() {
+    func test_showOverlay_withNoActiveWindowScene_isOverlayVisibleRemainsFalse() {
         let manager = OverlayManager()
 
         manager.showOverlay(for: .posture, duration: 15, hapticsEnabled: true, pauseMediaEnabled: false) {}
