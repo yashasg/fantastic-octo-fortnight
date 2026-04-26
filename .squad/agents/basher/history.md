@@ -7,6 +7,17 @@
 
 ## Learnings
 
+### 2026-04-30 — Post-redesign Review Fixes: Asset Catalog, Dead Tokens & Components (Issue #168)
+
+- **RGShadowCard.colorset** — Created `EyePostureReminder/Resources/Colors.xcassets/RGShadowCard.colorset/Contents.json` with light variant #2E3833 (alpha 1.0) and dark variant transparent (alpha 0.0). Dark mode SoftElevation uses a border overlay, not a shadow, so the transparent dark entry is correct.
+- **AppColor.shadowCard** — Updated from raw `Color(red:green:blue:)` literal to `Color("RGShadowCard", bundle: .module)`. The `.opacity(0.10)` at the usage site in `SoftElevation` is unchanged; the catalog stores the base opaque color.
+- **StatusPill removed** — Confirmed via grep that `StatusPill` was never used in any view (only declared in Components.swift and tested in ComponentsTests.swift). Removed the struct and all 4 matching test cases.
+- **SectionHeader removed** — `SectionHeader` from Components.swift was never used in any view. `SettingsView.swift` uses its own private `SettingsSectionHeader` struct. Removed `SectionHeader` and its 3 tests. `IconContainer` was kept — it is actively used in SettingsView.swift.
+- **AppLayout.overlayCornerRadius / cardCornerRadius removed** — Both tokens were superseded by `radiusSmall/radiusCard/radiusLarge/radiusPill`. Grep confirmed zero usage outside their definition and the one `DesignSystemTests` test, which was also removed.
+- **AppColor.permissionBanner / permissionBannerText removed** — Neither token was referenced in any view. Removed both from AppColor and removed all corresponding tests in ColorTokenTests.swift (resolve, light/dark variant, alpha, distinctness, pascal-case convention) and RegressionTests.swift. The colorset files remain in the asset catalog (harmless) but the Swift API surface is gone.
+- **ColorTokenTests updated to 5 tokens** — Replaced the old "6 tokens" lists with the current 5: ReminderBlue, ReminderGreen, WarningOrange, WarningText, RGShadowCard. Added `test_rgShadowCard_resolvesFromCatalog` and `test_rgShadowCard_lightVariant_resolves`. The `haveNonZeroAlpha` / `areDistinctInLightMode` tests exclude RGShadowCard since its dark variant is intentionally transparent.
+- **Build + tests verified clean** — `** BUILD SUCCEEDED **` and `** TEST SUCCEEDED **` on `xcodebuild` against `iPhone 17 Pro` simulator before commit `0a6c9e0`.
+
 ### 2026-04-29 — Phase 3B: Calming Micro-interactions with Reduce-Motion Guards (Issue #166)
 
 - **DesignSystem.swift — new animation tokens:** Added `calmingEntranceDuration` (0.5s) + `calmingEntranceCurve` (easeOut) for the soft overlay entrance that Linus can adopt; `statusCrossfadeDuration` (0.25s) + `statusCrossfadeCurve` (easeInOut) for icon/text state changes; `AppLayout.entranceSlideOffset = 20pt` for the upward drift in CalmingEntrance.

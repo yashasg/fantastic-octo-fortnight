@@ -7,7 +7,21 @@
 
 ## Learnings
 
-### 2026-04-30 — Issue #165 (Phase 3A — Restful Grove OverlayView redesign)
+### 2026-05-01 — Issue #168 (Post-redesign review fixes — items 2, 3, 4)
+
+**AppFont is a legacy alias — prefer AppTypography:**
+- `AppFont` (DesignSystem.swift) is a pure forwarding enum for `AppTypography`; all static properties delegate to their `AppTypography` counterpart. New and migrated views should reference `AppTypography.*` directly. `AppFont` is retained only for backward compatibility.
+
+**Deduplicating OnboardingPrimaryButtonStyle → PrimaryButtonStyle:**
+- `OnboardingPrimaryButtonStyle` was functionally identical to `PrimaryButtonStyle` from `Components.swift` (same pill shape, `primaryRest` fill, 0.98 press scale, reduce-motion guard). Removed the duplicate; all three onboarding views now use `.buttonStyle(.primary)`. `OnboardingSecondaryButtonStyle` has no equivalent in Components and was kept.
+
+**Replacing OnboardingScreenWrapper with .calmingEntrance():**
+- `OnboardingScreenWrapper` duplicated `CalmingEntrance` exactly (opacity 0→1, entranceSlideOffset y, hasEverAppeared guard, reduce-motion skip). The only difference was the animation curve constant (`onboardingFadeInCurve` vs `calmingEntranceCurve`). Replaced all three `OnboardingScreenWrapper { content }` usages with `content.calmingEntrance()`, then deleted the wrapper struct. This reduces the animation surface from two parallel implementations to one canonical `CalmingEntrance` modifier.
+
+**Structural pattern for eliminating OnboardingScreenWrapper:**
+- `OnboardingScreenWrapper { ScrollView { ... }.background(...) }` → `ScrollView { ... }.background(...).calmingEntrance()`. The `.calmingEntrance()` modifier goes after `.background(...)` so the entrance animates the fully-styled scroll view as a unit, matching the previous wrapper behaviour.
+
+
 
 **Gradient background for full-screen overlays:**
 - Replace `Color.clear.background(.ultraThinMaterial)` with a `LinearGradient(colors: [AppColor.background, AppColor.surfaceTint], startPoint: .top, endPoint: .bottom).ignoresSafeArea()`. This adapts to dark mode automatically because both tokens are adaptive, and gives a calming directional tint rather than a flat blur.

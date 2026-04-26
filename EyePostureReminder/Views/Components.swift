@@ -33,30 +33,6 @@ extension View {
     }
 }
 
-// MARK: - StatusPill
-
-/// A small pill-shaped label combining an SF Symbol icon and a text label.
-/// Background is `AppColor.surfaceTint`; text/icon are `AppColor.primaryRest`.
-struct StatusPill: View {
-    let icon: String
-    let label: String
-
-    var body: some View {
-        HStack(spacing: AppSpacing.xs) {
-            Image(systemName: icon)
-                .symbolRenderingMode(.hierarchical)
-                .font(AppTypography.caption)
-            Text(label)
-                .font(AppTypography.caption)
-        }
-        .foregroundStyle(AppColor.primaryRest)
-        .padding(.horizontal, AppSpacing.sm + 2)
-        .padding(.vertical, AppSpacing.xs + 1)
-        .background(AppColor.surfaceTint)
-        .clipShape(Capsule())
-    }
-}
-
 // MARK: - PrimaryButton
 
 /// A pill-shaped button style with a `primaryRest` fill and adaptive high-contrast foreground.
@@ -105,23 +81,6 @@ struct IconContainer: View {
             .frame(width: size, height: size)
             .background(AppColor.surfaceTint)
             .clipShape(Circle())
-    }
-}
-
-// MARK: - SectionHeader
-
-/// A styled section header row using `textSecondary` colour and Nunito caption font.
-struct SectionHeader: View {
-    let title: String
-
-    var body: some View {
-        Text(title.uppercased())
-            .font(AppTypography.caption)
-            .fontWeight(.semibold)
-            .foregroundStyle(AppColor.textSecondary)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, AppSpacing.md)
-            .padding(.top, AppSpacing.sm)
     }
 }
 

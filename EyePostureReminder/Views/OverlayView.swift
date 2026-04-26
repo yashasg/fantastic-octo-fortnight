@@ -87,6 +87,7 @@ struct OverlayView: View {
                     .foregroundStyle(AppColor.textSecondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, AppSpacing.xl)
+                    .accessibilityIdentifier("overlay.supportiveText")
 
                 // Circular countdown ring
                 ZStack {

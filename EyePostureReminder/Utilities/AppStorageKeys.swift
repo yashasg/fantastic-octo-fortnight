@@ -14,4 +14,8 @@ enum AppStorageKey {
     /// Set to `true` by `OnboardingView.finishOnboardingAndCustomize()` to
     /// signal that `HomeView` should immediately open the Settings sheet on appear.
     static let openSettingsOnLaunch = "epr.openSettingsOnLaunch"
+
+    /// Set by XCUITest launch argument handlers to trigger a specific overlay type on startup.
+    /// Value matches `ReminderType.rawValue` ("eyes" or "posture"). Cleared after use.
+    static let uiTestOverlayType = "epr.ui-test.overlayType"
 }

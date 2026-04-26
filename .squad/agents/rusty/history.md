@@ -408,3 +408,29 @@ Early architecture foundational work: Models, Services, ViewModels, DesignSystem
 - **Minimal xcodeproj is the pragmatic bridge.** When an SPM-first project needs XCUITest, the lowest-maintenance solution is an xcodeproj that contains ONLY the UITest target, referencing the SPM-built app. Drift risk is minimal because the xcodeproj has no app target to keep in sync.
 - **ViewInspector tests view structure, not rendered behavior.** It's a complement for view-level unit tests, not a replacement for flow-based UI tests that verify navigation, accessibility, and multi-screen interactions.
 - **`swift package generate-xcodeproj` is dead.** Deprecated since Swift 5.6. Not a viable path for any tooling decisions going forward.
+
+### 2026-04-26: Restful Grove Redesign — Full Architecture Review
+
+**What I reviewed:**
+
+Complete code quality and architecture review of the Restful Grove visual redesign (Issues #159–#167, Phases 1–4). Covered DesignSystem.swift (322 lines), Components.swift (182 lines), all view files, font integration, animation patterns, and MVVM compliance.
+
+**Verdict:** Ready to merge. No critical issues. Two minor warnings (dead legacy radius tokens, SettingsView size at 556 lines).
+
+**Key observations:**
+
+- Design token architecture is solid: 9 semantic colors, 4 corner radii, 6 spacing values, well-documented with WCAG ratios
+- 100% token adoption across all view files — zero hardcoded values escaped the QA pass
+- AppFont/AppTypography dual-namespace pattern works well (facade + implementation) but needs a clarifying doc comment
+- All animations properly guarded with `@Environment(\.accessibilityReduceMotion)` — consistent if/else pattern across 9+ files
+- Dynamic Type fully supported via `.custom(name, size:, relativeTo:)` on all Nunito text styles
+- Nunito font registration via CoreText is valid; Info.plist `UIAppFonts` is recommended but not required
+- CalmingEntrance ViewModifier is a clean, reusable animation component with proper reduce-motion handling
+- SoftElevation correctly adapts between light (shadow) and dark (border overlay) modes
+
+## Learnings
+
+- **Dual font namespaces (AppFont ↔ AppTypography) are maintainable when the facade layer is pure pass-through.** The key is to enforce a convention: define tokens in AppTypography, reference via AppFont at call sites. New contributors need a doc comment to understand this.
+- **Legacy design tokens should be removed in the same PR that introduces replacements.** The `overlayCornerRadius`/`cardCornerRadius` → `radiusSmall`/`radiusCard`/`radiusLarge`/`radiusPill` migration left dead code. Always grep for usage before merging.
+- **CoreText programmatic font registration is reliable for SPM bundle contexts.** `CTFontManagerRegisterGraphicsFont` works where Info.plist `UIAppFonts` cannot reference SPM `.module` bundle resources. This is the correct pattern for our project structure.
+- **556 lines in a single view file is the monitoring threshold.** SettingsView is well-decomposed with private structs, but extraction to separate files should happen before it hits ~600 lines.

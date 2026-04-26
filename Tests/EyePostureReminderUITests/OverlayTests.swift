@@ -6,13 +6,13 @@
 // NOTE: The overlay is presented by the app coordinator when a reminder notification
 // fires. In UI tests, the overlay can be triggered by using the
 // TestLaunchArguments.showOverlayEyes or TestLaunchArguments.showOverlayPosture
-// launch arguments (reserved for future test-mode support). Until then, overlay
-// tests verify accessibility properties accessible via the system without
-// triggering real notifications.
+// launch arguments, which are fully wired to AppDelegate and EyePostureReminderApp.
 //
 // ACCESSIBILITY IDENTIFIERS IN PLACE:
 //   OverlayView:
-//     - × dismiss button  → .accessibilityIdentifier("overlay.dismissButton")
+//     - × dismiss button     → .accessibilityIdentifier("overlay.dismissButton")
+//     - supportive subtitle  → .accessibilityIdentifier("overlay.supportiveText")
+//     - Done CTA button      → .accessibilityIdentifier("overlay.doneButton")
 //
 // REMOVED TESTS (false positives, Fixes #154):
 //   - test_overlay_dismissButton_identifierIsCorrect: asserted XCTAssertFalse on a
@@ -23,13 +23,12 @@
 //   - test_overlay_countdown_accessibilityLabelKeyIsCorrect: asserted
 //     XCTAssertEqual("overlay.countdown.label", "overlay.countdown.label") —
 //     compared a string literal to itself, always passed. The countdown element is
-//     only present when the overlay is visible. Because XCUITests run in a separate
-//     process, they cannot import the app module or its resource bundle to validate
-//     localization keys, and the overlay trigger launch arguments are not yet
-//     implemented. A meaningful replacement requires TestLaunchArguments.showOverlayEyes
-//     or showOverlayPosture to be wired up so the element can be queried live.
+//     only present when the overlay is visible. A meaningful replacement is provided
+//     below via test_overlay_onShowOverlayEyes_* which launch with --show-overlay-eyes.
 
 import XCTest
+
+// MARK: - OverlayTests (normal launch — overlay must NOT be present)
 
 final class OverlayTests: XCTestCase {
 
@@ -71,6 +70,79 @@ final class OverlayTests: XCTestCase {
         XCTAssertFalse(
             dismissButton.waitForExistence(timeout: 2),
             "Overlay should not be covering the Home screen on normal launch."
+        )
+    }
+
+}
+
+// MARK: - OverlayPresentationTests (--show-overlay-eyes triggers the live overlay)
+
+final class OverlayPresentationTests: XCTestCase {
+
+    var app: XCUIApplication!
+
+    override func setUpWithError() throws {
+        continueAfterFailure = false
+        app = XCUIApplication()
+        app.launchWithEyeOverlay()
+    }
+
+    override func tearDownWithError() throws {
+        app = nil
+    }
+
+    // MARK: - test_overlay_onShowOverlayEyes_dismissButtonVisible
+
+    /// Verifies the × dismiss button appears when the eye break overlay is triggered.
+    func test_overlay_onShowOverlayEyes_dismissButtonVisible() throws {
+        let dismissButton = app.buttons["overlay.dismissButton"]
+        XCTAssertTrue(
+            dismissButton.waitForExistence(timeout: 5),
+            "Overlay dismiss button must be visible when --show-overlay-eyes is used. " +
+            "Check that AppDelegate stores 'eyes' in AppStorageKey.uiTestOverlayType and " +
+            "EyePostureReminderApp calls coordinator.handleNotification(for:) in its .task."
+        )
+    }
+
+    // MARK: - test_overlay_onShowOverlayEyes_doneButtonVisible
+
+    /// Verifies the Done CTA button is visible on the eye break overlay (Restful Grove redesign).
+    func test_overlay_onShowOverlayEyes_doneButtonVisible() throws {
+        let doneButton = app.buttons["overlay.doneButton"]
+        XCTAssertTrue(
+            doneButton.waitForExistence(timeout: 5),
+            "Done button must be visible on the overlay. " +
+            "OverlayView must have .accessibilityIdentifier(\"overlay.doneButton\") " +
+            "on the primary Done PrimaryButton."
+        )
+        XCTAssertTrue(doneButton.isHittable, "Done button must be tappable.")
+    }
+
+    // MARK: - test_overlay_onShowOverlayEyes_supportiveTextVisible
+
+    /// Verifies the supportive text line is visible on the eye break overlay (Restful Grove redesign).
+    func test_overlay_onShowOverlayEyes_supportiveTextVisible() throws {
+        let supportiveText = app.staticTexts["overlay.supportiveText"]
+        XCTAssertTrue(
+            supportiveText.waitForExistence(timeout: 5),
+            "Overlay supportive text must be visible. " +
+            "OverlayView must have .accessibilityIdentifier(\"overlay.supportiveText\") " +
+            "on the subtitle Text element."
+        )
+    }
+
+    // MARK: - test_overlay_doneButton_dismissesOverlay
+
+    /// Taps the Done button and verifies the overlay dismisses (Home screen returns).
+    func test_overlay_doneButton_dismissesOverlay() throws {
+        let doneButton = app.buttons["overlay.doneButton"]
+        XCTAssertTrue(doneButton.waitForExistence(timeout: 5))
+        doneButton.tap()
+
+        let dismissButton = app.buttons["overlay.dismissButton"]
+        XCTAssertFalse(
+            dismissButton.waitForExistence(timeout: 5),
+            "After tapping Done, the overlay should be dismissed and dismiss button should disappear."
         )
     }
 

@@ -81,3 +81,18 @@
   3. `SettingsView.swift` at 446 lines — previously 347; grew with snooze/smart-pause sections. Subview extraction recommended for maintainability
 - **Clean bill on:** No swiftlint suppressions, zero TODO/FIXME/HACK markers, zero force unwraps, all Task closures use `[weak self]`, deprecated `snooze(for:)` properly marked and unused, DI pattern consistent, design system tokens comprehensive
 - **Ship confidence: HIGH** — No functional bugs, no architectural debt, no safety issues. Carried P2s are maintenance-quality items for a future cleanup pass.
+
+### 2025-07-18: Restful Grove Visual Redesign Code Review
+- **Scope:** All files changed on `feature/restful-grove` — 9 new color assets, 2 bundled fonts, DesignSystem.swift, Components.swift, SettingsView.swift, OverlayView.swift, HomeView.swift, OnboardingView.swift + 3 sub-views, ReminderType.swift, Package.swift
+- **Verdict:** Conditional Approval — 0 P0, 2 P1, 8 P2
+- **P1s identified:**
+  1. `AppColor.shadowCard` uses raw `Color(red:green:blue:)` instead of asset catalog — breaks single-source-of-truth pattern for dark mode adaptation
+  2. Three reusable components (`StatusPill`, `IconContainer`, `SectionHeader`) are dead code — added to Components.swift but never used by any view
+- **Key P2s:**
+  1. HomeView uses `.secondary` and `AppColor.reminderBlue` instead of RG palette tokens
+  2. `OnboardingPrimaryButtonStyle` duplicates `PrimaryButtonStyle` in Components.swift
+  3. `OnboardingScreenWrapper` duplicates `CalmingEntrance` modifier pattern
+  4. `permissionBanner`/`permissionBannerText` tokens appear unused after redesign
+  5. No test coverage for 9 new RG* color tokens in asset catalog
+- **Positives:** Design system adoption is thorough across all redesigned views, accessibility is excellent (labels, hints, identifiers, reduce-motion guards throughout), Dynamic Type properly preserved via relativeTo:, SoftElevation pattern is clean, CalmingEntrance handles re-appear correctly, OnboardingPermissionView DI injection now correct
+- **Key learning:** When adding a "reusable components" file during a redesign, verify each component is actually adopted by at least one view before shipping — otherwise you get dead code that duplicates bespoke implementations already in the views (SettingsRowIcon vs IconContainer, SettingsSectionHeader vs SectionHeader)

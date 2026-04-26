@@ -35,6 +35,16 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         if args.contains("--reset-onboarding") {
             UserDefaults.standard.removeObject(forKey: AppStorageKey.hasSeenOnboarding)
         }
+        if args.contains("--show-overlay-eyes") {
+            UserDefaults.standard.set(true, forKey: AppStorageKey.hasSeenOnboarding)
+            SettingsStore().resetToDefaults()
+            UserDefaults.standard.set(ReminderType.eyes.rawValue, forKey: AppStorageKey.uiTestOverlayType)
+        }
+        if args.contains("--show-overlay-posture") {
+            UserDefaults.standard.set(true, forKey: AppStorageKey.hasSeenOnboarding)
+            SettingsStore().resetToDefaults()
+            UserDefaults.standard.set(ReminderType.posture.rawValue, forKey: AppStorageKey.uiTestOverlayType)
+        }
     }
 
     func applicationDidBecomeActive(_ application: UIApplication) {

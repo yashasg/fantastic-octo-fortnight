@@ -112,7 +112,9 @@ final class AppCoordinator: ObservableObject {
     /// Used to suppress background services (timers, permission requests) that prevent
     /// the accessibility tree from settling between test interactions.
     static let isUITestMode: Bool = CommandLine.arguments.contains("--skip-onboarding") ||
-                                    CommandLine.arguments.contains("--reset-onboarding")
+                                    CommandLine.arguments.contains("--reset-onboarding") ||
+                                    CommandLine.arguments.contains("--show-overlay-eyes") ||
+                                    CommandLine.arguments.contains("--show-overlay-posture")
 
     // MARK: - Init
 

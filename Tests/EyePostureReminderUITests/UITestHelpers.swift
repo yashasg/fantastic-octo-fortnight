@@ -37,4 +37,18 @@ extension XCUIApplication {
         launchArguments += [TestLaunchArguments.resetOnboarding]
         launch()
     }
+
+    /// Appends `--show-overlay-eyes` and launches the app.
+    /// Use in tests that verify the eye break overlay UI.
+    func launchWithEyeOverlay() {
+        launchArguments += [TestLaunchArguments.showOverlayEyes]
+        launch()
+    }
+
+    /// Appends `--show-overlay-posture` and launches the app.
+    /// Use in tests that verify the posture check overlay UI.
+    func launchWithPostureOverlay() {
+        launchArguments += [TestLaunchArguments.showOverlayPosture]
+        launch()
+    }
 }

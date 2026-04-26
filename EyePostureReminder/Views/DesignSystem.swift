@@ -23,14 +23,6 @@ enum AppColor {
     /// Light: #E07000 (~3.5:1 on white). Dark: #FF9500 (6.8:1 on near-black).
     static let warningOrange = Color("WarningOrange", bundle: .module)
 
-    /// Permission banner background (#FFCC00) — intentionally static warm yellow in both modes
-    /// to signal caution. Only used on banner backgrounds; not for text or icon-only contexts.
-    static let permissionBanner = Color("PermissionBanner", bundle: .module)
-
-    /// Permission banner text — near-black (#262626) for WCAG AA contrast on the yellow banner.
-    /// Always dark because it is exclusively used on the static yellow permissionBanner background.
-    static let permissionBannerText = Color("PermissionBannerText", bundle: .module)
-
     /// Warning text colour for body/label contexts — WCAG AA on both backgrounds.
     /// Light mode: dark amber #994F00 (6.1:1 on white). Dark mode: #FF9500 (6.8:1 on near-black).
     static let warningText = Color("WarningText", bundle: .module)
@@ -75,7 +67,7 @@ enum AppColor {
 
     /// Card shadow tint — deep forest tint used by `SoftElevation` in light mode.
     /// Applied at 10% opacity; dark mode uses a border overlay instead.
-    static let shadowCard = Color(red: 0.18, green: 0.22, blue: 0.20)
+    static let shadowCard = Color("RGShadowCard", bundle: .module)
 }
 
 // MARK: - Typography
@@ -247,10 +239,6 @@ enum AppLayout {
     static let countdownRingDiameter: CGFloat = 160
     /// Countdown ring stroke width
     static let countdownRingStroke: CGFloat = 8
-    /// Overlay corner radius (for non-fullscreen contexts)
-    static let overlayCornerRadius: CGFloat = 24
-    /// Card / small-surface corner radius (onboarding cards, preview tiles)
-    static let cardCornerRadius: CGFloat = 16
     /// Onboarding content max width for iPad-friendly layout
     static let onboardingMaxContentWidth: CGFloat = 540
     /// Onboarding hero illustration icon size
