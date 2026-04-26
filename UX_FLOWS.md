@@ -169,7 +169,7 @@ iOS fires Eye Reminder notification
     │      │  Overlay slides up and off-screen (0.2s ease-in)
     │      │  Overlay window removed from hierarchy
     │      │  User returns to what they were doing
-    │      │  Next reminder already scheduled (repeat: true)
+    │      │  Next reminder already scheduled (repeat: false; ScreenTimeTracker re-arms after each break)
     │      │  [No snooze sheet — snooze controls live in Settings only]
     │      │
     │      ├─ User taps ⚙️
@@ -349,7 +349,7 @@ User sees countdown and can dismiss
     ▼
 Overlay dismissed
 App remains open in background
-Next notification already scheduled (repeat: true in original request)
+Next notification already scheduled (repeat: false; ScreenTimeTracker re-arms after each break)
 All reminders continue normally
 ```
 
