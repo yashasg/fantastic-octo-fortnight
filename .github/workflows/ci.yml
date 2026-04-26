@@ -19,6 +19,10 @@ permissions:
   contents: read
   actions: read
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   XCODE_VERSION: "16.2"
   SCHEME: "EyePostureReminder"
