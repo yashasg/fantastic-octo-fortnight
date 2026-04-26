@@ -18,8 +18,7 @@ struct OnboardingPermissionView: View {
     }
 
     var body: some View {
-        OnboardingScreenWrapper {
-            ScrollView {
+        ScrollView {
                 VStack(spacing: AppSpacing.lg) {
                     Spacer(minLength: AppSpacing.xl)
 
@@ -53,7 +52,7 @@ struct OnboardingPermissionView: View {
                         Text("onboarding.permission.enableButton", bundle: .module)
                             .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(OnboardingPrimaryButtonStyle())
+                    .buttonStyle(.primary)
                     .padding(.horizontal, AppSpacing.xl)
                     .accessibilityLabel(Text("onboarding.permission.enableButton", bundle: .module))
                     .accessibilityHint(Text("onboarding.permission.enableButton.hint", bundle: .module))
@@ -79,7 +78,7 @@ struct OnboardingPermissionView: View {
                 )
             }
             .background(AppColor.background.ignoresSafeArea())
-        }
+            .calmingEntrance()
     }
 
     private func requestNotificationPermission() {

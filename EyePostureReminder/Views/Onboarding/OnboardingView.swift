@@ -48,33 +48,6 @@ struct OnboardingView: View {
 
 // MARK: - Shared Onboarding Styles
 
-struct OnboardingPrimaryButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        OnboardingPrimaryButtonBody(configuration: configuration)
-    }
-
-    private struct OnboardingPrimaryButtonBody: View {
-        @Environment(\.accessibilityReduceMotion) private var reduceMotion
-        let configuration: ButtonStyleConfiguration
-
-        var body: some View {
-            configuration.label
-                .font(AppFont.bodyEmphasized)
-                .foregroundStyle(AppColor.background)
-                .padding(.vertical, AppSpacing.md)
-                .padding(.horizontal, AppSpacing.lg)
-                .frame(minHeight: AppLayout.minTapTarget)
-                .background(
-                    RoundedRectangle(cornerRadius: AppLayout.radiusPill, style: .continuous)
-                        .fill(AppColor.primaryRest)
-                )
-                .scaleEffect((!reduceMotion && configuration.isPressed) ? 0.98 : 1.0)
-                .opacity(configuration.isPressed ? 0.86 : 1)
-                .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: configuration.isPressed)
-        }
-    }
-}
-
 struct OnboardingSecondaryButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
@@ -88,36 +61,7 @@ struct OnboardingSecondaryButtonStyle: ButtonStyle {
 
 // MARK: - Animation Helper
 
-/// Wraps any onboarding screen content with a fade + gentle upward slide entrance.
-/// Respects `accessibilityReduceMotion` — when enabled, sets opacity immediately without animation.
-struct OnboardingScreenWrapper<Content: View>: View {
-    @State private var appeared = false
-    @State private var hasEverAppeared = false
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    let content: Content
-
-    init(@ViewBuilder content: () -> Content) {
-        self.content = content()
-    }
-
-    var body: some View {
-        content
-            .opacity(appeared ? 1 : 0)
-            .offset(y: (!reduceMotion && !appeared) ? AppLayout.entranceSlideOffset : 0)
-            .onAppear {
-                guard !hasEverAppeared else { appeared = true; return }
-                hasEverAppeared = true
-                if reduceMotion {
-                    appeared = true
-                } else {
-                    withAnimation(AppAnimation.onboardingFadeInCurve) {
-                        appeared = true
-                    }
-                }
-            }
-    }
-}
+// OnboardingScreenWrapper replaced by .calmingEntrance() from Components.swift
 
 #Preview {
     OnboardingView()

@@ -9,8 +9,7 @@ struct OnboardingWelcomeView: View {
     let onNext: () -> Void
 
     var body: some View {
-        OnboardingScreenWrapper {
-            ScrollView {
+        ScrollView {
                 VStack(spacing: AppSpacing.lg) {
                     Spacer(minLength: AppSpacing.xl)
 
@@ -56,7 +55,7 @@ struct OnboardingWelcomeView: View {
                         Text("onboarding.welcome.nextButton", bundle: .module)
                             .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(OnboardingPrimaryButtonStyle())
+                    .buttonStyle(.primary)
                     .padding(.horizontal, AppSpacing.xl)
                     .accessibilityLabel(Text("onboarding.welcome.nextButton", bundle: .module))
                     .accessibilityHint(Text("onboarding.welcome.nextButton.hint", bundle: .module))
@@ -67,7 +66,7 @@ struct OnboardingWelcomeView: View {
                 .frame(maxWidth: .infinity)
             }
             .background(AppColor.background.ignoresSafeArea())
-        }
+            .calmingEntrance()
     }
 }
 

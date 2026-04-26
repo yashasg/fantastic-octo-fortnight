@@ -34,20 +34,20 @@ struct HomeView: View {
                 VStack(spacing: AppSpacing.sm) {
                     Image(systemName: statusIcon)
                         .symbolRenderingMode(.hierarchical)
-                        .font(AppFont.overlayIcon)
+                        .font(AppTypography.overlayIcon)
                         .foregroundStyle(statusColor)
                         .accessibilityHidden(true)
                         .accessibilityIdentifier("home.statusIcon")
 
                     VStack(spacing: AppSpacing.sm) {
                         Text("home.title", bundle: .module)
-                            .font(AppFont.headline)
+                            .font(AppTypography.headline)
                             .foregroundStyle(AppColor.textPrimary)
                             .multilineTextAlignment(.center)
                             .accessibilityIdentifier("home.title")
 
                         Text(statusLabel)
-                            .font(AppFont.body)
+                            .font(AppTypography.body)
                             .foregroundStyle(AppColor.textSecondary)
                             .multilineTextAlignment(.center)
                             .accessibilityIdentifier("home.statusLabel")

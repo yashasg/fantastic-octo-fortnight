@@ -11,8 +11,7 @@ struct OnboardingSetupView: View {
     let onCustomize: () -> Void
 
     var body: some View {
-        OnboardingScreenWrapper {
-            ScrollView {
+        ScrollView {
                 VStack(spacing: AppSpacing.lg) {
                     Spacer(minLength: AppSpacing.xl)
 
@@ -62,7 +61,7 @@ struct OnboardingSetupView: View {
                         Text("onboarding.setup.getStartedButton", bundle: .module)
                             .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(OnboardingPrimaryButtonStyle())
+                    .buttonStyle(.primary)
                     .padding(.horizontal, AppSpacing.xl)
                     .accessibilityLabel(Text("onboarding.setup.getStartedButton", bundle: .module))
                     .accessibilityHint(Text("onboarding.setup.getStartedButton.hint", bundle: .module))
@@ -81,7 +80,7 @@ struct OnboardingSetupView: View {
                 .frame(maxWidth: .infinity)
             }
             .background(AppColor.background.ignoresSafeArea())
-        }
+            .calmingEntrance()
     }
 }
 
