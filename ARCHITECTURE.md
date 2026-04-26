@@ -2,7 +2,7 @@
 
 > **Owner:** Rusty (iOS Architect)  
 > **Last Updated:** 2026-04-25  
-> **Status:** Foundation
+> **Status:** Phase 2
 
 ---
 
@@ -237,7 +237,7 @@ final class AudioInterruptionManager: MediaControlling { ... }
 
 ## 3. Project Structure
 
-This project uses **Swift Package Manager** (`Package.swift`) — there is no `.xcodeproj`. Build and test via `swift build` / `swift test` or `xcodebuild` with `-scheme EyePostureReminder`.
+This project uses **Swift Package Manager** (`Package.swift`) — there is no `.xcodeproj`. Build and test via `xcodebuild` with `-scheme EyePostureReminder`.
 
 **Note:** Protocols are co-located with their primary implementation (no separate `Protocols/` folder).
 
@@ -652,11 +652,11 @@ Keeps `AppCoordinator` (450+ lines) within SRP. Pause logic is cohesive and test
 xcodebuild -version  # Xcode 15.0+
 swift --version       # Swift 5.9+
 
-# Build (SPM)
-swift build
+# Build
+xcodebuild build -scheme EyePostureReminder -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
 
-# Run unit tests (SPM)
-swift test
+# Run unit tests
+xcodebuild test -scheme EyePostureReminder -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
 
 # Build via xcodebuild (if simulator/device target needed)
 xcodebuild -scheme EyePostureReminder \
@@ -695,7 +695,7 @@ jobs:
         run: sudo xcode-select -s /Applications/Xcode_15.0.app
       
       - name: Build
-        run: swift build
+        run: xcodebuild build -scheme EyePostureReminder -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
       
       - name: Run Unit Tests
         run: |
