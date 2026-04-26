@@ -7,6 +7,29 @@
 
 ## Learnings
 
+### 2026-04-26 — Restful Grove: Test Coverage for Design Tokens and Components
+
+**Baseline:** 860/860 tests (0 failures) before this task.
+
+**Coverage gaps identified (all untested prior to this task):**
+- `AppTypography`: 5 new icon tokens (`settingsRowIcon`, `warningIcon`, `reminderCardIcon`, `overlayIcon`, `illustrationIcon`)
+- `AppSpacing.xxl` (40pt) — the only spacing token without a test
+- `AppLayout` radius tokens: `radiusSmall` (12pt), `radiusCard` (20pt), `radiusLarge` (28pt), `radiusPill` (999pt), `entranceSlideOffset` (20pt)
+- `AppAnimation` new duration tokens: `calmingEntranceDuration` (0.5s), `statusCrossfadeDuration` (0.25s), `onboardingFadeIn` (0.4s), `onboardingFadeInDelay` (0.1s); also `calmingEntranceCurve` and `statusCrossfadeCurve` compile tests
+- `AppColor` Restful Grove palette: 10 tokens (`background`, `surface`, `surfaceTint`, `primaryRest`, `secondaryCalm`, `accentWarm`, `textPrimary`, `textSecondary`, `separatorSoft`, `shadowCard`)
+- `AppSymbol`: 6 new names (`snoozed`, `bell`, `pauseDuringFocus`, `pauseWhileDriving`, `clock`, `timer`) — also added uniqueness regression guard
+- `Components.swift`: zero tests existed — all five components untested (`WellnessCard`, `StatusPill`, `IconContainer`, `SectionHeader`, `CalmingEntrance`, `PrimaryButtonStyle`)
+
+**Tests added:**
+- `DesignSystemTests.swift`: 37 new tests covering all token gaps above
+- `ComponentsTests.swift` (new file): 28 tests for Components.swift — default property values, init contracts, token usage, modifier logic
+
+**Final test count:** 905/905 (0 failures). +45 tests from baseline.
+
+**Key insight:** SwiftUI `ViewModifier` and `View` components can be meaningfully unit-tested without UIKit hosting by focusing on stored property defaults, initialiser contracts, and token reference assertions. Rendering behavior belongs in UI tests; logic and token wiring belong in unit tests.
+
+**Key insight:** The `allDurationsArePositive` test in `DesignSystemTests` only covered the original 5 animation tokens. When new `AppAnimation` tokens are added, that test must be updated AND a separate spec test for each new value should be added. A missing spec value (e.g. `calmingEntranceDuration`) won't break existing tests — it will simply have zero coverage.
+
 ### Issue #167: Phase 4 QA Pass — Restful Grove Redesign
 
 **Build & tests:** BUILD SUCCEEDED, 860/860 tests pass (0 failures).
