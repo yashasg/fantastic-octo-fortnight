@@ -266,8 +266,12 @@ private struct SettingsSnoozeSection: View {
 
                 Button(
                     action: {
-                        withAnimation(reduceMotion ? nil : AppAnimation.settingsExpandCurve) {
+                        if reduceMotion {
                             viewModel?.cancelSnooze()
+                        } else {
+                            withAnimation(AppAnimation.settingsExpandCurve) {
+                                viewModel?.cancelSnooze()
+                            }
                         }
                     },
                     label: {
@@ -285,8 +289,12 @@ private struct SettingsSnoozeSection: View {
             } else {
                 Button(
                     action: {
-                        withAnimation(reduceMotion ? nil : AppAnimation.settingsExpandCurve) {
+                        if reduceMotion {
                             viewModel?.snooze(option: .fiveMinutes)
+                        } else {
+                            withAnimation(AppAnimation.settingsExpandCurve) {
+                                viewModel?.snooze(option: .fiveMinutes)
+                            }
                         }
                     },
                     label: { Text("settings.snooze.5min", bundle: .module) }
@@ -301,8 +309,12 @@ private struct SettingsSnoozeSection: View {
 
                 Button(
                     action: {
-                        withAnimation(reduceMotion ? nil : AppAnimation.settingsExpandCurve) {
+                        if reduceMotion {
                             viewModel?.snooze(option: .oneHour)
+                        } else {
+                            withAnimation(AppAnimation.settingsExpandCurve) {
+                                viewModel?.snooze(option: .oneHour)
+                            }
                         }
                     },
                     label: { Text("settings.snooze.1hour", bundle: .module) }
@@ -317,8 +329,12 @@ private struct SettingsSnoozeSection: View {
 
                 Button(
                     action: {
-                        withAnimation(reduceMotion ? nil : AppAnimation.settingsExpandCurve) {
+                        if reduceMotion {
                             viewModel?.snooze(option: .restOfDay)
+                        } else {
+                            withAnimation(AppAnimation.settingsExpandCurve) {
+                                viewModel?.snooze(option: .restOfDay)
+                            }
                         }
                     },
                     label: { Text("settings.snooze.restOfDay", bundle: .module) }
