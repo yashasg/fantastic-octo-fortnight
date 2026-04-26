@@ -101,3 +101,22 @@
 - **Notification preview card as pre-education** — Show a visual mock of what the notification will look like before requesting permission. Sets expectations, reduces anxiety.
 - **Neutral secondary option labeling** — "Maybe Later" over "Skip" or "Not Now" avoids dark pattern territory while remaining honest.
 - **`@AppStorage` for one-time flow flags** — Clean, idiomatic SwiftUI pattern for `hasSeenOnboarding`, `hasSeenWhatsNew`, etc.
+
+### 2026-04-26: Tess — Wellness Visual Redesign Proposed (Issue #158)
+
+**Related artifact:** `.squad/decisions/inbox/tess-wellness-design-plan.md` (now merged into decisions.md)
+
+Tess completed comprehensive wellness design research proposing "Restful Grove" visual system as a redesign direction for Phase 2+:
+
+- **Color palette** (light + dark modes, WCAG AA verified): Sage green primary, gentle blue secondary, soft clay accent, warm sand backgrounds
+- **Typography recommendations:** DM Sans (safest full-app), or Nunito + DM Sans hybrid for more wellness personality
+- **Design tokens:** Semantic colors, spacing (4pt grid extended), radius system, elevation guidelines
+- **Motion guidelines:** Calming micro-interactions with reduce-motion respect
+- **Screen redesigns:** Home, Settings, Overlay, Onboarding with before/after visual direction
+- **Implementation phases:** 4 phases from token expansion through QA
+
+**Impact on UX flows:** Tess's visual system complements Reuben's interaction design. No flow conflicts; design system should enhance existing UX principles (e.g., "interruptions should feel helpful, not annoying" → soft visual treatment).
+
+**Open questions for team:** Font adoption timing, color unification (eye vs. posture), Phase 2 dashboard scope, overlay copy additions.
+
+**Status:** Awaiting team design review and feedback.

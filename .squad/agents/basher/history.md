@@ -7,6 +7,14 @@
 
 ## Learnings
 
+### 2026-04-27 — App Store submission blockers: Info.plist + Entitlements
+
+- **NSMotionUsageDescription already existed** in `EyePostureReminder/Info.plist` (line 31) with a short value. Updated to a more specific, safety-focused string: "Eye & Posture Reminder uses motion data to detect when you're driving and automatically pause reminders for your safety." This satisfies Apple's requirement for CMMotionActivityManager usage.
+- **No .entitlements file existed** — created `EyePostureReminder/EyePostureReminder.entitlements` with `com.apple.developer.focus-status = true`. This entitlement is required for `INFocusStatusCenter` (used by `LiveFocusStatusDetector` in `PauseConditionManager`). Without it, the app crashes at first API access on device.
+- **SPM entitlements pattern:** Since this is a pure SPM project (Package.swift, no .xcodeproj), the `.entitlements` file must be manually referenced in the App Store distribution build configuration in Xcode (`CODE_SIGN_ENTITLEMENTS = EyePostureReminder/EyePostureReminder.entitlements`). The dev/simulator build scripts use `CODE_SIGNING_REQUIRED=NO` so they are unaffected.
+- **File location:** `EyePostureReminder/EyePostureReminder.entitlements` — co-located with `Info.plist` in the target folder for discoverability.
+- **Commits:** `e3f5364` (NSMotionUsageDescription), `c1fe4c6` (focus-status entitlement).
+
 ### 2026-04-25 — TestBundle helper for SPM resource bundle resolution (Issue #11)
 
 - **Root cause of 70 test failures:** `Bundle.module` inside `@testable import EyePostureReminder` resolves to the *test* target's bundle, not the production module's resource bundle. Colors.xcassets, Localizable.xcstrings, and defaults.json are absent from the test bundle.

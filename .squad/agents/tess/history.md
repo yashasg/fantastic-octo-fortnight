@@ -286,3 +286,19 @@ Early design system work covering: DesignSystem.swift tokens (colors, fonts, spa
 - All colors via AppColor tokens, all fonts via AppFont tokens
 - VoiceOver order and combined elements logical throughout
 - Dark mode inheritance correct
+
+### 2026-04-26: Wellness Visual Redesign Plan
+
+**Task:** Researched and proposed a wellness-themed visual redesign before implementation.
+
+**Decision filed:** `.squad/decisions/inbox/tess-wellness-design-plan.md`
+
+**Direction:** “Restful Grove” — warm sand backgrounds, soft sage/teal primary colors, gentle blue secondary accents, muted clay warmth, rounded cards, subtle SF Symbol-based illustration, calming micro-interactions, and explicitly designed light/dark mode palettes.
+
+**Current UI assessment:** `DesignSystem.swift` is structurally strong but utility-first; `SettingsView` uses accessible native form patterns; `OverlayView` is accessibility-strong but visually generic; onboarding is tokenized but still icon-only/generic. `HomeView.swift` remains a phase-2/dashboard consideration based on prior audits.
+
+**Font research:** Recommended DM Sans as the safest full-app OFL font, Nunito/Nunito Sans as the strongest wellness-feeling option, and Plus Jakarta Sans as the premium/product-feel alternative. All proposed font options are free for commercial use under OFL.
+
+**Accessibility rule reinforced:** Soft wellness colors should be used primarily as backgrounds/fills; foreground text/icon colors must preserve WCAG AA contrast. Proposed palette includes checked AA foreground pairings for normal text and controls.
+
+**Key file paths:** `EyePostureReminder/Views/DesignSystem.swift`, `EyePostureReminder/Views/SettingsView.swift`, `EyePostureReminder/Views/OverlayView.swift`, `EyePostureReminder/Views/HomeView.swift`, `EyePostureReminder/Views/Onboarding/*.swift`.

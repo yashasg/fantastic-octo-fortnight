@@ -18,6 +18,14 @@
 
 ## Learnings
 
+### 2026-04-26 — Copyright & IP Analysis vs LookAway
+
+- **Report filed:** `.squad/decisions/inbox/frank-copyright-analysis.md`
+- Assessed LookAway by Mystical Bits, LLC as a macOS digital wellness competitor with eye-break, blink, posture, full-screen break, stats, and Screen Score features. Current app name **Eye & Posture Reminder** is descriptive and meaningfully different from **LookAway**, so direct LookAway trademark-confusion risk appears low, but formal clearance was not performed.
+- Concluded the 20-20-20 rule is a widely used wellness/optometry guideline and the underlying idea/method is not copyrightable; use it descriptively and write original explanatory copy.
+- Feature overlap with eye-break/posture apps is generally not a copyright issue because copyright protects expression, not ideas, systems, methods, or standard UI patterns. Risk areas are copying competitor code, copy, sounds, artwork, distinctive UI, screenshots, or proprietary names such as “Screen Score.”
+- Recommended pre-submission App Store and trademark knockout searches for exact/similar names, avoiding LookAway-specific branding, maintaining original iOS-native UI, and keeping medical-disclaimer language in onboarding/Settings/App Store metadata.
+
 ### 2026-04-25 — Legal Placeholder Values Filled (Issue #111)
 
 - Replaced all `[Date]` occurrences in TERMS.md and PRIVACY.md with "April 25, 2026"
@@ -86,3 +94,20 @@
 - ATT is not required unless future analytics/ads link app data with third-party data, share user/device data with data brokers, access IDFA, or use an SDK that tracks across apps/websites.
 - HealthKit should not be added for MVP; it would introduce HealthKit-specific privacy policy, purpose strings, marketing/UI disclosure, no-ad/data-mining restrictions, and false-health-data risks without a clear product need.
 - No age verification is needed for the current general-audience, no-data-collection app. Avoid Kids Category and child-targeted metadata unless the app is redesigned for COPPA/GDPR-K/Kids Category obligations.
+
+### 2026-04-26 — Analytics Privacy Correction: MetricKit + os.Logger
+
+- **Report filed:** `.squad/decisions/inbox/frank-analytics-privacy-update.md`
+- User corrected the prior legal assumption: the app **does collect analytics** through Apple-native systems. Stack is `os.Logger` for on-device privacy-tiered logs plus MetricKit/App Store Connect analytics; there is still **no third-party SDK**, no Firebase/Mixpanel, and no custom analytics backend.
+- Updated conclusion: blanket **"Data Not Collected"** is no longer the right overall posture if MetricKit/App Store Connect analytics are treated as data leaving the device. Local-only data, transient motion/Focus data, and normal on-device `os.Logger` logs remain **Not Collected**; MetricKit/App Store Connect diagnostics should be conservatively disclosed as **Diagnostics** (Crash Data and/or Performance Data), **Not Linked to User**, **Not Used for Tracking**.
+- Current `docs/legal/PRIVACY.md` needs updates because it says, or strongly implies, no analytics, no crash reporting, no MetricKit transmission, and nothing leaves the device. The replacement policy should explicitly disclose Apple-native MetricKit/App Store Connect diagnostics and explain that `os.Logger` logs normally remain on-device with private values redacted.
+- ATT remains **not required** for the current architecture because MetricKit does not use IDFA, does not track users across apps/websites, and does not involve third-party tracking, ad networks, data brokers, or user-level profiling.
+- If a third-party analytics SDK is added later, the team must redo Privacy Nutrition Labels, privacy policy disclosures, vendor due diligence, ATT analysis, SDK privacy manifest review, retention/opt-out planning, and event payload controls before release.
+
+### 2026-04-26 — Implemented Apple EULA + MetricKit Privacy Updates
+
+- Added `docs/legal/TERMS.md` Apple App Store Terms section with the required Apple custom EULA supplement clauses: Apple non-party acknowledgement, limited non-transferable device license, developer maintenance/support responsibility, Apple warranty limitation, developer responsibility for product claims, developer responsibility for IP claims, and Apple/subsidiaries as third-party beneficiaries.
+- Updated `docs/legal/PRIVACY.md` to remove overbroad no-analytics/nothing-leaves-device language and disclose Apple-native MetricKit/App Store Connect diagnostics and aggregate analytics.
+- Clarified that `os.Logger` logs normally remain on-device with private/redacted values, while diagnostic logs may be shared through Apple's diagnostic-sharing/TestFlight settings if the user opts in.
+- Preserved the privacy posture: no third-party analytics SDKs, no IDFA, no user accounts, no tracking, no sale of data, local settings stay on-device, and motion/Focus data remain transient.
+- Commits created: `797bdc2` (`docs(legal): add Apple EULA supplement to TERMS.md`) and `63a5ac1` (`docs(legal): update PRIVACY.md for MetricKit analytics disclosure`).

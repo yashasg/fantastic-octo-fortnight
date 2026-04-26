@@ -7,6 +7,16 @@
 
 ## Learnings
 
+### 2026-04-30 — Issues #149, #156 (AccessibleToggle fixes + migration)
+
+**Stale coordinator closure (#149):**
+- `UIKitSwitchView.updateUIView` must assign `context.coordinator.parent = self` so the coordinator always holds the latest `isOn` binding and `onChange` closure after SwiftUI re-renders the view. Without this, toggling via code (binding change) could fire the old closure.
+
+**Migrating Toggles to AccessibleToggle (#156):**
+- `ReminderRowView` now uses `AccessibleToggle` with `tint: type.color`, `accessibilityIdentifier: "settings.\(type.rawValue).toggle"`, a dynamic `accessibilityHint` (Text wrapping the enabled/disabled format string), and `onChange: { _ in onChanged() }`.
+- `SettingsView` Preferences section haptics toggle replaced with `AccessibleToggle(accessibilityIdentifier: "settings.hapticFeedback")`.
+- When migrating a `Toggle`, move `.tint`, `.accessibilityHint`, and `.onChange` into `AccessibleToggle`'s init parameters rather than chaining modifiers.
+
 ### 2026-04-29 — Issues #130, #131, #132, #134 (UI quality fixes)
 
 **`.onChange` deprecation (#130):**
@@ -393,3 +403,20 @@ Early phase 1 UI implementation decisions (OverlayView lifecycle, swipe gestures
 - Reduce Motion inconsistency (OnboardingScreenWrapper) requires alignment — Tess flags it, Linus owns fix.
 
 **Next owner action:** Prioritize W-1 (SettingsView decomposition) and token extensions (W-2/4/5) before Phase 2 UI work.
+
+### 2026-04-26: Tess — Wellness Visual Redesign Proposed (Issue #158)
+
+**Related artifact:** `.squad/decisions/inbox/tess-wellness-design-plan.md` (now merged into decisions.md)
+
+Tess completed comprehensive wellness design research proposing "Restful Grove" visual system:
+
+- **Color palette** (light + dark modes, WCAG AA verified): Sage green primary, gentle blue secondary, soft clay accent, warm sand backgrounds
+- **Typography recommendations:** DM Sans (safest), or Nunito + DM Sans hybrid for more personality
+- **Design tokens:** Semantic colors, spacing (4pt grid extended), radius system, elevation guidelines
+- **Motion guidelines:** Calming micro-interactions with reduce-motion respect
+- **Screen redesigns:** Home, Settings, Overlay, Onboarding with before/after direction
+- **Implementation phases:** 4 phases from token expansion through QA
+
+**Open questions for team:** Font adoption timing, color unification (eye vs. posture), Phase 2 dashboard scope, overlay copy additions.
+
+**Status:** Awaiting design review and team feedback. Linus to prioritize component styling (Phase 2) if approved.
