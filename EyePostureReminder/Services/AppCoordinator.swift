@@ -568,6 +568,7 @@ extension AppCoordinator: ReminderScheduling {
         scheduler.cancelReminder(for: type)
         screenTimeTracker.disableTracking(for: type)
         overlayManager.clearQueue(for: type)
+        if pendingOverlay?.type == type { pendingOverlay = nil }
     }
 
     func cancelAllReminders() {
