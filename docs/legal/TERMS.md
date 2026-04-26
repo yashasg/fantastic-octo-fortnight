@@ -1,7 +1,7 @@
 # Terms and Conditions
 
 **App:** Eye & Posture Reminder  
-**Last Updated:** April 25, 2026  
+**Last Updated:** April 26, 2026  
 **Publisher:** Yashasg
 
 ---
@@ -110,7 +110,21 @@ The App is distributed through the Apple App Store. Apple's own terms of service
 
 ---
 
-## 9. Termination
+## 9. Apple App Store Terms
+
+If you downloaded the App from the Apple App Store, the following additional terms apply:
+
+1. **Acknowledgement.** These Terms are concluded between you and Yashasg only, and not with Apple. Yashasg, not Apple, is solely responsible for the App and its content.
+2. **Scope of License.** The license granted to you for the App is a limited, non-transferable license to use the App on any Apple-branded products that you own or control, and as permitted by the Apple Media Services Terms and Conditions and applicable Usage Rules.
+3. **Maintenance and Support.** Yashasg is solely responsible for providing any maintenance and support services for the App, as specified in these Terms or as required under applicable law. Apple has no obligation to furnish any maintenance or support services for the App.
+4. **Warranty.** To the extent any warranty is not effectively disclaimed under these Terms or applicable law, Yashasg is solely responsible for any product warranties. If the App fails to conform to any applicable warranty, you may notify Apple, and Apple will refund the purchase price for the App, if any. To the maximum extent permitted by applicable law, Apple has no other warranty obligation for the App.
+5. **Product Claims.** Yashasg, not Apple, is responsible for addressing any claims by you or any third party relating to the App or your possession or use of the App, including product liability claims, claims that the App fails to conform to legal or regulatory requirements, and claims arising under consumer protection, privacy, or similar laws.
+6. **Intellectual Property Claims.** If a third party claims that the App or your possession and use of the App infringes that third party's intellectual property rights, Yashasg, not Apple, is solely responsible for the investigation, defense, settlement, and discharge of that intellectual property infringement claim.
+7. **Third-Party Beneficiary.** Apple and Apple's subsidiaries are third-party beneficiaries of these Terms. Upon your acceptance of these Terms, Apple has the right, and is deemed to have accepted the right, to enforce these Terms against you as a third-party beneficiary.
+
+---
+
+## 10. Termination
 
 You may stop using the App at any time by deleting it from your device. Yashasg reserves the right to discontinue the App or modify its functionality at any time without notice.
 
@@ -118,19 +132,19 @@ Sections 3 (Health Disclaimer), 4 (Limitation of Liability), 5 (Warranty Disclai
 
 ---
 
-## 10. Governing Law
+## 11. Governing Law
 
 These Terms are governed by the laws of California, United States, without regard to conflict of law principles. Any disputes arising from these Terms or your use of the App shall be resolved in the courts of California, United States.
 
 ---
 
-## 11. Changes to These Terms
+## 12. Changes to These Terms
 
 Yashasg may update these Terms at any time. When changes are made, the "Last Updated" date at the top of this document will be revised. It is your responsibility to review these Terms periodically. Continued use of the App after changes are posted constitutes your acceptance of the updated Terms.
 
 ---
 
-## 12. Contact
+## 13. Contact
 
 If you have questions about these Terms, contact:
 
@@ -139,4 +153,4 @@ If you have questions about these Terms, contact:
 
 ---
 
-*These Terms and Conditions were last updated on April 25, 2026.*
+*These Terms and Conditions were last updated on April 26, 2026.*
