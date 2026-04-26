@@ -72,7 +72,7 @@ struct OnboardingSetupView: View {
                     // Secondary option
                     Button(action: onCustomize) {
                         Text("onboarding.setup.customizeButton", bundle: .module)
-                            .frame(minHeight: 44)
+                            .frame(minHeight: AppLayout.minTapTarget)
                     }
                         .foregroundStyle(.secondary)
                         .font(AppFont.secondaryAction)
