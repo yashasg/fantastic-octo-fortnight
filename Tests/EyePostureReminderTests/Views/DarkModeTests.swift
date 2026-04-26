@@ -102,67 +102,21 @@ final class DarkModeTests: XCTestCase {
 
     // MARK: - Static Tokens: Light == Dark
 
-    /// PermissionBanner (#FFCC00) is intentionally static — same hex in both modes.
-    func test_permissionBanner_isStaticColor_lightAndDarkAreEqual() {
-        guard let light = resolvedLight("PermissionBanner"),
-              let dark  = resolvedDark("PermissionBanner"),
-              let (rL, gL, bL, _) = rgba(of: light),
-              let (rD, gD, bD, _) = rgba(of: dark) else {
-            XCTFail("PermissionBanner must resolve in both modes")
-            return
-        }
-        XCTAssertEqual(
-            rL,
-            rD,
-            accuracy: 0.01,
-            "PermissionBanner R must be identical in light and dark (static color)")
-        XCTAssertEqual(
-            gL,
-            gD,
-            accuracy: 0.01,
-            "PermissionBanner G must be identical in light and dark (static color)")
-        XCTAssertEqual(
-            bL,
-            bD,
-            accuracy: 0.01,
-            "PermissionBanner B must be identical in light and dark (static color)")
+    /// WarningOrange resolves in both light and dark modes.
+    func test_warningOrange_resolvesInBothModes() {
+        XCTAssertNotNil(resolvedLight("WarningOrange"),
+            "WarningOrange must resolve in light mode")
+        XCTAssertNotNil(resolvedDark("WarningOrange"),
+            "WarningOrange must resolve in dark mode")
     }
 
-    /// PermissionBannerText (#262626) is intentionally static — same hex in both modes.
-    func test_permissionBannerText_isStaticColor_lightAndDarkAreEqual() {
-        guard let light = resolvedLight("PermissionBannerText"),
-              let dark  = resolvedDark("PermissionBannerText"),
-              let (rL, gL, bL, _) = rgba(of: light),
-              let (rD, gD, bD, _) = rgba(of: dark) else {
-            XCTFail("PermissionBannerText must resolve in both modes")
-            return
-        }
-        XCTAssertEqual(
-            rL,
-            rD,
-            accuracy: 0.01,
-            "PermissionBannerText R must be identical in light and dark (static near-black)")
-        XCTAssertEqual(
-            gL,
-            gD,
-            accuracy: 0.01,
-            "PermissionBannerText G must be identical in light and dark (static near-black)")
-        XCTAssertEqual(
-            bL,
-            bD,
-            accuracy: 0.01,
-            "PermissionBannerText B must be identical in light and dark (static near-black)")
-    }
-
-    // MARK: - All 6 Named Tokens Non-nil in Dark Mode
+    // MARK: - All Named Tokens Non-nil in Dark Mode
 
     func test_allNamedTokens_resolveNonNilInDarkMode() {
         let names = [
             "ReminderBlue",
             "ReminderGreen",
             "WarningOrange",
-            "PermissionBanner",
-            "PermissionBannerText",
             "WarningText"
         ]
         for name in names {
@@ -325,8 +279,6 @@ final class DarkModeTests: XCTestCase {
             AppColor.reminderBlue,
             AppColor.reminderGreen,
             AppColor.warningOrange,
-            AppColor.permissionBanner,
-            AppColor.permissionBannerText,
             AppColor.warningText
         ]
         for token in tokens {

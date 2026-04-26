@@ -26,28 +26,6 @@ final class ComponentsTests: XCTestCase {
         XCTAssertFalse(modifier.elevated)
     }
 
-    // MARK: - StatusPill
-
-    func test_statusPill_iconIsRetained() {
-        let pill = StatusPill(icon: "eye.fill", label: "Active")
-        XCTAssertEqual(pill.icon, "eye.fill")
-    }
-
-    func test_statusPill_labelIsRetained() {
-        let pill = StatusPill(icon: "eye.fill", label: "Active")
-        XCTAssertEqual(pill.label, "Active")
-    }
-
-    func test_statusPill_emptyIcon_isAccepted() {
-        let pill = StatusPill(icon: "", label: "Test")
-        XCTAssertEqual(pill.icon, "")
-    }
-
-    func test_statusPill_labelAndIcon_independentlyStored() {
-        let pill = StatusPill(icon: "figure.stand", label: "Posture")
-        XCTAssertNotEqual(pill.icon, pill.label)
-    }
-
     // MARK: - IconContainer
 
     func test_iconContainer_iconIsRetained() {
@@ -86,28 +64,6 @@ final class ComponentsTests: XCTestCase {
         // Icon is rendered at size * 0.44 — verify the formula yields a positive value.
         let iconSize = container.size * 0.44
         XCTAssertGreaterThan(iconSize, 0)
-    }
-
-    // MARK: - SectionHeader
-
-    func test_sectionHeader_titleIsRetained() {
-        let header = SectionHeader(title: "Reminders")
-        XCTAssertEqual(header.title, "Reminders")
-    }
-
-    func test_sectionHeader_emptyTitle_isAccepted() {
-        let header = SectionHeader(title: "")
-        XCTAssertEqual(header.title, "")
-    }
-
-    func test_sectionHeader_titleUppercasing_isAppliedInBody() {
-        // The view body uppercases the title via `.uppercased()`.
-        // Verify the raw stored property is NOT already uppercased — the
-        // transform happens at render time, not in the initialiser.
-        let mixed = "Eye Reminders"
-        let header = SectionHeader(title: mixed)
-        XCTAssertEqual(header.title, mixed, "SectionHeader should store the title as-is")
-        XCTAssertEqual(header.title.uppercased(), "EYE REMINDERS")
     }
 
     // MARK: - CalmingEntrance

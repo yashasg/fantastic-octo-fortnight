@@ -5,7 +5,7 @@ import XCTest
 /// Tests that all color tokens in the `Colors.xcassets` Asset Catalog resolve correctly.
 ///
 /// ## What these tests verify:
-/// - All 6 named colors load from the asset catalog (non-nil via `UIColor(named:)`)
+/// - All named colors load from the asset catalog (non-nil via `UIColor(named:)`)
 /// - Light and dark variants are distinct (catalog has both appearances)
 /// - Color names in the catalog match the constant names in `AppColor` (DesignSystem.swift)
 /// - Asset catalog is properly bundled (reachable at runtime in the iOS Simulator context)
@@ -16,9 +16,8 @@ import XCTest
 /// | ReminderBlue         | AppColor.reminderBlue   |
 /// | ReminderGreen        | AppColor.reminderGreen  |
 /// | WarningOrange        | AppColor.warningOrange  |
-/// | PermissionBanner     | AppColor.permissionBanner |
-/// | PermissionBannerText | AppColor.permissionBannerText |
 /// | WarningText          | AppColor.warningText    |
+/// | RGShadowCard         | AppColor.shadowCard     |
 ///
 /// ## Bundle note:
 /// These tests run in the iOS Simulator context where the app bundle contains the compiled
@@ -62,22 +61,17 @@ final class ColorTokenTests: XCTestCase {
             "WarningOrange must exist in the Colors asset catalog")
     }
 
-    func test_permissionBanner_resolvesFromCatalog() {
-        XCTAssertNotNil(
-            TestBundle.testColor(named: "PermissionBanner"),
-            "PermissionBanner must exist in the Colors asset catalog")
-    }
-
-    func test_permissionBannerText_resolvesFromCatalog() {
-        XCTAssertNotNil(
-            TestBundle.testColor(named: "PermissionBannerText"),
-            "PermissionBannerText must exist in the Colors asset catalog")
-    }
 
     func test_warningText_resolvesFromCatalog() {
         XCTAssertNotNil(
             TestBundle.testColor(named: "WarningText"),
             "WarningText must exist in the Colors asset catalog")
+    }
+
+    func test_rgShadowCard_resolvesFromCatalog() {
+        XCTAssertNotNil(
+            TestBundle.testColor(named: "RGShadowCard"),
+            "RGShadowCard must exist in the Colors asset catalog")
     }
 
     // MARK: - All 6 Tokens: Light and Dark Variants Exist
@@ -110,28 +104,16 @@ final class ColorTokenTests: XCTestCase {
         XCTAssertNotNil(resolvedDark(named: "WarningOrange"))
     }
 
-    func test_permissionBanner_lightVariant_resolves() {
-        XCTAssertNotNil(resolvedLight(named: "PermissionBanner"))
-    }
-
-    func test_permissionBanner_darkVariant_resolves() {
-        XCTAssertNotNil(resolvedDark(named: "PermissionBanner"))
-    }
-
-    func test_permissionBannerText_lightVariant_resolves() {
-        XCTAssertNotNil(resolvedLight(named: "PermissionBannerText"))
-    }
-
-    func test_permissionBannerText_darkVariant_resolves() {
-        XCTAssertNotNil(resolvedDark(named: "PermissionBannerText"))
-    }
-
     func test_warningText_lightVariant_resolves() {
         XCTAssertNotNil(resolvedLight(named: "WarningText"))
     }
 
     func test_warningText_darkVariant_resolves() {
         XCTAssertNotNil(resolvedDark(named: "WarningText"))
+    }
+
+    func test_rgShadowCard_lightVariant_resolves() {
+        XCTAssertNotNil(resolvedLight(named: "RGShadowCard"))
     }
 
     // MARK: - Adaptive Colors: Light ≠ Dark
@@ -202,9 +184,8 @@ final class ColorTokenTests: XCTestCase {
             "ReminderBlue",
             "ReminderGreen",
             "WarningOrange",
-            "PermissionBanner",
-            "PermissionBannerText",
-            "WarningText"
+            "WarningText",
+            "RGShadowCard"
         ]
         for name in expectedNames {
             XCTAssertNotNil(
@@ -213,21 +194,20 @@ final class ColorTokenTests: XCTestCase {
         }
     }
 
-    func test_colorTokenCount_isSix() {
-        // The design system defines exactly 6 named color tokens (excludes system/opacity tokens).
+    func test_colorTokenCount_isFive() {
+        // The design system defines exactly 5 named color tokens (excludes system/opacity tokens).
         let namedTokens = [
             "ReminderBlue",
             "ReminderGreen",
             "WarningOrange",
-            "PermissionBanner",
-            "PermissionBannerText",
-            "WarningText"
+            "WarningText",
+            "RGShadowCard"
         ]
         let resolvingTokens = namedTokens.filter { TestBundle.testColor(named: $0) != nil }
         XCTAssertEqual(
             resolvingTokens.count,
-            6,
-            "All 6 named color tokens must resolve from the asset catalog")
+            5,
+            "All 5 named color tokens must resolve from the asset catalog")
     }
 
     // MARK: - Regression: Colors Load from Module Bundle, Not Bundle.main
@@ -239,7 +219,7 @@ final class ColorTokenTests: XCTestCase {
     func test_allTokens_resolveFromModuleBundle() {
         let tokenNames = [
             "ReminderBlue", "ReminderGreen", "WarningOrange",
-            "PermissionBanner", "PermissionBannerText", "WarningText"
+            "WarningText", "RGShadowCard"
         ]
         for name in tokenNames {
             XCTAssertNotNil(
@@ -255,7 +235,7 @@ final class ColorTokenTests: XCTestCase {
     func test_allTokens_areAbsentFromMainBundle() {
         let tokenNames = [
             "ReminderBlue", "ReminderGreen", "WarningOrange",
-            "PermissionBanner", "PermissionBannerText", "WarningText"
+            "WarningText", "RGShadowCard"
         ]
         for name in tokenNames {
             XCTAssertNil(
@@ -273,7 +253,7 @@ final class ColorTokenTests: XCTestCase {
     func test_allTokens_haveNonZeroAlpha() {
         let tokenNames = [
             "ReminderBlue", "ReminderGreen", "WarningOrange",
-            "PermissionBanner", "PermissionBannerText", "WarningText"
+            "WarningText"
         ]
         for name in tokenNames {
             guard let uiColor = TestBundle.testColor(named: name) else {
@@ -316,24 +296,6 @@ final class ColorTokenTests: XCTestCase {
         XCTAssertGreaterThan(alpha, 0, "WarningOrange light-mode alpha must be > 0 (non-clear)")
     }
 
-    func test_permissionBanner_lightMode_hasNonZeroAlpha() {
-        guard let color = resolvedLight(named: "PermissionBanner") else {
-            XCTFail("PermissionBanner must resolve from module bundle"); return
-        }
-        var alpha: CGFloat = 0
-        color.getRed(nil, green: nil, blue: nil, alpha: &alpha)
-        XCTAssertGreaterThan(alpha, 0, "PermissionBanner light-mode alpha must be > 0 (non-clear)")
-    }
-
-    func test_permissionBannerText_lightMode_hasNonZeroAlpha() {
-        guard let color = resolvedLight(named: "PermissionBannerText") else {
-            XCTFail("PermissionBannerText must resolve from module bundle"); return
-        }
-        var alpha: CGFloat = 0
-        color.getRed(nil, green: nil, blue: nil, alpha: &alpha)
-        XCTAssertGreaterThan(alpha, 0, "PermissionBannerText light-mode alpha must be > 0 (non-clear)")
-    }
-
     func test_warningText_lightMode_hasNonZeroAlpha() {
         guard let color = resolvedLight(named: "WarningText") else {
             XCTFail("WarningText must resolve from module bundle"); return
@@ -351,7 +313,7 @@ final class ColorTokenTests: XCTestCase {
     func test_allTokens_areDistinctInLightMode() {
         let tokenNames = [
             "ReminderBlue", "ReminderGreen", "WarningOrange",
-            "PermissionBanner", "PermissionBannerText", "WarningText"
+            "WarningText"
         ]
         var resolved: [(String, UIColor)] = []
         for name in tokenNames {

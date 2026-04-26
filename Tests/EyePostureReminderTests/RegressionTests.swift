@@ -172,12 +172,6 @@ final class LocalizationBundleRegressionTests: XCTestCase {
             "AppColor.warningOrange must resolve from bundle: .module.")
     }
 
-    func test_appColor_permissionBanner_resolvesFromModuleBundle() {
-        XCTAssertFalse(
-            "\(AppColor.permissionBanner)".isEmpty,
-            "AppColor.permissionBanner must resolve from bundle: .module.")
-    }
-
     func test_appColor_warningText_resolvesFromModuleBundle() {
         XCTAssertFalse(
             "\(AppColor.warningText)".isEmpty,

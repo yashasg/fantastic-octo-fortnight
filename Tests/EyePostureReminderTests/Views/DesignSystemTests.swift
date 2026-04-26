@@ -124,10 +124,6 @@ final class DesignSystemTests: XCTestCase {
         XCTAssertGreaterThan(AppLayout.countdownRingStroke, 0)
     }
 
-    func test_appLayout_overlayCornerRadius_isPositive() {
-        XCTAssertGreaterThan(AppLayout.overlayCornerRadius, 0)
-    }
-
     // MARK: - AppAnimation: Duration Spec Compliance
 
     func test_appAnimation_overlayAppear_is0point3s() {
@@ -327,8 +323,6 @@ final class DesignSystemTests: XCTestCase {
         _ = AppColor.reminderBlue
         _ = AppColor.reminderGreen
         _ = AppColor.warningOrange
-        _ = AppColor.permissionBanner
-        _ = AppColor.permissionBannerText
         _ = AppColor.warningText
     }
 
