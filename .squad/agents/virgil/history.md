@@ -169,3 +169,29 @@
 3. Cache SwiftLint install
 
 **Next owner action:** Address critical path bug and remove stale scripts this week.
+
+## Wave 10 — Issues #122/#123/#124 (CI/Build Improvements)
+
+**Task:** Fix three GitHub Issues: remove stale audit scripts (#122), add CI concurrency group (#123), raise coverage threshold (#124)
+**Outcome:** ✅ All three committed to main
+
+**Changes made:**
+- **#122:** `git rm`'d 6 tracked audit scripts (`audit_workflows.sh`, `detailed_audit.py`, `detailed_manual_audit.sh`, `edge_case_audit.sh`, `final_audit.sh`, `script_validation.sh`). Added `.gitignore` entries for all 6 plus `audit_check`, `build_check.log`, `build_output.log`. Note: scripts were already removed from tracking in a prior commit (`673066d`); the key deliverable here is the `.gitignore` guard.
+- **#123:** Added `concurrency: group: ci-${{ github.ref }}, cancel-in-progress: true` to `.github/workflows/ci.yml` at the top-level workflow scope (between `permissions` and `env`).
+- **#124:** Raised coverage gate in `.github/workflows/ci.yml` from 50% → 80%, aligning CI enforcement with the team's stated 80%+ target.
+
+**Learnings:**
+- **Concurrency group placement in GitHub Actions:** The `concurrency` key must be at the top-level workflow scope (same level as `on`, `permissions`, `env`, `jobs`), NOT inside a job. This cancels all concurrent runs for the same ref across all jobs in the workflow.
+- **Pre-flight git ls-files check:** Before running `git rm`, always verify with `git ls-files <path>` to confirm the file is actually tracked. Avoids confusing no-op `git rm` calls when files were already removed in a prior commit.
+- **Coverage threshold is 80%:** The enforced CI gate in `ci.yml` is now 80% (`$COVERAGE < 80`). Any PR that drops coverage below 80% will fail CI.
+
+## Wave 10 — Fix #113: set-build-info.sh doubled path (2026-04-26)
+
+**Task:** Fix GitHub Issue #113 — doubled path segment in `scripts/set-build-info.sh` L34  
+**Outcome:** ✅ Fixed and committed (640c970)
+
+**Changes made:**
+1. **L34 — Doubled path fixed:** `EyePostureReminder/EyePostureReminder/Info.plist` → `EyePostureReminder/Info.plist`. Fallback branch now resolves correctly when all Xcode env vars are unset.
+2. **L38-39 — Exit 1 on missing plist:** Changed `warning:` + `exit 0` to `error:` + `exit 1`. Silent no-op on missing plist would mask misconfiguration in future Xcode build phase setups; failing loudly is safer and aligns with `set -euo pipefail` philosophy already used in the script.
+
+**Learning:** When a script uses `set -euo pipefail` for resilience, soft-failing with `exit 0` in error branches is an anti-pattern — it defeats the purpose of strict mode. Errors on missing required resources should always be non-zero exits.
