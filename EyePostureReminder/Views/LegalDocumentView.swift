@@ -36,10 +36,12 @@ struct LegalDocumentView: View {
                     Button(String(localized: "legal.dismissButton", bundle: .module)) {
                         dismiss()
                     }
-                    .fontWeight(.semibold)
+                    .font(AppFont.bodyEmphasized)
+                    .foregroundStyle(AppColor.primaryRest)
                     .accessibilityIdentifier("legal.dismissButton")
                 }
             }
+            .background(AppColor.background.ignoresSafeArea())
         }
     }
 
@@ -151,10 +153,10 @@ private struct LegalSection: View {
         VStack(alignment: .leading, spacing: AppSpacing.sm)  {
             heading
                 .font(AppFont.bodyEmphasized)
-                .foregroundStyle(.primary)
+                .foregroundStyle(AppColor.textPrimary)
             content
                 .font(AppFont.body)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(AppColor.textSecondary)
         }
         .accessibilityElement(children: .combine)
     }

@@ -44,6 +44,7 @@ struct StatusPill: View {
     var body: some View {
         HStack(spacing: AppSpacing.xs) {
             Image(systemName: icon)
+                .symbolRenderingMode(.hierarchical)
                 .font(AppTypography.caption)
             Text(label)
                 .font(AppTypography.caption)
@@ -58,7 +59,7 @@ struct StatusPill: View {
 
 // MARK: - PrimaryButton
 
-/// A pill-shaped button style with a `primaryRest` fill and white foreground.
+/// A pill-shaped button style with a `primaryRest` fill and adaptive high-contrast foreground.
 /// Applies a subtle 0.98 scale animation on press (guarded by `accessibilityReduceMotion`).
 struct PrimaryButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
@@ -72,7 +73,7 @@ struct PrimaryButtonStyle: ButtonStyle {
         var body: some View {
             configuration.label
                 .font(AppTypography.bodyEmphasized)
-                .foregroundStyle(.white)
+                .foregroundStyle(AppColor.background)
                 .padding(.horizontal, AppSpacing.lg)
                 .padding(.vertical, AppSpacing.sm + 4)
                 .background(AppColor.primaryRest)
@@ -84,7 +85,7 @@ struct PrimaryButtonStyle: ButtonStyle {
 }
 
 extension ButtonStyle where Self == PrimaryButtonStyle {
-    /// Pill-shaped primary button: `primaryRest` fill, white text, subtle press scale.
+    /// Pill-shaped primary button: `primaryRest` fill, adaptive high-contrast text, subtle press scale.
     static var primary: PrimaryButtonStyle { PrimaryButtonStyle() }
 }
 
@@ -98,6 +99,7 @@ struct IconContainer: View {
 
     var body: some View {
         Image(systemName: icon)
+            .symbolRenderingMode(.hierarchical)
             .font(.system(size: size * 0.44, weight: .semibold))
             .foregroundStyle(color)
             .frame(width: size, height: size)

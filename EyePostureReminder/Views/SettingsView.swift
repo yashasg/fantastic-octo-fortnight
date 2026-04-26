@@ -18,15 +18,8 @@ private struct SettingsRowIcon: View {
     let tint: Color
 
     var body: some View {
-        ZStack {
-            Circle()
-                .fill(AppColor.surfaceTint)
-                .frame(width: 32, height: 32)
-            Image(systemName: systemName)
-                .font(AppFont.settingsRowIcon)
-                .foregroundStyle(tint)
-        }
-        .accessibilityHidden(true)
+        IconContainer(icon: systemName, color: tint, size: 32)
+            .accessibilityHidden(true)
     }
 }
 
@@ -287,7 +280,7 @@ struct SettingsView: View {
                 Button(String(localized: "settings.doneButton", bundle: .module)) {
                     isPresented = false
                 }
-                .fontWeight(.semibold)
+                .font(AppFont.bodyEmphasized)
                 .foregroundStyle(AppColor.primaryRest)
                 .accessibilityHint(Text("settings.doneButton.hint", bundle: .module))
                 .accessibilityIdentifier("settings.doneButton")
@@ -519,14 +512,7 @@ private struct SettingsNotificationWarningSection: View {
         if coordinator.notificationAuthStatus == .denied {
             Section {
                 HStack(spacing: AppSpacing.sm) {
-                    ZStack {
-                        Circle()
-                            .fill(AppColor.accentWarm.opacity(0.18))
-                            .frame(width: 36, height: 36)
-                        Image(systemName: AppSymbol.warning)
-                            .font(AppFont.warningIcon)
-                            .foregroundStyle(AppColor.accentWarm)
-                    }
+                    IconContainer(icon: AppSymbol.warning, color: AppColor.accentWarm, size: 36)
                     .accessibilityHidden(true)
                     VStack(alignment: .leading, spacing: AppSpacing.xs) {
                         Text("settings.notifications.disabledTitle", bundle: .module)

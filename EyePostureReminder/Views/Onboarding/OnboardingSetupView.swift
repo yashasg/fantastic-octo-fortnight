@@ -98,6 +98,7 @@ private struct SetupPreviewCard: View {
     var body: some View {
         HStack(spacing: AppSpacing.md) {
             Image(systemName: icon)
+                .symbolRenderingMode(.hierarchical)
                 .font(AppFont.reminderCardIcon)
                 .foregroundStyle(color)
                 .frame(width: AppLayout.minTapTarget, height: AppLayout.minTapTarget)

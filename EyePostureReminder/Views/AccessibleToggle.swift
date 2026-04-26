@@ -32,7 +32,7 @@ struct AccessibleToggle<LabelContent: View>: View {
 
     init(
         isOn: Binding<Bool>,
-        tint: Color = .accentColor,
+        tint: Color = AppColor.primaryRest,
         accessibilityIdentifier: String? = nil,
         accessibilityHint: Text? = nil,
         onChange: ((Bool) -> Void)? = nil,

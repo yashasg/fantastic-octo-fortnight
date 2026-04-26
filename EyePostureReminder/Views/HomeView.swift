@@ -22,7 +22,7 @@ struct HomeView: View {
     }
 
     private var statusColor: Color {
-        settings.globalEnabled ? AppColor.reminderBlue : .secondary
+        settings.globalEnabled ? AppColor.primaryRest : AppColor.textSecondary
     }
 
     var body: some View {
@@ -33,6 +33,7 @@ struct HomeView: View {
             ZStack {
                 VStack(spacing: AppSpacing.sm) {
                     Image(systemName: statusIcon)
+                        .symbolRenderingMode(.hierarchical)
                         .font(AppFont.overlayIcon)
                         .foregroundStyle(statusColor)
                         .accessibilityHidden(true)
@@ -41,12 +42,13 @@ struct HomeView: View {
                     VStack(spacing: AppSpacing.sm) {
                         Text("home.title", bundle: .module)
                             .font(AppFont.headline)
+                            .foregroundStyle(AppColor.textPrimary)
                             .multilineTextAlignment(.center)
                             .accessibilityIdentifier("home.title")
 
                         Text(statusLabel)
                             .font(AppFont.body)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(AppColor.textSecondary)
                             .multilineTextAlignment(.center)
                             .accessibilityIdentifier("home.statusLabel")
                     }
@@ -67,6 +69,8 @@ struct HomeView: View {
                     showSettings = true
                 } label: {
                     Image(systemName: AppSymbol.settings)
+                        .symbolRenderingMode(.hierarchical)
+                        .foregroundStyle(AppColor.primaryRest)
                         .accessibilityLabel(Text("home.settingsButton", bundle: .module))
                         .accessibilityHint(Text("home.settingsButton.hint", bundle: .module))
                 }
@@ -80,6 +84,7 @@ struct HomeView: View {
                     .environmentObject(coordinator)
             }
         }
+        .background(AppColor.background.ignoresSafeArea())
         .onAppear {
             if openSettingsOnLaunch {
                 openSettingsOnLaunch = false

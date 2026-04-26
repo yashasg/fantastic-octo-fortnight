@@ -300,7 +300,7 @@ struct SoftElevation: ViewModifier {
             content
                 .overlay(
                     RoundedRectangle(cornerRadius: AppLayout.radiusCard)
-                        .strokeBorder(Color.primary.opacity(0.10), lineWidth: 0.5)
+                        .strokeBorder(AppColor.separatorSoft.opacity(0.65), lineWidth: 0.5)
                 )
         } else {
             content

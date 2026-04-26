@@ -321,3 +321,15 @@ Early design system work covering: DesignSystem.swift tokens (colors, fonts, spa
 **Accessibility preserved:** Existing VoiceOver labels/hints, combined card elements, Dynamic Type font tokens, 44pt minimum secondary actions, and reduce-motion behavior remain intact.
 
 **Validation:** `xcodebuild build -scheme EyePostureReminder -destination 'platform=iOS Simulator,name=iPhone 17 Pro' 2>&1 | tail -5` → `** BUILD SUCCEEDED **`.
+
+### 2026-04-26: Restful Grove Design Consistency Audit
+
+**Task:** Reviewed every SwiftUI view under `EyePostureReminder/Views/`, plus `DesignSystem.swift` and `Components.swift`, for Restful Grove color, typography, icon, spacing/radius, dark-mode, component-adoption, and emotional-tone consistency.
+
+**Fixes shipped:** Replaced remaining user-visible system color usage in Home/Legal/shared controls with AppColor semantic tokens, improved dark-mode `PrimaryButtonStyle` contrast by using adaptive `AppColor.background` text, switched dark elevation border to `AppColor.separatorSoft`, reused `IconContainer` in Settings, and added hierarchical SF Symbol rendering to shared/onboarding/home icons.
+
+**Validation:** `xcodebuild -scheme EyePostureReminder -destination 'generic/platform=iOS' build -quiet` passed with existing warnings. `swift build` still fails because UIKit is unavailable for the host/macOS SwiftPM build path.
+
+**Report filed:** `.squad/decisions/inbox/tess-design-audit.md`
+
+**Learning:** Restful Grove is now consistently applied at the visual-token level. Remaining opportunities are mostly component-consolidation work: onboarding cards manually duplicate `WellnessCard`, onboarding primary CTAs duplicate `PrimaryButtonStyle`, and caption-emphasis could use a formal typography token instead of local `.fontWeight(.semibold)`.

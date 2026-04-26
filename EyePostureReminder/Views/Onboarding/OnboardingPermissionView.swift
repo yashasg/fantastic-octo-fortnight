@@ -98,6 +98,7 @@ private struct NotificationPreviewCard: View {
         VStack(alignment: .leading, spacing: AppSpacing.xs) {
             HStack(spacing: AppSpacing.sm) {
                 Image(systemName: AppSymbol.eyeBreak)
+                    .symbolRenderingMode(.hierarchical)
                     .font(AppFont.caption)
                     .foregroundStyle(AppColor.primaryRest)
                     .frame(width: AppLayout.minTapTarget, height: AppLayout.minTapTarget)
