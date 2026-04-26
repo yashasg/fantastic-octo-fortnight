@@ -7,7 +7,36 @@
 
 ## Learnings
 
-### Issue #108: Fixed OnboardingTests using wrong UserDefaults key
+### Issue #167: Phase 4 QA Pass — Restful Grove Redesign
+
+**Build & tests:** BUILD SUCCEEDED, 860/860 tests pass (0 failures).
+
+**Issues found and fixed:**
+
+1. **Raw color bypassing AppColor** — `SoftElevation` in `DesignSystem.swift` used `Color(red: 0.18, green: 0.22, blue: 0.20)` directly instead of an AppColor token. Fixed by adding `AppColor.shadowCard` token.
+
+2. **Raw fonts bypassing AppFont (6 call sites):**
+   - `SettingsView` row icon: `.font(.system(size: 15, weight: .semibold))` → `AppFont.settingsRowIcon`
+   - `SettingsView` warning icon: `.font(.system(size: 16, weight: .semibold))` → `AppFont.warningIcon`
+   - `OnboardingSetupView` reminder card icon: `.font(.title2)` → `AppFont.reminderCardIcon`
+   - `OnboardingWelcomeView` hero icon: `.font(.system(size: AppLayout.onboardingIllustrationSize, weight: .semibold))` → `AppFont.illustrationIcon`
+   - `HomeView` + `OverlayView` status icons: `.font(.system(size: AppLayout.overlayIconSize))` → `AppFont.overlayIcon`
+
+**Tokens added to DesignSystem:**
+- `AppColor.shadowCard` — card shadow tint, deep forest green for light mode `SoftElevation`
+- `AppTypography.settingsRowIcon`, `.warningIcon`, `.reminderCardIcon` (defined inline in AppTypography)
+- `AppTypography.overlayIcon`, `.illustrationIcon` (defined in an `extension AppTypography` after `AppLayout` to avoid forward-reference)
+- All mirrored in `AppFont` as convenience aliases
+
+**Key insight:** Icon-specific SF Symbol font sizing (`.font(.system(size:weight:))`) can still bypass the token system even when using `AppLayout` size constants. The fix is to define `AppFont` tokens that wrap the system font — keeping the raw `.system(...)` in one place only (the token definition). Any call site using `.font(.system(...)` with a literal size is a token violation even if the size itself is tokenized.
+
+**Reduce-motion audit:** All `withAnimation(...)` and `.animation(...)` calls in Views/ are properly guarded by `@Environment(\.accessibilityReduceMotion) private var reduceMotion`.
+
+**WCAG audit:** All token color comments in DesignSystem.swift document contrast ratios — all primary/body text tokens meet 4.5:1 (AA) for normal text on their respective backgrounds.
+
+**SwiftLint:** 0 warnings in production Views/ (pre-existing test file warnings unrelated to this task).
+
+
 
 **Root cause:** `OnboardingTests` hardcoded `hasSeenOnboardingKey = "hasSeenOnboarding"` — a key no production code touches. Production code uses `AppStorageKey.hasSeenOnboarding = "epr.hasSeenOnboarding"`. Every test passed silently while exercising a phantom key.
 

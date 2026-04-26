@@ -7,6 +7,17 @@
 
 ## Learnings
 
+### 2026-04-29 — Phase 3B: Calming Micro-interactions with Reduce-Motion Guards (Issue #166)
+
+- **DesignSystem.swift — new animation tokens:** Added `calmingEntranceDuration` (0.5s) + `calmingEntranceCurve` (easeOut) for the soft overlay entrance that Linus can adopt; `statusCrossfadeDuration` (0.25s) + `statusCrossfadeCurve` (easeInOut) for icon/text state changes; `AppLayout.entranceSlideOffset = 20pt` for the upward drift in CalmingEntrance.
+- **ButtonStyle reduce-motion pattern:** `ButtonStyle.makeBody` cannot itself read `@Environment`, so the body is delegated to a private inner `View` struct that reads `@Environment(\.accessibilityReduceMotion)`. Applied to both `PrimaryButtonStyle` (Components.swift) and `OnboardingPrimaryButtonStyle` (OnboardingView.swift). When reduce-motion is on, scale stays at `1.0` and the animation is `nil`.
+- **CalmingEntrance ViewModifier** (Components.swift) — generic `fade + 20pt upward slide` entrance, no-op when reduce-motion is on. Uses `hasEverAppeared` guard so re-appearing views (e.g. swapping TabView pages) don't re-animate. Linus can apply `.calmingEntrance()` to the overlay content in place of the existing opacity/offset approach.
+- **Status crossfade in HomeView** — wrapped the status icon + label in a `ZStack { VStack.id(globalEnabled).transition(.opacity) }` driven by `.animation(statusCrossfadeCurve, value: globalEnabled)`. The `.id()` trick forces SwiftUI to treat the content as new, triggering the `.transition` on each state toggle. No-op when `reduceMotion` is on.
+- **OnboardingScreenWrapper slide+fade** — added `.offset(y: !reduceMotion && !appeared ? AppLayout.entranceSlideOffset : 0)` alongside the existing opacity fade. Offset snaps to 0 immediately (no animation) when reduce-motion is on.
+- **Calming animation vocabulary:** No bounces (`spring` avoided), no rapid movements (≥0.25s durations), no progress bars. All new animations are easeOut (entrance) or easeInOut (crossfade) — consistent with the Restful Grove "calm, not gamified" brief.
+- **Build verified clean** — `** BUILD SUCCEEDED **` on `xcodebuild build -scheme EyePostureReminder -destination 'platform=iOS Simulator,name=iPhone 17 Pro'`.
+- **Commit:** `72f43b4` on `feature/restful-grove`.
+
 ### 2026-04-28 — Phase 2C: Reusable Component Library (Issue #164)
 
 - **File created:** `EyePostureReminder/Views/Components.swift` — new standalone file, not appended to DesignSystem.swift, to keep token definitions separate from composed UI components.

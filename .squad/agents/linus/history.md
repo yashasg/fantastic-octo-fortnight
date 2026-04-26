@@ -7,6 +7,61 @@
 
 ## Learnings
 
+### 2026-04-30 — Issue #165 (Phase 3A — Restful Grove OverlayView redesign)
+
+**Gradient background for full-screen overlays:**
+- Replace `Color.clear.background(.ultraThinMaterial)` with a `LinearGradient(colors: [AppColor.background, AppColor.surfaceTint], startPoint: .top, endPoint: .bottom).ignoresSafeArea()`. This adapts to dark mode automatically because both tokens are adaptive, and gives a calming directional tint rather than a flat blur.
+
+**Soft circular icon aura pattern:**
+- Wrap the reminder icon in a `ZStack { Circle().fill(type.color.opacity(0.12)); Image(...) }` sized to `overlayIconSize * 1.75`. The 0.12 opacity fill creates a subtle "glow" ring that's barely visible in dark mode but pleasant in light mode. Apply `.symbolRenderingMode(.hierarchical)` on the SF Symbol image to get the primary/secondary layer rendering at distinct opacities — this adds the nature/layered motif without extra assets.
+
+**Countdown ring track token swap:**
+- Changed countdown ring track from `Color.secondary.opacity(0.3)` to `AppColor.separatorSoft`. This ensures the track is palette-consistent and adapts correctly in both light and dark modes (the raw `.secondary` opacity approach was palette-agnostic).
+
+**PrimaryButtonStyle for primary overlay CTA:**
+- Use `Button { ... } label: { Text("overlay.doneButton", bundle: .module) }.buttonStyle(.primary)` as the main dismiss CTA in the content stack. Keep the floating × button (`overlay.dismissButton`) as a secondary escape hatch at top-right. Two dismiss points: primary styled pill (bottom) + secondary icon (top-right). Both are 44pt-accessible and VoiceOver-labelled.
+
+**`accessibilityViewIsModal` — UIKit only:**
+- `hostingController.view.accessibilityViewIsModal = true` must remain on the UIKit `UIHostingController.view` in `OverlayManager`. Do NOT use SwiftUI's `.accessibilityViewIsModal(_:)` modifier — it does not exist in the iOS 26 SDK. The UIKit property is the only correct path for overlay modal accessibility.
+
+**Supportive text in ReminderType:**
+- Added `overlaySupportiveText: String` computed property to `ReminderType` following the same `String(localized:bundle:.module)` pattern as `overlayTitle`. Localisation keys: `reminder.eyes.overlaySupportiveText` / `reminder.posture.overlaySupportiveText`. This keeps display copy co-located with the type, consistent with existing pattern.
+
+**StringCatalogTests maintenance:**
+- When adding new string keys used in a view, update three test methods: `test_allExpectedKeys_resolveToNonEmptyStrings`, `test_noDuplicateKeys_overlayScreen` (or the appropriate screen), and `test_noDuplicateKeys_acrossAllScreens`. Missing any one will cause test failures on the next run.
+
+
+
+**Form background theming — `scrollContentBackground(.hidden)`:**
+- To replace the default Form/List background, always pair `.scrollContentBackground(.hidden)` with `.background(AppColor.background)` on the Form. Without `.scrollContentBackground(.hidden)`, the system white/grey background overpaints the custom color. This is the canonical approach for iOS 16+.
+
+**Per-row card styling in Form sections:**
+- `.listRowBackground(AppColor.surface)` applied per-row (not per-section) is the iOS 16-compatible way to colour section cards. `.listSectionBackground` is iOS 17+ only.
+- `.listRowSeparatorTint(AppColor.separatorSoft)` threads palette-consistent separators throughout without disrupting the Form layout engine.
+
+**`SettingsSectionHeader` pattern:**
+- Extracted a private `SettingsSectionHeader` view that accepts a `titleKey`, optional `iconName`, and `iconTint`. Pass `.textCase(nil)` on the label Text to suppress the system all-caps forced on section headers. Centralises icon-badge + caption header appearance across all sections.
+
+**`SettingsRowIcon` helper:**
+- Reusable `ZStack { Circle().fill(surfaceTint) + Image(...) }` at 32×32pt. Applied in master toggle label, section headers (snooze/smart-pause), and notification warning. Mark `.accessibilityHidden(true)` — icon is purely decorative reinforcement.
+
+**Notification warning warm card:**
+- `.listRowBackground(AppColor.accentWarm.opacity(0.10))` + `.listRowSeparatorTint(AppColor.accentWarm.opacity(0.25))` on both warning rows gives a cohesive amber wash without a heavy background. The warning icon moved inside a circular `accentWarm.opacity(0.18)` badge consistent with the rest of the icon system.
+
+**Token migration — `reminderBlue` → `primaryRest`:**
+- All toggle tints in `SettingsView` and subsection structs updated from `AppColor.reminderBlue` to `AppColor.primaryRest`. The `reminderBlue` token is retained for legacy backward-compatibility but should not appear in new views.
+
+### 2026-04-30 — Issue #159 (Restful Grove color palette)
+
+**Asset catalog naming convention for themed palettes:**
+- Named all Restful Grove color assets with `RG` prefix (e.g. `RGBackground`, `RGPrimaryRest`) to namespace them from legacy colors and avoid collisions. Future palette additions should follow the same `<PaletteInitials><TokenName>` pattern.
+
+**SPM bundle requirement:**
+- All `Color(...)` asset lookups in a Swift Package must pass `bundle: .module`. Forgetting this silently returns the fallback color (clear/black) instead of the asset. Always include `bundle: .module` when adding new `AppColor` tokens.
+
+**Semantic remap strategy:**
+- When remapping `ReminderType.color` from old tokens (`reminderBlue`/`reminderGreen`) to new ones (`primaryRest`/`secondaryCalm`), the old tokens are kept in `AppColor` for backward compatibility with any views not yet migrated. The switch-based `var color` in `ReminderType` is the single remap site.
+
 ### 2026-04-30 — Issues #149, #156 (AccessibleToggle fixes + migration)
 
 **Stale coordinator closure (#149):**
