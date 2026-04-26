@@ -7,6 +7,7 @@ struct HomeView: View {
 
     @State private var showSettings = false
     @AppStorage(AppStorageKey.openSettingsOnLaunch) private var openSettingsOnLaunch = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var statusLabel: String {
         if settings.globalEnabled {
@@ -28,24 +29,32 @@ struct HomeView: View {
         VStack(spacing: AppSpacing.lg) {
             Spacer()
 
-            Image(systemName: statusIcon)
-                .font(.system(size: AppLayout.overlayIconSize))
-                .foregroundStyle(statusColor)
-                .accessibilityHidden(true)
-                .accessibilityIdentifier("home.statusIcon")
+            // Status block — crossfades as a unit when globalEnabled changes.
+            ZStack {
+                VStack(spacing: AppSpacing.sm) {
+                    Image(systemName: statusIcon)
+                        .font(.system(size: AppLayout.overlayIconSize))
+                        .foregroundStyle(statusColor)
+                        .accessibilityHidden(true)
+                        .accessibilityIdentifier("home.statusIcon")
 
-            VStack(spacing: AppSpacing.sm) {
-                Text("home.title", bundle: .module)
-                    .font(AppFont.headline)
-                    .multilineTextAlignment(.center)
-                    .accessibilityIdentifier("home.title")
+                    VStack(spacing: AppSpacing.sm) {
+                        Text("home.title", bundle: .module)
+                            .font(AppFont.headline)
+                            .multilineTextAlignment(.center)
+                            .accessibilityIdentifier("home.title")
 
-                Text(statusLabel)
-                    .font(AppFont.body)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .accessibilityIdentifier("home.statusLabel")
+                        Text(statusLabel)
+                            .font(AppFont.body)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                            .accessibilityIdentifier("home.statusLabel")
+                    }
+                }
+                .id(settings.globalEnabled)
+                .transition(.opacity)
             }
+            .animation(reduceMotion ? nil : AppAnimation.statusCrossfadeCurve, value: settings.globalEnabled)
 
             Spacer()
         }

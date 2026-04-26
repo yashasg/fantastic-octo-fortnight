@@ -59,18 +59,27 @@ struct StatusPill: View {
 // MARK: - PrimaryButton
 
 /// A pill-shaped button style with a `primaryRest` fill and white foreground.
-/// Applies a subtle 0.98 scale animation on press.
+/// Applies a subtle 0.98 scale animation on press (guarded by `accessibilityReduceMotion`).
 struct PrimaryButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(AppTypography.bodyEmphasized)
-            .foregroundStyle(.white)
-            .padding(.horizontal, AppSpacing.lg)
-            .padding(.vertical, AppSpacing.sm + 4)
-            .background(AppColor.primaryRest)
-            .clipShape(RoundedRectangle(cornerRadius: AppLayout.radiusPill, style: .continuous))
-            .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
-            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+        PrimaryButtonBody(configuration: configuration)
+    }
+
+    private struct PrimaryButtonBody: View {
+        @Environment(\.accessibilityReduceMotion) private var reduceMotion
+        let configuration: ButtonStyleConfiguration
+
+        var body: some View {
+            configuration.label
+                .font(AppTypography.bodyEmphasized)
+                .foregroundStyle(.white)
+                .padding(.horizontal, AppSpacing.lg)
+                .padding(.vertical, AppSpacing.sm + 4)
+                .background(AppColor.primaryRest)
+                .clipShape(RoundedRectangle(cornerRadius: AppLayout.radiusPill, style: .continuous))
+                .scaleEffect((!reduceMotion && configuration.isPressed) ? 0.98 : 1.0)
+                .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: configuration.isPressed)
+        }
     }
 }
 
@@ -111,6 +120,48 @@ struct SectionHeader: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, AppSpacing.md)
             .padding(.top, AppSpacing.sm)
+    }
+}
+
+// MARK: - CalmingEntrance
+
+/// Animates a view into position with a soft fade + gentle upward slide on first appear.
+///
+/// When `accessibilityReduceMotion` is enabled, the view appears immediately with no
+/// motion — opacity snaps to 1 without any slide offset.
+///
+/// Usage: `.calmingEntrance()` or `.calmingEntrance(delay: 0.1)` for staggered reveals.
+struct CalmingEntrance: ViewModifier {
+    @State private var appeared = false
+    @State private var hasEverAppeared = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var delay: Double = 0
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(appeared ? 1 : 0)
+            .offset(y: (!reduceMotion && !appeared) ? AppLayout.entranceSlideOffset : 0)
+            .onAppear {
+                guard !hasEverAppeared else { appeared = true; return }
+                hasEverAppeared = true
+                if reduceMotion {
+                    appeared = true
+                } else {
+                    withAnimation(AppAnimation.calmingEntranceCurve.delay(delay)) {
+                        appeared = true
+                    }
+                }
+            }
+    }
+}
+
+extension View {
+    /// Applies a calming fade + gentle upward slide entrance animation on first appear.
+    /// No animation is applied when `accessibilityReduceMotion` is enabled.
+    /// - Parameter delay: Optional delay before the animation begins. Default is `0`.
+    func calmingEntrance(delay: Double = 0) -> some View {
+        modifier(CalmingEntrance(delay: delay))
     }
 }
 

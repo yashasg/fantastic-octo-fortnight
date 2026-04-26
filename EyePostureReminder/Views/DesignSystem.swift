@@ -166,6 +166,11 @@ enum AppAnimation {
     static let onboardingFadeInDelay: Double = 0.1
     /// Countdown ring — continuous, driven by a 1-second timer tick
     static let countdownRingTick: Double = 1.0
+    /// Calming entrance for focal panels / overlay: 0.5s ease-out.
+    /// Linus: use `calmingEntranceCurve` in OverlayView in place of the current 0.3s slide.
+    static let calmingEntranceDuration: Double = 0.5
+    /// Status crossfade duration — icon + text fade when active ↔ paused changes.
+    static let statusCrossfadeDuration: Double = 0.25
 
     // Convenience SwiftUI Animation values
     static let overlayAppearCurve: Animation  = .easeOut(duration: overlayAppear)
@@ -177,6 +182,11 @@ enum AppAnimation {
     static let onboardingTransition: Animation = .easeInOut(duration: onboardingFadeIn)
     /// Onboarding screen fade-in entrance animation (easeOut + delay)
     static let onboardingFadeInCurve: Animation = .easeOut(duration: onboardingFadeIn).delay(onboardingFadeInDelay)
+    /// Calming entrance — slower ease-out for fade + gentle slide. No bounce.
+    /// Adopt in OverlayView for a softer, less utilitarian entrance.
+    static let calmingEntranceCurve: Animation = .easeOut(duration: calmingEntranceDuration)
+    /// Status crossfade — drives icon + text opacity when active/paused state changes.
+    static let statusCrossfadeCurve: Animation = .easeInOut(duration: statusCrossfadeDuration)
 }
 
 // MARK: - SF Symbol Names
@@ -229,6 +239,8 @@ enum AppLayout {
     static let onboardingMaxContentWidth: CGFloat = 540
     /// Onboarding hero illustration icon size
     static let onboardingIllustrationSize: CGFloat = 72
+    /// Entrance slide offset for CalmingEntrance animations — gentle 20pt upward drift.
+    static let entranceSlideOffset: CGFloat = 20
     // AppLayout.overlayIconSize / onboardingIllustrationSize / settingsRowIconWidth are
     // intentionally fixed-size (decorative, accessibility-hidden). See AppFont.countdown for precedent.
     /// Setup preview card icon column width (decorative icon frame)
