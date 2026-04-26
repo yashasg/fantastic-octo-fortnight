@@ -20993,3 +20993,86 @@ jobs:
 4. **P2-2** — Pin SwiftLint version or migrate to SPM plugin. Prevents silent CI flakiness.
 5. **P3-2** — Add `timeout-minutes: 30` to `build-and-test` job.
 6. **P2-1** / **P3-1** / **P3-3** — As bandwidth allows.
+
+---
+
+## Round 1 Fix Session Decisions (2026-04-26)
+
+### Decision: Test files must import key constants from AppStorageKey, never re-declare raw strings
+
+**Author:** Livingston (Tester)  
+**Date:** 2026-04-25  
+**Status:** Active  
+**Related Issue:** #108
+
+#### Decision
+
+Test files that exercise `UserDefaults` or `@AppStorage` keys **must** reference `AppStorageKey.<constant>` directly. They must **not** re-declare the key as a raw string literal.
+
+#### Rationale
+
+Issue #108 demonstrated that `OnboardingTests` hardcoded `"hasSeenOnboarding"` while production used `AppStorageKey.hasSeenOnboarding = "epr.hasSeenOnboarding"`. All 7 tests passed with 0 failures because they operated on a phantom key that no production code touched. The mismatch was invisible — no compiler error, no runtime error, no test failure.
+
+#### Rule
+
+```swift
+// ❌ Wrong — raw string can diverge from production silently
+static let hasSeenOnboardingKey = "hasSeenOnboarding"
+
+// ✅ Correct — single source of truth; compiler enforces sync
+static let hasSeenOnboardingKey = AppStorageKey.hasSeenOnboarding
+```
+
+Any new test that reads or writes a `UserDefaults` key must source it from `AppStorageKey` (or the relevant production constant). Code review should reject raw string re-declarations of known production keys.
+
+---
+
+### Decision: Overlay queue on no-scene + detector initial-state seeding
+
+**Author:** Basher (iOS Dev — Services)  
+**Date:** 2026-04-27  
+**Status:** Active  
+**Fixes:** #117, #118, #119
+
+#### Decision 1: `showOverlay()` queues instead of dropping on no active scene
+
+When `showOverlay()` is called and no `UIWindowScene` is `.foregroundActive`, the overlay request is now appended to `overlayQueue` (same tuple structure as the already-visible path) rather than silently discarded. The existing `presentNextQueuedOverlay()` mechanism retries on next scene availability.
+
+**Rationale:** ScreenTimeTracker-triggered overlays that race against scene activation (cold-launch notification tap) were silently lost. The existing queue infrastructure already handles the retry logic.
+
+#### Decision 2: Always cancel an existing `Task` property before re-assigning
+
+The established pattern in `ScreenTimeTracker` is `resetTask?.cancel()` immediately before `resetTask = Task { … }`. `handleWillResignActive` was the one missing site. This pattern should be enforced for all optional `Task` properties in Services.
+
+#### Decision 3: All three pause conditions must be seeded after `startMonitoring()`
+
+After starting all detectors, `PauseConditionManager.startMonitoring()` must seed the initial state for `.focusMode`, `.carPlay`, **and** `.driving`. Detectors only fire `onXxxChanged` on state *changes*; without seeding, conditions already active at cold-start are invisible to the manager until the next change event. The comment `// #73` should be updated to reference the canonical list of three.
+
+---
+
+### Decision: SettingsView Subview Pattern & Design Token Completeness
+
+**Author:** Linus (iOS Dev — UI)  
+**Date:** 2026-04-28  
+**Status:** Implemented (Issues #116, #120, #125)
+
+#### Decision 1: Private file-scope structs for SettingsView sections
+
+- Large `Form` bodies in `SettingsView` are decomposed into private structs at file scope (not nested inside the parent struct).
+- Each section struct uses `@EnvironmentObject` to receive `SettingsStore` / `AppCoordinator` — no manual injection required inside a `Form`.
+- Non-environment dependencies (`viewModel: SettingsViewModel?`, `reduceMotion: Bool`) are passed as `let` properties.
+- The `swiftlint:disable type_body_length` comment is the canary; if it reappears, the body needs further decomposition.
+
+#### Decision 2: Reduce Motion = no animation (not short animation)
+
+- Team rule clarified: `accessibilityReduceMotion == true` means **skip the animation entirely** — set state directly without `withAnimation`.
+- A `.linear(duration: 0.15)` "reduced" animation is still motion and violates user intent.
+- Pattern: `if reduceMotion { state = value } else { withAnimation(curve) { state = value } }`
+- `OnboardingScreenWrapper` is the reference implementation going forward.
+
+#### Decision 3: All inline literals must be design system tokens
+
+- Any literal that appears in ≥2 places OR has semantic meaning must live in `DesignSystem.swift`.
+- New tokens added: `AppFont.overlayDismiss`, `AppSymbol.snoozed`, `AppAnimation.onboardingTransition`, `AppAnimation.onboardingFadeInCurve`, `AppLayout.onboardingMaxContentWidth`.
+- When adding a new view: check DesignSystem for an existing token before using a literal.
+
