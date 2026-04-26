@@ -314,3 +314,32 @@ ContentView, HomeView, SettingsView, OverlayView, ReminderRowView, LegalDocument
 - `MockFocusStatusDetector.simulateFocusChange()` before PCM construction is the correct pattern to seed pre-existing detector state — `onFocusChanged` is nil before registration so the callback is a no-op, but `isFocused` is correctly set.
 - Detecting "only one reset" for ScreenTimeTracker requires threshold > grace period (5s) so the orphaned Task fires *before* the threshold would naturally be reached. With threshold < 5s, both fix and bug paths fire the threshold before the orphan fires (no observable difference).
 - `.onChange(of:){ _, newValue in }` is iOS 17+ API. The iOS 16-compatible form is `.onChange(of:){ newValue in }`. Always use single-parameter form in this project (iOS 16+ target).
+
+---
+
+### 2026-04-26 — Round 3 Test Quality Review
+
+**Test run:** 857/857 tests pass, 0 failures (iPhone 17 Pro simulator, iOS 26.4). All Round 2 regression tests are green.
+
+**SettingsView build issue / Linus #130:**
+- Linus's #130 fix (`ab78b19`) migrated `SettingsSmartPauseSection` `.onChange` to iOS 17+ two-parameter form `{ _, newValue in }`. This **introduced** a deprecation/compatibility regression for the iOS 16+ target.
+- Livingston's `c27b2e0` reverted lines 374/388 to single-parameter `{ newValue in }` as part of the regression test commit.
+- **Current state:** Single-parameter form is in place and the build is clean. The `#130` fix did not resolve the issue — it created it. It was resolved by the revert in `c27b2e0`.
+
+**Round 2 regression test quality:**
+
+New findings only:
+
+🟡 **W1 — Typo in test method name** (`RegressionTests.swift` line 873)
+`test_showOverlay_withNoActiveWindowScene_isOverlayVisibleRemainsFlase` — "Flase" should be "False". Affects test-output readability and searchability; does not affect correctness.
+
+🟡 **W2 — #118 ScreenTimeTracker timing test inherits existing flakiness risk**
+`test_doubleWillResignActive_secondCancelsFirst_onlyOneResetOccurs` uses a 9s timeout to differentiate a ~6s fix path from a ~11s bug path. This is the same inherent timer flakiness documented in the prior audit (W2, 2026-04-25). The test is correct in logic but may time out under sustained CI load.
+
+🟢 **S1 — #119 cold-start tests cover Focus Mode only**
+Three cold-start regression tests exist for Focus Mode, but CarPlay and Driving detectors have no cold-start regression guards. If `startMonitoring()` were to omit the seed for `carPlayDetector.isCarPlayActive` or `drivingDetector.isDriving`, no test would catch the regression.
+
+🟢 **S2 — #118 has no complement test**
+Only the double-resign path is tested. A single resign followed by return-to-active (the normal flow) has no dedicated test in this class. This is covered tangentially by `ScreenTimeTrackerTests` but not as an explicit regression guard for #118.
+
+**Summary:** Suite is fully green at 857 tests. Round 2 tests are logically correct and well-documented. Two new warnings (method typo + timing fragility), two low-priority suggestions (missing cold-start guard for CarPlay/Driving, missing #118 complement test).
