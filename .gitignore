@@ -40,3 +40,14 @@ manual_violations.txt
 other_violations.txt
 swiftlint_violations.txt
 excalidraw.log
+
+# Build/audit artifacts (one-off binaries and logs — never commit)
+audit_check
+build_check.log
+build_output.log
+audit_workflows.sh
+detailed_audit.py
+detailed_manual_audit.sh
+edge_case_audit.sh
+final_audit.sh
+script_validation.sh
