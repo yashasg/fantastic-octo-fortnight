@@ -155,6 +155,7 @@ final class AppCoordinator: ObservableObject {
                     self.overlayManager.dismissOverlay()
                 }
                 self.overlayManager.clearQueue()
+                self.pendingOverlay = nil
                 Logger.scheduling.info("PauseConditionManager: pausing reminders (active condition)")
             } else {
                 guard (self.settings.snoozedUntil ?? .distantPast) <= Date() else {
@@ -575,6 +576,7 @@ extension AppCoordinator: ReminderScheduling {
             overlayManager.dismissOverlay()
         }
         overlayManager.clearQueue()
+        pendingOverlay = nil
 
         // If snooze was just applied (snoozedUntil set before this call),
         // arm the in-process wake task immediately so the app resumes on time
