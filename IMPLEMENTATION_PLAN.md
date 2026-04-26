@@ -6,7 +6,7 @@
 
 ## 1. Overview
 
-A lightweight, battery-friendly iOS application that runs timers in the background and presents full-screen overlay reminders to:
+A lightweight, battery-friendly iOS application that tracks foreground screen-on time via `ScreenTimeTracker` and presents full-screen overlay reminders to:
 
 - **Rest your eyes** (e.g., the 20-20-20 rule – every 20 min, look 20 ft away for 20 s).
 - **Fix your posture** (e.g., every 30 min, sit up straight for 10 s).
@@ -15,7 +15,7 @@ Users can customise:
 - How often each reminder fires (the *reminder interval*).
 - How long the break overlay stays on screen (the *break duration*).
 
-The overlay is dismissible at any time. The app minimises CPU, memory, and battery usage by leveraging native iOS scheduling APIs rather than keeping a live timer in the foreground.
+The overlay is dismissible at any time. The app minimises CPU, memory, and battery usage by tracking continuous screen-on time in the foreground and using native iOS notification APIs only for snooze wake-ups.
 
 ---
 
