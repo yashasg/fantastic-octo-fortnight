@@ -217,6 +217,16 @@ Complete every item before submitting for App Review.
 - [ ] App icon uploaded (1024×1024, no alpha, no rounded corners)
 - [ ] "What's New" text finalized for v1.0
 
+### Pre-Submission Name Search
+
+- [ ] Search App Store for "Eye & Posture Reminder" and close variants
+- [ ] Search USPTO (https://tmsearch.uspto.gov) for similar marks in Class 009/042
+- [ ] Google search `"Eye & Posture Reminder"` in quotes
+- [ ] Verify name is accepted in App Store Connect during app setup
+- [ ] Check Google Play and Mac App Store for confusingly similar names
+
+**Note:** For a free indie app, the App Store + USPTO knockout search is sufficient. Formal clearance recommended only if monetizing with subscriptions/IAP.
+
 ### Final Checks
 
 - [ ] TestFlight beta tested with no critical bugs
