@@ -15,8 +15,8 @@ enum ReminderType: String, CaseIterable, Identifiable {
     /// SF Symbol name for the reminder type.
     var symbolName: String {
         switch self {
-        case .eyes:    return "eye"
-        case .posture: return "figure.stand"
+        case .eyes:    return AppSymbol.eyeBreak
+        case .posture: return AppSymbol.postureCheck
         }
     }
 
