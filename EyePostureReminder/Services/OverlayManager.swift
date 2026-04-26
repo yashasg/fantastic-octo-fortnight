@@ -58,10 +58,6 @@ protocol OverlayPresenting: AnyObject {
 @MainActor
 final class OverlayManager: OverlayPresenting {
 
-    // MARK: - Singleton
-
-    static let shared = OverlayManager()
-
     // MARK: - Dependencies
 
     private let audioManager: MediaControlling
@@ -115,7 +111,14 @@ final class OverlayManager: OverlayPresenting {
             .compactMap({ $0 as? UIWindowScene })
             .first(where: { $0.activationState == .foregroundActive })
         else {
-            Logger.overlay.error("No active UIWindowScene — cannot show overlay")
+            // Queue the request so it is shown once a scene becomes foreground-active.
+            overlayQueue.append((
+                type: type,
+                duration: duration,
+                hapticsEnabled: hapticsEnabled,
+                pauseMediaEnabled: pauseMediaEnabled,
+                onDismiss: onDismiss))
+            Logger.overlay.warning("No active UIWindowScene — overlay for \(type.rawValue) queued (depth: \(self.overlayQueue.count))")
             return
         }
 
