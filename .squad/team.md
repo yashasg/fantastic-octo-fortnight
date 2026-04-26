@@ -23,6 +23,7 @@
 | Virgil | CI/CD Dev | .squad/agents/virgil/charter.md | ⚙️ CI/CD |
 | Turk | Data Analyst | .squad/agents/turk/charter.md | 📊 Analytics |
 | Frank | Legal Advisor | .squad/agents/frank/charter.md | 📝 Legal |
+| Roman | Market Researcher | .squad/agents/roman/charter.md | 📊 Research |
 | Scribe | Scribe | .squad/agents/scribe/charter.md | 📋 Logger |
 | Ralph | Work Monitor | — | 🔄 Monitor |
 

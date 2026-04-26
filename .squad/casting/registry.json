@@ -76,6 +76,13 @@
       "created_at": "2026-04-24T22:31:00Z",
       "legacy_named": false,
       "status": "active"
+    },
+    "roman": {
+      "persistent_name": "Roman",
+      "universe": "Ocean's Eleven",
+      "created_at": "2026-04-26T22:06:00Z",
+      "legacy_named": false,
+      "status": "active"
     }
   }
 }

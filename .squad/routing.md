@@ -17,6 +17,7 @@ How to decide who handles what.
 | Telemetry, analytics, dashboards, metrics | Turk | Event schemas, App Store Connect, MetricKit, usage analysis |
 | Code review | Saul | Review PRs, check quality, suggest improvements |
 | Legal, terms, privacy, disclaimers | Frank | Terms of service, privacy policy, liability, compliance |
+| Market research, competitors, pricing, ASO | Roman | Competitive analysis, App Store landscape, keywords, monetization |
 | Scope & priorities | Danny | What to build next, trade-offs, decisions |
 | Session logging | Scribe | Automatic — never needs routing |
 
