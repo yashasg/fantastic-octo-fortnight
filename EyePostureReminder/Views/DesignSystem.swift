@@ -74,6 +74,8 @@ enum AppSpacing {
     static let lg: CGFloat = 24
     /// 32pt — screen-level breathing room, hero spacing
     static let xl: CGFloat = 32
+    /// 40pt — large section dividers, full-bleed padding
+    static let xxl: CGFloat = 40
 }
 
 // MARK: - Animation Durations
@@ -160,4 +162,45 @@ enum AppLayout {
     // intentionally fixed-size (decorative, accessibility-hidden). See AppFont.countdown for precedent.
     /// Setup preview card icon column width (decorative icon frame)
     static let settingsRowIconWidth: CGFloat = 40
+
+    // MARK: Corner Radii
+    /// 12pt — small interactive controls (chips, tags, compact buttons)
+    static let radiusSmall: CGFloat = 12
+    /// 20pt — content cards, modals, sheets
+    static let radiusCard: CGFloat = 20
+    /// 28pt — large surfaces, hero cards, bottom sheets
+    static let radiusLarge: CGFloat = 28
+    /// 999pt — pill shape (capsule buttons, toggles); use `.infinity` semantics
+    static let radiusPill: CGFloat = 999
+}
+
+// MARK: - Elevation
+
+/// Applies a soft shadow in light mode and a flat border in dark mode.
+///
+/// Use `.softElevation()` instead of a raw `.shadow()` to ensure the effect
+/// adapts correctly between colour schemes without any additional boilerplate.
+struct SoftElevation: ViewModifier {
+    @Environment(\.colorScheme) private var colorScheme
+
+    func body(content: Content) -> some View {
+        if colorScheme == .dark {
+            content
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppLayout.radiusCard)
+                        .strokeBorder(Color.primary.opacity(0.10), lineWidth: 0.5)
+                )
+        } else {
+            content
+                .shadow(color: Color(red: 0.18, green: 0.22, blue: 0.20).opacity(0.10),
+                        radius: 8, x: 0, y: 3)
+        }
+    }
+}
+
+extension View {
+    /// Applies `SoftElevation` — soft shadow in light mode, thin border in dark mode.
+    func softElevation() -> some View {
+        modifier(SoftElevation())
+    }
 }
