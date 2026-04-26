@@ -4,6 +4,7 @@
 // Design tokens — single source of truth for all visual decisions.
 // Every color, font, spacing, and animation in the app references this file.
 
+import CoreText
 import SwiftUI
 
 // MARK: - Semantic Color Literals
@@ -33,32 +34,102 @@ enum AppColor {
     /// Warning text colour for body/label contexts — WCAG AA on both backgrounds.
     /// Light mode: dark amber #994F00 (6.1:1 on white). Dark mode: #FF9500 (6.8:1 on near-black).
     static let warningText = Color("WarningText", bundle: .module)
+
+    // MARK: - Restful Grove Palette
+
+    /// App background — warm off-white / deep forest night.
+    /// Light: #F8F4EC. Dark: #101714.
+    static let background = Color("RGBackground", bundle: .module)
+
+    /// Card / sheet surface — pure warm white / slightly lighter forest.
+    /// Light: #FFFDF8. Dark: #18221E.
+    static let surface = Color("RGSurface", bundle: .module)
+
+    /// Elevated surface tint — pale green wash / muted deep green.
+    /// Light: #EEF6F1. Dark: #203128.
+    static let surfaceTint = Color("RGSurfaceTint", bundle: .module)
+
+    /// Primary action / eye-break tint — forest green / sage mint.
+    /// Light: #2F6F5E (4.7:1 on white — WCAG AA large). Dark: #8ED2B1.
+    static let primaryRest = Color("RGPrimaryRest", bundle: .module)
+
+    /// Secondary / posture-check tint — teal blue / sky blue.
+    /// Light: #286C8E (4.5:1 on white — WCAG AA). Dark: #8DBFE4.
+    static let secondaryCalm = Color("RGSecondaryCalm", bundle: .module)
+
+    /// Accent warm — terracotta / peach.
+    /// Light: #9E4F39 (4.6:1 on white — WCAG AA). Dark: #F0B79B.
+    static let accentWarm = Color("RGAccentWarm", bundle: .module)
+
+    /// Primary text — deep forest / near-white mint.
+    /// Light: #22352D. Dark: #EEF7F1.
+    static let textPrimary = Color("RGTextPrimary", bundle: .module)
+
+    /// Secondary / muted text — sage grey / light sage.
+    /// Light: #5F6F67. Dark: #B9C8BF.
+    static let textSecondary = Color("RGTextSecondary", bundle: .module)
+
+    /// Subtle separator / divider — pale green / dark forest.
+    /// Light: #D8E4DC. Dark: #314039.
+    static let separatorSoft = Color("RGSeparatorSoft", bundle: .module)
 }
 
 // MARK: - Typography
 
-enum AppFont {
-    /// Overlay headline — scales with Dynamic Type (base: 28pt bold).
-    static let headline: Font = .system(.title).weight(.bold)
+enum AppTypography {
+    private static let fontFamilyName = "Nunito"
+    private static let fontFileNames = [
+        "Nunito-Regular",
+        "Nunito-Italic"
+    ]
 
-    /// Body text — scales with Dynamic Type (base: 17pt regular).
-    static let body: Font = .system(.body)
+    /// Registers bundled OFL-licensed Nunito font files for SwiftUI custom-font lookup.
+    static func registerFonts() {
+        for fileName in fontFileNames {
+            guard
+                let url = Bundle.module.url(forResource: fileName, withExtension: "ttf", subdirectory: "Fonts"),
+                let dataProvider = CGDataProvider(url: url as CFURL),
+                let font = CGFont(dataProvider)
+            else {
+                continue
+            }
 
-    /// Snooze sheet title / settings labels — scales with Dynamic Type (17pt semibold).
-    static let bodyEmphasized: Font = .system(.headline)
+            var error: Unmanaged<CFError>?
+            CTFontManagerRegisterGraphicsFont(font, &error)
+        }
+    }
 
-    /// Caption — scales with Dynamic Type (base: 13pt regular).
-    static let caption: Font = .system(.footnote)
+    /// Overlay headline — custom font scales with Dynamic Type (base: 28pt bold).
+    static let headline: Font = .custom(fontFamilyName, size: 28, relativeTo: .title).weight(.bold)
 
-    /// Secondary action buttons (onboarding, secondary CTAs) — scales with Dynamic Type (base: 15pt regular).
-    static let secondaryAction: Font = .system(.subheadline)
+    /// Body text — custom font scales with Dynamic Type (base: 17pt regular).
+    static let body: Font = .custom(fontFamilyName, size: 17, relativeTo: .body)
 
-    /// Overlay dismiss button — scales with Dynamic Type (base: 28pt medium).
-    static let overlayDismiss: Font = .system(.title).weight(.medium)
+    /// Snooze sheet title / settings labels — custom font scales with Dynamic Type (17pt semibold).
+    static let bodyEmphasized: Font = .custom(fontFamilyName, size: 17, relativeTo: .headline).weight(.semibold)
+
+    /// Caption — custom font scales with Dynamic Type (base: 13pt regular).
+    static let caption: Font = .custom(fontFamilyName, size: 13, relativeTo: .footnote)
+
+    /// Secondary action buttons (onboarding, secondary CTAs) — custom font scales with Dynamic Type (base: 15pt regular).
+    static let secondaryAction: Font = .custom(fontFamilyName, size: 15, relativeTo: .subheadline)
+
+    /// Overlay dismiss button — custom font scales with Dynamic Type (base: 28pt medium).
+    static let overlayDismiss: Font = .custom(fontFamilyName, size: 28, relativeTo: .title).weight(.medium)
 
     /// Countdown digits — fixed 64pt monospaced bold (decorative; not scaled).
     /// VoiceOver exposes a labelled accessibility element instead of reading this text directly.
     static let countdown: Font = .system(size: 64, weight: .bold, design: .monospaced)
+}
+
+enum AppFont {
+    static let headline = AppTypography.headline
+    static let body = AppTypography.body
+    static let bodyEmphasized = AppTypography.bodyEmphasized
+    static let caption = AppTypography.caption
+    static let secondaryAction = AppTypography.secondaryAction
+    static let overlayDismiss = AppTypography.overlayDismiss
+    static let countdown = AppTypography.countdown
 }
 
 // MARK: - Spacing (4pt grid)

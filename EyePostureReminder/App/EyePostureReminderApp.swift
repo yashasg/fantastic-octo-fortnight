@@ -12,6 +12,10 @@ struct EyePostureReminderApp: App {
     /// switcher, control centre).
     @State private var wasInBackground = false
 
+    init() {
+        AppTypography.registerFonts()
+    }
+
     var body: some Scene {
         WindowGroup {
             ContentView()

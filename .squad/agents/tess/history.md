@@ -302,3 +302,12 @@ Early design system work covering: DesignSystem.swift tokens (colors, fonts, spa
 **Accessibility rule reinforced:** Soft wellness colors should be used primarily as backgrounds/fills; foreground text/icon colors must preserve WCAG AA contrast. Proposed palette includes checked AA foreground pairings for normal text and controls.
 
 **Key file paths:** `EyePostureReminder/Views/DesignSystem.swift`, `EyePostureReminder/Views/SettingsView.swift`, `EyePostureReminder/Views/OverlayView.swift`, `EyePostureReminder/Views/HomeView.swift`, `EyePostureReminder/Views/Onboarding/*.swift`.
+
+### 2026-04-26: Phase 1C Font Selection — Nunito
+
+**Task:** Make and implement the app font decision for issue #161.
+**Decision filed:** `.squad/decisions/inbox/tess-font-decision.md`
+
+**Decision:** Chose **Nunito** for the Restful Grove visual direction because its rounded, friendly tone best supports a calm wellness reminder product. DM Sans remained the safest neutral option, Plus Jakarta Sans felt more premium/product-led, and keeping SF missed the chance to add warmth through typography.
+
+**Implementation notes:** Added OFL-licensed Nunito font files under `EyePostureReminder/Resources/Fonts/`, registered them at app launch with CoreText, and introduced `AppTypography` tokens using SwiftUI `.custom(..., relativeTo:)` to preserve Dynamic Type. `AppFont` remains as a compatibility alias, and the countdown stays fixed monospaced by design.
