@@ -7,6 +7,24 @@
 
 ## Learnings
 
+### 2026-04-28 — Issues #116, #120, #125 (UI quality)
+
+**SettingsView decomposition pattern (#116):**
+- Extracted `SettingsSnoozeSection`, `SettingsSmartPauseSection`, `SettingsNotificationWarningSection` as `private struct` at file scope (not nested inside `SettingsView`).
+- Private subviews use `@EnvironmentObject` to inherit `SettingsStore`/`AppCoordinator` from the parent Form automatically — no manual injection needed.
+- Pass `viewModel: SettingsViewModel?` and `reduceMotion: Bool` as `let` properties since they're not environment objects.
+- Removed `// swiftlint:disable:next type_body_length` after successful decomposition.
+
+**Reduce Motion rule clarified (#120):**
+- The correct behaviour is **no animation** (set state directly) when `reduceMotion == true` — not a shortened animation. `.linear(duration: 0.15)` was still an animation. Pattern: `if reduceMotion { state = value } else { withAnimation(...) { state = value } }`.
+
+**Design system token discipline (#125):**
+- `AppFont.overlayDismiss` added for `.system(.title).weight(.medium)` (× dismiss button).
+- `AppSymbol.snoozed` added for `"moon.zzz.fill"` (used in HomeView status icon + SettingsView snooze label).
+- `AppAnimation.onboardingTransition` (`.easeInOut`) for ContentView hasSeenOnboarding toggle; `onboardingFadeInCurve` (`.easeOut.delay`) for OnboardingScreenWrapper entrance.
+- `AppLayout.onboardingMaxContentWidth = 540` replaces the same literal in all three onboarding screens.
+- Also fixed `OnboardingPermissionView` skip button using raw `44` instead of `AppLayout.minTapTarget`.
+
 ### 2026-04-27 — UI Code Quality & Readability Audit
 
 **SettingsView.swift — SettingsViewModelBox pattern:**
