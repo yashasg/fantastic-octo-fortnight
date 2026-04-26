@@ -61,3 +61,8 @@
 - **Test suite quality:** 9/10 — zero force unwraps, robust mocking infrastructure, MainActor safety, clear BDD naming, comprehensive coverage
 - **Key patterns confirmed healthy:** Protocol-driven DI, @MainActor isolation, design system tokens, SettingsPersisting abstraction, MVVM boundaries
 - **Key learning:** SwiftUI struct views (OverlayView, ReminderRowView) don't need `[weak self]` in closures — structs are value types. Only flag weak-capture issues on class types (AppCoordinator, SettingsStore, etc.)
+
+### 2025-07-18: Fix #115 — Strong self capture in AppCoordinator snooze task
+- **Fixed:** Line 587 in `AppCoordinator.swift` — `Task { await self.scheduleSnoozeWakeNotification(at: snoozeEnd) }` changed to `Task { [weak self] in await self?.scheduleSnoozeWakeNotification(at: snoozeEnd) }`
+- **Root cause:** Oversight during #73 implementation — the silent background notification scheduling Task was added without the `[weak self]` capture that every other Task closure in the class uses
+- **Key learning:** When adding new Task closures to a class, always check the file's existing capture pattern and match it — consistency prevents subtle retain-cycle bugs from slipping through review
