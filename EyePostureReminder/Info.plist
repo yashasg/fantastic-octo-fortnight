@@ -29,6 +29,6 @@
 	<key>NSFocusStatusUsageDescription</key>
 	<string>Eye &amp; Posture Reminder pauses notifications when you have a Focus mode active.</string>
 	<key>NSMotionUsageDescription</key>
-	<string>Eye &amp; Posture Reminder uses motion data to pause reminders while driving.</string>
+	<string>Eye &amp; Posture Reminder uses motion data to detect when you&apos;re driving and automatically pause reminders for your safety.</string>
 </dict>
 </plist>
