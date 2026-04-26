@@ -1,8 +1,8 @@
 # Terms and Conditions
 
 **App:** Eye & Posture Reminder  
-**Last Updated:** [Date]  
-**Publisher:** [Your Company Name]
+**Last Updated:** April 25, 2026  
+**Publisher:** Yashasg
 
 ---
 
@@ -10,7 +10,7 @@
 
 By downloading, installing, or using Eye & Posture Reminder ("the App"), you agree to be bound by these Terms and Conditions ("Terms"). If you do not agree, do not use the App.
 
-These Terms apply to all users of the App. [Your Company Name] reserves the right to update these Terms at any time. Continued use of the App after changes are posted constitutes acceptance of the revised Terms.
+These Terms apply to all users of the App. Yashasg reserves the right to update these Terms at any time. Continued use of the App after changes are posted constitutes acceptance of the revised Terms.
 
 ---
 
@@ -42,7 +42,7 @@ Eye & Posture Reminder is **not** a medical device, medical application, or heal
 
 **If you have any existing medical condition — including but not limited to eye disease, vision problems, chronic pain, spine or neck disorders, or any condition affecting your posture or musculoskeletal health — consult a qualified healthcare professional before relying on any reminder-based wellness routine.**
 
-Nothing in this App or these Terms constitutes a doctor-patient relationship or any other professional-client relationship between you and [Your Company Name].
+Nothing in this App or these Terms constitutes a doctor-patient relationship or any other professional-client relationship between you and Yashasg.
 
 **USE THIS APP AT YOUR OWN RISK.** Any wellness or health-related decisions you make based on reminders from this App are solely your own responsibility.
 
@@ -52,16 +52,16 @@ Nothing in this App or these Terms constitutes a doctor-patient relationship or 
 
 To the fullest extent permitted by applicable law:
 
-**[Your Company Name] shall not be liable for any direct, indirect, incidental, special, consequential, exemplary, or punitive damages** — including but not limited to loss of health, physical injury, vision deterioration, musculoskeletal injury, loss of data, loss of profits, or any other loss or damage — arising out of or in connection with:
+**Yashasg shall not be liable for any direct, indirect, incidental, special, consequential, exemplary, or punitive damages** — including but not limited to loss of health, physical injury, vision deterioration, musculoskeletal injury, loss of data, loss of profits, or any other loss or damage — arising out of or in connection with:
 
 - Your use of, or inability to use, the App
 - Any reliance on reminders, suggestions, or content delivered by the App
 - Any health outcome, positive or negative, associated with using the App
 - Technical failures, missed reminders, or inaccurate screen-on-time tracking
 
-This limitation of liability applies regardless of the legal theory (contract, tort, negligence, strict liability, or otherwise) and even if [Your Company Name] has been advised of the possibility of such damages.
+This limitation of liability applies regardless of the legal theory (contract, tort, negligence, strict liability, or otherwise) and even if Yashasg has been advised of the possibility of such damages.
 
-In jurisdictions that do not allow the exclusion of certain warranties or limitation of liability, [Your Company Name]'s liability is limited to the maximum extent permitted by law.
+In jurisdictions that do not allow the exclusion of certain warranties or limitation of liability, Yashasg's liability is limited to the maximum extent permitted by law.
 
 ---
 
@@ -75,7 +75,7 @@ The App is provided **"as is"** and **"as available"** without warranty of any k
 - Accuracy or reliability of any reminders or timing functions
 - Uninterrupted or error-free operation
 
-[Your Company Name] does not warrant that the App will function correctly on all devices, iOS versions, or in all usage conditions. Timer accuracy, overlay behavior, and notification delivery depend on iOS system conditions beyond [Your Company Name]'s control.
+Yashasg does not warrant that the App will function correctly on all devices, iOS versions, or in all usage conditions. Timer accuracy, overlay behavior, and notification delivery depend on iOS system conditions beyond Yashasg's control.
 
 ---
 
@@ -94,7 +94,7 @@ By using the App, you agree that:
 
 ## 7. Intellectual Property
 
-All content, design, code, branding, and assets within Eye & Posture Reminder are the intellectual property of [Your Company Name] and are protected by applicable copyright, trademark, and intellectual property laws.
+All content, design, code, branding, and assets within Eye & Posture Reminder are the intellectual property of Yashasg and are protected by applicable copyright, trademark, and intellectual property laws.
 
 You are granted a limited, non-exclusive, non-transferable, revocable license to use the App on your personal iOS device for personal, non-commercial purposes, subject to these Terms and Apple's App Store Terms of Service.
 
@@ -106,13 +106,13 @@ You may not copy, modify, distribute, sell, reverse-engineer, or create derivati
 
 Eye & Posture Reminder does not integrate with third-party analytics, advertising, or data platforms. The App operates entirely on your device and does not transmit data to external services.
 
-The App is distributed through the Apple App Store. Apple's own terms of service govern the download and installation process. [Your Company Name] is not responsible for Apple's policies or services.
+The App is distributed through the Apple App Store. Apple's own terms of service govern the download and installation process. Yashasg is not responsible for Apple's policies or services.
 
 ---
 
 ## 9. Termination
 
-You may stop using the App at any time by deleting it from your device. [Your Company Name] reserves the right to discontinue the App or modify its functionality at any time without notice.
+You may stop using the App at any time by deleting it from your device. Yashasg reserves the right to discontinue the App or modify its functionality at any time without notice.
 
 Sections 3 (Health Disclaimer), 4 (Limitation of Liability), 5 (Warranty Disclaimer), and 7 (Intellectual Property) survive termination.
 
@@ -120,13 +120,13 @@ Sections 3 (Health Disclaimer), 4 (Limitation of Liability), 5 (Warranty Disclai
 
 ## 10. Governing Law
 
-These Terms are governed by the laws of [Jurisdiction / State / Country], without regard to conflict of law principles. Any disputes arising from these Terms or your use of the App shall be resolved in the courts of [Jurisdiction].
+These Terms are governed by the laws of California, United States, without regard to conflict of law principles. Any disputes arising from these Terms or your use of the App shall be resolved in the courts of California, United States.
 
 ---
 
 ## 11. Changes to These Terms
 
-[Your Company Name] may update these Terms at any time. When changes are made, the "Last Updated" date at the top of this document will be revised. It is your responsibility to review these Terms periodically. Continued use of the App after changes are posted constitutes your acceptance of the updated Terms.
+Yashasg may update these Terms at any time. When changes are made, the "Last Updated" date at the top of this document will be revised. It is your responsibility to review these Terms periodically. Continued use of the App after changes are posted constitutes your acceptance of the updated Terms.
 
 ---
 
@@ -134,9 +134,9 @@ These Terms are governed by the laws of [Jurisdiction / State / Country], withou
 
 If you have questions about these Terms, contact:
 
-**[Your Company Name]**  
-**Email:** [Contact Email]
+**Yashasg**  
+**Email:** support@yashasg.dev
 
 ---
 
-*These Terms and Conditions were last updated on [Date].*
+*These Terms and Conditions were last updated on April 25, 2026.*

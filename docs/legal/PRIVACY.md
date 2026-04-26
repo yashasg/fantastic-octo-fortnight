@@ -1,8 +1,8 @@
 # Privacy Policy
 
 **App:** Eye & Posture Reminder  
-**Last Updated:** [Date]  
-**Publisher:** [Your Company Name]
+**Last Updated:** April 25, 2026  
+**Publisher:** Yashasg
 
 ---
 
@@ -62,7 +62,7 @@ We do not sell, rent, trade, or share any data with third parties because we do 
 
 ## 5. Apple App Store
 
-The App is distributed through the Apple App Store. Apple may collect certain data as part of the download and installation process, governed by [Apple's Privacy Policy](https://www.apple.com/legal/privacy/). [Your Company Name] has no control over or access to data collected by Apple.
+The App is distributed through the Apple App Store. Apple may collect certain data as part of the download and installation process, governed by [Apple's Privacy Policy](https://www.apple.com/legal/privacy/). Yashasg has no control over or access to data collected by Apple.
 
 ---
 
@@ -70,7 +70,7 @@ The App is distributed through the Apple App Store. Apple may collect certain da
 
 Eye & Posture Reminder does not knowingly collect personal information from children under the age of 13 (or the applicable age of digital consent in your jurisdiction). Since the App collects no personal information from any user, it presents no unique risk to children's privacy.
 
-If you are a parent or guardian and believe your child has somehow provided personal information through this App, please contact us at [Contact Email]. We will promptly address the concern.
+If you are a parent or guardian and believe your child has somehow provided personal information through this App, please contact us at support@yashasg.dev. We will promptly address the concern.
 
 ---
 
@@ -94,7 +94,7 @@ Since we do not collect personal data, most data subject rights (access, deletio
 
 ## 9. Changes to This Privacy Policy
 
-[Your Company Name] may update this Privacy Policy from time to time. When changes are made, the "Last Updated" date at the top will be revised. We encourage you to review this policy periodically. Continued use of the App after changes are posted constitutes your acceptance of the revised policy.
+Yashasg may update this Privacy Policy from time to time. When changes are made, the "Last Updated" date at the top will be revised. We encourage you to review this policy periodically. Continued use of the App after changes are posted constitutes your acceptance of the revised policy.
 
 ---
 
@@ -102,9 +102,9 @@ Since we do not collect personal data, most data subject rights (access, deletio
 
 If you have questions or concerns about this Privacy Policy, contact:
 
-**[Your Company Name]**  
-**Email:** [Contact Email]
+**Yashasg**  
+**Email:** support@yashasg.dev
 
 ---
 
-*This Privacy Policy was last updated on [Date].*
+*This Privacy Policy was last updated on April 25, 2026.*
