@@ -28,6 +28,9 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         let args = CommandLine.arguments
         if args.contains("--skip-onboarding") {
             UserDefaults.standard.set(true, forKey: AppStorageKey.hasSeenOnboarding)
+            // Reset all settings to defaults so each test starts from a clean, known state.
+            // Without this, toggling settings in one test pollutes the next test's launch state.
+            SettingsStore().resetToDefaults()
         }
         if args.contains("--reset-onboarding") {
             UserDefaults.standard.removeObject(forKey: AppStorageKey.hasSeenOnboarding)

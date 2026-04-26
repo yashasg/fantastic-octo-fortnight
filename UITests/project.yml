@@ -41,7 +41,27 @@ targets:
         CODE_SIGN_IDENTITY: ""
         CODE_SIGNING_REQUIRED: "NO"
         CODE_SIGNING_ALLOWED: "NO"
-        GENERATE_INFOPLIST_FILE: "YES"
+        INFOPLIST_FILE: ../EyePostureReminder/Info.plist
+    # The SPM executable binary and resource bundle are built to BUILT_PRODUCTS_DIR
+    # but Xcode's app-wrapper build phase doesn't auto-copy them into the .app bundle.
+    # This script copies them in so the app bundle is valid for UI test installation.
+    postBuildScripts:
+      - name: "Assemble App Bundle"
+        script: |
+          set -e
+          BIN_SRC="${BUILT_PRODUCTS_DIR}/${EXECUTABLE_NAME}"
+          BIN_DST="${BUILT_PRODUCTS_DIR}/${EXECUTABLE_FOLDER_PATH}/${EXECUTABLE_NAME}"
+          if [ -f "$BIN_SRC" ] && [ "$BIN_SRC" != "$BIN_DST" ]; then
+            cp "$BIN_SRC" "$BIN_DST"
+            chmod +x "$BIN_DST"
+          fi
+          BUNDLE_NAME="${PRODUCT_MODULE_NAME}_${PRODUCT_MODULE_NAME}.bundle"
+          BUNDLE_SRC="${BUILT_PRODUCTS_DIR}/${BUNDLE_NAME}"
+          BUNDLE_DST="${BUILT_PRODUCTS_DIR}/${EXECUTABLE_FOLDER_PATH}/${BUNDLE_NAME}"
+          if [ -d "$BUNDLE_SRC" ]; then
+            rm -rf "$BUNDLE_DST"
+            cp -r "$BUNDLE_SRC" "$BUNDLE_DST"
+          fi
 
   EyePostureReminderUITests:
     type: bundle.ui-testing

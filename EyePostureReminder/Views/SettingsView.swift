@@ -32,14 +32,14 @@ struct SettingsView: View {
         Form {
             // MARK: Master toggle
             Section {
-                Toggle(isOn: $settings.globalEnabled) {
+                AccessibleToggle(
+                    isOn: $settings.globalEnabled,
+                    tint: AppColor.reminderBlue,
+                    accessibilityHint: Text("settings.masterToggle.hint", bundle: .module),
+                    onChange: { _ in viewModel?.globalToggleChanged() }
+                ) {
                     Text("settings.masterToggle", bundle: .module)
                 }
-                    .tint(AppColor.reminderBlue)
-                    .onChange(of: settings.globalEnabled) { _ in
-                        viewModel?.globalToggleChanged()
-                    }
-                    .accessibilityHint(Text("settings.masterToggle.hint", bundle: .module))
             } footer: {
                 if settings.globalEnabled {
                     Text("settings.masterToggle.footer", bundle: .module)
@@ -362,32 +362,30 @@ private struct SettingsSmartPauseSection: View {
 
     var body: some View {
         Section {
-            Toggle(isOn: $settings.pauseDuringFocus) {
+            AccessibleToggle(
+                isOn: $settings.pauseDuringFocus,
+                tint: AppColor.reminderBlue,
+                accessibilityIdentifier: "settings.smartPause.pauseDuringFocus",
+                accessibilityHint: Text("settings.smartPause.pauseDuringFocus.hint", bundle: .module),
+                onChange: { newValue in viewModel?.pauseDuringFocus = newValue }
+            ) {
                 Label(
                     String(localized: "settings.smartPause.pauseDuringFocus", bundle: .module),
                     systemImage: AppSymbol.pauseDuringFocus
                 )
             }
-            .tint(AppColor.reminderBlue)
-            .accessibilityHint(Text("settings.smartPause.pauseDuringFocus.hint", bundle: .module))
-            .accessibilityIdentifier("settings.smartPause.pauseDuringFocus")
-            .onChange(of: settings.pauseDuringFocus) { newValue in
-                // Route through ViewModel so the analytics setter fires.
-                viewModel?.pauseDuringFocus = newValue
-            }
 
-            Toggle(isOn: $settings.pauseWhileDriving) {
+            AccessibleToggle(
+                isOn: $settings.pauseWhileDriving,
+                tint: AppColor.reminderBlue,
+                accessibilityIdentifier: "settings.smartPause.pauseWhileDriving",
+                accessibilityHint: Text("settings.smartPause.pauseWhileDriving.hint", bundle: .module),
+                onChange: { newValue in viewModel?.pauseWhileDriving = newValue }
+            ) {
                 Label(
                     String(localized: "settings.smartPause.pauseWhileDriving", bundle: .module),
                     systemImage: AppSymbol.pauseWhileDriving
                 )
-            }
-            .tint(AppColor.reminderBlue)
-            .accessibilityHint(Text("settings.smartPause.pauseWhileDriving.hint", bundle: .module))
-            .accessibilityIdentifier("settings.smartPause.pauseWhileDriving")
-            .onChange(of: settings.pauseWhileDriving) { newValue in
-                // Route through ViewModel so the analytics setter fires.
-                viewModel?.pauseWhileDriving = newValue
             }
         } header: {
             Text("settings.section.smartPause", bundle: .module)

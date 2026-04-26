@@ -106,6 +106,14 @@ final class AppCoordinator: ObservableObject {
     /// Used to compute session duration for the appSessionEnd analytics event.
     private var sessionStartTime: Date?
 
+    // MARK: - UI Test Mode
+
+    /// `true` when the app is launched by XCUITest with onboarding-control arguments.
+    /// Used to suppress background services (timers, permission requests) that prevent
+    /// the accessibility tree from settling between test interactions.
+    static let isUITestMode: Bool = CommandLine.arguments.contains("--skip-onboarding") ||
+                                    CommandLine.arguments.contains("--reset-onboarding")
+
     // MARK: - Init
 
     init(
@@ -120,8 +128,15 @@ final class AppCoordinator: ObservableObject {
         self.scheduler = scheduler ?? ReminderScheduler()
         self.notificationCenter = notificationCenter
         self.overlayManager = overlayManager ?? OverlayManager()
-        self.screenTimeTracker = screenTimeTracker ?? ScreenTimeTracker()
-        self.pauseConditionManager = pauseConditionProvider ?? PauseConditionManager(settings: self.settings)
+        // In UI test mode, use no-op stubs for services that register UIKit lifecycle
+        // observers and start 1-second timers — they prevent XCUITest from settling
+        // the accessibility tree between interactions, causing stale element reads.
+        self.screenTimeTracker = screenTimeTracker ?? (AppCoordinator.isUITestMode
+            ? NoopScreenTimeTracker()
+            : ScreenTimeTracker())
+        self.pauseConditionManager = pauseConditionProvider ?? (AppCoordinator.isUITestMode
+            ? NoopPauseConditionManager()
+            : PauseConditionManager(settings: self.settings))
         Logger.lifecycle.info("AppCoordinator initialised")
 
         // Wire ScreenTimeTracker callback — fires on main thread when a type's
@@ -190,6 +205,10 @@ final class AppCoordinator: ObservableObject {
 
     /// Re-read the current authorisation status from the system.
     func refreshAuthStatus() async {
+        // Skip the system async call in UI test mode — it suspends the main actor,
+        // which can prevent a Toggle binding update from executing before XCUITest
+        // reads the element's accessibility value immediately after tap().
+        guard !AppCoordinator.isUITestMode else { return }
         notificationAuthStatus = await notificationCenter.getAuthorizationStatus()
         Logger.lifecycle.debug("Notification auth status: \(self.notificationAuthStatus.rawValue)")
     }
@@ -240,13 +259,20 @@ final class AppCoordinator: ObservableObject {
 
         // First launch: prompt the user for notification permission.
         // Permission is still used for the snooze-wake silent notification.
-        if notificationAuthStatus == .notDetermined {
+        // Skip in UI test mode — the system alert would block the accessibility
+        // hierarchy and cause all XCUITest element lookups to fail.
+        if notificationAuthStatus == .notDetermined && !AppCoordinator.isUITestMode {
             await requestNotificationPermission()
         }
 
         // Cancel any legacy periodic UNNotifications (safety net after app update).
         // Reminders are now driven exclusively by ScreenTimeTracker.
         scheduler.cancelAllReminders()
+
+        // Skip the 1-second tick timer in UI test mode — continuous main-thread
+        // activity prevents XCUITest from settling the accessibility tree between
+        // interactions, causing stale value reads on Toggles and other controls.
+        guard !AppCoordinator.isUITestMode else { return }
 
         // Configure ScreenTimeTracker with current thresholds and start counting.
         configureScreenTimeTracker()

@@ -223,6 +223,34 @@ cmd_uitest() {
   fi
   info "xctestrun: $xctestrun"
 
+  # Patch UITargetAppPath so xctestrun always resolves to the .app bundle
+  # (build-for-testing may generate a path pointing at the flat SPM binary).
+  info "Patching UITargetAppPath in xctestrun…"
+  /usr/libexec/PlistBuddy \
+    -c "Set :${UI_TEST_SCHEME}:UITargetAppPath __TESTROOT__/Debug-iphonesimulator/EyePostureReminder.app" \
+    "$xctestrun" || warn "PlistBuddy patch failed — xctestrun may already have the correct path"
+
+  # Ensure the .app bundle contains the executable and resource bundle.
+  # The xcodeproj app-wrapper target builds them to BUILT_PRODUCTS_DIR but
+  # doesn't always copy them into the .app; copy them if missing.
+  local products_dir="${DERIVED_DATA_PATH}/Build/Products/Debug-iphonesimulator"
+  local app_dir="${products_dir}/EyePostureReminder.app"
+  local spm_bin="${products_dir}/EyePostureReminder"
+  local app_bin="${app_dir}/EyePostureReminder"
+  local bundle_src="${products_dir}/EyePostureReminder_EyePostureReminder.bundle"
+  local bundle_dst="${app_dir}/EyePostureReminder_EyePostureReminder.bundle"
+
+  if [[ -f "$spm_bin" && ! -f "$app_bin" ]]; then
+    info "Copying SPM binary into app bundle…"
+    cp "$spm_bin" "$app_bin"
+    chmod +x "$app_bin"
+  fi
+  if [[ -d "$bundle_src" ]]; then
+    info "Copying resource bundle into app bundle…"
+    rm -rf "$bundle_dst"
+    cp -r "$bundle_src" "$bundle_dst"
+  fi
+
   info "Step 2/2 — running UI tests…"
   run_xcodebuild test-without-building \
     -xctestrun "$xctestrun" \

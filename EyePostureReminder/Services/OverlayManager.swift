@@ -139,8 +139,7 @@ final class OverlayManager: OverlayPresenting {
                 pauseMediaEnabled: pauseMediaEnabled,
                 onDismiss: onDismiss))
             Logger.overlay.warning(
-                "No active UIWindowScene — overlay for \(type.rawValue) queued "
-                + "(depth: \(self.overlayQueue.count))"
+                "No active UIWindowScene — overlay for \(type.rawValue) queued (depth: \(self.overlayQueue.count))"
             )
             return
         }
@@ -207,8 +206,7 @@ final class OverlayManager: OverlayPresenting {
         let removed = before - overlayQueue.count
         if removed > 0 {
             Logger.overlay.info(
-                "Overlay queue: removed \(removed) queued item(s) for \(type.rawValue). "
-                + "Remaining: \(self.overlayQueue.count)"
+                "Overlay queue: removed \(removed) queued item(s) for \(type.rawValue). Remaining: \(self.overlayQueue.count)"
             )
         }
     }

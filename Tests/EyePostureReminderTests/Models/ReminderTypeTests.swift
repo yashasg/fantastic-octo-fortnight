@@ -114,7 +114,7 @@ final class ReminderTypeTests: XCTestCase {
     }
 
     func test_eyes_symbolName() {
-        XCTAssertEqual(ReminderType.eyes.symbolName, "eye")
+        XCTAssertEqual(ReminderType.eyes.symbolName, "eye.fill")
     }
 
     func test_posture_symbolName() {
