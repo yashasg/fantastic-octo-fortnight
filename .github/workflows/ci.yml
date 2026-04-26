@@ -91,7 +91,7 @@ jobs:
 
       # ── Lint ─────────────────────────────────────────────────────────────────
       - name: Install SwiftLint
-        run: brew install swiftlint@0.57.0
+        run: brew install swiftlint
 
       - name: Lint (SwiftLint)
         run: ./scripts/build.sh lint
