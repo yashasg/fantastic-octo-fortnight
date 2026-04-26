@@ -66,3 +66,18 @@
 - **Fixed:** Line 587 in `AppCoordinator.swift` — `Task { await self.scheduleSnoozeWakeNotification(at: snoozeEnd) }` changed to `Task { [weak self] in await self?.scheduleSnoozeWakeNotification(at: snoozeEnd) }`
 - **Root cause:** Oversight during #73 implementation — the silent background notification scheduling Task was added without the `[weak self]` capture that every other Task closure in the class uses
 - **Key learning:** When adding new Task closures to a class, always check the file's existing capture pattern and match it — consistency prevents subtle retain-cycle bugs from slipping through review
+
+### 2025-07-18: Round 4 Code Quality Review (Post 3 Fix Rounds)
+- **Scope:** Full codebase — 29 source files, fresh pass after 36 issues fixed across 3 rounds
+- **Verdict:** ✅ APPROVED — Ship it. 0 P0, 0 P1, 3 P2 (all carried/known)
+- **Round 3 fixes verified (all clean):**
+  1. **#136 (pendingOverlay):** `pendingOverlay = nil` added in both cancel and pause paths — correct, surgical
+  2. **#137 (type-specific queue):** New `clearQueue(for:)` on OverlayPresenting protocol + OverlayManager impl + mock — proper protocol extension, well-tested
+  3. **#138 (AppSymbol):** 4 new tokens (pauseDuringFocus, pauseWhileDriving, clock, timer) + all callsites migrated — no raw SF Symbol strings remain outside DesignSystem.swift and ReminderType.symbolName
+  4. **#143 (timer guard):** `guard timer == nil else { return }` in OverlayView.startTimer() — minimal, correct
+- **Carried P2s (known, non-blocking):**
+  1. `OverlayManager.overlayQueue` and `AppCoordinator.pendingOverlay` still use tuples — named struct would improve readability (carried from Round 0 P2-6)
+  2. `ReminderType.symbolName` returns `"eye"` while `AppSymbol.eyeBreak` is `"eye.fill"` — intentional (filled vs outline for different contexts) but undocumented
+  3. `SettingsView.swift` at 446 lines — previously 347; grew with snooze/smart-pause sections. Subview extraction recommended for maintainability
+- **Clean bill on:** No swiftlint suppressions, zero TODO/FIXME/HACK markers, zero force unwraps, all Task closures use `[weak self]`, deprecated `snooze(for:)` properly marked and unused, DI pattern consistent, design system tokens comprehensive
+- **Ship confidence: HIGH** — No functional bugs, no architectural debt, no safety issues. Carried P2s are maintenance-quality items for a future cleanup pass.
