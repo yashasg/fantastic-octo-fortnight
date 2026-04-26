@@ -195,3 +195,16 @@
 2. **L38-39 — Exit 1 on missing plist:** Changed `warning:` + `exit 0` to `error:` + `exit 1`. Silent no-op on missing plist would mask misconfiguration in future Xcode build phase setups; failing loudly is safer and aligns with `set -euo pipefail` philosophy already used in the script.
 
 **Learning:** When a script uses `set -euo pipefail` for resilience, soft-failing with `exit 0` in error branches is an anti-pattern — it defeats the purpose of strict mode. Errors on missing required resources should always be non-zero exits.
+
+## Wave 11 — Issues #139/#140 (SwiftLint + Test Typo)
+
+**Task:** Fix GitHub Issues #139 (invalid swiftlint key) and #140 (test method name typo)
+**Outcome:** ✅ Both committed to main (364cf4a, 8cbe352)
+
+**Changes made:**
+- **#139:** Removed `only_single_mutable_parameter: true` from `trailing_closure` config in `.swiftlint.yml` — this key does not exist in current SwiftLint and causes a config validation error. Moved `trailing_closure` from `opt_in_rules` to `disabled_rules` with a comment explaining the intent (SwiftUI DSL multi-argument calls).
+- **#140:** Renamed `test_showOverlay_withNoActiveWindowScene_isOverlayVisibleRemainsFlase` → `test_showOverlay_withNoActiveWindowScene_isOverlayVisibleRemainsFalse` in `Tests/EyePostureReminderTests/RegressionTests.swift` L873.
+
+**Learnings:**
+- **`trailing_closure` has no rule-level config options in current SwiftLint:** The rule is a simple opt-in/opt-out. Any key under `trailing_closure:` in the YAML will cause a config parse error. The SwiftUI-friendly intent (don't enforce on multi-arg calls) is better achieved by disabling the rule entirely.
+- **Test method names are part of the public API surface for CI:** Typos in test names surface in CI logs and coverage reports; they should be treated as code defects, not cosmetic issues.
