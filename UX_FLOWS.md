@@ -29,7 +29,9 @@ Every screen and interaction must work perfectly with VoiceOver, Dynamic Type, a
 
 ## 2. Complete User Flows
 
-### 2.1 First Launch → Permission Request → First Settings Configuration
+### 2.1 First Launch → Onboarding → Permission Request → Home Screen
+
+The app uses a 3-screen onboarding flow (`OnboardingView`) shown once on first launch. `ContentView` checks the `hasSeenOnboarding` flag in `@AppStorage` and routes to either `OnboardingView` or `HomeView`.
 
 ```
 User taps app icon (first time)
@@ -38,55 +40,98 @@ User taps app icon (first time)
 Launch Screen (standard iOS animation, < 1 second)
     │
     ▼
-App opens directly to Settings Screen
+ContentView checks @AppStorage("hasSeenOnboarding")
     │
-    ├─ System permission prompt appears immediately:
-    │  "Eye & Posture Reminder Would Like to Send You Notifications"
-    │  [Don't Allow] [Allow]
-    │
-    ├─ User taps "Allow"
+    ├─ false (first launch)
     │      │
     │      ▼
-    │  Permission granted ✓
-    │  Settings Screen displays normally
-    │  Default values already loaded:
-    │    • Eyes: every 20 min, 20 s break
-    │    • Posture: every 30 min, 10 s break
-    │    • Toggle: ON
+    │  ┌─────────────────────────────────────────────┐
+    │  │  SCREEN 1 — Welcome (OnboardingWelcomeView) │
+    │  │                                              │
+    │  │  Illustration: eye + figure SF Symbols       │
+    │  │  Headline: "Welcome to Eye & Posture         │
+    │  │            Reminder"                         │
+    │  │  Subheadline + value prop body text          │
+    │  │  Legal disclaimer (privacy note)             │
+    │  │                                              │
+    │  │  [ Next → ]  (borderedProminent, blue)       │
+    │  │  Page dots: ● ○ ○                            │
+    │  └─────────────────────────────────────────────┘
+    │      │
+    │      ▼  User taps "Next" (or swipes left)
+    │
+    │  ┌──────────────────────────────────────────────────┐
+    │  │  SCREEN 2 — Permissions (OnboardingPermissionView)│
+    │  │                                                   │
+    │  │  Mock notification preview card                   │
+    │  │  Headline: "Stay on track, effortlessly."         │
+    │  │  Explanation: why notifications are needed         │
+    │  │  Reassurance: "No spam. Just the breaks you       │
+    │  │               asked for."                         │
+    │  │                                                   │
+    │  │  [ Enable Notifications ]  ← triggers system      │
+    │  │                              permission prompt     │
+    │  │  "Not now" skip link      ← advances without      │
+    │  │                              prompting             │
+    │  │  Page dots: ○ ● ○                                 │
+    │  │                                                   │
+    │  │  ⚠ Horizontal swipe is blocked on this screen     │
+    │  │    (highPriorityGesture prevents accidental skip)  │
+    │  └──────────────────────────────────────────────────┘
+    │      │
+    │      ├─ User taps "Enable Notifications"
+    │      │      │
+    │      │      ▼
+    │      │  System permission prompt appears:
+    │      │  "Eye & Posture Reminder Would Like to
+    │      │   Send You Notifications"
+    │      │  [Don't Allow] [Allow]
+    │      │      │
+    │      │      ├─ User taps "Allow" → permission granted ✓
+    │      │      └─ User taps "Don't Allow" → permission denied
+    │      │      │
+    │      │      ▼  (either way, advances to Screen 3)
+    │      │
+    │      └─ User taps "Not now"
+    │             │
+    │             ▼  (advances to Screen 3 without prompting)
+    │
+    │  ┌──────────────────────────────────────────────────┐
+    │  │  SCREEN 3 — Setup Preview (OnboardingSetupView)  │
+    │  │                                                   │
+    │  │  Headline: "You're all set"                       │
+    │  │  Default config preview cards:                     │
+    │  │    • Eye Breaks: 20 min interval, 20 s break      │
+    │  │    • Posture Checks: 30 min interval, 10 s break  │
+    │  │  Reassurance body copy                             │
+    │  │                                                   │
+    │  │  [ Get Started ]    ← sets hasSeenOnboarding,     │
+    │  │                       transitions to HomeView     │
+    │  │  "Customize Settings" ← sets hasSeenOnboarding    │
+    │  │                         + openSettingsOnLaunch,    │
+    │  │                         opens Settings on arrival  │
+    │  │  Page dots: ○ ○ ●                                 │
+    │  └──────────────────────────────────────────────────┘
     │      │
     │      ▼
-    │  User can adjust intervals/durations if desired,
-    │  or simply close the app (reminders already scheduled)
+    │  hasSeenOnboarding = true (written to UserDefaults)
+    │  ContentView transitions to HomeView (opacity crossfade, 0.4s)
+    │  Reminders scheduled with default values
     │
-    └─ User taps "Don't Allow"
+    └─ true (returning user)
            │
            ▼
-       Permission denied
-       Banner appears at top of Settings Screen:
-       "⚠️ Notifications disabled. Reminders will only work when app is open."
-       [Open Settings] button
-           │
-           ├─ User taps "Open Settings"
-           │      │
-           │      ▼
-           │  iOS Settings app opens → Eye & Posture Reminder → Notifications
-           │  User can toggle on
-           │      │
-           │      ▼
-           │  Returns to app → reminders now scheduled
-           │
-           └─ User ignores banner
-                  │
-                  ▼
-              App works in foreground-only mode
-              (timers run while app is active)
+       HomeView loads directly (no onboarding)
 ```
 
 **Key UX decisions:**
-- **No splash screen or tour.** The settings speak for themselves.
-- **Permission request is immediate.** The app's core function requires notifications — no point delaying this ask.
-- **Defaults are sensible.** User can launch and close immediately; the app "just works."
-- **Graceful degradation.** If permission is denied, the app doesn't nag repeatedly — it shows a single, non-modal banner with a clear path to fix.
+- **3-screen onboarding educates before asking.** The permission request is on Screen 2, after the user understands the app's value (Screen 1). This increases grant rates.
+- **Permission screen blocks accidental swipe-past.** A `highPriorityGesture` prevents horizontal swiping on Screen 2, ensuring the user makes a deliberate choice.
+- **"Not now" skip is always available.** The user can skip the notification prompt and still proceed. A banner on the Home/Settings screen later offers recovery (see Section 2.4).
+- **Defaults are pre-configured.** Screen 3 previews the defaults so the user knows what to expect. No mandatory customization.
+- **"Customize Settings" path.** Users who want to adjust before starting can tap the secondary CTA, which opens Settings immediately after onboarding.
+- **Onboarding is shown exactly once.** The `hasSeenOnboarding` flag is only set on explicit completion ("Get Started" or "Customize"). Force-quitting mid-onboarding means it shows again next launch.
+- **Graceful degradation.** If permission is denied (either via "Don't Allow" or "Not now"), the app works in foreground-only mode. A persistent banner on the Home/Settings screen provides a path to fix (see Section 2.4).
 
 ---
 
@@ -414,7 +459,7 @@ All reminders continue normally
 
 ---
 
-### 3.3 Permission Prompt (System, First Launch)
+### 3.3 Permission Prompt (System, During Onboarding)
 
 **Purpose:** Request notification permission (shown by iOS, not custom UI).
 
@@ -423,11 +468,12 @@ All reminders continue normally
 - Body: (standard iOS text)
 - Buttons: [Don't Allow] [Allow]
 
-**Trigger:** Automatically on first launch, immediately after Settings Screen appears.
+**Trigger:** User taps "Enable Notifications" on Onboarding Screen 2 (`OnboardingPermissionView`). The prompt is **not** automatic — it only appears after the user has seen the Welcome screen and the permission education screen.
 
 **Post-interaction:**
-- User allows → Settings Screen continues normally
-- User denies → Banner appears at top of Settings Screen
+- User allows → advances to Setup screen (Screen 3); reminders scheduled after onboarding completion
+- User denies → advances to Setup screen (Screen 3); banner appears on Home/Settings screen after onboarding
+- User taps "Not now" → advances to Setup screen without triggering the system prompt at all
 
 ---
 
@@ -568,41 +614,44 @@ OverlayManager checks: is an overlay currently visible?
 
 ---
 
-## 5. Onboarding Strategy
+## 5. Onboarding Flow
 
-### 5.1 Philosophy: Minimal Onboarding
+### 5.1 Philosophy: Educate, Then Ask
 
-**Core belief:** The app is simple enough that it doesn't need a tutorial.
+**Core belief:** Even a simple app benefits from a brief, warm introduction — especially when a system permission is required.
 
 **Approach:**
-- **No walkthrough slides.** User opens app → sees settings → understands immediately.
-- **No "tutorial overlays"** or coach marks pointing at buttons.
-- **Defaults are pre-configured.** User can launch, close, and trust the app will work.
-- **Permission request is the only interruption** — and it's mandatory for core functionality, so no point delaying it.
+- **3-screen onboarding flow** (Welcome → Permissions → Setup) shown exactly once on first launch.
+- **Educate before asking.** The permission request comes on Screen 2, after the user understands the app's value. This produces higher grant rates than a cold prompt.
+- **Preview defaults.** Screen 3 shows the default configuration so users feel confident before starting.
+- **Two completion paths:** "Get Started" (use defaults) or "Customize Settings" (jump to Settings).
+- **Swipe navigation** between screens via `TabView` with `PageTabViewStyle`. Page dots indicate progress.
 
 ### 5.2 First Launch Experience
 
-**Goal:** User should be "done" in < 10 seconds.
+**Goal:** User should be through onboarding in < 30 seconds.
 
 **Flow:**
 1. App icon tap → launch screen (< 1s)
-2. Settings screen appears with default values already set
-3. System permission prompt appears automatically
-4. User taps "Allow"
-5. User closes app (or adjusts settings if desired)
-6. Reminders are scheduled. Done.
+2. Welcome screen establishes context and tone
+3. Permission screen explains why notifications matter, then offers "Enable Notifications" or "Not now"
+4. Setup screen previews default config (eye breaks every 20 min, posture checks every 30 min)
+5. User taps "Get Started" or "Customize Settings"
+6. `hasSeenOnboarding` flag set → ContentView crossfades to HomeView
+7. Reminders are scheduled. Done.
 
-**Optional (Phase 2):** 
-- A single, dismissible banner at the bottom of Settings Screen on first launch only:
-  - "👋 You're all set! Reminders will appear every 20 minutes. Adjust intervals above."
-  - [Got it] button (dismisses permanently via `UserDefaults.hasSeenWelcome`)
+**Implementation details:**
+- `ContentView` checks `@AppStorage(hasSeenOnboarding)` to gate the flow
+- `OnboardingView` uses a `TabView` with `PageTabViewStyle` for horizontal swipe between screens
+- `OnboardingPermissionView` blocks accidental swipe-past with a `highPriorityGesture`
+- `OnboardingSetupView` offers two CTAs: "Get Started" (defaults) and "Customize Settings" (opens Settings)
+- Force-quitting mid-onboarding re-shows onboarding (flag only set on explicit completion)
 
 ### 5.3 What We're NOT Doing
 
-❌ **No multi-screen onboarding flow**
-❌ **No "What is the 20-20-20 rule?" educational content** (user chose this app — they know why)
 ❌ **No account creation or sign-in** (no backend, all local)
 ❌ **No upsell or "Pro" feature gates** (not in scope)
+❌ **No feature tour or coach marks** (the 3 screens cover value, permission, and setup — nothing more)
 
 ---
 
@@ -861,7 +910,7 @@ This document defines the complete user experience for the Eye & Posture Reminde
 1. **Design is guided by 5 core principles** (helpful interruptions, low friction, user autonomy, battery efficiency, accessibility).
 2. **User flows are detailed and cover all states** — from first launch to edge cases like force-quit recovery.
 3. **The overlay interaction model balances flexibility and simplicity** — three dismissal methods, smooth animations, no stacking.
-4. **Onboarding is minimal** — no tutorial, no bloat. The app "just works."
+4. **Onboarding is a warm 3-screen handshake** — Welcome → Permissions → Setup. Educates before asking, previews defaults, then gets out of the way.
 5. **Edge cases are handled gracefully** — locked device, Low Power Mode, overlapping reminders, permission denial.
 6. **Success is measured by invisibility** — the best UX is when users forget the app exists until it helpfully reminds them.
 
@@ -872,8 +921,8 @@ This document defines the complete user experience for the Eye & Posture Reminde
 
 ---
 
-**Document version:** 1.1  
-**Last updated:** 2026-04-24 (session revision)  
+**Document version:** 1.2  
+**Last updated:** 2026-04-25 (onboarding flow correction — Fixes #112)  
 **Owner:** Reuben (Product Designer)
 
 ---
