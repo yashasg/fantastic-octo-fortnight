@@ -66,6 +66,7 @@ final class OverlayManager: OverlayPresenting {
 
     private var overlayWindow: UIWindow?
     private var dismissCallback: (() -> Void)?
+    private var sceneActivationObserver: NSObjectProtocol?
 
     /// Pending show requests queued while an overlay is already on screen.
     private var overlayQueue: [(
@@ -84,6 +85,21 @@ final class OverlayManager: OverlayPresenting {
 
     init(audioManager: MediaControlling = AudioInterruptionManager()) {
         self.audioManager = audioManager
+        sceneActivationObserver = NotificationCenter.default.addObserver(
+            forName: UIScene.didActivateNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.presentNextQueuedOverlay()
+            }
+        }
+    }
+
+    deinit {
+        if let obs = sceneActivationObserver {
+            NotificationCenter.default.removeObserver(obs)
+        }
     }
 
     // MARK: - OverlayPresenting
