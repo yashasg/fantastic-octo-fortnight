@@ -153,7 +153,7 @@ Changes trigger `ReminderScheduler.reschedule()` automatically via a `didSet` ob
 | Icon | SF Symbol (e.g., `eye.fill` / `figure.stand`) |
 | Title | "Time to rest your eyes" / "Time to check your posture" |
 | Countdown | Remaining seconds displayed with a circular progress ring |
-| Dismiss button | `×` in top-right corner; also swipe down to dismiss |
+| Dismiss button | `×` in top-right corner; also swipe up to dismiss |
 | Auto-dismiss | After *break duration* seconds the overlay fades out automatically |
 
 ---
