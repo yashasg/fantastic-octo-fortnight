@@ -106,72 +106,10 @@ struct SettingsView: View {
             }
 
             // MARK: Smart Pause
-            Section {
-                Toggle(isOn: $settings.pauseDuringFocus) {
-                    Label(
-                        String(localized: "settings.smartPause.pauseDuringFocus", bundle: .module),
-                        systemImage: "moon.fill"
-                    )
-                }
-                .tint(AppColor.reminderBlue)
-                .accessibilityHint(Text("settings.smartPause.pauseDuringFocus.hint", bundle: .module))
-                .accessibilityIdentifier("settings.smartPause.pauseDuringFocus")
-                .onChange(of: settings.pauseDuringFocus) { newValue in
-                    // Route through ViewModel so the analytics setter fires.
-                    viewModel?.pauseDuringFocus = newValue
-                }
-
-                Toggle(isOn: $settings.pauseWhileDriving) {
-                    Label(
-                        String(localized: "settings.smartPause.pauseWhileDriving", bundle: .module),
-                        systemImage: "car.fill"
-                    )
-                }
-                .tint(AppColor.reminderBlue)
-                .accessibilityHint(Text("settings.smartPause.pauseWhileDriving.hint", bundle: .module))
-                .accessibilityIdentifier("settings.smartPause.pauseWhileDriving")
-                .onChange(of: settings.pauseWhileDriving) { newValue in
-                    // Route through ViewModel so the analytics setter fires.
-                    viewModel?.pauseWhileDriving = newValue
-                }
-            } header: {
-                Text("settings.section.smartPause", bundle: .module)
-            } footer: {
-                Text("settings.smartPause.footer", bundle: .module)
-                    .font(AppFont.caption)
-            }
+            SettingsSmartPauseSection(viewModel: viewModel)
 
             // MARK: Notification permission warning
-            if coordinator.notificationAuthStatus == .denied {
-                Section {
-                    HStack(spacing: AppSpacing.sm) {
-                        Image(systemName: AppSymbol.warning)
-                            .foregroundStyle(AppColor.warningOrange)
-                            .accessibilityHidden(true)
-                        VStack(alignment: .leading, spacing: AppSpacing.xs) {
-                            Text("settings.notifications.disabledTitle", bundle: .module)
-                                .font(AppFont.bodyEmphasized)
-                            Text("settings.notifications.disabledBody", bundle: .module)
-                                .font(AppFont.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    .padding(.vertical, AppSpacing.xs)
-                    .accessibilityElement(children: .ignore)
-                        .accessibilityLabel(Text("settings.notifications.disabledLabel", bundle: .module))
-
-                    Button(
-                        action: {
-                            if let url = URL(string: UIApplication.openSettingsURLString) {
-                                UIApplication.shared.open(url)
-                            }
-                        },
-                        label: { Text("settings.notifications.openSettings", bundle: .module) }
-                    )
-                    .font(AppFont.body)
-                    .accessibilityHint(Text("settings.notifications.openSettings.hint", bundle: .module))
-                }
-            }
+            SettingsNotificationWarningSection()
 
             // MARK: Legal
             Section {
@@ -284,6 +222,201 @@ struct SettingsView: View {
         }
         .task {
             await coordinator.refreshAuthStatus()
+        }
+    }
+}
+
+// MARK: - Snooze Section
+
+private struct SettingsSnoozeSection: View {
+    @EnvironmentObject private var settings: SettingsStore
+    let viewModel: SettingsViewModel?
+    let reduceMotion: Bool
+
+    private var isSnoozed: Bool {
+        guard let until = settings.snoozedUntil else { return false }
+        return until > Date()
+    }
+
+    private var snoozeUntilFormatted: String {
+        guard let until = settings.snoozedUntil, until > Date() else { return "" }
+        return until.formatted(date: .omitted, time: .shortened)
+    }
+
+    var body: some View {
+        Section {
+            if isSnoozed {
+                HStack {
+                    Label(
+                        String(
+                            format: String(localized: "settings.snooze.activeLabel", bundle: .module),
+                            snoozeUntilFormatted
+                        ),
+                        systemImage: "moon.zzz.fill"
+                    )
+                    .font(AppFont.body)
+                    .foregroundStyle(AppColor.warningText)
+                    Spacer()
+                }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(String(
+                    format: String(localized: "settings.snooze.activeLabel.accessibility", bundle: .module),
+                    snoozeUntilFormatted
+                ))
+
+                Button(
+                    action: {
+                        withAnimation(reduceMotion ? nil : AppAnimation.settingsExpandCurve) {
+                            viewModel?.cancelSnooze()
+                        }
+                    },
+                    label: {
+                        Label {
+                            Text("settings.snooze.cancelButton", bundle: .module)
+                        } icon: {
+                            Image(systemName: "bell.fill")
+                        }
+                        .font(AppFont.body)
+                    }
+                )
+                .foregroundStyle(AppColor.reminderBlue)
+                .accessibilityHint(Text("settings.snooze.cancelButton.hint", bundle: .module))
+                .accessibilityIdentifier("settings.snooze.cancelButton")
+            } else {
+                Button(
+                    action: {
+                        withAnimation(reduceMotion ? nil : AppAnimation.settingsExpandCurve) {
+                            viewModel?.snooze(option: .fiveMinutes)
+                        }
+                    },
+                    label: { Text("settings.snooze.5min", bundle: .module) }
+                )
+                .font(AppFont.body)
+                .disabled(!(viewModel?.canSnooze ?? false))
+                .accessibilityLabel(Text("settings.snooze.5min.label", bundle: .module))
+                .accessibilityHint(viewModel?.canSnooze ?? false
+                    ? Text("settings.snooze.5min.hint", bundle: .module)
+                    : Text("settings.snooze.limitReached.hint", bundle: .module))
+                .accessibilityIdentifier("settings.snooze.5min")
+
+                Button(
+                    action: {
+                        withAnimation(reduceMotion ? nil : AppAnimation.settingsExpandCurve) {
+                            viewModel?.snooze(option: .oneHour)
+                        }
+                    },
+                    label: { Text("settings.snooze.1hour", bundle: .module) }
+                )
+                .font(AppFont.body)
+                .disabled(!(viewModel?.canSnooze ?? false))
+                .accessibilityLabel(Text("settings.snooze.1hour.label", bundle: .module))
+                .accessibilityHint(viewModel?.canSnooze ?? false
+                    ? Text("settings.snooze.1hour.hint", bundle: .module)
+                    : Text("settings.snooze.limitReached.hint", bundle: .module))
+                .accessibilityIdentifier("settings.snooze.1hour")
+
+                Button(
+                    action: {
+                        withAnimation(reduceMotion ? nil : AppAnimation.settingsExpandCurve) {
+                            viewModel?.snooze(option: .restOfDay)
+                        }
+                    },
+                    label: { Text("settings.snooze.restOfDay", bundle: .module) }
+                )
+                .font(AppFont.body)
+                .foregroundStyle(AppColor.warningText)
+                .disabled(!(viewModel?.canSnooze ?? false))
+                .accessibilityLabel(Text("settings.snooze.restOfDay.label", bundle: .module))
+                .accessibilityHint(viewModel?.canSnooze ?? false
+                    ? Text("settings.snooze.restOfDay.hint", bundle: .module)
+                    : Text("settings.snooze.limitReached.hint", bundle: .module))
+                .accessibilityIdentifier("settings.snooze.restOfDay")
+            }
+        } header: {
+            Text("settings.section.snooze", bundle: .module)
+        }
+    }
+}
+
+// MARK: - Smart Pause Section
+
+private struct SettingsSmartPauseSection: View {
+    @EnvironmentObject private var settings: SettingsStore
+    let viewModel: SettingsViewModel?
+
+    var body: some View {
+        Section {
+            Toggle(isOn: $settings.pauseDuringFocus) {
+                Label(
+                    String(localized: "settings.smartPause.pauseDuringFocus", bundle: .module),
+                    systemImage: "moon.fill"
+                )
+            }
+            .tint(AppColor.reminderBlue)
+            .accessibilityHint(Text("settings.smartPause.pauseDuringFocus.hint", bundle: .module))
+            .accessibilityIdentifier("settings.smartPause.pauseDuringFocus")
+            .onChange(of: settings.pauseDuringFocus) { newValue in
+                // Route through ViewModel so the analytics setter fires.
+                viewModel?.pauseDuringFocus = newValue
+            }
+
+            Toggle(isOn: $settings.pauseWhileDriving) {
+                Label(
+                    String(localized: "settings.smartPause.pauseWhileDriving", bundle: .module),
+                    systemImage: "car.fill"
+                )
+            }
+            .tint(AppColor.reminderBlue)
+            .accessibilityHint(Text("settings.smartPause.pauseWhileDriving.hint", bundle: .module))
+            .accessibilityIdentifier("settings.smartPause.pauseWhileDriving")
+            .onChange(of: settings.pauseWhileDriving) { newValue in
+                // Route through ViewModel so the analytics setter fires.
+                viewModel?.pauseWhileDriving = newValue
+            }
+        } header: {
+            Text("settings.section.smartPause", bundle: .module)
+        } footer: {
+            Text("settings.smartPause.footer", bundle: .module)
+                .font(AppFont.caption)
+        }
+    }
+}
+
+// MARK: - Notification Warning Section
+
+private struct SettingsNotificationWarningSection: View {
+    @EnvironmentObject private var coordinator: AppCoordinator
+
+    var body: some View {
+        if coordinator.notificationAuthStatus == .denied {
+            Section {
+                HStack(spacing: AppSpacing.sm) {
+                    Image(systemName: AppSymbol.warning)
+                        .foregroundStyle(AppColor.warningOrange)
+                        .accessibilityHidden(true)
+                    VStack(alignment: .leading, spacing: AppSpacing.xs) {
+                        Text("settings.notifications.disabledTitle", bundle: .module)
+                            .font(AppFont.bodyEmphasized)
+                        Text("settings.notifications.disabledBody", bundle: .module)
+                            .font(AppFont.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .padding(.vertical, AppSpacing.xs)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(Text("settings.notifications.disabledLabel", bundle: .module))
+
+                Button(
+                    action: {
+                        if let url = URL(string: UIApplication.openSettingsURLString) {
+                            UIApplication.shared.open(url)
+                        }
+                    },
+                    label: { Text("settings.notifications.openSettings", bundle: .module) }
+                )
+                .font(AppFont.body)
+                .accessibilityHint(Text("settings.notifications.openSettings.hint", bundle: .module))
+            }
         }
     }
 }
