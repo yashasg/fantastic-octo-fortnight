@@ -216,20 +216,18 @@ SettingsViewModel.update(type:interval:)
 SettingsStore.save()  →  UserDefaults
         │
         ▼
-ReminderScheduler.reschedule()
-  removeAllPendingNotificationRequests()
-  add new UNTimeIntervalNotificationRequests
+AppCoordinator notifies ScreenTimeTracker of new threshold
         │
         ▼
-iOS Notification Centre
-  (fires after interval)
+ScreenTimeTracker accumulates screen-on seconds
+  (PauseConditionManager blocks accumulation
+   if Focus / CarPlay / Driving detected)
         │
-  ┌─────┴──────────────────────────────┐
-  │ Foreground                         │ Background / locked
-  ▼                                    ▼
-UNUserNotificationCenterDelegate      System banner / lock screen
-.willPresent → OverlayManager.show()  .didReceive → app opens
-                                       → OverlayManager.show()
+        ▼
+Threshold reached → AppCoordinator.handleNotification(for:)
+        │
+        ▼
+OverlayManager.showOverlay(...)
         │
         ▼
 OverlayView shown with countdown
@@ -239,7 +237,7 @@ OverlayView shown with countdown
   ▼                ▼
 OverlayManager.dismiss()
   UIWindow removed from hierarchy
-  Next notification already scheduled (repeat: true)
+  ScreenTimeTracker.reset(for: type) — re-arms for next cycle
 ```
 
 ---
@@ -275,6 +273,7 @@ OverlayManager.dismiss()
 
 | Phase | Scope |
 |---|---|
-| **Phase 1 – MVP** | Settings screen (interval + duration pickers), local notification scheduling, foreground overlay with countdown and dismiss |
-| **Phase 2 – Polish** | Haptic feedback on overlay appearance, snooze action, onboarding / permission screen, app icon & launch screen |
-| **Phase 3 – Optional** | iCloud sync of settings via `NSUbiquitousKeyValueStore`, Home Screen widget showing "next break in X min", watchOS companion glance |
+| **Phase 0 – Foundation** ✅ | Project scaffolding (SPM, Xcode), CI/CD pipeline (GitHub Actions), MVVM architecture scaffolding, design system (Asset Catalog, String Catalog, design tokens) |
+| **Phase 1 – MVP** ✅ | Settings screen (interval + duration pickers), local notification scheduling, foreground overlay with countdown and dismiss, haptics, accessibility, ~65 unit tests |
+| **Phase 2 – Polish** 🔄 | Onboarding flow, snooze action, smart pause (Focus Mode / CarPlay / driving detection), ScreenTimeTracker replacing wall-clock intervals, data-driven config (Asset Catalog + String Catalog + defaults.json), App Store listing & preparation |
+| **Phase 3 – Advanced** 🔄 | Dependency injection refactoring, iCloud sync via `NSUbiquitousKeyValueStore`, Home Screen widget (WidgetKit), watchOS companion app |
