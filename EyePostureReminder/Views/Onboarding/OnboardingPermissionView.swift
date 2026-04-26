@@ -29,18 +29,19 @@ struct OnboardingPermissionView: View {
                     // Headline
                     Text("onboarding.permission.title", bundle: .module)
                         .font(AppFont.headline)
+                        .foregroundStyle(AppColor.textPrimary)
                         .multilineTextAlignment(.center)
 
                     // Explanation + reassurance copy
                     VStack(spacing: AppSpacing.md) {
                         Text("onboarding.permission.body1", bundle: .module)
                             .font(AppFont.body)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(AppColor.textSecondary)
                             .multilineTextAlignment(.center)
 
                         Text("onboarding.permission.body2", bundle: .module)
                             .font(AppFont.body)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(AppColor.textSecondary)
                             .multilineTextAlignment(.center)
                     }
                     .padding(.horizontal, AppSpacing.sm)
@@ -52,9 +53,7 @@ struct OnboardingPermissionView: View {
                         Text("onboarding.permission.enableButton", bundle: .module)
                             .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.large)
-                    .tint(AppColor.reminderBlue)
+                    .buttonStyle(OnboardingPrimaryButtonStyle())
                     .padding(.horizontal, AppSpacing.xl)
                     .accessibilityLabel(Text("onboarding.permission.enableButton", bundle: .module))
                     .accessibilityHint(Text("onboarding.permission.enableButton.hint", bundle: .module))
@@ -62,10 +61,8 @@ struct OnboardingPermissionView: View {
                     // Secondary option — no system prompt, just advance
                     Button(action: onNext) {
                         Text("onboarding.permission.skipButton", bundle: .module)
-                            .frame(minHeight: AppLayout.minTapTarget)
                     }
-                        .foregroundStyle(.secondary)
-                        .font(AppFont.secondaryAction)
+                        .buttonStyle(OnboardingSecondaryButtonStyle())
                         .accessibilityLabel(Text("onboarding.permission.skipButton", bundle: .module))
                         .accessibilityHint(Text("onboarding.permission.skipButton.hint", bundle: .module))
                         .accessibilityIdentifier("onboarding.permission.nextButton")
@@ -81,6 +78,7 @@ struct OnboardingPermissionView: View {
                         .onChanged { _ in }
                 )
             }
+            .background(AppColor.background.ignoresSafeArea())
         }
     }
 
@@ -100,25 +98,37 @@ private struct NotificationPreviewCard: View {
         VStack(alignment: .leading, spacing: AppSpacing.xs) {
             HStack(spacing: AppSpacing.sm) {
                 Image(systemName: AppSymbol.eyeBreak)
-                    .foregroundStyle(AppColor.reminderBlue)
                     .font(AppFont.caption)
+                    .foregroundStyle(AppColor.primaryRest)
+                    .frame(width: AppLayout.minTapTarget, height: AppLayout.minTapTarget)
+                    .background(
+                        RoundedRectangle(cornerRadius: AppLayout.radiusSmall, style: .continuous)
+                            .fill(AppColor.surfaceTint)
+                    )
+                    .accessibilityHidden(true)
                 Text("onboarding.permission.notificationCard.appName", bundle: .module)
                     .font(AppFont.caption)
                     .fontWeight(.semibold)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(AppColor.textSecondary)
                 Spacer()
                 Text("onboarding.permission.notificationCard.now", bundle: .module)
                     .font(AppFont.caption)
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(AppColor.textSecondary.opacity(0.72))
             }
             Text("onboarding.permission.notificationCard.title", bundle: .module)
                 .font(AppFont.bodyEmphasized)
+                .foregroundStyle(AppColor.textPrimary)
             Text("onboarding.permission.notificationCard.body", bundle: .module)
                 .font(AppFont.body)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(AppColor.textSecondary)
         }
-        .padding(AppSpacing.md)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: AppLayout.cardCornerRadius))
+        .padding(AppSpacing.lg)
+        .background(AppColor.surface, in: RoundedRectangle(cornerRadius: AppLayout.radiusCard, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppLayout.radiusCard, style: .continuous)
+                .strokeBorder(AppColor.separatorSoft, lineWidth: 1)
+        )
+        .softElevation()
         .padding(.horizontal, AppSpacing.md)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(Text("onboarding.permission.notificationCard.label", bundle: .module))

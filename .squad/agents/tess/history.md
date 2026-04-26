@@ -311,3 +311,13 @@ Early design system work covering: DesignSystem.swift tokens (colors, fonts, spa
 **Decision:** Chose **Nunito** for the Restful Grove visual direction because its rounded, friendly tone best supports a calm wellness reminder product. DM Sans remained the safest neutral option, Plus Jakarta Sans felt more premium/product-led, and keeping SF missed the chance to add warmth through typography.
 
 **Implementation notes:** Added OFL-licensed Nunito font files under `EyePostureReminder/Resources/Fonts/`, registered them at app launch with CoreText, and introduced `AppTypography` tokens using SwiftUI `.custom(..., relativeTo:)` to preserve Dynamic Type. `AppFont` remains as a compatibility alias, and the countdown stays fixed monospaced by design.
+
+### 2026-04-28: Phase 2B Onboarding Restful Grove Redesign
+
+**Task:** Implement issue #163 — restyle the 3-screen onboarding flow as a guided wellness setup experience.
+
+**Implementation notes:** Reworked onboarding visuals around the Restful Grove tokens: warm `AppColor.background`, soft `AppColor.surface` cards, `AppColor.surfaceTint` icon containers, pill CTAs with `AppLayout.radiusPill`, and Nunito `AppTypography`/`AppFont` text. Added a paired eye/posture hero card, a warmer notification preview card, soft reminder setup cards, and Restful Grove page indicator colors.
+
+**Accessibility preserved:** Existing VoiceOver labels/hints, combined card elements, Dynamic Type font tokens, 44pt minimum secondary actions, and reduce-motion behavior remain intact.
+
+**Validation:** `xcodebuild build -scheme EyePostureReminder -destination 'platform=iOS Simulator,name=iPhone 17 Pro' 2>&1 | tail -5` → `** BUILD SUCCEEDED **`.

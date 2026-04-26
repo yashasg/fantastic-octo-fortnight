@@ -20,11 +20,12 @@ struct OnboardingSetupView: View {
                     VStack(spacing: AppSpacing.sm) {
                         Text("onboarding.setup.title", bundle: .module)
                             .font(AppFont.headline)
+                            .foregroundStyle(AppColor.textPrimary)
                             .multilineTextAlignment(.center)
 
                         Text("onboarding.setup.subtitle", bundle: .module)
                             .font(AppFont.bodyEmphasized)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(AppColor.textSecondary)
                             .multilineTextAlignment(.center)
                     }
 
@@ -32,14 +33,14 @@ struct OnboardingSetupView: View {
                     VStack(spacing: AppSpacing.md) {
                         SetupPreviewCard(
                             icon: AppSymbol.eyeBreak,
-                            color: AppColor.reminderBlue,
+                            color: AppColor.primaryRest,
                             title: String(localized: "onboarding.setup.eyeBreaks.title", bundle: .module),
                             interval: String(localized: "onboarding.setup.eyeBreaks.interval", bundle: .module),
                             duration: String(localized: "onboarding.setup.eyeBreaks.duration", bundle: .module)
                         )
                         SetupPreviewCard(
                             icon: AppSymbol.postureCheck,
-                            color: AppColor.reminderGreen,
+                            color: AppColor.secondaryCalm,
                             title: String(localized: "onboarding.setup.postureChecks.title", bundle: .module),
                             interval: String(localized: "onboarding.setup.postureChecks.interval", bundle: .module),
                             duration: String(localized: "onboarding.setup.postureChecks.duration", bundle: .module)
@@ -50,7 +51,7 @@ struct OnboardingSetupView: View {
                     // Reassurance copy
                     Text("onboarding.setup.body", bundle: .module)
                         .font(AppFont.body)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(AppColor.textSecondary)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, AppSpacing.sm)
 
@@ -61,9 +62,7 @@ struct OnboardingSetupView: View {
                         Text("onboarding.setup.getStartedButton", bundle: .module)
                             .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.large)
-                    .tint(AppColor.reminderBlue)
+                    .buttonStyle(OnboardingPrimaryButtonStyle())
                     .padding(.horizontal, AppSpacing.xl)
                     .accessibilityLabel(Text("onboarding.setup.getStartedButton", bundle: .module))
                     .accessibilityHint(Text("onboarding.setup.getStartedButton.hint", bundle: .module))
@@ -72,10 +71,8 @@ struct OnboardingSetupView: View {
                     // Secondary option
                     Button(action: onCustomize) {
                         Text("onboarding.setup.customizeButton", bundle: .module)
-                            .frame(minHeight: AppLayout.minTapTarget)
                     }
-                        .foregroundStyle(.secondary)
-                        .font(AppFont.secondaryAction)
+                        .buttonStyle(OnboardingSecondaryButtonStyle())
                         .accessibilityLabel(Text("onboarding.setup.customizeButton", bundle: .module))
                         .accessibilityHint(Text("onboarding.setup.customizeButton.hint", bundle: .module))
                 }
@@ -83,6 +80,7 @@ struct OnboardingSetupView: View {
                 .frame(maxWidth: AppLayout.onboardingMaxContentWidth)
                 .frame(maxWidth: .infinity)
             }
+            .background(AppColor.background.ignoresSafeArea())
         }
     }
 }
@@ -100,26 +98,36 @@ private struct SetupPreviewCard: View {
     var body: some View {
         HStack(spacing: AppSpacing.md) {
             Image(systemName: icon)
-                .font(.title2) // decorative — intentional .title2, not in AppFont
+                .font(.title2)
                 .foregroundStyle(color)
-                .frame(width: AppLayout.settingsRowIconWidth)
+                .frame(width: AppLayout.minTapTarget, height: AppLayout.minTapTarget)
+                .background(
+                    RoundedRectangle(cornerRadius: AppLayout.radiusSmall, style: .continuous)
+                        .fill(AppColor.surfaceTint)
+                )
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: AppSpacing.xs) {
                 Text(title)
                     .font(AppFont.bodyEmphasized)
+                    .foregroundStyle(AppColor.textPrimary)
                 HStack(spacing: AppSpacing.sm) {
                     Label(interval, systemImage: AppSymbol.clock)
                         .font(AppFont.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(AppColor.textSecondary)
                     Label(duration, systemImage: AppSymbol.timer)
                         .font(AppFont.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(AppColor.textSecondary)
                 }
             }
             Spacer()
         }
-        .padding(AppSpacing.md)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: AppLayout.cardCornerRadius))
+        .padding(AppSpacing.lg)
+        .background(AppColor.surface, in: RoundedRectangle(cornerRadius: AppLayout.radiusCard, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppLayout.radiusCard, style: .continuous)
+                .strokeBorder(AppColor.separatorSoft, lineWidth: 1)
+        )
+        .softElevation()
         .accessibilityElement(children: .combine)
         .accessibilityLabel(
             String(
