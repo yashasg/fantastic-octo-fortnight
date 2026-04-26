@@ -265,3 +265,21 @@ ContentView, HomeView, SettingsView, OverlayView, ReminderRowView, LegalDocument
 - Saul audit flagged StringCatalogTests (1046 lines) should split — coordinate with split strategy.
 
 **Next owner action:** Fix OnboardingTests key this week. Implement resetToDefaults() tests before Phase 2 UI ships. Schedule team discussion on UI test infrastructure.
+
+---
+
+### 2026-04-25 — Issue #109: resetToDefaults() Test Coverage
+
+**Status:** RESOLVED — tests already implemented in commit `6dce7de` (bundled with Rusty's OverlayManager.shared removal refactor).
+
+**Tests added (17 total):**
+- `SettingsStoreConfigTests` (14 new methods): covers all setting categories — intervals, break durations, enabled states (global/eyes/posture), snooze state (snoozedUntil + snoozeCount), phase-2 flags (hapticsEnabled, pauseMediaDuringBreaks, pauseDuringFocus, pauseWhileDriving), unrelated-key isolation, and write-through persistence verification.
+- `DataDrivenDefaultsRegressionTests` (3 new methods): regression guards ensuring `resetToDefaults()` reads from AppConfig, not hardcoded literals (eyesInterval, postureInterval, globalEnabled).
+
+**Verification:** All 17 tests pass (Test Suite `SettingsStoreConfigTests` passed, `DataDrivenDefaultsRegressionTests` passed, iPhone 17 simulator, iOS 26.4).
+
+**Key pattern confirmed:** `resetToDefaults(config:)` propagates all values to `MockSettingsPersisting` via `@Published` `didSet` — meaning a new `SettingsStore` reading the same persistence object sees the correct defaults after reset. The `test_resetToDefaults_persistsAllValuesToStore` test validates this write-through contract.
+
+**Learnings:**
+- When tasks are bundled in team commits, a subsequent agent editing the same stubs writes a no-diff change — `git diff` correctly shows 0 lines because HEAD already contains the implementations.
+- Always verify `git show HEAD:file` to confirm committed content before assuming changes need to be made.
