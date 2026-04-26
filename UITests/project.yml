@@ -1,0 +1,62 @@
+# XcodeGen spec — EyePostureReminderUITests
+#
+# Generates a minimal .xcodeproj containing ONLY the UITest bundle target.
+# The app itself is built from Package.swift (referenced via local package dependency).
+#
+# Generate the xcodeproj with:
+#   ./scripts/setup-uitests.sh
+#
+# Then run UI tests with:
+#   ./scripts/build.sh uitest
+
+name: EyePostureReminderUITests
+
+options:
+  bundleIdPrefix: com.yashasg
+  deploymentTarget:
+    iOS: "16.0"
+  xcodeVersion: "16.2"
+  minimumXcodeGenVersion: "2.40.0"
+  generateEmptyDirectories: false
+
+# Reference the local Swift package so xcodebuild can build the app target
+# when running UI tests. XcodeGen will generate a .xcworkspace that includes
+# both this xcodeproj and Package.swift.
+packages:
+  EyePostureReminder:
+    path: ..
+
+targets:
+  EyePostureReminderUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    deploymentTarget: "16.0"
+    sources:
+      - path: ../Tests/EyePostureReminderUITests
+        excludes:
+          - README.md
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.yashasg.EyePostureReminder.UITests
+        # Tells XCTest which app to launch for UI testing
+        TEST_TARGET_NAME: EyePostureReminder
+        TARGETED_DEVICE_FAMILY: "1,2"
+        IPHONEOS_DEPLOYMENT_TARGET: "16.0"
+        CODE_SIGN_IDENTITY: ""
+        CODE_SIGNING_REQUIRED: "NO"
+        CODE_SIGNING_ALLOWED: "NO"
+        ENABLE_BITCODE: "NO"
+
+schemes:
+  EyePostureReminderUITests:
+    build:
+      targets:
+        EyePostureReminderUITests: [test]
+    test:
+      targets:
+        - name: EyePostureReminderUITests
+          parallelizable: true
+          randomExecutionOrder: false
+      disableMainThreadChecker: false
+      enableAddressSanitizer: false
+      enableThreadSanitizer: false

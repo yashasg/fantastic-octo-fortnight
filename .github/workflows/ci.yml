@@ -135,3 +135,60 @@ jobs:
           name: test-results-${{ env.MARKETING_VERSION }}-build${{ github.run_number }}
           path: TestResults.xcresult
           retention-days: 30
+
+  uitest:
+    name: UI Tests
+    runs-on: macos-15
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode ${{ env.XCODE_VERSION }}
+        run: sudo xcode-select -switch /Applications/Xcode_${{ env.XCODE_VERSION }}.app/Contents/Developer
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate UITest xcodeproj
+        run: ./scripts/setup-uitests.sh
+
+      - name: Boot Simulator
+        run: xcrun simctl boot "iPhone 16" 2>/dev/null || true
+
+      - name: Run UI Tests
+        run: |
+          xcodebuild test \
+            -workspace UITests/EyePostureReminderUITests.xcworkspace \
+            -scheme EyePostureReminderUITests \
+            -destination '${{ env.SIMULATOR }}' \
+            -derivedDataPath "${{ env.DERIVED_DATA_PATH }}" \
+            -resultBundlePath UITestResults.xcresult \
+            -parallel-testing-enabled YES \
+            -maximum-concurrent-test-simulator-destinations 3 \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            ENABLE_BITCODE=NO \
+            | xcpretty || \
+          xcodebuild test \
+            -workspace UITests/EyePostureReminderUITests.xcworkspace \
+            -scheme EyePostureReminderUITests \
+            -destination '${{ env.SIMULATOR }}' \
+            -derivedDataPath "${{ env.DERIVED_DATA_PATH }}" \
+            -resultBundlePath UITestResults.xcresult \
+            -parallel-testing-enabled YES \
+            -maximum-concurrent-test-simulator-destinations 3 \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            ENABLE_BITCODE=NO
+
+      - name: Upload UI test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ui-test-results-build${{ github.run_number }}
+          path: UITestResults.xcresult
+          retention-days: 30

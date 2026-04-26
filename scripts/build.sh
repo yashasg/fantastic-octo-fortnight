@@ -30,6 +30,7 @@ header(){ echo -e "\n${BOLD}${CYAN}━━━ $* ━━━${RESET}"; }
 # ── Constants ────────────────────────────────────────────────────────────────
 SCHEME="EyePostureReminder"
 TEST_SCHEME="EyePostureReminderTests"
+UI_TEST_SCHEME="EyePostureReminderUITests"
 PACKAGE_PATH="$(cd "$(dirname "$0")/.." && pwd)"
 DERIVED_DATA_PATH="${PACKAGE_PATH}/DerivedData"
 
@@ -177,6 +178,37 @@ cmd_clean() {
   pass "Clean complete"
 }
 
+cmd_uitest() {
+  header "UI TEST"
+  require_xcodebuild
+
+  local workspace="${PACKAGE_PATH}/UITests/EyePostureReminderUITests.xcworkspace"
+
+  # Generate xcodeproj (and workspace) if not present
+  if [[ ! -d "$workspace" ]]; then
+    info "UITest workspace not found — running setup…"
+    "${PACKAGE_PATH}/scripts/setup-uitests.sh"
+  fi
+
+  local dest
+  dest=$(detect_destination)
+  info "Destination: $dest"
+  info "UI Test scheme: $UI_TEST_SCHEME"
+
+  rm -rf "${PACKAGE_PATH}/UITestResults.xcresult"
+
+  run_xcodebuild test \
+    -workspace "$workspace" \
+    -scheme "$UI_TEST_SCHEME" \
+    -destination "$dest" \
+    -derivedDataPath "$DERIVED_DATA_PATH" \
+    -resultBundlePath "${PACKAGE_PATH}/UITestResults.xcresult" \
+    -parallel-testing-enabled YES \
+    -maximum-concurrent-test-simulator-destinations 3
+
+  pass "UI tests passed"
+}
+
 cmd_all() {
   header "ALL (build → lint → test)"
   local overall_start
@@ -232,6 +264,7 @@ usage() {
   echo "Commands:"
   echo "  build              Compile the project"
   echo "  test               Run unit tests"
+  echo "  uitest             Run UI tests (generates xcodeproj if needed)"
   echo "  lint               Run SwiftLint (skipped gracefully if not installed)"
   echo "  clean              Remove build artifacts"
   echo "  all                build + lint + test"
@@ -246,6 +279,7 @@ COMMAND="${1:-}"
 case "$COMMAND" in
   build)   cmd_build ;;
   test)    cmd_test  ;;
+  uitest)  cmd_uitest ;;
   lint)    cmd_lint  ;;
   clean)   cmd_clean ;;
   all)     cmd_all   ;;

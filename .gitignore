@@ -33,6 +33,11 @@ xcuserdata/
 .AppleDouble
 .LSOverride
 TestResults*.xcresult/
+UITestResults.xcresult/
+
+# XcodeGen-generated UITest project (generated from UITests/project.yml)
+UITests/*.xcodeproj/
+UITests/*.xcworkspace/
 
 # One-time scripts and tool output logs
 fix_multiline.py

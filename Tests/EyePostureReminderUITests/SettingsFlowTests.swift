@@ -2,21 +2,6 @@
 // EyePostureReminderUITests
 //
 // XCUITest suite — Settings sheet flow.
-//
-// ⚠️  SPM LIMITATION: See OnboardingFlowTests.swift header for full note.
-//
-// ACCESSIBILITY IDENTIFIERS NEEDED (to be added to source views):
-//   HomeView toolbar settings button → .accessibilityIdentifier("home.settingsButton")
-//   SettingsView:
-//     - "Done" toolbar button    → .accessibilityIdentifier("settings.doneButton")
-//     - Focus Mode toggle        → .accessibilityIdentifier("settings.smartPause.pauseDuringFocus")
-//     - Driving toggle           → .accessibilityIdentifier("settings.smartPause.pauseWhileDriving")
-//     - Terms row button         → .accessibilityIdentifier("settings.legal.terms")
-//     - Privacy row button       → .accessibilityIdentifier("settings.legal.privacy")
-//   LegalDocumentView:
-//     - Terms navigation title area (exists via nav bar)
-//     - Privacy navigation title area (exists via nav bar)
-//     - Dismiss button           → .accessibilityIdentifier("legal.dismissButton")
 
 import XCTest
 
@@ -27,9 +12,7 @@ final class SettingsFlowTests: XCTestCase {
     override func setUpWithError() throws {
         continueAfterFailure = false
         app = XCUIApplication()
-        // Skip onboarding so we land directly on the Home screen.
-        app.launchArguments += ["--skip-onboarding"]
-        app.launch()
+        app.launchWithSkippedOnboarding()
     }
 
     override func tearDownWithError() throws {
@@ -49,14 +32,12 @@ final class SettingsFlowTests: XCTestCase {
         settingsButton.tap()
     }
 
-    // MARK: - testSettingsOpensFromHomeScreen
+    // MARK: - test_settings_openFromHome_sheetAppears
 
     /// Taps the settings gear on the Home screen and verifies the Settings sheet appears.
-    func testSettingsOpensFromHomeScreen() throws {
+    func test_settings_openFromHome_sheetAppears() throws {
         openSettings()
 
-        // SettingsView uses `settings.navTitle` as the navigation title.
-        // Resolved string is "Settings" — we look for the navigation bar.
         let settingsNav = app.navigationBars["Settings"]
         XCTAssertTrue(
             settingsNav.waitForExistence(timeout: 5),
@@ -64,10 +45,10 @@ final class SettingsFlowTests: XCTestCase {
         )
     }
 
-    // MARK: - testDoneButtonDismissesSettings
+    // MARK: - test_settings_doneButton_dismissesSheet
 
     /// Opens Settings, taps Done, and verifies the sheet is dismissed (Home screen returns).
-    func testDoneButtonDismissesSettings() throws {
+    func test_settings_doneButton_dismissesSheet() throws {
         openSettings()
 
         let doneButton = app.buttons["settings.doneButton"]
@@ -78,7 +59,6 @@ final class SettingsFlowTests: XCTestCase {
         )
         doneButton.tap()
 
-        // After dismissal, Settings nav bar should be gone.
         let settingsNav = app.navigationBars["Settings"]
         XCTAssertFalse(
             settingsNav.waitForExistence(timeout: 3),
@@ -86,13 +66,12 @@ final class SettingsFlowTests: XCTestCase {
         )
     }
 
-    // MARK: - testLegalSectionExists
+    // MARK: - test_settings_legalSection_termsAndPrivacyExist
 
     /// Scrolls to the bottom of Settings and verifies both Terms and Privacy rows are present.
-    func testLegalSectionExists() throws {
+    func test_settings_legalSection_termsAndPrivacyExist() throws {
         openSettings()
 
-        // Scroll to the bottom of the form to reveal the Legal section.
         app.swipeUp()
         app.swipeUp()
 
@@ -111,10 +90,10 @@ final class SettingsFlowTests: XCTestCase {
         )
     }
 
-    // MARK: - testTermsSheetOpens
+    // MARK: - test_settings_termsRow_opensSheet
 
     /// Taps the Terms row and verifies the Terms & Conditions sheet appears with content.
-    func testTermsSheetOpens() throws {
+    func test_settings_termsRow_opensSheet() throws {
         openSettings()
 
         app.swipeUp()
@@ -124,14 +103,12 @@ final class SettingsFlowTests: XCTestCase {
         XCTAssertTrue(termsButton.waitForExistence(timeout: 5))
         termsButton.tap()
 
-        // LegalDocumentView for .terms uses "legal.terms.navTitle" → "Terms & Conditions"
         let termsNav = app.navigationBars["Terms & Conditions"]
         XCTAssertTrue(
             termsNav.waitForExistence(timeout: 5),
             "Terms & Conditions sheet should open with the correct navigation title."
         )
 
-        // Verify dismiss button is present
         let dismissButton = app.buttons["legal.dismissButton"]
         XCTAssertTrue(
             dismissButton.waitForExistence(timeout: 3),
@@ -140,10 +117,10 @@ final class SettingsFlowTests: XCTestCase {
         )
     }
 
-    // MARK: - testPrivacySheetOpens
+    // MARK: - test_settings_privacyRow_opensSheet
 
     /// Taps the Privacy row and verifies the Privacy Policy sheet appears with content.
-    func testPrivacySheetOpens() throws {
+    func test_settings_privacyRow_opensSheet() throws {
         openSettings()
 
         app.swipeUp()
@@ -153,7 +130,6 @@ final class SettingsFlowTests: XCTestCase {
         XCTAssertTrue(privacyButton.waitForExistence(timeout: 5))
         privacyButton.tap()
 
-        // LegalDocumentView for .privacy uses "legal.privacy.navTitle" → "Privacy Policy"
         let privacyNav = app.navigationBars["Privacy Policy"]
         XCTAssertTrue(
             privacyNav.waitForExistence(timeout: 5),
@@ -167,13 +143,12 @@ final class SettingsFlowTests: XCTestCase {
         )
     }
 
-    // MARK: - testSmartPauseTogglesExist
+    // MARK: - test_settings_smartPause_bothTogglesExist
 
     /// Verifies both Smart Pause toggles (Focus Mode and Driving) are present in Settings.
-    func testSmartPauseTogglesExist() throws {
+    func test_settings_smartPause_bothTogglesExist() throws {
         openSettings()
 
-        // Smart Pause section appears after the snooze section; may require a scroll.
         app.swipeUp()
 
         let focusToggle = app.switches["settings.smartPause.pauseDuringFocus"]
@@ -193,14 +168,12 @@ final class SettingsFlowTests: XCTestCase {
         )
     }
 
-    // MARK: - testGlobalToggleIsVisible
+    // MARK: - test_settings_globalToggle_isVisible
 
     /// Verifies the global enable/disable toggle is visible at the top of Settings.
-    func testGlobalToggleIsVisible() throws {
+    func test_settings_globalToggle_isVisible() throws {
         openSettings()
 
-        // The global toggle is the first row in the form; no scrolling needed.
-        // It renders as a UISwitch — find it among all switch elements.
         let globalToggle = app.switches.firstMatch
         XCTAssertTrue(
             globalToggle.waitForExistence(timeout: 5),
@@ -208,46 +181,38 @@ final class SettingsFlowTests: XCTestCase {
         )
     }
 
-    // MARK: - testGlobalToggleCanBeTapped
+    // MARK: - test_settings_globalToggle_changesStateOnTap
 
     /// Taps the global toggle and verifies the toggle changes state.
-    func testGlobalToggleCanBeTapped() throws {
+    func test_settings_globalToggle_changesStateOnTap() throws {
         openSettings()
 
         let globalToggle = app.switches.firstMatch
         XCTAssertTrue(globalToggle.waitForExistence(timeout: 5))
 
-        // Record initial value
         let initialValue = globalToggle.value as? String
-
         globalToggle.tap()
 
-        // After tap, value should have changed ("0" → "1" or vice versa)
         let newValue = globalToggle.value as? String
         XCTAssertNotEqual(initialValue, newValue, "Global toggle should change state after being tapped.")
     }
 
-    // MARK: - testHapticsToggleExists
+    // MARK: - test_settings_preferences_atLeastOneToggleExists
 
-    /// Verifies the haptic feedback toggle is present in the Preferences section.
-    func testHapticsToggleExists() throws {
+    /// Verifies at least one toggle is present in the Preferences section.
+    func test_settings_preferences_atLeastOneToggleExists() throws {
         openSettings()
 
-        // Preferences section is visible after a short scroll (below Snooze section)
         app.swipeUp()
 
-        // The haptics toggle is in the Preferences section.
-        // We look among switches for the one belonging to haptics settings.
-        // Since there may be multiple switches, we check that at least 2 exist
-        // (master + haptics) after scrolling past per-type toggles.
         let allSwitches = app.switches.allElementsBoundByIndex
         XCTAssertGreaterThan(allSwitches.count, 0, "At least one toggle must be visible in Settings.")
     }
 
-    // MARK: - testTermsSheetDismissReturnsToSettings
+    // MARK: - test_settings_termsSheet_dismissReturnsToSettings
 
     /// Opens the Terms sheet, taps Done, and verifies the Settings sheet is restored.
-    func testTermsSheetDismissReturnsToSettings() throws {
+    func test_settings_termsSheet_dismissReturnsToSettings() throws {
         openSettings()
 
         app.swipeUp()
@@ -261,7 +226,6 @@ final class SettingsFlowTests: XCTestCase {
         XCTAssertTrue(dismissButton.waitForExistence(timeout: 5))
         dismissButton.tap()
 
-        // Settings sheet should be back
         let settingsNav = app.navigationBars["Settings"]
         XCTAssertTrue(
             settingsNav.waitForExistence(timeout: 5),
@@ -269,10 +233,10 @@ final class SettingsFlowTests: XCTestCase {
         )
     }
 
-    // MARK: - testPrivacySheetDismissReturnsToSettings
+    // MARK: - test_settings_privacySheet_dismissReturnsToSettings
 
     /// Opens the Privacy sheet, taps Done, and verifies the Settings sheet is restored.
-    func testPrivacySheetDismissReturnsToSettings() throws {
+    func test_settings_privacySheet_dismissReturnsToSettings() throws {
         openSettings()
 
         app.swipeUp()
@@ -293,10 +257,10 @@ final class SettingsFlowTests: XCTestCase {
         )
     }
 
-    // MARK: - testFocusToggleCanBeTapped
+    // MARK: - test_settings_focusToggle_changesStateOnTap
 
     /// Taps the Focus Mode pause toggle and verifies it changes state.
-    func testFocusToggleCanBeTapped() throws {
+    func test_settings_focusToggle_changesStateOnTap() throws {
         openSettings()
         app.swipeUp()
 
@@ -310,10 +274,10 @@ final class SettingsFlowTests: XCTestCase {
         XCTAssertNotEqual(initialValue, newValue, "Focus pause toggle should change state after being tapped.")
     }
 
-    // MARK: - testDrivingToggleCanBeTapped
+    // MARK: - test_settings_drivingToggle_changesStateOnTap
 
     /// Taps the Driving pause toggle and verifies it changes state.
-    func testDrivingToggleCanBeTapped() throws {
+    func test_settings_drivingToggle_changesStateOnTap() throws {
         openSettings()
         app.swipeUp()
 
