@@ -7,6 +7,20 @@
 
 ## Learnings
 
+### 2026-04-29 — Issues #130, #131, #132, #134 (UI quality fixes)
+
+**`.onChange` deprecation (#130):**
+- Single-parameter `.onChange(of:) { newValue in }` is deprecated in iOS 17+. Always use the two-parameter form `.onChange(of:) { _, newValue in }`. Applied to `pauseDuringFocus` and `pauseWhileDriving` in `SettingsSmartPauseSection`.
+
+**`withAnimation(nil)` violates reduce-motion pattern (#131):**
+- `withAnimation(nil)` still creates an animation transaction; it does NOT fully suppress animation. The team-canonical pattern is `if reduceMotion { direct call } else { withAnimation(curve) { ... } }`. Applied to all four snooze action buttons in `SettingsSnoozeSection`.
+
+**Design token discipline — AppLayout.minTapTarget (#132):**
+- `OnboardingSetupView` line 75 used `.frame(minHeight: 44)` — replaced with `.frame(minHeight: AppLayout.minTapTarget)`. All tap-target minimum heights must use this token, not a raw literal.
+
+**AppSymbol.bell token (#134):**
+- Added `static let bell = "bell.fill"` to `AppSymbol` in `DesignSystem.swift`. Replaced the raw `"bell.fill"` string in `SettingsSnoozeSection`'s cancel-snooze button with `AppSymbol.bell`.
+
 ### 2026-04-28 — Issues #116, #120, #125 (UI quality)
 
 **SettingsView decomposition pattern (#116):**
