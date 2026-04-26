@@ -7,6 +7,21 @@
 
 ## Learnings
 
+### 2026-04-26: Fix #150, #151, #152 — Doc Consistency Sweep
+
+- **#150 (Bundle ID):** Replaced `com.yashasg.eye-posture-reminder` with `com.yashasg.eyeposturereminder` in `docs/APP_STORE_LISTING.md` (§10 table + §11 checklist). `docs/TELEMETRY.md` and `ARCHITECTURE.md` already correct.
+- **#151 (ROADMAP stale privacy claim):** Updated M2.9 line from "Zero data collection, no analytics, no network calls" to reflect MetricKit diagnostics disclosure per Frank's updated privacy policy.
+- **#152 (IMPLEMENTATION_PLAN swipe direction):** Changed "swipe down to dismiss" → "swipe up to dismiss" in §5.2 overlay UI spec, consistent with Decision #2 and §4.2.
+- **Commits:** Three separate commits, one per issue.
+
+### 2026-04-26: Privacy Nutrition Labels & Submission Checklist
+
+- **Context:** Created two deliverables for App Store submission based on Frank's updated analytics privacy findings (MetricKit/App Store Connect analytics disclosure).
+- **Deliverable 1 — `docs/PRIVACY_NUTRITION_LABELS.md`:** Step-by-step guide for App Store Connect privacy questionnaire. Maps all 6 app data types to correct labels: UserDefaults, motion activity, Focus status, and os.Logger → Not Collected; MetricKit crash data → Collected (Diagnostics → Crash Data, Not Linked, Not Tracking, App Functionality); MetricKit performance data → Collected (Diagnostics → Performance Data, Not Linked, Not Tracking, Analytics).
+- **Deliverable 2 — Submission checklist in `docs/APP_STORE_LISTING.md`:** Added Section 11 with 16-item checklist covering legal/privacy, entitlements, App Store Connect config, assets, and final checks. Filled in TBD fields: Bundle ID → `com.yashasg.eye-posture-reminder`, Support/Marketing URL → GitHub repo.
+- **Privacy policy updated:** Revised Section 6 to disclose MetricKit analytics, removed "zero data collection" and "nothing leaves device" claims per Frank's recommendation. Added motion permission and diagnostic-sharing language.
+- **Key Insight:** The privacy label is no longer a blanket "Data Not Collected" — MetricKit requires Diagnostics disclosure even though it's Apple-native and aggregate-only.
+
 ### 2026-04-25: Apple Legal Compliance — Implementation Plan from Frank's Report
 
 - **Context:** Frank completed Apple legal/privacy compliance research identifying 5 submission blockers and 6 important items. Created a prioritized, dependency-ordered implementation plan.
