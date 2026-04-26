@@ -31,12 +31,12 @@ elif [[ -n "${BUILT_PRODUCTS_DIR:-}" && -n "${PRODUCT_NAME:-}" ]]; then
 else
   # Fallback: resolve relative to script location
   SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-  PLIST_PATH="${SCRIPT_DIR}/../EyePostureReminder/EyePostureReminder/Info.plist"
+  PLIST_PATH="${SCRIPT_DIR}/../EyePostureReminder/Info.plist"
 fi
 
 if [[ ! -f "$PLIST_PATH" ]]; then
-  echo "warning: set-build-info.sh — Info.plist not found at: $PLIST_PATH"
-  exit 0
+  echo "error: set-build-info.sh — Info.plist not found at: $PLIST_PATH"
+  exit 1
 fi
 
 # ── Build number ─────────────────────────────────────────────────────────────
