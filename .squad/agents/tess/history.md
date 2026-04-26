@@ -254,3 +254,35 @@ Early design system work covering: DesignSystem.swift tokens (colors, fonts, spa
 - Reduce motion respected in all views except the minor OnboardingScreenWrapper case above
 
 **Key insight:** The UIKit-level `accessibilityViewIsModal` setting in OverlayManager is the correct and sufficient approach for a UIKit-window-hosted SwiftUI overlay. The previous audits were correct to flag the absence of the SwiftUI `.accessibilityViewIsModal(true)` modifier, but the UIKit property on the hosting controller's view achieves the same effect and is actually more robust for this architecture.
+
+---
+
+### 2026-04-28: Accessibility & Design System Audit Round 3 (Post-#131/#132/#134 Fixes)
+
+**Task:** Verify Linus's Round 2 fixes (#131 reduce-motion, #134 bell.fill token, #132 hardcoded 44) and perform a full fresh pass for new issues.
+**Overall health score: 9.5/10**
+
+**All three Round 2 fixes confirmed correct:**
+
+- **#131 (reduce-motion pattern)** ✅ — `SettingsSnoozeSection` all 4 button actions now use canonical `if reduceMotion { direct } else { withAnimation { ... } }` pattern. `OnboardingScreenWrapper` (previously flagged 🟡 in Pass 3 as `.linear(0.15)`) also now uses the correct if/else pattern — fixed as a side effect.
+- **#134 (bell.fill token)** ✅ — `AppSymbol.bell = "bell.fill"` added to `DesignSystem.swift:129`; `SettingsView.swift:281` uses `AppSymbol.bell`. Clean.
+- **#132 (hardcoded 44)** ✅ — `OnboardingSetupView.swift:75` customize button frame now uses `AppLayout.minTapTarget`.
+
+**Previous Pass 3 findings verified as resolved:**
+- `OverlayView` dismiss button (🟢 raw font) — now uses `AppFont.overlayDismiss` ✅
+- `OnboardingScreenWrapper` reduce-motion (🟡) — now if/else pattern ✅
+
+**No accessibility regressions from Round 2 fixes.** All Round 2 changes were additive/corrective with no side effects on VoiceOver, Dynamic Type, or tap targets.
+
+**New findings (only):**
+
+1. 🟡 **`SettingsSmartPauseSection` (SettingsView.swift:368,382) — raw SF symbol strings** — `Label(..., systemImage: "moon.fill")` and `Label(..., systemImage: "car.fill")` are hardcoded strings. Team rule (Linus Wave 2 Decision 1) mandates all SF Symbol names use `AppSymbol` tokens. These were introduced by the Smart Pause feature and missed by the `bell.fill` token sweep (#125). `AppSymbol` has no `pauseDuringFocus`/`pauseWhileDriving` tokens. Same class of issue as #134. Fix: add two tokens to `AppSymbol` and replace inline strings.
+
+2. 🟢 **`SetupPreviewCard` (OnboardingSetupView.swift:111,114) — raw SF symbol strings** — `systemImage: "clock"` and `systemImage: "timer"` in the decorative preview card are hardcoded strings. Lower severity (decorative, non-interactive, read-only preview card) but inconsistent with AppSymbol rule. Fix: add `AppSymbol.clock`/`AppSymbol.timer` tokens.
+
+**Areas confirmed clean (Round 3):**
+- Reduce motion: consistent across OverlayView, SettingsSnoozeSection, OnboardingScreenWrapper, ContentView (uses `.animation(nil, value:)` view-modifier form — consistent with OverlayView countdown ring pattern)
+- All tap targets ≥ 44pt everywhere
+- All colors via AppColor tokens, all fonts via AppFont tokens
+- VoiceOver order and combined elements logical throughout
+- Dark mode inheritance correct

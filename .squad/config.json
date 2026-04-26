@@ -5,6 +5,7 @@
     "danny": "claude-opus-4.6-1m",
     "rusty": "claude-opus-4.6-1m",
     "saul": "claude-opus-4.6-1m",
-    "turk": "claude-opus-4.6-1m"
+    "turk": "claude-opus-4.6-1m",
+    "frank": "gpt-5.5"
   }
 }

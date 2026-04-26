@@ -51,3 +51,38 @@
   - GDPR/CCPA addressed in Privacy Policy even though no personal data collected — confirms compliance by design
   - COPPA section included as App Store best practice even with no data collection
   - iCloud backup carve-out noted in Privacy Policy (UserDefaults may be included in device backup)
+
+### 2026-04-25 — Apple App Store Legal & Privacy Compliance Research
+
+- **Report filed:** `.squad/decisions/inbox/frank-apple-legal-requirements.md`
+- **Scope:** Full audit of App Store Review Guidelines sections 1.3, 5, 5.1.1, 5.1.2; Privacy Nutrition Labels; TERMS.md, PRIVACY.md, DISCLAIMER.md, APP_STORE_LISTING.md
+
+**Key findings:**
+
+- **3 submission blockers identified:**
+  1. No hosted HTTPS URL for Privacy Policy — Apple requires a live URL in App Store Connect (not a Markdown file)
+  2. TERMS.md (used as custom EULA) is missing Apple's required EULA supplement provisions (Apple as third-party beneficiary, Apple's non-responsibility, etc.)
+  3. `NSMotionUsageDescription` key must be in Info.plist for CMMotionActivityManager; `com.apple.developer.focus-status` entitlement required for INFocusStatusCenter — neither confirmed present
+
+- **Privacy Nutrition Labels:** Recommended "Data Not Collected" for all categories. Motion data (CMMotionActivityManager) and Focus Status (INFocusStatusCenter) qualify for Apple's transient-data exemption (in-memory only, never stored, never transmitted, not linked to identity). UserDefaults preferences also qualify — they never reach the developer.
+
+- **What's solid:** Health disclaimer language is excellent. Limitation of liability comprehensive. GDPR/CCPA/COPPA addressed correctly by "data not collected" architecture. Age rating 4+ and category (Health & Fitness) correct.
+
+- **Apple custom EULA requirement pattern:** Any custom EULA uploaded to App Store Connect MUST include 7 specific Apple provisions (Apple non-party, no warranty obligation, developer responsible for claims, IP indemnity, third-party terms compliance, Apple as third-party beneficiary). Full text provided in report Section 4.
+
+- **App Store description gap:** No disclaimer language in APP_STORE_LISTING.md Section 3. Health/wellness apps should include a brief disclaimer in the description; exact language provided in report Section 8.
+
+- **In-app disclaimer:** DISCLAIMER.md "Short" variant must be surfaced in the UI (onboarding or Settings "About"). Document exists but implementation not confirmed.
+
+- **TestFlight carve-out in PRIVACY.md** mentions "Share App Data" diagnostic log sharing — should be updated or removed for production App Store release.
+
+
+### 2026-04-26 — Apple Legal & Privacy Deep Dive (Second Pass)
+
+- **Report filed:** `.squad/decisions/inbox/frank-apple-legal-deep-dive.md`
+- Apple does not mandate exact “not medical advice” wording; current requirement is to avoid unsupported medical claims, disclose limitations, and remind users to consult a doctor before medical decisions. Existing TERMS.md and DISCLAIMER.md language exceeds Apple’s minimum.
+- Current App Store Review Guidelines place health/fitness data rules primarily in **5.1.3 Health and Health Research** and **5.1.2(vi)**, not 5.1.1(v) (which is Account Sign-In in current guidelines).
+- Privacy label conclusion strengthened: Apple defines “collect” as transmitting data off-device for developer/partner access beyond real-time servicing. On-device-only Core Motion, Focus Status, UserDefaults, and local logging can support **Data Not Collected** if never transmitted.
+- ATT is not required unless future analytics/ads link app data with third-party data, share user/device data with data brokers, access IDFA, or use an SDK that tracks across apps/websites.
+- HealthKit should not be added for MVP; it would introduce HealthKit-specific privacy policy, purpose strings, marketing/UI disclosure, no-ad/data-mining restrictions, and false-health-data risks without a clear product need.
+- No age verification is needed for the current general-audience, no-data-collection app. Avoid Kids Category and child-targeted metadata unless the app is redesigned for COPPA/GDPR-K/Kids Category obligations.

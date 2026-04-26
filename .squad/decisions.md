@@ -21164,3 +21164,990 @@ All tests passing; no flakiness observed.
 - Archive orchestration/session logs
 - Schedule Phase 2 planning to address W2–W4 + suggestions
 
+# Frank — Apple Legal Requirements Report
+**Role:** Legal Advisor  
+**Date:** 2026-04-25  
+**Subject:** Apple App Store Legal & Privacy Compliance — Eye & Posture Reminder  
+**Status:** Ready for team review
+
+---
+
+## Executive Summary
+
+The existing legal documents (TERMS.md, PRIVACY.md, DISCLAIMER.md) are well-written and cover the substantive health/wellness legal ground thoroughly. However, there are **three submission blockers** and several important gaps that must be resolved before App Store Connect submission. This report documents everything with specificity.
+
+---
+
+## Legend
+- ✅ Already covered — no action needed
+- ⚠️ Exists but needs updating or clarification
+- 🔴 Missing or incomplete — **blocks submission or creates legal exposure**
+
+---
+
+## 1. App Store Review Guidelines Compliance
+
+### Section 5 (Legal)
+Apple requires that apps comply with all legal requirements in every jurisdiction where they are distributed, and that a privacy policy URL is provided.
+
+| Item | Status | Notes |
+|---|---|---|
+| Privacy policy exists | ✅ | PRIVACY.md is thorough |
+| **Hosted privacy policy URL** | 🔴 | **BLOCKER: Apple requires a publicly accessible HTTPS URL in App Store Connect. PRIVACY.md is a repo file, not a URL. Must be hosted on a webpage before submission.** |
+| Custom EULA Apple-required provisions | 🔴 | See Section 4 below — TERMS.md is being used as a custom EULA but is missing Apple-mandated EULA boilerplate |
+| No deceptive, fraudulent, or misleading practices | ✅ | Docs accurately represent app behavior |
+| Governing law clause | ✅ | TERMS.md Section 10 — California, USA |
+
+### Section 1.3 (Kids / Health)
+Apple's Section 1.3 addresses Kids category (not applicable here, 4+ rated). The health-specific rules fall under Section 5 (Legal) and Section 1.4.2 (objectionable content). For wellness/fitness apps:
+
+| Item | Status | Notes |
+|---|---|---|
+| No false health claims | ✅ | Language carefully avoids any claims of treatment or diagnosis |
+| 20-20-20 rule not presented as medical prescription | ✅ | Both TERMS.md (Section 3) and DISCLAIMER.md are explicit |
+| Encourages professional consultation | ✅ | Covered in TERMS.md Section 3 and DISCLAIMER.md |
+| Does not reference Apple HealthKit | ✅ | App does not use HealthKit — no additional Apple health data rules apply |
+| Source citation for 20-20-20 rule | ⚠️ | Not required by Apple, but citing a credible source (e.g., American Academy of Ophthalmology) strengthens credibility during review and in App Store description. Consider adding one line: *"The 20-20-20 guideline is commonly cited by the American Academy of Ophthalmology as a general eye comfort practice."* |
+
+### Section 5.1.1 (Data Collection and Storage)
+Apple requires that all apps with App Store privacy labels accurately represent data collection in the questionnaire in App Store Connect.
+
+| Item | Status | Notes |
+|---|---|---|
+| Privacy Nutrition Label questionnaire | ⚠️ | The team needs a definitive answer on exactly what to declare — see Section 2 of this report |
+| Motion data purpose string (NSMotionUsageDescription) | 🔴 | **BLOCKER: CMMotionActivityManager requires `NSMotionUsageDescription` in Info.plist. Without it, iOS will not grant access AND Apple review will reject the build. The privacy string must accurately describe the use: e.g., *"Eye & Posture Reminder uses motion activity to detect when you are driving and automatically pause reminders."*** |
+| Focus status entitlement | 🔴 | **BLOCKER: INFocusStatusCenter requires the `com.apple.developer.focus-status` entitlement in the app's entitlements file. Without it, the API returns nil/empty and the feature silently fails. Apple review may flag the capability claim without the entitlement.** |
+| No tracking (ATT framework) | ✅ | No IDFA, no cross-app tracking — ATT opt-in dialog NOT required |
+| No HealthKit | ✅ | No HealthKit entitlement needed |
+
+### Section 5.1.2 (Data Use and Sharing)
+| Item | Status | Notes |
+|---|---|---|
+| No third-party data sharing | ✅ | PRIVACY.md Section 4 explicitly states this |
+| No advertising SDKs | ✅ | TERMS.md Section 8 and PRIVACY.md Section 2 confirm |
+| MetricKit/os.Logger disclosure | ✅ | PRIVACY.md Section 2 has thorough explanation of the two-tier privacy annotation system and that no data is transmitted externally |
+
+---
+
+## 2. App Privacy Details — Privacy Nutrition Labels
+
+This is the questionnaire in App Store Connect → App Privacy. Answering it wrong causes rejection or takedown. Here is the recommended answer for each data category based on Apple's definitions.
+
+### Key Definitions (Apple)
+- **Data Not Collected:** You do not collect this type of data at all, OR you access it only transiently (in memory, never stored, never transmitted, never linked to identity, not used for tracking).
+- **Data Not Linked to You:** You collect this data but cannot link it to a specific user identity.
+- **Data Linked to You:** You collect this data AND can link it to a user identity.
+
+Apple's exception: *"Data collected only on a transient basis that is not linked to the user's identity and is not used for tracking may be omitted from disclosure."* — CMMotionActivityManager and INFocusStatusCenter data in this app qualifies for this exemption if properly implemented.
+
+### Recommended Privacy Label Declarations
+
+| Category | Data Type | Declaration | Purpose | Notes |
+|---|---|---|---|---|
+| **Health & Fitness** | Fitness (motion activity) | **Data Not Collected** | — | CMMotionActivityManager data is read in-memory transiently, never stored or transmitted, not linked to identity, not used for tracking. Qualifies for Apple's transient exemption. Conservative alternative: declare as "Data Not Linked to You / App Functionality" |
+| **Identifiers** | Device ID | **Data Not Collected** | — | No IDFA, no persistent device identifiers |
+| **Identifiers** | User ID | **Data Not Collected** | — | No user accounts |
+| **Location** | Coarse or precise location | **Data Not Collected** | — | Not accessed |
+| **Usage Data** | Other usage data (app preferences) | ⚠️ **See note** | App Functionality | UserDefaults preferences (reminder intervals, durations, toggle states) are stored locally only and never transmitted. Under Apple's definition, locally-stored data that never leaves the device and is not transmitted to the developer is generally classified as "Data Not Collected" because the developer never receives it. Recommended: **Data Not Collected** |
+| **Diagnostics** | Crash data / Performance data | **Data Not Collected** | — | MetricKit is passive; data is collected at OS level by Apple. The app does not transmit diagnostic data to the developer. No third-party crash SDK. |
+| **Sensitive Info** | Any sensitive category | **Data Not Collected** | — |  |
+| **Contact Info** | Any | **Data Not Collected** | — |  |
+| **Financial Info** | Any | **Data Not Collected** | — |  |
+
+### Bottom Line on Privacy Labels
+The app should declare **"No Data Collected"** for all categories. This is supportable and accurate because:
+1. Motion data: transient in-memory only, qualifies for Apple's exemption
+2. Focus status: system state signal, transient, never stored
+3. UserDefaults preferences: developer never receives them; they never leave the device
+
+**Recommended label text for App Store Connect:** *"This app does not collect any data."*
+
+> ⚠️ **Important:** Even selecting "Data Not Collected" requires completing the questionnaire in App Store Connect and confirming each category. Leaving the privacy section blank is NOT the same as "Data Not Collected" — blank = incomplete = submission blocker.
+
+---
+
+## 3. Privacy Policy Assessment
+
+### What Apple Mandates
+Apple requires:
+1. A privacy policy link in App Store Connect (must be a working HTTPS URL)
+2. Privacy policy must cover all data collection practices
+3. Privacy policy must be accessible before download (i.e., linked from the App Store listing page)
+
+### What GDPR/CCPA Require
+Even for a US-focused app on the global App Store, GDPR applies to EU users (App Store distributes globally by default). CCPA applies to California users.
+
+| Requirement | Status | Notes |
+|---|---|---|
+| **GDPR: Data controller identification** | ✅ | PRIVACY.md Section 8 addresses GDPR — "we do not act as a data controller" because no personal data is collected. Accurate and defensible. |
+| **GDPR: Legal basis for processing** | ✅ | No personal data = no processing = no legal basis needed |
+| **GDPR: Data subject rights** | ✅ | PRIVACY.md Section 8 — rights satisfied by design (nothing held) |
+| **CCPA: "Do not sell"** | ✅ | PRIVACY.md Section 8 explicitly states no personal data sold |
+| **CCPA: Categories of personal information** | ✅ | Section 2 (What We Do NOT Collect) covers this |
+| **COPPA (children under 13)** | ✅ | PRIVACY.md Section 6 — correctly states no data collected from anyone |
+| **Privacy policy version/date** | ✅ | Dated April 25, 2026 |
+| **Contact information** | ✅ | support@yashasg.dev |
+
+### Privacy Policy Gaps
+
+| Gap | Severity | Recommended Fix |
+|---|---|---|
+| **No hosted URL** | 🔴 BLOCKER | Must host PRIVACY.md content at a stable HTTPS URL (e.g., GitHub Pages, simple landing page, or developer website). The URL must be entered in App Store Connect before submission. |
+| **No explicit mention of NSMotionUsageDescription** | ⚠️ | The privacy policy describes motion data use correctly, but it does not mention the iOS permission dialog the user will see. Consider adding: *"When you first use this app on a device with a motion coprocessor, iOS will ask for permission to access motion and fitness activity. This permission is used only to detect driving and pause reminders."* |
+| **TestFlight "Share App Data" disclosure** | ⚠️ | PRIVACY.md Section 2 mentions this correctly (diagnostic logs shared with developer if Share App Data is enabled in TestFlight). However, this should be removed or updated for the production App Store release — once shipped as a production app (not TestFlight), this carve-out no longer applies since MetricKit data is not transmitted. |
+| **iCloud backup carve-out** | ✅ | PRIVACY.md Section 3 covers this appropriately |
+
+---
+
+## 4. Terms of Service (EULA) Assessment
+
+### Apple EULA vs Custom EULA
+Apps distributed through the App Store are automatically covered by Apple's standard EULA for App Store apps. Using a CUSTOM EULA (which this app does, via TERMS.md) is permitted but requires meeting Apple's requirements for custom EULAs:
+
+> Per Apple's App Store Connect documentation: *"If you choose to provide your own custom end-user license agreement (EULA), it must include specific provisions required by Apple."*
+
+The required provisions are documented in the Apple Developer Program License Agreement and the App Store Review Guidelines. **TERMS.md is missing all of these.**
+
+### Required Apple EULA Provisions (Currently Missing) 🔴
+
+Apple requires that any custom EULA include the following acknowledgements. These must be added to TERMS.md (or a new dedicated "Apple EULA Supplement" section):
+
+```
+APPLE TERMS SUPPLEMENT
+
+1. The EULA is concluded between Yashasg and the end-user only, and not with Apple, Inc. ("Apple").
+2. Apple is not responsible for Eye & Posture Reminder and its content.
+3. Apple has no warranty obligation whatsoever with respect to Eye & Posture Reminder. Any warranties (if any) are solely the responsibility of Yashasg.
+4. Yashasg, not Apple, is responsible for addressing any claims by the end-user or any third party relating to Eye & Posture Reminder, including but not limited to: (a) product liability claims; (b) any claim that Eye & Posture Reminder fails to conform to any applicable legal or regulatory requirement; and (c) claims arising under consumer protection or similar legislation.
+5. In the event of any third-party claim that Eye & Posture Reminder or the end-user's possession and use of Eye & Posture Reminder infringes a third party's intellectual property rights, Yashasg, not Apple, will be solely responsible for the investigation, defense, settlement, and discharge of any such claim.
+6. The end-user must comply with applicable third-party terms of service when using Eye & Posture Reminder.
+7. Apple and its subsidiaries are third-party beneficiaries of this EULA, and Apple will have the right (and will be deemed to have accepted the right) to enforce this EULA against the end-user as a third-party beneficiary.
+```
+
+> 🔴 **This is required by Apple. Without it, a custom EULA submission may be rejected.**
+
+### Other TERMS.md Assessment
+
+| Section | Status | Notes |
+|---|---|---|
+| Acceptance of Terms (Section 1) | ✅ | Clear and appropriate |
+| App Description (Section 2) | ✅ | Accurately describes motion data use |
+| Health Disclaimer (Section 3) | ✅ | Excellent — prominently placed, detailed, appropriate |
+| Limitation of Liability (Section 4) | ✅ | Comprehensive. Covers health outcomes, technical failures, missed reminders |
+| Warranty Disclaimer (Section 5) | ✅ | "As is / as available" language correct |
+| User Responsibilities (Section 6) | ✅ | Appropriate |
+| Intellectual Property (Section 7) | ✅ | Covers the basics |
+| Third-Party Services / Apple reference (Section 8) | ⚠️ | Mentions Apple but does not include the required Apple EULA supplement provisions (see above) |
+| Termination (Section 9) | ✅ | Survival clause correct |
+| Governing Law (Section 10) | ✅ | California, USA |
+| Changes (Section 11) | ✅ | Standard clause |
+| Contact (Section 12) | ✅ | support@yashasg.dev |
+| **Apple EULA required supplement** | 🔴 | **Entirely missing — see above** |
+
+---
+
+## 5. Disclaimer Assessment
+
+### Where Disclaimers Must Appear
+Apple does not mandate a specific in-app disclaimer placement, but for health apps, best practice and App Store reviewer expectations require the disclaimer to be:
+1. **In the App Store description** — yes (DISCLAIMER.md "Full Disclaimer" variant is suitable)
+2. **Accessible within the app** — recommended (onboarding, Settings "About" section, or first-launch screen)
+3. **In the Terms/Privacy** — yes (TERMS.md Section 3 covers this comprehensively)
+
+| Item | Status | Notes |
+|---|---|---|
+| "Not medical advice" language | ✅ | All three formats (short, full, one-line) exist in DISCLAIMER.md |
+| App Store description variant | ✅ | "Full Disclaimer" in DISCLAIMER.md is appropriate for App Store description |
+| In-app short disclaimer | ✅ | "Short Disclaimer" in DISCLAIMER.md suitable for onboarding/Settings |
+| One-line variant | ✅ | Available for tight spaces |
+| **Disclaimer actually integrated in-app** | ⚠️ | The disclaimer *documents exist* but the implementation team (Linus/Basher) needs to confirm the short disclaimer is surfaced in the app UI — e.g., on first launch or in a Settings "About" section. Docs alone are not enough; it must appear in the app. |
+| **App Store description includes disclaimer** | ⚠️ | APP_STORE_LISTING.md Section 3 (Description) does NOT include any disclaimer language. The full disclaimer from DISCLAIMER.md should be appended to the App Store description text. Apple reviewers look for this in health/wellness apps. |
+
+### Exact Recommended Language for App Store Description Append
+
+Add this block to the bottom of the App Store description (Section 3 of APP_STORE_LISTING.md):
+
+```
+DISCLAIMER: Eye & Posture Reminder is a wellness reminder tool, not a medical 
+device or medical application. The 20-20-20 rule and posture reminders are 
+general wellness guidelines, not medical advice. This app does not diagnose, 
+treat, or prevent any health condition. Consult a healthcare professional for 
+any eye or musculoskeletal concerns. Use at your own risk.
+```
+
+---
+
+## 6. App Store Connect Submission Checklist
+
+| Field | Status | Notes |
+|---|---|---|
+| **Privacy Policy URL** | 🔴 BLOCKER | Must be a live HTTPS URL. Host PRIVACY.md content at a webpage. GitHub Pages or a simple landing page is sufficient. Enter in App Store Connect → App Information → Privacy Policy URL |
+| **Support URL** | ⚠️ | APP_STORE_LISTING.md says TBD. Required field. Minimum: GitHub repo URL or a contact page. |
+| **Marketing URL** | ✅ | Optional — TBD is fine |
+| **Privacy Nutrition Labels** | ⚠️ | Complete the questionnaire in App Store Connect. Recommended: "Data Not Collected" for all categories (see Section 2 above). Do not leave blank. |
+| **Custom EULA** | 🔴 | If using TERMS.md as custom EULA, it must include Apple's required supplement provisions (see Section 4). Alternatively, use Apple's standard EULA (simpler — just do not upload a custom EULA in App Store Connect). |
+| **Age Rating** | ✅ | 4+ is correct. All questionnaire answers are "No/None". |
+| **Primary Category** | ✅ | Health & Fitness — correct |
+| **Secondary Category** | ✅ | Productivity — reasonable choice |
+| **NSMotionUsageDescription (Info.plist)** | 🔴 BLOCKER | Missing or not confirmed. Required for CMMotionActivityManager. String: *"Eye & Posture Reminder uses motion activity to detect when you are driving and automatically pause reminders."* |
+| **com.apple.developer.focus-status entitlement** | 🔴 BLOCKER | Required for INFocusStatusCenter. Must be present in .entitlements file. If this is missing, Focus Status feature silently fails and the feature claim in the app is unsupported. |
+| **Bundle ID confirmed** | ⚠️ | APP_STORE_LISTING.md says TBD — must be registered and confirmed before submission |
+| **Copyright string** | ✅ | "© 2026 Yashasg" — correct |
+| **SKU** | ✅ | "eye-posture-reminder" |
+| **Content Rights** | ✅ | No third-party content — no certifications needed |
+| **Export Compliance** | ✅ | No encryption used beyond standard iOS APIs — can answer "No" to encryption questions |
+| **App Review Notes** | ⚠️ | When submitting, add a note to Apple reviewers explaining: (1) the app uses motion data only to detect driving and pause reminders, (2) the app reads Focus Status to pause reminders during active Focus sessions, (3) no data is transmitted off-device. This reduces review confusion and rejection risk. |
+
+---
+
+## 7. Summary of Action Items by Priority
+
+### 🔴 Blockers (must resolve before submission)
+
+| # | Action | Owner |
+|---|---|---|
+| B1 | **Host Privacy Policy at a public HTTPS URL** and enter that URL in App Store Connect. A GitHub Pages deployment or simple landing page is sufficient. | Danny (Product) + Yashasg |
+| B2 | **Add Apple-required EULA supplement provisions** to TERMS.md (Section 8 or new Section 13). Full text provided in Section 4 of this report. | Frank (drafts text) → Danny or Yashasg confirms |
+| B3 | **Add `NSMotionUsageDescription` to Info.plist** with accurate description string. | Basher or Linus (iOS Dev) |
+| B4 | **Add `com.apple.developer.focus-status` entitlement** to the app's .entitlements file. | Basher or Linus (iOS Dev) |
+| B5 | **Complete Privacy Nutrition Labels questionnaire** in App Store Connect — do not leave blank. Recommended: "Data Not Collected" for all categories. | Danny (Product) |
+
+### ⚠️ Important (should resolve before submission)
+
+| # | Action | Owner |
+|---|---|---|
+| W1 | **Confirm Support URL** and enter in App Store Connect. GitHub repo is acceptable minimum. | Danny (Product) |
+| W2 | **Add disclaimer to App Store description** (Section 3 of APP_STORE_LISTING.md). Exact language provided in Section 5 of this report. | Danny (Product) |
+| W3 | **Confirm in-app disclaimer is surfaced** (e.g., onboarding screen, Settings "About" section). The DISCLAIMER.md "Short" version must appear in the app UI. | Linus (iOS Dev — UI) |
+| W4 | **Confirm Bundle ID** is registered in Apple Developer portal and matches App Store Connect. | Yashasg |
+| W5 | **Remove TestFlight "Share App Data" reference from PRIVACY.md** for production release (or update to accurately describe production behavior). | Frank (legal docs update) |
+| W6 | **Add App Review Notes** to App Store Connect submission explaining motion and focus status usage. | Danny (Product) |
+
+### ✅ No action needed (already covered well)
+
+- Health disclaimer language — excellent, thorough, appropriately prominent
+- Limitation of liability — comprehensive, correct legal theory coverage
+- "Not medical advice" language — clear and appropriate throughout
+- GDPR/CCPA coverage — correctly handled by "data not collected" architecture
+- COPPA section — present and appropriate
+- Age rating (4+) — correct
+- Category selection — correct
+- No HealthKit = no HealthKit-specific requirements
+- No ATT/IDFA = no App Tracking Transparency prompt needed
+- No third-party SDKs = no third-party privacy disclosures needed
+- MetricKit/os.Logger — correctly and fully disclosed in PRIVACY.md
+
+---
+
+## 8. Recommended Text Additions
+
+### For TERMS.md — New Section 13 (Apple EULA Supplement)
+
+```markdown
+## 13. Apple App Store — End User License Agreement Supplement
+
+The following terms apply to your use of Eye & Posture Reminder as obtained 
+from the Apple App Store:
+
+1. This license is between you and Yashasg only, not with Apple, Inc. ("Apple"). 
+   Apple is not responsible for Eye & Posture Reminder or its content.
+
+2. Yashasg, not Apple, is solely responsible for Eye & Posture Reminder and its 
+   content. Apple has no obligation to furnish any maintenance or support services 
+   with respect to Eye & Posture Reminder.
+
+3. In the event of any failure of Eye & Posture Reminder to conform to any 
+   applicable warranty, you may notify Apple, and Apple will refund the purchase 
+   price (if any) for Eye & Posture Reminder. To the maximum extent permitted by 
+   law, Apple has no other warranty obligation.
+
+4. Yashasg, not Apple, is responsible for addressing claims by you or any third 
+   party relating to Eye & Posture Reminder, including product liability claims, 
+   claims that Eye & Posture Reminder fails to conform to any applicable legal or 
+   regulatory requirement, and claims under consumer protection or similar 
+   legislation.
+
+5. In the event of any third-party claim that Eye & Posture Reminder or your 
+   possession and use of Eye & Posture Reminder infringes a third party's 
+   intellectual property rights, Yashasg, not Apple, will be solely responsible 
+   for the investigation, defense, settlement, and discharge of any such claim.
+
+6. You must comply with any applicable third-party terms when using 
+   Eye & Posture Reminder.
+
+7. Apple and its subsidiaries are third-party beneficiaries of these Terms, and 
+   upon your acceptance, Apple will have the right to enforce these Terms against 
+   you as a third-party beneficiary thereof.
+```
+
+### For Info.plist
+
+```xml
+<key>NSMotionUsageDescription</key>
+<string>Eye &amp; Posture Reminder uses motion activity to detect when you are driving and automatically pause reminders so you are not distracted.</string>
+```
+
+### For App Store Description (append to Section 3)
+
+```
+DISCLAIMER: This app is a wellness reminder tool, not a medical device or 
+application. The 20-20-20 rule and posture reminders are general wellness 
+guidelines — not medical advice. This app does not diagnose, treat, or prevent 
+any medical condition. Consult a qualified healthcare professional for any eye, 
+vision, or musculoskeletal concerns. Use at your own risk.
+```
+
+---
+
+*Report prepared by Frank (Legal Advisor) — 2026-04-25*  
+*For questions, raise in the next squad ceremony or ping via team.md.*
+
+# Frank — Apple Legal / Privacy Deep Dive (Second Pass)
+**Role:** Legal Advisor  
+**Date:** 2026-04-26  
+**Subject:** Apple health/wellness, privacy-label, ATT, HealthKit, international compliance, and rejection-risk requirements for Eye & Posture Reminder  
+**Status:** Deep-dive findings for team review  
+
+---
+
+## Executive Summary
+
+The first-pass conclusion remains correct: this app can defensibly ship as a **general wellness reminder tool** with **Data Not Collected** privacy labels, **no ATT prompt**, and **no HealthKit obligations**, provided implementation matches the stated architecture: no accounts, no server, no third-party SDKs, no analytics transmission, transient Core Motion and Focus Status use only.
+
+The deeper pass adds three important clarifications:
+
+1. **Apple does not prescribe exact “not medical advice” wording.** Apple’s official requirement is outcome-based: health/medical apps must avoid unsupported accuracy claims, remind users to check with a doctor before medical decisions, and provide data/methodology for any measurement claims. The current disclaimer language is stronger than Apple’s minimum.
+2. **The user’s “5.1.1(v) Health & Fitness data” reference is outdated/misaligned with current guidelines.** Current Guideline 5.1.1(v) is **Account Sign-In**. Health/fitness/medical data rules are primarily in **5.1.3 Health and Health Research** and **5.1.2(vi) Data Use and Sharing**.
+3. **“Data Not Collected” is stronger than merely “transient exemption.”** Apple defines “Collect” as transmitting data off-device so the developer/partners can access it longer than needed to service a real-time request. Data processed only on-device and never sent off-device is not collected and need not appear in privacy labels.
+
+The five first-pass blockers still stand unless already fixed outside the reviewed docs: hosted privacy-policy URL, EULA/Apple supplement choice, NSMotionUsageDescription, Focus Status entitlement, and App Store Connect privacy questionnaire completion.
+
+---
+
+## 1. Apple App Store Review Guidelines — Health / Wellness Specifics
+
+### 1.1 Relevant Apple rules
+
+#### Guideline 1.4 — Physical Harm
+Apple’s health-app scrutiny starts with safety. Current Guideline 1.4 says Apple may reject apps that behave in a way that risks physical harm. For medical apps specifically, Guideline 1.4.1 says:
+
+- Medical apps that could provide inaccurate data or information, or could be used for diagnosing or treating patients, may receive greater scrutiny.
+- Apps must clearly disclose data and methodology to support accuracy claims relating to health measurements.
+- If accuracy or methodology cannot be validated, Apple will reject the app.
+- Apps claiming to measure medical values with only device sensors — x-rays, blood pressure, body temperature, blood glucose, blood oxygen — are not permitted.
+- Apps should remind users to check with a doctor in addition to using the app and before making medical decisions.
+- If a medical app has regulatory clearance, submit a link to that documentation.
+
+**Application to this app:** Eye & Posture Reminder does not measure eye strain, posture, medical status, or treatment outcomes. It should never claim to “detect,” “diagnose,” “treat,” “prevent,” “cure,” “improve vision,” “correct posture,” or “reduce disease risk.” The safe positioning is: **reminds users to take breaks and check posture**.
+
+#### Guideline 5.1.3 — Health and Health Research
+Apple treats health, fitness, and medical data as especially sensitive. Current 5.1.3 says:
+
+- Apps may not use or disclose health, fitness, or medical research context data — including data from HealthKit, Clinical Health Records, **Motion and Fitness**, Movement Disorder APIs, or health-related human-subject research — for advertising, marketing, or other use-based data mining purposes other than improving health management, or for health research, and then only with permission.
+- Apps may use health or fitness data to provide a direct benefit to the user in limited cases, with restrictions.
+- Developers must disclose the specific health data collected from the device.
+- Apps must not write false or inaccurate data into HealthKit or other medical research/health management apps.
+- Apps may not store personal health information in iCloud.
+- Health-related human-subject research requires participant consent and independent ethics review approval.
+
+**Application to this app:** The app uses Motion and Fitness APIs for driving pause logic only. Because it does not transmit or retain that data and does not use it for ads/marketing/data mining, it fits Apple’s privacy posture. The app is not human-subject research.
+
+#### Guideline 5.1.2(vi) — Apple API data mining restrictions
+Apple prohibits using data gathered from HealthKit, Clinical Health Records, Movement Disorder APIs, ClassKit, depth/facial mapping, and related APIs for marketing, advertising, or use-based data mining. This reinforces the same rule: do not use sensitive Apple API data for profiling or monetization.
+
+#### Guideline 2.3 — Accurate Metadata
+Apple requires metadata, screenshots, previews, descriptions, and privacy information to accurately reflect the app’s core experience. Health/wellness apps are vulnerable here because marketing copy can accidentally become a medical claim.
+
+**Safe metadata posture:** “helps you remember,” “general wellness reminder,” “configurable break reminders,” “20-20-20 guideline,” “pause while driving / Focus is active.”  
+**Unsafe metadata posture:** “prevents eye strain,” “fixes posture,” “protects vision,” “clinically proven,” “doctor recommended,” “treats computer vision syndrome,” “detects poor posture,” unless backed by appropriate evidence and regulatory analysis.
+
+---
+
+### 1.2 Exact “not medical advice” language Apple requires
+
+Apple does **not** publish a required exact disclaimer sentence such as “This is not medical advice.” Instead, Apple requires the app’s behavior and disclosures to avoid unsupported medical uses and to remind users to consult a doctor before medical decisions.
+
+**Minimum Apple-aligned legal meaning:**
+
+> This app provides general wellness reminders only. It does not provide medical advice, diagnosis, treatment, prevention, or cure. Do not use it to make medical decisions. Consult a qualified healthcare professional for eye, vision, posture, pain, or other health concerns.
+
+**Current docs assessment:** TERMS.md Section 3 and DISCLAIMER.md already exceed Apple’s minimum. The language is appropriately clear that:
+
+- the app is not a medical device or medical application;
+- it does not diagnose, treat, cure, or prevent conditions;
+- it does not replace physicians, optometrists, ophthalmologists, physiotherapists, chiropractors, or other licensed professionals;
+- the 20-20-20 rule is a general wellness guideline, not a prescription;
+- users with existing conditions should consult a qualified professional.
+
+**Deep-pass recommendation:** Keep the existing legal language. Add a shorter version to the App Store description and in-app onboarding/Settings if not already implemented.
+
+---
+
+### 1.3 Eye-health app rejection patterns
+
+Apple does not publish a separate “eye health app” rejection list. Rejection risk comes from general health, safety, privacy, metadata, and medical-device rules.
+
+High-risk patterns for eye/posture apps:
+
+| Risk pattern | Why Apple may reject | Safer alternative |
+|---|---|---|
+| Claims the app “prevents,” “treats,” or “cures” eye strain, myopia, dry eye, headaches, back pain, neck pain, posture disorders, or computer vision syndrome | Unsupported medical/treatment claim under 1.4 and misleading metadata under 2.3 | “Reminds you to take breaks and check posture” |
+| Claims measurement without validation, e.g. “detects eye strain,” “measures posture,” “knows when your eyes are tired” | Accuracy/methodology requirement in 1.4.1 | “Tracks foreground screen time and schedules reminders” |
+| Uses camera or sensors to infer health status without consent/disclosure | Sensitive data / privacy / possible medical claim | Do not add camera-based health inference unless legally reviewed |
+| Uses “doctor recommended,” “clinically proven,” or institutional logos without evidence/license | Misleading metadata / IP / substantiation risk | Avoid unless documented and authorized |
+| Hides disclaimer only in legal docs | Reviewers may see health copy but not disclaimer | Put concise disclaimer in app and App Store description |
+| Screenshot text says “Protect your eyes” or “Correct your posture” as guaranteed outcome | Screenshot metadata is reviewed like description text | Use “Take an eye break” / “Check your posture” |
+
+---
+
+### 1.4 Kids Category / age gating / 20-20-20 content
+
+Apple Guideline 1.3 governs the **Kids Category**, not every app that children might use. It says Kids Category apps must focus on a great experience for younger users, avoid links out, purchases, or distractions unless behind a parental gate, comply with children’s privacy laws, and generally avoid third-party analytics and advertising.
+
+Current Guideline 5.1.4 adds that apps intended primarily for kids should not include third-party analytics or third-party advertising; apps in the Kids Category or apps that collect/transmit/can share minors’ personal information must include a privacy policy and comply with children’s privacy statutes.
+
+**Does 20-20-20 content require age gating?** No, not by itself. A general wellness reminder about looking away from the screen does not require age verification or a parental gate. Age gating becomes relevant if the app is marketed as “for kids,” enters the Kids Category, collects children’s personal information, includes external links/purchases/ads, or offers medical/treatment content targeted to minors.
+
+**Recommendation:**
+
+- Do **not** select Kids Category unless the team intentionally redesigns around Kids Category rules.
+- Do **not** use “for kids,” “for children,” “school children,” or child-targeting phrases in app name, subtitle, screenshots, or description unless intentionally targeting children and ready for COPPA/GDPR-K obligations.
+- A 4+ age rating remains plausible if App Store Connect age-rating answers truthfully reflect no mature content, no medical treatment info, no drugs, no user-generated content, no web browsing, no accounts, and no data collection.
+
+---
+
+## 2. Privacy Nutrition Label — Exact Questionnaire Answers
+
+### 2.1 Apple’s definition: “collected” vs “used”
+
+Apple’s privacy-label documentation is decisive:
+
+- “Collect” means transmitting data off the device in a way that allows the developer or third-party partners to access it for longer than necessary to service a real-time request.
+- Even if data is collected only for app functionality, it must be declared.
+- Data processed only on device and never sent to a server is **not collected**.
+- Developers are not responsible for disclosing data collected by Apple itself.
+
+**Therefore:** transient CMMotionActivityManager reads, transient Focus Status reads, local UserDefaults preferences, on-device fallback timers, and local OS logging are not “collected” for App Store privacy labels if they never leave the device and are not accessible to Yashasg or a partner.
+
+### 2.2 Motion & Fitness categorization
+
+If transmitted off-device, CMMotionActivityManager data would fall under:
+
+- **Health & Fitness → Fitness** because Apple’s definition includes “fitness and exercise data, including but not limited to the Motion and Fitness API.”
+
+For this app, the correct answer is still **Data Not Collected** because the motion activity state is used on-device only to decide whether to pause reminders while driving.
+
+**Important implementation dependency:** do not log raw motion states to a remote analytics/crash service later. If motion-derived states are transmitted, the label likely changes to **Health & Fitness → Fitness**, purpose **App Functionality** and/or **Analytics**, depending on use.
+
+### 2.3 Recommended App Store Connect privacy answers
+
+Assuming the app remains as described — no accounts, no server, no third-party SDKs, no analytics upload, no data transmission — answer **No / Data Not Collected** for every data type.
+
+| Apple category | Apple data type | Answer | Rationale / caveat |
+|---|---|---|---|
+| Contact Info | Name | Not collected | No account/profile/contact form in app |
+| Contact Info | Email Address | Not collected | Support email is external; app does not collect email |
+| Contact Info | Phone Number | Not collected | No phone field |
+| Contact Info | Physical Address | Not collected | No address field |
+| Contact Info | Other User Contact Info | Not collected | None |
+| Health & Fitness | Health | Not collected | No eye-strain metric, diagnosis, symptom, HealthKit, clinical data, or user-entered health data |
+| Health & Fitness | Fitness | Not collected | Motion activity is processed only on-device and never transmitted; if transmitted later, this changes |
+| Financial Info | Payment Info | Not collected | No IAP/payment; Apple handles App Store transaction data if app becomes paid |
+| Financial Info | Credit Info | Not collected | None |
+| Financial Info | Other Financial Info | Not collected | None |
+| Location | Precise Location | Not collected | No Core Location/GPS |
+| Location | Coarse Location | Not collected | No location access |
+| Sensitive Info | Sensitive Info | Not collected | No racial/ethnic, health status, disability, beliefs, biometric, etc. collected |
+| Contacts | Contacts | Not collected | No Contacts access |
+| User Content | Emails or Text Messages | Not collected | None |
+| User Content | Photos or Videos | Not collected | No photo/camera access |
+| User Content | Audio Data | Not collected | No microphone/audio recording |
+| User Content | Gameplay Content | Not collected | Not a game |
+| User Content | Customer Support | Not collected by app | If users email support outside the app, handle under website/email privacy practice, not app-collected data unless support form is embedded |
+| User Content | Other User Content | Not collected | No free-form notes/journal |
+| Browsing History | Browsing History | Not collected | No browser/web tracking |
+| Search History | Search History | Not collected | No search feature |
+| Identifiers | User ID | Not collected | No account or assigned user ID |
+| Identifiers | Device ID | Not collected | No IDFA/IDFV/device identifier collection |
+| Purchases | Purchase History | Not collected | No IAP; Apple purchase records are Apple’s collection, not developer’s, unless developer receives receipts/server data later |
+| Usage Data | Product Interaction | Not collected | App interactions are not transmitted; local os.Logger only is not developer collection |
+| Usage Data | Advertising Data | Not collected | No ads |
+| Usage Data | Other Usage Data | Not collected | Local settings/timers remain on-device |
+| Diagnostics | Crash Data | Not collected | No third-party crash reporting and no developer server; Apple/Xcode/TestFlight diagnostics should be treated carefully in docs but not as app-collected production data unless developer receives them as part of App Store Connect diagnostics |
+| Diagnostics | Performance Data | Not collected | MetricKit local handling only; no transmission by app |
+| Diagnostics | Other Diagnostic Data | Not collected | No remote diagnostics |
+| Surroundings | Environment Scanning | Not collected | No AR/environment scan |
+| Body | Hands | Not collected | No body tracking |
+| Body | Head | Not collected | No head movement tracking |
+| Other Data | Other Data Types | Not collected | None |
+
+### 2.4 Is “Data Not Collected” truly accurate with CMMotionActivityManager?
+
+Yes, if all of the following remain true:
+
+- motion activity is read only on-device;
+- no raw motion activity, derived driving state, or motion timestamps are transmitted to Yashasg or any third party;
+- no analytics/crash SDK receives motion-derived event parameters;
+- no persistent identifier links motion state to a user/device profile;
+- no server receives logs containing motion/focus/pause state.
+
+Core Motion still requires **NSMotionUsageDescription** because iOS requires user-facing permission text for access to motion data. Permission access and App Store privacy-label collection are separate concepts: data can require permission even when it is not “collected” under privacy-label rules.
+
+---
+
+## 3. App Tracking Transparency (ATT)
+
+### 3.1 Does this app need ATT now?
+
+No. ATT is required when the app tracks users by linking app-collected user/device data with third-party data for targeted advertising or advertising measurement, or shares user/device data with data brokers. The app has no IDFA use, no ads, no analytics SDK, no third-party SDK, no accounts, and no transmitted identifiers.
+
+**Do not include the ATT framework or NSUserTrackingUsageDescription unless tracking is actually added.** Adding unused tracking permission language can create review confusion and user distrust.
+
+### 3.2 If analytics are added later, when does ATT apply?
+
+Analytics alone does not automatically trigger ATT. The decision tree:
+
+| Future addition | ATT needed? | Other action |
+|---|---:|---|
+| First-party analytics to Yashasg only, no third-party data linking, no data broker, no targeted ads | Usually no | Update privacy label: Usage Data / Diagnostics / Identifiers as applicable; update privacy policy; consider consent depending on jurisdiction |
+| Third-party analytics SDK that uses data only to provide analytics to this app and does not track across apps/websites | Usually no ATT, but verify SDK terms/privacy manifest | Update privacy label for SDK data; verify no fingerprinting; disclose third-party partner |
+| Ad network, attribution SDK, retargeting, lookalike audiences, or analytics SDK that combines app data with data from other companies’ apps/websites | Yes | ATT prompt required before tracking; update labels and privacy policy |
+| Access to IDFA | Yes | ATT prompt required; NSUserTrackingUsageDescription required |
+| Sharing email/ID/device/location/motion events with a data broker | Yes | ATT plus privacy-policy/legal review; likely not appropriate for this app |
+| Fingerprinting or deriving device identity from signals | Not allowed | Apple may reject regardless of ATT |
+
+---
+
+## 4. Apple Health Integration Considerations
+
+### 4.1 Should this app integrate with HealthKit?
+
+Recommendation: **No for the current product.** HealthKit would materially increase legal, review, privacy, and UX burden without a clear user benefit. Eye breaks and posture reminders do not map cleanly to a standard HealthKit data type, and writing improvised “eye strain” or “posture quality” health data would risk inaccuracy/misleading-health-data problems.
+
+Potentially legitimate future HealthKit ideas require separate review:
+
+- writing **Mindful Minutes** for completed eye breaks, if the product intentionally frames breaks as mindfulness/wellbeing sessions and user consent is explicit;
+- reading sleep/focus/activity data only if it directly improves reminder scheduling and is clearly explained;
+- no HealthKit write should imply diagnosis, treatment, eye health improvement, or posture correction.
+
+### 4.2 Additional HealthKit legal requirements if added
+
+If HealthKit is introduced, the app must:
+
+- enable HealthKit capability and request explicit per-type read/write authorization;
+- include NSHealthShareUsageDescription for reading and NSHealthUpdateUsageDescription for writing;
+- provide a privacy policy specifically explaining health data use, storage, and sharing;
+- clearly disclose HealthKit use in marketing text and in the UI;
+- not use HealthKit information for advertising or similar services;
+- not disclose HealthKit data to third parties without express user permission, and only to third parties providing health/fitness service to the user;
+- never sell HealthKit information to ads platforms, data brokers, or information resellers;
+- not write false/inaccurate data into HealthKit;
+- not store personal health information in iCloud;
+- update App Store privacy labels if any HealthKit-derived data is transmitted off-device;
+- update App Review Notes to explain exactly which HealthKit types are read/written and why.
+
+---
+
+## 5. International Compliance
+
+### 5.1 GDPR / EU users
+
+GDPR personal data means information relating to an identified or identifiable person. Health data is a special category when it reveals health status. This app’s current design avoids transmitting personal data to the developer.
+
+**Current posture:** Low GDPR risk because there is no developer-side collection, account, server, analytics, tracking, or support form inside the app. Local-only UserDefaults and transient on-device motion/focus handling are privacy-by-design.
+
+**Still recommended for EU distribution:**
+
+- maintain a public privacy policy URL with contact email;
+- accurately state that data remains on device and deletion occurs by deleting the app;
+- avoid claiming “GDPR does not apply” too broadly; safer wording is “we do not collect personal data through the app, so we generally do not hold app personal data to access, export, or delete”; 
+- if analytics/support forms/accounts are added, revisit controller role, legal basis, retention, DSR process, international transfers, and possibly EU representative obligations.
+
+### 5.2 CCPA / California
+
+CCPA applies to many for-profit businesses doing business in California that meet thresholds such as over $25M annual revenue, buying/selling/sharing personal information of 100,000+ California residents/households, or deriving 50%+ revenue from selling personal information.
+
+**Current posture:** Even if CCPA thresholds were met, the app does not collect, sell, or share personal information through the app. The privacy policy’s “we do not sell personal information” position is appropriate.
+
+**If analytics/ads are added later:** Reassess “sale”/“sharing,” targeted advertising, Global Privacy Control, sensitive personal information, and notice-at-collection obligations.
+
+### 5.3 COPPA / children
+
+COPPA applies to child-directed online services, including mobile apps, that collect personal information from children under 13, and to general-audience apps with actual knowledge of collecting children’s personal information. COPPA personal information includes persistent identifiers used to recognize a user over time/across services, photos/videos/audio of a child, geolocation sufficient to identify street/city, and online contact information.
+
+**Current posture:** No age verification is required because the app is not directed to children and does not collect personal information. No parental consent workflow is required for the current architecture.
+
+**Do not do without legal review:**
+
+- market as a children’s app;
+- select Kids Category;
+- add third-party analytics/ads;
+- add accounts/profiles for minors;
+- collect email, birthdate, school, location, photos, or persistent identifiers.
+
+### 5.4 Do we need age verification?
+
+No for the current app. Age verification would be disproportionate and would itself collect or process age information. Use age verification only if a future feature legally requires it, such as child-directed accounts, restricted medical content, regulated services, or advertising controls.
+
+---
+
+## 6. App Store Rejection Risk Assessment
+
+### 6.1 Highest-risk rejection categories for this app
+
+| Severity | Risk | Guideline basis | Mitigation |
+|---|---|---|---|
+| 🔴 | Missing hosted privacy-policy URL | 5.1.1(i), App Privacy Details | Host public HTTPS privacy policy and add to App Store Connect and in-app Settings/About |
+| 🔴 | Missing NSMotionUsageDescription | Core Motion docs / permission purpose strings | Add exact purpose string before any CMMotionActivityManager use |
+| 🔴 | Focus Status feature claimed without entitlement | Entitlement/API capability integrity | Add entitlement or remove feature/claim |
+| 🔴 | Custom EULA without Apple-required terms | App Store custom EULA expectations | Either use Apple standard EULA or add Apple supplement |
+| 🔴 | Incomplete privacy questionnaire | App Privacy Details | Complete as Data Not Collected; do not leave blank |
+| ⚠️ | Metadata overclaims health benefits | 1.4, 2.3 | Reminder-only language; no diagnosis/treatment/prevention claims |
+| ⚠️ | Screenshots imply medical efficacy | 1.4, 2.3 | Use neutral reminder text and include disclaimer where practical |
+| ⚠️ | App review confusion about motion/focus | 5.1, permissions | Add App Review Notes explaining on-device transient use |
+| ⚠️ | TestFlight diagnostic language in production privacy policy | Accurate privacy representation | Distinguish TestFlight from App Store production or remove production-inapplicable text |
+
+### 6.2 Metadata preemption checklist
+
+Use these exact content rules before submission:
+
+- App name/subtitle: avoid medical claims. Good: “Eye & Posture Reminder.” Avoid: “Eye Strain Cure,” “Posture Corrector Medical.”
+- Description: state “wellness reminder tool,” “not medical advice,” and “does not diagnose, treat, prevent, or cure.”
+- Keywords: avoid “treatment,” “cure,” “medical,” “doctor,” “therapy,” “disease,” “myopia treatment,” “dry eye treatment.”
+- Screenshots: show actual UI only; no claim banners like “Protects your vision.”
+- Preview video: show reminders/settings, not medical outcomes.
+- Review notes: explain Motion & Fitness permission and Focus Status use.
+- Privacy label: Data Not Collected, if implementation remains local-only.
+
+### 6.3 Suggested App Review Notes
+
+> Eye & Posture Reminder is a general wellness reminder app. It tracks foreground app/screen session time locally on device to show configurable eye-break and posture-check reminders. It uses Core Motion activity transiently on device only to detect when the user appears to be in a vehicle so reminders can pause while driving; motion data is not stored, transmitted, linked to identity, or used for analytics/advertising. It also reads Focus Status transiently on device to pause reminders during active Focus sessions. The app has no accounts, server, analytics SDK, advertising SDK, or data collection.
+
+### 6.4 Suggested App Store description disclaimer
+
+> Disclaimer: Eye & Posture Reminder is a general wellness reminder tool, not a medical device or medical app. The 20-20-20 rule and posture reminders are general wellness guidelines, not medical advice. This app does not diagnose, treat, prevent, or cure any eye, vision, musculoskeletal, or other health condition. Consult a qualified healthcare professional for health concerns. Use at your own risk.
+
+### 6.5 Screenshot / preview requirements for health claims
+
+Apple’s metadata rule applies to screenshots and previews, not only the text description. Recommended screenshot text:
+
+- “Time for an eye break”
+- “Look away for 20 seconds”
+- “Check your posture”
+- “Pause reminders while driving”
+- “Respects Focus Status”
+- “No account. No data collection.”
+
+Avoid screenshot text:
+
+- “Prevent eye strain”
+- “Cure computer vision syndrome”
+- “Fix bad posture”
+- “Protect your spine”
+- “Scientifically proven to improve vision”
+- “Doctor-approved treatment”
+
+---
+
+## 7. Legal Docs Assessment Against Deep-Dive Findings
+
+### TERMS.md
+Strong. Health disclaimer is robust and should be retained. Remaining action from first pass: if TERMS.md is intended as a custom EULA, add Apple supplement language or choose Apple’s standard EULA instead.
+
+### PRIVACY.md
+Strong and accurate for local-only architecture. Recommended refinements before production:
+
+- Add explicit mention that iOS may show a Motion & Fitness permission prompt and why.
+- Consider moving TestFlight “Share App Data” language into a separate TestFlight/privacy note or distinguish it from production, because production users may not understand it.
+- Ensure hosted HTTPS version exactly matches the production policy.
+
+### DISCLAIMER.md
+Strong. The short, full, and one-line variants are appropriate. The remaining issue is implementation/placement: use the short disclaimer in onboarding or Settings/About, and include the full or condensed disclaimer in App Store description.
+
+---
+
+## 8. Final Compliance Position
+
+If the team keeps the app local-only and avoids medical claims, Eye & Posture Reminder is legally and App Store-review viable as a general wellness app. The main review risk is not the product concept; it is **metadata/permission/privacy execution**.
+
+Before submission, the team should treat these as must-do:
+
+1. Host Privacy Policy at a public HTTPS URL.
+2. Complete App Store privacy questionnaire as **Data Not Collected** across all categories.
+3. Add `NSMotionUsageDescription`: “Eye & Posture Reminder uses motion activity to detect when you are driving and automatically pause reminders.”
+4. Add/confirm Focus Status entitlement or remove Focus Status claims.
+5. Decide Apple standard EULA vs custom EULA with Apple supplement.
+6. Add in-app and App Store description disclaimer.
+7. Keep screenshots and keywords reminder-only, with no treatment/prevention claims.
+
+---
+
+## Sources Consulted
+
+- Apple App Store Review Guidelines: https://developer.apple.com/app-store/review/guidelines/
+- Apple App Privacy Details / Privacy Nutrition Labels: https://developer.apple.com/app-store/app-privacy-details/
+- Apple User Privacy and Data Use / ATT: https://developer.apple.com/app-store/user-privacy-and-data-use/
+- Apple Core Motion — CMMotionActivityManager: https://docs.developer.apple.com/tutorials/data/documentation/coremotion/cmmotionactivitymanager.md
+- Apple NSMotionUsageDescription: https://docs.developer.apple.com/tutorials/data/documentation/bundleresources/information-property-list/nsmotionusagedescription.md
+- Apple HealthKit — Protecting User Privacy: https://docs.developer.apple.com/tutorials/data/documentation/healthkit/protecting-user-privacy.md
+- GDPR Article 4 definitions: https://gdpr-info.eu/art-4-gdpr/
+- GDPR Article 8 children’s consent: https://gdpr-info.eu/art-8-gdpr/
+- California CCPA overview: https://oag.ca.gov/privacy/ccpa
+- FTC COPPA FAQ: https://www.ftc.gov/business-guidance/resources/complying-coppa-frequently-asked-questions
+
+# Apple Legal & Privacy Compliance — Implementation Plan
+
+**Author:** Danny (Product Manager)  
+**Date:** 2026-04-25  
+**Source:** Frank's Apple Legal Requirements Report (`.squad/decisions/inbox/frank-apple-legal-requirements.md`)  
+**Status:** Ready for execution
+
+---
+
+## Overview
+
+Frank identified **5 submission blockers** and **6 important items** for App Store compliance. This plan breaks them into prioritized, dependency-ordered work items with clear ownership and acceptance criteria.
+
+---
+
+## Execution Order & Dependencies
+
+```
+Phase A (Parallel — no dependencies, start immediately)
+  ├─ WI-1: EULA Supplement (Frank)
+  ├─ WI-2: NSMotionUsageDescription (Basher)
+  ├─ WI-3: Focus Status Entitlement (Basher)
+  └─ WI-4: Privacy Nutrition Labels Guidance (Danny)
+
+Phase B (Depends on WI-3 completing)
+  └─ WI-5: CI/Build Entitlements Verification (Virgil)
+
+Phase C (Depends on WI-1 completing)
+  └─ WI-6: Privacy Policy Hosting Guidance (Frank)
+
+Phase D (Depends on all blockers resolved)
+  └─ WI-7: Pre-Submission Checklist & Final Review (Danny)
+```
+
+---
+
+## Work Items
+
+### WI-1: Add Apple EULA Supplement to TERMS.md 🔴 BLOCKER
+**Owner:** Frank (Legal Advisor)  
+**Priority:** P0 — Submission blocker  
+**Phase:** A (immediate)
+
+**Description:**  
+Add the 7-clause Apple EULA supplement to TERMS.md as a new Section 13. Frank's report (Section 4 / Section 8) provides the exact text. Apple requires these provisions whenever a custom EULA is used instead of Apple's standard EULA.
+
+**Scope:**
+- Add new Section 13 "Apple App Store — End User License Agreement Supplement" to TERMS.md
+- Include all 7 required clauses verbatim from Frank's report
+- Update TERMS.md section numbering if needed
+- Also update the Third-Party Services section (Section 8) to cross-reference the new supplement
+
+**Acceptance Criteria:**
+- [ ] TERMS.md contains Section 13 with all 7 Apple-mandated EULA clauses
+- [ ] Entity name "Yashasg" and app name "Eye & Posture Reminder" are correctly used throughout
+- [ ] Section 8 cross-references the new supplement section
+- [ ] No existing sections are broken or removed
+- [ ] Frank self-reviews for legal accuracy
+
+**Also (non-blocking, same PR):**
+- Remove or update the TestFlight "Share App Data" reference in PRIVACY.md for production release (Frank's item W5)
+- Add one-line AAO citation to health disclaimer if appropriate (Frank's Section 1.3 suggestion)
+
+---
+
+### WI-2: Add NSMotionUsageDescription to Info.plist 🔴 BLOCKER
+**Owner:** Basher (iOS Dev — Services)  
+**Priority:** P0 — Submission blocker  
+**Phase:** A (immediate)
+
+**Description:**  
+CMMotionActivityManager requires `NSMotionUsageDescription` in Info.plist. Without it, iOS denies motion access and Apple rejects the build. The string must accurately describe what motion data is used for (driving detection → auto-pause reminders).
+
+**Scope:**
+- Add the following entry to Info.plist:
+  ```xml
+  <key>NSMotionUsageDescription</key>
+  <string>Eye &amp; Posture Reminder uses motion activity to detect when you are driving and automatically pause reminders so you are not distracted.</string>
+  ```
+
+**Acceptance Criteria:**
+- [ ] Info.plist contains `NSMotionUsageDescription` key with the approved string
+- [ ] App builds successfully with `xcodebuild build`
+- [ ] On first launch (simulator or device), iOS shows the motion permission dialog with the correct string
+- [ ] Existing unit tests still pass
+
+---
+
+### WI-3: Add Focus Status Entitlement 🔴 BLOCKER
+**Owner:** Basher (iOS Dev — Services)  
+**Priority:** P0 — Submission blocker  
+**Phase:** A (immediate)
+
+**Description:**  
+`INFocusStatusCenter` requires the `com.apple.developer.focus-status` entitlement. Without it, Focus Status queries return nil/empty and Apple may reject the capability claim.
+
+**Scope:**
+- Add `com.apple.developer.focus-status` entitlement to the app's `.entitlements` file
+- If no `.entitlements` file exists, create `EyePostureReminder.entitlements` and reference it in the Xcode project build settings
+
+**Acceptance Criteria:**
+- [ ] `.entitlements` file contains `com.apple.developer.focus-status` set to `true`
+- [ ] Xcode build settings reference the entitlements file (`CODE_SIGN_ENTITLEMENTS`)
+- [ ] App builds successfully with `xcodebuild build`
+- [ ] Focus Status feature does not silently fail (returns valid data when Focus is active on device)
+- [ ] Existing unit tests still pass
+
+---
+
+### WI-4: Privacy Nutrition Labels Guidance 🔴 BLOCKER
+**Owner:** Danny (Product Manager)  
+**Priority:** P0 — Submission blocker  
+**Phase:** A (immediate)
+
+**Description:**  
+App Store Connect requires completing the Privacy Nutrition Labels questionnaire. Leaving it blank = incomplete = submission blocked. Danny will prepare step-by-step guidance for Yashasg to complete in App Store Connect.
+
+**Scope:**
+- Document exact answers for every Privacy Nutrition Labels category based on Frank's Section 2 analysis
+- Prepare a step-by-step walkthrough for App Store Connect → App Privacy
+
+**Guidance (from Frank's analysis):**
+
+| Category | Answer | Rationale |
+|---|---|---|
+| Health & Fitness | Data Not Collected | Motion data is transient in-memory, never stored/transmitted. Apple's transient exemption applies. |
+| Identifiers | Data Not Collected | No IDFA, no persistent device identifiers, no user accounts |
+| Location | Data Not Collected | Not accessed |
+| Usage Data | Data Not Collected | UserDefaults is local-only, developer never receives it |
+| Diagnostics | Data Not Collected | MetricKit is OS-level; app does not transmit diagnostic data |
+| Contact Info | Data Not Collected | N/A |
+| Financial Info | Data Not Collected | N/A |
+| Sensitive Info | Data Not Collected | N/A |
+
+**Final declaration:** Select **"This app does not collect any data"** after confirming each category.
+
+**Acceptance Criteria:**
+- [ ] All Privacy Nutrition Label categories are answered in App Store Connect (none left blank)
+- [ ] Each category is set to "Data Not Collected"
+- [ ] The summary reads "No Data Collected"
+- [ ] Yashasg confirms completion in App Store Connect
+
+---
+
+### WI-5: CI/Build Entitlements Verification
+**Owner:** Virgil (CI/Build Engineer)  
+**Priority:** P1 — Must complete before submission  
+**Phase:** B (after WI-3)  
+**Depends on:** WI-3 (entitlements file must exist first)
+
+**Description:**  
+Ensure CI pipeline correctly handles the new entitlements file. Code signing with entitlements can break CI builds if not properly configured.
+
+**Scope:**
+- Verify `xcodebuild build` succeeds in CI with the new entitlements
+- Verify `xcodebuild test` still passes with entitlements present
+- If CI uses a specific code signing identity or provisioning profile, ensure the `com.apple.developer.focus-status` capability is included in the provisioning profile
+- Add a CI check that validates the entitlements file is present and contains expected keys (optional but recommended)
+
+**Acceptance Criteria:**
+- [ ] CI build passes with the new entitlements file
+- [ ] CI test suite passes (no regressions from entitlements change)
+- [ ] Code signing does not fail due to missing capability in provisioning profile
+- [ ] If archive/export step exists in CI, it succeeds with the entitlements
+
+---
+
+### WI-6: Privacy Policy Hosting Guidance 🔴 BLOCKER
+**Owner:** Frank (Legal Advisor)  
+**Priority:** P0 — Submission blocker  
+**Phase:** C (after WI-1, so hosted version reflects EULA changes)
+
+**Description:**  
+Apple requires a publicly accessible HTTPS URL for the privacy policy. PRIVACY.md in the repo is not a URL. Frank provides guidance on hosting options; Yashasg executes.
+
+**Scope:**
+- Recommend hosting approach (GitHub Pages is simplest — repo already on GitHub)
+- Provide instructions for deploying PRIVACY.md content as a hosted webpage
+- The hosted page must reflect the final PRIVACY.md content (after WI-1 updates)
+- URL must be stable (not a preview/draft link)
+
+**Hosting Options (ranked by simplicity):**
+1. **GitHub Pages** — Enable in repo settings, serve PRIVACY.md at `https://yashasg.github.io/fantastic-octo-fortnight/PRIVACY`
+2. **Simple landing page** — Single HTML file on any hosting provider
+3. **Developer website** — If yashasg.dev exists, add a `/privacy` page
+
+**Acceptance Criteria:**
+- [ ] PRIVACY.md content is accessible at a stable public HTTPS URL
+- [ ] URL returns HTTP 200 and displays the full privacy policy text
+- [ ] URL is entered in App Store Connect → App Information → Privacy Policy URL
+- [ ] Page content matches the final version of PRIVACY.md (including any WI-1 updates)
+
+---
+
+### WI-7: Pre-Submission Checklist & Final Review
+**Owner:** Danny (Product Manager)  
+**Priority:** P1 — Gate before submission  
+**Phase:** D (after all blockers resolved)
+
+**Description:**  
+Final verification that all 5 blockers are resolved and all important items are addressed before App Store Connect submission.
+
+**Checklist:**
+
+#### Blockers (all must be ✅)
+- [ ] B1: Privacy Policy hosted at public HTTPS URL and entered in App Store Connect
+- [ ] B2: TERMS.md contains Apple EULA supplement (7 clauses)
+- [ ] B3: Info.plist contains `NSMotionUsageDescription`
+- [ ] B4: `.entitlements` contains `com.apple.developer.focus-status`
+- [ ] B5: Privacy Nutrition Labels questionnaire completed in App Store Connect
+
+#### Important Items
+- [ ] W1: Support URL confirmed and entered in App Store Connect
+- [ ] W2: Disclaimer appended to App Store description (APP_STORE_LISTING.md Section 3)
+- [ ] W3: In-app disclaimer surfaced in UI (onboarding or Settings "About")
+- [ ] W4: Bundle ID registered and confirmed in Apple Developer portal
+- [ ] W5: TestFlight "Share App Data" reference removed/updated in PRIVACY.md
+- [ ] W6: App Review Notes written for Apple reviewers (motion + focus status explanation)
+
+#### Final Build Verification
+- [ ] Clean build succeeds (`xcodebuild clean build`)
+- [ ] All tests pass (`xcodebuild test`)
+- [ ] Archive succeeds for distribution
+- [ ] No new warnings related to entitlements or Info.plist
+
+**Acceptance Criteria:**
+- [ ] All blocker checkboxes are checked
+- [ ] All important item checkboxes are checked (or explicitly deferred with rationale)
+- [ ] Danny signs off on submission readiness
+
+---
+
+## Timeline Estimate
+
+| Phase | Work Items | Duration | Notes |
+|---|---|---|---|
+| A | WI-1, WI-2, WI-3, WI-4 | 1 day | All parallel, no dependencies |
+| B | WI-5 | 0.5 day | After WI-3 merges |
+| C | WI-6 | 0.5 day | After WI-1 merges (so hosted content is final) |
+| D | WI-7 | 0.5 day | Final gate review |
+| **Total** | | **~2 days** | Assumes no provisioning profile issues |
+
+---
+
+## Risk Register
+
+| Risk | Impact | Mitigation |
+|---|---|---|
+| Provisioning profile doesn't include Focus Status capability | CI and archive builds fail | Yashasg must enable capability in Apple Developer portal before Basher adds entitlement |
+| GitHub Pages deployment issues | Privacy policy URL not accessible | Fallback: host a simple HTML page on yashasg.dev or any static host |
+| Apple rejects "Data Not Collected" for motion data | Submission rejected | Conservative fallback: declare as "Data Not Linked to You / App Functionality" per Frank's note |
+
+---
+
+*Plan prepared by Danny (Product Manager) — 2026-04-25*  
+*Based on Frank's Apple Legal Requirements Report*

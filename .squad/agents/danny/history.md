@@ -7,6 +7,15 @@
 
 ## Learnings
 
+### 2026-04-25: Apple Legal Compliance — Implementation Plan from Frank's Report
+
+- **Context:** Frank completed Apple legal/privacy compliance research identifying 5 submission blockers and 6 important items. Created a prioritized, dependency-ordered implementation plan.
+- **5 Blockers:** (1) Privacy Policy needs HTTPS URL hosting, (2) TERMS.md missing Apple's 7-clause EULA supplement, (3) NSMotionUsageDescription missing from Info.plist, (4) Focus Status entitlement missing, (5) Privacy Nutrition Labels questionnaire incomplete.
+- **Plan Structure:** 4 phases (A–D), 7 work items. Phase A fully parallel. Phases B–D sequential gates.
+- **Assignments:** Frank → EULA + privacy hosting; Basher → Info.plist + entitlements; Virgil → CI verification; Danny → Nutrition Labels + submission checklist.
+- **Key Insight:** All Privacy Nutrition Label categories = "Data Not Collected" — motion data qualifies for Apple's transient exemption.
+- **Timeline:** ~2 days. **Artifact:** `.squad/decisions/inbox/danny-legal-compliance-plan.md`
+
 ### 2026-04-25: Fix #141 and #142 — Documentation Stale References
 
 - **#141 (UX_FLOWS.md):** Replaced two stale `repeat: true` references (lines ~172, ~352) with `repeat: false` and noted ScreenTimeTracker re-arming after each break. Checked Section 3.1 snooze durations — already match implementation ([5 minutes], [1 hour], [Rest of day]).
