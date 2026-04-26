@@ -584,7 +584,7 @@ extension AppCoordinator: ReminderScheduling {
         if let snoozeEnd = settings.snoozedUntil, snoozeEnd > Date() {
             scheduleSnoozeWakeTask(at: snoozeEnd)
             if notificationAuthStatus == .authorized {
-                Task { await self.scheduleSnoozeWakeNotification(at: snoozeEnd) }
+                Task { [weak self] in await self?.scheduleSnoozeWakeNotification(at: snoozeEnd) }
             }
         }
     }
