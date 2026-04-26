@@ -115,7 +115,7 @@ immediately                     (user taps → app opens
 
 - A second `UIWindow` is created at `UIWindow.Level.alert + 1`, placed above all other content including the keyboard and system chrome.
 - The root view controller hosts `OverlayView` (SwiftUI via `UIHostingController`).
-- A **dismiss button** (and swipe-down gesture) allows the user to cancel at any time.
+- A **dismiss button** (and swipe-up gesture) allows the user to cancel at any time.
 - The window is torn down after dismissal or after the configured *break duration* elapses (whichever comes first), using a simple `DispatchQueue.main.asyncAfter` for the auto-dismiss timer – this is intentionally short-lived and only runs while the app is active.
 - The overlay is **not** shown if the device is locked (the notification appears on the lock screen instead; the user will see the overlay once they unlock and open the app).
 
