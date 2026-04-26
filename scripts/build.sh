@@ -182,11 +182,11 @@ cmd_uitest() {
   header "UI TEST"
   require_xcodebuild
 
-  local workspace="${PACKAGE_PATH}/UITests/EyePostureReminderUITests.xcworkspace"
+  local project="${PACKAGE_PATH}/UITests/EyePostureReminderUITests.xcodeproj"
 
-  # Generate xcodeproj (and workspace) if not present
-  if [[ ! -d "$workspace" ]]; then
-    info "UITest workspace not found — running setup…"
+  # Generate xcodeproj if not present
+  if [[ ! -d "$project" ]]; then
+    info "UITest xcodeproj not found — running setup…"
     "${PACKAGE_PATH}/scripts/setup-uitests.sh"
   fi
 
@@ -197,9 +197,35 @@ cmd_uitest() {
 
   rm -rf "${PACKAGE_PATH}/UITestResults.xcresult"
 
-  run_xcodebuild test \
-    -workspace "$workspace" \
+  # Step 1: build-for-testing generates a .xctestrun that correctly resolves
+  # UITargetAppPath to EyePostureReminder.app (not the flat SPM binary).
+  # Step 2: test-without-building uses the xctestrun directly, bypassing the
+  # TEST_TARGET_NAME ambiguity that occurs when 'xcodebuild test' runs both
+  # build and test in a single invocation.
+  info "Step 1/2 — building for testing…"
+  run_xcodebuild build-for-testing \
+    -project "$project" \
     -scheme "$UI_TEST_SCHEME" \
+    -destination "$dest" \
+    -derivedDataPath "$DERIVED_DATA_PATH"
+
+  # Locate the generated xctestrun file
+  local xctestrun
+  xctestrun=$(find "${DERIVED_DATA_PATH}/Build/Products" \
+    -name "${UI_TEST_SCHEME}_*.xctestrun" \
+    -maxdepth 1 \
+    -print \
+    | sort | tail -1)
+
+  if [[ -z "$xctestrun" ]]; then
+    fail "No .xctestrun found after build-for-testing"
+    exit 1
+  fi
+  info "xctestrun: $xctestrun"
+
+  info "Step 2/2 — running UI tests…"
+  run_xcodebuild test-without-building \
+    -xctestrun "$xctestrun" \
     -destination "$dest" \
     -derivedDataPath "$DERIVED_DATA_PATH" \
     -resultBundlePath "${PACKAGE_PATH}/UITestResults.xcresult" \

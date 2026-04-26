@@ -20,17 +20,35 @@ options:
   generateEmptyDirectories: false
 
 # Reference the local Swift package so xcodebuild can build the app target
-# when running UI tests. XcodeGen will generate a .xcworkspace that includes
-# both this xcodeproj and Package.swift.
+# when running UI tests. Note: XcodeGen does not generate a separate .xcworkspace
+# for local package references; use -project (not -workspace) with xcodebuild.
 packages:
   EyePostureReminder:
     path: ..
 
 targets:
+  # Minimal app target that wraps the SPM executable for UITest hosting
+  EyePostureReminder:
+    type: application
+    platform: iOS
+    deploymentTarget: "16.0"
+    dependencies:
+      - package: EyePostureReminder
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.yashasg.EyePostureReminder
+        TARGETED_DEVICE_FAMILY: "1,2"
+        CODE_SIGN_IDENTITY: ""
+        CODE_SIGNING_REQUIRED: "NO"
+        CODE_SIGNING_ALLOWED: "NO"
+        GENERATE_INFOPLIST_FILE: "YES"
+
   EyePostureReminderUITests:
     type: bundle.ui-testing
     platform: iOS
     deploymentTarget: "16.0"
+    dependencies:
+      - target: EyePostureReminder
     sources:
       - path: ../Tests/EyePostureReminderUITests
         excludes:
@@ -38,8 +56,15 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.yashasg.EyePostureReminder.UITests
-        # Tells XCTest which app to launch for UI testing
         TEST_TARGET_NAME: EyePostureReminder
+        # UITest bundles launch the app as a separate process; they must NOT
+        # set BUNDLE_LOADER or TEST_HOST (those are for unit-test bundles that
+        # inject into the host app process).  XcodeGen adds BUNDLE_LOADER by
+        # default when a ui-testing target has an app dependency — override it
+        # to empty so the runner resolves EyePostureReminder.app, not the flat
+        # SPM executable binary.
+        BUNDLE_LOADER: ""
+        TEST_HOST: ""
         TARGETED_DEVICE_FAMILY: "1,2"
         IPHONEOS_DEPLOYMENT_TARGET: "16.0"
         CODE_SIGN_IDENTITY: ""
@@ -51,6 +76,7 @@ schemes:
   EyePostureReminderUITests:
     build:
       targets:
+        EyePostureReminder: [run, test]
         EyePostureReminderUITests: [test]
     test:
       targets:

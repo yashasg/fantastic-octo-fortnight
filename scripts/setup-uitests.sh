@@ -50,7 +50,7 @@ else
   info "xcodegen: $(xcodegen version 2>/dev/null || echo 'version unknown')"
 fi
 
-# ── Generate xcodeproj + xcworkspace ──────────────────────────────────────────
+# ── Generate xcodeproj ────────────────────────────────────────────────────────
 info "Generating from UITests/project.yml → UITests/EyePostureReminderUITests.xcodeproj…"
 
 xcodegen generate \
@@ -58,5 +58,4 @@ xcodegen generate \
   --project "$OUTPUT_DIR"
 
 pass "Generated UITests/EyePostureReminderUITests.xcodeproj"
-pass "Generated UITests/EyePostureReminderUITests.xcworkspace"
 info "Run UI tests with:  ./scripts/build.sh uitest"
