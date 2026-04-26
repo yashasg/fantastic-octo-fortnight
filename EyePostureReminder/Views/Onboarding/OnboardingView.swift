@@ -42,7 +42,7 @@ struct OnboardingView: View {
 // MARK: - Animation Helper
 
 /// Wraps any onboarding screen content with a fade-in entrance animation.
-/// Respects `accessibilityReduceMotion` — when enabled, the animation duration is shortened to 0.15s.
+/// Respects `accessibilityReduceMotion` — when enabled, sets opacity immediately without animation.
 struct OnboardingScreenWrapper<Content: View>: View {
     @State private var appeared = false
     @State private var hasEverAppeared = false
@@ -60,11 +60,12 @@ struct OnboardingScreenWrapper<Content: View>: View {
             .onAppear {
                 guard !hasEverAppeared else { appeared = true; return }
                 hasEverAppeared = true
-                let animation: Animation = reduceMotion
-                    ? .linear(duration: 0.15)
-                    : .easeOut(duration: 0.4).delay(0.1)
-                withAnimation(animation) {
+                if reduceMotion {
                     appeared = true
+                } else {
+                    withAnimation(.easeOut(duration: 0.4).delay(0.1)) {
+                        appeared = true
+                    }
                 }
             }
     }
