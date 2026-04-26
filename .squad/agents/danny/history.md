@@ -7,6 +7,12 @@
 
 ## Learnings
 
+### 2026-04-25: Fix #141 and #142 — Documentation Stale References
+
+- **#141 (UX_FLOWS.md):** Replaced two stale `repeat: true` references (lines ~172, ~352) with `repeat: false` and noted ScreenTimeTracker re-arming after each break. Checked Section 3.1 snooze durations — already match implementation ([5 minutes], [1 hour], [Rest of day]).
+- **#142 (IMPLEMENTATION_PLAN.md §1):** Updated overview from "runs timers in the background" to describe Phase 2 foreground screen-time tracking via `ScreenTimeTracker`. Also updated the battery/scheduling description to reflect foreground timer + notification APIs for snooze wake-ups only.
+- **Commits:** Two separate commits, one per issue.
+
 ### 2026-04-25: Fix #128 and #135 — IMPLEMENTATION_PLAN.md Stale Content
 
 - **#128 (§4.2):** Changed "swipe-down gesture" to "swipe-up gesture" per Decision #2 (team decided swipe-UP for overlay dismiss).
