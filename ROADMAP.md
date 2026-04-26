@@ -339,7 +339,7 @@ Shipped **Phase 1 MVP** with core reminder scheduling and overlay functionality.
 - **Delivered so far:**
   - App Store listing documented: description, keywords, privacy policy
   - Screenshots planned (5 key screens)
-  - Privacy Policy filed: "Zero data collection, no analytics, no network calls"
+  - Privacy Policy filed: MetricKit diagnostics and App Store Connect analytics disclosed; no third-party SDKs
   - Disclaimer & legal docs completed (Frank)
   - Version scheme: v0.1.0-beta (TestFlight), v1.0+ (App Store)
   - **Outstanding:** Final code review, TestFlight submission (awaiting decision)
