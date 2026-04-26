@@ -33,7 +33,7 @@ struct HomeView: View {
             ZStack {
                 VStack(spacing: AppSpacing.sm) {
                     Image(systemName: statusIcon)
-                        .font(.system(size: AppLayout.overlayIconSize))
+                        .font(AppFont.overlayIcon)
                         .foregroundStyle(statusColor)
                         .accessibilityHidden(true)
                         .accessibilityIdentifier("home.statusIcon")

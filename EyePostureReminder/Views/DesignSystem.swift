@@ -72,6 +72,10 @@ enum AppColor {
     /// Subtle separator / divider — pale green / dark forest.
     /// Light: #D8E4DC. Dark: #314039.
     static let separatorSoft = Color("RGSeparatorSoft", bundle: .module)
+
+    /// Card shadow tint — deep forest tint used by `SoftElevation` in light mode.
+    /// Applied at 10% opacity; dark mode uses a border overlay instead.
+    static let shadowCard = Color(red: 0.18, green: 0.22, blue: 0.20)
 }
 
 // MARK: - Typography
@@ -120,6 +124,15 @@ enum AppTypography {
     /// Countdown digits — fixed 64pt monospaced bold (decorative; not scaled).
     /// VoiceOver exposes a labelled accessibility element instead of reading this text directly.
     static let countdown: Font = .system(size: 64, weight: .bold, design: .monospaced)
+
+    /// Settings row icon — SF Symbol inside a 32 pt tinted circle (decorative, accessibility-hidden).
+    static let settingsRowIcon: Font = .system(size: 15, weight: .semibold)
+
+    /// Warning icon — SF Symbol inside a 36 pt warning banner circle (decorative, accessibility-hidden).
+    static let warningIcon: Font = .system(size: 16, weight: .semibold)
+
+    /// Reminder card icon — SF Symbol in an onboarding reminder card; scales with Dynamic Type.
+    static let reminderCardIcon: Font = .system(.title2)
 }
 
 enum AppFont {
@@ -130,6 +143,9 @@ enum AppFont {
     static let secondaryAction = AppTypography.secondaryAction
     static let overlayDismiss = AppTypography.overlayDismiss
     static let countdown = AppTypography.countdown
+    static let settingsRowIcon = AppTypography.settingsRowIcon
+    static let warningIcon = AppTypography.warningIcon
+    static let reminderCardIcon = AppTypography.reminderCardIcon
 }
 
 // MARK: - Spacing (4pt grid)
@@ -259,6 +275,19 @@ enum AppLayout {
 
 // MARK: - Elevation
 
+/// Icon font tokens that depend on AppLayout size constants.
+extension AppTypography {
+    /// Overlay / home-screen status icon — SF Symbol sized to `overlayIconSize` (decorative).
+    static let overlayIcon: Font = .system(size: AppLayout.overlayIconSize)
+    /// Onboarding hero illustration icon — SF Symbol sized to `onboardingIllustrationSize` (decorative).
+    static let illustrationIcon: Font = .system(size: AppLayout.onboardingIllustrationSize, weight: .semibold)
+}
+
+extension AppFont {
+    static let overlayIcon = AppTypography.overlayIcon
+    static let illustrationIcon = AppTypography.illustrationIcon
+}
+
 /// Applies a soft shadow in light mode and a flat border in dark mode.
 ///
 /// Use `.softElevation()` instead of a raw `.shadow()` to ensure the effect
@@ -275,8 +304,12 @@ struct SoftElevation: ViewModifier {
                 )
         } else {
             content
-                .shadow(color: Color(red: 0.18, green: 0.22, blue: 0.20).opacity(0.10),
-                        radius: 8, x: 0, y: 3)
+                .shadow(
+                    color: AppColor.shadowCard.opacity(0.10),
+                    radius: 8,
+                    x: 0,
+                    y: 3
+                )
         }
     }
 }

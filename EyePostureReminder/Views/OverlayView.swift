@@ -65,7 +65,7 @@ struct OverlayView: View {
                         .fill(type.color.opacity(0.12))
                     Image(systemName: type.symbolName)
                         .symbolRenderingMode(.hierarchical)
-                        .font(.system(size: AppLayout.overlayIconSize))
+                        .font(AppFont.overlayIcon)
                         .foregroundStyle(type.color)
                 }
                 .frame(

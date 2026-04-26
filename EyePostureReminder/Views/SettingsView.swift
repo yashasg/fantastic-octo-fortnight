@@ -23,7 +23,7 @@ private struct SettingsRowIcon: View {
                 .fill(AppColor.surfaceTint)
                 .frame(width: 32, height: 32)
             Image(systemName: systemName)
-                .font(.system(size: 15, weight: .semibold))
+                .font(AppFont.settingsRowIcon)
                 .foregroundStyle(tint)
         }
         .accessibilityHidden(true)
@@ -524,7 +524,7 @@ private struct SettingsNotificationWarningSection: View {
                             .fill(AppColor.accentWarm.opacity(0.18))
                             .frame(width: 36, height: 36)
                         Image(systemName: AppSymbol.warning)
-                            .font(.system(size: 16, weight: .semibold))
+                            .font(AppFont.warningIcon)
                             .foregroundStyle(AppColor.accentWarm)
                     }
                     .accessibilityHidden(true)

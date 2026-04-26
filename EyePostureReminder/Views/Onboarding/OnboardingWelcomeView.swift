@@ -120,7 +120,7 @@ private struct HeroIcon: View {
 
     var body: some View {
         Image(systemName: systemName)
-            .font(.system(size: AppLayout.onboardingIllustrationSize, weight: .semibold))
+            .font(AppFont.illustrationIcon)
             .foregroundStyle(tint)
             .frame(width: 108, height: 108)
             .background(
