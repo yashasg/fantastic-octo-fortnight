@@ -1,4 +1,4 @@
-# Eye & Posture Reminder – App Store Listing
+# kshana — App Store Listing
 
 > **Author:** Danny (Product Manager)  
 > **Date:** 2026-04-24  
@@ -9,14 +9,13 @@
 
 ## 1. App Name
 
-**Eye & Posture Reminder**
+**kshana**
 
-*Alternatives considered:*
-- ScreenBreak — Eye & Posture Care
-- Break Buddy — Eye & Posture Timer
-- GentleBreak — Eyes & Posture
+*Subtitle:* Eye & Posture Wellness
 
-**Recommendation:** Keep "Eye & Posture Reminder" — it's descriptive, keyword-rich, and immediately tells the user what the app does. Apple favors clarity over cleverness.
+*Origin:* Sanskrit (क्षण) — "a moment, an instant"
+
+*Previous name:* Eye & Posture Reminder (renamed for brand identity)
 
 ---
 
@@ -32,7 +31,7 @@
 
 Take care of your eyes and posture with gentle, timely reminders — no effort required.
 
-Eye & Posture Reminder uses the proven 20-20-20 rule to protect your eyes: every 20 minutes, look 20 feet away for 20 seconds. It also nudges you to check your posture at customizable intervals. A calming full-screen overlay guides each break with a countdown timer, then quietly fades away.
+kshana uses the proven 20-20-20 rule to protect your eyes: every 20 minutes, look 20 feet away for 20 seconds. It also nudges you to check your posture at customizable intervals. A calming full-screen overlay guides each break with a countdown timer, then quietly fades away.
 
 **Key features:**
 - Customizable reminder intervals and break durations
@@ -68,7 +67,7 @@ eye health,posture,20-20-20,screen break,reminder,timer,wellness,eye strain,ergo
 ## 5. What's New (v0.1.0-beta)
 
 ```
-Welcome to the first TestFlight beta of Eye & Posture Reminder!
+Welcome to the first TestFlight beta of kshana!
 
 • Eye break reminders using the 20-20-20 rule
 • Posture check reminders at customizable intervals
@@ -86,14 +85,14 @@ We'd love your feedback! Please report any issues via TestFlight.
 
 ## 6. Privacy Policy
 
-### Eye & Posture Reminder — Privacy Policy
+### kshana — Privacy Policy
 
 **Effective date:** 2026-04-24  
 **Last updated:** 2026-04-26
 
 #### What we collect
 
-Eye & Posture Reminder is built with privacy as a core value. The app uses **no third-party analytics SDKs**, no advertising frameworks, no user accounts, and no custom backend.
+kshana is built with privacy as a core value. The app uses **no third-party analytics SDKs**, no advertising frameworks, no user accounts, and no custom backend.
 
 The app uses Apple's built-in diagnostics and analytics tools, including **MetricKit** and **App Store Connect analytics**, to understand aggregate app performance, reliability, crashes, hangs, launch times, memory use, and similar technical metrics. These reports are processed through Apple's systems and are provided to the developer in aggregated or diagnostic form. They are **not used to identify you**, track you across apps or websites, build advertising profiles, or sell data.
 
@@ -219,9 +218,9 @@ Complete every item before submitting for App Review.
 
 ### Pre-Submission Name Search
 
-- [ ] Search App Store for "Eye & Posture Reminder" and close variants
+- [ ] Search App Store for "kshana" and close variants
 - [ ] Search USPTO (https://tmsearch.uspto.gov) for similar marks in Class 009/042
-- [ ] Google search `"Eye & Posture Reminder"` in quotes
+- [ ] Google search `"kshana"` in quotes
 - [ ] Verify name is accepted in App Store Connect during app setup
 - [ ] Check Google Play and Mac App Store for confusingly similar names
 

@@ -1,4 +1,4 @@
-# Eye & Posture Reminder — Design System
+# kshana — Design System
 
 > **Author:** Tess (UI/UX Designer)  
 > **Date:** 2026-04-24  

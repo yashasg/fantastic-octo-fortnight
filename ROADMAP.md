@@ -1,4 +1,4 @@
-# Eye & Posture Reminder – iOS App Roadmap
+# kshana — iOS App Roadmap
 
 > **Status:** Execution in full progress – Phase 1 shipped, Phase 2 ~80% complete  
 > **Target Platform:** iOS 16+, Swift, SwiftUI + UIKit  

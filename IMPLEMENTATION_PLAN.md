@@ -1,4 +1,4 @@
-# Eye & Posture Reminder – iOS App Implementation Plan
+# kshana — iOS App Implementation Plan
 
 > **Scope:** Implementation plan only. No source code is included in this document.
 

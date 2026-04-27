@@ -3,7 +3,7 @@
 > **Author:** Danny (Product Manager)  
 > **Date:** 2026-04-26  
 > **Based on:** Frank's Analytics Privacy Update (2026-04-26)  
-> **App:** Eye & Posture Reminder v1.0
+> **App:** kshana v1.0
 
 ---
 
@@ -16,7 +16,7 @@ This document provides step-by-step instructions for filling out Apple's **App P
 ## Before You Start
 
 1. Sign in to [App Store Connect](https://appstoreconnect.apple.com).
-2. Navigate to **My Apps → Eye & Posture Reminder → App Privacy**.
+2. Navigate to **My Apps → kshana → App Privacy**.
 3. Click **Get Started** (or **Edit** if previously filled in).
 4. Apple will walk through data type categories one by one. Use this guide to answer each.
 

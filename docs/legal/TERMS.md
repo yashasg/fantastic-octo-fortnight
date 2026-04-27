@@ -1,6 +1,6 @@
 # Terms and Conditions
 
-**App:** Eye & Posture Reminder  
+**App:** kshana  
 **Last Updated:** April 26, 2026  
 **Publisher:** Yashasg
 
@@ -8,7 +8,7 @@
 
 ## 1. Acceptance of Terms
 
-By downloading, installing, or using Eye & Posture Reminder ("the App"), you agree to be bound by these Terms and Conditions ("Terms"). If you do not agree, do not use the App.
+By downloading, installing, or using kshana ("the App"), you agree to be bound by these Terms and Conditions ("Terms"). If you do not agree, do not use the App.
 
 These Terms apply to all users of the App. Yashasg reserves the right to update these Terms at any time. Continued use of the App after changes are posted constitutes acceptance of the revised Terms.
 
@@ -16,7 +16,7 @@ These Terms apply to all users of the App. Yashasg reserves the right to update 
 
 ## 2. Description of the App
 
-Eye & Posture Reminder is a wellness reminder tool for iOS. It monitors screen-on time and notifies you at configurable intervals to:
+kshana is a wellness reminder tool for iOS. It monitors screen-on time and notifies you at configurable intervals to:
 
 - Take short eye breaks using the 20-20-20 guideline (look at something 20 feet away for 20 seconds every 20 minutes)
 - Check and correct your posture
@@ -31,7 +31,7 @@ The App also reads device motion activity data (via `CMMotionActivityManager`) i
 
 **This is the most important section. Read it carefully.**
 
-Eye & Posture Reminder is **not** a medical device, medical application, or health management tool. The App does **not**:
+kshana is **not** a medical device, medical application, or health management tool. The App does **not**:
 
 - Provide medical advice of any kind
 - Diagnose, treat, cure, or prevent any eye condition, musculoskeletal condition, or any other medical condition
@@ -94,7 +94,7 @@ By using the App, you agree that:
 
 ## 7. Intellectual Property
 
-All content, design, code, branding, and assets within Eye & Posture Reminder are the intellectual property of Yashasg and are protected by applicable copyright, trademark, and intellectual property laws.
+All content, design, code, branding, and assets within kshana are the intellectual property of Yashasg and are protected by applicable copyright, trademark, and intellectual property laws.
 
 You are granted a limited, non-exclusive, non-transferable, revocable license to use the App on your personal iOS device for personal, non-commercial purposes, subject to these Terms and Apple's App Store Terms of Service.
 
@@ -104,7 +104,7 @@ You may not copy, modify, distribute, sell, reverse-engineer, or create derivati
 
 ## 8. Third-Party Services
 
-Eye & Posture Reminder does not integrate with third-party analytics, advertising, or data platforms. The App operates entirely on your device and does not transmit data to external services.
+kshana does not integrate with third-party analytics, advertising, or data platforms. The App operates entirely on your device and does not transmit data to external services.
 
 The App is distributed through the Apple App Store. Apple's own terms of service govern the download and installation process. Yashasg is not responsible for Apple's policies or services.
 

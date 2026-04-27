@@ -1,4 +1,4 @@
-# Eye & Posture Reminder – UX Flows & Interaction Design
+# kshana — UX Flows & Interaction Design
 
 > **Author:** Reuben, Product Designer  
 > **Date:** 2026-04-24  
@@ -83,7 +83,7 @@ ContentView checks @AppStorage("hasSeenOnboarding")
     │      │      │
     │      │      ▼
     │      │  System permission prompt appears:
-    │      │  "Eye & Posture Reminder Would Like to
+    │      │  "kshana Would Like to
     │      │   Send You Notifications"
     │      │  [Don't Allow] [Allow]
     │      │      │
@@ -285,7 +285,7 @@ Banner at top (yellow background, system-style alert):
     ├─ User taps "Open Settings"
     │      │
     │      ▼
-    │  Deep link to iOS Settings > Eye & Posture Reminder > Notifications
+    │  Deep link to iOS Settings > kshana > Notifications
     │  User toggles "Allow Notifications" ON
     │      │
     │      ▼
@@ -464,7 +464,7 @@ All reminders continue normally
 **Purpose:** Request notification permission (shown by iOS, not custom UI).
 
 **Content:**
-- Title: "Eye & Posture Reminder Would Like to Send You Notifications"
+- Title: "kshana Would Like to Send You Notifications"
 - Body: (standard iOS text)
 - Buttons: [Don't Allow] [Allow]
 
@@ -949,7 +949,7 @@ These are outside the MVP scope but worth documenting:
 
 ## 10. Summary
 
-This document defines the complete user experience for the Eye & Posture Reminder app. Key takeaways:
+This document defines the complete user experience for kshana. Key takeaways:
 
 1. **Design is guided by 5 core principles** (helpful interruptions, low friction, user autonomy, battery efficiency, accessibility).
 2. **User flows are detailed and cover all states** — from first launch to edge cases like force-quit recovery.

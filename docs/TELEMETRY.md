@@ -1,4 +1,4 @@
-# Eye & Posture Reminder — Telemetry Event Schema & Dashboard Requirements
+# kshana — Telemetry Event Schema & Dashboard Requirements
 
 > **Author:** Turk (Data Analyst)
 > **Date:** 2025-07-25
@@ -9,7 +9,7 @@
 
 ## Overview
 
-This document defines the complete telemetry strategy for Eye & Posture Reminder: every log point, every MetricKit subscription, and every dashboard tile we need to ship a healthy, measurable app.
+This document defines the complete telemetry strategy for kshana: every log point, every MetricKit subscription, and every dashboard tile we need to ship a healthy, measurable app.
 
 **Guiding principles:**
 - **Native Apple only.** No third-party SDKs. No data leaves the device except through Apple's own channels (os.log → App Store Connect / TestFlight feedback).

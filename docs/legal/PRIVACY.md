@@ -1,6 +1,6 @@
 # Privacy Policy
 
-**App:** Eye & Posture Reminder  
+**App:** kshana  
 **Last Updated:** April 26, 2026  
 **Publisher:** Yashasg
 
@@ -8,7 +8,7 @@
 
 ## Overview
 
-Your privacy matters. Eye & Posture Reminder is designed to be privacy-preserving: your app settings stay on your device, motion and Focus information are used only transiently for reminder pause logic, and the App does not use advertising, tracking, user accounts, or third-party analytics SDKs.
+Your privacy matters. kshana is designed to be privacy-preserving: your app settings stay on your device, motion and Focus information are used only transiently for reminder pause logic, and the App does not use advertising, tracking, user accounts, or third-party analytics SDKs.
 
 The App does use Apple's built-in diagnostics and analytics tools, including MetricKit and App Store Connect analytics, to understand aggregate app performance, reliability, crashes, hangs, launch times, memory use, and similar technical metrics. These reports are processed through Apple's systems and are provided to the developer in aggregated or diagnostic form. They are not used to identify you, track you across apps or websites, build advertising profiles, or sell data.
 
@@ -16,7 +16,7 @@ The App does use Apple's built-in diagnostics and analytics tools, including Met
 
 ## 1. What We Collect or Access
 
-Eye & Posture Reminder stores the following data **locally on your device only**, using Apple's `UserDefaults` storage:
+kshana stores the following data **locally on your device only**, using Apple's `UserDefaults` storage:
 
 - **App settings and preferences** — your configured reminder intervals, break durations, and any other in-app settings you adjust
 - **App state** — whether reminders are enabled or disabled
@@ -99,7 +99,7 @@ The App is distributed through the Apple App Store. Apple may collect certain da
 
 ## 8. Children's Privacy (COPPA)
 
-Eye & Posture Reminder does not knowingly collect personal information from children under the age of 13 (or the applicable age of digital consent in your jurisdiction). The App does not require accounts, direct identifiers, advertising identifiers, or third-party tracking.
+kshana does not knowingly collect personal information from children under the age of 13 (or the applicable age of digital consent in your jurisdiction). The App does not require accounts, direct identifiers, advertising identifiers, or third-party tracking.
 
 If you are a parent or guardian and believe your child has somehow provided personal information through this App, please contact us at support@yashasg.dev. We will promptly address the concern.
 

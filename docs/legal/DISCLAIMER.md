@@ -1,6 +1,6 @@
 # Disclaimer
 
-**App:** Eye & Posture Reminder  
+**App:** kshana  
 **Publisher:** Yashasg
 
 ---
@@ -11,7 +11,7 @@
 
 ---
 
-**Eye & Posture Reminder is a wellness reminder tool, not a medical app.**
+**kshana is a wellness reminder tool, not a medical app.**
 
 This app reminds you to take eye breaks and check your posture at intervals you set. It does not diagnose, treat, or prevent any medical condition. The 20-20-20 rule and posture reminders are general wellness guidelines — not medical advice.
 
@@ -27,7 +27,7 @@ Use this app at your own risk. Yashasg is not responsible for any health outcome
 
 ---
 
-**NOT MEDICAL ADVICE:** Eye & Posture Reminder is a personal wellness reminder tool. It is not a medical device and does not provide medical advice. The 20-20-20 rule (look at something ~20 feet away for 20 seconds every 20 minutes) is a general eye-comfort guideline — it is not a medical prescription and does not treat or prevent any eye disease or condition.
+**NOT MEDICAL ADVICE:** kshana is a personal wellness reminder tool. It is not a medical device and does not provide medical advice. The 20-20-20 rule (look at something ~20 feet away for 20 seconds every 20 minutes) is a general eye-comfort guideline — it is not a medical prescription and does not treat or prevent any eye disease or condition.
 
 **NOT A SUBSTITUTE FOR PROFESSIONAL CARE:** This app is not a substitute for consultation with a qualified healthcare professional. If you experience eye discomfort, vision changes, pain, or any health symptoms, consult a doctor, optometrist, or other licensed professional.
 
@@ -43,7 +43,7 @@ Use this app at your own risk. Yashasg is not responsible for any health outcome
 
 ---
 
-> Eye & Posture Reminder is a wellness reminder tool, not medical advice. Use at your own risk. Not a substitute for professional healthcare. © Yashasg
+> kshana is a wellness reminder tool, not medical advice. Use at your own risk. Not a substitute for professional healthcare. © Yashasg
 
 ---
 

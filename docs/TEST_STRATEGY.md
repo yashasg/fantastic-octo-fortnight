@@ -1,4 +1,4 @@
-# Eye & Posture Reminder — Test Strategy
+# kshana — Test Strategy
 
 > **Author:** Livingston (Tester)  
 > **Created:** 2026-04-24  
