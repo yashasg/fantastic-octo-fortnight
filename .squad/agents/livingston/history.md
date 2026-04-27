@@ -477,3 +477,33 @@ Only the double-resign path is tested. A single resign followed by return-to-act
 - **Coverage:** Path construction and rendering, animation state transitions (Spin → Breathe), reduce-motion accessibility compliance, color token integration, final settled state validation.
 - **Build status:** xcodebuild test passed on iPhone 17 Pro simulator.
 - **Quality gate:** All tests aligned with existing test patterns (DesignSystemTests, ComponentsTests architecture).
+
+### 2026-04-27 — Comprehensive Code Coverage Pass
+
+**Baseline:** 963/963 tests (0 failures).
+
+**Coverage gaps identified and filled (12 new test files, 246 new tests):**
+
+| File | Tests Added | Coverage |
+|------|------------|----------|
+| `ReminderSettingsTests.swift` | 16 | Init, Equatable, static defaults, AppConfig alignment, interval > breakDuration |
+| `NoopServicesTests.swift` | 22 | Protocol conformance, all no-op methods crash-safe, lifecycle sequencing |
+| `AppStorageKeysTests.swift` | 8 | Key values, uniqueness, non-empty, kshana. prefix convention |
+| `PauseConditionSourceTests.swift` | 8 | Hashable, set operations, all cases distinct, LegalDocument enum |
+| `AnalyticsEventTests.swift` | 16 | DismissMethod rawValues/init/unknown, all event edge cases, empty/zero/negative inputs |
+| `ReminderTypeExtendedTests.swift` | 22 | Display properties non-empty, categoryIdentifier roundtrip, init failable, rawValues unique |
+| `OverlayManagerExtendedTests.swift` | 12 | clearQueue(for:) per-type, mock parameter recording, showOverlay without scene |
+| `SettingsViewModelExtendedTests.swift` | 37 | SnoozeOption.minutes/.endDate/.label, preset arrays, canSnooze boundary, proxy properties, cancelSnooze |
+| `DesignSystemExtendedTests.swift` | 42 | AppOpacity range+values, AppLayout sizes+ordering, AppSpacing 4pt grid, AppAnimation durations, AppFont aliases |
+| `ComponentsExtendedTests.swift` | 15 | SecondaryButtonStyle, CalmingEntrance delay, IconContainer custom values, modifier extensions |
+| `MockMediaControllingTests.swift` | 6 | Mock recording fidelity — pause/resume/reset |
+| `MockRecordingTests.swift` | 42 | All mock detectors (Focus/CarPlay/Driving/ScreenTime) state, callbacks, recording |
+
+**Final result:** 1209/1209 tests (0 failures).
+
+**Key decisions:**
+- Prioritized behavioral tests over "it instantiates" — every test asserts a meaningful property or contract.
+- Used existing mock infrastructure (MockSettingsPersisting, MockReminderScheduler, MockDetectors) — no new production code changes needed.
+- Validated mock fidelity with dedicated MockRecordingTests — bad mocks are worse than no tests.
+- AppStorageKeys regression guard catches typos that would silently break onboarding routing.
+- SnoozeOption.restOfDay.endDate verified to be midnight (hour=0, minute=0, second=0).
