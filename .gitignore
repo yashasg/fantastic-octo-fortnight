@@ -56,3 +56,10 @@ detailed_manual_audit.sh
 edge_case_audit.sh
 final_audit.sh
 script_validation.sh
+
+# Dev artifacts (screenshots, issue dumps, preview files)
+*.png
+*.jpeg
+*-issues.json
+uitest_run.log
+yinyang-preview.html
