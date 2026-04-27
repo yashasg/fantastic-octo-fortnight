@@ -516,11 +516,11 @@ final class StringCatalogTests: XCTestCase {
 
     // MARK: - Specific Value Spot-Checks
 
-    func test_homeTitle_value_isEyePostureReminder() {
+    func test_homeTitle_value_isKshana() {
         XCTAssertEqual(
             str("home.title"),
-            "Eye & Posture Reminder",
-            "home.title must equal 'Eye & Posture Reminder'")
+            "kshana",
+            "home.title must equal 'kshana'")
     }
 
     func test_overlayDismissButton_value_isNonEmpty() {

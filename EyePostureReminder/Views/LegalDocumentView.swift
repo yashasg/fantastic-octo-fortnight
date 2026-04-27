@@ -1,5 +1,5 @@
 // LegalDocumentView.swift
-// Eye & Posture Reminder
+// kshana
 //
 // Reusable sheet for displaying legal documents (Terms & Conditions / Privacy Policy).
 

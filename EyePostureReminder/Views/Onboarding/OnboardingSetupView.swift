@@ -1,5 +1,5 @@
 // OnboardingSetupView.swift
-// Eye & Posture Reminder
+// kshana
 //
 // Onboarding Screen 3 — Quick Setup Preview.
 // Shows the default configuration and lets the user get started or go straight to Settings.

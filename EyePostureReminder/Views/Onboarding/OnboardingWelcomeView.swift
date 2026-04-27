@@ -1,5 +1,5 @@
 // OnboardingWelcomeView.swift
-// Eye & Posture Reminder
+// kshana
 //
 // Onboarding Screen 1 — Welcome. Establishes context and sets a warm tone.
 

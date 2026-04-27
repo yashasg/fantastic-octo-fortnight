@@ -5,7 +5,7 @@
 	<key>CFBundleIdentifier</key>
 	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 	<key>CFBundleName</key>
-	<string>$(PRODUCT_NAME)</string>
+	<string>kshana</string>
 	<key>CFBundleShortVersionString</key>
 	<string>0.1.0</string>
 	<key>CFBundleVersion</key>
@@ -32,10 +32,10 @@
 		<string>UIInterfaceOrientationPortrait</string>
 	</array>
 	<key>NSUserNotificationsUsageDescription</key>
-	<string>Eye &amp; Posture Reminder needs notification access to deliver break reminders.</string>
+	<string>kshana needs notification access to deliver break reminders.</string>
 	<key>NSFocusStatusUsageDescription</key>
-	<string>Eye &amp; Posture Reminder pauses notifications when you have a Focus mode active.</string>
+	<string>kshana pauses notifications when you have a Focus mode active.</string>
 	<key>NSMotionUsageDescription</key>
-	<string>Eye &amp; Posture Reminder uses motion data to detect when you&apos;re driving and automatically pause reminders for your safety.</string>
+	<string>kshana uses motion data to detect when you&apos;re driving and automatically pause reminders for your safety.</string>
 </dict>
 </plist>

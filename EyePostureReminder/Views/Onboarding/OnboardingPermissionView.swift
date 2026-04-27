@@ -1,5 +1,5 @@
 // OnboardingPermissionView.swift
-// Eye & Posture Reminder
+// kshana
 //
 // Onboarding Screen 2 — Notification Permission.
 // Educates the user about WHY notifications are needed before triggering the system prompt.

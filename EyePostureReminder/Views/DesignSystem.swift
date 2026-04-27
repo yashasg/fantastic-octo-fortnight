@@ -1,5 +1,5 @@
 // DesignSystem.swift
-// Eye & Posture Reminder
+// kshana
 //
 // Design tokens — single source of truth for all visual decisions.
 // Every color, font, spacing, and animation in the app references this file.

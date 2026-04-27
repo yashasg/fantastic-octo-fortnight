@@ -1,5 +1,5 @@
 // OnboardingView.swift
-// Eye & Posture Reminder
+// kshana
 //
 // Main onboarding container — 3-screen TabView with page indicator.
 

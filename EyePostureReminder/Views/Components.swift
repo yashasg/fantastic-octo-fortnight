@@ -1,5 +1,5 @@
 // Components.swift
-// Eye & Posture Reminder
+// kshana
 //
 // Reusable SwiftUI view modifiers and views for the Restful Grove design system.
 // All components consume AppColor, AppLayout, and AppTypography tokens.

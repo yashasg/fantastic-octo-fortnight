@@ -2371,3 +2371,32 @@ User decision made after 4 rounds of comprehensive naming research:
 
 ---
 
+# Decision: App Rename — "Eye & Posture Reminder" → "kshana"
+
+**Author:** Linus (iOS Dev — UI)
+**Date:** 2026-05-16
+**Status:** Implemented
+
+## Context
+
+Yashas requested a codebase-wide rename from "Eye & Posture Reminder" to **kshana** (all lowercase in branding).
+
+## Decision
+
+- **Brand name:** "kshana" (all lowercase) in all user-facing strings.
+- **Code identifiers:** `EyePostureReminder` SPM target/module name is intentionally preserved — renaming it would break all imports and should be a separate PR.
+- **CFBundleName:** Hardcoded to `"kshana"` in Info.plist, decoupling display name from module name.
+- **Subtitle for App Store:** "kshana — Eye & Posture Wellness" (to be used in metadata, not yet wired into the app itself).
+
+## Files Changed
+
+- `EyePostureReminder/Resources/Localizable.xcstrings` — 6 string values updated
+- `EyePostureReminder/Info.plist` — CFBundleName + 3 usage descriptions
+- `Tests/EyePostureReminderTests/Views/StringCatalogTests.swift` — test assertion updated
+- `.swiftlint.yml` — header comment
+- 8 Swift source files — file header comments
+
+## Risks
+
+- `CFBundleName` is now hardcoded. If a future PR renames the SPM target to `Kshana`, `CFBundleName` can revert to `$(PRODUCT_NAME)`.
+- Legal text references "kshana" — ensure legal review if the name changes again.

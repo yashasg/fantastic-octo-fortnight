@@ -489,3 +489,20 @@ Tess completed comprehensive wellness design research proposing "Restful Grove" 
 **Open questions for team:** Font adoption timing, color unification (eye vs. posture), Phase 2 dashboard scope, overlay copy additions.
 
 **Status:** Awaiting design review and team feedback. Linus to prioritize component styling (Phase 2) if approved.
+
+### 2026-05-16 — App Rename: "Eye & Posture Reminder" → "kshana"
+
+**Scope of the rename:**
+- All user-facing strings in `Localizable.xcstrings` updated: `home.title`, `onboarding.permission.notificationCard.appName`, `onboarding.welcome.title`, plus legal/privacy text (terms of service, third-party services, children's privacy).
+- `Info.plist`: `CFBundleName` set to `"kshana"` (was `$(PRODUCT_NAME)`). Usage descriptions (notifications, focus, motion) now reference "kshana" instead of "Eye & Posture Reminder".
+- Swift file header comments updated from `// Eye & Posture Reminder` → `// kshana`.
+- `.swiftlint.yml` header comment updated.
+- `StringCatalogTests` assertion updated to expect `"kshana"` for `home.title`.
+
+**What was NOT changed (by design):**
+- SPM target/module name `EyePostureReminder` — renaming would break all imports; saved for a dedicated PR.
+- `EyePostureReminder/` folder path — tied to Package.swift.
+- Test target names and paths.
+- Git repo name.
+
+**Key learning:** `CFBundleName` was previously `$(PRODUCT_NAME)` which resolves to the SPM target name. Hardcoding `"kshana"` decouples the display name from the module name, which is the correct approach when branding diverges from code identifiers.

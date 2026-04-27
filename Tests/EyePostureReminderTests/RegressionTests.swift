@@ -1,5 +1,5 @@
 // RegressionTests.swift
-// Eye & Posture Reminder
+// kshana
 //
 // Regression tests for bugs fixed on 2026-04-25 and 2026-04-26.
 // Each section documents the root cause and what failure mode proves the bug regressed.
