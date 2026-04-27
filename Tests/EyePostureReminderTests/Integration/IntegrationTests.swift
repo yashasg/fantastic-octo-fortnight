@@ -19,7 +19,7 @@ final class SettingsStoreViewModelIntegrationTests: XCTestCase {
 
     override func setUp() async throws {
         try await super.setUp()
-        suiteName = "com.epr.integration.storevm.\(UUID().uuidString)"
+        suiteName = "com.kshana.integration.storevm.\(UUID().uuidString)"
         userDefaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
         store = SettingsStore(store: userDefaults, config: AppConfig.fallback)
         scheduler = MockReminderScheduler()
@@ -74,17 +74,17 @@ final class SettingsStoreViewModelIntegrationTests: XCTestCase {
     func test_viewModelWrite_globalEnabled_persistsToUserDefaults() {
         store.globalEnabled = false
         XCTAssertNotNil(
-            userDefaults.object(forKey: "epr.globalEnabled"),
+            userDefaults.object(forKey: "kshana.globalEnabled"),
             "SettingsStore must write globalEnabled to real UserDefaults immediately")
         XCTAssertFalse(
-            userDefaults.bool(forKey: "epr.globalEnabled"),
+            userDefaults.bool(forKey: "kshana.globalEnabled"),
             "Persisted globalEnabled must be false")
     }
 
     func test_viewModelWrite_eyesInterval_persistsToUserDefaults() {
         store.eyesInterval = 1800
         XCTAssertEqual(
-            userDefaults.double(forKey: "epr.eyes.interval"),
+            userDefaults.double(forKey: "kshana.eyes.interval"),
             1800,
             "SettingsStore must write eyesInterval to real UserDefaults")
     }
@@ -92,15 +92,15 @@ final class SettingsStoreViewModelIntegrationTests: XCTestCase {
     func test_viewModelWrite_pauseDuringFocus_persistsViaViewModelProxy() {
         viewModel.pauseDuringFocus = false
         XCTAssertNotNil(
-            userDefaults.object(forKey: "epr.pauseDuringFocus"),
+            userDefaults.object(forKey: "kshana.pauseDuringFocus"),
             "ViewModel setter must flow through SettingsStore into real UserDefaults")
-        XCTAssertFalse(userDefaults.bool(forKey: "epr.pauseDuringFocus"))
+        XCTAssertFalse(userDefaults.bool(forKey: "kshana.pauseDuringFocus"))
     }
 
     func test_viewModelWrite_pauseWhileDriving_persistsViaViewModelProxy() {
         viewModel.pauseWhileDriving = false
         XCTAssertFalse(
-            userDefaults.bool(forKey: "epr.pauseWhileDriving"),
+            userDefaults.bool(forKey: "kshana.pauseWhileDriving"),
             "ViewModel setter must persist pauseWhileDriving to UserDefaults")
     }
 
@@ -135,9 +135,9 @@ final class SettingsStoreViewModelIntegrationTests: XCTestCase {
         let future = Date().addingTimeInterval(300)
         store.snoozedUntil = future
         XCTAssertNotNil(
-            userDefaults.object(forKey: "epr.snoozedUntil"),
+            userDefaults.object(forKey: "kshana.snoozedUntil"),
             "snoozedUntil must be written to real UserDefaults")
-        let stored = userDefaults.double(forKey: "epr.snoozedUntil")
+        let stored = userDefaults.double(forKey: "kshana.snoozedUntil")
         XCTAssertGreaterThan(stored, 0, "Persisted snoozedUntil timestamp must be positive")
     }
 
@@ -150,7 +150,7 @@ final class SettingsStoreViewModelIntegrationTests: XCTestCase {
         try? await Task.sleep(nanoseconds: 200_000_000)
         XCTAssertNil(store.snoozedUntil, "cancelSnooze must clear snoozedUntil on SettingsStore")
         XCTAssertEqual(store.snoozeCount, 0, "cancelSnooze must reset snoozeCount to 0")
-        let raw = userDefaults.double(forKey: "epr.snoozedUntil")
+        let raw = userDefaults.double(forKey: "kshana.snoozedUntil")
         XCTAssertEqual(raw, 0, "Persisted snoozedUntil must be 0 after cancel")
     }
 
@@ -199,7 +199,7 @@ final class AppConfigSettingsStoreIntegrationTests: XCTestCase {
 
     override func setUpWithError() throws {
         try super.setUpWithError()
-        suiteName = "com.epr.integration.config.\(UUID().uuidString)"
+        suiteName = "com.kshana.integration.config.\(UUID().uuidString)"
         userDefaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
     }
 
@@ -277,7 +277,7 @@ final class AppConfigSettingsStoreIntegrationTests: XCTestCase {
     // MARK: Pre-populated UserDefaults: user values win over JSON
 
     func test_prePopulated_eyesInterval_userValueWins() {
-        userDefaults.set(600.0, forKey: "epr.eyes.interval")
+        userDefaults.set(600.0, forKey: "kshana.eyes.interval")
         let sut = SettingsStore(store: userDefaults, config: AppConfig.fallback)
         XCTAssertEqual(
             sut.eyesInterval,
@@ -286,7 +286,7 @@ final class AppConfigSettingsStoreIntegrationTests: XCTestCase {
     }
 
     func test_prePopulated_postureInterval_userValueWins() {
-        userDefaults.set(3600.0, forKey: "epr.posture.interval")
+        userDefaults.set(3600.0, forKey: "kshana.posture.interval")
         let sut = SettingsStore(store: userDefaults, config: AppConfig.fallback)
         XCTAssertEqual(
             sut.postureInterval,
@@ -295,7 +295,7 @@ final class AppConfigSettingsStoreIntegrationTests: XCTestCase {
     }
 
     func test_prePopulated_globalEnabled_false_userValueWins() {
-        userDefaults.set(false, forKey: "epr.globalEnabled")
+        userDefaults.set(false, forKey: "kshana.globalEnabled")
         let sut = SettingsStore(store: userDefaults, config: AppConfig.fallback)
         XCTAssertFalse(
             sut.globalEnabled,
@@ -303,11 +303,11 @@ final class AppConfigSettingsStoreIntegrationTests: XCTestCase {
     }
 
     func test_prePopulated_allKeys_userValuesWin() {
-        userDefaults.set(300.0, forKey: "epr.eyes.interval")
-        userDefaults.set(5.0, forKey: "epr.eyes.breakDuration")
-        userDefaults.set(600.0, forKey: "epr.posture.interval")
-        userDefaults.set(5.0, forKey: "epr.posture.breakDuration")
-        userDefaults.set(false, forKey: "epr.globalEnabled")
+        userDefaults.set(300.0, forKey: "kshana.eyes.interval")
+        userDefaults.set(5.0, forKey: "kshana.eyes.breakDuration")
+        userDefaults.set(600.0, forKey: "kshana.posture.interval")
+        userDefaults.set(5.0, forKey: "kshana.posture.breakDuration")
+        userDefaults.set(false, forKey: "kshana.globalEnabled")
 
         let sut = SettingsStore(store: userDefaults, config: AppConfig.fallback)
 
@@ -359,7 +359,7 @@ final class PauseSettingsIntegrationTests: XCTestCase {
 
     override func setUpWithError() throws {
         try super.setUpWithError()
-        suiteName = "com.epr.integration.pause.\(UUID().uuidString)"
+        suiteName = "com.kshana.integration.pause.\(UUID().uuidString)"
         userDefaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
         store = SettingsStore(store: userDefaults, config: AppConfig.fallback)
         focusDetector = MockFocusStatusDetector()
@@ -475,7 +475,7 @@ final class PauseSettingsIntegrationTests: XCTestCase {
 
     func test_storeValuePersisted_pauseSettingReadCorrectly() {
         // Simulate a second launch: pre-set the value in UserDefaults before creating the store.
-        userDefaults.set(false, forKey: "epr.pauseDuringFocus")
+        userDefaults.set(false, forKey: "kshana.pauseDuringFocus")
         let reloadedStore = SettingsStore(store: userDefaults, config: AppConfig.fallback)
         let freshManager = PauseConditionManager(
             settings: reloadedStore,

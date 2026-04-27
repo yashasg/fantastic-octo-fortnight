@@ -47,6 +47,7 @@ protocol PauseConditionProviding: ServiceLifecycle {
 /// Observes `INFocusStatusCenter` for Focus mode changes.
 /// Requires `NSFocusStatusUsageDescription` in Info.plist.
 /// If authorization is denied, `isFocused` stays `false` (fail open — no pause).
+@MainActor
 final class LiveFocusStatusDetector: NSObject, FocusStatusDetecting {
 
     private(set) var isFocused: Bool = false
@@ -93,6 +94,7 @@ final class LiveFocusStatusDetector: NSObject, FocusStatusDetecting {
 
 /// Observes `AVAudioSession.routeChangeNotification` for CarPlay connection/disconnection.
 /// No permission required.
+@MainActor
 final class LiveCarPlayDetector: CarPlayDetecting {
 
     private(set) var isCarPlayActive: Bool = false
@@ -139,6 +141,7 @@ final class LiveCarPlayDetector: CarPlayDetecting {
 /// Uses `CMMotionActivityManager` to detect automotive activity with high confidence.
 /// Requires `NSMotionUsageDescription` in Info.plist.
 /// Falls back to inactive state on simulator or when motion hardware is unavailable.
+@MainActor
 final class LiveDrivingActivityDetector: DrivingActivityDetecting {
 
     private(set) var isDriving: Bool = false
@@ -206,9 +209,9 @@ final class PauseConditionManager: PauseConditionProviding {
 
     init(
         settings: SettingsStore,
-        focusDetector: FocusStatusDetecting = LiveFocusStatusDetector(),
-        carPlayDetector: CarPlayDetecting = LiveCarPlayDetector(),
-        drivingDetector: DrivingActivityDetecting = LiveDrivingActivityDetector()
+        focusDetector: FocusStatusDetecting,
+        carPlayDetector: CarPlayDetecting,
+        drivingDetector: DrivingActivityDetecting
     ) {
         self.settings = settings
         self.focusDetector = focusDetector
@@ -236,17 +239,21 @@ final class PauseConditionManager: PauseConditionProviding {
         settings.$pauseDuringFocus
             .dropFirst()
             .sink { [weak self] newValue in
-                guard let self else { return }
-                self.update(.focusMode, isActive: self.focusDetector.isFocused && newValue)
+                MainActor.assumeIsolated {
+                    guard let self else { return }
+                    self.update(.focusMode, isActive: self.focusDetector.isFocused && newValue)
+                }
             }
             .store(in: &cancellables)
 
         settings.$pauseWhileDriving
             .dropFirst()
             .sink { [weak self] newValue in
-                guard let self else { return }
-                self.update(.carPlay, isActive: self.carPlayDetector.isCarPlayActive && newValue)
-                self.update(.driving, isActive: self.drivingDetector.isDriving && newValue)
+                MainActor.assumeIsolated {
+                    guard let self else { return }
+                    self.update(.carPlay, isActive: self.carPlayDetector.isCarPlayActive && newValue)
+                    self.update(.driving, isActive: self.drivingDetector.isDriving && newValue)
+                }
             }
             .store(in: &cancellables)
 

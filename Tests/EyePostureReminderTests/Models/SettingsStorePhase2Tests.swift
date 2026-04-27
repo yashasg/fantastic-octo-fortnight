@@ -45,7 +45,7 @@ final class SettingsStorePhase2Tests: XCTestCase {
     func test_toggleHapticsEnabled_savesToPersistence() {
         sut.hapticsEnabled = false
         XCTAssertTrue(
-            mockPersistence.hasValue(forKey: "epr.hapticsEnabled"),
+            mockPersistence.hasValue(forKey: "kshana.hapticsEnabled"),
             "Setting hapticsEnabled must write to the persistence store immediately"
         )
     }
@@ -79,7 +79,7 @@ final class SettingsStorePhase2Tests: XCTestCase {
     func test_snoozeCount_writesToPersistence() {
         sut.snoozeCount = 1
         XCTAssertTrue(
-            mockPersistence.hasValue(forKey: "epr.snoozeCount"),
+            mockPersistence.hasValue(forKey: "kshana.snoozeCount"),
             "Setting snoozeCount must write to the persistence store immediately"
         )
     }

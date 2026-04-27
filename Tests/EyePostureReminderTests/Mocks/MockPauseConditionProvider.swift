@@ -4,6 +4,7 @@ import Foundation
 /// Mock implementation of `PauseConditionProviding` for use in `AppCoordinatorTests`
 /// and any test that needs to control pause-condition state without real Focus mode,
 /// CarPlay, or driving-detection logic.
+@MainActor
 final class MockPauseConditionProvider: PauseConditionProviding {
 
     var onPauseStateChanged: ((Bool) -> Void)?

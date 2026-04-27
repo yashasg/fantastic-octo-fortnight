@@ -41,8 +41,8 @@ final class AppCoordinator: ObservableObject {
     /// Category identifier for the one-time snooze-wake notification.
     /// `AppDelegate` checks this to route snooze-wake notifications separately
     /// from real reminder notifications.
-    static let snoozeWakeCategory = "com.yashasgujjar.epr.snooze-wake"
-    private static let snoozeWakeIdentifier = "com.yashasgujjar.epr.snooze-wake"
+    static let snoozeWakeCategory = "com.yashasgujjar.kshana.snooze-wake"
+    private static let snoozeWakeIdentifier = "com.yashasgujjar.kshana.snooze-wake"
 
     // MARK: - Owned Dependencies
 
@@ -138,53 +138,67 @@ final class AppCoordinator: ObservableObject {
             : ScreenTimeTracker())
         self.pauseConditionManager = pauseConditionProvider ?? (AppCoordinator.isUITestMode
             ? NoopPauseConditionManager()
-            : PauseConditionManager(settings: self.settings))
+            : PauseConditionManager(
+                settings: self.settings,
+                focusDetector: LiveFocusStatusDetector(),
+                carPlayDetector: LiveCarPlayDetector(),
+                drivingDetector: LiveDrivingActivityDetector()
+            ))
         Logger.lifecycle.info("AppCoordinator initialised")
 
         // Wire ScreenTimeTracker callback — fires on main thread when a type's
         // continuous screen-on threshold is reached.
         self.screenTimeTracker.onThresholdReached = { [weak self] type in
-            guard let self else { return }
-            // New reminder cycle — reset consecutive snooze count so the user
-            // gets a fresh snooze budget on every threshold fire.
-            self.settings.snoozeCount = 0
-            let duration = self.settings.settings(for: type).breakDuration
-            let thresholdS = self.settings.settings(for: type).interval
-            self.overlayManager.showOverlay(
-                for: type,
-                duration: duration,
-                hapticsEnabled: self.settings.hapticsEnabled,
-                pauseMediaEnabled: self.settings.pauseMediaDuringBreaks) {}
-            AnalyticsLogger.log(.reminderTriggered(type: type, thresholdS: thresholdS))
-            Logger.scheduling.info("Reminder triggered by screen-time threshold: \(type.rawValue)")
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                // New reminder cycle — reset consecutive snooze count so the user
+                // gets a fresh snooze budget on every threshold fire.
+                self.settings.snoozeCount = 0
+                let duration = self.settings.settings(for: type).breakDuration
+                let thresholdS = self.settings.settings(for: type).interval
+                self.overlayManager.showOverlay(
+                    for: type,
+                    duration: duration,
+                    hapticsEnabled: self.settings.hapticsEnabled,
+                    pauseMediaEnabled: self.settings.pauseMediaDuringBreaks) {}
+                AnalyticsLogger.log(.reminderTriggered(type: type, thresholdS: thresholdS))
+                Logger.scheduling.info("Reminder triggered by screen-time threshold: \(type.rawValue)")
+            }
         }
 
         // Wire PauseConditionManager — pauses/resumes tracker when conditions change.
         // Critical invariant: only call resumeAll() if BOTH snooze is clear AND no
         // pause conditions are active.
         self.pauseConditionManager.onPauseStateChanged = { [weak self] isPaused in
-            guard let self else { return }
-            if isPaused {
-                self.screenTimeTracker.pauseAll()
-                // Dismiss any overlay that is currently on screen and drop queued ones.
-                // CarPlay/driving contexts should never show a break overlay.
-                if self.overlayManager.isOverlayVisible {
-                    self.overlayManager.dismissOverlay()
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                if isPaused {
+                    self.screenTimeTracker.pauseAll()
+                    // Dismiss any overlay that is currently on screen and drop queued ones.
+                    // CarPlay/driving contexts should never show a break overlay.
+                    if self.overlayManager.isOverlayVisible {
+                        self.overlayManager.dismissOverlay()
+                    }
+                    self.overlayManager.clearQueue()
+                    self.pendingOverlay = nil
+                    Logger.scheduling.info("PauseConditionManager: pausing reminders (active condition)")
+                } else {
+                    guard (self.settings.snoozedUntil ?? .distantPast) <= Date() else {
+                        Logger.scheduling.debug(
+                            "PauseConditionManager: pause cleared but snooze still active — not resuming")
+                        return
+                    }
+                    self.screenTimeTracker.resumeAll()
+                    Logger.scheduling.info("PauseConditionManager: resuming reminders (no active conditions)")
                 }
-                self.overlayManager.clearQueue()
-                self.pendingOverlay = nil
-                Logger.scheduling.info("PauseConditionManager: pausing reminders (active condition)")
-            } else {
-                guard (self.settings.snoozedUntil ?? .distantPast) <= Date() else {
-                    Logger.scheduling.debug(
-                        "PauseConditionManager: pause cleared but snooze still active — not resuming")
-                    return
-                }
-                self.screenTimeTracker.resumeAll()
-                Logger.scheduling.info("PauseConditionManager: resuming reminders (no active conditions)")
             }
         }
         self.pauseConditionManager.startMonitoring()
+    }
+
+    deinit {
+        rescheduleDebounce.values.forEach { $0.cancel() }
+        snoozeWakeTask?.cancel()
     }
 
     // MARK: - Notification Permission

@@ -21,7 +21,7 @@ final class OnboardingTests: XCTestCase {
 
     // MARK: - Isolated UserDefaults
 
-    let testSuiteName = "com.yashasg.epr.test.onboarding"
+    let testSuiteName = "com.yashasg.kshana.test.onboarding"
     var testDefaults: UserDefaults!
 
     override func setUpWithError() throws {
@@ -41,7 +41,7 @@ final class OnboardingTests: XCTestCase {
     func test_hasSeenOnboardingKey_exactString() {
         XCTAssertEqual(
             Self.hasSeenOnboardingKey,
-            "epr.hasSeenOnboarding",
+            "kshana.hasSeenOnboarding",
             "Key must match the @AppStorage key used in ContentView and OnboardingView")
     }
 

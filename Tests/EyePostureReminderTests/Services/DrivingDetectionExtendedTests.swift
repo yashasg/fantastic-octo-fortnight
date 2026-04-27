@@ -399,7 +399,7 @@ final class DrivingSettingsViewModelTests: XCTestCase {
     func test_pauseWhileDriving_writesToPersistence_immediately() {
         vm.pauseWhileDriving = false
         XCTAssertTrue(
-            mockPersistence.hasValue(forKey: "epr.pauseWhileDriving"),
+            mockPersistence.hasValue(forKey: "kshana.pauseWhileDriving"),
             "Setting pauseWhileDriving must immediately write to MockSettingsPersisting")
     }
 

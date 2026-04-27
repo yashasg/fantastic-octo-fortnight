@@ -84,7 +84,7 @@ final class SettingsStoreConfigTests: XCTestCase {
 
     func test_subsequentLaunch_userDefaultsWins_eyesInterval() {
         // Simulate first launch seeding
-        mockPersistence.set(600.0, forKey: "epr.eyes.interval")  // user set 10 min
+        mockPersistence.set(600.0, forKey: "kshana.eyes.interval")  // user set 10 min
         let secondLaunch = SettingsStore(store: mockPersistence)
         XCTAssertEqual(
             secondLaunch.eyesInterval,
@@ -93,7 +93,7 @@ final class SettingsStoreConfigTests: XCTestCase {
     }
 
     func test_subsequentLaunch_userDefaultsWins_postureInterval() {
-        mockPersistence.set(3600.0, forKey: "epr.posture.interval")  // user set 60 min
+        mockPersistence.set(3600.0, forKey: "kshana.posture.interval")  // user set 60 min
         let secondLaunch = SettingsStore(store: mockPersistence)
         XCTAssertEqual(
             secondLaunch.postureInterval,
@@ -102,7 +102,7 @@ final class SettingsStoreConfigTests: XCTestCase {
     }
 
     func test_subsequentLaunch_userDefaultsWins_eyesBreakDuration() {
-        mockPersistence.set(30.0, forKey: "epr.eyes.breakDuration")
+        mockPersistence.set(30.0, forKey: "kshana.eyes.breakDuration")
         let secondLaunch = SettingsStore(store: mockPersistence)
         XCTAssertEqual(
             secondLaunch.eyesBreakDuration,
@@ -111,7 +111,7 @@ final class SettingsStoreConfigTests: XCTestCase {
     }
 
     func test_subsequentLaunch_userDefaultsWins_globalEnabled() {
-        mockPersistence.set(false, forKey: "epr.globalEnabled")
+        mockPersistence.set(false, forKey: "kshana.globalEnabled")
         let secondLaunch = SettingsStore(store: mockPersistence)
         XCTAssertFalse(
             secondLaunch.globalEnabled,
@@ -119,11 +119,11 @@ final class SettingsStoreConfigTests: XCTestCase {
     }
 
     func test_subsequentLaunch_multipleKeys_allWin() {
-        mockPersistence.set(600.0, forKey: "epr.eyes.interval")
-        mockPersistence.set(30.0, forKey: "epr.eyes.breakDuration")
-        mockPersistence.set(2700.0, forKey: "epr.posture.interval")
-        mockPersistence.set(30.0, forKey: "epr.posture.breakDuration")
-        mockPersistence.set(false, forKey: "epr.globalEnabled")
+        mockPersistence.set(600.0, forKey: "kshana.eyes.interval")
+        mockPersistence.set(30.0, forKey: "kshana.eyes.breakDuration")
+        mockPersistence.set(2700.0, forKey: "kshana.posture.interval")
+        mockPersistence.set(30.0, forKey: "kshana.posture.breakDuration")
+        mockPersistence.set(false, forKey: "kshana.globalEnabled")
 
         let secondLaunch = SettingsStore(store: mockPersistence)
         XCTAssertEqual(secondLaunch.eyesInterval, 600)
@@ -137,7 +137,7 @@ final class SettingsStoreConfigTests: XCTestCase {
 
     func test_configDifferentFromUserDefaults_userDefaultsWins() {
         // Even when AppConfig would set 900, if the key is already in the store, store wins.
-        mockPersistence.set(300.0, forKey: "epr.eyes.interval")  // 5-minute user preference
+        mockPersistence.set(300.0, forKey: "kshana.eyes.interval")  // 5-minute user preference
         let store = SettingsStore(store: mockPersistence)
         XCTAssertEqual(
             store.eyesInterval,
@@ -182,7 +182,7 @@ final class SettingsStoreConfigTests: XCTestCase {
     func test_snoozeCount_notAffectedByAppConfig() {
         // Snooze count is runtime state — AppConfig must not touch it.
         // Set a non-zero snooze count before creating the store.
-        mockPersistence.set(2, forKey: "epr.snoozeCount")
+        mockPersistence.set(2, forKey: "kshana.snoozeCount")
         let store = SettingsStore(store: mockPersistence)
         XCTAssertEqual(
             store.snoozeCount,
@@ -193,7 +193,7 @@ final class SettingsStoreConfigTests: XCTestCase {
     func test_snoozedUntil_notAffectedByAppConfig() {
         // snoozedUntil is runtime state — AppConfig must not touch it.
         let futureTimestamp = Date().addingTimeInterval(3600).timeIntervalSince1970
-        mockPersistence.set(futureTimestamp, forKey: "epr.snoozedUntil")
+        mockPersistence.set(futureTimestamp, forKey: "kshana.snoozedUntil")
         let store = SettingsStore(store: mockPersistence)
         XCTAssertNotNil(
             store.snoozedUntil,
