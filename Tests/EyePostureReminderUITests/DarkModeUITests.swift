@@ -128,4 +128,46 @@ final class DarkModeUITests: XCTestCase {
         )
     }
 
+    // MARK: - test_darkMode_onboarding_welcomeScreenLaunches
+
+    /// Verifies the onboarding Welcome screen launches in dark mode without crashing.
+    func test_darkMode_onboarding_welcomeScreenLaunches() throws {
+        app = XCUIApplication()
+        app.launchArguments += [TestLaunchArguments.resetOnboarding, "-AppleInterfaceStyle", "Dark"]
+        app.launch()
+
+        let nextButton = app.buttons["onboarding.welcome.nextButton"]
+        XCTAssertTrue(
+            nextButton.waitForExistence(timeout: 5),
+            "Onboarding Welcome screen Next button must be visible in dark mode."
+        )
+
+        let disclaimerElement = app.staticTexts["onboarding.welcome.disclaimer"]
+        XCTAssertTrue(
+            disclaimerElement.waitForExistence(timeout: 5),
+            "Disclaimer text must be visible on the Welcome screen in dark mode."
+        )
+    }
+
+    // MARK: - test_darkMode_postureOverlay_essentialElementsVisible
+
+    /// Verifies the posture check overlay renders in dark mode with essential elements visible.
+    func test_darkMode_postureOverlay_essentialElementsVisible() throws {
+        app = XCUIApplication()
+        app.launchArguments += [TestLaunchArguments.showOverlayPosture, "-AppleInterfaceStyle", "Dark"]
+        app.launch()
+
+        let doneButton = app.buttons["overlay.doneButton"]
+        XCTAssertTrue(
+            doneButton.waitForExistence(timeout: 5),
+            "Done button must be visible on the posture overlay in dark mode."
+        )
+
+        let supportiveText = app.staticTexts["overlay.supportiveText"]
+        XCTAssertTrue(
+            supportiveText.waitForExistence(timeout: 5),
+            "Supportive text must be visible on the posture overlay in dark mode."
+        )
+    }
+
 }

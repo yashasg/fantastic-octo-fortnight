@@ -290,4 +290,100 @@ final class SettingsFlowTests: XCTestCase {
         let newValue = drivingToggle.value as? String
         XCTAssertNotEqual(initialValue, newValue, "Driving pause toggle should change state after being tapped.")
     }
+
+    // MARK: - test_settings_hapticFeedbackToggle_exists
+
+    /// Verifies the Haptic Feedback toggle is visible in Settings.
+    func test_settings_hapticFeedbackToggle_exists() throws {
+        openSettings()
+        app.swipeUp()
+
+        let hapticToggle = app.switches["settings.hapticFeedback"]
+        XCTAssertTrue(
+            hapticToggle.waitForExistence(timeout: 5),
+            "Haptic Feedback toggle must exist in Settings. " +
+            "Add .accessibilityIdentifier(\"settings.hapticFeedback\") to the haptics toggle in SettingsView."
+        )
+    }
+
+    // MARK: - test_settings_resetToDefaults_exists
+
+    /// Verifies the Reset to Defaults button is visible at the bottom of Settings.
+    func test_settings_resetToDefaults_exists() throws {
+        openSettings()
+        app.swipeUp()
+        app.swipeUp()
+
+        let resetButton = app.buttons["settings.resetToDefaults"]
+        XCTAssertTrue(
+            resetButton.waitForExistence(timeout: 5),
+            "Reset to Defaults button must exist in Settings. " +
+            "Add .accessibilityIdentifier(\"settings.resetToDefaults\") to the reset button in SettingsView."
+        )
+    }
+
+    // MARK: - test_settings_sendFeedback_exists
+
+    /// Verifies the Send Feedback button is visible in Settings.
+    func test_settings_sendFeedback_exists() throws {
+        openSettings()
+        app.swipeUp()
+        app.swipeUp()
+
+        let feedbackButton = app.buttons["settings.feedback.sendFeedback"]
+        XCTAssertTrue(
+            feedbackButton.waitForExistence(timeout: 5),
+            "Send Feedback button must exist in Settings. " +
+            "Add .accessibilityIdentifier(\"settings.feedback.sendFeedback\") to the feedback button in SettingsView."
+        )
+    }
+
+    // MARK: - test_settings_reminderToggles_eyesAndPostureExist
+
+    /// Verifies both the eye break and posture check toggles are present in Settings.
+    func test_settings_reminderToggles_eyesAndPostureExist() throws {
+        openSettings()
+
+        let eyesToggle = app.switches["settings.eyes.toggle"]
+        let postureToggle = app.switches["settings.posture.toggle"]
+
+        XCTAssertTrue(
+            eyesToggle.waitForExistence(timeout: 5),
+            "Eye break toggle must exist in Settings. " +
+            "ReminderRowView must set .accessibilityIdentifier(\"settings.eyes.toggle\")."
+        )
+        XCTAssertTrue(
+            postureToggle.waitForExistence(timeout: 5),
+            "Posture check toggle must exist in Settings. " +
+            "ReminderRowView must set .accessibilityIdentifier(\"settings.posture.toggle\")."
+        )
+    }
+
+    // MARK: - test_settings_snoozeButtons_allThreeExist
+
+    /// Verifies all three snooze duration buttons are visible in Settings.
+    func test_settings_snoozeButtons_allThreeExist() throws {
+        openSettings()
+
+        let snooze5min = app.buttons["settings.snooze.5min"]
+        XCTAssertTrue(
+            snooze5min.waitForExistence(timeout: 5),
+            "Snooze 5 min button must exist in Settings."
+        )
+
+        let snooze1hour = app.buttons["settings.snooze.1hour"]
+        XCTAssertTrue(
+            snooze1hour.waitForExistence(timeout: 5),
+            "Snooze 1 hour button must exist in Settings."
+        )
+
+        // Rest of Day may be below the fold — scroll to reveal it.
+        app.swipeUp()
+
+        let snoozeRestOfDay = app.buttons["settings.snooze.restOfDay"]
+        XCTAssertTrue(
+            snoozeRestOfDay.waitForExistence(timeout: 5),
+            "Snooze Rest of Day button must exist in Settings."
+        )
+    }
 }

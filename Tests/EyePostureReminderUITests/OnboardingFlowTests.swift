@@ -166,4 +166,41 @@ final class OnboardingFlowTests: XCTestCase {
             )
         }
     }
+
+    // MARK: - test_onboarding_permissionScreen_enableNotificationsButtonExists
+
+    /// Verifies the "Enable Notifications" primary CTA button is visible on the Permission screen.
+    func test_onboarding_permissionScreen_enableNotificationsButtonExists() throws {
+        let nextButton = app.buttons["onboarding.welcome.nextButton"]
+        XCTAssertTrue(nextButton.waitForExistence(timeout: 5))
+        nextButton.tap()
+
+        let enableButton = app.buttons["onboarding.enableNotifications"]
+        XCTAssertTrue(
+            enableButton.waitForExistence(timeout: 5),
+            "Enable Notifications button must exist on the Permission screen. " +
+            "Add .accessibilityIdentifier(\"onboarding.enableNotifications\") in OnboardingPermissionView."
+        )
+        XCTAssertTrue(enableButton.isHittable, "Enable Notifications button must be tappable.")
+    }
+
+    // MARK: - test_onboarding_setupScreen_customizeButtonIdentifierExists
+
+    /// Verifies the Customize button has the correct accessibility identifier on the Setup screen.
+    func test_onboarding_setupScreen_customizeButtonIdentifierExists() throws {
+        let nextButton = app.buttons["onboarding.welcome.nextButton"]
+        XCTAssertTrue(nextButton.waitForExistence(timeout: 5))
+        nextButton.tap()
+
+        let skipButton = app.buttons["onboarding.permission.nextButton"]
+        XCTAssertTrue(skipButton.waitForExistence(timeout: 5))
+        skipButton.tap()
+
+        let customizeButton = app.buttons["onboarding.customize"]
+        XCTAssertTrue(
+            customizeButton.waitForExistence(timeout: 5),
+            "Customize button must exist on the Setup screen with identifier 'onboarding.customize'."
+        )
+        XCTAssertTrue(customizeButton.isHittable, "Customize button must be tappable.")
+    }
 }

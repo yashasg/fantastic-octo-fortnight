@@ -30,11 +30,12 @@ final class HomeScreenTests: XCTestCase {
             "Home screen navigation bar should be visible on launch."
         )
 
-        let statusIcon = app.images["home.statusIcon"]
+        // YinYangEyeView is a shape-based view, not an Image — query otherElements.
+        let statusIcon = app.otherElements["home.statusIcon"]
         XCTAssertTrue(
             statusIcon.waitForExistence(timeout: 5),
-            "Home screen status icon must be visible. " +
-            "Add .accessibilityIdentifier(\"home.statusIcon\") to the status Image in HomeView."
+            "Home screen status icon (YinYangEyeView) must be visible. " +
+            "Add .accessibilityIdentifier(\"home.statusIcon\") to the YinYangEyeView."
         )
 
         let titleText = app.staticTexts["home.title"]
