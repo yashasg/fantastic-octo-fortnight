@@ -148,7 +148,7 @@ jobs:
   uitest:
     name: UI Tests
     runs-on: macos-15
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     steps:
       - name: Checkout
@@ -173,7 +173,10 @@ jobs:
         run: ./scripts/setup-uitests.sh
 
       - name: Boot Simulator
-        run: xcrun simctl boot "iPhone 16" 2>/dev/null || true
+        run: |
+          xcrun simctl boot "iPhone 16" 2>/dev/null || true
+          # Wait for simulator to finish booting
+          xcrun simctl bootstatus "iPhone 16" -b 2>/dev/null || sleep 10
 
       - name: Run UI Tests
         run: ./scripts/build.sh uitest
