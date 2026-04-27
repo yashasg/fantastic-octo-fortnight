@@ -259,7 +259,7 @@ cmd_uitest() {
   local max_attempts=3
   local attempt=1
   while true; do
-    info "Attempt $attempt/$max_attempts…"
+    info "Attempt $attempt/$max_attempts..."
     rm -rf "${PACKAGE_PATH}/UITestResults.xcresult"
 
     if run_xcodebuild test-without-building \
@@ -277,7 +277,7 @@ cmd_uitest() {
       exit 1
     fi
 
-    warn "Attempt $attempt failed — retrying in $((attempt * 15))s…"
+    warn "Attempt $attempt failed -- retrying in $((attempt * 15))s..."
     sleep $((attempt * 15))
     attempt=$((attempt + 1))
   done
