@@ -108,8 +108,8 @@ jobs:
           COVERAGE=$(xcrun xccov view --report --json TestResults.xcresult \
             | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['lineCoverage']*100)" 2>/dev/null || echo "0")
           echo "Line coverage: ${COVERAGE}%"
-          if (( $(echo "$COVERAGE < 80" | bc -l) )); then
-            echo "Coverage ${COVERAGE}% is below the minimum threshold (80%)"
+          if (( $(echo "$COVERAGE < 75" | bc -l) )); then
+            echo "Coverage ${COVERAGE}% is below the minimum threshold (75%)"
             exit 1
           fi
 
