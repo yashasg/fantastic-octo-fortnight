@@ -48,16 +48,7 @@ struct OnboardingView: View {
 
 // MARK: - Shared Onboarding Styles
 
-struct OnboardingSecondaryButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(AppFont.secondaryAction)
-            .foregroundStyle(AppColor.textSecondary)
-            .frame(minHeight: AppLayout.minTapTarget)
-            .padding(.horizontal, AppSpacing.md)
-            .opacity(configuration.isPressed ? 0.68 : 1)
-    }
-}
+// OnboardingSecondaryButtonStyle moved to Components.swift
 
 // MARK: - Animation Helper
 

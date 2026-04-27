@@ -123,12 +123,7 @@ private struct SetupPreviewCard: View {
             Spacer()
         }
         .padding(AppSpacing.lg)
-        .background(AppColor.surface, in: RoundedRectangle(cornerRadius: AppLayout.radiusCard, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: AppLayout.radiusCard, style: .continuous)
-                .strokeBorder(AppColor.separatorSoft, lineWidth: 1)
-        )
-        .softElevation()
+        .wellnessCard(elevated: true)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(
             String(

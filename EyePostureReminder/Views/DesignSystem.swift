@@ -107,6 +107,9 @@ enum AppTypography {
     /// Caption — custom font scales with Dynamic Type (base: 13pt regular).
     static let caption: Font = .custom(fontFamilyName, size: 13, relativeTo: .footnote)
 
+    /// Caption emphasized — custom font scales with Dynamic Type (base: 13pt semibold).
+    static let captionEmphasized: Font = .custom(fontFamilyName, size: 13, relativeTo: .footnote).weight(.semibold)
+
     /// Secondary action buttons (onboarding, secondary CTAs) — custom font scales with Dynamic Type (base: 15pt regular).
     static let secondaryAction: Font = .custom(fontFamilyName, size: 15, relativeTo: .subheadline)
 
@@ -132,6 +135,7 @@ enum AppFont {
     static let body = AppTypography.body
     static let bodyEmphasized = AppTypography.bodyEmphasized
     static let caption = AppTypography.caption
+    static let captionEmphasized = AppTypography.captionEmphasized
     static let secondaryAction = AppTypography.secondaryAction
     static let overlayDismiss = AppTypography.overlayDismiss
     static let countdown = AppTypography.countdown
@@ -261,6 +265,23 @@ enum AppLayout {
     static let radiusLarge: CGFloat = 28
     /// 999pt — pill shape (capsule buttons, toggles); use `.infinity` semantics
     static let radiusPill: CGFloat = 999
+}
+
+// MARK: - Opacity Constants
+
+enum AppOpacity {
+    /// Soft icon aura / decorative glow ring — 12%.
+    static let iconAura: Double = 0.12
+    /// Warning row background wash — 10%.
+    static let warningBackground: Double = 0.10
+    /// Warning row separator tint — 25%.
+    static let warningSeparator: Double = 0.25
+    /// Pressed-state button dimming — 68%.
+    static let pressedButton: Double = 0.68
+    /// Muted timestamp / tertiary text — 72%.
+    static let mutedTimestamp: Double = 0.72
+    /// Subtle border ring (SoftElevation, yin-yang) — 65%.
+    static let subtleBorder: Double = 0.65
 }
 
 // MARK: - Elevation

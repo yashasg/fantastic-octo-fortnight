@@ -38,173 +38,190 @@ struct OverlayView: View {
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
-            // MARK: Restful gradient background
-            LinearGradient(
-                colors: [AppColor.background, AppColor.surfaceTint],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea()
-
-            // MARK: × Dismiss — fixed top-right corner (secondary escape)
-            Button(
-                action: { performDismiss(method: .button) },
-                label: {
-                    Image(systemName: AppSymbol.dismiss)
-                        .font(AppFont.overlayDismiss)
-                        .foregroundStyle(AppColor.textSecondary)
-                        .frame(minWidth: AppLayout.minTapTarget, minHeight: AppLayout.minTapTarget)
-                        .contentShape(Rectangle())
-                }
-            )
-            .padding(.top, AppSpacing.lg)
-            .padding(.trailing, AppSpacing.lg)
-            .accessibilityLabel(Text("overlay.dismissButton", bundle: .module))
-            .accessibilityHint(Text("overlay.dismissButton.hint", bundle: .module))
-            .accessibilityIdentifier("overlay.dismissButton")
-
-            // MARK: Center content
-            VStack(spacing: AppSpacing.lg) {
-                Spacer()
-
-                // Icon with soft circular aura — decorative; headline conveys meaning for VoiceOver
-                ZStack {
-                    Circle()
-                        .fill(type.color.opacity(0.12))
-                    Image(systemName: type.symbolName)
-                        .symbolRenderingMode(.hierarchical)
-                        .font(AppFont.overlayIcon)
-                        .foregroundStyle(type.color)
-                }
-                .frame(
-                    width: AppLayout.overlayIconSize * 1.75,
-                    height: AppLayout.overlayIconSize * 1.75
-                )
-                .accessibilityHidden(true)
-
-                // Headline
-                Text(type.overlayTitle)
-                    .font(AppFont.headline)
-                    .foregroundStyle(AppColor.textPrimary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, AppSpacing.xl)
-
-                // Supportive subtitle
-                Text(type.overlaySupportiveText)
-                    .font(AppFont.body)
-                    .foregroundStyle(AppColor.textSecondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, AppSpacing.xl)
-                    .accessibilityIdentifier("overlay.supportiveText")
-
-                // Circular countdown ring
-                ZStack {
-                    Circle()
-                        .stroke(AppColor.separatorSoft, lineWidth: AppLayout.countdownRingStroke)
-                        .accessibilityHidden(true)
-
-                    Circle()
-                        .trim(from: 0, to: CGFloat(secondsRemaining) / CGFloat(max(duration, 1)))
-                        .stroke(
-                            type.color,
-                            style: StrokeStyle(lineWidth: AppLayout.countdownRingStroke, lineCap: .round)
-                        )
-                        .rotationEffect(.degrees(-90))
-                        .animation(
-                            reduceMotion ? .none : AppAnimation.countdownRingCurve,
-                            value: secondsRemaining
-                        )
-                        .accessibilityHidden(true)
-
-                    Text("\(secondsRemaining)")
-                        .font(AppFont.countdown)
-                        .foregroundStyle(AppColor.textPrimary)
-                        .monospacedDigit()
-                        .contentTransition(
-                            reduceMotion ? .identity : .numericText(countsDown: true)
-                        )
-                }
-                .frame(
-                    width: AppLayout.countdownRingDiameter,
-                    height: AppLayout.countdownRingDiameter
-                )
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel(Text("overlay.countdown.label", bundle: .module))
-                .accessibilityValue(
-                    String.localizedStringWithFormat(
-                        NSLocalizedString("overlay.countdown.value", bundle: .module, comment: ""),
-                        secondsRemaining
-                    )
-                )
-                .accessibilityAddTraits(.updatesFrequently)
-
-                Spacer()
-
-                // Primary "Done" CTA — styled pill button
-                Button(
-                    action: { performDismiss(method: .button) },
-                    label: { Text("overlay.doneButton", bundle: .module) }
-                )
-                .buttonStyle(.primary)
-                .frame(minHeight: AppLayout.minTapTarget)
-                .accessibilityIdentifier("overlay.doneButton")
-
-                // Settings gear — low-prominence link; dismisses overlay and opens Settings
-                Button(
-                    action: { performDismiss(method: .settingsTap) },
-                    label: {
-                        Label(
-                            title: { Text("overlay.settingsLabel", bundle: .module) },
-                            icon: { Image(systemName: AppSymbol.settings) }
-                        )
-                        .font(AppFont.body)
-                        .foregroundStyle(AppColor.textSecondary)
-                    }
-                )
-                .frame(minHeight: AppLayout.minTapTarget)
-                .accessibilityLabel(Text("overlay.settingsButton", bundle: .module))
-                .accessibilityHint(Text("overlay.settingsButton.hint", bundle: .module))
-                .accessibilityIdentifier("overlay.settingsLink")
-
-                Spacer(minLength: AppSpacing.lg)
-            }
-            .padding(AppSpacing.xl)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            backgroundGradient
+            dismissButton
+            centerContent
         }
         .opacity(contentOpacity)
         .offset(y: slideOffset)
-        // Swipe UP to dismiss (negative Y translation = upward drag)
-        .gesture(
-            DragGesture(minimumDistance: 30)
-                .onEnded { value in
-                    if value.translation.height < 0 { performDismiss(method: .swipe) }
-                }
+        .gesture(swipeUpDismissGesture)
+        .onAppear(perform: handleAppear)
+        .onDisappear { timer?.invalidate() }
+    }
+
+    // MARK: - Body Sections
+
+    private var backgroundGradient: some View {
+        LinearGradient(
+            colors: [AppColor.background, AppColor.surfaceTint],
+            startPoint: .top,
+            endPoint: .bottom
         )
-        .onAppear {
-            // Prepare haptic generators up front so they are ready when needed.
-            let impact = UIImpactFeedbackGenerator(style: .medium)
-            impact.prepare()
-            impactGenerator = impact
-            let notification = UINotificationFeedbackGenerator()
-            notification.prepare()
-            notificationGenerator = notification
+        .ignoresSafeArea()
+    }
 
-            if hapticsEnabled { notification.notificationOccurred(.warning) }
+    private var dismissButton: some View {
+        Button(
+            action: { performDismiss(method: .button) },
+            label: {
+                Image(systemName: AppSymbol.dismiss)
+                    .font(AppFont.overlayDismiss)
+                    .foregroundStyle(AppColor.textSecondary)
+                    .frame(minWidth: AppLayout.minTapTarget, minHeight: AppLayout.minTapTarget)
+                    .contentShape(Rectangle())
+            }
+        )
+        .padding(.top, AppSpacing.lg)
+        .padding(.trailing, AppSpacing.lg)
+        .accessibilityLabel(Text("overlay.dismissButton", bundle: .module))
+        .accessibilityHint(Text("overlay.dismissButton.hint", bundle: .module))
+        .accessibilityIdentifier("overlay.dismissButton")
+    }
 
-            if reduceMotion {
+    private var centerContent: some View {
+        VStack(spacing: AppSpacing.lg) {
+            Spacer()
+            iconAura
+            headlineSection
+            countdownRing
+            Spacer()
+            actionSection
+            Spacer(minLength: AppSpacing.lg)
+        }
+        .padding(AppSpacing.xl)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var iconAura: some View {
+        ZStack {
+            Circle()
+                .fill(type.color.opacity(AppOpacity.iconAura))
+            Image(systemName: type.symbolName)
+                .symbolRenderingMode(.hierarchical)
+                .font(AppFont.overlayIcon)
+                .foregroundStyle(type.color)
+        }
+        .frame(
+            width: AppLayout.overlayIconSize * 1.75,
+            height: AppLayout.overlayIconSize * 1.75
+        )
+        .accessibilityHidden(true)
+    }
+
+    private var headlineSection: some View {
+        Group {
+            Text(type.overlayTitle)
+                .font(AppFont.headline)
+                .foregroundStyle(AppColor.textPrimary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, AppSpacing.xl)
+
+            Text(type.overlaySupportiveText)
+                .font(AppFont.body)
+                .foregroundStyle(AppColor.textSecondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, AppSpacing.xl)
+                .accessibilityIdentifier("overlay.supportiveText")
+        }
+    }
+
+    private var countdownRing: some View {
+        ZStack {
+            Circle()
+                .stroke(AppColor.separatorSoft, lineWidth: AppLayout.countdownRingStroke)
+                .accessibilityHidden(true)
+
+            Circle()
+                .trim(from: 0, to: CGFloat(secondsRemaining) / CGFloat(max(duration, 1)))
+                .stroke(
+                    type.color,
+                    style: StrokeStyle(lineWidth: AppLayout.countdownRingStroke, lineCap: .round)
+                )
+                .rotationEffect(.degrees(-90))
+                .animation(
+                    reduceMotion ? .none : AppAnimation.countdownRingCurve,
+                    value: secondsRemaining
+                )
+                .accessibilityHidden(true)
+
+            Text("\(secondsRemaining)")
+                .font(AppFont.countdown)
+                .foregroundStyle(AppColor.textPrimary)
+                .monospacedDigit()
+                .contentTransition(
+                    reduceMotion ? .identity : .numericText(countsDown: true)
+                )
+        }
+        .frame(
+            width: AppLayout.countdownRingDiameter,
+            height: AppLayout.countdownRingDiameter
+        )
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text("overlay.countdown.label", bundle: .module))
+        .accessibilityValue(
+            String.localizedStringWithFormat(
+                NSLocalizedString("overlay.countdown.value", bundle: .module, comment: ""),
+                secondsRemaining
+            )
+        )
+        .accessibilityAddTraits(.updatesFrequently)
+    }
+
+    private var actionSection: some View {
+        Group {
+            Button(
+                action: { performDismiss(method: .button) },
+                label: { Text("overlay.doneButton", bundle: .module) }
+            )
+            .buttonStyle(.primary)
+            .frame(minHeight: AppLayout.minTapTarget)
+            .accessibilityIdentifier("overlay.doneButton")
+
+            Button(
+                action: { performDismiss(method: .settingsTap) },
+                label: {
+                    Label(
+                        title: { Text("overlay.settingsLabel", bundle: .module) },
+                        icon: { Image(systemName: AppSymbol.settings) }
+                    )
+                    .font(AppFont.body)
+                    .foregroundStyle(AppColor.textSecondary)
+                }
+            )
+            .frame(minHeight: AppLayout.minTapTarget)
+            .accessibilityLabel(Text("overlay.settingsButton", bundle: .module))
+            .accessibilityHint(Text("overlay.settingsButton.hint", bundle: .module))
+            .accessibilityIdentifier("overlay.settingsLink")
+        }
+    }
+
+    private var swipeUpDismissGesture: some Gesture {
+        DragGesture(minimumDistance: 30)
+            .onEnded { value in
+                if value.translation.height < 0 { performDismiss(method: .swipe) }
+            }
+    }
+
+    private func handleAppear() {
+        let impact = UIImpactFeedbackGenerator(style: .medium)
+        impact.prepare()
+        impactGenerator = impact
+        let notification = UINotificationFeedbackGenerator()
+        notification.prepare()
+        notificationGenerator = notification
+
+        if hapticsEnabled { notification.notificationOccurred(.warning) }
+
+        if reduceMotion {
+            contentOpacity = 1
+            slideOffset = 0
+        } else {
+            withAnimation(AppAnimation.calmingEntranceCurve) {
                 contentOpacity = 1
                 slideOffset = 0
-            } else {
-                withAnimation(AppAnimation.calmingEntranceCurve) {
-                    contentOpacity = 1
-                    slideOffset = 0
-                }
             }
-            startTimer()
         }
-        .onDisappear {
-            timer?.invalidate()
-        }
+        startTimer()
     }
 
     // MARK: - Manual dismiss (× button, swipe up, or Settings tap)

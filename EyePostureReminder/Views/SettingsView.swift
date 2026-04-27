@@ -324,6 +324,10 @@ private struct SettingsSnoozeSection: View {
         return until.formatted(date: .omitted, time: .shortened)
     }
 
+    private func animatedAction(_ action: @escaping () -> Void) {
+        withMotionSafe(reduceMotion, animation: AppAnimation.settingsExpandCurve, action: action)
+    }
+
     var body: some View {
         Section {
             if isSnoozed {
@@ -348,15 +352,7 @@ private struct SettingsSnoozeSection: View {
                 .listRowSeparatorTint(AppColor.separatorSoft)
 
                 Button(
-                    action: {
-                        if reduceMotion {
-                            viewModel?.cancelSnooze()
-                        } else {
-                            withAnimation(AppAnimation.settingsExpandCurve) {
-                                viewModel?.cancelSnooze()
-                            }
-                        }
-                    },
+                    action: { animatedAction { viewModel?.cancelSnooze() } },
                     label: {
                         Label {
                             Text("settings.snooze.cancelButton", bundle: .module)
@@ -373,15 +369,7 @@ private struct SettingsSnoozeSection: View {
                 .listRowSeparatorTint(AppColor.separatorSoft)
             } else {
                 Button(
-                    action: {
-                        if reduceMotion {
-                            viewModel?.snooze(option: .fiveMinutes)
-                        } else {
-                            withAnimation(AppAnimation.settingsExpandCurve) {
-                                viewModel?.snooze(option: .fiveMinutes)
-                            }
-                        }
-                    },
+                    action: { animatedAction { viewModel?.snooze(option: .fiveMinutes) } },
                     label: { Text("settings.snooze.5min", bundle: .module) }
                 )
                 .font(AppFont.body)
@@ -396,15 +384,7 @@ private struct SettingsSnoozeSection: View {
                 .listRowSeparatorTint(AppColor.separatorSoft)
 
                 Button(
-                    action: {
-                        if reduceMotion {
-                            viewModel?.snooze(option: .oneHour)
-                        } else {
-                            withAnimation(AppAnimation.settingsExpandCurve) {
-                                viewModel?.snooze(option: .oneHour)
-                            }
-                        }
-                    },
+                    action: { animatedAction { viewModel?.snooze(option: .oneHour) } },
                     label: { Text("settings.snooze.1hour", bundle: .module) }
                 )
                 .font(AppFont.body)
@@ -419,15 +399,7 @@ private struct SettingsSnoozeSection: View {
                 .listRowSeparatorTint(AppColor.separatorSoft)
 
                 Button(
-                    action: {
-                        if reduceMotion {
-                            viewModel?.snooze(option: .restOfDay)
-                        } else {
-                            withAnimation(AppAnimation.settingsExpandCurve) {
-                                viewModel?.snooze(option: .restOfDay)
-                            }
-                        }
-                    },
+                    action: { animatedAction { viewModel?.snooze(option: .restOfDay) } },
                     label: { Text("settings.snooze.restOfDay", bundle: .module) }
                 )
                 .font(AppFont.body)
@@ -527,8 +499,8 @@ private struct SettingsNotificationWarningSection: View {
                 .padding(.vertical, AppSpacing.xs)
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel(Text("settings.notifications.disabledLabel", bundle: .module))
-                .listRowBackground(AppColor.accentWarm.opacity(0.10))
-                .listRowSeparatorTint(AppColor.accentWarm.opacity(0.25))
+                .listRowBackground(AppColor.accentWarm.opacity(AppOpacity.warningBackground))
+                .listRowSeparatorTint(AppColor.accentWarm.opacity(AppOpacity.warningSeparator))
 
                 Button(
                     action: {
@@ -541,8 +513,8 @@ private struct SettingsNotificationWarningSection: View {
                 .font(AppFont.body)
                 .foregroundStyle(AppColor.accentWarm)
                 .accessibilityHint(Text("settings.notifications.openSettings.hint", bundle: .module))
-                .listRowBackground(AppColor.accentWarm.opacity(0.10))
-                .listRowSeparatorTint(AppColor.accentWarm.opacity(0.25))
+                .listRowBackground(AppColor.accentWarm.opacity(AppOpacity.warningBackground))
+                .listRowSeparatorTint(AppColor.accentWarm.opacity(AppOpacity.warningSeparator))
             }
         }
     }

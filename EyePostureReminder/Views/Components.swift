@@ -126,6 +126,44 @@ extension View {
     }
 }
 
+// MARK: - Reduce-Motion Animation Helper
+
+extension View {
+    /// Performs an action optionally wrapped in an animation, respecting reduce-motion.
+    /// Use instead of repeating `if reduceMotion { action() } else { withAnimation { action() } }`.
+    @MainActor
+    func withMotionSafe(_ reduceMotion: Bool, animation: Animation, action: @escaping () -> Void) {
+        if reduceMotion {
+            action()
+        } else {
+            withAnimation(animation) { action() }
+        }
+    }
+}
+
+// MARK: - SecondaryButton
+
+/// A low-prominence button style used for secondary actions (e.g., onboarding skip/customize).
+/// Applies a subtle opacity change on press.
+struct SecondaryButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(AppTypography.secondaryAction)
+            .foregroundStyle(AppColor.textSecondary)
+            .frame(minHeight: AppLayout.minTapTarget)
+            .padding(.horizontal, AppSpacing.md)
+            .opacity(configuration.isPressed ? AppOpacity.pressedButton : 1)
+    }
+}
+
+/// Legacy alias — prefer `.buttonStyle(.secondary)`.
+typealias OnboardingSecondaryButtonStyle = SecondaryButtonStyle
+
+extension ButtonStyle where Self == SecondaryButtonStyle {
+    /// Low-prominence secondary button: muted text, subtle press opacity.
+    static var secondary: SecondaryButtonStyle { SecondaryButtonStyle() }
+}
+
 // MARK: - Internal helpers
 
 private extension View {

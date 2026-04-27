@@ -108,8 +108,7 @@ private struct NotificationPreviewCard: View {
                     )
                     .accessibilityHidden(true)
                 Text("onboarding.permission.notificationCard.appName", bundle: .module)
-                    .font(AppFont.caption)
-                    .fontWeight(.semibold)
+                    .font(AppFont.captionEmphasized)
                     .foregroundStyle(AppColor.textSecondary)
                 Spacer()
                 Text("onboarding.permission.notificationCard.now", bundle: .module)
@@ -124,12 +123,7 @@ private struct NotificationPreviewCard: View {
                 .foregroundStyle(AppColor.textSecondary)
         }
         .padding(AppSpacing.lg)
-        .background(AppColor.surface, in: RoundedRectangle(cornerRadius: AppLayout.radiusCard, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: AppLayout.radiusCard, style: .continuous)
-                .strokeBorder(AppColor.separatorSoft, lineWidth: 1)
-        )
-        .softElevation()
+        .wellnessCard(elevated: true)
         .padding(.horizontal, AppSpacing.md)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(Text("onboarding.permission.notificationCard.label", bundle: .module))
