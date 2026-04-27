@@ -7,7 +7,7 @@
 	<key>CFBundleName</key>
 	<string>kshana</string>
 	<key>CFBundleShortVersionString</key>
-	<string>0.1.0</string>
+	<string>0.2.0</string>
 	<key>CFBundleVersion</key>
 	<string>1</string>
 	<key>CFBundleExecutable</key>
@@ -31,8 +31,8 @@
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
 	</array>
-	<key>NSUserNotificationsUsageDescription</key>
-	<string>kshana needs notification access to deliver break reminders.</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>NSFocusStatusUsageDescription</key>
 	<string>kshana pauses notifications when you have a Focus mode active.</string>
 	<key>NSMotionUsageDescription</key>

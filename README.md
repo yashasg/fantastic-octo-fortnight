@@ -1,6 +1,6 @@
 # kshana — Eye & Posture Wellness
 
-A lightweight iOS app that runs in the background and reminds you to rest your eyes and fix your posture. Built exclusively with core iOS libraries (SwiftUI, UserNotifications, UIKit) to minimise battery and memory usage.
+A calming iOS wellness app — redesigned as **Restful Grove** with a yin-yang–inspired logo — that delivers gentle eye-break and posture reminders based on actual screen time. Built exclusively with SwiftUI, UserNotifications, and UIKit to minimise battery and memory usage.
 
 ## Features
 
