@@ -149,9 +149,6 @@ jobs:
     name: UI Tests
     runs-on: macos-15
     timeout-minutes: 45
-    # UI tests are informational — simulator launches are flaky on GitHub runners.
-    # Build & Test is the required gate (build + unit tests + lint + coverage).
-    continue-on-error: true
 
     steps:
       - name: Checkout
