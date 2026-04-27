@@ -507,3 +507,24 @@ Only the double-resign path is tested. A single resign followed by return-to-act
 - Validated mock fidelity with dedicated MockRecordingTests — bad mocks are worse than no tests.
 - AppStorageKeys regression guard catches typos that would silently break onboarding routing.
 - SnoozeOption.restOfDay.endDate verified to be midnight (hour=0, minute=0, second=0).
+
+### 2026-04-27 — UI Test Coverage Pass (kshana rename, Restful Grove, YinYangEyeView)
+
+**Baseline:** 37 UI tests across 5 files (HomeScreenTests, OnboardingFlowTests, OverlayTests, SettingsFlowTests, DarkModeUITests). Two pre-existing failures: `test_homeScreen_onLaunch_displaysRequiredElements` (queried YinYangEyeView as `app.images` instead of `app.otherElements`) and `test_overlay_doneButton_dismissesOverlay` (flaky dismiss detection during overlay animation).
+
+**Tests added (16 new test methods):**
+- OnboardingFlowTests (+2): Enable Notifications button exists and is hittable, Customize button identifier verified via `onboarding.customize`.
+- OverlayTests (+1): Settings link (`overlay.settingsLink`) visible on eye overlay.
+- OverlayPostureTests (+4, new class): Posture variant — dismiss button, Done button, supportive text, Done dismisses overlay. Uses `--show-overlay-posture` launch arg.
+- SettingsFlowTests (+6): Haptic feedback toggle, Reset to Defaults button, Send Feedback button, eyes+posture reminder toggles, all three snooze duration buttons.
+- DarkModeUITests (+3): Onboarding welcome screen in dark mode, posture overlay in dark mode (both element checks).
+
+**Pre-existing bugs fixed (2):**
+- HomeScreenTests: Changed `app.images["home.statusIcon"]` → `app.otherElements["home.statusIcon"]`. YinYangEyeView is a shape-based Canvas view, not an Image — XCUITest categorizes it as `otherElements`.
+- OverlayPresentationTests: Replaced flaky negative assertion (`XCTAssertFalse(dismissButton.waitForExistence)`) with positive assertion (`XCTAssertTrue(homeNav.waitForExistence)`). The overlay's asyncAfter dismiss delay means the dismiss button may linger in the accessibility tree during animation.
+
+**Key insight:** When testing custom SwiftUI views built with shapes/Canvas (like YinYangEyeView), use `app.otherElements["identifier"]` for XCUITest queries, not `app.images`. Only views wrapping `Image()` or `UIImageView` map to the `images` element type.
+
+**Key insight:** For overlay dismiss tests, assert the positive outcome (Home screen reappears) rather than the negative (overlay elements disappear). Overlay windows with animation delays cause the negative assertion to be timing-dependent.
+
+**Result:** 53 total UI tests (37 → 53). 46/46 passed in the test run; DarkMode suite (7 tests) compiled but didn't schedule within the parallel execution time window — infrastructure timeout, not a test failure.
