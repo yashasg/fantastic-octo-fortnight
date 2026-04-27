@@ -2153,3 +2153,221 @@ Researched 13 name candidates for the app (currently "Eye & Posture Reminder"). 
 ## Full Research
 
 See `docs/app-naming-research.md` for all 13 candidates, scoring matrix, and ASO strategy.
+
+---
+
+# Decision: English Name Candidates Research
+
+**Author:** Roman (Market Researcher)  
+**Date:** 2026-04-27  
+**Status:** Research phase
+
+## Context
+
+Initial naming exploration across 13 English-language concepts to replace "Eye & Posture Reminder" with a memorable, brandable single word.
+
+## Findings
+
+- **Restwell** — strongest candidate: warm, memorable, perfectly aligned with Restful Grove aesthetic
+- **Softsight** — distinctive, premium feel, unique positioning
+- **Respite** — sophisticated, dictionary-backed meaning, but competes with existing app
+
+## Full Analysis
+
+See `docs/app-naming-research.md` for complete research.
+
+---
+
+# Decision: Respite Name Availability Assessment
+
+**Author:** Roman (Market Researcher)  
+**Date:** 2026-04-27  
+**Status:** Research phase
+
+## Key Finding
+
+"Respite: Reduce Screen Time" is a live iOS app in the wellness category. Creates brand confusion but not a dealbreaker.
+
+## Conflicts Identified
+
+- respiteapp.com domain taken (caregiver service)
+- Narrow trademark protection (dictionary word)
+- Existing competing app with poor maintenance signal
+
+## Alternatives
+
+- Restwell: zero conflicts across all channels
+- Alternative domains (getrespite.com) available
+
+## Full Report
+
+See `docs/respite-name-availability.md`.
+
+---
+
+# Decision: Classical Name Candidates for App
+
+**Author:** Roman (Market Researcher)  
+**Date:** 2026-04-27  
+**Status:** Research phase
+
+## Context
+
+After Respite conflicts emerged, explored Greek, Latin, and Roman vocabulary for classical-language alternatives.
+
+## Top 5 Candidates (All App Store Clean)
+
+1. **Lenis** (Latin: "gentle") — short, brandable, intuitive
+2. **Requies** (Latin: "rest") — direct Respite replacement, no conflicts
+3. **Galene** (Greek: goddess of calm seas) — poetic, strong visual alignment
+4. **Placida** (Latin: "peaceful") — warm, place-like quality
+5. **Levamen** (Latin: "relief") — most descriptive, clear meaning
+
+## Key Insights
+
+- Latin outperforms Greek for brandability (shorter, English cognates)
+- All verified zero App Store conflicts
+- "Otium" (leisure) philosophically perfect but has direct competitor app (disqualified)
+
+## Full Analysis
+
+See `docs/app-naming-classical.md`.
+
+---
+
+# Decision: Synonym Translation Naming Round
+
+**Author:** Roman (Market Researcher)  
+**Date:** 2026-04-27  
+**Status:** Research phase
+
+## Context
+
+Fourth research pass — translated 14 English wellness concepts across Greek, Latin, and Sanskrit for comprehensive naming landscape.
+
+## New Strong Candidates
+
+- **Anesis** (Greek: "relief/relaxation") — elegant, completely clean, delivers the core value
+- **Nimesha** (Sanskrit: "blink/moment") — poetic, strong yin-yang resonance
+- **Mollis** (Latin: "soft/tender") — sounds like its meaning, short, clean
+
+## Key Insight
+
+"Gentle/soft" semantic space is the richest naming vein across all three languages. Watch/guard words are heavily contested on App Store — avoided this space.
+
+## Full Analysis
+
+See `docs/app-naming-synonyms.md`.
+
+---
+
+# Decision: Sanskrit Name Candidates for App
+
+**Author:** Roman (Market Researcher)  
+**Date:** 2026-04-27  
+**Status:** Research phase
+
+## Context
+
+Explored 18 Sanskrit candidates emphasizing yin-yang visual alignment and Eastern philosophy cohesion.
+
+## Top 5 Candidates
+
+1. **Samata** (balance/equanimity) — strongest yin-yang alignment, easy pronunciation, clean App Store
+2. **Netra** (eye/guide) — directly relevant, short, easy pronunciation, low risk
+3. **Taraka** (pupil/star/crossing) — beautiful triple meaning, easy pronunciation, clean App Store
+4. **Achala** (stillness/immovable) — strong posture association, easy pronunciation, clean
+5. **Drishti** (sight/gaze) — yoga-recognized, but trademark issues emerged
+
+## Key Insight
+
+Sanskrit names create stronger brand coherence with yin-yang logo and Eastern philosophy aesthetic. Popular wellness words (Shanti, Prana, etc.) are heavily contested — avoided.
+
+## Full Analysis
+
+See `docs/app-naming-sanskrit.md`.
+
+---
+
+# Decision: Final Name Availability Check — Kshana Selected
+
+**Author:** Roman (Market Researcher)  
+**Date:** 2026-04-27  
+**Status:** FINAL DECISION
+
+## Context
+
+Exhaustive availability audit on two Sanskrit finalists: Drishti and Kshana.
+
+## Evaluation
+
+### Drishti — NO-GO
+
+- **Trademark blocker:** Drishti Technologies Inc. (Palo Alto) holds live USPTO registration (Class 9/42)
+- drishti.com and drishtiapp.com both taken by active businesses
+- Drishti Learning App has 1M+ downloads — would dominate App Store search
+- Cultural sensitivity: "evil eye" connotation in South Asian cultures
+
+### Kshana — APPROVED ✅
+
+- No App Store conflicts on any platform
+- No USPTO trademark registration
+- Social handles available (@kshanaapp, @getkshana)
+- No cultural sensitivity issues
+- Cleanest availability landscape of all names evaluated across four research rounds
+
+## Recommendation
+
+**Kshana (क्षण — "a moment, an instant") is the final selected app name.**
+
+**App Store listing:** `Kshana — Eye & Posture Breaks`
+
+**Branding:** All lowercase (kshana) where the team controls presentation. App Store may auto-capitalize.
+
+## Next Steps
+
+1. ✅ Completed by Linus: App name and UI strings updated to kshana
+2. ✅ Completed by Danny: Documentation and README updated for kshana branding
+3. Register domains: kshanaapp.com, getkshana.com
+4. Claim social handles: @kshanaapp on Twitter/X, Instagram, TikTok
+5. File USPTO trademark in Class 9
+6. Attorney consult for due diligence vs. Kshana AI (fintech, different sector)
+
+## Full Report
+
+See `docs/app-naming-final-check.md` for complete head-to-head analysis.
+
+---
+
+# Decision: App Name Finalized — Kshana
+
+**Author:** Yashas (User)  
+**Date:** 2026-04-27  
+**Status:** FINAL
+
+## User Directive
+
+App name is officially **kshana** (all lowercase). Sanskrit for "a moment, an instant."
+
+Branding should use lowercase everywhere the team controls (logo, website, in-app strings, marketing). The App Store may auto-capitalize per its policies.
+
+## Rationale
+
+User decision made after 4 rounds of comprehensive naming research:
+- Round 1: 13 English candidates (Restwell, Softsight, Respite)
+- Round 2: Respite availability assessment + alternatives
+- Round 3: 18 classical language candidates (Greek, Latin, Roman)
+- Round 4: 14 synonym translations + Sanskrit deep dive
+- Round 5: Final availability check (Drishti vs. Kshana)
+
+**Key decisive factor:** Kshana had the cleanest App Store landscape of all finalists — zero conflicts, no trademark issues, open social handles, no cultural sensitivities.
+
+## Impact
+
+- Linus to update app bundle name, UI strings, onboarding to reflect kshana
+- Danny to update all documentation and website references
+- All marketing and branding materials should use lowercase "kshana"
+- Post-launch: register domains and social handles, file trademark
+
+---
+

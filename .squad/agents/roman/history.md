@@ -58,6 +58,16 @@
 - **Decision artifact:** `.squad/decisions/inbox/roman-sanskrit-naming.md`
 - **Insight:** Sanskrit names create stronger brand coherence with the yin-yang logo than Latin/Greek names. The well-known Sanskrit words are too contested; the sweet spot is less common but still pronounceable words like Samata and Taraka. Consonant clusters (kṣ, sth) are the main pronunciation barrier for Western audiences.
 
+### 2026-07-17: Final Name Availability Check — Drishti vs. Kshana
+
+- **Context:** Yashas narrowed to two Sanskrit finalists: Drishti ("sight/vision") and Kshana ("a moment"). Conducted exhaustive availability audit across App Store, domains, social, trademark, cultural sensitivity, and ASO for both names.
+- **Deliverable:** `docs/app-naming-final-check.md` — full head-to-head comparison with GO/NO-GO verdicts.
+- **Drishti verdict: 🔴 NO-GO** — Drishti Technologies Inc. (Palo Alto) holds a LIVE USPTO trademark for "DRISHTI" in Class 9 (software) and Class 42 (SaaS), registered since 2018. This is a hard blocker for trademark registration. Additionally: drishti.com taken, drishtiapp.com taken, Drishti Learning App has 1M+ downloads on App Store, and the word carries an "evil eye" connotation in South Asian cultures.
+- **Kshana verdict: ✅ GO** — Cleanest landscape of any name across all four naming rounds. No App Store conflicts, no USPTO registration, social handles open, no cultural issues. Only caveats: kshana.app domain taken by Kshana AI (fintech startup, different industry), and "ksh" consonant cluster is unusual for English speakers.
+- **Recommendation:** Kshana is the clear winner. Recommended listing: "Kshana — Eye & Posture Breaks"
+- **Decision artifact:** `.squad/decisions/inbox/roman-final-name-check.md`
+- **Key insight:** USPTO trademark search is the single most important availability check. A beautiful name means nothing if someone already holds a live registration in your class. Drishti looked promising until the Class 9/42 registration surfaced — always check trademarks before falling in love with a name.
+
 ### 2026-07-18: Synonym Translations (Greek/Latin/Sanskrit)
 
 - **Context:** Yashas requested translations of 14 specific English concepts (Blink, Posture, Gaze, Glance, Rest, Ease, Breath, Gentle, Watch, Guard, Wink, Stretch, Soothe, Focus) across Greek, Latin, and Sanskrit. Current favorites: Ocella (#1) and Restwell (#2).

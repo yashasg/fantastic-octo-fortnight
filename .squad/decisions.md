@@ -22151,3 +22151,387 @@ Final verification that all 5 blockers are resolved and all important items are 
 
 *Plan prepared by Danny (Product Manager) — 2026-04-25*  
 *Based on Frank's Apple Legal Requirements Report*
+
+# Decision: Restful Grove Color Palette Naming & Remap Strategy
+
+**Date:** 2026-04-30
+**Author:** Linus (iOS Dev UI)
+**Issue:** #159
+
+## Decision
+
+### 1. Asset naming prefix `RG`
+All Restful Grove palette assets are prefixed `RG` (e.g. `RGBackground`, `RGPrimaryRest`) in Colors.xcassets. This namespaces them from legacy colors (`ReminderBlue`, `ReminderGreen`, etc.) and makes the palette's membership visually obvious in Xcode's asset browser.
+
+### 2. Legacy tokens retained
+`AppColor.reminderBlue` and `AppColor.reminderGreen` are kept in `DesignSystem.swift`. Only `ReminderType.color` is remapped to the new tokens. Views that reference legacy tokens directly are unaffected until a separate cleanup pass.
+
+### 3. Single remap site
+`ReminderType.var color` is the canonical remap point for type→color mapping. This ensures a one-line change per type if the palette changes again, and avoids scattered `if/switch` in view code.
+
+## Rationale
+Keeping old tokens prevents unintended breakage across views not yet audited. The `RG` prefix future-proofs the asset catalog against additional palettes (e.g. a "Dark Ember" theme).
+
+# QA Findings — Issue #167 (Phase 4 Restful Grove QA Pass)
+
+**Author:** Livingston (Tester)  
+**Date:** 2026-04-26  
+**Branch:** feature/restful-grove
+
+---
+
+## Pattern: Partially-tokenized font calls still bypass the design system
+
+**Finding:** Six call sites used `.font(.system(size: AppLayout.someConstant))` — these pass the color/spacing token audits (the size constant is tokenized) but still bypass `AppFont`. SwiftLint and a naive `grep -v AppColor` won't catch them.
+
+**Rule to enforce:** Any `.font(.system(...))` or `.font(.custom(...))` at a call site is a token violation, regardless of whether the `size:` argument uses an AppLayout constant. The token belongs in `AppTypography` / `AppFont`.
+
+**Recommended addition to QA checklist:**
+```
+grep -rn '\.font(.system(\|\.font(.custom(' EyePostureReminder/Views/ --include='*.swift' | grep -v '//'
+```
+This will catch ALL raw font calls, even those using tokenized size constants.
+
+---
+
+## Pattern: `extension AppTypography` after `AppLayout` for size-dependent tokens
+
+**Finding:** AppFont tokens that reference `AppLayout` size constants can't be defined inside `AppTypography` (which is declared before `AppLayout`). The fix is to define them in an `extension AppTypography` placed after `AppLayout` in DesignSystem.swift.
+
+**Convention adopted:**
+```swift
+// After AppLayout definition:
+extension AppTypography {
+    static let overlayIcon: Font = .system(size: AppLayout.overlayIconSize)
+    static let illustrationIcon: Font = .system(size: AppLayout.onboardingIllustrationSize, weight: .semibold)
+}
+extension AppFont {
+    static let overlayIcon = AppTypography.overlayIcon
+    static let illustrationIcon = AppTypography.illustrationIcon
+}
+```
+
+---
+
+## Pattern: Shadow colors need AppColor tokens too
+
+**Finding:** `SoftElevation` used an inline `Color(red: 0.18, green: 0.22, blue: 0.20)` for the card shadow. The shadow audit grep (`grep -v AppColor`) caught it. Shadow tints should be `AppColor` tokens even if they are purely light-mode and not xcasset-backed.
+
+**Token added:** `AppColor.shadowCard = Color(red: 0.18, green: 0.22, blue: 0.20)`
+
+---
+
+## Reduce-motion: All animations are properly guarded
+
+All `withAnimation(...)` and `.animation(...)` usages in `EyePostureReminder/Views/` are inside `if reduceMotion { } else { withAnimation(...) { } }` blocks or use `reduceMotion ? nil : animation` patterns. No violations found.
+
+---
+
+## WCAG: All documented, no violations
+
+All `AppColor` token comments in DesignSystem.swift include contrast ratio documentation (e.g., "4.7:1 on white — WCAG AA large"). No new colors were introduced without ratio documentation.
+
+# Restful Grove Redesign — Architecture & Code Quality Review
+
+**Reviewer:** Rusty (iOS Architect)  
+**Date:** 2026-04-26  
+**Branch:** `feature/restful-grove`  
+**Scope:** Issues #159–#167 (Phases 1–4)
+
+---
+
+## Build & Test Status
+
+| Check | Result |
+|-------|--------|
+| Build (`xcodebuild build`) | ✅ **BUILD SUCCEEDED** |
+| Tests (`xcodebuild test`) | ✅ **TEST SUCCEEDED** |
+
+---
+
+## 1. DesignSystem.swift (322 lines)
+
+### 🟢 Overall Assessment: Well-Architected
+
+Tokens are cleanly organized in logical MARK sections: Color → Typography → Spacing → Animation → Symbols → Layout → Elevation. Naming follows a consistent `Noun` or `adjNoun` pattern. WCAG contrast ratios are documented inline — excellent for maintainability.
+
+### Findings
+
+| # | Rating | File:Line | Finding |
+|---|--------|-----------|---------|
+| 1 | 🟡 Warning | `DesignSystem.swift:251-253` | **Legacy radius tokens `overlayCornerRadius` (24pt) and `cardCornerRadius` (16pt) are dead code.** The redesign added `radiusSmall`/`radiusCard`/`radiusLarge`/`radiusPill` (lines 267-273). The old tokens at lines 251-253 are unused anywhere in the codebase but still defined. Should be removed to avoid confusion. |
+| 2 | 🟢 Suggestion | `DesignSystem.swift:138-149` | **`AppFont` is a pure pass-through facade for `AppTypography`.** Every property is `static let x = AppTypography.x`. This is fine for API ergonomics (shorter call-site names), but the two namespaces could confuse new contributors. Consider a doc comment on `AppFont` explaining its role as a convenience alias layer, e.g. `/// Convenience aliases — prefer `AppFont` at call sites; define new tokens in `AppTypography`.` |
+| 3 | 🟢 Suggestion | `DesignSystem.swift:78` | **`shadowCard` uses a raw `Color(red:green:blue:)` literal** instead of an asset catalog entry. This is the only hardcoded color in the system. Since it's only used at 10% opacity as a shadow tint and is scoped to `SoftElevation`, it's acceptable — but moving it to the asset catalog would complete the "all colors in catalog" story. |
+| 4 | 🟢 Suggestion | `DesignSystem.swift:186` | **Leftover implementation note:** `"Linus: use calmingEntranceCurve in OverlayView in place of the current 0.3s slide."` This work was completed in Phase 3. The comment should be cleaned up to remove the team-member directive. |
+
+---
+
+## 2. Components.swift (182 lines)
+
+### 🟢 Overall Assessment: Clean, Well-Structured
+
+Five reusable components: `WellnessCard`, `StatusPill`, `PrimaryButtonStyle`, `IconContainer`, `CalmingEntrance`. All consume design tokens. The `applyIf` helper is correctly scoped as `private`.
+
+### Findings
+
+| # | Rating | File:Line | Finding |
+|---|--------|-----------|---------|
+| 5 | 🟢 Suggestion | `Components.swift:103` | **`IconContainer` uses `.system(size: size * 0.44)` for icon scaling.** This is the only non-token font in view code. It's intentional (decorative SF Symbol sizing relative to container), but documenting the `0.44` magic number with a comment like `// ≈ 44% of container for optical centering` would help future readers. |
+| 6 | 🟢 Suggestion | `Components.swift:52-53` | **`StatusPill` uses `AppSpacing.sm + 2` and `AppSpacing.xs + 1` arithmetic.** Minor padding tweaks are acceptable, but if these values recur, consider adding `AppSpacing.smPlus` or documenting why the base token isn't sufficient. Low priority. |
+
+---
+
+## 3. View Files — Token Compliance
+
+### 🟢 Overall Assessment: Excellent Token Adoption
+
+All view files (SettingsView, OverlayView, HomeView, OnboardingView and sub-views, ReminderRowView, ContentView) use design tokens exclusively. No hardcoded colors, spacings, or corner radii escaped the QA pass.
+
+### Findings
+
+| # | Rating | File:Line | Finding |
+|---|--------|-----------|---------|
+| 7 | 🟡 Warning | `SettingsView.swift` (556 lines) | **SettingsView is at 556 lines — approaching "too large" territory.** It's well-decomposed with `private struct` sections (`SettingsSnoozeSection`, `SettingsSmartPauseSection`, `SettingsNotificationWarningSection`), so the complexity is managed. However, these private structs could be extracted to separate files (`SettingsSnoozeSection.swift`, etc.) to improve navigability. Not blocking, but worth tracking. |
+| 8 | 🟢 Suggestion | `SettingsView.swift:543` | **`accentWarm.opacity(0.10)` for notification row background** — consider extracting this as a semantic token (e.g., `AppColor.warningRowBackground`) if the pattern recurs. Currently single-use, so acceptable. |
+
+---
+
+## 4. Font Integration
+
+### 🟢 Overall Assessment: Properly Implemented
+
+Nunito Regular and Italic are bundled as TTFs in `Resources/Fonts/`. Registration uses Core Text APIs (`CTFontManagerRegisterGraphicsFont`) called at app startup — valid and reliable approach.
+
+### Findings
+
+| # | Rating | File:Line | Finding |
+|---|--------|-----------|---------|
+| 9 | 🟢 Suggestion | Info.plist | **No `UIAppFonts` key in Info.plist.** Programmatic registration via CoreText works, but declaring fonts in Info.plist provides belt-and-suspenders safety and is the Apple-recommended approach. Consider adding for completeness. Not required since CoreText registration is functioning. |
+
+---
+
+## 5. Dynamic Type
+
+### 🟢 Overall Assessment: Fully Supported
+
+All Nunito text styles use `.custom(name, size:, relativeTo:)` which correctly participates in Dynamic Type scaling. The countdown font (64pt monospaced) is intentionally fixed with a documented VoiceOver accessibility note. No issues.
+
+---
+
+## 6. Animation & Reduce Motion
+
+### 🟢 Overall Assessment: Comprehensive Guards
+
+Every `withAnimation` call in the codebase is wrapped in an `if reduceMotion { ... } else { withAnimation(...) { ... } }` guard. The pattern is consistent across all 9+ files. The `.animation()` modifier on the countdown ring (OverlayView:104) correctly uses `reduceMotion ? .none : ...` ternary form. CalmingEntrance (Components.swift:150) handles it identically. No missing guards found.
+
+---
+
+## 7. MVVM Architecture
+
+### 🟢 Overall Assessment: Correctly Applied
+
+- **Models:** `ReminderType`, `ReminderSettings`, `SettingsStore` — clean data layer
+- **ViewModels:** `SettingsViewModel` handles scheduling side-effects; properly injected via `@StateObject` container (`SettingsViewModelBox`)
+- **Views:** Pure presentation with design token consumption; no business logic leakage
+- **Services:** `OverlayManager`, `ReminderScheduler`, `AppCoordinator` — correctly decoupled
+
+The SettingsViewModelBox pattern (line 9) is a pragmatic workaround for SwiftUI's `@StateObject` ownership requirements when the VM needs external dependencies. Well-documented.
+
+---
+
+## Summary
+
+| Category | Rating | Notes |
+|----------|--------|-------|
+| Design tokens | 🟢 Excellent | 9 color tokens, 4 radius tokens, 6 spacing tokens, well-documented |
+| Token adoption | 🟢 Excellent | 100% in views; zero hardcoded values escaped |
+| Font integration | 🟢 Good | CoreText registration works; Info.plist optional |
+| Dynamic Type | 🟢 Excellent | All text scales; decorative elements correctly excluded |
+| Reduce motion | 🟢 Excellent | Every animation guarded; consistent pattern |
+| Build health | ✅ | Build + tests pass |
+| MVVM compliance | 🟢 Excellent | Clean separation maintained |
+| Dead code | 🟡 Minor | 2 legacy radius tokens to remove |
+| File size | 🟡 Minor | SettingsView at 556 lines (manageable but monitor) |
+
+### Verdict: **Ready to merge.** No 🔴 critical issues found. Two 🟡 warnings are minor cleanup items that can be addressed post-merge or in a follow-up PR.
+
+### Recommended Follow-Up Items
+
+1. Remove `AppLayout.overlayCornerRadius` and `AppLayout.cardCornerRadius` (dead code)
+2. Clean up Linus implementation note at DesignSystem.swift:186
+3. Track SettingsView size — extract private sections if it grows past ~600 lines
+
+# Code Review: Restful Grove Visual Redesign
+
+**Reviewer:** Saul (Code Reviewer)  
+**Branch:** `feature/restful-grove`  
+**Date:** 2025-07-18  
+**Verdict:** Conditional Approval — 0 P0, 2 P1, 8 P2
+
+---
+
+## Summary
+
+The Restful Grove redesign is well-executed overall. The design token system (AppColor, AppFont, AppLayout) is comprehensive and consistently applied across most views. Accessibility is strong: reduce-motion guards, VoiceOver labels, Dynamic Type scaling, and min tap targets are present throughout. The calming entrance animations are a nice touch.
+
+However, there are token bypass regressions, dead code from the redesign, duplicated patterns, and a gap in test coverage for new palette tokens.
+
+---
+
+## 🔴 Critical (P0)
+
+None.
+
+---
+
+## 🟡 Warning (P1)
+
+### P1-1: `AppColor.shadowCard` uses raw `Color(red:green:blue:)` — not in asset catalog
+**File:** `EyePostureReminder/Views/DesignSystem.swift`, line 78  
+**Issue:** Every other AppColor token uses `Color("name", bundle: .module)` from the asset catalog, which supports dark/light mode adaptation. `shadowCard` is a hardcoded RGB literal with no dark mode variant.  
+**Impact:** The shadow color is currently only used at 10% opacity in light mode (SoftElevation), so it's not visually broken — but it violates the single-source-of-truth pattern. If any future code references `shadowCard` directly (not through `SoftElevation`), it will get a fixed color in both modes.  
+**Fix:** Add `RGShadowCard.colorset` to the asset catalog with light/dark variants, and change to `Color("RGShadowCard", bundle: .module)`.
+
+### P1-2: Three reusable components are dead code — never referenced outside Components.swift
+**File:** `EyePostureReminder/Views/Components.swift`  
+**Components:** `StatusPill` (line 40), `IconContainer` (line 94), `SectionHeader` (line 112)  
+**Issue:** These were added as reusable components during the redesign but are not used by any view. SettingsView has its own `SettingsSectionHeader` and `SettingsRowIcon` (which duplicate the concepts). Dead public types increase API surface, confuse future developers, and bloat the binary.  
+**Fix:** Either (a) adopt them in the views that duplicate their functionality, or (b) remove them. If kept for future use, mark `internal` and add a `// TODO: adopt in SettingsView` comment.
+
+---
+
+## 🟢 Suggestion (P2)
+
+### P2-1: `HomeView` uses `.secondary` system color, bypassing AppColor
+**File:** `EyePostureReminder/Views/HomeView.swift`, line 49  
+**Issue:** `.foregroundStyle(.secondary)` uses the system semantic color instead of `AppColor.textSecondary`. This will render in Apple's default gray, not the Restful Grove sage-green secondary text.  
+**Fix:** Change to `.foregroundStyle(AppColor.textSecondary)`.
+
+### P2-2: `HomeView` uses `AppColor.reminderBlue` for status icon, not RG palette
+**File:** `EyePostureReminder/Views/HomeView.swift`, line 25  
+**Issue:** `statusColor` returns `AppColor.reminderBlue` for the active state and `.secondary` for paused. Both bypass the Restful Grove palette. After the redesign, the active status should use `AppColor.primaryRest` and the paused state `AppColor.textSecondary`.  
+**Fix:** `settings.globalEnabled ? AppColor.primaryRest : AppColor.textSecondary`
+
+### P2-3: `PrimaryButtonStyle` uses hardcoded `.white` foreground
+**File:** `EyePostureReminder/Views/Components.swift`, line 75  
+**Issue:** `.foregroundStyle(.white)` is a raw system color. On the `primaryRest` green background, white works visually today — but it bypasses the token system. If the primary fill ever changes to a light color, white-on-light would break contrast.  
+**Fix:** Consider adding `AppColor.onPrimary` token (always white/near-white), or document that `.white` is intentional for CTA contrast.
+
+### P2-4: `OnboardingPrimaryButtonStyle` duplicates `PrimaryButtonStyle`
+**File:** `EyePostureReminder/Views/Onboarding/OnboardingView.swift`, lines 51–76  
+**File:** `EyePostureReminder/Views/Components.swift`, lines 63–84  
+**Issue:** These two button styles are near-identical (pill shape, primaryRest fill, 0.98 scale, reduce-motion guard). The only difference is `OnboardingPrimaryButtonStyle` uses `AppColor.background` for foreground (warm off-white) while `PrimaryButtonStyle` uses `.white`. This creates two components to maintain for the same visual concept.  
+**Fix:** Consolidate into one `PrimaryButtonStyle` with a parameter for foreground color, or just use `.white`/`AppColor.background` consistently. Then delete the duplicate.
+
+### P2-5: `OnboardingScreenWrapper` duplicates `CalmingEntrance` modifier
+**File:** `EyePostureReminder/Views/Onboarding/OnboardingView.swift`, lines 93–120  
+**File:** `EyePostureReminder/Views/Components.swift`, lines 134–166  
+**Issue:** `OnboardingScreenWrapper` and `CalmingEntrance` implement the same fade+slide entrance with reduce-motion guard. The only difference is the animation curve (onboardingFadeIn vs calmingEntrance). This is two implementations of the same pattern.  
+**Fix:** Make `CalmingEntrance` accept an optional `Animation` parameter and refactor `OnboardingScreenWrapper` to use it: `.calmingEntrance(animation: AppAnimation.onboardingFadeInCurve)`.
+
+### P2-6: `IconContainer` uses raw `.system()` font — bypasses AppFont
+**File:** `EyePostureReminder/Views/Components.swift`, line 101  
+**Issue:** `.font(.system(size: size * 0.44, weight: .semibold))` dynamically computes font size from the container size. This is understandable for a parameterized component, but it's the only place in the redesigned code that uses a raw `.system()` font outside DesignSystem.swift. Since `IconContainer` is currently dead code (P1-2), this is moot — but if adopted, it should use a design token or document why it's dynamic.  
+**Fix:** If kept, add a comment: `// Dynamic size — intentionally not an AppFont token`.
+
+### P2-7: `permissionBanner` and `permissionBannerText` tokens appear unused after redesign
+**File:** `EyePostureReminder/Views/DesignSystem.swift`, lines 28–32  
+**Issue:** The notification warning section in SettingsView was redesigned to use `AppColor.accentWarm` instead of the old yellow `permissionBanner`. No view references `permissionBanner` or `permissionBannerText` anymore.  
+**Fix:** Verify no other code path uses them. If confirmed dead, remove the tokens and their asset catalog entries.
+
+### P2-8: No test coverage for new Restful Grove color tokens
+**Issue:** The 9 new `RG*` colors added to the asset catalog (RGBackground, RGSurface, RGSurfaceTint, RGPrimaryRest, RGSecondaryCalm, RGAccentWarm, RGTextPrimary, RGTextSecondary, RGSeparatorSoft) have no tests in `ColorTokenTests.swift` or `RegressionTests.swift`. The existing tests only cover the original 5 tokens.  
+**Fix:** Add asset-catalog resolution tests (same pattern as `RegressionTests.swift` lines 156–184) to verify all RG* colors load from `bundle: .module` without falling back to system defaults. Also add them to the `ColorTokenTests` distinctness and naming-convention suites.
+
+---
+
+## Positives
+
+- **Design system adoption is thorough.** All 6 redesigned views consistently use `AppColor`, `AppFont`, `AppLayout`, `AppSpacing`, and `AppAnimation` tokens. The QA pass (#167) caught and fixed remaining raw colors.
+- **Accessibility is excellent.** Every interactive element has `.accessibilityLabel`, `.accessibilityHint`, and `.accessibilityIdentifier`. Decorative elements are properly hidden. Reduce-motion is guarded in 5 separate animation contexts.
+- **Dynamic Type is preserved.** All Nunito fonts use `.custom(_, size:, relativeTo:)` for scaling. Fixed-size fonts (countdown, icons) are documented as intentionally decorative.
+- **`SoftElevation` ViewModifier is well-designed.** Light-mode shadow / dark-mode border pattern is clean and correctly adapts via `@Environment(\.colorScheme)`.
+- **`CalmingEntrance` correctly handles re-appear.** The `hasEverAppeared` guard prevents re-animating on TabView page revisits.
+- **Font registration in `App.init()` is correct.** `CTFontManagerRegisterGraphicsFont` runs once before any view needs Nunito.
+- **OnboardingPermissionView DI is fixed.** Notification center is now injected from the coordinator (P2-3 from Phase 2 review resolved).
+
+---
+
+## Recommendation
+
+**Conditional Approval.** Ship after addressing P1-1 (shadowCard) and P1-2 (dead components). P2s are recommended for a cleanup pass but are not blocking.
+
+# Tess Design Consistency Audit — Restful Grove
+
+**Date:** 2026-04-26
+**Branch:** `feature/restful-grove`
+**Scope:** All files under `EyePostureReminder/Views/`, plus `DesignSystem.swift` and `Components.swift`.
+
+## Summary
+
+Restful Grove is broadly applied across the view layer: semantic `AppColor` tokens, Nunito `AppFont`/`AppTypography`, rounded-radius tokens, and adaptive surfaces are now the dominant pattern. I found and fixed several quick consistency gaps in Home, Legal, shared components, settings icons, dark-mode elevation, and SF Symbol rendering.
+
+Build validation: `xcodebuild -scheme EyePostureReminder -destination 'generic/platform=iOS' build -quiet` passed. `swift build` still fails in this repo because it targets macOS where UIKit is unavailable; that appears to be an existing package/tooling limitation, not caused by this audit.
+
+## Fixes Applied
+
+- Replaced remaining visible `.primary`, `.secondary`, and `.accentColor` usages in view code with Restful Grove semantic tokens where they affected app UI.
+- Updated `PrimaryButtonStyle` foreground from hardcoded `.white` to adaptive `AppColor.background` for dark-mode contrast on light sage primary buttons.
+- Changed `SoftElevation` dark-mode border from `Color.primary.opacity(...)` to `AppColor.separatorSoft.opacity(...)`.
+- Brought `HomeView` onto Restful Grove background/text/tint tokens and hierarchical SF Symbol rendering.
+- Brought `LegalDocumentView` body text and dismiss action onto AppFont/AppColor tokens.
+- Reused `IconContainer` for settings row/warning icons and added hierarchical rendering to shared/icon-heavy components.
+- Added hierarchical rendering to onboarding hero, preview, and reminder-card SF Symbols.
+
+## Findings
+
+### 🔴 Must fix
+
+None remaining after the quick fixes above.
+
+### 🟡 Should fix
+
+1. **Onboarding primary buttons still use a separate `OnboardingPrimaryButtonStyle`.**
+   It matches Restful Grove closely, but duplicates `PrimaryButtonStyle` instead of adopting the shared component. This is not visually broken, but it increases drift risk.
+
+2. **Some semibold text is expressed via `.fontWeight(.semibold)` after an AppFont token.**
+   Examples: `SectionHeader`, notification-card app name. This still uses Nunito because the base font is an AppFont token, but adding caption-emphasized typography tokens would make intent cleaner.
+
+3. **Settings form rows are visually tokenized, but still constrained by native `Form` styling.**
+   Row backgrounds/separators use Restful Grove tokens, but a fully custom list/card settings surface would better express the `WellnessCard` direction.
+
+### 🟢 Nice to have
+
+1. **Use `WellnessCard` for onboarding preview cards.**
+   The cards already manually match the modifier (`surface`, `radiusCard`, `separatorSoft`, `softElevation`). Swapping to `.wellnessCard(elevated: true)` would reduce duplication.
+
+2. **Adopt `StatusPill` where short state labels appear.**
+   Home/snooze states could eventually use a pill treatment for stronger component reuse, but current layouts are acceptable.
+
+3. **Introduce icon-size typography helpers for `IconContainer`.**
+   `IconContainer` uses `.font(.system(size:...))` appropriately for SF Symbols, but a helper token would make audit searches quieter.
+
+## Emotional Tone
+
+Overlay copy feels supportive and concise: “Look away and soften your focus.” and “Roll your shoulders and reset.” fit the calm wellness tone. Onboarding copy is warm enough overall, with reassuring phrases like “No spam” and “Works quietly in the background.” No copy changes needed for this pass.
+
+# Tess Font Decision — Phase 1C (#161)
+
+**Decision:** Use **Nunito** as the app typography family.
+
+## Rationale
+
+Nunito is the best fit for the Restful Grove direction from parent plan #158: rounded, soft, friendly, and wellness-oriented without becoming childish. DM Sans was the safest neutral option, Plus Jakarta Sans was more premium/product-led, and SF was lowest overhead, but Nunito adds the clearest emotional lift for a calm reminder app.
+
+## Implementation
+
+- Added OFL-licensed Nunito variable font files from the Google Fonts GitHub repo to `EyePostureReminder/Resources/Fonts/`.
+- Kept `Package.swift` processing `EyePostureReminder/Resources`, which includes the new font files.
+- Added `AppTypography` tokens in `DesignSystem.swift` using SwiftUI `.custom(..., relativeTo:)` so Dynamic Type is preserved.
+- Kept fixed monospaced system typography for countdown digits because it is decorative, accessibility-labelled, and intentionally non-scaling.
+- Registered bundled fonts programmatically at app startup via `CTFontManagerRegisterGraphicsFont`.
+- Kept `AppFont` as a compatibility alias to avoid broad view churn while moving the canonical decision to `AppTypography`.
+
+## Accessibility
+
+All text tokens except the existing countdown token use Dynamic Type-relative SwiftUI custom fonts. The countdown remains a documented fixed-size decorative exception with VoiceOver labels.
