@@ -240,7 +240,7 @@ final class ScreenTimeTracker: ScreenTimeTracking {
         guard tickTimer == nil else { return }
         lastTickTime = 0  // reset so first tick uses default delta of 1.0
         tickTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-            self?.tick()
+            MainActor.assumeIsolated { self?.tick() }
         }
         tickTimer?.tolerance = 0.5
         Logger.scheduling.debug("ScreenTimeTracker: started ticking")

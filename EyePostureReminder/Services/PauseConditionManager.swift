@@ -16,6 +16,7 @@ enum PauseConditionSource: Hashable {
 
 // MARK: - Detector Protocols
 
+@MainActor
 protocol FocusStatusDetecting: AnyObject {
     var isFocused: Bool { get }
     var onFocusChanged: ((Bool) -> Void)? { get set }
@@ -23,6 +24,7 @@ protocol FocusStatusDetecting: AnyObject {
     func stopMonitoring()
 }
 
+@MainActor
 protocol CarPlayDetecting: AnyObject {
     var isCarPlayActive: Bool { get }
     var onCarPlayChanged: ((Bool) -> Void)? { get set }
@@ -30,6 +32,7 @@ protocol CarPlayDetecting: AnyObject {
     func stopMonitoring()
 }
 
+@MainActor
 protocol DrivingActivityDetecting: AnyObject {
     var isDriving: Bool { get }
     var onDrivingChanged: ((Bool) -> Void)? { get set }
@@ -37,6 +40,7 @@ protocol DrivingActivityDetecting: AnyObject {
     func stopMonitoring()
 }
 
+@MainActor
 protocol PauseConditionProviding: ServiceLifecycle {
     var isPaused: Bool { get }
     var onPauseStateChanged: ((Bool) -> Void)? { get set }
@@ -127,7 +131,7 @@ final class LiveCarPlayDetector: CarPlayDetecting {
         observer = nil
     }
 
-    private func checkCarPlay() -> Bool {
+    nonisolated private func checkCarPlay() -> Bool {
         // .carPlay port may not be exposed in all SDK configurations; match via raw value.
         let carPlayPort = AVAudioSession.Port(rawValue: "CarPlay")
         let outputs = AVAudioSession.sharedInstance().currentRoute.outputs

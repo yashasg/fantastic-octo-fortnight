@@ -22,8 +22,9 @@ struct OnboardingView: View {
             // Inject the coordinator's notification center so the permission
             // request can be driven by a mock in UI tests without swizzling.
             OnboardingPermissionView(
+                onNext: { currentPage = 2 },
                 notificationCenter: coordinator.notificationCenter
-            ) { currentPage = 2 }
+            )
                 .tag(1)
             OnboardingSetupView(
                 onGetStarted: finishOnboarding,
