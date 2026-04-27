@@ -52,6 +52,11 @@ struct OverlayView: View {
             dismissButton
             centerContent
         }
+        .accessibilityElement(children: .contain)
+        .accessibilityAddTraits(.isModal)
+        .accessibilityAction(AccessibilityActionKind.escape) {
+            performDismiss(method: .button)
+        }
         .opacity(contentOpacity)
         .offset(y: slideOffset)
         .gesture(swipeUpDismissGesture)

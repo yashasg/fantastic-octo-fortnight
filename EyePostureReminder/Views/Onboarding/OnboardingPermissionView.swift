@@ -11,6 +11,8 @@ struct OnboardingPermissionView: View {
     let onNext: () -> Void
     private let notificationCenter: NotificationScheduling
 
+    @Environment(\.accessibilityEnabled) private var accessibilityEnabled
+
     init(onNext: @escaping () -> Void,
          notificationCenter: NotificationScheduling = UNUserNotificationCenter.current()) {
         self.onNext = onNext
@@ -70,11 +72,11 @@ struct OnboardingPermissionView: View {
                 .padding()
                 .frame(maxWidth: AppLayout.onboardingMaxContentWidth)
                 .frame(maxWidth: .infinity)
-                // Use highPriorityGesture so this view consumes horizontal drags
-                // before the parent TabView sees them, preventing accidental swipe
-                // past the permission screen.
+                // Block horizontal drags to prevent accidental swipe past the
+                // permission screen — but only when VoiceOver is off, so the
+                // three-finger page-navigation gesture still works.
                 .highPriorityGesture(
-                    DragGesture(minimumDistance: 10)
+                    DragGesture(minimumDistance: accessibilityEnabled ? .infinity : 10)
                         .onChanged { _ in }
                 )
             }

@@ -67,6 +67,15 @@ struct YinYangEyeView: View {
                 breathing = false
             }
         }
+        .onChange(of: reduceMotion) { newValue in
+            if newValue {
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    breathing = false
+                }
+            } else if isVisible {
+                startAnimations()
+            }
+        }
     }
 
     private func startAnimations() {
