@@ -71,7 +71,7 @@ struct OnboardingSetupView: View {
                     Button(action: onCustomize) {
                         Text("onboarding.setup.customizeButton", bundle: .module)
                     }
-                        .buttonStyle(OnboardingSecondaryButtonStyle())
+                        .buttonStyle(.secondary)
                         .accessibilityLabel(Text("onboarding.setup.customizeButton", bundle: .module))
                         .accessibilityHint(Text("onboarding.setup.customizeButton.hint", bundle: .module))
                         .accessibilityIdentifier("onboarding.customize")

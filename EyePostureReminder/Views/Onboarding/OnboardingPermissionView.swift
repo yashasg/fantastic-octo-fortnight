@@ -64,7 +64,7 @@ struct OnboardingPermissionView: View {
                     Button(action: onNext) {
                         Text("onboarding.permission.skipButton", bundle: .module)
                     }
-                        .buttonStyle(OnboardingSecondaryButtonStyle())
+                        .buttonStyle(.secondary)
                         .accessibilityLabel(Text("onboarding.permission.skipButton", bundle: .module))
                         .accessibilityHint(Text("onboarding.permission.skipButton.hint", bundle: .module))
                         .accessibilityIdentifier("onboarding.permission.nextButton")
