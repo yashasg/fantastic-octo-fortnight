@@ -131,6 +131,8 @@ final class LiveCarPlayDetector: CarPlayDetecting {
         observer = nil
     }
 
+    // nonisolated: required because NotificationCenter.addObserver(forName:queue:) closure
+    // is not actor-isolated; the callback dispatches back to main for state mutation.
     nonisolated private func checkCarPlay() -> Bool {
         // .carPlay port may not be exposed in all SDK configurations; match via raw value.
         let carPlayPort = AVAudioSession.Port(rawValue: "CarPlay")

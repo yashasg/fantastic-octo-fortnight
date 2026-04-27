@@ -82,7 +82,7 @@ final class MetricKitSubscriber: NSObject, MXMetricManagerSubscriber {
             )
             for crash in crashes {
                 Logger.lifecycle.error(
-                    "MetricKit crash signal=\(crash.signal ?? -1) exception_type=\(crash.exceptionType ?? -1)"
+                    "MetricKit crash signal=\(crash.signal?.intValue ?? -1) exception_type=\(crash.exceptionType?.intValue ?? -1)"
                 )
             }
         }
