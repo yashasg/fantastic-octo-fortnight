@@ -129,6 +129,21 @@ final class HomeScreenTests: XCTestCase {
         XCTAssertNotEqual(initialText, updatedText, "Status label should update after toggling the global switch.")
     }
 
+    // MARK: - test_homeScreen_onLaunch_titleShowsKshana
+
+    /// Verifies the home screen title displays "kshana" — the app's brand name.
+    func test_homeScreen_onLaunch_titleShowsKshana() throws {
+        let titleText = app.staticTexts["home.title"]
+        XCTAssertTrue(
+            titleText.waitForExistence(timeout: 5),
+            "Home screen title must be visible."
+        )
+        XCTAssertEqual(
+            titleText.label, "kshana",
+            "Home screen title must display 'kshana' — the app's brand name."
+        )
+    }
+
     // MARK: - test_homeScreen_onLaunch_statusLabelIsNotEmpty
 
     /// Verifies the status label is non-empty (shows "active" or "paused" state).
