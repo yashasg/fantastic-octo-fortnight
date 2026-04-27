@@ -87,7 +87,7 @@ final class PreviewTests: XCTestCase {
     }
 
     func test_onboardingPermissionView_preview() {
-        let view = OnboardingPermissionView(notificationCenter: MockNotificationCenter()) {}
+        let view = OnboardingPermissionView(onNext: {}, notificationCenter: MockNotificationCenter())
         assertPreviewRenders(view)
     }
 

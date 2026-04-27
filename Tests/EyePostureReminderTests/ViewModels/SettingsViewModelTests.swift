@@ -163,24 +163,24 @@ final class SettingsViewModelTests: XCTestCase {
     // MARK: - snooze
 
     func test_snooze_5min_cancelAllReminders() {
-        sut.snooze(for: 5)
+        sut.snooze(option: .fiveMinutes)
         XCTAssertEqual(mockScheduler.cancelAllCallCount, 1)
     }
 
     func test_snooze_1hour_cancelAllReminders() {
-        sut.snooze(for: 60)
+        sut.snooze(option: .oneHour)
         XCTAssertEqual(mockScheduler.cancelAllCallCount, 1)
     }
 
     func test_snooze_setsSnoozedUntilInFuture() throws {
-        sut.snooze(for: 5)
+        sut.snooze(option: .fiveMinutes)
         let snoozedUntil = try XCTUnwrap(settings.snoozedUntil)
         XCTAssertGreaterThan(snoozedUntil, Date())
     }
 
     func test_snooze_5min_setsCorrectDuration() throws {
         let before = Date()
-        sut.snooze(for: 5)
+        sut.snooze(option: .fiveMinutes)
         let after = Date()
 
         let expectedMin = before.addingTimeInterval(5 * 60)
@@ -197,7 +197,7 @@ final class SettingsViewModelTests: XCTestCase {
 
     func test_snooze_60min_setsCorrectDuration() throws {
         let before = Date()
-        sut.snooze(for: 60)
+        sut.snooze(option: .oneHour)
 
         let snoozedUntil = try XCTUnwrap(settings.snoozedUntil)
         XCTAssertEqual(
@@ -208,7 +208,7 @@ final class SettingsViewModelTests: XCTestCase {
     }
 
     func test_snooze_doesNotCallSchedule() {
-        sut.snooze(for: 5)
+        sut.snooze(option: .fiveMinutes)
         XCTAssertEqual(mockScheduler.scheduleRemindersCallCount, 0)
     }
 
