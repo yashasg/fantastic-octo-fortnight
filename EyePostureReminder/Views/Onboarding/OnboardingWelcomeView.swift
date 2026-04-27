@@ -13,7 +13,9 @@ struct OnboardingWelcomeView: View {
                 VStack(spacing: AppSpacing.lg) {
                     Spacer(minLength: AppSpacing.xl)
 
-                    WelcomeHeroCard()
+                    YinYangEyeView()
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityLabel(Text("onboarding.welcome.illustrationLabel", bundle: .module))
 
                     // Headline + Subheadline
                     VStack(spacing: AppSpacing.sm) {
@@ -67,68 +69,6 @@ struct OnboardingWelcomeView: View {
             }
             .background(AppColor.background.ignoresSafeArea())
             .calmingEntrance()
-    }
-}
-
-// MARK: - Welcome Hero Card
-
-private struct WelcomeHeroCard: View {
-    var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: AppLayout.radiusLarge, style: .continuous)
-                .fill(AppColor.surface)
-
-            Circle()
-                .fill(AppColor.accentWarm.opacity(0.16))
-                .frame(width: 86, height: 86)
-                .offset(x: 94, y: -48)
-                .accessibilityHidden(true)
-
-            Circle()
-                .fill(AppColor.surfaceTint)
-                .frame(width: 64, height: 64)
-                .offset(x: -104, y: 52)
-                .accessibilityHidden(true)
-
-            HStack(spacing: AppSpacing.lg) {
-                HeroIcon(
-                    systemName: AppSymbol.eyeBreak,
-                    tint: AppColor.primaryRest,
-                    yOffset: -AppSpacing.xs
-                )
-                HeroIcon(
-                    systemName: AppSymbol.postureCheck,
-                    tint: AppColor.secondaryCalm,
-                    yOffset: AppSpacing.xs
-                )
-            }
-            .padding(AppSpacing.xl)
-        }
-        .frame(maxWidth: 320, minHeight: 188)
-        .softElevation()
-        .padding(.horizontal, AppSpacing.md)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text("onboarding.welcome.illustrationLabel", bundle: .module))
-    }
-}
-
-private struct HeroIcon: View {
-    let systemName: String
-    let tint: Color
-    let yOffset: CGFloat
-
-    var body: some View {
-        Image(systemName: systemName)
-            .symbolRenderingMode(.hierarchical)
-            .font(AppFont.illustrationIcon)
-            .foregroundStyle(tint)
-            .frame(width: 108, height: 108)
-            .background(
-                RoundedRectangle(cornerRadius: AppLayout.radiusLarge, style: .continuous)
-                    .fill(AppColor.surfaceTint)
-            )
-            .offset(y: yOffset)
-            .accessibilityHidden(true)
     }
 }
 
