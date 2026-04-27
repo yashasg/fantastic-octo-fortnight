@@ -28,7 +28,7 @@ env:
   SCHEME: "EyePostureReminder"
   # No .xcodeproj — project uses Swift Package Manager.
   # xcodebuild resolves the package directly from Package.swift.
-  SIMULATOR: "platform=iOS Simulator,name=iPhone 16,OS=26.2"
+  SIMULATOR: "platform=iOS Simulator,name=iPhone 16"
   DERIVED_DATA_PATH: "${{ github.workspace }}/DerivedData"
 
 jobs:
@@ -43,6 +43,15 @@ jobs:
 
       - name: Select Xcode ${{ env.XCODE_VERSION }}
         run: sudo xcode-select -switch /Applications/Xcode_${{ env.XCODE_VERSION }}.app/Contents/Developer
+
+      - name: Ensure iOS Simulator runtime
+        run: |
+          if ! xcrun simctl list devices available 2>/dev/null | grep -q "iPhone"; then
+            echo "No iOS simulators found — downloading runtime…"
+            xcodebuild -downloadPlatform iOS -quiet || true
+          fi
+          echo "Available iOS simulators:"
+          xcrun simctl list devices available | grep -i iphone | head -5
 
       # ── Versioning ──────────────────────────────────────────────────────────
       # CFBundleShortVersionString is managed via: ./scripts/build.sh version <x.y.z>
@@ -147,6 +156,15 @@ jobs:
 
       - name: Select Xcode ${{ env.XCODE_VERSION }}
         run: sudo xcode-select -switch /Applications/Xcode_${{ env.XCODE_VERSION }}.app/Contents/Developer
+
+      - name: Ensure iOS Simulator runtime
+        run: |
+          if ! xcrun simctl list devices available 2>/dev/null | grep -q "iPhone"; then
+            echo "No iOS simulators found — downloading runtime…"
+            xcodebuild -downloadPlatform iOS -quiet || true
+          fi
+          echo "Available iOS simulators:"
+          xcrun simctl list devices available | grep -i iphone | head -5
 
       - name: Install XcodeGen
         run: brew install xcodegen
