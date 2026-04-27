@@ -5,58 +5,6 @@
 - **Stack:** Swift, SwiftUI (iOS 16+), MVVM, UserNotifications, UIKit overlay, UserDefaults
 - **Created:** 2026-04-24
 
-## Learnings
-
-### 2026-04-26: Architecture Audit v2 — Deeper Pass
-
-**Scope:** Full re-read of all key files (AppCoordinator, ScreenTimeTracker, PauseConditionManager, OverlayManager, AnalyticsLogger, MetricKitSubscriber, ReminderScheduler, SettingsViewModel, AppDelegate, Package.swift).
-
-**Key new findings (beyond v1):**
-
-1. **🔴 P0: ScreenTimeTracker and its protocol lack `@MainActor`** — all access is main-thread in practice (Timer, NotificationCenter observers), but no compile-time enforcement. This will fail under Swift 6 strict concurrency. Protocol `ScreenTimeTracking` must also be annotated.
-2. **🟡 P1: PauseConditionManager and detector protocols also lack `@MainActor`** — same class of issue. `PauseConditionProviding` callbacks cross isolation boundaries without Sendable guarantees.
-3. **🟡 P1: Analytics events `.reminderTriggered`, `.overlayDismissed`, `.overlayAutoDismissed`, `.appSessionEnd` are defined but never emitted** — analytics system has gaps that undermine its debugging value.
-4. **🟢 P2: `AppDelegate.coordinator` is strong (not weak)** — safe in single-window app but defensive improvement for multi-scene.
-5. **🟢 P2: `resumeAll()` doesn't reset elapsed counters (asymmetric with `pauseAll()`)** — intentional design, but undocumented.
-
-**v1 P1s confirmed still open:** AnalyticsEvent Sendable, MetricKitSubscriber unregistered.
-
-**Score:** 8/10 (down from 8.5). Report: `.squad/decisions/inbox/rusty-arch-pass-v2.md`
-
-### 2026-04-26: Edge Case Analysis — Quality Pass (Issues #26–#29)
-
-**Scope:** Full read of AppCoordinator, ScreenTimeTracker, OverlayManager, PauseConditionManager, ReminderScheduler, SettingsStore, AppDelegate, EyePostureReminderApp.
-
-**Four confirmed bugs filed:**
-
-| # | Issue | Severity | Root cause |
-|---|---|---|---|
-| #26 | PauseConditionManager stale state when pause-setting toggled mid-condition | High | `update()` only called on detector callbacks, not on settings changes — `activeConditions` never re-evaluated when `pauseDuringFocus`/`pauseWhileDriving` flips |
-| #27 | Active overlay stays visible when driving/CarPlay pause fires | Medium-High | `onPauseStateChanged(true)` only calls `screenTimeTracker.pauseAll()`, never `overlayManager.dismissOverlay()` |
-| #28 | ScreenTimeTracker elapsed counter wiped on break-duration change | Medium | `setThreshold` always resets `elapsed[type] = 0` — called for all reminder settings changes, not just interval changes |
-| #29 | Snooze-wake notification is user-visible banner; dismissed banner = dead snooze on killed app | Low-Medium | `scheduleSnoozeWakeNotification` sets title/body; `didReceive` never fires if user swipes banner away; killed-app self-heals only on next manual open |
-
-**Key architecture invariants confirmed safe:**
-- `ScreenTimeTracker` grace period (5s) correctly handles notification banners, incoming calls, Control Center pulls.
-- `OverlayManager` overlay queue handles concurrent eye+posture threshold hits.
-- `AppCoordinator.onPauseStateChanged(false)` correctly checks snooze state before resuming.
-- `wasInBackground` flag correctly gates `handleForegroundTransition` to genuine background→foreground only.
-- `OverlayView` uses `Timer.scheduledTimer` which auto-pauses on `willResignActive` — device-sleep countdown drift is NOT an issue.
-- `scenePhase .active` calls `presentPendingOverlayIfNeeded()` safely — `pendingOverlay` is nil-checked and cleared on first use.
-- Periodic `UNNotificationTrigger` (legacy scheduler path) is dead code post-ScreenTimeTracker migration — the 60s minimum trigger interval constraint cannot be hit.
-
-**Findings ruled out (not bugs):**
-- Force-quit during overlay: all `onDismiss` callbacks are `{}` — no state to corrupt. Self-heals on relaunch.
-- Clock/DST changes: snooze uses `date.timeIntervalSinceNow` at schedule time, not stored interval. `max(0, ...)` handles forward time jumps. Backward jumps extend snooze — acceptable edge case.
-- Short intervals (<60s): blocked by ScreenTimeTracker's `threshold > 0` guard. UNTimeIntervalTrigger min is not hit.
-- CarPlay raw port string `"CarPlay"`: matches Apple's SDK raw value. Fragile but not wrong.
-
-### 2026-04-25: Architecture Review — Updated ARCHITECTURE.md (04:35 spawn)
-- **Deliverable:** ARCHITECTURE.md rewritten with 6 major corrections
-- **Corrections:** Module graph accuracy, protocol definitions, SPM structure, trigger model, AppConfig initialization, onboarding state machine
-- **Impact:** New authority for impl team; resolved ambiguities in Services/Views boundaries; informed Basher's DI protocol design (#13, #14)
-- **Quality note:** Corrections validate Rusty's edge case analysis (#26–#29) — state machine invariants properly documented post-review.
-
 ## Core Context
 
 **Initial Architecture Scaffolding (Rusty Pre-Phase1) — 2026-04-24:**
@@ -261,99 +209,6 @@ All model, protocol, and service skeletons in `EyePostureReminder/`:
 
 ---
 
-## Session 6 Update: Screen-Time Triggers Architecture Finalized
-
-**Session:** 2026-04-24T20:58Z – 2026-04-24T21:37Z
-
-### Architecture Review Complete ✅
-
-Reviewed Danny's screen-time spec and approved with **6 required amendments** (documented in Decision 3.2):
-
-**Critical Amendment — Grace Period (5s debounce):**
-```swift
-func handleWillResignActive() {
-    pauseTimer()  // stop incrementing immediately
-    resetTask = Task { [weak self] in
-        try? await Task.sleep(nanoseconds: UInt64(5.0 * 1_000_000_000))
-        guard !Task.isCancelled else { return }
-        self?.resetElapsedTime()
-    }
-}
-
-func handleDidBecomeActive() {
-    if let resetTask {
-        resetTask.cancel()  // came back within grace period
-        resumeTimer()
-    } else {
-        startTracking()  // genuine screen-off (grace expired)
-    }
-}
-```
-
-**Why this matters:** Without the grace period, notification banners, incoming calls, and Control Center pulls would reset the timer to zero. User loses 19 minutes of accumulated time because a text arrived — feature feels broken.
-
-### Implementation Status
-
-Basher implemented ScreenTimeTracker per architecture spec (Decision 3.4):
-- ✅ Standalone service (not in AppCoordinator)
-- ✅ 5s grace period with Task-based cancellation
-- ✅ Monotonic clock (`CACurrentMediaTime()`)
-- ✅ `isEnabled` flag for snooze suppression
-- ✅ `Timer.tolerance = 0.5` for battery coalescing
-- ✅ Build: **BUILD SUCCEEDED**
-
-### Module Structure Realized
-
-```
-Services/
-├── ScreenTimeTracker.swift (NEW) — lifecycle + timer + thresholds
-├── ReminderScheduler.swift (NARROWED) — UNNotifications for snooze-wake only
-├── AppCoordinator.swift (UPDATED) — subscribes to tracker events, wires to overlays
-└── OverlayManager.swift — unchanged
-
-Dependency flow:
-  AppCoordinator → ScreenTimeTracker (owns, start/stop/reset)
-  ScreenTimeTracker → (callback) → AppCoordinator (what to do with threshold events)
-  AppCoordinator → OverlayManager (present reminders)
-```
-
-### Testing Strategy Documented
-
-For Livingston's unit tests:
-- `MockTimerFactory` — fires ticks on demand (no real timers in tests)
-- `AppLifecycleProviding` protocol — tests inject `PassthroughSubject` for lifecycle events
-- `MockTimeProvider` — clock is mockable
-- Test cases: grace period, threshold firing, multi-threshold handling, snooze suppression, settings reschedule, system clock immunity
-
-### Next: Testing Phase
-
-Livingston will implement ScreenTimeTracker unit tests using mock factories + mock lifecycle provider. 8 test cases documented in architecture review; ~60-80 lines of test code per case.
-
-
-## 2026-04-25 — Architecture: Wave 2 Testing Strategy Documentation
-
-**Status:** ✅ Complete  
-**Scope:** Testing architecture patterns and conventions documented in ARCHITECTURE.md
-
-### Orchestration Summary
-
-- **Testing Layers Defined:** Unit (manager + detectors), Integration (cross-component), UI (XCUITest)
-- **Conventions Established:** Mocking patterns, fixture factory, async test patterns
-- **XCUITest Requirements Documented:** Blocker (SPM limitation) and workaround (add .xcodeproj)
-- **Data Flow Diagrams:** Testing architecture visually documented
-- **Orchestration Log:** Filed at `.squad/orchestration-log/2026-04-24T23-19-18Z-rusty.md`
-
-### Architecture Decisions
-
-- Layered testing aligns with clean MVVM architecture
-- Fixture factory pattern for detector mocks (reusable across test suites)
-- Test environment flags via launchArguments for reproducible UI testing
-- Documented test data patterns (UserDefaults mocking, NotificationCenter test doubles)
-
-### Next Phase
-
-Testing infrastructure documented and ready. XCUITest blocker (Phase 2) documented in decisions.md.
-
 ## Learnings
 
 ### 2026-04-25 — ARCHITECTURE.md Codebase Audit
@@ -381,6 +236,22 @@ Performed a full audit of the production codebase vs ARCHITECTURE.md (which was 
 
 **Lesson:** Architecture docs written at project start become actively misleading within a few sprints. Consider requiring ARCHITECTURE.md to be in the PR diff for any service-layer change.
 
+### 2025-07-25 — Full Architecture Quality Review (READ-ONLY)
+
+Performed a comprehensive architecture quality audit across all 6 dimensions. Summary:
+
+**MVVM compliance (Strong):** Clean 3-layer separation (Views → ViewModels → Services). One issue: `SettingsView` uses a `SettingsViewModelBox` wrapper pattern that leaves `viewModel` nil during first render, requiring `?.` chaining everywhere. Should refactor to inject VM directly.
+
+**Protocol usage (Strong):** Every service has a testable protocol: `NotificationScheduling`, `ReminderScheduling`, `OverlayPresenting`, `MediaControlling`, `ScreenTimeTracking`, `SettingsPersisting`, `PauseConditionProviding`, plus 3 detector protocols. Mocks exist for all. `AppCoordinator.scheduler` is correctly typed as `ReminderScheduling` (protocol).
+
+**Module structure (Good):** Clean folder layout: App/, Models/, Services/, ViewModels/, Views/, Utilities/, Resources/. Protocols co-located with implementations (pragmatic for this scale). No misplaced files found.
+
+**Swift concurrency (Good):** `@MainActor` correctly applied to all UI-touching types (SettingsStore, OverlayManager, AppCoordinator, PauseConditionManager, ScreenTimeTracker). `async/await` used for notification center calls. One concern: `OverlayView` uses `DispatchQueue.main.asyncAfter` for animation callbacks — not a bug but mixes paradigms.
+
+**DI (Good with one issue):** `AppCoordinator` init accepts all dependencies as optional protocol types — excellent. `OverlayManager.shared` singleton still exists (line 63) but is only used as a default; the coordinator injects it via `OverlayPresenting`. `MetricKitSubscriber.shared` is a true singleton — acceptable for a diagnostic service.
+
+**Battery/performance (Excellent):** `ScreenTimeTracker` uses a 1-second Timer with 0.5s tolerance (coalescing-friendly). Grace period mechanism prevents unnecessary resets on brief interruptions. No polling or background processing. Audio session activated only during overlays. Reschedule debounce (300ms) prevents slider thrashing.
+
 ## Team Sync — 2026-04-25T04:35
 
 **Corrections Validated:**
@@ -395,3 +266,114 @@ Performed a full audit of the production codebase vs ARCHITECTURE.md (which was 
 ### 2025-07-25 — Initial Architecture Scaffolding
 
 Early architecture foundational work: Models, Services, ViewModels, DesignSystem scaffolding with all protocol, service skeleton definitions. Pre-Phase 1 architecture decisions. Preserved for reference; superseded by Phase 1-2 implementations and updated ARCHITECTURE.md audit (2026-04-25).
+
+### 2026-04-26 — Quality Sweep: Architecture Review (Grade A)
+
+**Quality sweep findings from 8-agent parallel audit:**
+
+1. **OverlayManager singleton is dead code** — `static let shared` duplicates DI protocol. Coordinator is the only correct owner. Refactor post-Phase-1.
+
+2. **SettingsView ViewModel box pattern needs refactoring** — `@StateObject` wrapping optional means `viewModel` is `nil` during first render, forcing optional chaining. Should construct in init or pass as parameter.
+
+3. **Protocol extraction per ARCHITECTURE.md** — `SettingsPersisting`, `NotificationScheduling`, `MediaControlling` scattered across services. Recommend `Protocols/` directory for future discoverability (not urgent for Phase 1).
+
+4. **Timer.publish more idiomatic** — `OverlayView` uses `Timer(timeInterval:repeats:)` + `RunLoop.main`. Consider `Timer.publish(...).onReceive` for iOS 16+ (suggestion, not blocking).
+
+5. **Cross-cutting impact:** Linus audit identified SettingsView body decomposition as priority W-1. Coordinate with Linus on extraction strategy (Snooze section ~90 lines, Smart Pause section ~80 lines).
+
+6. **Documentation stale:** ARCHITECTURE.md build instructions ("swift build / swift test") contradict README (xcodebuild required). Update Section 3 pre-submission.
+
+**Next owner action:** Post-Phase-1, ~~remove OverlayManager singleton~~ ✅ Done (Issue #114) and refactor SettingsView ViewModel pattern.
+
+### 2025-07-25 — Issue #114: Removed OverlayManager.shared singleton
+
+**What I did:**
+- Deleted `static let shared = OverlayManager()` from `OverlayManager.swift` (was line 63).
+- Changed `AppCoordinator.init` default from `OverlayManager.shared` to `OverlayManager()` — each coordinator now owns a fresh instance, proper DI.
+- Rewrote `OverlayManagerTests` to use `makeManager()` factory instead of `.shared`. Removed 2 singleton-identity tests (`test_shared_isNotNil`, `test_shared_returnsSameInstance`) that no longer apply. Eliminated `tearDown` that cleaned shared state.
+- Updated doc comments in `AppCoordinator.swift` and `AppCoordinatorTests.swift`.
+- All 38 OverlayManager + AppCoordinator tests pass. Build clean, zero warnings on changed files.
+
+### 2026-04-26 — Issue #110: UI Test Architecture Proposal
+
+**What I did:**
+- Analyzed all 31 XCUITest methods across 4 files (`HomeScreenTests`, `OnboardingFlowTests`, `SettingsFlowTests`, `OverlayTests`) — all use `XCUIApplication` launch/query patterns incompatible with SPM test targets.
+- Evaluated 5 options: minimal xcodeproj, full xcodeproj, ViewInspector, Xcode-generated project, Swift Testing macros.
+- **Recommended Option 1: Minimal .xcodeproj containing only the UITest bundle target.** App and unit tests stay in Package.swift. Zero changes to existing test files.
+- Ruled out ViewInspector — cannot test app launch, multi-view flows, overlay window presentation, or accessibility in rendered context. Would require full rewrite of all 31 tests.
+- Ruled out Swift Testing — no XCUITest equivalent; irrelevant to the problem.
+- Ruled out `swift package generate-xcodeproj` — deprecated/removed; Xcode's transient workspace doesn't support adding targets.
+- Proposed CI integration: separate `ui-test` job in ci.yml (UI tests are slower and flakier than unit tests).
+- Proposed `uitest` subcommand for `scripts/build.sh`.
+- Estimated effort: 3-4 hours total across team.
+
+**Documentation:** `.squad/decisions/inbox/rusty-ui-test-architecture.md`
+
+## Learnings
+
+- **SPM fundamentally cannot host XCUITest targets.** SPM's `.testTarget` creates XCTest unit test bundles only. XCUITest requires a UITest bundle target type (`com.apple.product-type.bundle.ui-testing`), which is an Xcode project concept with no SPM equivalent. This is an Apple toolchain limitation, not a configuration issue.
+- **Minimal xcodeproj is the pragmatic bridge.** When an SPM-first project needs XCUITest, the lowest-maintenance solution is an xcodeproj that contains ONLY the UITest target, referencing the SPM-built app. Drift risk is minimal because the xcodeproj has no app target to keep in sync.
+- **ViewInspector tests view structure, not rendered behavior.** It's a complement for view-level unit tests, not a replacement for flow-based UI tests that verify navigation, accessibility, and multi-screen interactions.
+- **`swift package generate-xcodeproj` is dead.** Deprecated since Swift 5.6. Not a viable path for any tooling decisions going forward.
+
+### 2026-04-26: Restful Grove Redesign — Full Architecture Review
+
+**What I reviewed:**
+
+Complete code quality and architecture review of the Restful Grove visual redesign (Issues #159–#167, Phases 1–4). Covered DesignSystem.swift (322 lines), Components.swift (182 lines), all view files, font integration, animation patterns, and MVVM compliance.
+
+**Verdict:** Ready to merge. No critical issues. Two minor warnings (dead legacy radius tokens, SettingsView size at 556 lines).
+
+**Key observations:**
+
+- Design token architecture is solid: 9 semantic colors, 4 corner radii, 6 spacing values, well-documented with WCAG ratios
+- 100% token adoption across all view files — zero hardcoded values escaped the QA pass
+- AppFont/AppTypography dual-namespace pattern works well (facade + implementation) but needs a clarifying doc comment
+- All animations properly guarded with `@Environment(\.accessibilityReduceMotion)` — consistent if/else pattern across 9+ files
+- Dynamic Type fully supported via `.custom(name, size:, relativeTo:)` on all Nunito text styles
+- Nunito font registration via CoreText is valid; Info.plist `UIAppFonts` is recommended but not required
+- CalmingEntrance ViewModifier is a clean, reusable animation component with proper reduce-motion handling
+- SoftElevation correctly adapts between light (shadow) and dark (border overlay) modes
+
+## Learnings
+
+- **Dual font namespaces (AppFont ↔ AppTypography) are maintainable when the facade layer is pure pass-through.** The key is to enforce a convention: define tokens in AppTypography, reference via AppFont at call sites. New contributors need a doc comment to understand this.
+- **Legacy design tokens should be removed in the same PR that introduces replacements.** The `overlayCornerRadius`/`cardCornerRadius` → `radiusSmall`/`radiusCard`/`radiusLarge`/`radiusPill` migration left dead code. Always grep for usage before merging.
+- **CoreText programmatic font registration is reliable for SPM bundle contexts.** `CTFontManagerRegisterGraphicsFont` works where Info.plist `UIAppFonts` cannot reference SPM `.module` bundle resources. This is the correct pattern for our project structure.
+- **556 lines in a single view file is the monitoring threshold.** SettingsView is well-decomposed with private structs, but extraction to separate files should happen before it hits ~600 lines.
+- **Final verification pass (2026-04-26): Restful Grove redesign is SHIP-READY.** 889 tests, 0 failures. Zero raw `Color.*` or system font literals in Views layer. All `withAnimation` and `.animation` calls are guarded by `reduceMotion`. Design token adoption is 100% across DesignSystem, Components, SettingsView, OverlayView, HomeView, and all Onboarding screens. `IconContainer.font(.system(...))` is the sole computed-size exception — intentional, since the icon scales relative to its container `size` parameter. Architecture is clean MVVM with protocol-injected dependencies.
+- **SVG-to-SwiftUI-Path conversion via `addArc()` is cleaner than translating SVG `d` paths.** For geometric shapes like yin-yang, expressing the geometry as arc operations is more maintainable and readable than raw cubic bezier control points. Document the approach in ARCHITECTURE.md when introducing custom Shape conformers.
+- **Phase-based animation state machines should use `@State` booleans with `DispatchQueue.main.asyncAfter` for sequencing.** SwiftUI's `withAnimation` doesn't natively support chained phases — the asyncAfter pattern is the established workaround. Always guard with `hasStarted` to prevent re-triggering on view re-render.
+
+### 2026-04-27: YinYangEyeView Architecture Pattern Documentation
+
+- **Context:** Documented the established architectural pattern for custom animated branding components in the app.
+- **Decision:** `YinYangEyeView` uses custom SwiftUI `Shape` / `Path` drawing (not SF Symbols or image assets) with a two-phase animation state machine (Spin → Breathe).
+- **Rationale:** Resolution-independent, direct design-token integration, per-layer animation control. Two-phase state machine sequences animations cleanly (SwiftUI lacks native chaining). Reduce-motion compliance via `@Environment(\.accessibilityReduceMotion)`.
+- **ARCHITECTURE.md updates:** Documented pattern in §4.8. Any future custom animated branding components should follow the same Shape + phase-based approach.
+- **Design tokens used:** Existing Restful Grove tokens (`AppColor.primaryRest`, `AppColor.surfaceTint`) — no new tokens introduced.
+- **Decision artifact:** `.squad/decisions/inbox/rusty-yinyang-arch.md` → merged into decisions.md
+
+### 2025-07-18: Battery Life & Performance Audit
+
+- **Context:** Full battery/performance audit requested by Yashas. Reviewed all 33 Swift source files across Services, Models, ViewModels, Views, App, and Utilities layers.
+- **Overall Grade: B+** — No critical battery drains. 3 minor warnings, 12 good practices confirmed.
+- **Key Findings:**
+  - ScreenTimeTracker timer (1s with 0.5s tolerance, pauses on background) is correctly implemented
+  - All detection systems (Focus, CarPlay, driving) use event-driven patterns — zero polling
+  - No UIBackgroundModes declared — app does zero work when suspended
+  - Consistent `[weak self]` across all closures — no retain cycles found
+  - All animations respect `accessibilityReduceMotion`
+  - Startup path is clean: only 3 lightweight operations before first frame
+- **3 Warnings (all P3/P4):**
+  1. OverlayView countdown timer missing `tolerance` (1-line fix)
+  2. YinYang breathing animation lacks `onDisappear` lifecycle control
+  3. OnboardingView sets `UIPageControl.appearance()` in struct init (runs on every struct creation)
+- **Artifacts:** `docs/performance-audit.md`, `rusty-issues.json` (15 findings)
+
+## Learnings
+
+- **Timer tolerance is a one-line battery optimization that should be standard practice.** Every `Timer` in the codebase should set tolerance to at least 10-20% of the interval. The ScreenTimeTracker does this (0.5s on 1s timer); the OverlayView countdown does not. Add tolerance wherever timers are created.
+- **`.repeatForever` SwiftUI animations should always have lifecycle control.** Without `onDisappear` cleanup, the animation continues keeping the GPU compositor active even when the view is off-screen. For continuous animations, pair `onAppear` start with `onDisappear` stop.
+- **`UIAppearance` proxy calls in SwiftUI struct `init()` are a code smell.** SwiftUI recreates structs frequently — appearance proxy calls should live in a `static let` initializer or `.onAppear` with a guard, not in the struct's `init`.
+- **CMMotionActivityManager is the correct battery-efficient alternative to CLLocationManager for activity detection.** It runs on the dedicated motion coprocessor, not the main CPU or GPS hardware. This was validated as the right choice for driving detection in kshana.

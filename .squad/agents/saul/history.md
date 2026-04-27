@@ -44,3 +44,70 @@
   2. **#25 — OnboardingPermissionView hardcodes system framework.** Direct `UNUserNotificationCenter.current()` call; couples to system, untestable; violates DI pattern.
 - **Pattern observation:** All 4 issues originated from Phase 1 or early Phase 2. Onboarding module (#25) shows same integration gaps flagged in Phase 2 review.
 - **Quality note:** Phase 1 P1 fixes were solid (snooze guard, DI injection for NotificationScheduling/OverlayPresenting). Phase 2 onboarding adhered to spec but didn't fully adopt established patterns — #25 is endemic to that module boundary gap.
+
+### 2025-07-18: Comprehensive Code Quality & Readability Audit
+- **Scope:** Full codebase — 28 source files, 41 test files (all Swift in EyePostureReminder/ and Tests/)
+- **Verdict:** Strong codebase — 0 P0, 1 P1 (consistency), 6 P2 (readability/maintenance)
+- **P1 finding:**
+  1. AppCoordinator.swift line 587: Strong `self` capture in Task closure — inconsistent with every other Task closure in the class which uses `[weak self]`. Not a practical leak (short-lived Task) but violates the project's own established pattern.
+- **P2 findings:**
+  1. `AnalyticsLogger.log()` is 72 lines (single switch) — exceeds 40-line method threshold; extract per-event helpers
+  2. `AppCoordinator.scheduleReminders()` is 52 lines — extract snooze-guard and analytics-session sub-methods
+  3. `SettingsView.body` is 347 lines with a swiftlint suppression (`type_body_length`) — should decompose into extracted subviews
+  4. `StringCatalogTests.swift` is 1046 lines — split into 3–4 focused test files
+  5. `ColorTokenTests.swift` line 363: O(n²) distinctness check — replace with Set-based O(n) approach
+  6. `OverlayManager` uses tuple for queued overlays — should be a named struct for type safety
+- **No issues found in:** Naming conventions (excellent), documentation (thorough on public APIs), force unwraps (zero), error handling (proper throughout), dead code (minimal — deprecated `snooze(for:)` properly marked), Swift idioms (strong guard/optional patterns)
+- **Test suite quality:** 9/10 — zero force unwraps, robust mocking infrastructure, MainActor safety, clear BDD naming, comprehensive coverage
+- **Key patterns confirmed healthy:** Protocol-driven DI, @MainActor isolation, design system tokens, SettingsPersisting abstraction, MVVM boundaries
+- **Key learning:** SwiftUI struct views (OverlayView, ReminderRowView) don't need `[weak self]` in closures — structs are value types. Only flag weak-capture issues on class types (AppCoordinator, SettingsStore, etc.)
+
+### 2025-07-18: Fix #115 — Strong self capture in AppCoordinator snooze task
+- **Fixed:** Line 587 in `AppCoordinator.swift` — `Task { await self.scheduleSnoozeWakeNotification(at: snoozeEnd) }` changed to `Task { [weak self] in await self?.scheduleSnoozeWakeNotification(at: snoozeEnd) }`
+- **Root cause:** Oversight during #73 implementation — the silent background notification scheduling Task was added without the `[weak self]` capture that every other Task closure in the class uses
+- **Key learning:** When adding new Task closures to a class, always check the file's existing capture pattern and match it — consistency prevents subtle retain-cycle bugs from slipping through review
+
+### 2025-07-18: Round 4 Code Quality Review (Post 3 Fix Rounds)
+- **Scope:** Full codebase — 29 source files, fresh pass after 36 issues fixed across 3 rounds
+- **Verdict:** ✅ APPROVED — Ship it. 0 P0, 0 P1, 3 P2 (all carried/known)
+- **Round 3 fixes verified (all clean):**
+  1. **#136 (pendingOverlay):** `pendingOverlay = nil` added in both cancel and pause paths — correct, surgical
+  2. **#137 (type-specific queue):** New `clearQueue(for:)` on OverlayPresenting protocol + OverlayManager impl + mock — proper protocol extension, well-tested
+  3. **#138 (AppSymbol):** 4 new tokens (pauseDuringFocus, pauseWhileDriving, clock, timer) + all callsites migrated — no raw SF Symbol strings remain outside DesignSystem.swift and ReminderType.symbolName
+  4. **#143 (timer guard):** `guard timer == nil else { return }` in OverlayView.startTimer() — minimal, correct
+- **Carried P2s (known, non-blocking):**
+  1. `OverlayManager.overlayQueue` and `AppCoordinator.pendingOverlay` still use tuples — named struct would improve readability (carried from Round 0 P2-6)
+  2. `ReminderType.symbolName` returns `"eye"` while `AppSymbol.eyeBreak` is `"eye.fill"` — intentional (filled vs outline for different contexts) but undocumented
+  3. `SettingsView.swift` at 446 lines — previously 347; grew with snooze/smart-pause sections. Subview extraction recommended for maintainability
+- **Clean bill on:** No swiftlint suppressions, zero TODO/FIXME/HACK markers, zero force unwraps, all Task closures use `[weak self]`, deprecated `snooze(for:)` properly marked and unused, DI pattern consistent, design system tokens comprehensive
+- **Ship confidence: HIGH** — No functional bugs, no architectural debt, no safety issues. Carried P2s are maintenance-quality items for a future cleanup pass.
+
+### 2025-07-18: Restful Grove Visual Redesign Code Review
+- **Scope:** All files changed on `feature/restful-grove` — 9 new color assets, 2 bundled fonts, DesignSystem.swift, Components.swift, SettingsView.swift, OverlayView.swift, HomeView.swift, OnboardingView.swift + 3 sub-views, ReminderType.swift, Package.swift
+- **Verdict:** Conditional Approval — 0 P0, 2 P1, 8 P2
+- **P1s identified:**
+  1. `AppColor.shadowCard` uses raw `Color(red:green:blue:)` instead of asset catalog — breaks single-source-of-truth pattern for dark mode adaptation
+  2. Three reusable components (`StatusPill`, `IconContainer`, `SectionHeader`) are dead code — added to Components.swift but never used by any view
+- **Key P2s:**
+  1. HomeView uses `.secondary` and `AppColor.reminderBlue` instead of RG palette tokens
+  2. `OnboardingPrimaryButtonStyle` duplicates `PrimaryButtonStyle` in Components.swift
+  3. `OnboardingScreenWrapper` duplicates `CalmingEntrance` modifier pattern
+  4. `permissionBanner`/`permissionBannerText` tokens appear unused after redesign
+  5. No test coverage for 9 new RG* color tokens in asset catalog
+- **Positives:** Design system adoption is thorough across all redesigned views, accessibility is excellent (labels, hints, identifiers, reduce-motion guards throughout), Dynamic Type properly preserved via relativeTo:, SoftElevation pattern is clean, CalmingEntrance handles re-appear correctly, OnboardingPermissionView DI injection now correct
+- **Key learning:** When adding a "reusable components" file during a redesign, verify each component is actually adopted by at least one view before shipping — otherwise you get dead code that duplicates bespoke implementations already in the views (SettingsRowIcon vs IconContainer, SettingsSectionHeader vs SectionHeader)
+
+### 2026-04-26: Restful Grove Final Verification (Post-Fix Pass)
+- **Scope:** Final verification that all P1/P2 findings from the Restful Grove review were properly addressed
+- **Verdict:** ✅ APPROVED — All previous findings resolved. Ship it.
+- **Checklist results:**
+  1. ✅ **shadowCard** — moved to asset catalog (`RGShadowCard.colorset`), zero raw `Color(red:green:blue:)` calls anywhere in codebase
+  2. ✅ **Dead components** — `StatusPill` and generic `SectionHeader` removed from `Components.swift`; `IconContainer` kept and actively used in `SettingsView.swift` (2 callsites) + tests
+  3. ✅ **Dead tokens** — `overlayCornerRadius`, `cardCornerRadius`, `permissionBanner`, `permissionBannerText` all removed from `DesignSystem.swift`
+  4. ✅ **HomeView** — fully migrated to RG tokens (`AppColor.primaryRest`, `AppColor.textPrimary`, `AppColor.textSecondary`, `AppColor.background`, `AppTypography.*`, `AppSpacing.*`, `AppAnimation.*`, `AppSymbol.*`); zero raw `.secondary` or `reminderBlue` references
+  5. ✅ **Duplicate styles** — `OnboardingPrimaryButtonStyle` removed; `OnboardingScreenWrapper` replaced by `.calmingEntrance()` (confirmed by comment in OnboardingView.swift)
+  6. ✅ **No new issues** introduced by fixes
+- **Minor note (non-blocking):** `PermissionBanner.colorset` and `PermissionBannerText.colorset` still exist as orphaned asset catalog entries — no Swift code references them. Stale comment in `DarkModeTests.swift:11` references them. Cleanup candidate for a future housekeeping pass.
+- **Build:** ✅ BUILD SUCCEEDED (xcodebuild, iPhone 17 Simulator, iOS 26.4)
+- **Tests:** ✅ 889 tests, 0 failures
+- **Key learning:** When removing design tokens from Swift code, also audit the asset catalog for orphaned `.colorset` entries and test comments that reference deleted tokens — these artifacts survive code-level cleanup and accumulate as noise

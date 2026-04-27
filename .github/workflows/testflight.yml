@@ -51,6 +51,7 @@ jobs:
   deploy-testflight:
     name: Archive & Upload to TestFlight
     runs-on: macos-15
+    timeout-minutes: 45
 
     steps:
       - name: Checkout

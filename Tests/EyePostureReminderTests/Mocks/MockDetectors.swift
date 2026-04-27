@@ -8,6 +8,7 @@ import Foundation
 /// exposes `simulate*` helpers so tests can trigger callbacks synchronously
 /// without touching any live system APIs.
 
+@MainActor
 final class MockFocusStatusDetector: FocusStatusDetecting {
 
     private(set) var isFocused: Bool = false
@@ -26,6 +27,7 @@ final class MockFocusStatusDetector: FocusStatusDetecting {
     }
 }
 
+@MainActor
 final class MockCarPlayDetector: CarPlayDetecting {
 
     private(set) var isCarPlayActive: Bool = false
@@ -43,6 +45,7 @@ final class MockCarPlayDetector: CarPlayDetecting {
     }
 }
 
+@MainActor
 final class MockDrivingActivityDetector: DrivingActivityDetecting {
 
     private(set) var isDriving: Bool = false

@@ -11,27 +11,15 @@ import XCTest
 @MainActor
 final class OverlayManagerTests: XCTestCase {
 
-    override func tearDown() {
-        OverlayManager.shared.clearQueue()
-        super.tearDown()
-    }
-
-    // MARK: - Singleton
-
-    func test_shared_isNotNil() {
-        XCTAssertNotNil(OverlayManager.shared)
-    }
-
-    func test_shared_returnsSameInstance() {
-        let first = OverlayManager.shared
-        let second = OverlayManager.shared
-        XCTAssertTrue(first === second, "OverlayManager.shared must always return the same instance")
+    /// Each test gets its own fresh instance — no shared state leaks.
+    private func makeManager() -> OverlayManager {
+        OverlayManager()
     }
 
     // MARK: - OverlayPresenting Conformance
 
     func test_conformsToOverlayPresenting() {
-        let manager: OverlayPresenting = OverlayManager.shared
+        let manager: OverlayPresenting = makeManager()
         XCTAssertNotNil(manager)
     }
 
@@ -40,7 +28,7 @@ final class OverlayManagerTests: XCTestCase {
     /// In a headless test environment there is no window scene, so no overlay
     /// can have been shown. `isOverlayVisible` must start as `false`.
     func test_isOverlayVisible_withNoOverlayShown_isFalse() {
-        XCTAssertFalse(OverlayManager.shared.isOverlayVisible)
+        XCTAssertFalse(makeManager().isOverlayVisible)
     }
 
     // MARK: - dismissOverlay — guard path
@@ -48,32 +36,36 @@ final class OverlayManagerTests: XCTestCase {
     /// `dismissOverlay` must be safe to call when nothing is visible.
     /// The implementation guards with `guard isOverlayVisible else { return }`.
     func test_dismissOverlay_whenNoOverlayVisible_doesNotCrash() {
-        XCTAssertFalse(OverlayManager.shared.isOverlayVisible)
-        OverlayManager.shared.dismissOverlay()
+        let manager = makeManager()
+        XCTAssertFalse(manager.isOverlayVisible)
+        manager.dismissOverlay()
     }
 
     func test_dismissOverlay_calledMultipleTimes_whenNoOverlay_doesNotCrash() {
-        OverlayManager.shared.dismissOverlay()
-        OverlayManager.shared.dismissOverlay()
-        OverlayManager.shared.dismissOverlay()
+        let manager = makeManager()
+        manager.dismissOverlay()
+        manager.dismissOverlay()
+        manager.dismissOverlay()
     }
 
     /// After `dismissOverlay()` on an already-dismissed manager the visible
     /// flag must remain `false`.
     func test_isOverlayVisible_afterDismissOnEmptyManager_remainsFalse() {
-        OverlayManager.shared.dismissOverlay()
-        XCTAssertFalse(OverlayManager.shared.isOverlayVisible)
+        let manager = makeManager()
+        manager.dismissOverlay()
+        XCTAssertFalse(manager.isOverlayVisible)
     }
 
     // MARK: - Queue management
 
     func test_clearQueue_withNoQueuedItems_doesNotCrash() {
-        OverlayManager.shared.clearQueue()
+        makeManager().clearQueue()
     }
 
     func test_clearQueue_calledMultipleTimes_doesNotCrash() {
-        OverlayManager.shared.clearQueue()
-        OverlayManager.shared.clearQueue()
+        let manager = makeManager()
+        manager.clearQueue()
+        manager.clearQueue()
     }
 
     // MARK: - Audio wiring (MockMediaControlling injection)

@@ -1,0 +1,108 @@
+# XcodeGen spec — EyePostureReminderUITests
+#
+# Generates a minimal .xcodeproj containing ONLY the UITest bundle target.
+# The app itself is built from Package.swift (referenced via local package dependency).
+#
+# Generate the xcodeproj with:
+#   ./scripts/setup-uitests.sh
+#
+# Then run UI tests with:
+#   ./scripts/build.sh uitest
+
+name: EyePostureReminderUITests
+
+options:
+  bundleIdPrefix: com.yashasg
+  deploymentTarget:
+    iOS: "16.0"
+  xcodeVersion: "16.2"
+  minimumXcodeGenVersion: "2.40.0"
+  generateEmptyDirectories: false
+
+# Reference the local Swift package so xcodebuild can build the app target
+# when running UI tests. Note: XcodeGen does not generate a separate .xcworkspace
+# for local package references; use -project (not -workspace) with xcodebuild.
+packages:
+  EyePostureReminder:
+    path: ..
+
+targets:
+  # Minimal app target that wraps the SPM executable for UITest hosting
+  EyePostureReminder:
+    type: application
+    platform: iOS
+    deploymentTarget: "16.0"
+    dependencies:
+      - package: EyePostureReminder
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.yashasg.EyePostureReminder
+        TARGETED_DEVICE_FAMILY: "1,2"
+        CODE_SIGN_IDENTITY: ""
+        CODE_SIGNING_REQUIRED: "NO"
+        CODE_SIGNING_ALLOWED: "NO"
+        INFOPLIST_FILE: ../EyePostureReminder/Info.plist
+    # The SPM executable binary and resource bundle are built to BUILT_PRODUCTS_DIR
+    # but Xcode's app-wrapper build phase doesn't auto-copy them into the .app bundle.
+    # This script copies them in so the app bundle is valid for UI test installation.
+    postBuildScripts:
+      - name: "Assemble App Bundle"
+        script: |
+          set -e
+          BIN_SRC="${BUILT_PRODUCTS_DIR}/${EXECUTABLE_NAME}"
+          BIN_DST="${BUILT_PRODUCTS_DIR}/${EXECUTABLE_FOLDER_PATH}/${EXECUTABLE_NAME}"
+          if [ -f "$BIN_SRC" ] && [ "$BIN_SRC" != "$BIN_DST" ]; then
+            cp "$BIN_SRC" "$BIN_DST"
+            chmod +x "$BIN_DST"
+          fi
+          BUNDLE_NAME="${PRODUCT_MODULE_NAME}_${PRODUCT_MODULE_NAME}.bundle"
+          BUNDLE_SRC="${BUILT_PRODUCTS_DIR}/${BUNDLE_NAME}"
+          BUNDLE_DST="${BUILT_PRODUCTS_DIR}/${EXECUTABLE_FOLDER_PATH}/${BUNDLE_NAME}"
+          if [ -d "$BUNDLE_SRC" ]; then
+            rm -rf "$BUNDLE_DST"
+            cp -r "$BUNDLE_SRC" "$BUNDLE_DST"
+          fi
+
+  EyePostureReminderUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    deploymentTarget: "16.0"
+    dependencies:
+      - target: EyePostureReminder
+    sources:
+      - path: ../Tests/EyePostureReminderUITests
+        excludes:
+          - README.md
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.yashasg.EyePostureReminder.UITests
+        TEST_TARGET_NAME: EyePostureReminder
+        # UITest bundles launch the app as a separate process; they must NOT
+        # set BUNDLE_LOADER or TEST_HOST (those are for unit-test bundles that
+        # inject into the host app process).  XcodeGen adds BUNDLE_LOADER by
+        # default when a ui-testing target has an app dependency — override it
+        # to empty so the runner resolves EyePostureReminder.app, not the flat
+        # SPM executable binary.
+        BUNDLE_LOADER: ""
+        TEST_HOST: ""
+        TARGETED_DEVICE_FAMILY: "1,2"
+        IPHONEOS_DEPLOYMENT_TARGET: "16.0"
+        CODE_SIGN_IDENTITY: ""
+        CODE_SIGNING_REQUIRED: "NO"
+        CODE_SIGNING_ALLOWED: "NO"
+        ENABLE_BITCODE: "NO"
+
+schemes:
+  EyePostureReminderUITests:
+    build:
+      targets:
+        EyePostureReminder: [run, test]
+        EyePostureReminderUITests: [test]
+    test:
+      targets:
+        - name: EyePostureReminderUITests
+          parallelizable: true
+          randomExecutionOrder: false
+      disableMainThreadChecker: false
+      enableAddressSanitizer: false
+      enableThreadSanitizer: false

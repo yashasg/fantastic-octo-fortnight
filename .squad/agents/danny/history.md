@@ -1,11 +1,63 @@
 # Project Context
 
 - **Owner:** Yashasg
-- **Project:** Eye & Posture Reminder — a lightweight iOS app with background timers and full-screen overlay reminders for eye breaks (20-20-20 rule) and posture checks
+- **Project:** kshana (formerly Eye & Posture Reminder) — a lightweight iOS app with background timers and full-screen overlay reminders for eye breaks (20-20-20 rule) and posture checks
 - **Stack:** Swift, SwiftUI (iOS 16+), MVVM, UserNotifications, UIKit overlay, UserDefaults
 - **Created:** 2026-04-24
 
 ## Learnings
+
+### 2026-04-27: App Renamed to kshana
+
+- **Context:** App officially renamed from "Eye & Posture Reminder" to **kshana** (Sanskrit: क्षण, "a moment, an instant"). Branding: always lowercase, subtitle "kshana — Eye & Posture Wellness."
+- **Scope:** Updated 17 documentation files across root docs, `docs/`, and `docs/legal/`. Added CHANGELOG entry for the rename.
+- **Branding rules:** Brand name is always lowercase "kshana" in prose. SPM module/target remains `EyePostureReminder` (technical name, not user-facing). Historical references to old name kept in naming research docs and changelog for context.
+- **Files touched:** README, ROADMAP, ARCHITECTURE, IMPLEMENTATION_PLAN, UX_FLOWS, CHANGELOG, APP_STORE_LISTING, DESIGN_SYSTEM, ONBOARDING_SPEC, TELEMETRY, TEST_REPORT, TEST_STRATEGY, PRIVACY_NUTRITION_LABELS, app-naming-research, DISCLAIMER, PRIVACY, TERMS.
+
+### 2026-04-26: Yin-Yang Logo Animation — Roadmap & UX Docs Update
+
+- **Context:** Documented the yin-yang logo animation feature as part of the Restful Grove visual redesign (issues #158–#169). Design approved after 10+ HTML prototype iterations.
+- **ROADMAP.md:** Added M2.10 milestone under Phase 2 (Polish). Marked ✅ Complete (design approved, Tess implementing in SwiftUI). Updated timeline table (M2.1–M2.10, ~85%), executive summary, dependency map, key decisions (Decision 2.4), and final status summary.
+- **UX_FLOWS.md:** Added §5.4 documenting the animation flow: spin (360°, 2s deceleration) → breathing pulse (4s in/out, infinite). Covers reduce-motion fallback, screen placement (HomeView + OnboardingView), and design rationale.
+- **Key Design Decisions:** Custom SwiftUI `Path` over SF Symbols for brand identity; Sage (#2F6F5E) + Mint (#EEF6F1) palette for Restful Grove wellness aesthetic; spin→breathe metaphor mirrors "settle in, then relax."
+- **Decision artifact:** `.squad/decisions/inbox/danny-yinyang-roadmap.md`
+
+### 2026-04-26: Fix #150, #151, #152 — Doc Consistency Sweep
+
+- **#150 (Bundle ID):** Replaced `com.yashasg.eye-posture-reminder` with `com.yashasg.eyeposturereminder` in `docs/APP_STORE_LISTING.md` (§10 table + §11 checklist). `docs/TELEMETRY.md` and `ARCHITECTURE.md` already correct.
+- **#151 (ROADMAP stale privacy claim):** Updated M2.9 line from "Zero data collection, no analytics, no network calls" to reflect MetricKit diagnostics disclosure per Frank's updated privacy policy.
+- **#152 (IMPLEMENTATION_PLAN swipe direction):** Changed "swipe down to dismiss" → "swipe up to dismiss" in §5.2 overlay UI spec, consistent with Decision #2 and §4.2.
+- **Commits:** Three separate commits, one per issue.
+
+### 2026-04-26: Privacy Nutrition Labels & Submission Checklist
+
+- **Context:** Created two deliverables for App Store submission based on Frank's updated analytics privacy findings (MetricKit/App Store Connect analytics disclosure).
+- **Deliverable 1 — `docs/PRIVACY_NUTRITION_LABELS.md`:** Step-by-step guide for App Store Connect privacy questionnaire. Maps all 6 app data types to correct labels: UserDefaults, motion activity, Focus status, and os.Logger → Not Collected; MetricKit crash data → Collected (Diagnostics → Crash Data, Not Linked, Not Tracking, App Functionality); MetricKit performance data → Collected (Diagnostics → Performance Data, Not Linked, Not Tracking, Analytics).
+- **Deliverable 2 — Submission checklist in `docs/APP_STORE_LISTING.md`:** Added Section 11 with 16-item checklist covering legal/privacy, entitlements, App Store Connect config, assets, and final checks. Filled in TBD fields: Bundle ID → `com.yashasg.eye-posture-reminder`, Support/Marketing URL → GitHub repo.
+- **Privacy policy updated:** Revised Section 6 to disclose MetricKit analytics, removed "zero data collection" and "nothing leaves device" claims per Frank's recommendation. Added motion permission and diagnostic-sharing language.
+- **Key Insight:** The privacy label is no longer a blanket "Data Not Collected" — MetricKit requires Diagnostics disclosure even though it's Apple-native and aggregate-only.
+
+### 2026-04-25: Apple Legal Compliance — Implementation Plan from Frank's Report
+
+- **Context:** Frank completed Apple legal/privacy compliance research identifying 5 submission blockers and 6 important items. Created a prioritized, dependency-ordered implementation plan.
+- **5 Blockers:** (1) Privacy Policy needs HTTPS URL hosting, (2) TERMS.md missing Apple's 7-clause EULA supplement, (3) NSMotionUsageDescription missing from Info.plist, (4) Focus Status entitlement missing, (5) Privacy Nutrition Labels questionnaire incomplete.
+- **Plan Structure:** 4 phases (A–D), 7 work items. Phase A fully parallel. Phases B–D sequential gates.
+- **Assignments:** Frank → EULA + privacy hosting; Basher → Info.plist + entitlements; Virgil → CI verification; Danny → Nutrition Labels + submission checklist.
+- **Key Insight:** All Privacy Nutrition Label categories = "Data Not Collected" — motion data qualifies for Apple's transient exemption.
+- **Timeline:** ~2 days. **Artifact:** `.squad/decisions/inbox/danny-legal-compliance-plan.md`
+
+### 2026-04-25: Fix #141 and #142 — Documentation Stale References
+
+- **#141 (UX_FLOWS.md):** Replaced two stale `repeat: true` references (lines ~172, ~352) with `repeat: false` and noted ScreenTimeTracker re-arming after each break. Checked Section 3.1 snooze durations — already match implementation ([5 minutes], [1 hour], [Rest of day]).
+- **#142 (IMPLEMENTATION_PLAN.md §1):** Updated overview from "runs timers in the background" to describe Phase 2 foreground screen-time tracking via `ScreenTimeTracker`. Also updated the battery/scheduling description to reflect foreground timer + notification APIs for snooze wake-ups only.
+- **Commits:** Two separate commits, one per issue.
+
+### 2026-04-25: Fix #128 and #135 — IMPLEMENTATION_PLAN.md Stale Content
+
+- **#128 (§4.2):** Changed "swipe-down gesture" to "swipe-up gesture" per Decision #2 (team decided swipe-UP for overlay dismiss).
+- **#135 (§9):** Replaced old wall-clock data flow diagram (showing `ReminderScheduler.reschedule()`, `repeat: true`, foreground/background notification paths) with ScreenTimeTracker-based flow: accumulate screen-on time → threshold → `AppCoordinator` → `OverlayManager` → dismiss → `ScreenTimeTracker.reset()` re-arms.
+- **#135 (§12):** Updated phased delivery from stale 3-phase table to 4-phase table matching ROADMAP.md: Phase 0 (Foundation ✅), Phase 1 (MVP ✅), Phase 2 (Polish 🔄), Phase 3 (Advanced 🔄). Added status indicators and expanded scope descriptions.
+- **Commits:** Two separate commits, one per issue.
 
 ### 2026-04-25: Roadmap Audit & Status Update
 
@@ -241,3 +293,39 @@ Documentation ready for Phase 2 planning cycle.
 **Initial Roadmap Planning, M2.7 App Store Preparation, Data-Driven Config Spec, Dark Mode Feature Scoping, App Store Metadata, Wave 4 Native-First Config**
 
 Consolidated 2026-04-24 planning entries covering early architecture decisions (MVVM + UNUserNotificationCenter), app store listing metadata, privacy policy, data-driven configuration exploration, dark mode feature scope, and final 4-layer config architecture (Asset Catalog + String Catalog + defaults.json + Swift code). All decisions have been implemented and verified; legacy planning notes preserved for reference. Phase 0 foundation complete; Phase 1-2 implementation active.
+
+### 2026-04-25: Documentation Completeness & Quality Audit (READ-ONLY)
+
+- **Context:** Full audit of all project documentation — root markdown files, docs/ directory, and inline source comments.
+- **Key Findings:**
+  1. **Legal placeholders are the top blocker:** TERMS.md and PRIVACY.md still have `[Date]` and `[Your Company Name]` placeholder text — must be fixed before App Store submission.
+  2. **UX_FLOWS.md is stale:** Describes pre-onboarding first-launch flow (straight to Settings + system permission prompt). Actual app uses 3-screen onboarding (Welcome → Permissions → Setup). Snooze UI described as "in Settings only" but may have evolved.
+  3. **IMPLEMENTATION_PLAN.md partially outdated:** Section 9 Data Flow diagram still says `repeat: true` (Phase 1 behavior); Phase 2 uses `repeat: false` with ScreenTimeTracker re-arm. Section 1 says "runs timers in the background" — no longer accurate (foreground screen-time tracking).
+  4. **ARCHITECTURE.md build instructions wrong:** Section 3 says "Build via `swift build` / `swift test`" but README correctly notes these don't work (iOS-only frameworks require xcodebuild). Contradicts README.
+  5. **ARCHITECTURE.md status tag stale:** Header says "Status: Foundation" — should be "Phase 2" or later.
+  6. **CHANGELOG.md well-maintained:** Follows Keep a Changelog-adjacent format; covers all 7 quality loops. No version entries beyond v0.1.0-beta.
+  7. **README.md is solid:** Build instructions, feature list, legal links all present and accurate.
+  8. **Inline code docs excellent:** Every service and model file has file-level doc comments explaining purpose, behavior, and design rationale.
+  9. **docs/ directory well-organized:** APP_STORE_LISTING, DESIGN_SYSTEM, ONBOARDING_SPEC, TELEMETRY, TEST_REPORT, TEST_STRATEGY, legal/ subdirectory — comprehensive.
+  10. **ROADMAP.md is thorough and current:** Phase 0-3 status accurately reflects implementation state.
+- **Recommendation:** Fix legal placeholders (blocker), update UX_FLOWS.md for onboarding, reconcile IMPLEMENTATION_PLAN.md data flow diagram, fix ARCHITECTURE.md build instructions and status tag.
+
+### 2026-04-25: UX_FLOWS.md Onboarding Correction (Issue #112)
+
+- **Context:** UX_FLOWS.md Section 2.1 described first-launch as "App opens directly to Settings Screen" with an immediate system permission prompt. The actual app uses a 3-screen onboarding flow (Welcome → Permissions → Setup) implemented via `ContentView` → `OnboardingView`.
+- **Root cause:** UX_FLOWS.md was written during Phase 1 planning (pre-onboarding). The onboarding flow was added in Phase 2 (M2.1) but UX_FLOWS.md was never updated to match.
+- **Sections rewritten:**
+  1. **Section 2.1** — Complete rewrite: documents the 3-screen `OnboardingView` flow with accurate screen descriptions, navigation behavior (swipe blocked on Screen 2), two completion paths ("Get Started" / "Customize Settings"), and `hasSeenOnboarding` gating logic.
+  2. **Section 3.3** — Updated trigger: permission prompt is user-initiated on Screen 2, not automatic on launch.
+  3. **Section 5** — Replaced "Minimal Onboarding / No multi-screen flow" philosophy with "Educate, Then Ask" philosophy describing the actual 3-screen implementation.
+  4. **Section 10 Summary** — Updated onboarding bullet to reflect the 3-screen flow.
+- **Key learning:** When a Phase 2 feature replaces Phase 1 behavior, all doc sections referencing the old behavior must be audited — not just the primary section. UX_FLOWS.md had 4 separate sections describing the old first-launch flow.
+- **Commit:** `docs: update UX_FLOWS.md to reflect actual onboarding flow` (Fixes #112)
+
+### 2026-04-27: Yin-Yang Roadmap & UX Flow Documentation Sprint
+
+- **Context:** Team sprint to document yin-yang logo animation feature as M2.10 (Phase 2 Polish). Decision merged into decisions.md.
+- **ROADMAP.md update:** Classified yin-yang as M2.10, Phase 2 (part of Restful Grove redesign, not Phase 3 advanced feature). Updated timeline table, dependency map, key decisions (Decision 2.4 mapped to 5 architectural choices).
+- **UX_FLOWS.md §5.4:** Documented animation flow — spin (360°, 2s deceleration) → breathing pulse (4s in/out, infinite). Reduce-motion fallback (static logo). Placement: HomeView + OnboardingView.
+- **Decision artifact:** `.squad/decisions/inbox/danny-yinyang-roadmap.md` → merged into decisions.md
+- **Team collaboration:** Tess (implementation), Rusty (architecture docs), Livingston (9 tests), Roman (app naming research)

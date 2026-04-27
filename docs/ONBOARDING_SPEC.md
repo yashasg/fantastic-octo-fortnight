@@ -1,4 +1,4 @@
-# Eye & Posture Reminder — Onboarding Flow Spec (M2.1)
+# kshana — Onboarding Flow Spec (M2.1)
 
 > **Author:** Reuben, Product Designer  
 > **Date:** 2026-04-24  
@@ -84,7 +84,7 @@ Establish context and set a warm, confident tone. Tell the user what the app doe
 │         (see below)                │
 │                                    │
 │    Welcome to                      │
-│    Eye & Posture Reminder          │  ← Headline
+│    kshana                          │  ← Headline
 │                                    │
 │    Small, helpful nudges to rest   │
 │    your eyes and sit up straight.  │  ← Subheadline
@@ -106,7 +106,7 @@ Establish context and set a warm, confident tone. Tell the user what the app doe
 
 | Element | Copy |
 |---|---|
-| **Headline** | `Welcome to Eye & Posture Reminder` |
+| **Headline** | `Welcome to kshana` |
 | **Subheadline** | `Small, helpful nudges to rest your eyes and sit up straight.` |
 | **Body** | `Takes less than a minute to set up. Works quietly in the background — you'll barely know it's there.` |
 | **CTA button** | `Next` |
@@ -179,7 +179,7 @@ Explain *why* the app needs notifications before triggering the system prompt. R
 │                                    │
 │    [Notification preview card]     │
 │    ┌────────────────────────────┐  │
-│    │ 👁  Eye & Posture Reminder │  │
+│    │ 👁  kshana                  │  │
 │    │ Eye Break                  │  │
 │    │ Time to rest your eyes.    │  │
 │    │                    now     │  │
@@ -224,7 +224,7 @@ VStack(alignment: .leading, spacing: 4) {
         Image(systemName: "eye.fill")
             .foregroundStyle(.indigo)
             .font(.caption)
-        Text("Eye & Posture Reminder")
+        Text("kshana")
             .font(.caption)
             .fontWeight(.semibold)
             .foregroundStyle(.secondary)

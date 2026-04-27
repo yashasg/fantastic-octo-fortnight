@@ -5,147 +5,6 @@
 - **Stack:** Swift, SwiftUI (iOS 16+), MVVM, UserNotifications, UIKit overlay, UserDefaults
 - **Created:** 2026-04-24
 
-## Learnings
-
-### 2026-04-25 — Asset Catalog Color Migration (Decision 2.18)
-
-- **Deliverable:** 6 color sets in `EyePostureReminder/Resources/Colors.xcassets/`, DesignSystem.swift refactored, UIKit import removed
-- **Color tokens:** ReminderBlue (#4A90D9/#5BA8F0), ReminderGreen (#34C759/#30D158), WarningOrange (#E07000/#FF9500), WarningText (#994F00/#FF9500), PermissionBanner (#FFCC00 static), PermissionBannerText (#262626 static)
-- **Implementation:** Replaced all `UIColor(dynamicProvider:)` + `Color(red:green:blue:)` with `Color("name")` asset references
-- **Result:** DesignSystem.swift now pure SwiftUI (no UIKit import); dark/light adaptation handled by Asset Catalog JSON, not Swift logic
-- **Build verified:** `./scripts/build.sh build` → BUILD SUCCEEDED
-- **Decision filed:** `.squad/decisions/decisions.md` (Decision 2.18)
-
-## Learnings
-
-### 2026-04-24: Design System Foundation
-
-- Created `EyePostureReminder/Views/DesignSystem.swift` — SwiftUI design tokens (colors, fonts, spacing, animations, SF symbols, layout constants).
-- Created `docs/DESIGN_SYSTEM.md` — full human-readable spec with contrast tables, overlay layout ASCII diagrams, accessibility notes, Dark Mode guidance.
-- **Color decisions:**
-  - `reminderBlue` (#4A90D9) for eye breaks — calming, distinct from system blue.
-  - `reminderGreen` (#34C759) for posture — matches iOS system green (familiar).
-  - `warningOrange` (#FF9500) for "Rest of day" snooze — communicates consequence without full destructive red.
-  - `permissionBanner` (#FFCC00) — warm yellow to signal warning, not error.
-- **White text on reminderGreen fails WCAG AA at small sizes** — use dark text on green backgrounds.
-- **Overlay uses `.systemUltraThinMaterial`** — handles dark/light automatically; no manual background adaptation needed.
-- Snooze flow per Reuben's two-phase model: clean countdown overlay → snooze sheet only after manual dismiss.
-- Overlay layout: × top-right, ⚙ bottom-center, icon 80pt centered, 160pt countdown ring with 8pt stroke.
-- Swipe UP gesture (not down) to dismiss overlay, matching the slide-up presentation direction.
-- All interactive elements at minimum 44pt tap target (iOS HIG).
-- Monospaced countdown font (`design: .monospaced`) prevents digit-width jitter as numbers decrease.
-
-### 2026-04-25 — Data-Driven App Configuration (Danny Decision 3.6)
-
-- **Theme values in spec:** Colors (reminderBlue light #4A90D9 / dark #5BA8F0, reminderGreen, warningOrange, permissionBanner, permissionBannerText, onboardingAccent), fonts, spacing (xs–xl), layout (tap targets, overlay icon, countdown ring), animations, SF symbols.
-- **Tess ownership:** Validate JSON hex values against current `DesignSystem.swift` tokens; confirm contrast ratios for all color pairs.
-- **Future:** Support per-device/per-OS variants in config structure.
-
-### 2026-04-25: Dark Mode Colour Adaptation
-
-- **No in-app colour scheme toggle** — app follows OS appearance exclusively. No `.preferredColorScheme` modifier exists anywhere in the codebase; confirmed clean.
-- `reminderBlue` is now adaptive via `UIColor(dynamicProvider:)`: light #4A90D9 → dark #5BA8F0 (brighter for dark-background contrast).
-- `reminderGreen` now uses `Color(.systemGreen)` — iOS automatically adapts between #34C759 (light) and #30D158 (dark).
-- `warningOrange` is now adaptive: light #E07000 (~3.5:1 on white, meets WCAG 1.4.11 non-text contrast) → dark #FF9500 (6.8:1 on near-black).
-- `warningText` was already adaptive (UIColor dynamicProvider) — no change needed.
-- `overlayBackground` was already using `Color(.systemBackground)` — no change needed.
-- `permissionBanner` (yellow) intentionally static in both modes — warning yellow reads correctly on both backgrounds.
-- `permissionBannerText` remains near-black — exclusively used on the yellow banner, where dark text contrast is high regardless of mode.
-- No hardcoded `.foregroundColor(.black)` or `.background(.white)` found in any view file — all views were clean.
-- OverlayView uses `.ultraThinMaterial` — automatically adapts to dark/light mode.
-- **WCAG non-text contrast (1.4.11) requires 3:1** for UI components/icons — warningOrange in light mode was previously #FF9500 at 2.7:1 (below threshold); now fixed to #E07000 at 3.5:1.
-
-### 2026-04-25 — Wave 3: Dark Mode Color Adaptation
-
-**Task:** Design and implement dark mode color system for DesignSystem.swift  
-**Status:** ✅ SUCCESS — Implemented, build clean  
-
-**Changes Made:**
-
-1. **`reminderBlue` → Adaptive (UIColor dynamicProvider)**
-   - Light: #4A90D9 (unchanged)
-   - Dark: #5BA8F0 (brighter, improves dark-background contrast from ~2.9:1 to ~4:1)
-
-2. **`reminderGreen` → System color (Color(.systemGreen))**
-   - Light: #34C759 | Dark: #30D158
-   - Delegates to iOS system adaptation — zero-risk, automatic future updates
-
-3. **`warningOrange` → Adaptive (UIColor dynamicProvider)**
-   - Light: #E07000 (WCAG fix: 2.7:1 → 3.5:1 on white)
-   - Dark: #FF9500 (unchanged, 6.8:1 on near-black)
-   - Addressed real accessibility bug as part of dark mode work
-
-4. **`permissionBanner` → Static #FFCC00 (both modes)**
-   - Yellow "caution" signal intentionally constant across modes
-
-5. **`permissionBannerText` → Static #262626 (both modes)**
-   - High contrast (>10:1) on yellow background in both modes
-
-**Policy Decisions:**
-- No `.preferredColorScheme` modifier anywhere (permanent — reject future in-app toggle requests)
-- All view files were already clean (semantic colors, `.ultraThinMaterial`, `.systemBackground`)
-- View files require zero changes — DesignSystem.swift update is the entire implementation
-
-**Verification:**
-- ✅ Build succeeded, no warnings
-- ✅ No view file modifications needed
-- ✅ Integration with Danny's dark mode spec complete
-- ✅ Ready for visual QA in next cycle
-
-## Learnings
-
-### 2026-04-26: Color Token Migration to Asset Catalog
-
-**Task:** Migrate all 6 AppColor tokens from hardcoded Swift to `Colors.xcassets`  
-**Status:** ✅ SUCCESS — Build clean
-
-**Changes Made:**
-
-1. **`EyePostureReminder/Resources/Colors.xcassets/`** — created with 6 `.colorset` entries:
-   - `ReminderBlue`: light #4A90D9 / dark #5BA8F0
-   - `ReminderGreen`: light #34C759 / dark #30D158
-   - `WarningOrange`: light #E07000 / dark #FF9500
-   - `WarningText`: light #994F00 / dark #FF9500
-   - `PermissionBanner`: static #FFCC00 (both modes)
-   - `PermissionBannerText`: static #262626 (both modes)
-
-2. **`DesignSystem.swift`** — replaced all `UIColor(dynamicProvider:)` and `Color(red:green:blue:)` with `Color("Name")`; removed `import UIKit`
-
-3. **`Package.swift`** — added `.process("Resources")` to SPM target so `.xcassets` is bundled
-
-**Key Learnings:**
-- SPM requires explicit `.process("Resources")` in target resources for `.xcassets` to be compiled and bundled
-- Static colors (same light/dark) in `.colorset` use a single entry with no `appearances` array
-- `import UIKit` can be fully removed from `DesignSystem.swift` once all `UIColor` references are gone
-- Asset catalog colors are the canonical iOS pattern — light/dark adaptation is declarative, not imperative
-- `Color("Name")` is safe (no crash on miss), but name typos produce invisible failures — treat asset names as stable API
-
-## Learnings
-
-### 2026-04-26: Screen-Time-Based Trigger UX Review
-
-**Task:** UX review of Danny's screen-time trigger spec (Decision: continuous screen-on time vs fixed wall-clock intervals) and Rusty's architecture amendments (grace period, ScreenTimeTracker service).  
-**Status:** ✅ Review complete — `tess-screen-time-ux-review.md` filed
-
-**Key findings:**
-
-- **Critical onboarding copy bug:** `onboarding.permission.body1` ("Reminders arrive as notifications — so the app works even when you're not looking at it") is now factually false. Foreground-only delivery is the new model. This string must change before launch.
-- **Secondary onboarding bug:** `onboarding.welcome.body` ("Works quietly in the background") also needs updating — background delivery is gone.
-- **Settings copy pattern:** `"Remind me every"` → `"Remind me after"` + section footer ("Timer resets when you lock your phone.") is cleaner than appending "of screen time" to every picker row.
-- **HomeView: no progress indicator.** Showing elapsed screen time creates anxiety and contradicts the app's "calm nudge" positioning. Keep it as-is.
-- **OverlayView: no changes.** Trigger mechanism changed, overlay experience is identical.
-- **Grace period: invisible by design.** The 5-second debounce on willResignActive is a pure implementation detail — no user-facing copy needed.
-- **ReminderRowView hardcoded strings:** The picker label `"Remind me every"` and its accessibility hint are hardcoded Swift strings, not in `Localizable.xcstrings`. Flag for Linus to migrate before copy changes are made.
-- **Notification permission framing:** Notifications now serve snooze-wake only, not primary reminders. The permission screen's urgency must soften accordingly — frame around snooze, not primary delivery.
-- **Master toggle footer (new):** Add `"Reminders only appear while this app is open."` to address Danny's open question about foreground-only UX communication — Settings footer is the right low-friction placement.
-
-**Design principles reinforced:**
-- iOS users understand "screen time" — lean on Apple's vocabulary rather than inventing terms like "continuous use"
-- "After" implies accumulation toward a threshold; "every" implies clock cycles — one word carries the entire mental model difference
-- Never surface implementation details (grace periods, timer debounce) as user-facing UX
-
----
-
 ## Session 6 Update: Screen-Time UX Review Complete
 
 **Session:** 2026-04-24T20:58Z – 2026-04-24T21:37Z  
@@ -364,3 +223,167 @@ Early design system work covering: DesignSystem.swift tokens (colors, fonts, spa
 - `AppFont` Dynamic Type tokens (headline, body, bodyEmphasized, caption) scale correctly; countdown intentionally fixed. ✅
 - Reduce motion is respected in all views (OverlayView, SettingsView, OnboardingScreenWrapper). ✅
 - Snooze time formatted with `.formatted(date: .omitted, time: .shortened)` — locale-aware. ✅
+
+---
+
+### 2026-04-28: Accessibility & Design System Audit Pass 3
+
+**Task:** Full read-only audit of all Views/ + DesignSystem.swift across 8 accessibility/design areas.  
+**Report filed:** `.squad/decisions/inbox/tess-a11y-design-audit-pass3.md`  
+**Overall health score: 9/10** (up from 6.5/10 in pass 2)
+
+**All previous critical issues confirmed fixed:**
+- `accessibilityViewIsModal` — implemented in `OverlayManager.swift:139` via UIKit (`hostingController.view.accessibilityViewIsModal = true`) — correct approach for UIKit-hosted SwiftUI overlay
+- `ReminderType.title/overlayTitle/notificationTitle` — all properly localized via `String(localized:, bundle: .module)` in `ReminderType.swift`
+- Issues #32 (onboarding design tokens), #33 (ReminderRowView a11y strings), #35 (tap targets), #36 (time format) — all resolved
+
+**New findings (minor):**
+
+1. 🟡 **`OnboardingScreenWrapper` (OnboardingView.swift:63-66)** — Uses `.linear(duration: 0.15)` when `reduceMotion=true`. Deviates from the team's established pattern of passing `nil` to eliminate animations entirely. All other reduce-motion guards in the app (OverlayView, SettingsView, ReminderRowView) use `nil`. Fix: replace with direct state set outside `withAnimation`.
+
+2. 🟢 **`LegalDocumentView.swift:36-40`** — Dismiss button has `.accessibilityIdentifier` but no `.accessibilityHint`. Minor — VoiceOver reads the button label fine, but hint would improve context.
+
+3. 🟢 **`OverlayView.swift:43`** — × dismiss icon uses raw `.font(.system(.title).weight(.medium))`. Scales correctly with Dynamic Type but is not an AppFont token. Team rule (Linus Wave 2 Decision 1) mandates AppFont tokens for all font usage. Low priority.
+
+**Areas confirmed clean:**
+- Dark mode: `OverlayManager.swift` explicitly does NOT set `overrideUserInterfaceStyle` — overlay inherits scene appearance correctly
+- All text scales with Dynamic Type; `AppFont.countdown` fixed-size is intentional and documented
+- No raw hardcoded colors anywhere in views
+- All tap targets ≥ 44pt
+- VoiceOver reading order logical throughout
+- Reduce motion respected in all views except the minor OnboardingScreenWrapper case above
+
+**Key insight:** The UIKit-level `accessibilityViewIsModal` setting in OverlayManager is the correct and sufficient approach for a UIKit-window-hosted SwiftUI overlay. The previous audits were correct to flag the absence of the SwiftUI `.accessibilityViewIsModal(true)` modifier, but the UIKit property on the hosting controller's view achieves the same effect and is actually more robust for this architecture.
+
+---
+
+### 2026-04-28: Accessibility & Design System Audit Round 3 (Post-#131/#132/#134 Fixes)
+
+**Task:** Verify Linus's Round 2 fixes (#131 reduce-motion, #134 bell.fill token, #132 hardcoded 44) and perform a full fresh pass for new issues.
+**Overall health score: 9.5/10**
+
+**All three Round 2 fixes confirmed correct:**
+
+- **#131 (reduce-motion pattern)** ✅ — `SettingsSnoozeSection` all 4 button actions now use canonical `if reduceMotion { direct } else { withAnimation { ... } }` pattern. `OnboardingScreenWrapper` (previously flagged 🟡 in Pass 3 as `.linear(0.15)`) also now uses the correct if/else pattern — fixed as a side effect.
+- **#134 (bell.fill token)** ✅ — `AppSymbol.bell = "bell.fill"` added to `DesignSystem.swift:129`; `SettingsView.swift:281` uses `AppSymbol.bell`. Clean.
+- **#132 (hardcoded 44)** ✅ — `OnboardingSetupView.swift:75` customize button frame now uses `AppLayout.minTapTarget`.
+
+**Previous Pass 3 findings verified as resolved:**
+- `OverlayView` dismiss button (🟢 raw font) — now uses `AppFont.overlayDismiss` ✅
+- `OnboardingScreenWrapper` reduce-motion (🟡) — now if/else pattern ✅
+
+**No accessibility regressions from Round 2 fixes.** All Round 2 changes were additive/corrective with no side effects on VoiceOver, Dynamic Type, or tap targets.
+
+**New findings (only):**
+
+1. 🟡 **`SettingsSmartPauseSection` (SettingsView.swift:368,382) — raw SF symbol strings** — `Label(..., systemImage: "moon.fill")` and `Label(..., systemImage: "car.fill")` are hardcoded strings. Team rule (Linus Wave 2 Decision 1) mandates all SF Symbol names use `AppSymbol` tokens. These were introduced by the Smart Pause feature and missed by the `bell.fill` token sweep (#125). `AppSymbol` has no `pauseDuringFocus`/`pauseWhileDriving` tokens. Same class of issue as #134. Fix: add two tokens to `AppSymbol` and replace inline strings.
+
+2. 🟢 **`SetupPreviewCard` (OnboardingSetupView.swift:111,114) — raw SF symbol strings** — `systemImage: "clock"` and `systemImage: "timer"` in the decorative preview card are hardcoded strings. Lower severity (decorative, non-interactive, read-only preview card) but inconsistent with AppSymbol rule. Fix: add `AppSymbol.clock`/`AppSymbol.timer` tokens.
+
+**Areas confirmed clean (Round 3):**
+- Reduce motion: consistent across OverlayView, SettingsSnoozeSection, OnboardingScreenWrapper, ContentView (uses `.animation(nil, value:)` view-modifier form — consistent with OverlayView countdown ring pattern)
+- All tap targets ≥ 44pt everywhere
+- All colors via AppColor tokens, all fonts via AppFont tokens
+- VoiceOver order and combined elements logical throughout
+- Dark mode inheritance correct
+
+### 2026-04-26: Wellness Visual Redesign Plan
+
+**Task:** Researched and proposed a wellness-themed visual redesign before implementation.
+
+**Decision filed:** `.squad/decisions/inbox/tess-wellness-design-plan.md`
+
+**Direction:** “Restful Grove” — warm sand backgrounds, soft sage/teal primary colors, gentle blue secondary accents, muted clay warmth, rounded cards, subtle SF Symbol-based illustration, calming micro-interactions, and explicitly designed light/dark mode palettes.
+
+**Current UI assessment:** `DesignSystem.swift` is structurally strong but utility-first; `SettingsView` uses accessible native form patterns; `OverlayView` is accessibility-strong but visually generic; onboarding is tokenized but still icon-only/generic. `HomeView.swift` remains a phase-2/dashboard consideration based on prior audits.
+
+**Font research:** Recommended DM Sans as the safest full-app OFL font, Nunito/Nunito Sans as the strongest wellness-feeling option, and Plus Jakarta Sans as the premium/product-feel alternative. All proposed font options are free for commercial use under OFL.
+
+**Accessibility rule reinforced:** Soft wellness colors should be used primarily as backgrounds/fills; foreground text/icon colors must preserve WCAG AA contrast. Proposed palette includes checked AA foreground pairings for normal text and controls.
+
+**Key file paths:** `EyePostureReminder/Views/DesignSystem.swift`, `EyePostureReminder/Views/SettingsView.swift`, `EyePostureReminder/Views/OverlayView.swift`, `EyePostureReminder/Views/HomeView.swift`, `EyePostureReminder/Views/Onboarding/*.swift`.
+
+### 2026-04-26: Phase 1C Font Selection — Nunito
+
+**Task:** Make and implement the app font decision for issue #161.
+**Decision filed:** `.squad/decisions/inbox/tess-font-decision.md`
+
+**Decision:** Chose **Nunito** for the Restful Grove visual direction because its rounded, friendly tone best supports a calm wellness reminder product. DM Sans remained the safest neutral option, Plus Jakarta Sans felt more premium/product-led, and keeping SF missed the chance to add warmth through typography.
+
+**Implementation notes:** Added OFL-licensed Nunito font files under `EyePostureReminder/Resources/Fonts/`, registered them at app launch with CoreText, and introduced `AppTypography` tokens using SwiftUI `.custom(..., relativeTo:)` to preserve Dynamic Type. `AppFont` remains as a compatibility alias, and the countdown stays fixed monospaced by design.
+
+### 2026-04-28: Phase 2B Onboarding Restful Grove Redesign
+
+**Task:** Implement issue #163 — restyle the 3-screen onboarding flow as a guided wellness setup experience.
+
+**Implementation notes:** Reworked onboarding visuals around the Restful Grove tokens: warm `AppColor.background`, soft `AppColor.surface` cards, `AppColor.surfaceTint` icon containers, pill CTAs with `AppLayout.radiusPill`, and Nunito `AppTypography`/`AppFont` text. Added a paired eye/posture hero card, a warmer notification preview card, soft reminder setup cards, and Restful Grove page indicator colors.
+
+**Accessibility preserved:** Existing VoiceOver labels/hints, combined card elements, Dynamic Type font tokens, 44pt minimum secondary actions, and reduce-motion behavior remain intact.
+
+**Validation:** `xcodebuild build -scheme EyePostureReminder -destination 'platform=iOS Simulator,name=iPhone 17 Pro' 2>&1 | tail -5` → `** BUILD SUCCEEDED **`.
+
+### 2026-04-26: Restful Grove Design Consistency Audit
+
+**Task:** Reviewed every SwiftUI view under `EyePostureReminder/Views/`, plus `DesignSystem.swift` and `Components.swift`, for Restful Grove color, typography, icon, spacing/radius, dark-mode, component-adoption, and emotional-tone consistency.
+
+**Fixes shipped:** Replaced remaining user-visible system color usage in Home/Legal/shared controls with AppColor semantic tokens, improved dark-mode `PrimaryButtonStyle` contrast by using adaptive `AppColor.background` text, switched dark elevation border to `AppColor.separatorSoft`, reused `IconContainer` in Settings, and added hierarchical SF Symbol rendering to shared/onboarding/home icons.
+
+**Validation:** `xcodebuild -scheme EyePostureReminder -destination 'generic/platform=iOS' build -quiet` passed with existing warnings. `swift build` still fails because UIKit is unavailable for the host/macOS SwiftPM build path.
+
+**Report filed:** `.squad/decisions/inbox/tess-design-audit.md`
+
+**Learning:** Restful Grove is now consistently applied at the visual-token level. Remaining opportunities are mostly component-consolidation work: onboarding cards manually duplicate `WellnessCard`, onboarding primary CTAs duplicate `PrimaryButtonStyle`, and caption-emphasis could use a formal typography token instead of local `.fontWeight(.semibold)`.
+
+### 2026-04-26: Home Yin-Yang Eye Animation
+
+**Task:** Added a calming HomeView hero animation for the Restful Grove redesign.
+**Status:** ✅ Complete — build and tests passed.
+
+**What changed:**
+- Replaced the single status icon in `HomeView` with `YinYangEyeView`, a reusable SwiftUI component intended to be extractable as a future app logo.
+- The open eye (`eye.fill`) and closed eye (`eye.slash.fill`) begin separated, ease inward, orbit once around each other, and settle into a simplified vertical yin-yang composition.
+- Used Restful Grove design tokens: `AppColor.primaryRest`, `AppColor.secondaryCalm`, `AppColor.surfaceTint`, `AppSpacing`, `AppLayout`, and the new `AppTypography.homeLogoIcon` token.
+- Respected `accessibilityReduceMotion` by showing the final resting state immediately.
+- Kept existing Home screen UI test hooks (`home.statusIcon`, `home.title`, `home.statusLabel`, `home.settingsButton`).
+
+**Validation:**
+- `xcodebuild build -scheme EyePostureReminder -destination 'platform=iOS Simulator,name=iPhone 17 Pro'` ✅
+- `xcodebuild test -scheme EyePostureReminder -destination 'platform=iOS Simulator,name=iPhone 17 Pro'` ✅
+
+## Session 8: Yin-Yang SVG-Style Rewrite
+
+**Date:** 2025-07-22
+**Task:** Rewrite YinYangEyeView to match approved HTML prototype with proper yin-yang shape
+
+### What Changed
+
+1. **YinYangEyeView.swift** — Full rewrite:
+   - Replaced SF Symbol orbiting eyes with SwiftUI Path-drawn yin-yang symbol
+   - Created `YinYangHalfShape` (private Shape) using arc-based paths for yin/yang halves
+   - Yin half: `AppColor.primaryRest` (sage), Yang half: `AppColor.surfaceTint` (mint)
+   - Dots at 25% and 75% vertical positions using opposite colors
+   - Border ring with `AppColor.separatorSoft`
+   - Two-phase animation: spin (360°/2s deceleration) → breathe (scale 1.0↔1.06, 8s cycle)
+   - `accessibilityReduceMotion` skips all animations
+
+2. **OnboardingWelcomeView.swift** — Replaced `WelcomeHeroCard` with `YinYangEyeView()`:
+   - Removed dead `WelcomeHeroCard` and `HeroIcon` structs
+   - Yin-yang serves as the hero visual on welcome screen
+   - Preserved accessibility label for illustration
+
+### Learnings
+
+- SwiftUI `Path.addArc` clockwise parameter is inverted from SVG convention (SwiftUI uses flipped Y-axis coordinates). When converting SVG arc sweeps, flip the clockwise boolean.
+- For yin-yang S-curve: the trick is two small arcs (radius = R/2) centered at 25% and 75% of the diameter on the center axis, with opposite sweep directions per half.
+- `DispatchQueue.main.asyncAfter` works well for sequencing animation phases (spin then breathe) without complex state machines.
+
+**Build:** ✅ `xcodebuild build` passed
+
+### 2026-04-27: Yin-Yang SwiftUI Implementation — Complete
+
+- **Context:** Six-agent sprint on Restful Grove branding component. Tess implemented custom Path yin-yang logo.
+- **Deliverable:** `YinYangEyeView.swift` — custom SwiftUI Shape + Path (no SF Symbols), two-phase animation (Spin → Breathe), full reduce-motion compliance.
+- **Integration:** Added to `OnboardingView` and `HomeView` hero areas. Single source of truth for logo.
+- **Testing:** 9 comprehensive tests (Livingston) — all passing. Build passing.
+- **Decisions:** Merged 5 decisions into `.squad/decisions/decisions.md` (Tess, Danny, Rusty, Roman contributions). Inbox cleared.
+- **Session artifacts:** `.squad/orchestration-log/2026-04-27T03-41-00Z-*.md`, `.squad/log/2026-04-27T03-41-00Z-yinyang-implementation.md`

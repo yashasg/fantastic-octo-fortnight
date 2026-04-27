@@ -30,6 +30,7 @@ header(){ echo -e "\n${BOLD}${CYAN}━━━ $* ━━━${RESET}"; }
 # ── Constants ────────────────────────────────────────────────────────────────
 SCHEME="EyePostureReminder"
 TEST_SCHEME="EyePostureReminderTests"
+UI_TEST_SCHEME="EyePostureReminderUITests"
 PACKAGE_PATH="$(cd "$(dirname "$0")/.." && pwd)"
 DERIVED_DATA_PATH="${PACKAGE_PATH}/DerivedData"
 
@@ -177,6 +178,113 @@ cmd_clean() {
   pass "Clean complete"
 }
 
+cmd_uitest() {
+  header "UI TEST"
+  require_xcodebuild
+
+  local project="${PACKAGE_PATH}/UITests/EyePostureReminderUITests.xcodeproj"
+
+  # Generate xcodeproj if not present
+  if [[ ! -d "$project" ]]; then
+    info "UITest xcodeproj not found — running setup…"
+    "${PACKAGE_PATH}/scripts/setup-uitests.sh"
+  fi
+
+  local dest
+  dest=$(detect_destination)
+  info "Destination: $dest"
+  info "UI Test scheme: $UI_TEST_SCHEME"
+
+  rm -rf "${PACKAGE_PATH}/UITestResults.xcresult"
+
+  # Step 1: build-for-testing generates a .xctestrun that correctly resolves
+  # UITargetAppPath to EyePostureReminder.app (not the flat SPM binary).
+  # Step 2: test-without-building uses the xctestrun directly, bypassing the
+  # TEST_TARGET_NAME ambiguity that occurs when 'xcodebuild test' runs both
+  # build and test in a single invocation.
+  info "Step 1/2 — building for testing…"
+  run_xcodebuild build-for-testing \
+    -project "$project" \
+    -scheme "$UI_TEST_SCHEME" \
+    -destination "$dest" \
+    -derivedDataPath "$DERIVED_DATA_PATH"
+
+  # Locate the generated xctestrun file
+  local xctestrun
+  xctestrun=$(find "${DERIVED_DATA_PATH}/Build/Products" \
+    -name "${UI_TEST_SCHEME}_*.xctestrun" \
+    -maxdepth 1 \
+    -print \
+    | sort | tail -1)
+
+  if [[ -z "$xctestrun" ]]; then
+    fail "No .xctestrun found after build-for-testing"
+    exit 1
+  fi
+  info "xctestrun: $xctestrun"
+
+  # Patch UITargetAppPath so xctestrun always resolves to the .app bundle
+  # (build-for-testing may generate a path pointing at the flat SPM binary).
+  info "Patching UITargetAppPath in xctestrun…"
+  /usr/libexec/PlistBuddy \
+    -c "Set :${UI_TEST_SCHEME}:UITargetAppPath __TESTROOT__/Debug-iphonesimulator/EyePostureReminder.app" \
+    "$xctestrun" || warn "PlistBuddy patch failed — xctestrun may already have the correct path"
+
+  # Ensure the .app bundle contains the executable and resource bundle.
+  # The xcodeproj app-wrapper target builds them to BUILT_PRODUCTS_DIR but
+  # doesn't always copy them into the .app; copy them if missing.
+  local products_dir="${DERIVED_DATA_PATH}/Build/Products/Debug-iphonesimulator"
+  local app_dir="${products_dir}/EyePostureReminder.app"
+  local spm_bin="${products_dir}/EyePostureReminder"
+  local app_bin="${app_dir}/EyePostureReminder"
+  local bundle_src="${products_dir}/EyePostureReminder_EyePostureReminder.bundle"
+  local bundle_dst="${app_dir}/EyePostureReminder_EyePostureReminder.bundle"
+
+  if [[ -f "$spm_bin" && ! -f "$app_bin" ]]; then
+    info "Copying SPM binary into app bundle…"
+    cp "$spm_bin" "$app_bin"
+    chmod +x "$app_bin"
+  fi
+  if [[ -d "$bundle_src" ]]; then
+    info "Copying resource bundle into app bundle…"
+    rm -rf "$bundle_dst"
+    cp -r "$bundle_src" "$bundle_dst"
+  fi
+
+  info "Step 2/2 — running UI tests…"
+
+  # Retry logic: simulator app launch can fail transiently in CI when
+  # SpringBoard hasn't fully settled. Retry up to 3 times with increasing
+  # delays to handle FBSOpenApplicationServiceErrorDomain / RequestDenied.
+  local max_attempts=3
+  local attempt=1
+  while true; do
+    info "Attempt $attempt/$max_attempts..."
+    rm -rf "${PACKAGE_PATH}/UITestResults.xcresult"
+
+    if run_xcodebuild test-without-building \
+      -xctestrun "$xctestrun" \
+      -destination "$dest" \
+      -derivedDataPath "$DERIVED_DATA_PATH" \
+      -resultBundlePath "${PACKAGE_PATH}/UITestResults.xcresult" \
+      -disable-concurrent-destination-testing \
+      -parallel-testing-enabled NO; then
+      break
+    fi
+
+    if (( attempt >= max_attempts )); then
+      fail "UI tests failed after $max_attempts attempts"
+      exit 1
+    fi
+
+    warn "Attempt $attempt failed -- retrying in $((attempt * 15))s..."
+    sleep $((attempt * 15))
+    attempt=$((attempt + 1))
+  done
+
+  pass "UI tests passed"
+}
+
 cmd_all() {
   header "ALL (build → lint → test)"
   local overall_start
@@ -232,6 +340,7 @@ usage() {
   echo "Commands:"
   echo "  build              Compile the project"
   echo "  test               Run unit tests"
+  echo "  uitest             Run UI tests (generates xcodeproj if needed)"
   echo "  lint               Run SwiftLint (skipped gracefully if not installed)"
   echo "  clean              Remove build artifacts"
   echo "  all                build + lint + test"
@@ -246,6 +355,7 @@ COMMAND="${1:-}"
 case "$COMMAND" in
   build)   cmd_build ;;
   test)    cmd_test  ;;
+  uitest)  cmd_uitest ;;
   lint)    cmd_lint  ;;
   clean)   cmd_clean ;;
   all)     cmd_all   ;;

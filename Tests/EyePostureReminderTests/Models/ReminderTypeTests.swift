@@ -114,7 +114,7 @@ final class ReminderTypeTests: XCTestCase {
     }
 
     func test_eyes_symbolName() {
-        XCTAssertEqual(ReminderType.eyes.symbolName, "eye")
+        XCTAssertEqual(ReminderType.eyes.symbolName, "eye.fill")
     }
 
     func test_posture_symbolName() {
@@ -131,6 +131,18 @@ final class ReminderTypeTests: XCTestCase {
 
     func test_overlayTitles_areDistinct() {
         XCTAssertNotEqual(ReminderType.eyes.overlayTitle, ReminderType.posture.overlayTitle)
+    }
+
+    func test_eyes_overlaySupportiveText_isNonEmpty() {
+        XCTAssertFalse(ReminderType.eyes.overlaySupportiveText.isEmpty)
+    }
+
+    func test_posture_overlaySupportiveText_isNonEmpty() {
+        XCTAssertFalse(ReminderType.posture.overlaySupportiveText.isEmpty)
+    }
+
+    func test_overlaySupportiveTexts_areDistinct() {
+        XCTAssertNotEqual(ReminderType.eyes.overlaySupportiveText, ReminderType.posture.overlaySupportiveText)
     }
 
     // MARK: - Init from categoryIdentifier

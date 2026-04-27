@@ -314,7 +314,7 @@ final class FocusModeSettingsViewModelTests: XCTestCase {
     func test_pauseDuringFocus_writesToPersistence_immediately() {
         vm.pauseDuringFocus = false
         XCTAssertTrue(
-            mockPersistence.hasValue(forKey: "epr.pauseDuringFocus"),
+            mockPersistence.hasValue(forKey: "kshana.pauseDuringFocus"),
             "Setting pauseDuringFocus must immediately write to MockSettingsPersisting")
     }
 

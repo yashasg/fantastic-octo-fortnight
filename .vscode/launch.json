@@ -1,0 +1,24 @@
+{
+    "configurations": [
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:fantastic-octo-fortnight}",
+            "name": "Debug EyePostureReminder",
+            "target": "EyePostureReminder",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug EyePostureReminder"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:fantastic-octo-fortnight}",
+            "name": "Release EyePostureReminder",
+            "target": "EyePostureReminder",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release EyePostureReminder"
+        }
+    ]
+}

@@ -7,6 +7,168 @@
 
 ## Learnings
 
+### 2026-05-01 — Issue #168 (Post-redesign review fixes — items 2, 3, 4)
+
+**AppFont is a legacy alias — prefer AppTypography:**
+- `AppFont` (DesignSystem.swift) is a pure forwarding enum for `AppTypography`; all static properties delegate to their `AppTypography` counterpart. New and migrated views should reference `AppTypography.*` directly. `AppFont` is retained only for backward compatibility.
+
+**Deduplicating OnboardingPrimaryButtonStyle → PrimaryButtonStyle:**
+- `OnboardingPrimaryButtonStyle` was functionally identical to `PrimaryButtonStyle` from `Components.swift` (same pill shape, `primaryRest` fill, 0.98 press scale, reduce-motion guard). Removed the duplicate; all three onboarding views now use `.buttonStyle(.primary)`. `OnboardingSecondaryButtonStyle` has no equivalent in Components and was kept.
+
+**Replacing OnboardingScreenWrapper with .calmingEntrance():**
+- `OnboardingScreenWrapper` duplicated `CalmingEntrance` exactly (opacity 0→1, entranceSlideOffset y, hasEverAppeared guard, reduce-motion skip). The only difference was the animation curve constant (`onboardingFadeInCurve` vs `calmingEntranceCurve`). Replaced all three `OnboardingScreenWrapper { content }` usages with `content.calmingEntrance()`, then deleted the wrapper struct. This reduces the animation surface from two parallel implementations to one canonical `CalmingEntrance` modifier.
+
+**Structural pattern for eliminating OnboardingScreenWrapper:**
+- `OnboardingScreenWrapper { ScrollView { ... }.background(...) }` → `ScrollView { ... }.background(...).calmingEntrance()`. The `.calmingEntrance()` modifier goes after `.background(...)` so the entrance animates the fully-styled scroll view as a unit, matching the previous wrapper behaviour.
+
+
+
+**Gradient background for full-screen overlays:**
+- Replace `Color.clear.background(.ultraThinMaterial)` with a `LinearGradient(colors: [AppColor.background, AppColor.surfaceTint], startPoint: .top, endPoint: .bottom).ignoresSafeArea()`. This adapts to dark mode automatically because both tokens are adaptive, and gives a calming directional tint rather than a flat blur.
+
+**Soft circular icon aura pattern:**
+- Wrap the reminder icon in a `ZStack { Circle().fill(type.color.opacity(0.12)); Image(...) }` sized to `overlayIconSize * 1.75`. The 0.12 opacity fill creates a subtle "glow" ring that's barely visible in dark mode but pleasant in light mode. Apply `.symbolRenderingMode(.hierarchical)` on the SF Symbol image to get the primary/secondary layer rendering at distinct opacities — this adds the nature/layered motif without extra assets.
+
+**Countdown ring track token swap:**
+- Changed countdown ring track from `Color.secondary.opacity(0.3)` to `AppColor.separatorSoft`. This ensures the track is palette-consistent and adapts correctly in both light and dark modes (the raw `.secondary` opacity approach was palette-agnostic).
+
+**PrimaryButtonStyle for primary overlay CTA:**
+- Use `Button { ... } label: { Text("overlay.doneButton", bundle: .module) }.buttonStyle(.primary)` as the main dismiss CTA in the content stack. Keep the floating × button (`overlay.dismissButton`) as a secondary escape hatch at top-right. Two dismiss points: primary styled pill (bottom) + secondary icon (top-right). Both are 44pt-accessible and VoiceOver-labelled.
+
+**`accessibilityViewIsModal` — UIKit only:**
+- `hostingController.view.accessibilityViewIsModal = true` must remain on the UIKit `UIHostingController.view` in `OverlayManager`. Do NOT use SwiftUI's `.accessibilityViewIsModal(_:)` modifier — it does not exist in the iOS 26 SDK. The UIKit property is the only correct path for overlay modal accessibility.
+
+**Supportive text in ReminderType:**
+- Added `overlaySupportiveText: String` computed property to `ReminderType` following the same `String(localized:bundle:.module)` pattern as `overlayTitle`. Localisation keys: `reminder.eyes.overlaySupportiveText` / `reminder.posture.overlaySupportiveText`. This keeps display copy co-located with the type, consistent with existing pattern.
+
+**StringCatalogTests maintenance:**
+- When adding new string keys used in a view, update three test methods: `test_allExpectedKeys_resolveToNonEmptyStrings`, `test_noDuplicateKeys_overlayScreen` (or the appropriate screen), and `test_noDuplicateKeys_acrossAllScreens`. Missing any one will cause test failures on the next run.
+
+
+
+**Form background theming — `scrollContentBackground(.hidden)`:**
+- To replace the default Form/List background, always pair `.scrollContentBackground(.hidden)` with `.background(AppColor.background)` on the Form. Without `.scrollContentBackground(.hidden)`, the system white/grey background overpaints the custom color. This is the canonical approach for iOS 16+.
+
+**Per-row card styling in Form sections:**
+- `.listRowBackground(AppColor.surface)` applied per-row (not per-section) is the iOS 16-compatible way to colour section cards. `.listSectionBackground` is iOS 17+ only.
+- `.listRowSeparatorTint(AppColor.separatorSoft)` threads palette-consistent separators throughout without disrupting the Form layout engine.
+
+**`SettingsSectionHeader` pattern:**
+- Extracted a private `SettingsSectionHeader` view that accepts a `titleKey`, optional `iconName`, and `iconTint`. Pass `.textCase(nil)` on the label Text to suppress the system all-caps forced on section headers. Centralises icon-badge + caption header appearance across all sections.
+
+**`SettingsRowIcon` helper:**
+- Reusable `ZStack { Circle().fill(surfaceTint) + Image(...) }` at 32×32pt. Applied in master toggle label, section headers (snooze/smart-pause), and notification warning. Mark `.accessibilityHidden(true)` — icon is purely decorative reinforcement.
+
+**Notification warning warm card:**
+- `.listRowBackground(AppColor.accentWarm.opacity(0.10))` + `.listRowSeparatorTint(AppColor.accentWarm.opacity(0.25))` on both warning rows gives a cohesive amber wash without a heavy background. The warning icon moved inside a circular `accentWarm.opacity(0.18)` badge consistent with the rest of the icon system.
+
+**Token migration — `reminderBlue` → `primaryRest`:**
+- All toggle tints in `SettingsView` and subsection structs updated from `AppColor.reminderBlue` to `AppColor.primaryRest`. The `reminderBlue` token is retained for legacy backward-compatibility but should not appear in new views.
+
+### 2026-04-30 — Issue #159 (Restful Grove color palette)
+
+**Asset catalog naming convention for themed palettes:**
+- Named all Restful Grove color assets with `RG` prefix (e.g. `RGBackground`, `RGPrimaryRest`) to namespace them from legacy colors and avoid collisions. Future palette additions should follow the same `<PaletteInitials><TokenName>` pattern.
+
+**SPM bundle requirement:**
+- All `Color(...)` asset lookups in a Swift Package must pass `bundle: .module`. Forgetting this silently returns the fallback color (clear/black) instead of the asset. Always include `bundle: .module` when adding new `AppColor` tokens.
+
+**Semantic remap strategy:**
+- When remapping `ReminderType.color` from old tokens (`reminderBlue`/`reminderGreen`) to new ones (`primaryRest`/`secondaryCalm`), the old tokens are kept in `AppColor` for backward compatibility with any views not yet migrated. The switch-based `var color` in `ReminderType` is the single remap site.
+
+### 2026-04-30 — Issues #149, #156 (AccessibleToggle fixes + migration)
+
+**Stale coordinator closure (#149):**
+- `UIKitSwitchView.updateUIView` must assign `context.coordinator.parent = self` so the coordinator always holds the latest `isOn` binding and `onChange` closure after SwiftUI re-renders the view. Without this, toggling via code (binding change) could fire the old closure.
+
+**Migrating Toggles to AccessibleToggle (#156):**
+- `ReminderRowView` now uses `AccessibleToggle` with `tint: type.color`, `accessibilityIdentifier: "settings.\(type.rawValue).toggle"`, a dynamic `accessibilityHint` (Text wrapping the enabled/disabled format string), and `onChange: { _ in onChanged() }`.
+- `SettingsView` Preferences section haptics toggle replaced with `AccessibleToggle(accessibilityIdentifier: "settings.hapticFeedback")`.
+- When migrating a `Toggle`, move `.tint`, `.accessibilityHint`, and `.onChange` into `AccessibleToggle`'s init parameters rather than chaining modifiers.
+
+### 2026-04-29 — Issues #130, #131, #132, #134 (UI quality fixes)
+
+**`.onChange` deprecation (#130):**
+- Single-parameter `.onChange(of:) { newValue in }` is deprecated in iOS 17+. Always use the two-parameter form `.onChange(of:) { _, newValue in }`. Applied to `pauseDuringFocus` and `pauseWhileDriving` in `SettingsSmartPauseSection`.
+
+**`withAnimation(nil)` violates reduce-motion pattern (#131):**
+- `withAnimation(nil)` still creates an animation transaction; it does NOT fully suppress animation. The team-canonical pattern is `if reduceMotion { direct call } else { withAnimation(curve) { ... } }`. Applied to all four snooze action buttons in `SettingsSnoozeSection`.
+
+**Design token discipline — AppLayout.minTapTarget (#132):**
+- `OnboardingSetupView` line 75 used `.frame(minHeight: 44)` — replaced with `.frame(minHeight: AppLayout.minTapTarget)`. All tap-target minimum heights must use this token, not a raw literal.
+
+**AppSymbol.bell token (#134):**
+- Added `static let bell = "bell.fill"` to `AppSymbol` in `DesignSystem.swift`. Replaced the raw `"bell.fill"` string in `SettingsSnoozeSection`'s cancel-snooze button with `AppSymbol.bell`.
+
+### 2026-04-28 — Issues #116, #120, #125 (UI quality)
+
+**SettingsView decomposition pattern (#116):**
+- Extracted `SettingsSnoozeSection`, `SettingsSmartPauseSection`, `SettingsNotificationWarningSection` as `private struct` at file scope (not nested inside `SettingsView`).
+- Private subviews use `@EnvironmentObject` to inherit `SettingsStore`/`AppCoordinator` from the parent Form automatically — no manual injection needed.
+- Pass `viewModel: SettingsViewModel?` and `reduceMotion: Bool` as `let` properties since they're not environment objects.
+- Removed `// swiftlint:disable:next type_body_length` after successful decomposition.
+
+**Reduce Motion rule clarified (#120):**
+- The correct behaviour is **no animation** (set state directly) when `reduceMotion == true` — not a shortened animation. `.linear(duration: 0.15)` was still an animation. Pattern: `if reduceMotion { state = value } else { withAnimation(...) { state = value } }`.
+
+**Design system token discipline (#125):**
+- `AppFont.overlayDismiss` added for `.system(.title).weight(.medium)` (× dismiss button).
+- `AppSymbol.snoozed` added for `"moon.zzz.fill"` (used in HomeView status icon + SettingsView snooze label).
+- `AppAnimation.onboardingTransition` (`.easeInOut`) for ContentView hasSeenOnboarding toggle; `onboardingFadeInCurve` (`.easeOut.delay`) for OnboardingScreenWrapper entrance.
+- `AppLayout.onboardingMaxContentWidth = 540` replaces the same literal in all three onboarding screens.
+- Also fixed `OnboardingPermissionView` skip button using raw `44` instead of `AppLayout.minTapTarget`.
+
+### 2026-04-27 — UI Code Quality & Readability Audit
+
+**SettingsView.swift — SettingsViewModelBox pattern:**
+- The `@StateObject private var vmBox = SettingsViewModelBox()` wrapper exists to give `SettingsViewModel` a SwiftUI-managed lifecycle without `@Published` observation triggering re-renders. The code comment at the top of the class is the only explanation — new devs will find this confusing. The intent should be documented inline more directly: "we need `@StateObject` lifecycle but no reactive observation."
+
+**SettingsView.swift — body length:**
+- `swiftlint:disable:next type_body_length` at line 13 is a canary. The `body` spans ~350 lines with 8 Sections inline. At minimum, the Snooze section (~90 lines) and the Smart Pause section warrant extraction as private subviews. This is the single biggest readability gap.
+
+**Missing AppFont token — OverlayView dismiss button:**
+- `OverlayView.swift` line 43: `.font(.system(.title).weight(.medium))` for the × dismiss button is a one-off, not using `AppFont`. The closest existing token is `AppFont.headline` (`.title.weight(.bold)`) — this should either use that or get a new `AppFont.overlayDismiss` token.
+
+**UIKit screen height in SwiftUI — OverlayView:**
+- `OverlayView.swift` lines 184-186: The manual dismiss slide animation queries `UIApplication.shared.connectedScenes...screen.bounds.height` and falls back to `1000`. This UIKit call inside a SwiftUI view is fragile — prefer a `GeometryReader` or `@Environment(\.displayScale)` + `UIScreen.main.bounds` approach. The magic `1000` fallback is arbitrary.
+
+**Hardcoded animation durations outside AppAnimation:**
+- `ContentView.swift` line 19: `.easeInOut(duration: 0.4)` — onboarding transition not in `AppAnimation`.
+- `OnboardingView.swift` line 65: `.easeOut(duration: 0.4).delay(0.1)` — not in `AppAnimation`.
+- `OnboardingView.swift` line 64: `.linear(duration: 0.15)` — reduce-motion variant not in `AppAnimation`.
+- `OverlayView.swift` lines 182, 205: `0.05` grace delay constant repeated twice — should be `AppAnimation.reduceMotionGraceDuration`.
+
+**AppSymbol gaps:**
+- `"moon.zzz.fill"` appears in both `HomeView.swift` line 22 and `SettingsView.swift` line 115 — a literal in two places. Should be `AppSymbol.snoozed` (or similar).
+- `"bell.fill"` (SettingsView line 137), `"moon.fill"` (line 216), `"car.fill"` (line 232) are all one-offs inline in SettingsView; should be added to `AppSymbol`.
+
+**AppLayout gap — onboarding content width:**
+- `maxWidth: 540` iPad constraint appears in three separate onboarding views (Welcome, Permission, Setup). Should be `AppLayout.onboardingMaxContentWidth`.
+
+**Consistency — minTapTarget:**
+- `OnboardingPermissionView.swift` line 65 uses `.frame(minHeight: 44)` instead of `.frame(minHeight: AppLayout.minTapTarget)`. Small inconsistency.
+
+**Missing preview — ReminderRowView:**
+- `ReminderRowView.swift` is the only view file with no `#Preview`. The expand/collapse picker logic makes it the hardest to develop without one.
+
+**Snooze section indentation cosmetic bug — SettingsView.swift:**
+- Lines 106-107: The `Section {` body is not indented under `if settings.globalEnabled {`. The closing `}` has an explanatory comment but the opener is visually confusing.
+
+**Timer pattern in OverlayView:**
+- `Timer(timeInterval:repeats:block:)` + `RunLoop.main.add` is correct but old-style. Modern equivalent using `Task { for _ in 1... { try await Task.sleep(for: .seconds(1)); ... } }` would be more idiomatic for iOS 16+ / Swift 5.9+. Not a bug, a style note.
+
+**OnboardingScreenWrapper placement:**
+- Defined at the bottom of `OnboardingView.swift` but used by all 3 sibling onboarding views. As it grows (e.g., if entrance animation variations are added), it should live in its own file.
+
+**What is solid:**
+- UIKit bridge (`OverlayManager.swift`) is clean: `[weak self]`, window nil'd after dismiss, `@MainActor` throughout, no retain cycles detected.
+- `reduceMotion` respected in every animated view (`OverlayView`, `SettingsView`, `ContentView`, `OnboardingScreenWrapper`).
+- Design system (`DesignSystem.swift`) is comprehensive and well-documented with WCAG ratios.
+- `@Binding` usage in `ReminderRowView` is correct and idiomatic.
+- Preview providers exist on all views except `ReminderRowView`.
+- String catalog usage is consistent; no hardcoded user-facing strings found.
+- Accessibility (labels, hints, identifiers, `accessibilityElement`, `accessibilityHidden`) is thorough across all views.
+
 ## Core Context
 
 **Phase 1 UI Layer (M1.2, M1.5) — 2026-04-24 to 2026-04-25:**
@@ -270,3 +432,77 @@ UI layer ready for Phase 2 expansion. Legal content handoff to human team.
 ### 2026-04-24 — UI Layer Phase 1 (M1.2, M1.5)
 
 Early phase 1 UI implementation decisions (OverlayView lifecycle, swipe gestures, animations, accessibility, SettingsViewModel patterns, string catalog) and legal/disclaimer/settings integration completed. All build verified and tests passing. Preserved for reference; current active work continues in Phase 2 Views expansion.
+
+### 2026-04-26 — Quality Sweep: UI Code Quality Audit
+
+**Quality sweep findings from 8-agent parallel audit:**
+
+**7 Warnings (should fix before Phase 2 UI work):**
+
+1. **W-1: SettingsView.body too long (~350 lines)** — Snooze section alone ~90 lines. Linter suppression (`type_body_length`) masks structural debt. **Action:** Extract `SnoozeSectionView`, `SmartPauseSectionView`, `NotificationWarningSection` as private subviews or extension file. Coordinate with Saul's long-method threshold audit (40-line max).
+
+2. **W-2: OverlayView dismiss button font is one-off** — Uses `Font.system(.title).weight(.medium)`, not AppFont token. **Action:** Add `AppFont.overlayDismiss` or reuse `AppFont.headline` if weight difference acceptable.
+
+3. **W-3: Magic `1000` fallback for screen height** — `UIApplication.shared.connectedScenes...screen.bounds.height ?? 1000` is arbitrary, too short for large screens. **Action:** Use `GeometryReader` or `UIScreen.main.nativeBounds.height`.
+
+4. **W-4: Hardcoded `"moon.zzz.fill"` in 2 files** — Appears in `HomeView.swift` L22 and `SettingsView.swift` L115. Symbol rename will miss one. **Action:** Add `AppSymbol.snoozed = "moon.zzz.fill"`.
+
+5. **W-5: Hardcoded animation durations not in AppAnimation** — `ContentView` 0.4s, `OnboardingView` 0.4s + 0.1s delay, `OverlayView` 0.05s grace delays. **Action:** Add `AppAnimation.onboardingTransition`, `AppAnimation.reduceMotionGraceDuration`.
+
+6. **W-6: ReminderRowView missing #Preview** — Only view file without one. Expand/collapse Picker logic needs preview. **Action:** Add two previews (enabled/disabled states).
+
+7. **W-7: OnboardingPermissionView uses raw `44`** — Should use `AppLayout.minTapTarget`. **Action:** Replace hardcoded value.
+
+**1 Warning from accessibility sweep (Tess):**
+- **OnboardingScreenWrapper deviates from Reduce Motion pattern** — Currently uses `.linear(duration: 0.15)` fade. Team pattern (OverlayView, SettingsView, ReminderRowView) is `nil` (no animation). **Action:** Use `if reduceMotion { appeared = true } else { withAnimation(...) }`.
+
+**6 Suggestions (lower urgency):**
+- S-1: AppSymbol gaps (`snoozeCancel`, `focusPause`, `drivingPause`)
+- S-2: `maxWidth: 540` iPad constraint duplicated across 3 onboarding screens → add `AppLayout.onboardingMaxContentWidth`
+- S-3: Snooze section indentation in SettingsView (cosmetic)
+- S-4: OnboardingScreenWrapper placement (consider separate file if grows)
+- S-5: SetupPreviewCard `.title2` font — add AppFont token or confirm intentional
+- S-6: OverlayView Timer → async Task alternative for iOS 16+ idiom
+
+**Accessibility: Clean** — All interactive elements have labels/hints, VoiceOver navigation solid, Dynamic Type correct, color contrast ✅, design system consistent, HIG compliant, Reduce Motion respected (except W above), Dark mode ✅.
+
+**Cross-cutting impacts:**
+- SettingsView body decomposition (W-1) affects Saul's long-method audit and Rusty's ViewModel box pattern. Coordinate strategy.
+- AppFont/AppAnimation token gaps (W-2, W-5) affect design system completeness. Batch as one extension task.
+- Reduce Motion inconsistency (OnboardingScreenWrapper) requires alignment — Tess flags it, Linus owns fix.
+
+**Next owner action:** Prioritize W-1 (SettingsView decomposition) and token extensions (W-2/4/5) before Phase 2 UI work.
+
+### 2026-04-26: Tess — Wellness Visual Redesign Proposed (Issue #158)
+
+**Related artifact:** `.squad/decisions/inbox/tess-wellness-design-plan.md` (now merged into decisions.md)
+
+Tess completed comprehensive wellness design research proposing "Restful Grove" visual system:
+
+- **Color palette** (light + dark modes, WCAG AA verified): Sage green primary, gentle blue secondary, soft clay accent, warm sand backgrounds
+- **Typography recommendations:** DM Sans (safest), or Nunito + DM Sans hybrid for more personality
+- **Design tokens:** Semantic colors, spacing (4pt grid extended), radius system, elevation guidelines
+- **Motion guidelines:** Calming micro-interactions with reduce-motion respect
+- **Screen redesigns:** Home, Settings, Overlay, Onboarding with before/after direction
+- **Implementation phases:** 4 phases from token expansion through QA
+
+**Open questions for team:** Font adoption timing, color unification (eye vs. posture), Phase 2 dashboard scope, overlay copy additions.
+
+**Status:** Awaiting design review and team feedback. Linus to prioritize component styling (Phase 2) if approved.
+
+### 2026-05-16 — App Rename: "Eye & Posture Reminder" → "kshana"
+
+**Scope of the rename:**
+- All user-facing strings in `Localizable.xcstrings` updated: `home.title`, `onboarding.permission.notificationCard.appName`, `onboarding.welcome.title`, plus legal/privacy text (terms of service, third-party services, children's privacy).
+- `Info.plist`: `CFBundleName` set to `"kshana"` (was `$(PRODUCT_NAME)`). Usage descriptions (notifications, focus, motion) now reference "kshana" instead of "Eye & Posture Reminder".
+- Swift file header comments updated from `// Eye & Posture Reminder` → `// kshana`.
+- `.swiftlint.yml` header comment updated.
+- `StringCatalogTests` assertion updated to expect `"kshana"` for `home.title`.
+
+**What was NOT changed (by design):**
+- SPM target/module name `EyePostureReminder` — renaming would break all imports; saved for a dedicated PR.
+- `EyePostureReminder/` folder path — tied to Package.swift.
+- Test target names and paths.
+- Git repo name.
+
+**Key learning:** `CFBundleName` was previously `$(PRODUCT_NAME)` which resolves to the SPM target name. Hardcoding `"kshana"` decouples the display name from the module name, which is the correct approach when branding diverges from code identifiers.

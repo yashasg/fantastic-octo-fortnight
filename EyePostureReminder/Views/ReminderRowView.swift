@@ -12,20 +12,23 @@ struct ReminderRowView: View {
 
     var body: some View {
         Group {
-            Toggle(isOn: $isEnabled) {
+            AccessibleToggle(
+                isOn: $isEnabled,
+                tint: type.color,
+                accessibilityIdentifier: "settings.\(type.rawValue).toggle",
+                accessibilityHint: Text(
+                    isEnabled
+                        ? String(
+                            format: String(localized: "settings.reminder.toggle.enabled.hint", bundle: .module),
+                            type.title)
+                        : String(
+                            format: String(localized: "settings.reminder.toggle.disabled.hint", bundle: .module),
+                            type.title)
+                ),
+                onChange: { _ in onChanged() }
+            ) {
                 Label(type.title, systemImage: type.symbolName)
             }
-            .tint(type.color)
-            .onChange(of: isEnabled) { _ in onChanged() }
-            .accessibilityHint(
-                isEnabled
-                    ? String(
-                        format: String(localized: "settings.reminder.toggle.enabled.hint", bundle: .module),
-                        type.title)
-                    : String(
-                        format: String(localized: "settings.reminder.toggle.disabled.hint", bundle: .module),
-                        type.title)
-            )
 
             if isEnabled {
                 Picker(String(localized: "settings.reminder.intervalPicker", bundle: .module), selection: $interval) {

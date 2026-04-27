@@ -56,6 +56,7 @@ protocol ReminderScheduling: AnyObject {
 ///
 /// Depends on `NotificationScheduling` (injected) for all system calls.
 /// All `async` methods must be called from a `Task` or `async` context.
+@MainActor
 final class ReminderScheduler: ReminderScheduling {
 
     // MARK: - Notification Identifier Namespace

@@ -1,0 +1,54 @@
+// UITestHelpers.swift
+// kshana UI Tests
+//
+// Shared launch-argument constants and XCUIApplication helpers for UI test setup.
+// All arguments are handled in AppDelegate.applyUITestLaunchArguments().
+
+import XCTest
+
+// MARK: - TestLaunchArguments
+
+/// Constants for launch arguments injected by UI tests to pre-seed app state.
+/// Handled in `AppDelegate.applyUITestLaunchArguments()`.
+enum TestLaunchArguments {
+    /// Sets `hasSeenOnboarding = true` before launch → app opens on the Home screen.
+    static let skipOnboarding = "--skip-onboarding"
+    /// Clears `hasSeenOnboarding` → app starts fresh with the onboarding flow.
+    static let resetOnboarding = "--reset-onboarding"
+    /// Triggers the eye break overlay immediately on launch (reserved for future test-mode support).
+    static let showOverlayEyes = "--show-overlay-eyes"
+    /// Triggers the posture check overlay immediately on launch (reserved for future test-mode support).
+    static let showOverlayPosture = "--show-overlay-posture"
+}
+
+// MARK: - XCUIApplication + Test Helpers
+
+extension XCUIApplication {
+    /// Appends `--skip-onboarding` and launches the app.
+    /// Use in `setUpWithError()` for tests that start from the Home screen.
+    func launchWithSkippedOnboarding() {
+        launchArguments += [TestLaunchArguments.skipOnboarding]
+        launch()
+    }
+
+    /// Appends `--reset-onboarding` and launches the app.
+    /// Use in `setUpWithError()` for tests that verify the onboarding flow from scratch.
+    func launchWithOnboarding() {
+        launchArguments += [TestLaunchArguments.resetOnboarding]
+        launch()
+    }
+
+    /// Appends `--show-overlay-eyes` and launches the app.
+    /// Use in tests that verify the eye break overlay UI.
+    func launchWithEyeOverlay() {
+        launchArguments += [TestLaunchArguments.showOverlayEyes]
+        launch()
+    }
+
+    /// Appends `--show-overlay-posture` and launches the app.
+    /// Use in tests that verify the posture check overlay UI.
+    func launchWithPostureOverlay() {
+        launchArguments += [TestLaunchArguments.showOverlayPosture]
+        launch()
+    }
+}

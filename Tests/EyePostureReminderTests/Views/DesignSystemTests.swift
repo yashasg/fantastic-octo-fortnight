@@ -124,10 +124,6 @@ final class DesignSystemTests: XCTestCase {
         XCTAssertGreaterThan(AppLayout.countdownRingStroke, 0)
     }
 
-    func test_appLayout_overlayCornerRadius_isPositive() {
-        XCTAssertGreaterThan(AppLayout.overlayCornerRadius, 0)
-    }
-
     // MARK: - AppAnimation: Duration Spec Compliance
 
     func test_appAnimation_overlayAppear_is0point3s() {
@@ -167,21 +163,234 @@ final class DesignSystemTests: XCTestCase {
         }
     }
 
+    // MARK: - AppFont: Icon Tokens (Restful Grove additions)
+
+    /// settingsRowIcon token compiles — SF Symbol at 15pt semibold (decorative, accessibility-hidden).
+    func test_appFont_settingsRowIcon_isAccessible() {
+        let font = AppFont.settingsRowIcon
+        XCTAssertFalse(String(describing: font).isEmpty, "settingsRowIcon font must produce a non-empty description")
+    }
+
+    /// warningIcon token compiles — SF Symbol at 16pt semibold (decorative, accessibility-hidden).
+    func test_appFont_warningIcon_isAccessible() {
+        let font = AppFont.warningIcon
+        XCTAssertFalse(String(describing: font).isEmpty, "warningIcon font must produce a non-empty description")
+    }
+
+    /// reminderCardIcon token compiles — system(.title2), scales with Dynamic Type.
+    func test_appFont_reminderCardIcon_isAccessible() {
+        let font = AppFont.reminderCardIcon
+        XCTAssertFalse(String(describing: font).isEmpty, "reminderCardIcon font must produce a non-empty description")
+    }
+
+    /// overlayIcon token compiles — sized to AppLayout.overlayIconSize (decorative).
+    func test_appFont_overlayIcon_isAccessible() {
+        let font = AppFont.overlayIcon
+        XCTAssertFalse(String(describing: font).isEmpty, "overlayIcon font must produce a non-empty description")
+    }
+
+    /// illustrationIcon token compiles — sized to AppLayout.onboardingIllustrationSize semibold (decorative).
+    func test_appFont_illustrationIcon_isAccessible() {
+        let font = AppFont.illustrationIcon
+        XCTAssertFalse(String(describing: font).isEmpty, "illustrationIcon font must produce a non-empty description")
+    }
+
+    // MARK: - AppSpacing: xxl token
+
+    func test_appSpacing_xxl_is40pt() {
+        XCTAssertEqual(AppSpacing.xxl, 40, "xxl must be 40pt (10× grid, large section dividers)")
+    }
+
+    func test_appSpacing_allValuesAscending_includesXxl() {
+        let spacings: [CGFloat] = [
+            AppSpacing.xs, AppSpacing.sm, AppSpacing.md,
+            AppSpacing.lg, AppSpacing.xl, AppSpacing.xxl
+        ]
+        for index in 1..<spacings.count {
+            XCTAssertGreaterThan(
+                spacings[index],
+                spacings[index - 1],
+                "Spacing tokens (including xxl) must be in strictly ascending order")
+        }
+    }
+
+    // MARK: - AppLayout: Corner Radius Tokens (Restful Grove)
+
+    func test_appLayout_radiusSmall_is12pt() {
+        XCTAssertEqual(AppLayout.radiusSmall, 12, "radiusSmall must be 12pt (chips, tags, compact buttons)")
+    }
+
+    func test_appLayout_radiusCard_is20pt() {
+        XCTAssertEqual(AppLayout.radiusCard, 20, "radiusCard must be 20pt (content cards, modals, sheets)")
+    }
+
+    func test_appLayout_radiusLarge_is28pt() {
+        XCTAssertEqual(AppLayout.radiusLarge, 28, "radiusLarge must be 28pt (large surfaces, hero cards)")
+    }
+
+    func test_appLayout_radiusPill_is999pt() {
+        XCTAssertEqual(AppLayout.radiusPill, 999, "radiusPill must be 999pt (capsule/pill semantics)")
+    }
+
+    func test_appLayout_radiusValues_areAscending() {
+        let radii: [CGFloat] = [
+            AppLayout.radiusSmall,
+            AppLayout.radiusCard,
+            AppLayout.radiusLarge,
+            AppLayout.radiusPill
+        ]
+        for index in 1..<radii.count {
+            XCTAssertGreaterThan(
+                radii[index],
+                radii[index - 1],
+                "Radius tokens must be in strictly ascending order")
+        }
+    }
+
+    func test_appLayout_entranceSlideOffset_is20pt() {
+        XCTAssertEqual(AppLayout.entranceSlideOffset, 20, "entranceSlideOffset must be 20pt (gentle upward drift)")
+    }
+
+    func test_appLayout_entranceSlideOffset_isPositive() {
+        XCTAssertGreaterThan(AppLayout.entranceSlideOffset, 0)
+    }
+
+    // MARK: - AppAnimation: New Duration Tokens (Restful Grove)
+
+    func test_appAnimation_onboardingFadeIn_is0point4s() {
+        XCTAssertEqual(
+            AppAnimation.onboardingFadeIn,
+            0.4,
+            accuracy: 0.001,
+            "onboardingFadeIn must be 0.4s")
+    }
+
+    func test_appAnimation_onboardingFadeInDelay_is0point1s() {
+        XCTAssertEqual(
+            AppAnimation.onboardingFadeInDelay,
+            0.1,
+            accuracy: 0.001,
+            "onboardingFadeInDelay must be 0.1s")
+    }
+
+    func test_appAnimation_calmingEntranceDuration_is0point5s() {
+        XCTAssertEqual(
+            AppAnimation.calmingEntranceDuration,
+            0.5,
+            accuracy: 0.001,
+            "calmingEntranceDuration must be 0.5s (slower ease-out for calming overlay entrance)")
+    }
+
+    func test_appAnimation_statusCrossfadeDuration_is0point25s() {
+        XCTAssertEqual(
+            AppAnimation.statusCrossfadeDuration,
+            0.25,
+            accuracy: 0.001,
+            "statusCrossfadeDuration must be 0.25s (icon + text crossfade)")
+    }
+
+    func test_appAnimation_allDurationsArePositive_includesNewTokens() {
+        let durations = [
+            AppAnimation.overlayAppear,
+            AppAnimation.overlayDismiss,
+            AppAnimation.overlayAutoDismiss,
+            AppAnimation.settingsExpand,
+            AppAnimation.countdownRingTick,
+            AppAnimation.onboardingFadeIn,
+            AppAnimation.onboardingFadeInDelay,
+            AppAnimation.calmingEntranceDuration,
+            AppAnimation.statusCrossfadeDuration
+        ]
+        for duration in durations {
+            XCTAssertGreaterThan(duration, 0, "All animation durations must be positive")
+        }
+    }
+
+    func test_appAnimation_calmingEntranceCurve_compiles() {
+        let curve = AppAnimation.calmingEntranceCurve
+        _ = curve
+    }
+
+    func test_appAnimation_statusCrossfadeCurve_compiles() {
+        let curve = AppAnimation.statusCrossfadeCurve
+        _ = curve
+    }
+
     // MARK: - AppColor: Token Accessibility
 
-    /// Verifies all `AppColor` tokens compile and are accessible without crashing.
-    func test_appColor_allTokensAreAccessible() {
+    /// Verifies all original `AppColor` tokens compile and are accessible without crashing.
+    func test_appColor_originalTokensAreAccessible() {
         _ = AppColor.reminderBlue
         _ = AppColor.reminderGreen
         _ = AppColor.warningOrange
-        _ = AppColor.permissionBanner
-        _ = AppColor.permissionBannerText
         _ = AppColor.warningText
+    }
+
+    /// Verifies all Restful Grove `AppColor` tokens compile and are accessible without crashing.
+    func test_appColor_restfulGrovePaletteTokensAreAccessible() {
+        _ = AppColor.background
+        _ = AppColor.surface
+        _ = AppColor.surfaceTint
+        _ = AppColor.primaryRest
+        _ = AppColor.secondaryCalm
+        _ = AppColor.accentWarm
+        _ = AppColor.textPrimary
+        _ = AppColor.textSecondary
+        _ = AppColor.separatorSoft
+        _ = AppColor.shadowCard
     }
 
     // MARK: - AppSymbol: SF Symbol Names Are Non-Empty
 
-    func test_appSymbol_allNamesAreNonEmpty() {
+    // MARK: - AppOpacity: Token Value Coverage
+
+    func test_appOpacity_iconAura_existsAndInRange() {
+        XCTAssertGreaterThanOrEqual(AppOpacity.iconAura, 0, "iconAura must be >= 0")
+        XCTAssertLessThanOrEqual(AppOpacity.iconAura, 1, "iconAura must be <= 1")
+    }
+
+    func test_appOpacity_warningBackground_existsAndInRange() {
+        XCTAssertGreaterThanOrEqual(AppOpacity.warningBackground, 0)
+        XCTAssertLessThanOrEqual(AppOpacity.warningBackground, 1)
+    }
+
+    func test_appOpacity_warningSeparator_existsAndInRange() {
+        XCTAssertGreaterThanOrEqual(AppOpacity.warningSeparator, 0)
+        XCTAssertLessThanOrEqual(AppOpacity.warningSeparator, 1)
+    }
+
+    func test_appOpacity_pressedButton_existsAndInRange() {
+        XCTAssertGreaterThanOrEqual(AppOpacity.pressedButton, 0)
+        XCTAssertLessThanOrEqual(AppOpacity.pressedButton, 1)
+    }
+
+    func test_appOpacity_mutedTimestamp_existsAndInRange() {
+        XCTAssertGreaterThanOrEqual(AppOpacity.mutedTimestamp, 0)
+        XCTAssertLessThanOrEqual(AppOpacity.mutedTimestamp, 1)
+    }
+
+    func test_appOpacity_subtleBorder_existsAndInRange() {
+        XCTAssertGreaterThanOrEqual(AppOpacity.subtleBorder, 0)
+        XCTAssertLessThanOrEqual(AppOpacity.subtleBorder, 1)
+    }
+
+    func test_appOpacity_allTokensAreInValidRange() {
+        let tokens: [Double] = [
+            AppOpacity.iconAura,
+            AppOpacity.warningBackground,
+            AppOpacity.warningSeparator,
+            AppOpacity.pressedButton,
+            AppOpacity.mutedTimestamp,
+            AppOpacity.subtleBorder
+        ]
+        for token in tokens {
+            XCTAssertTrue((0...1).contains(token), "All AppOpacity tokens must be in 0...1, got \(token)")
+        }
+    }
+
+    // MARK: - AppSymbol
+
+    func test_appSymbol_originalNamesAreNonEmpty() {
         let symbols = [
             AppSymbol.eyeBreak,
             AppSymbol.postureCheck,
@@ -194,5 +403,33 @@ final class DesignSystemTests: XCTestCase {
         for symbol in symbols {
             XCTAssertFalse(symbol.isEmpty, "AppSymbol name must not be empty: \(symbol)")
         }
+    }
+
+    func test_appSymbol_newNamesAreNonEmpty() {
+        let symbols = [
+            AppSymbol.snoozed,
+            AppSymbol.bell,
+            AppSymbol.pauseDuringFocus,
+            AppSymbol.pauseWhileDriving,
+            AppSymbol.clock,
+            AppSymbol.timer
+        ]
+        for symbol in symbols {
+            XCTAssertFalse(symbol.isEmpty, "AppSymbol name must not be empty: \(symbol)")
+        }
+    }
+
+    func test_appSymbol_allNamesAreUnique() {
+        let symbols = [
+            AppSymbol.eyeBreak, AppSymbol.postureCheck, AppSymbol.dismiss,
+            AppSymbol.settings, AppSymbol.chevronDown, AppSymbol.chevronUp,
+            AppSymbol.warning, AppSymbol.snoozed, AppSymbol.bell,
+            AppSymbol.pauseDuringFocus, AppSymbol.pauseWhileDriving,
+            AppSymbol.clock, AppSymbol.timer
+        ]
+        XCTAssertEqual(
+            Set(symbols).count,
+            symbols.count,
+            "All AppSymbol names must be unique")
     }
 }

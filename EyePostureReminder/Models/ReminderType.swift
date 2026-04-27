@@ -15,8 +15,8 @@ enum ReminderType: String, CaseIterable, Identifiable {
     /// SF Symbol name for the reminder type.
     var symbolName: String {
         switch self {
-        case .eyes:    return "eye"
-        case .posture: return "figure.stand"
+        case .eyes:    return AppSymbol.eyeBreak
+        case .posture: return AppSymbol.postureCheck
         }
     }
 
@@ -29,11 +29,11 @@ enum ReminderType: String, CaseIterable, Identifiable {
     }
 
     /// Tint color used consistently across the app for this type.
-    /// Uses DesignSystem semantic tokens for visual consistency.
+    /// Uses Restful Grove semantic tokens: eyes→primaryRest, posture→secondaryCalm.
     var color: Color {
         switch self {
-        case .eyes:    return AppColor.reminderBlue
-        case .posture: return AppColor.reminderGreen
+        case .eyes:    return AppColor.primaryRest
+        case .posture: return AppColor.secondaryCalm
         }
     }
 
@@ -44,6 +44,14 @@ enum ReminderType: String, CaseIterable, Identifiable {
         switch self {
         case .eyes:    return String(localized: "reminder.eyes.overlayTitle", bundle: .module)
         case .posture: return String(localized: "reminder.posture.overlayTitle", bundle: .module)
+        }
+    }
+
+    /// Supportive one-liner shown below the headline to guide the user during their break.
+    var overlaySupportiveText: String {
+        switch self {
+        case .eyes:    return String(localized: "reminder.eyes.overlaySupportiveText", bundle: .module)
+        case .posture: return String(localized: "reminder.posture.overlaySupportiveText", bundle: .module)
         }
     }
 

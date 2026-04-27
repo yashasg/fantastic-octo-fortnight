@@ -16,7 +16,7 @@ struct ContentView: View {
                     .transition(.opacity)
             }
         }
-        .animation(reduceMotion ? nil : .easeInOut(duration: 0.4), value: hasSeenOnboarding)
+        .animation(reduceMotion ? nil : AppAnimation.onboardingTransition, value: hasSeenOnboarding)
     }
 }
 

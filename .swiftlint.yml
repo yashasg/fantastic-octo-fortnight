@@ -1,4 +1,4 @@
-# SwiftLint Configuration — Eye & Posture Reminder
+# SwiftLint Configuration — kshana
 # https://github.com/realm/SwiftLint
 
 # ── Excluded paths ────────────────────────────────────────────────────────────
@@ -46,7 +46,6 @@ opt_in_rules:
   - redundant_type_annotation
   - sorted_imports
   - toggle_bool
-  - trailing_closure
   - unneeded_parentheses_in_closure_argument
   - vertical_parameter_alignment_on_call
   - yoda_condition
@@ -61,6 +60,8 @@ disabled_rules:
   - opening_brace
   # trailing_whitespace conflicts with some editors; enforced by .editorconfig
   - trailing_whitespace
+  # trailing_closure has no valid config options in current SwiftLint; disabled to avoid multi-arg SwiftUI DSL noise
+  - trailing_closure
 
 # ── Rule configuration ────────────────────────────────────────────────────────
 line_length:
@@ -109,6 +110,5 @@ multiline_arguments:
   first_argument_location: next_line
   only_enforce_after_first_closure_on_first_line: true
 
-# Trailing closure — don't require for multi-argument calls (SwiftUI DSL)
-trailing_closure:
-  only_single_mutable_parameter: true
+# trailing_closure disabled — multi-argument SwiftUI DSL calls don't need it
+# (only_single_mutable_parameter was invalid in current SwiftLint)

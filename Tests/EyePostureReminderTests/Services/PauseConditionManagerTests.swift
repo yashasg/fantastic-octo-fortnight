@@ -352,8 +352,8 @@ final class PauseConditionManagerTests: XCTestCase {
 // MARK: - SettingsStore Pause-Flag Tests
 //
 // Verifies the two new SettingsStore properties added for PauseConditionManager:
-//   epr.pauseDuringFocus   (default true)
-//   epr.pauseWhileDriving  (default true)
+//   kshana.pauseDuringFocus   (default true)
+//   kshana.pauseWhileDriving  (default true)
 
 @MainActor
 final class SettingsPauseFlagsTests: XCTestCase {
@@ -403,7 +403,7 @@ final class SettingsPauseFlagsTests: XCTestCase {
     func test_pauseDuringFocus_whenSet_writesToPersistence() {
         sut.pauseDuringFocus = false
         XCTAssertTrue(
-            mockPersistence.hasValue(forKey: "epr.pauseDuringFocus"),
+            mockPersistence.hasValue(forKey: "kshana.pauseDuringFocus"),
             "Setting pauseDuringFocus must write to the persistence store immediately"
         )
     }
@@ -411,7 +411,7 @@ final class SettingsPauseFlagsTests: XCTestCase {
     func test_pauseWhileDriving_whenSet_writesToPersistence() {
         sut.pauseWhileDriving = false
         XCTAssertTrue(
-            mockPersistence.hasValue(forKey: "epr.pauseWhileDriving"),
+            mockPersistence.hasValue(forKey: "kshana.pauseWhileDriving"),
             "Setting pauseWhileDriving must write to the persistence store immediately"
         )
     }

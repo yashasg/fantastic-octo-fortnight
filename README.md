@@ -1,4 +1,4 @@
-# Eye & Posture Reminder – iOS App
+# kshana — Eye & Posture Wellness
 
 A lightweight iOS app that runs in the background and reminds you to rest your eyes and fix your posture. Built exclusively with core iOS libraries (SwiftUI, UserNotifications, UIKit) to minimise battery and memory usage.
 

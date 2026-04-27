@@ -14,6 +14,7 @@ let package = Package(
             name: "EyePostureReminder",
             path: "EyePostureReminder",
             resources: [
+                // Includes bundled app defaults, color assets, localization, and Fonts/*.ttf.
                 .process("Resources")
             ]
         ),

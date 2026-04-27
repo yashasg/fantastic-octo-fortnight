@@ -1,9 +1,17 @@
 # Changelog
 
-All notable changes to Eye & Posture Reminder are documented here.
+All notable changes to kshana (formerly Eye & Posture Reminder) are documented here.
 
 Format: `vMAJOR.MINOR.PATCH[-prerelease]`  
 Versioning strategy: `0.x.x` during TestFlight beta, `1.0.0` at App Store launch.
+
+---
+
+## Rename — "Eye & Posture Reminder" → kshana
+
+- App renamed to **kshana** (Sanskrit: क्षण, "a moment, an instant")
+- All documentation updated to reflect new brand name
+- SPM module/target remains `EyePostureReminder` (internal technical name)
 
 ---
 

@@ -1,4 +1,4 @@
-# Eye & Posture Reminder – iOS App Implementation Plan
+# kshana — iOS App Implementation Plan
 
 > **Scope:** Implementation plan only. No source code is included in this document.
 
@@ -6,7 +6,7 @@
 
 ## 1. Overview
 
-A lightweight, battery-friendly iOS application that runs timers in the background and presents full-screen overlay reminders to:
+A lightweight, battery-friendly iOS application that tracks foreground screen-on time via `ScreenTimeTracker` and presents full-screen overlay reminders to:
 
 - **Rest your eyes** (e.g., the 20-20-20 rule – every 20 min, look 20 ft away for 20 s).
 - **Fix your posture** (e.g., every 30 min, sit up straight for 10 s).
@@ -15,7 +15,7 @@ Users can customise:
 - How often each reminder fires (the *reminder interval*).
 - How long the break overlay stays on screen (the *break duration*).
 
-The overlay is dismissible at any time. The app minimises CPU, memory, and battery usage by leveraging native iOS scheduling APIs rather than keeping a live timer in the foreground.
+The overlay is dismissible at any time. The app minimises CPU, memory, and battery usage by tracking continuous screen-on time in the foreground and using native iOS notification APIs only for snooze wake-ups.
 
 ---
 
@@ -115,7 +115,7 @@ immediately                     (user taps → app opens
 
 - A second `UIWindow` is created at `UIWindow.Level.alert + 1`, placed above all other content including the keyboard and system chrome.
 - The root view controller hosts `OverlayView` (SwiftUI via `UIHostingController`).
-- A **dismiss button** (and swipe-down gesture) allows the user to cancel at any time.
+- A **dismiss button** (and swipe-up gesture) allows the user to cancel at any time.
 - The window is torn down after dismissal or after the configured *break duration* elapses (whichever comes first), using a simple `DispatchQueue.main.asyncAfter` for the auto-dismiss timer – this is intentionally short-lived and only runs while the app is active.
 - The overlay is **not** shown if the device is locked (the notification appears on the lock screen instead; the user will see the overlay once they unlock and open the app).
 
@@ -153,7 +153,7 @@ Changes trigger `ReminderScheduler.reschedule()` automatically via a `didSet` ob
 | Icon | SF Symbol (e.g., `eye.fill` / `figure.stand`) |
 | Title | "Time to rest your eyes" / "Time to check your posture" |
 | Countdown | Remaining seconds displayed with a circular progress ring |
-| Dismiss button | `×` in top-right corner; also swipe down to dismiss |
+| Dismiss button | `×` in top-right corner; also swipe up to dismiss |
 | Auto-dismiss | After *break duration* seconds the overlay fades out automatically |
 
 ---
@@ -216,20 +216,18 @@ SettingsViewModel.update(type:interval:)
 SettingsStore.save()  →  UserDefaults
         │
         ▼
-ReminderScheduler.reschedule()
-  removeAllPendingNotificationRequests()
-  add new UNTimeIntervalNotificationRequests
+AppCoordinator notifies ScreenTimeTracker of new threshold
         │
         ▼
-iOS Notification Centre
-  (fires after interval)
+ScreenTimeTracker accumulates screen-on seconds
+  (PauseConditionManager blocks accumulation
+   if Focus / CarPlay / Driving detected)
         │
-  ┌─────┴──────────────────────────────┐
-  │ Foreground                         │ Background / locked
-  ▼                                    ▼
-UNUserNotificationCenterDelegate      System banner / lock screen
-.willPresent → OverlayManager.show()  .didReceive → app opens
-                                       → OverlayManager.show()
+        ▼
+Threshold reached → AppCoordinator.handleNotification(for:)
+        │
+        ▼
+OverlayManager.showOverlay(...)
         │
         ▼
 OverlayView shown with countdown
@@ -239,7 +237,7 @@ OverlayView shown with countdown
   ▼                ▼
 OverlayManager.dismiss()
   UIWindow removed from hierarchy
-  Next notification already scheduled (repeat: true)
+  ScreenTimeTracker.reset(for: type) — re-arms for next cycle
 ```
 
 ---
@@ -275,6 +273,7 @@ OverlayManager.dismiss()
 
 | Phase | Scope |
 |---|---|
-| **Phase 1 – MVP** | Settings screen (interval + duration pickers), local notification scheduling, foreground overlay with countdown and dismiss |
-| **Phase 2 – Polish** | Haptic feedback on overlay appearance, snooze action, onboarding / permission screen, app icon & launch screen |
-| **Phase 3 – Optional** | iCloud sync of settings via `NSUbiquitousKeyValueStore`, Home Screen widget showing "next break in X min", watchOS companion glance |
+| **Phase 0 – Foundation** ✅ | Project scaffolding (SPM, Xcode), CI/CD pipeline (GitHub Actions), MVVM architecture scaffolding, design system (Asset Catalog, String Catalog, design tokens) |
+| **Phase 1 – MVP** ✅ | Settings screen (interval + duration pickers), local notification scheduling, foreground overlay with countdown and dismiss, haptics, accessibility, ~65 unit tests |
+| **Phase 2 – Polish** 🔄 | Onboarding flow, snooze action, smart pause (Focus Mode / CarPlay / driving detection), ScreenTimeTracker replacing wall-clock intervals, data-driven config (Asset Catalog + String Catalog + defaults.json), App Store listing & preparation |
+| **Phase 3 – Advanced** 🔄 | Dependency injection refactoring, iCloud sync via `NSUbiquitousKeyValueStore`, Home Screen widget (WidgetKit), watchOS companion app |

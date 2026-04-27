@@ -14,6 +14,8 @@ final class MockOverlayPresenting: OverlayPresenting {
     private(set) var showCallCount = 0
     private(set) var dismissCallCount = 0
     private(set) var clearQueueCallCount = 0
+    private(set) var clearQueueForTypeCallCount = 0
+    private(set) var clearQueueForTypeArgs: [ReminderType] = []
 
     // MARK: - Ordered Call History
 
@@ -44,6 +46,8 @@ final class MockOverlayPresenting: OverlayPresenting {
         showCallCount = 0
         dismissCallCount = 0
         clearQueueCallCount = 0
+        clearQueueForTypeCallCount = 0
+        clearQueueForTypeArgs = []
         showCallOrder = []
         showCallDurations = []
         showCallHapticsEnabled = []
@@ -88,5 +92,10 @@ final class MockOverlayPresenting: OverlayPresenting {
 
     func clearQueue() {
         clearQueueCallCount += 1
+    }
+
+    func clearQueue(for type: ReminderType) {
+        clearQueueForTypeCallCount += 1
+        clearQueueForTypeArgs.append(type)
     }
 }

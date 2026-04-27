@@ -1,8 +1,8 @@
-# Eye & Posture Reminder – iOS Architecture
+# kshana — iOS Architecture
 
 > **Owner:** Rusty (iOS Architect)  
 > **Last Updated:** 2026-04-25  
-> **Status:** Foundation
+> **Status:** Phase 2
 
 ---
 
@@ -26,6 +26,7 @@
  │  │  ├ Permission│  │                  │  │  ├ PauseConditionManager │
  │  │  └ Setup     │  │                  │  │  │   ├ FocusDetector     │
  │  └ HomeView      │  │                  │  │  │   ├ CarPlayDetector   │
+ │     ├ YinYangEye │  │                  │  │  │                        │
  │     ├ SettingsView│  │                  │  │  │   └ DrivingDetector  │
  │     │  └ Reminder│  │                  │  │  ├ OverlayManager       │
  │     │    RowView │  │                  │  │  ├ AudioInterruption-   │
@@ -237,7 +238,7 @@ final class AudioInterruptionManager: MediaControlling { ... }
 
 ## 3. Project Structure
 
-This project uses **Swift Package Manager** (`Package.swift`) — there is no `.xcodeproj`. Build and test via `swift build` / `swift test` or `xcodebuild` with `-scheme EyePostureReminder`.
+This project uses **Swift Package Manager** (`Package.swift`) — there is no `.xcodeproj`. Build and test via `xcodebuild` with `-scheme EyePostureReminder`.
 
 **Note:** Protocols are co-located with their primary implementation (no separate `Protocols/` folder).
 
@@ -274,6 +275,7 @@ EyePostureReminder/                  (SPM executable target)
 │   ├── SettingsView.swift            Settings screen; passes coordinator as ReminderScheduling
 │   ├── ReminderRowView.swift         Per-type interval/duration row
 │   ├── OverlayView.swift             Full-screen break overlay; countdown; haptics
+│   ├── YinYangEyeView.swift         Custom Path yin-yang logo; spin→breathe animation
 │   ├── DesignSystem.swift            AppColor, AppFont, AppSpacing, AppAnimation tokens
 │   ├── LegalDocumentView.swift       Terms of Service / Privacy Policy inline viewer
 │   └── Onboarding/
@@ -455,6 +457,7 @@ Covers all six view files. Xcode 15's String Catalog editor warns on stale keys 
 - Spacing constants (`AppSpacing.xs`, `AppSpacing.md`)
 - Layout structure (`VStack`, `HStack`)
 - Animation curves (`withAnimation(.easeInOut(duration: 0.3))`)
+- Custom SwiftUI `Shape` / `Path` drawing (e.g., `YinYangHalfShape`)
 - SF Symbol names (`"eye.fill"`, `"figure.stand"`)
 - Typography scale (`AppFont.headline`, `AppFont.body`)
 
@@ -587,6 +590,58 @@ Keeps `AppCoordinator` (450+ lines) within SRP. Pause logic is cohesive and test
 
 ---
 
+### 4.8 YinYangEyeView — Custom Path Drawing & Phase-Based Animation
+
+**Decision:** Replace SF Symbol–based logo with a custom SwiftUI `Shape` drawing of a yin-yang symbol, animated via a two-phase state machine.
+
+**Why custom Path instead of SF Symbols or image assets:**
+1. **Resolution independence** — `Path` renders at any scale without rasterization artifacts.
+2. **Token integration** — Fill colors use `AppColor.primaryRest` (Sage) and `AppColor.surfaceTint` (Mint) directly; no separate asset catalog entries needed.
+3. **Animation control** — Individual shape layers can be composed into a `ZStack` and animated independently.
+
+**SVG-to-SwiftUI-Path conversion:**
+
+`YinYangHalfShape` (a private `Shape` conformer) constructs each half via three `Path.addArc()` calls — one large arc for the outer semicircle and two small arcs for the S-curve. The `isYin` flag mirrors the arc directions to produce left/right halves. This approach was derived from SVG clip-path geometry and expressed natively in SwiftUI's coordinate system.
+
+**Two-phase animation state machine:**
+
+```
+onAppear
+   │
+   ▼
+[guard !reduceMotion]──► Static logo at scale 1.0 (no animation)
+   │
+   ▼
+Phase 1: SPIN
+   .timingCurve(0.2, 0.0, 0.0, 1.0, duration: 2)
+   rotationEffect → 360°
+   │
+   2s delay (DispatchQueue.main.asyncAfter)
+   │
+   ▼
+Phase 2: BREATHE
+   .easeInOut(duration: 4).repeatForever(autoreverses: true)
+   scaleEffect → 1.0 ↔ 1.06
+```
+
+**State variables:**
+- `@State spinComplete` — drives rotation (0° → 360°)
+- `@State breathing` — drives scale oscillation (1.0 ↔ 1.06)
+- `@State hasStarted` — one-shot guard prevents re-triggering on view re-render
+
+**Accessibility:**
+- `@Environment(\.accessibilityReduceMotion)` — when true, both phases are skipped entirely; the logo renders static at scale 1.0.
+- Follows the same `CalmingEntrance` reduce-motion pattern used across all animated views in the Restful Grove redesign.
+
+**Design system integration:**
+- Colors: `AppColor.primaryRest` (Sage yin half), `AppColor.surfaceTint` (Mint yang half), `AppColor.separatorSoft` (border ring)
+- Sizing: `AppLayout.overlayIconSize * 1.55`
+- No new design tokens introduced — fully composed from existing Restful Grove tokens
+
+**Usage:** `HomeView` (hero branding element) and `OnboardingWelcomeView` (welcome visual)
+
+---
+
 ## 5. Technical Risks
 
 ### 5.1 Notification Permission Flow
@@ -652,11 +707,11 @@ Keeps `AppCoordinator` (450+ lines) within SRP. Pause logic is cohesive and test
 xcodebuild -version  # Xcode 15.0+
 swift --version       # Swift 5.9+
 
-# Build (SPM)
-swift build
+# Build
+xcodebuild build -scheme EyePostureReminder -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
 
-# Run unit tests (SPM)
-swift test
+# Run unit tests
+xcodebuild test -scheme EyePostureReminder -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
 
 # Build via xcodebuild (if simulator/device target needed)
 xcodebuild -scheme EyePostureReminder \
@@ -695,7 +750,7 @@ jobs:
         run: sudo xcode-select -s /Applications/Xcode_15.0.app
       
       - name: Build
-        run: swift build
+        run: xcodebuild build -scheme EyePostureReminder -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
       
       - name: Run Unit Tests
         run: |
@@ -1169,3 +1224,4 @@ Establish baselines on the CI runner (not local) to avoid machine-dependent drif
 | 2026-04-26 | Added Section 10: Testing Architecture | Rusty |
 | 2026-04-25 | Full codebase audit: updated module graph, all protocol definitions (ScreenTimeTracking, ReminderScheduling, PauseConditionProviding, MediaControlling, detector protocols), project structure (SPM, no Protocols/ folder, new services + views), §4.7 Screen-Time Trigger Model, §4.4 AppConfig.load() (removed DefaultsLoader), build commands (SPM), mock table, test file listing | Rusty |
 | 2026-04-25 | Fix docs drift (#93): added 3 undocumented services (AnalyticsLogger, MetricKitSubscriber, ServiceLifecycle) to module graph + project structure; corrected color token names in §4.4 to match Asset Catalog (ReminderBlue, ReminderGreen, WarningOrange, PermissionBanner, PermissionBannerText, WarningText) | Rusty |
+| 2026-04-27 | Added §4.8 YinYangEyeView architecture: custom Path drawing, two-phase animation state machine (spin→breathe), SVG-to-SwiftUI conversion, reduce-motion compliance. Updated module graph + project structure listing. Added custom Shape to Layer 4 design tokens. | Rusty |

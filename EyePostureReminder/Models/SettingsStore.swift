@@ -185,19 +185,19 @@ final class SettingsStore: ObservableObject {
 
 private extension SettingsStore {
     enum Keys {
-        static let globalEnabled          = "epr.globalEnabled"
-        static let eyesEnabled            = "epr.eyes.enabled"
-        static let eyesInterval           = "epr.eyes.interval"
-        static let eyesBreakDuration      = "epr.eyes.breakDuration"
-        static let postureEnabled         = "epr.posture.enabled"
-        static let postureInterval        = "epr.posture.interval"
-        static let postureBreakDuration   = "epr.posture.breakDuration"
-        static let snoozedUntil           = "epr.snoozedUntil"
-        static let snoozeCount            = "epr.snoozeCount"
-        static let pauseMediaDuringBreaks = "epr.pauseMediaDuringBreaks"
-        static let hapticsEnabled         = "epr.hapticsEnabled"
-        static let pauseDuringFocus       = "epr.pauseDuringFocus"
-        static let pauseWhileDriving      = "epr.pauseWhileDriving"
+        static let globalEnabled          = "kshana.globalEnabled"
+        static let eyesEnabled            = "kshana.eyes.enabled"
+        static let eyesInterval           = "kshana.eyes.interval"
+        static let eyesBreakDuration      = "kshana.eyes.breakDuration"
+        static let postureEnabled         = "kshana.posture.enabled"
+        static let postureInterval        = "kshana.posture.interval"
+        static let postureBreakDuration   = "kshana.posture.breakDuration"
+        static let snoozedUntil           = "kshana.snoozedUntil"
+        static let snoozeCount            = "kshana.snoozeCount"
+        static let pauseMediaDuringBreaks = "kshana.pauseMediaDuringBreaks"
+        static let hapticsEnabled         = "kshana.hapticsEnabled"
+        static let pauseDuringFocus       = "kshana.pauseDuringFocus"
+        static let pauseWhileDriving      = "kshana.pauseWhileDriving"
     }
 }
 

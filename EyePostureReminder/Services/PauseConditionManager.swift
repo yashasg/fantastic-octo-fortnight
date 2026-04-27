@@ -16,6 +16,7 @@ enum PauseConditionSource: Hashable {
 
 // MARK: - Detector Protocols
 
+@MainActor
 protocol FocusStatusDetecting: AnyObject {
     var isFocused: Bool { get }
     var onFocusChanged: ((Bool) -> Void)? { get set }
@@ -23,6 +24,7 @@ protocol FocusStatusDetecting: AnyObject {
     func stopMonitoring()
 }
 
+@MainActor
 protocol CarPlayDetecting: AnyObject {
     var isCarPlayActive: Bool { get }
     var onCarPlayChanged: ((Bool) -> Void)? { get set }
@@ -30,6 +32,7 @@ protocol CarPlayDetecting: AnyObject {
     func stopMonitoring()
 }
 
+@MainActor
 protocol DrivingActivityDetecting: AnyObject {
     var isDriving: Bool { get }
     var onDrivingChanged: ((Bool) -> Void)? { get set }
@@ -37,6 +40,7 @@ protocol DrivingActivityDetecting: AnyObject {
     func stopMonitoring()
 }
 
+@MainActor
 protocol PauseConditionProviding: ServiceLifecycle {
     var isPaused: Bool { get }
     var onPauseStateChanged: ((Bool) -> Void)? { get set }
@@ -47,6 +51,7 @@ protocol PauseConditionProviding: ServiceLifecycle {
 /// Observes `INFocusStatusCenter` for Focus mode changes.
 /// Requires `NSFocusStatusUsageDescription` in Info.plist.
 /// If authorization is denied, `isFocused` stays `false` (fail open — no pause).
+@MainActor
 final class LiveFocusStatusDetector: NSObject, FocusStatusDetecting {
 
     private(set) var isFocused: Bool = false
@@ -93,6 +98,7 @@ final class LiveFocusStatusDetector: NSObject, FocusStatusDetecting {
 
 /// Observes `AVAudioSession.routeChangeNotification` for CarPlay connection/disconnection.
 /// No permission required.
+@MainActor
 final class LiveCarPlayDetector: CarPlayDetecting {
 
     private(set) var isCarPlayActive: Bool = false
@@ -125,7 +131,7 @@ final class LiveCarPlayDetector: CarPlayDetecting {
         observer = nil
     }
 
-    private func checkCarPlay() -> Bool {
+    nonisolated private func checkCarPlay() -> Bool {
         // .carPlay port may not be exposed in all SDK configurations; match via raw value.
         let carPlayPort = AVAudioSession.Port(rawValue: "CarPlay")
         let outputs = AVAudioSession.sharedInstance().currentRoute.outputs
@@ -139,6 +145,7 @@ final class LiveCarPlayDetector: CarPlayDetecting {
 /// Uses `CMMotionActivityManager` to detect automotive activity with high confidence.
 /// Requires `NSMotionUsageDescription` in Info.plist.
 /// Falls back to inactive state on simulator or when motion hardware is unavailable.
+@MainActor
 final class LiveDrivingActivityDetector: DrivingActivityDetecting {
 
     private(set) var isDriving: Bool = false
@@ -206,9 +213,9 @@ final class PauseConditionManager: PauseConditionProviding {
 
     init(
         settings: SettingsStore,
-        focusDetector: FocusStatusDetecting = LiveFocusStatusDetector(),
-        carPlayDetector: CarPlayDetecting = LiveCarPlayDetector(),
-        drivingDetector: DrivingActivityDetecting = LiveDrivingActivityDetector()
+        focusDetector: FocusStatusDetecting,
+        carPlayDetector: CarPlayDetecting,
+        drivingDetector: DrivingActivityDetecting
     ) {
         self.settings = settings
         self.focusDetector = focusDetector
@@ -217,6 +224,12 @@ final class PauseConditionManager: PauseConditionProviding {
     }
 
     func startMonitoring() {
+        // Guard against duplicate subscriptions — tear down any existing
+        // monitoring before re-subscribing to avoid double-firing callbacks.
+        if !cancellables.isEmpty {
+            stopMonitoring()
+        }
+
         focusDetector.onFocusChanged = { [weak self] focused in
             guard let self else { return }
             self.update(.focusMode, isActive: focused && self.settings.pauseDuringFocus)
@@ -236,17 +249,21 @@ final class PauseConditionManager: PauseConditionProviding {
         settings.$pauseDuringFocus
             .dropFirst()
             .sink { [weak self] newValue in
-                guard let self else { return }
-                self.update(.focusMode, isActive: self.focusDetector.isFocused && newValue)
+                MainActor.assumeIsolated {
+                    guard let self else { return }
+                    self.update(.focusMode, isActive: self.focusDetector.isFocused && newValue)
+                }
             }
             .store(in: &cancellables)
 
         settings.$pauseWhileDriving
             .dropFirst()
             .sink { [weak self] newValue in
-                guard let self else { return }
-                self.update(.carPlay, isActive: self.carPlayDetector.isCarPlayActive && newValue)
-                self.update(.driving, isActive: self.drivingDetector.isDriving && newValue)
+                MainActor.assumeIsolated {
+                    guard let self else { return }
+                    self.update(.carPlay, isActive: self.carPlayDetector.isCarPlayActive && newValue)
+                    self.update(.driving, isActive: self.drivingDetector.isDriving && newValue)
+                }
             }
             .store(in: &cancellables)
 
@@ -257,6 +274,7 @@ final class PauseConditionManager: PauseConditionProviding {
         // #73: Propagate initial detector state immediately — detectors only fire
         // onXxxChanged on state *changes*, so if CarPlay or driving is already active
         // on cold-start, activeConditions would stay empty without this seed call.
+        update(.focusMode, isActive: focusDetector.isFocused && settings.pauseDuringFocus)
         update(.carPlay, isActive: carPlayDetector.isCarPlayActive && settings.pauseWhileDriving)
         update(.driving, isActive: drivingDetector.isDriving && settings.pauseWhileDriving)
 

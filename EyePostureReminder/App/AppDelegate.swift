@@ -28,9 +28,22 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         let args = CommandLine.arguments
         if args.contains("--skip-onboarding") {
             UserDefaults.standard.set(true, forKey: AppStorageKey.hasSeenOnboarding)
+            // Reset all settings to defaults so each test starts from a clean, known state.
+            // Without this, toggling settings in one test pollutes the next test's launch state.
+            SettingsStore().resetToDefaults()
         }
         if args.contains("--reset-onboarding") {
             UserDefaults.standard.removeObject(forKey: AppStorageKey.hasSeenOnboarding)
+        }
+        if args.contains("--show-overlay-eyes") {
+            UserDefaults.standard.set(true, forKey: AppStorageKey.hasSeenOnboarding)
+            SettingsStore().resetToDefaults()
+            UserDefaults.standard.set(ReminderType.eyes.rawValue, forKey: AppStorageKey.uiTestOverlayType)
+        }
+        if args.contains("--show-overlay-posture") {
+            UserDefaults.standard.set(true, forKey: AppStorageKey.hasSeenOnboarding)
+            SettingsStore().resetToDefaults()
+            UserDefaults.standard.set(ReminderType.posture.rawValue, forKey: AppStorageKey.uiTestOverlayType)
         }
     }
 

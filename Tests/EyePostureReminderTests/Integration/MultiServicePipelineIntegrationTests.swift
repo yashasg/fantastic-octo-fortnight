@@ -22,7 +22,7 @@ final class MultiServicePipelineIntegrationTests: XCTestCase {
 
     override func setUp() async throws {
         try await super.setUp()
-        suiteName = "com.epr.integration.pipeline.\(UUID().uuidString)"
+        suiteName = "com.kshana.integration.pipeline.\(UUID().uuidString)"
         userDefaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
         store = SettingsStore(store: userDefaults, config: AppConfig.fallback)
         scheduler = MockReminderScheduler()
@@ -158,7 +158,7 @@ final class MultiServicePipelineIntegrationTests: XCTestCase {
             viewModel.settings.pauseDuringFocus,
             "ViewModel must see the same pauseDuringFocus=true on the shared store")
 
-        let raw = userDefaults.bool(forKey: "epr.pauseDuringFocus")
+        let raw = userDefaults.bool(forKey: "kshana.pauseDuringFocus")
         XCTAssertTrue(
             raw,
             "pauseDuringFocus must be persisted to the shared real UserDefaults suite")

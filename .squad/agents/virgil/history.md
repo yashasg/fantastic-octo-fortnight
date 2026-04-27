@@ -7,79 +7,6 @@
 - **Owner:** Yashas
 - **Joined:** 2026-04-24
 
-## Learnings
-
-- **iOS versioning is strictly numeric.** Apple requires `CFBundleShortVersionString` as dot-separated integers (e.g., `1.0.0`) and `CFBundleVersion` as a strictly increasing integer for TestFlight. No letters, hashes, or dashes allowed. Commit hashes cannot be used as versions — they get rejected server-side by App Store Connect.
-- **Proposed versioning scheme (2025-07-17):** Semantic versioning for marketing version (manual bump), `github.run_number` for build number (auto), commit SHA embedded as custom `EPRCommitHash` Info.plist key for traceability. Git tags in `v1.0.0` format, annotated, created after successful upload. Full decision in `.squad/decisions/inbox/virgil-versioning.md`.
-- **Build number strategy:** Using `github.run_number` is the simplest auto-increment for build numbers — guaranteed unique, guaranteed increasing, zero maintenance. Timestamp-based alternatives (e.g., `YYYYMMDDHHmm`) work but are harder to reason about and can collide on fast re-runs.
-- **CI pipeline shipped (2025-07-17):** Full CI/CD pipeline created — `.github/workflows/ci.yml` (build + test + lint on `macos-14`, DerivedData cache, dSYM artifact upload), `.swiftlint.yml` (120-char line length, SwiftUI-friendly disabled rules), and `scripts/set-build-info.sh` (Xcode Run Script Build Phase for build number + EPRCommitHash injection). TestFlight upload job is present but fully commented out pending Apple Developer account.
-- **xcpretty fallback pattern:** The CI workflow calls xcodebuild twice in a `cmd | xcpretty || cmd` pattern so that if xcpretty is unavailable, raw xcodebuild output is still captured and the step doesn't fail on missing tools.
-- **ENABLE_BITCODE=NO in CI:** Bitcode has been deprecated by Apple since Xcode 14. Setting `ENABLE_BITCODE=NO` on every xcodebuild call avoids warnings and aligns with Apple's current toolchain defaults.
-- **Simulator-only builds on CI:** Until a real Apple Developer account is available, all CI builds target the iOS Simulator (`platform=iOS Simulator`) with `CODE_SIGN_IDENTITY=""`, `CODE_SIGNING_REQUIRED=NO`, `CODE_SIGNING_ALLOWED=NO`. Device/archive builds require valid provisioning profiles.
-- **SwiftLint in CI via brew:** If SwiftLint is not pre-installed on the runner, the lint step installs it via Homebrew. This is slower than caching a binary but avoids pinning a version manually. Consider caching when lint times become a problem.
-- **Info.plist is source of truth for version (2025-07-17):** `EyePostureReminder/Info.plist` was created with `CFBundleShortVersionString=0.1.0`. CI reads `MARKETING_VERSION` from it via PlistBuddy and injects it into artifact names. `./scripts/build.sh version [x.y.z]` is the canonical way to read/set the marketing version locally.
-- **build.sh version subcommand:** Added `version` and `version <x.y.z>` subcommands to `scripts/build.sh`. Validates numeric semver (Apple rejects non-numeric). Shows both marketing version and build number (with reminder that CI overwrites build number).
-- **TestFlight workflow stub pattern:** `testflight.yml` uses `workflow_dispatch` with a `version` input — operator specifies which version to deploy. Steps: set version → install cert+profile → archive → export IPA → altool upload → upload IPA artifact → clean keychain. Fully disabled until secrets are configured.
-- **Artifact naming with version:** CI artifact names now include `MARKETING_VERSION` (e.g., `dSYMs-0.1.0-build42`). This makes it trivial to match a dSYM to a specific TestFlight build without looking up run numbers.
-- **v0.1.0-beta tag created (2025-07-17):** First annotated git tag on this project. Tags mark significant milestones post-upload, not pre-upload — this tag marks the TestFlight-ready codebase snapshot.
-- **scripts/run.sh created:** Standalone script to build, boot, install, and launch the app on iOS Simulator. Supports `--device` for targeting a specific simulator and `--no-build` to skip compilation. Extracts bundle ID dynamically from the built `.app` bundle (avoids hardcoding). Follows same conventions as `build.sh` (colors, helpers, error handling, xcpretty fallback).
-- **scripts/run.sh deployment (2026-04-24):** Orchestrated via Scribe. Script ready for team use on iOS Simulator builds.
-- **run.sh flat executable bug (2026-04-24):** Swift Package `executableTarget` builds produce a flat Mach-O binary (`EyePostureReminder`), NOT a `.app` bundle. `simctl install` requires a `.app` bundle. Fixed by adding `assemble_app_bundle()` to `run.sh` — runs post-build, wraps the flat binary in `EyePostureReminder.app/`, copies executable, and generates `Info.plist` from source with variable substitution. Bundle ID derived as `{workspace-name}.{scheme}` (SPM auto-convention, confirmed by test bundle ID `fantastic-octo-fortnight.EyePostureReminderTests`).
-- **SPM bundle ID convention:** SPM auto-assigns bundle IDs as `{workspace-name}.{target-name}`. Workspace name = basename of package root directory. This project: `fantastic-octo-fortnight.EyePostureReminder` and `fantastic-octo-fortnight.EyePostureReminderTests`.
-- **Key build output paths:** Flat executable at `DerivedData/Build/Products/Debug-iphonesimulator/EyePostureReminder`. Assembled `.app` bundle at `DerivedData/Build/Products/Debug-iphonesimulator/EyePostureReminder.app/`. Source `Info.plist` at `EyePostureReminder/Info.plist` (uses `$(PRODUCT_BUNDLE_IDENTIFIER)`, `$(EXECUTABLE_NAME)`, `$(PRODUCT_NAME)` placeholders — must be sed-substituted when assembling bundle manually).
-
-## Wave 5+ — run.sh SPM Bundle Assembly (2026-04-24T19:44:00Z)
-
-**Task:** Debug and fix scripts/run.sh — app bundle not found error  
-**Outcome:** ✅ SUCCESS
-
-**Root Cause:** `executableTarget` in Package.swift produces flat Mach-O binary, not .app bundle. `simctl install` requires `.app` directory with Info.plist + executable.
-
-**Solution:** Added `assemble_app_bundle()` function to run.sh post-build:
-1. Creates `DerivedData/Build/Products/Debug-iphonesimulator/EyePostureReminder.app/`
-2. Copies flat executable into bundle
-3. Processes `EyePostureReminder/Info.plist` via sed to substitute build variables:
-   - `$(PRODUCT_BUNDLE_IDENTIFIER)` → `fantastic-octo-fortnight.EyePostureReminder`
-   - `$(EXECUTABLE_NAME)` → `EyePostureReminder`
-   - `$(PRODUCT_NAME)` → `EyePostureReminder`
-4. Skips if `.app` already exists (future-proof)
-
-**Verification:** ✅ End-to-end works: build → assemble → install → launch  
-**Committed:** 0e1dc79
-
-## Wave 6 — Binary Cache Fix (2026-04-24T20:08:03Z)
-
-**Task:** Fix stale binary caching bug in run.sh — assemble_app_bundle skipped binary refresh when .app existed  
-**Outcome:** ✅ SUCCESS
-
-**Root Cause:** When `.app` directory already existed, script skipped binary copy, using stale executable from previous build.
-
-**Solution:** Reordered logic in `assemble_app_bundle()` to:
-1. Always copy fresh binary from DerivedData into `.app/EyePostureReminder`
-2. Reuse existing Info.plist if present
-3. Added REFRESHING APP BUNDLE status message for visibility
-
-**Verification:** ✅ Binary refresh works on rebuild
-**Committed:** Pending
-
-## Wave 7 — SPM Resource Bundle Embedding (2026-04-24T21:48:00Z)
-
-**Task:** Fix localization string resolution — raw keys displaying in SPM app  
-**Collaborator:** Linus (iOS Dev — UI)  
-**Outcome:** ✅ SUCCESS
-
-**Root Cause:** SPM `executableTarget` builds localized resources into a separate bundle (`EyePostureReminder_EyePostureReminder.bundle`), not `Bundle.main`. SwiftUI localization calls default to `Bundle.main`, causing raw keys to appear at runtime.
-
-**Solution:** Updated `assemble_app_bundle()` in `scripts/run.sh` to embed `EyePostureReminder_EyePostureReminder.bundle` inside the assembled `.app` bundle:
-1. After creating `.app` structure, copy resource bundle into `.app/EyePostureReminder_EyePostureReminder.bundle`
-2. This allows `Bundle.module` (the SPM-generated accessor) to resolve the bundle at runtime post-install
-3. Without this step, `Bundle.module` cannot find the bundle because `xcrun simctl install` only installs the `.app` and not sibling bundles in DerivedData
-
-**Impact:** Localization infrastructure now fully operational for SPM projects. All 77 string catalog keys resolve correctly.
-
-**Verification:** ✅ Build succeeded; no raw keys visible; light/dark modes verified  
-**Decision Filed:** `.squad/decisions.md` → SPM Localization Bundle Strategy
-
 ## Wave 8 — CI/CD Full Audit Fix #66 (2026-04-25)
 
 **Task:** Fix all P0/P1/P2 issues from `.squad/decisions/inbox/virgil-full-audit.md`  
@@ -98,3 +25,108 @@
 - **P2-4:** Removed the broken commented-out `upload-testflight` job block from `ci.yml`
 - **P2-5:** Collapsed `cmd_check` in `build.sh` to an explicit alias for `cmd_build` with a warning message
 
+
+### 2026-04-26 — Quality Sweep: CI/CD & Build Config Quality Audit
+
+**Quality sweep findings from 8-agent parallel audit (read-only, no changes made):**
+
+**1 Critical Issue:**
+
+1. **Doubled path in scripts/set-build-info.sh L34** — Fallback path resolves to `EyePostureReminder/EyePostureReminder/Info.plist` (doubled segment). Should be `EyePostureReminder/Info.plist`. Low probability in current usage (fires when `INFOPLIST_FILE`/`SRCROOT`/`BUILT_PRODUCTS_DIR`/`PRODUCT_NAME` all unset), but latent bug. Script exits `warning:` with code 0, masking misconfiguration. **Action:** Fix line 34.
+
+**5 Warnings (Config Hygiene):**
+
+1. **Stale audit scripts committed** — 6 one-off audit scripts from review session pollute repo root. Not project build/run tools: `audit_workflows.sh`, `detailed_audit.py`, `detailed_manual_audit.sh`, `edge_case_audit.sh`, `final_audit.sh`, `script_validation.sh`. **Action:** `git rm` all six.
+
+2. **No concurrency group in `.github/workflows/ci.yml`** — Rapid commits to PR branch trigger parallel runs, wasting CI minutes on stale jobs. **Action:** Add concurrency group with `cancel-in-progress: true`.
+
+3. **Coverage enforcement threshold 50% vs stated target 80%+** — CI gate too lenient. decisions.md records 80%+ coverage across all modules. **Action:** Raise threshold to 75% (headroom for new untested code), stretch goal 80%.
+
+4. **deploy-testflight job has no timeout-minutes** — Archive + App Store Connect upload can hang indefinitely during Apple delays. Job consumes macOS runner slot until GitHub's 6-hour limit kills it. **Action:** Add `timeout-minutes: 45`.
+
+5. **Untracked build artifacts not in .gitignore** — `audit_check` (compiled Mach-O), `build_check.log`, `build_output.log` in working tree. Risk accidental future commits. **Action:** Add to `.gitignore`.
+
+**4 Suggestions (Optimization/Safety):**
+
+1. **Cache SwiftLint brew install** — `brew install swiftlint@0.57.0` takes 30-60s per run. Wrap with `actions/cache` keyed on version to skip re-download.
+
+2. **Poll instead of fixed sleep for simulator boot** — `ensure_booted()` sleeps 2s after `xcrun simctl boot`. Too short on cold CI. Consider polling `xcrun simctl list devices | grep Booted` in loop.
+
+3. **Consider exit 1 (not exit 0) on missing plist** — `set-build-info.sh` L39 exits 0 when plist not found. Future Xcode setup would silently no-op during build phase, masking config error. Non-zero exit safer.
+
+4. **Consider force_try: error (not warning)** — `.swiftlint.yml` allows `try!` in app code. Consider `error` severity for non-test code (or use custom rules to exclude tests).
+
+**What's Working Well:**
+- Package.swift clean and minimal
+- All scripts use `set -euo pipefail`
+- xcpretty fallback correct with pipefail
+- GitHub Actions versions pinned at v4/v7
+- testflight.yml uses modern xcodebuild API (not deprecated altool)
+- Permissions scoped (`contents: read`, not `write-all`)
+- DerivedData cache key uses Package.swift + Package.resolved
+- .swiftlint.yml SwiftUI-appropriate with well-reasoned rules
+- API key and keychain cleanup use `if: always()` guards
+
+**Immediate actions (ASAP):**
+1. Fix doubled path in set-build-info.sh L34
+2. git rm 6 stale audit scripts
+3. Add concurrency group to ci.yml
+4. Add `.gitignore` entries for build artifacts
+
+**Next priority (before Phase 2):**
+1. Raise coverage threshold to 75%
+2. Add timeout-minutes to deploy-testflight
+3. Cache SwiftLint install
+
+**Next owner action:** Address critical path bug and remove stale scripts this week.
+
+## Wave 10 — Issues #122/#123/#124 (CI/Build Improvements)
+
+**Task:** Fix three GitHub Issues: remove stale audit scripts (#122), add CI concurrency group (#123), raise coverage threshold (#124)
+**Outcome:** ✅ All three committed to main
+
+**Changes made:**
+- **#122:** `git rm`'d 6 tracked audit scripts (`audit_workflows.sh`, `detailed_audit.py`, `detailed_manual_audit.sh`, `edge_case_audit.sh`, `final_audit.sh`, `script_validation.sh`). Added `.gitignore` entries for all 6 plus `audit_check`, `build_check.log`, `build_output.log`. Note: scripts were already removed from tracking in a prior commit (`673066d`); the key deliverable here is the `.gitignore` guard.
+- **#123:** Added `concurrency: group: ci-${{ github.ref }}, cancel-in-progress: true` to `.github/workflows/ci.yml` at the top-level workflow scope (between `permissions` and `env`).
+- **#124:** Raised coverage gate in `.github/workflows/ci.yml` from 50% → 80%, aligning CI enforcement with the team's stated 80%+ target.
+
+**Learnings:**
+- **Concurrency group placement in GitHub Actions:** The `concurrency` key must be at the top-level workflow scope (same level as `on`, `permissions`, `env`, `jobs`), NOT inside a job. This cancels all concurrent runs for the same ref across all jobs in the workflow.
+- **Pre-flight git ls-files check:** Before running `git rm`, always verify with `git ls-files <path>` to confirm the file is actually tracked. Avoids confusing no-op `git rm` calls when files were already removed in a prior commit.
+- **Coverage threshold is 80%:** The enforced CI gate in `ci.yml` is now 80% (`$COVERAGE < 80`). Any PR that drops coverage below 80% will fail CI.
+
+## Wave 10 — Fix #113: set-build-info.sh doubled path (2026-04-26)
+
+**Task:** Fix GitHub Issue #113 — doubled path segment in `scripts/set-build-info.sh` L34  
+**Outcome:** ✅ Fixed and committed (640c970)
+
+**Changes made:**
+1. **L34 — Doubled path fixed:** `EyePostureReminder/EyePostureReminder/Info.plist` → `EyePostureReminder/Info.plist`. Fallback branch now resolves correctly when all Xcode env vars are unset.
+2. **L38-39 — Exit 1 on missing plist:** Changed `warning:` + `exit 0` to `error:` + `exit 1`. Silent no-op on missing plist would mask misconfiguration in future Xcode build phase setups; failing loudly is safer and aligns with `set -euo pipefail` philosophy already used in the script.
+
+**Learning:** When a script uses `set -euo pipefail` for resilience, soft-failing with `exit 0` in error branches is an anti-pattern — it defeats the purpose of strict mode. Errors on missing required resources should always be non-zero exits.
+
+## Wave 11 — Issues #139/#140 (SwiftLint + Test Typo)
+
+**Task:** Fix GitHub Issues #139 (invalid swiftlint key) and #140 (test method name typo)
+**Outcome:** ✅ Both committed to main (364cf4a, 8cbe352)
+
+**Changes made:**
+- **#139:** Removed `only_single_mutable_parameter: true` from `trailing_closure` config in `.swiftlint.yml` — this key does not exist in current SwiftLint and causes a config validation error. Moved `trailing_closure` from `opt_in_rules` to `disabled_rules` with a comment explaining the intent (SwiftUI DSL multi-argument calls).
+- **#140:** Renamed `test_showOverlay_withNoActiveWindowScene_isOverlayVisibleRemainsFlase` → `test_showOverlay_withNoActiveWindowScene_isOverlayVisibleRemainsFalse` in `Tests/EyePostureReminderTests/RegressionTests.swift` L873.
+
+**Learnings:**
+- **`trailing_closure` has no rule-level config options in current SwiftLint:** The rule is a simple opt-in/opt-out. Any key under `trailing_closure:` in the YAML will cause a config parse error. The SwiftUI-friendly intent (don't enforce on multi-arg calls) is better achieved by disabling the rule entirely.
+- **Test method names are part of the public API surface for CI:** Typos in test names surface in CI logs and coverage reports; they should be treated as code defects, not cosmetic issues.
+
+## Wave 12 — UI Test Infrastructure (#110)
+
+**Task:** Implement UI test infrastructure per Rusty's architecture proposal (Issue #110)  
+**Outcome:** ✅ All three parts committed to main (fe241ac)
+
+**Changes made:**
+- **Part 1:** `UITests/project.yml` — XcodeGen spec for minimal UITest bundle target. References local Package.swift via `packages: path: ..` so the app builds from SPM. No app target in xcodeproj (Package.swift stays source of truth).
+- **Part 1:** `scripts/setup-uitests.sh` — installs xcodegen via Homebrew if missing, then runs `xcodegen generate`. Generates both `.xcodeproj` and `.xcworkspace`.
+- **Part 2:** Added `uitest` job to `.github/workflows/ci.yml` — parallel to `build-and-test`, `macos-15`, installs xcodegen, runs setup, boots simulator, runs xcodebuild with `-parallel-testing-enabled YES -maximum-concurrent-test-simulator-destinations 3`. xcpretty fallback pattern. Uploads `UITestResults.xcresult`.
+- **Part 3:** Added `cmd_uitest()` to `scripts/build.sh`. Uses `-workspace` (required for local package resolution). Auto-runs setup if workspace not present. Uses same `detect_destination()` and `DERIVED_DATA_PATH` as other subcommands.
+- **Supporting:** `.gitignore` updated with `UITests/*.xcodeproj/` and `UITests/*.xcworkspace/` (generated artefacts). `Tests/EyePostureReminderUITests/README.md` updated to remove "not yet runnable" caveat and document setup steps.

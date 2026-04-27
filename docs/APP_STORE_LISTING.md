@@ -1,4 +1,4 @@
-# Eye & Posture Reminder – App Store Listing
+# kshana — App Store Listing
 
 > **Author:** Danny (Product Manager)  
 > **Date:** 2026-04-24  
@@ -9,14 +9,13 @@
 
 ## 1. App Name
 
-**Eye & Posture Reminder**
+**kshana**
 
-*Alternatives considered:*
-- ScreenBreak — Eye & Posture Care
-- Break Buddy — Eye & Posture Timer
-- GentleBreak — Eyes & Posture
+*Subtitle:* Eye & Posture Wellness
 
-**Recommendation:** Keep "Eye & Posture Reminder" — it's descriptive, keyword-rich, and immediately tells the user what the app does. Apple favors clarity over cleverness.
+*Origin:* Sanskrit (क्षण) — "a moment, an instant"
+
+*Previous name:* Eye & Posture Reminder (renamed for brand identity)
 
 ---
 
@@ -32,7 +31,7 @@
 
 Take care of your eyes and posture with gentle, timely reminders — no effort required.
 
-Eye & Posture Reminder uses the proven 20-20-20 rule to protect your eyes: every 20 minutes, look 20 feet away for 20 seconds. It also nudges you to check your posture at customizable intervals. A calming full-screen overlay guides each break with a countdown timer, then quietly fades away.
+kshana uses the proven 20-20-20 rule to protect your eyes: every 20 minutes, look 20 feet away for 20 seconds. It also nudges you to check your posture at customizable intervals. A calming full-screen overlay guides each break with a countdown timer, then quietly fades away.
 
 **Key features:**
 - Customizable reminder intervals and break durations
@@ -40,7 +39,7 @@ Eye & Posture Reminder uses the proven 20-20-20 rule to protect your eyes: every
 - Snooze options (5 min, 15 min, rest of day)
 - Battery-friendly — uses native iOS scheduling, not background timers
 - No account needed — works instantly out of the box
-- Privacy-first — zero data collection, everything stays on your device
+- Privacy-first — no third-party analytics, no accounts, no ads
 
 Built for people who spend hours at a screen and want a simple, lightweight way to build healthier habits. Download now and give your eyes and body the breaks they deserve.
 
@@ -68,7 +67,7 @@ eye health,posture,20-20-20,screen break,reminder,timer,wellness,eye strain,ergo
 ## 5. What's New (v0.1.0-beta)
 
 ```
-Welcome to the first TestFlight beta of Eye & Posture Reminder!
+Welcome to the first TestFlight beta of kshana!
 
 • Eye break reminders using the 20-20-20 rule
 • Posture check reminders at customizable intervals
@@ -86,29 +85,31 @@ We'd love your feedback! Please report any issues via TestFlight.
 
 ## 6. Privacy Policy
 
-### Eye & Posture Reminder — Privacy Policy
+### kshana — Privacy Policy
 
 **Effective date:** 2026-04-24  
-**Last updated:** 2026-04-24
+**Last updated:** 2026-04-26
 
 #### What we collect
 
-**Nothing.** Eye & Posture Reminder does not collect, store, or transmit any personal data.
+kshana is built with privacy as a core value. The app uses **no third-party analytics SDKs**, no advertising frameworks, no user accounts, and no custom backend.
+
+The app uses Apple's built-in diagnostics and analytics tools, including **MetricKit** and **App Store Connect analytics**, to understand aggregate app performance, reliability, crashes, hangs, launch times, memory use, and similar technical metrics. These reports are processed through Apple's systems and are provided to the developer in aggregated or diagnostic form. They are **not used to identify you**, track you across apps or websites, build advertising profiles, or sell data.
 
 #### How the app works
 
 - All your settings (reminder intervals, break durations, preferences) are stored locally on your device using iOS UserDefaults.
-- The app does not make any network calls. It works entirely offline.
-- No analytics, crash reporting, or telemetry SDKs are included.
-- No third-party SDKs or frameworks are used — the app is built exclusively with Apple's native iOS libraries (SwiftUI, UIKit, UserNotifications).
+- Motion activity and Focus status are accessed transiently in memory to pause reminders — they are never stored or transmitted.
+- The app uses Apple's `os.Logger` framework for on-device diagnostic logging. These logs remain on your device. In release builds, values that could be sensitive are marked private/redacted. If you choose to share diagnostics with Apple or a TestFlight developer, some diagnostic logs may be included according to Apple's diagnostic-sharing settings.
+- No third-party SDKs or frameworks are used — the app is built exclusively with Apple's native iOS libraries (SwiftUI, UIKit, UserNotifications, MetricKit).
 
 #### Permissions
 
-The app requests **notification permission** only. This is used solely to deliver reminder alerts when the app is in the background. No other permissions are requested.
+The app requests **notification permission** to deliver reminder alerts when in the background. It requests **motion activity permission** to detect driving and pause reminders. No other permissions are requested beyond what is declared in the app's Info.plist.
 
 #### Data sharing
 
-We do not share any data with third parties because we do not collect any data.
+We do not share any data with third parties. Apple may receive aggregated diagnostics and performance metrics through MetricKit as described above.
 
 #### Children's privacy
 
@@ -120,7 +121,7 @@ If we add analytics or data collection features in a future update, this privacy
 
 #### Contact
 
-For questions about this privacy policy, contact the developer via the App Store support link.
+For questions about this privacy policy, contact the developer via the App Store support link or at the GitHub repository.
 
 ---
 
@@ -170,13 +171,64 @@ All App Store age rating questionnaire answers are "No" / "None".
 
 | Field | Value |
 |---|---|
-| **Bundle ID** | TBD (confirm with team before submission) |
+| **Bundle ID** | com.yashasg.eyeposturereminder |
 | **SKU** | eye-posture-reminder |
 | **Copyright** | © 2026 Yashasg |
-| **Support URL** | TBD (GitHub repo or landing page) |
-| **Marketing URL** | TBD (optional) |
+| **Support URL** | https://github.com/yashasg/fantastic-octo-fortnight |
+| **Marketing URL** | https://github.com/yashasg/fantastic-octo-fortnight |
 | **Version** | 0.1.0 |
 | **Build** | 1 |
 | **Availability** | All territories |
 | **Price** | Free |
 | **In-App Purchases** | None |
+
+---
+
+## 11. App Store Submission Checklist
+
+Complete every item before submitting for App Review.
+
+### Legal & Privacy
+
+- [ ] Privacy Policy hosted at a public HTTPS URL (link it in App Store Connect and in-app)
+- [ ] EULA supplement with Apple's 7 required clauses added to TERMS.md
+- [ ] Privacy Nutrition Labels filled in App Store Connect (see [`docs/PRIVACY_NUTRITION_LABELS.md`](PRIVACY_NUTRITION_LABELS.md))
+- [ ] Health/wellness disclaimers included in app description ("not medical advice")
+
+### Entitlements & Info.plist
+
+- [ ] `NSMotionUsageDescription` present in Info.plist with accurate purpose string
+- [ ] Focus status entitlement (`com.apple.developer.focus-status`) added to app capabilities
+- [ ] Notification permission usage description accurate
+
+### App Store Connect Configuration
+
+- [ ] Bundle ID finalized: `com.yashasg.eyeposturereminder`
+- [ ] Support URL set: `https://github.com/yashasg/fantastic-octo-fortnight`
+- [ ] App name, subtitle, keywords, and description finalized (Sections 1–4 above)
+- [ ] Age rating questionnaire completed (all answers "No" / "None" → 4+)
+- [ ] Primary category: Health & Fitness; Secondary: Productivity
+- [ ] Price: Free, all territories
+
+### Assets
+
+- [ ] Screenshots prepared for iPhone 15 Pro (6.1") and iPhone 15 Pro Max (6.7")
+- [ ] App icon uploaded (1024×1024, no alpha, no rounded corners)
+- [ ] "What's New" text finalized for v1.0
+
+### Pre-Submission Name Search
+
+- [ ] Search App Store for "kshana" and close variants
+- [ ] Search USPTO (https://tmsearch.uspto.gov) for similar marks in Class 009/042
+- [ ] Google search `"kshana"` in quotes
+- [ ] Verify name is accepted in App Store Connect during app setup
+- [ ] Check Google Play and Mac App Store for confusingly similar names
+
+**Note:** For a free indie app, the App Store + USPTO knockout search is sufficient. Formal clearance recommended only if monetizing with subscriptions/IAP.
+
+### Final Checks
+
+- [ ] TestFlight beta tested with no critical bugs
+- [ ] Build uploaded via Xcode or `xcodebuild` and processed in App Store Connect
+- [ ] All App Review rejection risks reviewed (Frank's legal report)
+- [ ] Version number set to 1.0 (build number incremented from TestFlight)

@@ -1,22 +1,7 @@
 // OnboardingFlowTests.swift
-// EyePostureReminderUITests
+// kshana UI Tests
 //
 // XCUITest suite — Onboarding flow.
-//
-// ⚠️  SPM LIMITATION: XCUITest requires a UITest bundle target which cannot be
-// declared in Package.swift (SPM has no `.uiTestTarget` product type). These
-// tests are written and ready to run, but require an Xcode project (.xcodeproj)
-// with a dedicated UITest target that links this file. See decision-inbox note
-// in .squad/decisions-inbox/ui-test-xcodeproj-required.md for details.
-//
-// ACCESSIBILITY IDENTIFIERS NEEDED (to be added to source views):
-//   OnboardingWelcomeView:
-//     - disclaimer Text          → .accessibilityIdentifier("onboarding.welcome.disclaimer")
-//     - "Next" button            → .accessibilityIdentifier("onboarding.welcome.nextButton")
-//   OnboardingPermissionView:
-//     - "Continue" / next button → .accessibilityIdentifier("onboarding.permission.nextButton")
-//   OnboardingSetupView:
-//     - "Get Started" button     → .accessibilityIdentifier("onboarding.setup.getStartedButton")
 
 import XCTest
 
@@ -27,22 +12,18 @@ final class OnboardingFlowTests: XCTestCase {
     override func setUpWithError() throws {
         continueAfterFailure = false
         app = XCUIApplication()
-        // Fresh-install state: forces onboarding to show.
-        app.launchArguments += ["--reset-onboarding"]
-        app.launch()
+        app.launchWithOnboarding()
     }
 
     override func tearDownWithError() throws {
         app = nil
     }
 
-    // MARK: - testDisclaimerVisibleOnWelcomeScreen
+    // MARK: - test_onboarding_welcomeScreen_disclaimerIsVisible
 
     /// Verifies the medical disclaimer text is present on the first onboarding screen.
     /// The disclaimer must always be visible without scrolling on the Welcome page.
-    func testDisclaimerVisibleOnWelcomeScreen() throws {
-        // The welcome screen is page 0 — it should be visible immediately after launch
-        // when onboarding has not been completed.
+    func test_onboarding_welcomeScreen_disclaimerIsVisible() throws {
         let disclaimerElement = app.staticTexts["onboarding.welcome.disclaimer"]
         XCTAssertTrue(
             disclaimerElement.waitForExistence(timeout: 5),
@@ -52,11 +33,11 @@ final class OnboardingFlowTests: XCTestCase {
         )
     }
 
-    // MARK: - testOnboardingCompletesSuccessfully
+    // MARK: - test_onboarding_fullFlow_completesSuccessfully
 
     /// Taps through all three onboarding screens and verifies the app transitions
     /// to the Home screen upon completion.
-    func testOnboardingCompletesSuccessfully() throws {
+    func test_onboarding_fullFlow_completesSuccessfully() throws {
         // --- Screen 1: Welcome ---
         let nextButton = app.buttons["onboarding.welcome.nextButton"]
         XCTAssertTrue(
@@ -86,7 +67,6 @@ final class OnboardingFlowTests: XCTestCase {
         getStartedButton.tap()
 
         // --- Post-onboarding: Home screen should be visible ---
-        // HomeView's navigation title is "home.navTitle" → resolved string "Eye & Posture"
         let homeNav = app.navigationBars.firstMatch
         XCTAssertTrue(
             homeNav.waitForExistence(timeout: 5),
@@ -94,12 +74,10 @@ final class OnboardingFlowTests: XCTestCase {
         )
     }
 
-    // MARK: - testWelcomeScreenTitleIsVisible
+    // MARK: - test_onboarding_welcomeScreen_titleIsVisible
 
     /// Verifies the main title text is present on the Welcome screen.
-    func testWelcomeScreenTitleIsVisible() throws {
-        // The welcome view renders its title Text immediately; no tap needed.
-        // We look for any static text containing the app's key phrase.
+    func test_onboarding_welcomeScreen_titleIsVisible() throws {
         let welcomeTitle = app.staticTexts.firstMatch
         XCTAssertTrue(
             welcomeTitle.waitForExistence(timeout: 5),
@@ -107,15 +85,14 @@ final class OnboardingFlowTests: XCTestCase {
         )
     }
 
-    // MARK: - testOnboardingNextButtonTapsToPermissionScreen
+    // MARK: - test_onboarding_welcomeNextButton_navigatesToPermissionScreen
 
     /// Taps the Next button on the Welcome screen and confirms the Permission screen appears.
-    func testOnboardingNextButtonTapsToPermissionScreen() throws {
+    func test_onboarding_welcomeNextButton_navigatesToPermissionScreen() throws {
         let nextButton = app.buttons["onboarding.welcome.nextButton"]
         XCTAssertTrue(nextButton.waitForExistence(timeout: 5))
         nextButton.tap()
 
-        // The Permission screen has a skip button with the nextButton identifier.
         let skipButton = app.buttons["onboarding.permission.nextButton"]
         XCTAssertTrue(
             skipButton.waitForExistence(timeout: 5),
@@ -123,21 +100,18 @@ final class OnboardingFlowTests: XCTestCase {
         )
     }
 
-    // MARK: - testOnboardingSkipPermissionReachesSetupScreen
+    // MARK: - test_onboarding_skipPermission_reachesSetupScreen
 
     /// Skips notification permission and verifies the Setup screen is reached.
-    func testOnboardingSkipPermissionReachesSetupScreen() throws {
-        // Navigate past Welcome
+    func test_onboarding_skipPermission_reachesSetupScreen() throws {
         let nextButton = app.buttons["onboarding.welcome.nextButton"]
         XCTAssertTrue(nextButton.waitForExistence(timeout: 5))
         nextButton.tap()
 
-        // Skip permission
         let skipButton = app.buttons["onboarding.permission.nextButton"]
         XCTAssertTrue(skipButton.waitForExistence(timeout: 5))
         skipButton.tap()
 
-        // Get Started button should now be visible on Setup screen
         let getStartedButton = app.buttons["onboarding.setup.getStartedButton"]
         XCTAssertTrue(
             getStartedButton.waitForExistence(timeout: 5),
@@ -145,11 +119,10 @@ final class OnboardingFlowTests: XCTestCase {
         )
     }
 
-    // MARK: - testOnboardingSetupCustomizeButtonExists
+    // MARK: - test_onboarding_setupScreen_customizeButtonExists
 
     /// Verifies the Customize button exists on the Setup screen as a secondary CTA.
-    func testOnboardingSetupCustomizeButtonExists() throws {
-        // Navigate to Setup screen
+    func test_onboarding_setupScreen_customizeButtonExists() throws {
         let nextButton = app.buttons["onboarding.welcome.nextButton"]
         XCTAssertTrue(nextButton.waitForExistence(timeout: 5))
         nextButton.tap()
@@ -158,22 +131,18 @@ final class OnboardingFlowTests: XCTestCase {
         XCTAssertTrue(skipButton.waitForExistence(timeout: 5))
         skipButton.tap()
 
-        // Both primary and secondary CTAs should be present
         let getStartedButton = app.buttons["onboarding.setup.getStartedButton"]
         XCTAssertTrue(getStartedButton.waitForExistence(timeout: 5))
 
-        // The Customize button is a secondary link-style button; verify it exists via label text
-        // (it does not have a separate accessibilityIdentifier but is accessible by label)
+        // The Customize button is a secondary link-style button; verify it exists via label text.
         let setupButtons = app.buttons.allElementsBoundByIndex
-        // Must have Get Started + Customize buttons
         XCTAssertGreaterThan(setupButtons.count, 1, "Setup screen should have at least two buttons.")
     }
 
-    // MARK: - testOnboardingCustomizeButtonOpensSettingsAfterCompletion
+    // MARK: - test_onboarding_customizeButton_opensSettingsAfterCompletion
 
     /// Tapping Customize on the Setup screen should complete onboarding and open Settings.
-    func testOnboardingCustomizeButtonOpensSettingsAfterCompletion() throws {
-        // Navigate to Setup screen
+    func test_onboarding_customizeButton_opensSettingsAfterCompletion() throws {
         let nextButton = app.buttons["onboarding.welcome.nextButton"]
         XCTAssertTrue(nextButton.waitForExistence(timeout: 5))
         nextButton.tap()
@@ -182,21 +151,56 @@ final class OnboardingFlowTests: XCTestCase {
         XCTAssertTrue(skipButton.waitForExistence(timeout: 5))
         skipButton.tap()
 
-        // Tap the customize / secondary button (last button in the setup screen VStack)
         let getStartedButton = app.buttons["onboarding.setup.getStartedButton"]
         XCTAssertTrue(getStartedButton.waitForExistence(timeout: 5))
 
-        // There should be a second button (Customize) after Get Started
+        // Tap the secondary Customize button (last button in the setup screen VStack)
         let allButtons = app.buttons.allElementsBoundByIndex
         let customizeButton = allButtons.last { $0.identifier != "onboarding.setup.getStartedButton" }
         if let customizeButton = customizeButton, customizeButton.exists {
             customizeButton.tap()
-            // After customization path, app should show Home with Settings open
             let homeNav = app.navigationBars.firstMatch
             XCTAssertTrue(
                 homeNav.waitForExistence(timeout: 5),
                 "After tapping Customize, the app should transition to the Home/Settings screen."
             )
         }
+    }
+
+    // MARK: - test_onboarding_permissionScreen_enableNotificationsButtonExists
+
+    /// Verifies the "Enable Notifications" primary CTA button is visible on the Permission screen.
+    func test_onboarding_permissionScreen_enableNotificationsButtonExists() throws {
+        let nextButton = app.buttons["onboarding.welcome.nextButton"]
+        XCTAssertTrue(nextButton.waitForExistence(timeout: 5))
+        nextButton.tap()
+
+        let enableButton = app.buttons["onboarding.enableNotifications"]
+        XCTAssertTrue(
+            enableButton.waitForExistence(timeout: 5),
+            "Enable Notifications button must exist on the Permission screen. " +
+            "Add .accessibilityIdentifier(\"onboarding.enableNotifications\") in OnboardingPermissionView."
+        )
+        XCTAssertTrue(enableButton.isHittable, "Enable Notifications button must be tappable.")
+    }
+
+    // MARK: - test_onboarding_setupScreen_customizeButtonIdentifierExists
+
+    /// Verifies the Customize button has the correct accessibility identifier on the Setup screen.
+    func test_onboarding_setupScreen_customizeButtonIdentifierExists() throws {
+        let nextButton = app.buttons["onboarding.welcome.nextButton"]
+        XCTAssertTrue(nextButton.waitForExistence(timeout: 5))
+        nextButton.tap()
+
+        let skipButton = app.buttons["onboarding.permission.nextButton"]
+        XCTAssertTrue(skipButton.waitForExistence(timeout: 5))
+        skipButton.tap()
+
+        let customizeButton = app.buttons["onboarding.customize"]
+        XCTAssertTrue(
+            customizeButton.waitForExistence(timeout: 5),
+            "Customize button must exist on the Setup screen with identifier 'onboarding.customize'."
+        )
+        XCTAssertTrue(customizeButton.isHittable, "Customize button must be tappable.")
     }
 }

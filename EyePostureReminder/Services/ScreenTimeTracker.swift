@@ -220,7 +220,8 @@ final class ScreenTimeTracker: ScreenTimeTracking {
         stopTicking()
         Logger.scheduling.debug("ScreenTimeTracker: resigned active — starting \(self.resetGracePeriod)s grace period")
 
-        // Arm the grace-period reset. Cancelled if the app becomes active again in time.
+        // Cancel any in-flight grace-period task before arming a new one.
+        resetTask?.cancel()
         resetTask = Task { [weak self] in
             guard let self else { return }
             try? await Task.sleep(nanoseconds: UInt64(self.resetGracePeriod * 1_000_000_000))
@@ -239,7 +240,7 @@ final class ScreenTimeTracker: ScreenTimeTracking {
         guard tickTimer == nil else { return }
         lastTickTime = 0  // reset so first tick uses default delta of 1.0
         tickTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-            self?.tick()
+            MainActor.assumeIsolated { self?.tick() }
         }
         tickTimer?.tolerance = 0.5
         Logger.scheduling.debug("ScreenTimeTracker: started ticking")

@@ -40,6 +40,10 @@ protocol OverlayPresenting: AnyObject {
 
     /// Drop all queued overlays (e.g. on snooze or master-toggle-off).
     func clearQueue()
+
+    /// Drop all queued overlays for a specific reminder type (e.g. when a single
+    /// reminder type is cancelled without affecting other queued types).
+    func clearQueue(for type: ReminderType)
 }
 
 // MARK: - OverlayManager
@@ -58,10 +62,6 @@ protocol OverlayPresenting: AnyObject {
 @MainActor
 final class OverlayManager: OverlayPresenting {
 
-    // MARK: - Singleton
-
-    static let shared = OverlayManager()
-
     // MARK: - Dependencies
 
     private let audioManager: MediaControlling
@@ -70,15 +70,19 @@ final class OverlayManager: OverlayPresenting {
 
     private var overlayWindow: UIWindow?
     private var dismissCallback: (() -> Void)?
+    private var sceneActivationObserver: NSObjectProtocol?
+
+    /// A single queued overlay-show request.
+    private struct QueuedOverlay {
+        let type: ReminderType
+        let duration: TimeInterval
+        let hapticsEnabled: Bool
+        let pauseMediaEnabled: Bool
+        let onDismiss: () -> Void
+    }
 
     /// Pending show requests queued while an overlay is already on screen.
-    private var overlayQueue: [(
-        type: ReminderType,
-        duration: TimeInterval,
-        hapticsEnabled: Bool,
-        pauseMediaEnabled: Bool,
-        onDismiss: () -> Void
-    )] = []
+    private var overlayQueue: [QueuedOverlay] = []
 
     var isOverlayVisible: Bool {
         overlayWindow != nil && overlayWindow?.isHidden == false
@@ -88,6 +92,21 @@ final class OverlayManager: OverlayPresenting {
 
     init(audioManager: MediaControlling = AudioInterruptionManager()) {
         self.audioManager = audioManager
+        sceneActivationObserver = NotificationCenter.default.addObserver(
+            forName: UIScene.didActivateNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.presentNextQueuedOverlay()
+            }
+        }
+    }
+
+    deinit {
+        if let obs = sceneActivationObserver {
+            NotificationCenter.default.removeObserver(obs)
+        }
     }
 
     // MARK: - OverlayPresenting
@@ -101,7 +120,7 @@ final class OverlayManager: OverlayPresenting {
     ) {
         guard !isOverlayVisible else {
             // Queue instead of stacking windows — dequeued after current overlay dismisses.
-            overlayQueue.append((
+            overlayQueue.append(QueuedOverlay(
                 type: type,
                 duration: duration,
                 hapticsEnabled: hapticsEnabled,
@@ -115,7 +134,16 @@ final class OverlayManager: OverlayPresenting {
             .compactMap({ $0 as? UIWindowScene })
             .first(where: { $0.activationState == .foregroundActive })
         else {
-            Logger.overlay.error("No active UIWindowScene — cannot show overlay")
+            // Queue the request so it is shown once a scene becomes foreground-active.
+            overlayQueue.append(QueuedOverlay(
+                type: type,
+                duration: duration,
+                hapticsEnabled: hapticsEnabled,
+                pauseMediaEnabled: pauseMediaEnabled,
+                onDismiss: onDismiss))
+            Logger.overlay.warning(
+                "No active UIWindowScene — overlay for \(type.rawValue) queued (depth: \(self.overlayQueue.count))"
+            )
             return
         }
 
@@ -131,7 +159,9 @@ final class OverlayManager: OverlayPresenting {
         window.backgroundColor = .clear
 
         let hostingController = UIHostingController(
-            rootView: OverlayView(type: type, duration: duration, hapticsEnabled: hapticsEnabled) { [weak self] in
+            rootView: OverlayView(type: type, duration: duration, hapticsEnabled: hapticsEnabled, onAnalyticsEvent: AnalyticsLogger.log, onSettingsTap: {
+                UserDefaults.standard.set(true, forKey: AppStorageKey.openSettingsOnLaunch)
+            }) { [weak self] in
                 Task { @MainActor in self?.dismissOverlay() }
             }
         )
@@ -172,6 +202,18 @@ final class OverlayManager: OverlayPresenting {
     func clearQueue() {
         overlayQueue.removeAll()
         Logger.overlay.info("Overlay queue cleared")
+    }
+
+    /// Drop all queued overlays for a specific reminder type.
+    func clearQueue(for type: ReminderType) {
+        let before = overlayQueue.count
+        overlayQueue.removeAll { $0.type == type }
+        let removed = before - overlayQueue.count
+        if removed > 0 {
+            Logger.overlay.info(
+                "Overlay queue: removed \(removed) queued item(s) for \(type.rawValue). Remaining: \(self.overlayQueue.count)"
+            )
+        }
     }
 
     // MARK: - Private

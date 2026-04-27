@@ -9,9 +9,13 @@ import Foundation
 enum AppStorageKey {
     /// Set to `true` once the user completes the onboarding flow.
     /// Read by `ContentView` via `@AppStorage` to gate the main UI.
-    static let hasSeenOnboarding = "epr.hasSeenOnboarding"
+    static let hasSeenOnboarding = "kshana.hasSeenOnboarding"
 
     /// Set to `true` by `OnboardingView.finishOnboardingAndCustomize()` to
     /// signal that `HomeView` should immediately open the Settings sheet on appear.
-    static let openSettingsOnLaunch = "epr.openSettingsOnLaunch"
+    static let openSettingsOnLaunch = "kshana.openSettingsOnLaunch"
+
+    /// Set by XCUITest launch argument handlers to trigger a specific overlay type on startup.
+    /// Value matches `ReminderType.rawValue` ("eyes" or "posture"). Cleared after use.
+    static let uiTestOverlayType = "kshana.ui-test.overlayType"
 }

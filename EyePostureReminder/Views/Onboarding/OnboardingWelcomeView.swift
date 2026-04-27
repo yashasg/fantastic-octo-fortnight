@@ -1,5 +1,5 @@
 // OnboardingWelcomeView.swift
-// Eye & Posture Reminder
+// kshana
 //
 // Onboarding Screen 1 — Welcome. Establishes context and sets a warm tone.
 
@@ -9,56 +9,44 @@ struct OnboardingWelcomeView: View {
     let onNext: () -> Void
 
     var body: some View {
-        OnboardingScreenWrapper {
-            ScrollView {
+        ScrollView {
                 VStack(spacing: AppSpacing.lg) {
                     Spacer(minLength: AppSpacing.xl)
 
-                    // Illustration
-                    HStack(spacing: AppSpacing.lg) {
-                        Image(systemName: AppSymbol.eyeBreak)
-                            .font(.system(size: AppLayout.onboardingIllustrationSize))
-                            .foregroundStyle(AppColor.reminderBlue)
-                            .accessibilityHidden(true)
-                        Image(systemName: AppSymbol.postureCheck)
-                            .font(.system(size: AppLayout.onboardingIllustrationSize))
-                            .foregroundStyle(AppColor.reminderGreen)
-                            .accessibilityHidden(true)
-                    }
-                    .padding(AppSpacing.xl)
-                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: AppLayout.overlayCornerRadius))
-                    .accessibilityElement(children: .ignore)
-                    .accessibilityLabel(Text("onboarding.welcome.illustrationLabel", bundle: .module))
+                    YinYangEyeView()
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityLabel(Text("onboarding.welcome.illustrationLabel", bundle: .module))
 
                     // Headline + Subheadline
                     VStack(spacing: AppSpacing.sm) {
                         Text("onboarding.welcome.title", bundle: .module)
                             .font(AppFont.headline)
+                            .foregroundStyle(AppColor.textPrimary)
                             .multilineTextAlignment(.center)
 
                         Text("onboarding.welcome.subtitle", bundle: .module)
                             .font(AppFont.bodyEmphasized)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(AppColor.textSecondary)
                             .multilineTextAlignment(.center)
                     }
 
                     // Value proposition body
                     Text("onboarding.welcome.body", bundle: .module)
                         .font(AppFont.body)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(AppColor.textSecondary)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, AppSpacing.sm)
 
                     // Legal disclaimer
                     Text("onboarding.welcome.disclaimer", bundle: .module)
                         .font(AppFont.caption)
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(AppColor.textSecondary)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, AppSpacing.lg)
-                        .padding(.vertical, AppSpacing.xs)
+                        .padding(.vertical, AppSpacing.sm)
                         .background(
-                            .quaternary.opacity(0.5),
-                            in: RoundedRectangle(cornerRadius: AppLayout.cardCornerRadius)
+                            AppColor.surfaceTint,
+                            in: RoundedRectangle(cornerRadius: AppLayout.radiusCard, style: .continuous)
                         )
                         .accessibilityIdentifier("onboarding.welcome.disclaimer")
 
@@ -69,19 +57,18 @@ struct OnboardingWelcomeView: View {
                         Text("onboarding.welcome.nextButton", bundle: .module)
                             .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.large)
-                    .tint(AppColor.reminderBlue)
+                    .buttonStyle(.primary)
                     .padding(.horizontal, AppSpacing.xl)
                     .accessibilityLabel(Text("onboarding.welcome.nextButton", bundle: .module))
                     .accessibilityHint(Text("onboarding.welcome.nextButton.hint", bundle: .module))
                     .accessibilityIdentifier("onboarding.welcome.nextButton")
                 }
                 .padding()
-                .frame(maxWidth: 540)
+                .frame(maxWidth: AppLayout.onboardingMaxContentWidth)
                 .frame(maxWidth: .infinity)
             }
-        }
+            .background(AppColor.background.ignoresSafeArea())
+            .calmingEntrance()
     }
 }
 

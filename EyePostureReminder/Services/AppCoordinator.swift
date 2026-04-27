@@ -23,7 +23,7 @@ import UserNotifications
 /// **P1-2:** Uses injected `NotificationScheduling` for all auth management
 /// instead of calling `UNUserNotificationCenter.current()` directly.
 ///
-/// **P1-3:** Uses injected `OverlayPresenting` instead of `OverlayManager.shared` directly.
+/// **P1-3:** Uses injected `OverlayPresenting` instead of a shared singleton.
 ///
 /// `AppCoordinator` conforms to `ReminderScheduling` so Views can pass it
 /// directly to `SettingsViewModel`. The conformance routes every call through
@@ -41,8 +41,8 @@ final class AppCoordinator: ObservableObject {
     /// Category identifier for the one-time snooze-wake notification.
     /// `AppDelegate` checks this to route snooze-wake notifications separately
     /// from real reminder notifications.
-    static let snoozeWakeCategory = "com.yashasgujjar.epr.snooze-wake"
-    private static let snoozeWakeIdentifier = "com.yashasgujjar.epr.snooze-wake"
+    static let snoozeWakeCategory = "com.yashasgujjar.kshana.snooze-wake"
+    private static let snoozeWakeIdentifier = "com.yashasgujjar.kshana.snooze-wake"
 
     // MARK: - Owned Dependencies
 
@@ -58,7 +58,7 @@ final class AppCoordinator: ObservableObject {
     let notificationCenter: NotificationScheduling
 
     /// Injected overlay manager — used to show overlays and clear the queue.
-    /// Defaults to `OverlayManager.shared` in production.
+    /// Defaults to a fresh `OverlayManager()` in production.
     private let overlayManager: OverlayPresenting
 
     // MARK: - Screen-Time Tracker
@@ -83,10 +83,16 @@ final class AppCoordinator: ObservableObject {
 
     // MARK: - Pending Overlay
 
+    /// A stashed overlay request awaiting an active scene.
+    private struct PendingOverlay {
+        let type: ReminderType
+        let duration: TimeInterval
+    }
+
     /// When a notification-tap launches the app, `didReceive` fires before any
     /// `UIWindowScene` reaches `.foregroundActive`. We stash the overlay here
     /// and present it once `scenePhase` transitions to `.active`.
-    private var pendingOverlay: (type: ReminderType, duration: TimeInterval)?
+    private var pendingOverlay: PendingOverlay?
 
     // MARK: - Reschedule Debounce
 
@@ -106,6 +112,16 @@ final class AppCoordinator: ObservableObject {
     /// Used to compute session duration for the appSessionEnd analytics event.
     private var sessionStartTime: Date?
 
+    // MARK: - UI Test Mode
+
+    /// `true` when the app is launched by XCUITest with onboarding-control arguments.
+    /// Used to suppress background services (timers, permission requests) that prevent
+    /// the accessibility tree from settling between test interactions.
+    static let isUITestMode: Bool = CommandLine.arguments.contains("--skip-onboarding") ||
+                                    CommandLine.arguments.contains("--reset-onboarding") ||
+                                    CommandLine.arguments.contains("--show-overlay-eyes") ||
+                                    CommandLine.arguments.contains("--show-overlay-posture")
+
     // MARK: - Init
 
     init(
@@ -119,54 +135,76 @@ final class AppCoordinator: ObservableObject {
         self.settings = settings ?? SettingsStore()
         self.scheduler = scheduler ?? ReminderScheduler()
         self.notificationCenter = notificationCenter
-        self.overlayManager = overlayManager ?? OverlayManager.shared
-        self.screenTimeTracker = screenTimeTracker ?? ScreenTimeTracker()
-        self.pauseConditionManager = pauseConditionProvider ?? PauseConditionManager(settings: self.settings)
+        self.overlayManager = overlayManager ?? OverlayManager()
+        // In UI test mode, use no-op stubs for services that register UIKit lifecycle
+        // observers and start 1-second timers — they prevent XCUITest from settling
+        // the accessibility tree between interactions, causing stale element reads.
+        self.screenTimeTracker = screenTimeTracker ?? (AppCoordinator.isUITestMode
+            ? NoopScreenTimeTracker()
+            : ScreenTimeTracker())
+        self.pauseConditionManager = pauseConditionProvider ?? (AppCoordinator.isUITestMode
+            ? NoopPauseConditionManager()
+            : PauseConditionManager(
+                settings: self.settings,
+                focusDetector: LiveFocusStatusDetector(),
+                carPlayDetector: LiveCarPlayDetector(),
+                drivingDetector: LiveDrivingActivityDetector()
+            ))
         Logger.lifecycle.info("AppCoordinator initialised")
 
         // Wire ScreenTimeTracker callback — fires on main thread when a type's
         // continuous screen-on threshold is reached.
         self.screenTimeTracker.onThresholdReached = { [weak self] type in
-            guard let self else { return }
-            // New reminder cycle — reset consecutive snooze count so the user
-            // gets a fresh snooze budget on every threshold fire.
-            self.settings.snoozeCount = 0
-            let duration = self.settings.settings(for: type).breakDuration
-            let thresholdS = self.settings.settings(for: type).interval
-            self.overlayManager.showOverlay(
-                for: type,
-                duration: duration,
-                hapticsEnabled: self.settings.hapticsEnabled,
-                pauseMediaEnabled: self.settings.pauseMediaDuringBreaks) {}
-            AnalyticsLogger.log(.reminderTriggered(type: type, thresholdS: thresholdS))
-            Logger.scheduling.info("Reminder triggered by screen-time threshold: \(type.rawValue)")
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                // New reminder cycle — reset consecutive snooze count so the user
+                // gets a fresh snooze budget on every threshold fire.
+                self.settings.snoozeCount = 0
+                let duration = self.settings.settings(for: type).breakDuration
+                let thresholdS = self.settings.settings(for: type).interval
+                self.overlayManager.showOverlay(
+                    for: type,
+                    duration: duration,
+                    hapticsEnabled: self.settings.hapticsEnabled,
+                    pauseMediaEnabled: self.settings.pauseMediaDuringBreaks) {}
+                AnalyticsLogger.log(.reminderTriggered(type: type, thresholdS: thresholdS))
+                Logger.scheduling.info("Reminder triggered by screen-time threshold: \(type.rawValue)")
+            }
         }
 
         // Wire PauseConditionManager — pauses/resumes tracker when conditions change.
         // Critical invariant: only call resumeAll() if BOTH snooze is clear AND no
         // pause conditions are active.
         self.pauseConditionManager.onPauseStateChanged = { [weak self] isPaused in
-            guard let self else { return }
-            if isPaused {
-                self.screenTimeTracker.pauseAll()
-                // Dismiss any overlay that is currently on screen and drop queued ones.
-                // CarPlay/driving contexts should never show a break overlay.
-                if self.overlayManager.isOverlayVisible {
-                    self.overlayManager.dismissOverlay()
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                if isPaused {
+                    self.screenTimeTracker.pauseAll()
+                    // Dismiss any overlay that is currently on screen and drop queued ones.
+                    // CarPlay/driving contexts should never show a break overlay.
+                    if self.overlayManager.isOverlayVisible {
+                        self.overlayManager.dismissOverlay()
+                    }
+                    self.overlayManager.clearQueue()
+                    self.pendingOverlay = nil
+                    Logger.scheduling.info("PauseConditionManager: pausing reminders (active condition)")
+                } else {
+                    guard (self.settings.snoozedUntil ?? .distantPast) <= Date() else {
+                        Logger.scheduling.debug(
+                            "PauseConditionManager: pause cleared but snooze still active — not resuming")
+                        return
+                    }
+                    self.screenTimeTracker.resumeAll()
+                    Logger.scheduling.info("PauseConditionManager: resuming reminders (no active conditions)")
                 }
-                self.overlayManager.clearQueue()
-                Logger.scheduling.info("PauseConditionManager: pausing reminders (active condition)")
-            } else {
-                guard (self.settings.snoozedUntil ?? .distantPast) <= Date() else {
-                    Logger.scheduling.debug(
-                        "PauseConditionManager: pause cleared but snooze still active — not resuming")
-                    return
-                }
-                self.screenTimeTracker.resumeAll()
-                Logger.scheduling.info("PauseConditionManager: resuming reminders (no active conditions)")
             }
         }
         self.pauseConditionManager.startMonitoring()
+    }
+
+    deinit {
+        rescheduleDebounce.values.forEach { $0.cancel() }
+        snoozeWakeTask?.cancel()
     }
 
     // MARK: - Notification Permission
@@ -189,6 +227,10 @@ final class AppCoordinator: ObservableObject {
 
     /// Re-read the current authorisation status from the system.
     func refreshAuthStatus() async {
+        // Skip the system async call in UI test mode — it suspends the main actor,
+        // which can prevent a Toggle binding update from executing before XCUITest
+        // reads the element's accessibility value immediately after tap().
+        guard !AppCoordinator.isUITestMode else { return }
         notificationAuthStatus = await notificationCenter.getAuthorizationStatus()
         Logger.lifecycle.debug("Notification auth status: \(self.notificationAuthStatus.rawValue)")
     }
@@ -239,13 +281,20 @@ final class AppCoordinator: ObservableObject {
 
         // First launch: prompt the user for notification permission.
         // Permission is still used for the snooze-wake silent notification.
-        if notificationAuthStatus == .notDetermined {
+        // Skip in UI test mode — the system alert would block the accessibility
+        // hierarchy and cause all XCUITest element lookups to fail.
+        if notificationAuthStatus == .notDetermined && !AppCoordinator.isUITestMode {
             await requestNotificationPermission()
         }
 
         // Cancel any legacy periodic UNNotifications (safety net after app update).
         // Reminders are now driven exclusively by ScreenTimeTracker.
         scheduler.cancelAllReminders()
+
+        // Skip the 1-second tick timer in UI test mode — continuous main-thread
+        // activity prevents XCUITest from settling the accessibility tree between
+        // interactions, causing stale value reads on Toggles and other controls.
+        guard !AppCoordinator.isUITestMode else { return }
 
         // Configure ScreenTimeTracker with current thresholds and start counting.
         configureScreenTimeTracker()
@@ -308,7 +357,7 @@ final class AppCoordinator: ObservableObject {
                 hapticsEnabled: settings.hapticsEnabled,
                 pauseMediaEnabled: settings.pauseMediaDuringBreaks) {}
         } else {
-            pendingOverlay = (type: type, duration: duration)
+            pendingOverlay = PendingOverlay(type: type, duration: duration)
             Logger.lifecycle.info("Queued pending overlay for \(type.rawValue) (no active scene)")
         }
     }
@@ -566,6 +615,8 @@ extension AppCoordinator: ReminderScheduling {
     func cancelReminder(for type: ReminderType) {
         scheduler.cancelReminder(for: type)
         screenTimeTracker.disableTracking(for: type)
+        overlayManager.clearQueue(for: type)
+        if pendingOverlay?.type == type { pendingOverlay = nil }
     }
 
     func cancelAllReminders() {
@@ -575,6 +626,7 @@ extension AppCoordinator: ReminderScheduling {
             overlayManager.dismissOverlay()
         }
         overlayManager.clearQueue()
+        pendingOverlay = nil
 
         // If snooze was just applied (snoozedUntil set before this call),
         // arm the in-process wake task immediately so the app resumes on time
@@ -584,7 +636,7 @@ extension AppCoordinator: ReminderScheduling {
         if let snoozeEnd = settings.snoozedUntil, snoozeEnd > Date() {
             scheduleSnoozeWakeTask(at: snoozeEnd)
             if notificationAuthStatus == .authorized {
-                Task { await self.scheduleSnoozeWakeNotification(at: snoozeEnd) }
+                Task { [weak self] in await self?.scheduleSnoozeWakeNotification(at: snoozeEnd) }
             }
         }
     }

@@ -7,6 +7,7 @@ struct HomeView: View {
 
     @State private var showSettings = false
     @AppStorage(AppStorageKey.openSettingsOnLaunch) private var openSettingsOnLaunch = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var statusLabel: String {
         if settings.globalEnabled {
@@ -16,35 +17,32 @@ struct HomeView: View {
         }
     }
 
-    private var statusIcon: String {
-        settings.globalEnabled ? AppSymbol.eyeBreak : "moon.zzz.fill"
-    }
-
-    private var statusColor: Color {
-        settings.globalEnabled ? AppColor.reminderBlue : .secondary
-    }
-
     var body: some View {
         VStack(spacing: AppSpacing.lg) {
             Spacer()
 
-            Image(systemName: statusIcon)
-                .font(.system(size: AppLayout.overlayIconSize))
-                .foregroundStyle(statusColor)
-                .accessibilityHidden(true)
-                .accessibilityIdentifier("home.statusIcon")
+            VStack(spacing: AppSpacing.lg) {
+                YinYangEyeView()
 
-            VStack(spacing: AppSpacing.sm) {
-                Text("home.title", bundle: .module)
-                    .font(AppFont.headline)
-                    .multilineTextAlignment(.center)
-                    .accessibilityIdentifier("home.title")
+                // Status copy crossfades as a unit when globalEnabled changes.
+                ZStack {
+                    VStack(spacing: AppSpacing.sm) {
+                        Text("home.title", bundle: .module)
+                            .font(AppTypography.headline)
+                            .foregroundStyle(AppColor.textPrimary)
+                            .multilineTextAlignment(.center)
+                            .accessibilityIdentifier("home.title")
 
-                Text(statusLabel)
-                    .font(AppFont.body)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .accessibilityIdentifier("home.statusLabel")
+                        Text(statusLabel)
+                            .font(AppTypography.body)
+                            .foregroundStyle(AppColor.textSecondary)
+                            .multilineTextAlignment(.center)
+                            .accessibilityIdentifier("home.statusLabel")
+                    }
+                    .id(settings.globalEnabled)
+                    .transition(.opacity)
+                }
+                .animation(reduceMotion ? nil : AppAnimation.statusCrossfadeCurve, value: settings.globalEnabled)
             }
 
             Spacer()
@@ -58,6 +56,8 @@ struct HomeView: View {
                     showSettings = true
                 } label: {
                     Image(systemName: AppSymbol.settings)
+                        .symbolRenderingMode(.hierarchical)
+                        .foregroundStyle(AppColor.primaryRest)
                         .accessibilityLabel(Text("home.settingsButton", bundle: .module))
                         .accessibilityHint(Text("home.settingsButton.hint", bundle: .module))
                 }
@@ -71,6 +71,7 @@ struct HomeView: View {
                     .environmentObject(coordinator)
             }
         }
+        .background(AppColor.background.ignoresSafeArea())
         .onAppear {
             if openSettingsOnLaunch {
                 openSettingsOnLaunch = false

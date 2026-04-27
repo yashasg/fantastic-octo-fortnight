@@ -63,7 +63,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Eye & Posture Reminder"
+            "value": "kshana"
           }
         }
       }
@@ -118,7 +118,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Eye & Posture Reminder"
+            "value": "kshana"
           }
         }
       }
@@ -415,7 +415,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Welcome to Eye & Posture Reminder"
+            "value": "Welcome to kshana"
           }
         }
       }
@@ -691,7 +691,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Eye & Posture Reminder"
+            "value": "Settings"
           }
         }
       }
@@ -1571,7 +1571,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "All content, design, code, and assets within Eye & Posture Reminder are the intellectual property of the developer and protected by applicable copyright and intellectual property laws. You are granted a limited, non-exclusive, non-transferable license to use the App on your personal iOS device for personal, non-commercial purposes. You may not copy, modify, distribute, sell, reverse-engineer, or create derivative works from the App."
+            "value": "All content, design, code, and assets within kshana are the intellectual property of the developer and protected by applicable copyright and intellectual property laws. You are granted a limited, non-exclusive, non-transferable license to use the App on your personal iOS device for personal, non-commercial purposes. You may not copy, modify, distribute, sell, reverse-engineer, or create derivative works from the App."
           }
         }
       }
@@ -1593,7 +1593,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Eye & Posture Reminder does not integrate with third-party analytics, advertising, or data platforms. The App operates entirely on your device and does not transmit data to external services. The App is distributed through the Apple App Store. Apple’s own terms govern the download and installation process."
+            "value": "kshana does not integrate with third-party analytics, advertising, or data platforms. The App operates entirely on your device and does not transmit data to external services. The App is distributed through the Apple App Store. Apple’s own terms govern the download and installation process."
           }
         }
       }
@@ -1725,7 +1725,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Eye & Posture Reminder does not knowingly collect personal information from children under the age of 13. Since the App collects no personal information from any user, it presents no unique risk to children’s privacy."
+            "value": "kshana does not knowingly collect personal information from children under the age of 13. Since the App collects no personal information from any user, it presents no unique risk to children’s privacy."
           }
         }
       }
@@ -1748,6 +1748,39 @@
           "stringUnit": {
             "state": "translated",
             "value": "The developer may update this Privacy Policy from time to time. When changes are made, continued use of the App after changes are posted constitutes your acceptance of the revised policy. We encourage you to review this policy periodically."
+          }
+        }
+      }
+    },
+    "overlay.doneButton": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Done"
+          }
+        }
+      }
+    },
+    "reminder.eyes.overlaySupportiveText": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Look away and soften your focus."
+          }
+        }
+      }
+    },
+    "reminder.posture.overlaySupportiveText": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Roll your shoulders and reset."
           }
         }
       }
