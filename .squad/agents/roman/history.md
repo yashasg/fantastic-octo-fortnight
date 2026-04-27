@@ -58,6 +58,16 @@
 - **Decision artifact:** `.squad/decisions/inbox/roman-sanskrit-naming.md`
 - **Insight:** Sanskrit names create stronger brand coherence with the yin-yang logo than Latin/Greek names. The well-known Sanskrit words are too contested; the sweet spot is less common but still pronounceable words like Samata and Taraka. Consonant clusters (kṣ, sth) are the main pronunciation barrier for Western audiences.
 
+### 2026-07-18: Synonym Translations (Greek/Latin/Sanskrit)
+
+- **Context:** Yashas requested translations of 14 specific English concepts (Blink, Posture, Gaze, Glance, Rest, Ease, Breath, Gentle, Watch, Guard, Wink, Stretch, Soothe, Focus) across Greek, Latin, and Sanskrit. Current favorites: Ocella (#1) and Restwell (#2).
+- **Deliverable:** `docs/app-naming-synonyms.md` — translations organized by source word, filtered for pronunciation/length/duplicates, with App Store checks and final Top 10.
+- **Top new discoveries:** Anesis (#1, Greek "relief/relaxation"), Nimesha (#2, Sanskrit "blink/moment"), Mollis (#3, Latin "soft/tender"), Tener (#4, Latin "tender/gentle"), Komala (#5, Sanskrit "soft/beautiful").
+- **Key finding:** The "gentle/soft" concept produces the best app names across all three languages — Mollis (Latin), Komala (Sanskrit), Mridu (Sanskrit) are all strong. Anesis (Greek) is the single strongest new find across all four naming rounds.
+- **App Store landscape:** Watch/Guard/Vigilance words are heavily contested (Phylax, Skopos, Vigilia, Raksha all taken). Soft/gentle words are mostly clean. Mitis (Latin "gentle") has a direct wellness competitor ("mitis: wellness in groups").
+- **Decision artifact:** `.squad/decisions/inbox/roman-synonym-naming.md`
+- **Insight:** Yashas's instinct toward Ocella remains strong — it holds up well against all 60+ candidates across four rounds. The best complement/alternative from this round is Anesis (Greek "relief") which has a similar elegance profile.
+
 ### 2026-07-17: Kshanam (क्षणम्) Final Availability Check
 
 - **Context:** Yashas added Kshanam as a third finalist alongside Drishti and Kshana. Conducted full 9-point availability audit.
