@@ -254,6 +254,12 @@ final class ServiceCoverageBoostTests: XCTestCase {
         delegate.applicationDidBecomeActive(UIApplication.shared)
     }
 
+}
+
+// MARK: - Additional Service Coverage (split to stay under type_body_length)
+@MainActor
+final class ServiceCoverageBoostTests2: XCTestCase {
+
     // MARK: - AppCoordinator — Coverage Gaps
 
     func test_appCoordinator_isUITestMode_isBool() {
