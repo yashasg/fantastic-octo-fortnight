@@ -1,6 +1,6 @@
 # kshana — iOS App Roadmap
 
-> **Status:** Execution in full progress – Phase 1 shipped, Phase 2 ~80% complete  
+> **Status:** v0.2.0 (Restful Grove) shipped — Phase 1 complete, Phase 2 ~95% complete  
 > **Target Platform:** iOS 16+, Swift, SwiftUI + UIKit  
 > **Architecture:** MVVM, ScreenTimeTracker, UIWindow overlay, native config (Asset Catalog, String Catalog, defaults.json)  
 > **Team:** 13 members across PM, Design, Architecture, Dev, QA, Review, Legal, DevOps, Analytics
@@ -9,11 +9,11 @@
 
 ## Executive Summary
 
-Shipped **Phase 1 MVP** with core reminder scheduling and overlay functionality. **Phase 2 (Polish)** is nearly complete with screen-time triggers, smart pause (Focus Mode / CarPlay / driving detection), onboarding, haptics, snooze, and data-driven config via native Apple formats. Ready for final App Store preparation. **Phase 3 (Advanced)** partially started with dependency injection protocols and UI test scaffolding.
+Shipped **v0.2.0 (Restful Grove)** — the definitive quality and branding milestone. Phase 1 MVP fully delivered. **Phase 2 (Polish)** is ~95% complete: screen-time triggers, smart pause, onboarding, haptics, snooze, data-driven config, Restful Grove visual identity with yin-yang logo animation, 7 quality passes, 1,382 unit tests, 53 UI tests, 81%+ coverage. App Store prep in final stages. **Phase 3 (Advanced)** partially started with DI protocols and UI test scaffolding.
 
 - **Phase 0: Foundation** ✅ – Project scaffolding, CI/CD, architecture, design system
 - **Phase 1: MVP** ✅ – Reminders, overlay, settings (shipped)
-- **Phase 2: Polish** 🔄 – Onboarding, haptics, snooze, smart pause, accessibility, data-driven config, yin-yang logo (~85% done)
+- **Phase 2: Polish** 🔄 – Onboarding, haptics, snooze, smart pause, accessibility, data-driven config, Restful Grove identity, yin-yang logo (~95% done)
 - **Phase 3: Advanced** 🔄 – iCloud sync, widgets, watchOS, dependency injection refactoring (started)
 
 ---
@@ -218,7 +218,7 @@ Shipped **Phase 1 MVP** with core reminder scheduling and overlay functionality.
 
 ---
 
-## Phase 2: Polish 🔄 IN PROGRESS (~80% Complete)
+## Phase 2: Polish 🔄 IN PROGRESS (~95% Complete)
 
 **Goal:** Elevate UX with onboarding, haptics, smart pause, accessibility, data-driven config, and App Store readiness.
 
@@ -335,7 +335,7 @@ Shipped **Phase 1 MVP** with core reminder scheduling and overlay functionality.
 
 #### M2.10: Yin-Yang Logo Animation (Restful Grove Redesign) ✅
 - **Owner:** Tess (UI/UX Designer) + Linus (iOS UI Dev)
-- **Status:** ✅ Complete (design approved, implementation in progress)
+- **Status:** ✅ Complete
 - **Context:** Part of the Restful Grove visual redesign (issues #158–#169). HTML prototype iterated through 10+ versions before final design approved.
 - **Delivered:**
   - Custom yin-yang symbol drawn with SwiftUI `Path` (not SF Symbol icons)
@@ -489,10 +489,10 @@ Shipped **Phase 1 MVP** with core reminder scheduling and overlay functionality.
 |---|---|---|---|
 | **Phase 0** | ✅ Complete | M0.1–M0.6 | 2 weeks; all foundation work shipped |
 | **Phase 1** | ✅ Complete | M1.1–M1.8 | 3 weeks; MVP with 65+ unit tests, notifications, overlay |
-| **Phase 2** | 🔄 ~85% | M2.1–M2.10 | 4 weeks; screen-time triggers, smart pause, onboarding, haptics, data-driven config, yin-yang logo animation; App Store prep in progress |
+| **Phase 2** | 🔄 ~95% | M2.1–M2.10 | 4 weeks; screen-time triggers, smart pause, onboarding, haptics, data-driven config, yin-yang logo animation, 7 quality passes, Restful Grove identity; App Store prep in final stages |
 | **Phase 3** | 🔄 Started | M3.1–M3.5 | Planned 3+ weeks; DI refactoring in progress (issues #13-14); iCloud sync, widgets, watchOS deferred |
 
-**Current Project Status:** Main branch 36 commits ahead of origin. Awaiting decision on App Store submission (Phase 2 complete, Phase 3 optional).
+**Current Project Status:** v0.2.0 (Restful Grove) tagged and shipped. Awaiting decision on TestFlight/App Store submission (Phase 2 ~95%, Phase 3 optional).
 
 ---
 
@@ -558,7 +558,7 @@ Shipped **Phase 1 MVP** with core reminder scheduling and overlay functionality.
 - ✅ **Crash-Free Rate:** Target 99.5%+ (to measure post-launch)
 - ✅ **Battery Impact:** < 3% per day (actual: ~1–2% measured via ScreenTimeTracker)
 - ✅ **Average Memory Usage:** < 30 MB idle (validated)
-- ✅ **Unit Test Coverage:** 80%+ (achieved: 71 tests, 80%+ coverage across Models, Services, ViewModels, Pause)
+- ✅ **Unit Test Coverage:** 81%+ (achieved: 1,382 unit tests + 53 UI tests across Models, Services, ViewModels, Views, Pause)
 
 ### User Experience (Phase 1+2 Delivered)
 - ✅ **Onboarding Completion:** 90%+ of first-launch users reach Settings (to measure post-launch)
@@ -609,7 +609,7 @@ Phase 1: MVP ✅
            ↓
   M1.6 → M1.7 (Testing) → M1.8 (Code Review) ✅
 
-Phase 2: Polish 🔄 ~80%
+Phase 2: Polish 🔄 ~95%
   M1.2 + M0.5 → M2.1 (Onboarding) ✅
   M1.5 → M2.2 (Haptics) ✅
   M1.4 → M2.3 (Snooze) ✅
