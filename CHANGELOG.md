@@ -7,6 +7,50 @@ Versioning strategy: `0.x.x` during TestFlight beta, `1.0.0` at App Store launch
 
 ---
 
+## v0.2.0 — Restful Grove (2026-04-27)
+
+The **Restful Grove** release transforms kshana's visual identity and hardens every layer of the app through seven dedicated quality passes.
+
+### ✨ New
+- **Restful Grove visual identity:** new Sage (#2F6F5E) + Mint (#EEF6F1) color palette with 10 `RG*` semantic color tokens in Asset Catalog (RGPrimaryRest, RGSecondaryCalm, RGAccentWarm, RGSurface, RGSurfaceTint, RGBackground, RGTextPrimary, RGTextSecondary, RGSeparatorSoft, RGShadowCard)
+- **Yin-yang logo animation:** custom SwiftUI `Path` symbol with spin (360°, 2s deceleration) → breathing pulse (4s in/out, infinite); Reduce Motion fallback shows static logo
+- **App renamed to kshana** (Sanskrit: क्षण, "a moment, an instant") — all 17 documentation files updated; SPM target remains `EyePostureReminder`
+- **`AccessibleToggle.swift`:** reusable accessible toggle component
+- **`Components.swift`:** shared UI component library
+- **`AppStorageKeys.swift`:** centralized `@AppStorage` key constants
+- **`PrivacyInfo.xcprivacy`:** Apple privacy manifest for App Store submission
+
+### 🛠 Improved
+- **7 quality passes** (Loops 1–7): core service reliability, UI & accessibility polish, localization & onboarding, analytics & MetricKit, test coverage expansion, CI hardening, completeness sweep
+- **Smart Pause cold-start fix:** `PauseConditionManager` re-evaluates conditions on cold start to avoid stuck-pause state
+- **CI hardening:** `xcodebuild` timeout cap (25 min), dSYM archiving, coverage thresholds, SwiftLint version pinned, nightly cron job, `CODE_SIGNING_ALLOWED=NO` archive flags
+- **Swift 6 concurrency compliance:** `ReminderType`, `ReminderSettings` marked `Sendable`; removed `@unchecked Sendable` workarounds; `@MainActor` isolation fixes
+- **Analytics privacy:** two-tier annotation (`.public` for categorical labels, `.private` for user values)
+- **`ServiceLifecycle` protocol:** uniform `start()` / `stop()` interface across all services
+- **Comprehensive UI/UX text audit:** notification copy, VoiceOver hints, String Catalog consistency
+- **WCAG AA contrast:** all text/background pairs verified at 4.5:1; `WarningOrange`/`WarningText` tokens adjusted
+- **Tap targets:** all interactive controls verified ≥ 44 × 44 pt
+
+### 🐛 Fixed
+- **Overlay double-present guard:** `isDismissing` state prevents duplicate dismiss callbacks
+- **Snooze wake reliability:** dual wake mechanism (in-process `Task` + silent notification); stale `snoozedUntil` cleared on foreground
+- **Dead color tokens removed:** six unused `AppColor` tokens deleted; `overlayBackground` replaced by `.ultraThinMaterial`
+- **`slideOffset` reset** under Reduce Motion corrected
+- **`StateObject` lifecycle:** `SettingsViewModel` promoted to `@StateObject` to prevent spurious re-inits
+- **Snooze identifiers and dismiss binding** edge cases resolved
+- **AppColor bundle resolution:** named colors now loaded from `.module` bundle correctly
+- **Notification `repeats: false`** enforced explicitly
+- **Overlay timer RunLoop mode** set to `.common` for reliable firing during gestures
+
+### 📋 Meta
+- **1,382 unit tests**, **53 UI tests**, **81%+ code coverage**
+- 100+ commits across 13 team members
+- Inclusive language: test names updated (`master` → `global`/`primary`)
+- All legal docs (TERMS, PRIVACY, DISCLAIMER) rendered in-app via `LegalDocumentView`
+- `PrivacyInfo.xcprivacy` added for App Store Connect compliance
+
+---
+
 ## Rename — "Eye & Posture Reminder" → kshana
 
 - App renamed to **kshana** (Sanskrit: क्षण, "a moment, an instant")

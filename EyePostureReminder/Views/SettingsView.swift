@@ -513,6 +513,7 @@ private struct SettingsNotificationWarningSection: View {
                 .font(AppFont.body)
                 .foregroundStyle(AppColor.accentWarm)
                 .accessibilityHint(Text("settings.notifications.openSettings.hint", bundle: .module))
+                .accessibilityIdentifier("settings.notifications.openSettings")
                 .listRowBackground(AppColor.accentWarm.opacity(AppOpacity.warningBackground))
                 .listRowSeparatorTint(AppColor.accentWarm.opacity(AppOpacity.warningSeparator))
             }

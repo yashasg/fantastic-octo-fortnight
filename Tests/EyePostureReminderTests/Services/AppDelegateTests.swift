@@ -112,6 +112,23 @@ final class AppDelegateTests: XCTestCase {
         // No assertions needed — surviving without a coordinator is the behaviour under test.
     }
 
+    // MARK: - Uncaught exception handler
+
+    /// Verifies `installUncaughtExceptionHandler` sets a non-nil global handler.
+    /// Called directly because `application(_:didFinishLaunchingWithOptions:)` touches
+    /// MetricKit and UNNotificationCenter which crash in the unit-test host.
+    func test_appDelegate_installsUncaughtExceptionHandler() {
+        NSSetUncaughtExceptionHandler(nil)
+        XCTAssertNil(NSGetUncaughtExceptionHandler(), "precondition: handler should be nil")
+
+        delegate.installUncaughtExceptionHandler()
+
+        XCTAssertNotNil(
+            NSGetUncaughtExceptionHandler(),
+            "installUncaughtExceptionHandler must set a global exception handler"
+        )
+    }
+
     // MARK: - Category-identifier routing logic (ReminderType parsing)
 
     /// The two valid reminder category identifiers must parse to the correct types.

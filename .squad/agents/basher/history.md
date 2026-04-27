@@ -7,7 +7,14 @@
 
 ## Learnings
 
-### 2026-04-30 — Post-redesign Review Fixes: Asset Catalog, Dead Tokens & Components (Issue #168)
+### 2026-04-27 — NSSetUncaughtExceptionHandler for ObjC Exception Logging (Issue #195)
+
+- **AppDelegate.swift** — Added `installUncaughtExceptionHandler()` called BEFORE `MetricKitSubscriber.shared.register()` in `application(_:didFinishLaunchingWithOptions:)`. Installs `NSSetUncaughtExceptionHandler` that logs exception name, reason, userInfo, and full callStackSymbols at `Logger.lifecycle.fault` level (persists to disk immediately, survives crash).
+- **Handler constraints** — No network calls, file I/O, or memory allocation in the handler. Fault-level os.Logger is safe because it's a kernel-buffered write. Local `let` bindings extract values before passing to `Logger.fault` to avoid `OSLogMessage` string concatenation (`+`) limitation.
+- **OSLogMessage gotcha** — `Logger.fault()` takes `OSLogMessage` (uses `OSLogInterpolation`), NOT `String`. Cannot use `+` concatenation; must use single interpolation expressions per call.
+- **Test** — `test_appDelegate_installsUncaughtExceptionHandler` in `AppDelegateTests.swift`. Cannot call `application(_:didFinishLaunchingWithOptions:)` in unit tests because MetricKit/UNNotificationCenter triggers `NSInternalInconsistencyException` ("bundleProxyForCurrentProcess is nil"). Method made `internal` (not `private`) so the test calls `installUncaughtExceptionHandler()` directly.
+- **Test results** — 1383 unit tests passed (0 failures), 46 UI tests passed (0 failures).
+- **Commit:** `0ffbd82` on `fix/testflight-all`, closes #195.
 
 - **RGShadowCard.colorset** — Created `EyePostureReminder/Resources/Colors.xcassets/RGShadowCard.colorset/Contents.json` with light variant #2E3833 (alpha 1.0) and dark variant transparent (alpha 0.0). Dark mode SoftElevation uses a border overlay, not a shadow, so the transparent dark entry is correct.
 - **AppColor.shadowCard** — Updated from raw `Color(red:green:blue:)` literal to `Color("RGShadowCard", bundle: .module)`. The `.opacity(0.10)` at the usage site in `SoftElevation` is unchanged; the catalog stores the base opaque color.

@@ -15,10 +15,28 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
         UNUserNotificationCenter.current().delegate = self
+        installUncaughtExceptionHandler()
         MetricKitSubscriber.shared.register()
         applyUITestLaunchArguments()
         Logger.lifecycle.info("App did finish launching")
         return true
+    }
+
+    /// Installs `NSSetUncaughtExceptionHandler` so uncaught ObjC exceptions
+    /// (NSInvalidArgumentException, KVO issues, UIKit assertions, out-of-bounds, etc.)
+    /// are logged at fault level before the process terminates.
+    /// Fault-level messages persist to disk immediately, surviving the crash.
+    func installUncaughtExceptionHandler() {
+        NSSetUncaughtExceptionHandler { exception in
+            let name = exception.name.rawValue
+            let reason = exception.reason ?? "nil"
+            let info = String(describing: exception.userInfo)
+            let stack = exception.callStackSymbols.joined(separator: "\n")
+            Logger.lifecycle.fault(
+                "Uncaught ObjC exception: name=\(name) reason=\(reason) userInfo=\(info)"
+            )
+            Logger.lifecycle.fault("Stack trace:\n\(stack)")
+        }
     }
 
     // MARK: - UI Test Support

@@ -1,7 +1,7 @@
 # kshana — iOS Architecture
 
 > **Owner:** Rusty (iOS Architect)  
-> **Last Updated:** 2026-04-25  
+> **Last Updated:** 2026-04-27  
 > **Status:** Phase 2
 
 ---
@@ -276,6 +276,8 @@ EyePostureReminder/                  (SPM executable target)
 │   ├── ReminderRowView.swift         Per-type interval/duration row
 │   ├── OverlayView.swift             Full-screen break overlay; countdown; haptics
 │   ├── YinYangEyeView.swift         Custom Path yin-yang logo; spin→breathe animation
+│   ├── AccessibleToggle.swift       Reusable accessible toggle component
+│   ├── Components.swift             Shared UI component library
 │   ├── DesignSystem.swift            AppColor, AppFont, AppSpacing, AppAnimation tokens
 │   ├── LegalDocumentView.swift       Terms of Service / Privacy Policy inline viewer
 │   └── Onboarding/
@@ -285,12 +287,18 @@ EyePostureReminder/                  (SPM executable target)
 │       └── OnboardingSetupView.swift Screen 2 — reminder type setup / get-started CTA
 │
 ├── Utilities/
-│   └── Logger+App.swift              OSLog subsystem categories: .lifecycle, .scheduling, .overlay, .settings
+│   ├── Logger+App.swift              OSLog subsystem categories: .lifecycle, .scheduling, .overlay, .settings
+│   └── AppStorageKeys.swift          Centralized @AppStorage key constants
 │
 └── Resources/
-    ├── Colors.xcassets               Semantic color tokens (ReminderBlue, ReminderGreen, WarningOrange, PermissionBanner, PermissionBannerText, WarningText) with dark/light variants
+    ├── Colors.xcassets               Semantic color tokens with dark/light variants:
+    │                                   Legacy: ReminderBlue, ReminderGreen, WarningOrange, WarningText
+    │                                   Restful Grove: RGPrimaryRest, RGSecondaryCalm, RGAccentWarm,
+    │                                     RGSurface, RGSurfaceTint, RGBackground, RGTextPrimary,
+    │                                     RGTextSecondary, RGSeparatorSoft, RGShadowCard
     ├── Localizable.xcstrings         ~35 user-facing strings; Xcode 15 String Catalog
-    └── defaults.json                 First-launch seed values for intervals + feature flags
+    ├── defaults.json                 First-launch seed values for intervals + feature flags
+    └── PrivacyInfo.xcprivacy         Apple privacy manifest for App Store Connect compliance
 
 Tests/
 ├── EyePostureReminderTests/          (SPM test target, depends on EyePostureReminder)

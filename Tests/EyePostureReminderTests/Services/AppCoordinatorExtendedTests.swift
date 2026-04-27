@@ -1,4 +1,4 @@
-@testable import EyePostureReminder
+@preconcurrency @testable import EyePostureReminder
 import XCTest
 
 /// Extended unit tests for `AppCoordinator` focusing on the three highest-impact
