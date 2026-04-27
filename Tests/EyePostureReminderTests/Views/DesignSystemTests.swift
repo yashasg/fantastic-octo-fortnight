@@ -342,6 +342,54 @@ final class DesignSystemTests: XCTestCase {
 
     // MARK: - AppSymbol: SF Symbol Names Are Non-Empty
 
+    // MARK: - AppOpacity: Token Value Coverage
+
+    func test_appOpacity_iconAura_existsAndInRange() {
+        XCTAssertGreaterThanOrEqual(AppOpacity.iconAura, 0, "iconAura must be >= 0")
+        XCTAssertLessThanOrEqual(AppOpacity.iconAura, 1, "iconAura must be <= 1")
+    }
+
+    func test_appOpacity_warningBackground_existsAndInRange() {
+        XCTAssertGreaterThanOrEqual(AppOpacity.warningBackground, 0)
+        XCTAssertLessThanOrEqual(AppOpacity.warningBackground, 1)
+    }
+
+    func test_appOpacity_warningSeparator_existsAndInRange() {
+        XCTAssertGreaterThanOrEqual(AppOpacity.warningSeparator, 0)
+        XCTAssertLessThanOrEqual(AppOpacity.warningSeparator, 1)
+    }
+
+    func test_appOpacity_pressedButton_existsAndInRange() {
+        XCTAssertGreaterThanOrEqual(AppOpacity.pressedButton, 0)
+        XCTAssertLessThanOrEqual(AppOpacity.pressedButton, 1)
+    }
+
+    func test_appOpacity_mutedTimestamp_existsAndInRange() {
+        XCTAssertGreaterThanOrEqual(AppOpacity.mutedTimestamp, 0)
+        XCTAssertLessThanOrEqual(AppOpacity.mutedTimestamp, 1)
+    }
+
+    func test_appOpacity_subtleBorder_existsAndInRange() {
+        XCTAssertGreaterThanOrEqual(AppOpacity.subtleBorder, 0)
+        XCTAssertLessThanOrEqual(AppOpacity.subtleBorder, 1)
+    }
+
+    func test_appOpacity_allTokensAreInValidRange() {
+        let tokens: [Double] = [
+            AppOpacity.iconAura,
+            AppOpacity.warningBackground,
+            AppOpacity.warningSeparator,
+            AppOpacity.pressedButton,
+            AppOpacity.mutedTimestamp,
+            AppOpacity.subtleBorder
+        ]
+        for token in tokens {
+            XCTAssertTrue((0...1).contains(token), "All AppOpacity tokens must be in 0...1, got \(token)")
+        }
+    }
+
+    // MARK: - AppSymbol
+
     func test_appSymbol_originalNamesAreNonEmpty() {
         let symbols = [
             AppSymbol.eyeBreak,

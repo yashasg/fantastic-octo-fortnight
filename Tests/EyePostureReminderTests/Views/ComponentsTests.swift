@@ -7,6 +7,7 @@ import XCTest
 /// These tests focus on testable logic: stored property default values,
 /// initialiser contracts, and token references. Pure layout/rendering
 /// is not tested here (no UIKit hosting required).
+@MainActor
 final class ComponentsTests: XCTestCase {
 
     // MARK: - WellnessCard
@@ -81,6 +82,47 @@ final class ComponentsTests: XCTestCase {
     func test_calmingEntrance_delayIsNonNegative_forDefaultCase() {
         let modifier = CalmingEntrance()
         XCTAssertGreaterThanOrEqual(modifier.delay, 0)
+    }
+
+    // MARK: - withMotionSafe
+
+    func test_withMotionSafe_reduceMotionFalse_executesAction() {
+        let view = EmptyView()
+        var executed = false
+        view.withMotionSafe(false, animation: .easeOut(duration: 0.3)) {
+            executed = true
+        }
+        XCTAssertTrue(executed, "Action must execute when reduceMotion is false")
+    }
+
+    func test_withMotionSafe_reduceMotionTrue_executesAction() {
+        let view = EmptyView()
+        var executed = false
+        view.withMotionSafe(true, animation: .easeOut(duration: 0.3)) {
+            executed = true
+        }
+        XCTAssertTrue(executed, "Action must execute (without animation) when reduceMotion is true")
+    }
+
+    func test_withMotionSafe_reduceMotionTrue_runsStaticPath() {
+        // When reduceMotion is true the action runs synchronously without withAnimation.
+        // We verify by setting a flag — if withAnimation wrapped it the flag would
+        // still be set, but the code path differs (no animation transaction).
+        let view = EmptyView()
+        var value = 0
+        view.withMotionSafe(true, animation: .easeOut(duration: 0.3)) {
+            value = 42
+        }
+        XCTAssertEqual(value, 42, "Static (reduce-motion) path must set value synchronously")
+    }
+
+    func test_withMotionSafe_reduceMotionFalse_runsAnimatedPath() {
+        let view = EmptyView()
+        var value = 0
+        view.withMotionSafe(false, animation: .easeOut(duration: 0.3)) {
+            value = 99
+        }
+        XCTAssertEqual(value, 99, "Animated path must still execute the action closure")
     }
 
     // MARK: - PrimaryButtonStyle

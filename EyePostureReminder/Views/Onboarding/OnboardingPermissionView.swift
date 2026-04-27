@@ -113,7 +113,7 @@ private struct NotificationPreviewCard: View {
                 Spacer()
                 Text("onboarding.permission.notificationCard.now", bundle: .module)
                     .font(AppFont.caption)
-                    .foregroundStyle(AppColor.textSecondary.opacity(0.72))
+                    .foregroundStyle(AppColor.textSecondary.opacity(AppOpacity.mutedTimestamp))
             }
             Text("onboarding.permission.notificationCard.title", bundle: .module)
                 .font(AppFont.bodyEmphasized)

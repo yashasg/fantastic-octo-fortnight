@@ -1,0 +1,29 @@
+[
+  {
+    "id": "LIV-R2-001",
+    "severity": "P3",
+    "title": "AppOpacity enum has zero test coverage",
+    "description": "AppOpacity (6 tokens: iconAura, warningBackground, warningSeparator, pressedButton, mutedTimestamp, subtleBorder) was added in Round 1 but has no unit tests. All 6 values should have spec assertions in DesignSystemTests.",
+    "file": "EyePostureReminder/Views/DesignSystem.swift",
+    "line": 272,
+    "action": "Add 6 spec tests + 1 allOpacitiesInRange guard to DesignSystemTests.swift"
+  },
+  {
+    "id": "LIV-R2-002",
+    "severity": "P3",
+    "title": "withMotionSafe() View extension has zero test coverage",
+    "description": "The withMotionSafe(_:animation:action:) helper in Components.swift (line 135) is untested. Should verify: (1) action runs immediately when reduceMotion=true, (2) action runs inside animation when reduceMotion=false.",
+    "file": "EyePostureReminder/Views/Components.swift",
+    "line": 135,
+    "action": "Add 2 tests to ComponentsTests.swift covering both branches"
+  },
+  {
+    "id": "LIV-R2-003",
+    "severity": "P4",
+    "title": "UI tests not runnable via SPM scheme",
+    "description": "EyePostureReminderUITests target is not in the SPM test plan. UI tests (OverlayTests, DarkModeUITests) can only run from Xcode IDE, not from CLI xcodebuild with the current scheme.",
+    "file": "UITests/",
+    "line": null,
+    "action": "No immediate action needed — Xcode project scheme covers these. Document for CI setup."
+  }
+]

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>YinYang Merge v7</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, sans-serif; overflow: hidden; }
+  .scene {
+    position: relative; width: 100vw; height: 100vh;
+    display: flex; justify-content: center; align-items: center;
+  }
+  .scene.light { background: #F8F4EC; }
+  .scene.dark { background: #101714; }
+
+  .controls {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 10px; z-index: 10;
+  }
+  .btn { padding: 10px 20px; border: none; border-radius: 999px; font-size: 14px; cursor: pointer; }
+  .btn-primary { background: #2F6F5E; color: white; }
+  .btn-primary:hover { background: #256b54; }
+  .btn-secondary { background: #314039; color: #EEF7F1; }
+  .btn-secondary:hover { background: #203128; }
+
+  .label {
+    position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
+    font-size: 13px; z-index: 10; text-align: center;
+  }
+  .light .label { color: #5F6F67; }
+  .dark .label { color: #B9C8BF; }
+
+  /* Container holds the full logo */
+  .logo-container {
+    position: relative; width: 180px; height: 180px;
+  }
+  /* Phase 1: spin once */
+  .logo-container.spin {
+    animation: logo-spin 2s cubic-bezier(0.2, 0.0, 0.0, 1.0) forwards;
+  }
+  /* Phase 2: breathe — 4s in, 4s out = 8s total */
+  .logo-container.settled {
+    animation: breathe 8s ease-in-out infinite;
+  }
+
+  @keyframes logo-spin {
+    0%   { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  @keyframes breathe {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.06); }
+  }
+
+  /* Each half is absolutely positioned inside the container */
+  .half-svg {
+    position: absolute; top: 0; left: 0; width: 180px; height: 180px;
+  }
+</style>
+</head>
+<body>
+
+<div class="scene light" id="scene">
+  <div class="label" id="label">Option 5: Sage + Mint</div>
+
+  <div class="logo-container" id="container">
+    <!-- Yin half -->
+    <svg class="half-svg" id="yin" viewBox="0 0 200 200">
+      <clipPath id="yinClip">
+        <path d="M100,0 A100,100 0 0,0 100,200 A50,50 0 0,0 100,100 A50,50 0 0,1 100,0"/>
+      </clipPath>
+      <g clip-path="url(#yinClip)" transform="translate(0,200) scale(1,-1)">
+        <rect width="200" height="200" id="yinFill"/>
+      </g>
+    </svg>
+
+    <!-- Yang half -->
+    <svg class="half-svg" id="yang" viewBox="0 0 200 200">
+      <clipPath id="yangClip">
+        <path d="M100,0 A100,100 0 0,1 100,200 A50,50 0 0,1 100,100 A50,50 0 0,0 100,0"/>
+      </clipPath>
+      <g clip-path="url(#yangClip)">
+        <rect width="200" height="200" id="yangFill"/>
+      </g>
+    </svg>
+
+    <!-- Dots and border ring -->
+    <svg class="half-svg" id="ring" viewBox="0 0 200 200">
+      <circle cx="100" cy="50" r="13" id="yinDot"/><circle cx="100" cy="150" r="13" id="yangDot"/><circle cx="100" cy="100" r="98" fill="none" stroke-width="2" id="ringStroke"/>
+    </svg>
+  </div>
+</div>
+
+<div class="controls">
+  <button class="btn btn-primary" onclick="replay()">↻ Replay</button>
+  <button class="btn btn-secondary" onclick="toggleScheme()">Switch Colors</button>
+  <button class="btn btn-secondary" onclick="toggleMode()">Dark / Light</button>
+</div>
+
+<script>
+const schemes = [
+  { name: "Option 5: Sage + Mint", c1: "#2F6F5E", c2: "#EEF6F1", borderL: "#D8E4DC", borderD: "#314039" },
+  { name: "Option 6: Blue + Clay", c1: "#286C8E", c2: "#9E4F39", borderL: "#D8E4DC", borderD: "#314039" },
+  { name: "Option 1: Sage + Clay", c1: "#2F6F5E", c2: "#9E4F39", borderL: "#D8E4DC", borderD: "#314039" },
+];
+let idx = 0, isDark = false;
+
+function applyScheme() {
+  const s = schemes[idx];
+  const border = isDark ? s.borderD : s.borderL;
+  document.getElementById('yinFill').setAttribute('fill', s.c1);
+  document.getElementById('yinDot').setAttribute('fill', s.c2);
+  document.getElementById('yangFill').setAttribute('fill', s.c2);
+  document.getElementById('yangDot').setAttribute('fill', s.c1);
+  document.getElementById('ringStroke').setAttribute('stroke', border);
+  document.getElementById('label').textContent = s.name + (isDark ? " (dark)" : "");
+}
+
+function runAnimation() {
+  const c = document.getElementById('container');
+  c.classList.remove('spin', 'settled');
+  void c.offsetWidth;
+  c.classList.add('spin');
+  c.addEventListener('animationend', function onSpin() {
+    c.removeEventListener('animationend', onSpin);
+    c.classList.remove('spin');
+    c.classList.add('settled');
+  });
+}
+
+function replay() { runAnimation(); }
+
+function toggleScheme() { idx = (idx + 1) % schemes.length; applyScheme(); replay(); }
+function toggleMode() {
+  isDark = !isDark;
+  const s = document.getElementById('scene');
+  s.classList.toggle('light', !isDark);
+  s.classList.toggle('dark', isDark);
+  applyScheme(); replay();
+}
+
+applyScheme();
+runAnimation();
+</script>
+</body>
+</html>

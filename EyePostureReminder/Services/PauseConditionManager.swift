@@ -220,6 +220,12 @@ final class PauseConditionManager: PauseConditionProviding {
     }
 
     func startMonitoring() {
+        // Guard against duplicate subscriptions — tear down any existing
+        // monitoring before re-subscribing to avoid double-firing callbacks.
+        if !cancellables.isEmpty {
+            stopMonitoring()
+        }
+
         focusDetector.onFocusChanged = { [weak self] focused in
             guard let self else { return }
             self.update(.focusMode, isActive: focused && self.settings.pauseDuringFocus)

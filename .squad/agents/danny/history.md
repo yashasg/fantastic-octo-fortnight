@@ -1,11 +1,18 @@
 # Project Context
 
 - **Owner:** Yashasg
-- **Project:** Eye & Posture Reminder — a lightweight iOS app with background timers and full-screen overlay reminders for eye breaks (20-20-20 rule) and posture checks
+- **Project:** kshana (formerly Eye & Posture Reminder) — a lightweight iOS app with background timers and full-screen overlay reminders for eye breaks (20-20-20 rule) and posture checks
 - **Stack:** Swift, SwiftUI (iOS 16+), MVVM, UserNotifications, UIKit overlay, UserDefaults
 - **Created:** 2026-04-24
 
 ## Learnings
+
+### 2026-04-27: App Renamed to kshana
+
+- **Context:** App officially renamed from "Eye & Posture Reminder" to **kshana** (Sanskrit: क्षण, "a moment, an instant"). Branding: always lowercase, subtitle "kshana — Eye & Posture Wellness."
+- **Scope:** Updated 17 documentation files across root docs, `docs/`, and `docs/legal/`. Added CHANGELOG entry for the rename.
+- **Branding rules:** Brand name is always lowercase "kshana" in prose. SPM module/target remains `EyePostureReminder` (technical name, not user-facing). Historical references to old name kept in naming research docs and changelog for context.
+- **Files touched:** README, ROADMAP, ARCHITECTURE, IMPLEMENTATION_PLAN, UX_FLOWS, CHANGELOG, APP_STORE_LISTING, DESIGN_SYSTEM, ONBOARDING_SPEC, TELEMETRY, TEST_REPORT, TEST_STRATEGY, PRIVACY_NUTRITION_LABELS, app-naming-research, DISCLAIMER, PRIVACY, TERMS.
 
 ### 2026-04-26: Yin-Yang Logo Animation — Roadmap & UX Docs Update
 

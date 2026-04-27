@@ -314,12 +314,12 @@ struct SoftElevation: ViewModifier {
             content
                 .overlay(
                     RoundedRectangle(cornerRadius: AppLayout.radiusCard)
-                        .strokeBorder(AppColor.separatorSoft.opacity(0.65), lineWidth: 0.5)
+                        .strokeBorder(AppColor.separatorSoft.opacity(AppOpacity.subtleBorder), lineWidth: 0.5)
                 )
         } else {
             content
                 .shadow(
-                    color: AppColor.shadowCard.opacity(0.10),
+                    color: AppColor.shadowCard.opacity(AppOpacity.warningBackground),
                     radius: 8,
                     x: 0,
                     y: 3
