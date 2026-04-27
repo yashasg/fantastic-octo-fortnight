@@ -56,6 +56,7 @@ struct OnboardingPermissionView: View {
                     .padding(.horizontal, AppSpacing.xl)
                     .accessibilityLabel(Text("onboarding.permission.enableButton", bundle: .module))
                     .accessibilityHint(Text("onboarding.permission.enableButton.hint", bundle: .module))
+                    .accessibilityIdentifier("onboarding.enableNotifications")
 
                     // Secondary option — no system prompt, just advance
                     Button(action: onNext) {

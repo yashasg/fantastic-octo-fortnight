@@ -74,6 +74,7 @@ struct OnboardingSetupView: View {
                         .buttonStyle(OnboardingSecondaryButtonStyle())
                         .accessibilityLabel(Text("onboarding.setup.customizeButton", bundle: .module))
                         .accessibilityHint(Text("onboarding.setup.customizeButton.hint", bundle: .module))
+                        .accessibilityIdentifier("onboarding.customize")
                 }
                 .padding()
                 .frame(maxWidth: AppLayout.onboardingMaxContentWidth)

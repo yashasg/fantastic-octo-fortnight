@@ -195,6 +195,8 @@ enum AppAnimation {
     static let calmingEntranceCurve: Animation = .easeOut(duration: calmingEntranceDuration)
     /// Status crossfade — drives icon + text opacity when active/paused state changes.
     static let statusCrossfadeCurve: Animation = .easeInOut(duration: statusCrossfadeDuration)
+    /// Yin-yang entrance spin — custom deceleration curve for the initial rotation.
+    static let yinYangSpinCurve: Animation = .timingCurve(0.2, 0.0, 0.0, 1.0, duration: 2)
 }
 
 // MARK: - SF Symbol Names

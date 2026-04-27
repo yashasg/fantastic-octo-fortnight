@@ -7,6 +7,7 @@ struct OverlayView: View {
     let duration: TimeInterval
     let hapticsEnabled: Bool
     let onDismiss: () -> Void
+    let onAnalyticsEvent: (AnalyticsEvent) -> Void
 
     @State private var secondsRemaining: Int
     @State private var timer: Timer?
@@ -20,12 +21,19 @@ struct OverlayView: View {
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    init(type: ReminderType, duration: TimeInterval, hapticsEnabled: Bool = true, onDismiss: @escaping () -> Void) {
-        self.type            = type
-        self.duration        = duration
-        self.hapticsEnabled  = hapticsEnabled
-        self.onDismiss       = onDismiss
-        _secondsRemaining    = State(initialValue: Int(duration))
+    init(
+        type: ReminderType,
+        duration: TimeInterval,
+        hapticsEnabled: Bool = true,
+        onAnalyticsEvent: @escaping (AnalyticsEvent) -> Void = { _ in },
+        onDismiss: @escaping () -> Void
+    ) {
+        self.type              = type
+        self.duration          = duration
+        self.hapticsEnabled    = hapticsEnabled
+        self.onAnalyticsEvent  = onAnalyticsEvent
+        self.onDismiss         = onDismiss
+        _secondsRemaining      = State(initialValue: Int(duration))
     }
 
     var body: some View {
@@ -156,6 +164,7 @@ struct OverlayView: View {
                 .frame(minHeight: AppLayout.minTapTarget)
                 .accessibilityLabel(Text("overlay.settingsButton", bundle: .module))
                 .accessibilityHint(Text("overlay.settingsButton.hint", bundle: .module))
+                .accessibilityIdentifier("overlay.settingsLink")
 
                 Spacer(minLength: AppSpacing.lg)
             }
@@ -186,7 +195,7 @@ struct OverlayView: View {
                 contentOpacity = 1
                 slideOffset = 0
             } else {
-                withAnimation(AppAnimation.overlayAppearCurve) {
+                withAnimation(AppAnimation.calmingEntranceCurve) {
                     contentOpacity = 1
                     slideOffset = 0
                 }
@@ -205,7 +214,7 @@ struct OverlayView: View {
         isDismissing = true
         timer?.invalidate()
         let elapsedS = duration - TimeInterval(secondsRemaining)
-        AnalyticsLogger.log(.overlayDismissed(type: type, method: method, elapsedS: elapsedS))
+        onAnalyticsEvent(.overlayDismissed(type: type, method: method, elapsedS: elapsedS))
         if method == .settingsTap {
             UserDefaults.standard.set(true, forKey: AppStorageKey.openSettingsOnLaunch)
         }
@@ -232,7 +241,7 @@ struct OverlayView: View {
     private func performAutoDismiss() {
         guard !isDismissing else { return }
         isDismissing = true
-        AnalyticsLogger.log(.overlayAutoDismissed(type: type, durationS: duration))
+        onAnalyticsEvent(.overlayAutoDismissed(type: type, durationS: duration))
         triggerCompletionHaptic()
         if reduceMotion {
             contentOpacity = 0

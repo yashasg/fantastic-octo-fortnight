@@ -10,35 +10,46 @@ struct YinYangEyeView: View {
     private let diameter = AppLayout.overlayIconSize * 1.55
 
     var body: some View {
-        let dotSize = diameter * 0.18
+        let half = diameter / 2
+        let dotSize = diameter * 0.13
 
         ZStack {
-            // Yin half (left teardrop) — sage green
-            YinYangHalfShape(isYin: true)
+            // Base circle — yin color (sage)
+            Circle()
                 .fill(AppColor.primaryRest)
-                .frame(width: diameter, height: diameter)
 
-            // Yang half (right teardrop) — mint
-            YinYangHalfShape(isYin: false)
+            // Right half — yang color (mint), clipped to right semicircle
+            Circle()
                 .fill(AppColor.surfaceTint)
-                .frame(width: diameter, height: diameter)
+                .clipShape(RightHalf())
 
-            // Yin dot (yang color inside yin half, at 25% from top)
+            // Top small circle — sage (yin bulges into yang territory)
+            Circle()
+                .fill(AppColor.primaryRest)
+                .frame(width: half, height: half)
+                .offset(y: -half / 2)
+
+            // Bottom small circle — mint (yang bulges into yin territory)
+            Circle()
+                .fill(AppColor.surfaceTint)
+                .frame(width: half, height: half)
+                .offset(y: half / 2)
+
+            // Yin dot (mint inside yin, upper area)
             Circle()
                 .fill(AppColor.surfaceTint)
                 .frame(width: dotSize, height: dotSize)
-                .offset(y: -diameter * 0.25)
+                .offset(y: -half / 2)
 
-            // Yang dot (yin color inside yang half, at 75% from top)
+            // Yang dot (sage inside yang, lower area)
             Circle()
                 .fill(AppColor.primaryRest)
                 .frame(width: dotSize, height: dotSize)
-                .offset(y: diameter * 0.25)
+                .offset(y: half / 2)
 
             // Border ring
             Circle()
-                .strokeBorder(AppColor.separatorSoft.opacity(0.65), lineWidth: 1)
-                .frame(width: diameter, height: diameter)
+                .strokeBorder(AppColor.separatorSoft.opacity(0.65), lineWidth: 1.5)
         }
         .frame(width: diameter, height: diameter)
         .rotationEffect(.degrees(spinComplete ? 360 : 0))
@@ -54,12 +65,10 @@ struct YinYangEyeView: View {
 
         guard !reduceMotion else { return }
 
-        // Phase 1: Spin 360° over 2 seconds with deceleration
-        withAnimation(.timingCurve(0.2, 0.0, 0.0, 1.0, duration: 2)) {
+        withAnimation(AppAnimation.yinYangSpinCurve) {
             spinComplete = true
         }
 
-        // Phase 2: Breathe after spin completes
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
             withAnimation(
                 .easeInOut(duration: 4)
@@ -71,81 +80,12 @@ struct YinYangEyeView: View {
     }
 }
 
-// MARK: - Yin-Yang Half Shape
+// MARK: - Right Half Clip Shape
 
-/// Draws one half of a yin-yang symbol using SwiftUI Path.
-/// `isYin` = true draws the left (yin) half, false draws the right (yang) half.
-private struct YinYangHalfShape: Shape {
-    let isYin: Bool
-
+/// Clips to the right half of the bounding rect.
+struct RightHalf: Shape {
     func path(in rect: CGRect) -> Path {
-        let w = rect.width
-        let h = rect.height
-        let cx = w / 2
-        let cy = h / 2
-        let r = min(w, h) / 2
-        let smallR = r / 2
-
-        var path = Path()
-
-        if isYin {
-            // Start at top center
-            path.move(to: CGPoint(x: cx, y: 0))
-            // Large arc: top-center to bottom-center going LEFT (counter-clockwise)
-            path.addArc(
-                center: CGPoint(x: cx, y: cy),
-                radius: r,
-                startAngle: .degrees(-90),
-                endAngle: .degrees(90),
-                clockwise: true
-            )
-            // Small arc: bottom-center back to center going RIGHT (S-curve bottom)
-            path.addArc(
-                center: CGPoint(x: cx, y: cy + smallR),
-                radius: smallR,
-                startAngle: .degrees(90),
-                endAngle: .degrees(-90),
-                clockwise: true
-            )
-            // Small arc: center to top-center going LEFT (S-curve top)
-            path.addArc(
-                center: CGPoint(x: cx, y: cy - smallR),
-                radius: smallR,
-                startAngle: .degrees(90),
-                endAngle: .degrees(-90),
-                clockwise: false
-            )
-        } else {
-            // Start at top center
-            path.move(to: CGPoint(x: cx, y: 0))
-            // Large arc: top-center to bottom-center going RIGHT (clockwise)
-            path.addArc(
-                center: CGPoint(x: cx, y: cy),
-                radius: r,
-                startAngle: .degrees(-90),
-                endAngle: .degrees(90),
-                clockwise: false
-            )
-            // Small arc: bottom-center back to center going LEFT (S-curve bottom)
-            path.addArc(
-                center: CGPoint(x: cx, y: cy + smallR),
-                radius: smallR,
-                startAngle: .degrees(90),
-                endAngle: .degrees(-90),
-                clockwise: false
-            )
-            // Small arc: center to top-center going RIGHT (S-curve top)
-            path.addArc(
-                center: CGPoint(x: cx, y: cy - smallR),
-                radius: smallR,
-                startAngle: .degrees(90),
-                endAngle: .degrees(-90),
-                clockwise: true
-            )
-        }
-
-        path.closeSubpath()
-        return path
+        Path(CGRect(x: rect.midX, y: rect.minY, width: rect.width / 2, height: rect.height))
     }
 }
 

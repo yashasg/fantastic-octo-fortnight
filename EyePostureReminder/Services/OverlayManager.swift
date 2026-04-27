@@ -156,7 +156,7 @@ final class OverlayManager: OverlayPresenting {
         window.backgroundColor = .clear
 
         let hostingController = UIHostingController(
-            rootView: OverlayView(type: type, duration: duration, hapticsEnabled: hapticsEnabled) { [weak self] in
+            rootView: OverlayView(type: type, duration: duration, hapticsEnabled: hapticsEnabled, onAnalyticsEvent: AnalyticsLogger.log) { [weak self] in
                 Task { @MainActor in self?.dismissOverlay() }
             }
         )
