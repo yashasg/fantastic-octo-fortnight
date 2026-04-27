@@ -24,11 +24,11 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  XCODE_VERSION: "16.2"
+  XCODE_VERSION: "26.3"
   SCHEME: "EyePostureReminder"
   # No .xcodeproj — project uses Swift Package Manager.
   # xcodebuild resolves the package directly from Package.swift.
-  SIMULATOR: "platform=iOS Simulator,name=iPhone 16,OS=latest"
+  SIMULATOR: "platform=iOS Simulator,name=iPhone 16,OS=26.2"
   DERIVED_DATA_PATH: "${{ github.workspace }}/DerivedData"
 
 jobs:

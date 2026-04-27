@@ -295,6 +295,7 @@ struct OverlayView: View {
                 performAutoDismiss()
             }
         }
+        newTimer.tolerance = 0.5
         RunLoop.main.add(newTimer, forMode: .common)
         timer = newTimer
     }

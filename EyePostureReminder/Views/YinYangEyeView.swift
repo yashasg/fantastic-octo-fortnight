@@ -6,6 +6,7 @@ struct YinYangEyeView: View {
     @State private var spinComplete = false
     @State private var breathing = false
     @State private var hasStarted = false
+    @State private var isVisible = false
 
     private let diameter = AppLayout.overlayIconSize * 1.55
 
@@ -56,20 +57,40 @@ struct YinYangEyeView: View {
         .scaleEffect(breathing ? 1.06 : 1.0)
         .accessibilityIdentifier("home.statusIcon")
         .accessibilityHidden(true)
-        .onAppear(perform: startAnimations)
+        .onAppear {
+            isVisible = true
+            startAnimations()
+        }
+        .onDisappear {
+            isVisible = false
+            withAnimation(.easeInOut(duration: 0.3)) {
+                breathing = false
+            }
+        }
     }
 
     private func startAnimations() {
-        guard !hasStarted else { return }
-        hasStarted = true
-
         guard !reduceMotion else { return }
+
+        if hasStarted {
+            // Returning to view — restart breathing only
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                guard isVisible else { return }
+                withAnimation(.easeInOut(duration: 4).repeatForever(autoreverses: true)) {
+                    breathing = true
+                }
+            }
+            return
+        }
+
+        hasStarted = true
 
         withAnimation(AppAnimation.yinYangSpinCurve) {
             spinComplete = true
         }
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            guard isVisible else { return }
             withAnimation(
                 .easeInOut(duration: 4)
                 .repeatForever(autoreverses: true)

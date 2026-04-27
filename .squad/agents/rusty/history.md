@@ -353,3 +353,27 @@ Complete code quality and architecture review of the Restful Grove visual redesi
 - **ARCHITECTURE.md updates:** Documented pattern in §4.8. Any future custom animated branding components should follow the same Shape + phase-based approach.
 - **Design tokens used:** Existing Restful Grove tokens (`AppColor.primaryRest`, `AppColor.surfaceTint`) — no new tokens introduced.
 - **Decision artifact:** `.squad/decisions/inbox/rusty-yinyang-arch.md` → merged into decisions.md
+
+### 2025-07-18: Battery Life & Performance Audit
+
+- **Context:** Full battery/performance audit requested by Yashas. Reviewed all 33 Swift source files across Services, Models, ViewModels, Views, App, and Utilities layers.
+- **Overall Grade: B+** — No critical battery drains. 3 minor warnings, 12 good practices confirmed.
+- **Key Findings:**
+  - ScreenTimeTracker timer (1s with 0.5s tolerance, pauses on background) is correctly implemented
+  - All detection systems (Focus, CarPlay, driving) use event-driven patterns — zero polling
+  - No UIBackgroundModes declared — app does zero work when suspended
+  - Consistent `[weak self]` across all closures — no retain cycles found
+  - All animations respect `accessibilityReduceMotion`
+  - Startup path is clean: only 3 lightweight operations before first frame
+- **3 Warnings (all P3/P4):**
+  1. OverlayView countdown timer missing `tolerance` (1-line fix)
+  2. YinYang breathing animation lacks `onDisappear` lifecycle control
+  3. OnboardingView sets `UIPageControl.appearance()` in struct init (runs on every struct creation)
+- **Artifacts:** `docs/performance-audit.md`, `rusty-issues.json` (15 findings)
+
+## Learnings
+
+- **Timer tolerance is a one-line battery optimization that should be standard practice.** Every `Timer` in the codebase should set tolerance to at least 10-20% of the interval. The ScreenTimeTracker does this (0.5s on 1s timer); the OverlayView countdown does not. Add tolerance wherever timers are created.
+- **`.repeatForever` SwiftUI animations should always have lifecycle control.** Without `onDisappear` cleanup, the animation continues keeping the GPU compositor active even when the view is off-screen. For continuous animations, pair `onAppear` start with `onDisappear` stop.
+- **`UIAppearance` proxy calls in SwiftUI struct `init()` are a code smell.** SwiftUI recreates structs frequently — appearance proxy calls should live in a `static let` initializer or `.onAppear` with a guard, not in the struct's `init`.
+- **CMMotionActivityManager is the correct battery-efficient alternative to CLLocationManager for activity detection.** It runs on the dedicated motion coprocessor, not the main CPU or GPS hardware. This was validated as the right choice for driving detection in kshana.

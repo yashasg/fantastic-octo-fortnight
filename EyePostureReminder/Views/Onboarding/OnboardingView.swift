@@ -10,10 +10,10 @@ struct OnboardingView: View {
     @EnvironmentObject private var coordinator: AppCoordinator
     @State private var currentPage = 0
 
-    init() {
+    private static let configurePageControl: Void = {
         UIPageControl.appearance().currentPageIndicatorTintColor = UIColor(AppColor.primaryRest)
         UIPageControl.appearance().pageIndicatorTintColor = UIColor(AppColor.separatorSoft)
-    }
+    }()
 
     var body: some View {
         TabView(selection: $currentPage) {
@@ -34,6 +34,7 @@ struct OnboardingView: View {
         .tabViewStyle(PageTabViewStyle(indexDisplayMode: .always))
         .indexViewStyle(PageIndexViewStyle(backgroundDisplayMode: .always))
         .background(AppColor.background.ignoresSafeArea())
+        .onAppear { _ = Self.configurePageControl }
     }
 
     private func finishOnboarding() {

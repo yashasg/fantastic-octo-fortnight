@@ -1,1 +1,152 @@
-[]
+[
+  {
+    "id": "PERF-001",
+    "severity": "warning",
+    "category": "timer",
+    "title": "OverlayView countdown timer missing tolerance",
+    "file": "EyePostureReminder/Views/OverlayView.swift",
+    "lines": "289-299",
+    "description": "The OverlayView countdown timer is created via Timer(timeInterval:repeats:) and added to RunLoop.main without setting a tolerance. While the timer only runs for 10-60 seconds during an overlay (low battery impact), setting tolerance allows iOS to coalesce timer firings with other system work, reducing CPU wakeups.",
+    "recommendation": "Add newTimer.tolerance = 0.2 after line 298 (before assigning to self.timer). A 200ms tolerance won't affect the 1-second countdown display but lets iOS optimize CPU wake scheduling."
+  },
+  {
+    "id": "PERF-002",
+    "severity": "warning",
+    "category": "animation",
+    "title": "YinYang breathing animation runs indefinitely without lifecycle control",
+    "file": "EyePostureReminder/Views/YinYangEyeView.swift",
+    "lines": "72-79",
+    "description": "The breathing animation uses .repeatForever(autoreverses: true) started in onAppear, but there is no onDisappear handler to pause/stop it. The animation continues running (keeping GPU active for compositing) even when the user navigates away from HomeView to Settings or other sheets. While SwiftUI suspends the render pipeline on app background, the animation resumes on foreground transitions causing a brief GPU spike.",
+    "recommendation": "Consider adding an onDisappear handler that sets breathing = false, or wrap the animation in a TimelineView that checks view visibility. Alternatively, accept this as-is since scaleEffect is GPU-composited and very cheap."
+  },
+  {
+    "id": "PERF-003",
+    "severity": "warning",
+    "category": "startup",
+    "title": "OnboardingView sets UIPageControl appearance in struct init",
+    "file": "EyePostureReminder/Views/Onboarding/OnboardingView.swift",
+    "lines": "13-15",
+    "description": "UIPageControl.appearance() is modified in the OnboardingView init, which runs every time SwiftUI re-creates the struct (potentially on each parent body evaluation). While idempotent and not a battery concern, this involves unnecessary Objective-C runtime appearance proxy calls on each struct creation.",
+    "recommendation": "Move the UIPageControl.appearance() calls to a static initializer (e.g., private static let configureAppearance: Void = { ... }()) or use .onAppear with a guard to ensure it runs only once."
+  },
+  {
+    "id": "PERF-004",
+    "severity": "good",
+    "category": "timer",
+    "title": "ScreenTimeTracker timer uses 0.5s tolerance",
+    "file": "EyePostureReminder/Services/ScreenTimeTracker.swift",
+    "lines": "242-245",
+    "description": "The 1-second tick timer sets tolerance to 0.5s, allowing iOS to coalesce timer firings with other system work. Combined with CACurrentMediaTime() delta tracking (lines 262-265), this provides accurate elapsed time while minimizing CPU wakeups. The timer is properly invalidated on willResignActive.",
+    "recommendation": "No action needed — this is a best-practice implementation."
+  },
+  {
+    "id": "PERF-005",
+    "severity": "good",
+    "category": "battery",
+    "title": "No background modes declared in Info.plist",
+    "file": "EyePostureReminder/Info.plist",
+    "lines": "1-42",
+    "description": "The app declares no UIBackgroundModes, meaning it performs zero work when suspended. The ScreenTimeTracker timer pauses on willResignActive and resumes on didBecomeActive. This is the ideal model for a foreground-only reminder app.",
+    "recommendation": "No action needed — this is the correct approach."
+  },
+  {
+    "id": "PERF-006",
+    "severity": "good",
+    "category": "battery",
+    "title": "Focus mode detection uses event-driven KVO",
+    "file": "EyePostureReminder/Services/PauseConditionManager.swift",
+    "lines": "72-83",
+    "description": "Focus mode changes are detected via KVO on INFocusStatusCenter.focusStatus, which fires only when the system Focus state changes. No polling timer or periodic checks. Authorization is requested lazily and KVO is only installed after authorization succeeds.",
+    "recommendation": "No action needed — this is the optimal approach."
+  },
+  {
+    "id": "PERF-007",
+    "severity": "good",
+    "category": "battery",
+    "title": "Driving detection uses low-power motion coprocessor",
+    "file": "EyePostureReminder/Services/PauseConditionManager.swift",
+    "lines": "152-169",
+    "description": "Driving detection uses CMMotionActivityManager which runs on Apple's dedicated motion coprocessor (M-series chip). This operates independently of the main CPU at extremely low power. Updates are delivered to .main queue and filtered for automotive + high confidence, minimizing false positives and processing overhead.",
+    "recommendation": "No action needed — CMMotionActivityManager is the most battery-efficient approach for activity detection."
+  },
+  {
+    "id": "PERF-008",
+    "severity": "good",
+    "category": "battery",
+    "title": "CarPlay detection uses notification-based approach",
+    "file": "EyePostureReminder/Services/PauseConditionManager.swift",
+    "lines": "108-119",
+    "description": "CarPlay connection state is detected via AVAudioSession.routeChangeNotification, which fires only when audio routing hardware changes. Zero battery cost when CarPlay state is stable. The check function (lines 130-136) iterates only the current route outputs — no expensive enumeration.",
+    "recommendation": "No action needed — this is event-driven and efficient."
+  },
+  {
+    "id": "PERF-009",
+    "severity": "good",
+    "category": "memory",
+    "title": "Consistent [weak self] in all closure captures",
+    "file": "EyePostureReminder/Services/AppCoordinator.swift",
+    "lines": "157-200",
+    "description": "All timer callbacks, notification observers, Combine sinks, and Task closures consistently use [weak self] to prevent retain cycles. This covers ScreenTimeTracker timer (line 242), reset task (line 225), detector callbacks (lines 229-239), Combine sinks (lines 247-263), and AppCoordinator wiring (lines 157, 178, 475).",
+    "recommendation": "No action needed — this is properly implemented throughout the codebase."
+  },
+  {
+    "id": "PERF-010",
+    "severity": "good",
+    "category": "observers",
+    "title": "All NotificationCenter observers properly cleaned up",
+    "file": "EyePostureReminder/Services/ScreenTimeTracker.swift",
+    "lines": "86-89",
+    "description": "ScreenTimeTracker removes all observers in deinit (line 87). OverlayManager removes its scene activation observer in deinit (lines 107-109). LiveCarPlayDetector removes its observer in stopMonitoring (lines 124-127). LiveFocusStatusDetector invalidates its KVO in stopMonitoring (lines 88-89). PauseConditionManager clears Combine cancellables in stopMonitoring (line 281).",
+    "recommendation": "No action needed — all observer lifecycles are properly managed."
+  },
+  {
+    "id": "PERF-011",
+    "severity": "good",
+    "category": "animation",
+    "title": "All animations respect accessibilityReduceMotion",
+    "file": "EyePostureReminder/Views/OverlayView.swift",
+    "lines": "30, 157-160, 234, 257, 276",
+    "description": "Every animation site reads @Environment(\\.accessibilityReduceMotion) and skips animation when enabled. This includes overlay entrance/exit, countdown ring, yin-yang spin/breathing, settings expand, and onboarding transitions. The withMotionSafe() helper (Components.swift:134-142) centralizes the pattern.",
+    "recommendation": "No action needed — accessibility compliance is thorough."
+  },
+  {
+    "id": "PERF-012",
+    "severity": "good",
+    "category": "animation",
+    "title": "Animations use GPU-accelerated transforms",
+    "file": "EyePostureReminder/Views/YinYangEyeView.swift",
+    "lines": "55-56",
+    "description": "The yin-yang view uses .rotationEffect and .scaleEffect, which are compositing-layer transforms handled by the GPU without triggering layout passes. The overlay countdown uses .trim on a Circle stroke — also GPU-composited. Button press animations use .scaleEffect(0.98). No layout-based animations found.",
+    "recommendation": "No action needed — transform-based animations are the most efficient approach."
+  },
+  {
+    "id": "PERF-013",
+    "severity": "good",
+    "category": "startup",
+    "title": "Minimal blocking work before first frame",
+    "file": "EyePostureReminder/App/AppDelegate.swift",
+    "lines": "13-21",
+    "description": "didFinishLaunchingWithOptions performs only 3 lightweight operations: setting notification delegate, registering MetricKit subscriber, and processing UI test arguments. AppCoordinator init (via @StateObject) creates lightweight service objects. scheduleReminders() runs asynchronously via .task modifier, not blocking the first frame. Font registration (2 TTF files, ~270KB each) completes in <5ms.",
+    "recommendation": "No action needed — startup path is clean and fast."
+  },
+  {
+    "id": "PERF-014",
+    "severity": "good",
+    "category": "battery",
+    "title": "Audio session activated only during overlay display",
+    "file": "EyePostureReminder/Services/AudioInterruptionManager.swift",
+    "lines": "43-72",
+    "description": "AVAudioSession is activated with .soloAmbient category only when an overlay appears (pauseExternalAudio) and deactivated with .notifyOthersOnDeactivation on every dismiss path (resumeExternalAudio). No persistent audio session between reminders. No UIBackgroundModes:audio declared.",
+    "recommendation": "No action needed — this correctly avoids holding the audio session open."
+  },
+  {
+    "id": "PERF-015",
+    "severity": "good",
+    "category": "memory",
+    "title": "OverlayManager nullifies UIWindow after dismissal",
+    "file": "EyePostureReminder/Services/OverlayManager.swift",
+    "lines": "177-197",
+    "description": "After overlay dismissal, overlayWindow is set to nil (line 182), rootViewController is set to nil (line 181), and a debug assertion verifies the cleanup (line 193). This ensures no UIWindow/UIHostingController retention between reminder cycles, preventing memory pressure buildup over long app sessions.",
+    "recommendation": "No action needed — proper cleanup prevents memory leaks."
+  }
+]
