@@ -209,99 +209,6 @@ All model, protocol, and service skeletons in `EyePostureReminder/`:
 
 ---
 
-## Session 6 Update: Screen-Time Triggers Architecture Finalized
-
-**Session:** 2026-04-24T20:58Z – 2026-04-24T21:37Z
-
-### Architecture Review Complete ✅
-
-Reviewed Danny's screen-time spec and approved with **6 required amendments** (documented in Decision 3.2):
-
-**Critical Amendment — Grace Period (5s debounce):**
-```swift
-func handleWillResignActive() {
-    pauseTimer()  // stop incrementing immediately
-    resetTask = Task { [weak self] in
-        try? await Task.sleep(nanoseconds: UInt64(5.0 * 1_000_000_000))
-        guard !Task.isCancelled else { return }
-        self?.resetElapsedTime()
-    }
-}
-
-func handleDidBecomeActive() {
-    if let resetTask {
-        resetTask.cancel()  // came back within grace period
-        resumeTimer()
-    } else {
-        startTracking()  // genuine screen-off (grace expired)
-    }
-}
-```
-
-**Why this matters:** Without the grace period, notification banners, incoming calls, and Control Center pulls would reset the timer to zero. User loses 19 minutes of accumulated time because a text arrived — feature feels broken.
-
-### Implementation Status
-
-Basher implemented ScreenTimeTracker per architecture spec (Decision 3.4):
-- ✅ Standalone service (not in AppCoordinator)
-- ✅ 5s grace period with Task-based cancellation
-- ✅ Monotonic clock (`CACurrentMediaTime()`)
-- ✅ `isEnabled` flag for snooze suppression
-- ✅ `Timer.tolerance = 0.5` for battery coalescing
-- ✅ Build: **BUILD SUCCEEDED**
-
-### Module Structure Realized
-
-```
-Services/
-├── ScreenTimeTracker.swift (NEW) — lifecycle + timer + thresholds
-├── ReminderScheduler.swift (NARROWED) — UNNotifications for snooze-wake only
-├── AppCoordinator.swift (UPDATED) — subscribes to tracker events, wires to overlays
-└── OverlayManager.swift — unchanged
-
-Dependency flow:
-  AppCoordinator → ScreenTimeTracker (owns, start/stop/reset)
-  ScreenTimeTracker → (callback) → AppCoordinator (what to do with threshold events)
-  AppCoordinator → OverlayManager (present reminders)
-```
-
-### Testing Strategy Documented
-
-For Livingston's unit tests:
-- `MockTimerFactory` — fires ticks on demand (no real timers in tests)
-- `AppLifecycleProviding` protocol — tests inject `PassthroughSubject` for lifecycle events
-- `MockTimeProvider` — clock is mockable
-- Test cases: grace period, threshold firing, multi-threshold handling, snooze suppression, settings reschedule, system clock immunity
-
-### Next: Testing Phase
-
-Livingston will implement ScreenTimeTracker unit tests using mock factories + mock lifecycle provider. 8 test cases documented in architecture review; ~60-80 lines of test code per case.
-
-
-## 2026-04-25 — Architecture: Wave 2 Testing Strategy Documentation
-
-**Status:** ✅ Complete  
-**Scope:** Testing architecture patterns and conventions documented in ARCHITECTURE.md
-
-### Orchestration Summary
-
-- **Testing Layers Defined:** Unit (manager + detectors), Integration (cross-component), UI (XCUITest)
-- **Conventions Established:** Mocking patterns, fixture factory, async test patterns
-- **XCUITest Requirements Documented:** Blocker (SPM limitation) and workaround (add .xcodeproj)
-- **Data Flow Diagrams:** Testing architecture visually documented
-- **Orchestration Log:** Filed at `.squad/orchestration-log/2026-04-24T23-19-18Z-rusty.md`
-
-### Architecture Decisions
-
-- Layered testing aligns with clean MVVM architecture
-- Fixture factory pattern for detector mocks (reusable across test suites)
-- Test environment flags via launchArguments for reproducible UI testing
-- Documented test data patterns (UserDefaults mocking, NotificationCenter test doubles)
-
-### Next Phase
-
-Testing infrastructure documented and ready. XCUITest blocker (Phase 2) documented in decisions.md.
-
 ## Learnings
 
 ### 2026-04-25 — ARCHITECTURE.md Codebase Audit
@@ -434,3 +341,15 @@ Complete code quality and architecture review of the Restful Grove visual redesi
 - **Legacy design tokens should be removed in the same PR that introduces replacements.** The `overlayCornerRadius`/`cardCornerRadius` → `radiusSmall`/`radiusCard`/`radiusLarge`/`radiusPill` migration left dead code. Always grep for usage before merging.
 - **CoreText programmatic font registration is reliable for SPM bundle contexts.** `CTFontManagerRegisterGraphicsFont` works where Info.plist `UIAppFonts` cannot reference SPM `.module` bundle resources. This is the correct pattern for our project structure.
 - **556 lines in a single view file is the monitoring threshold.** SettingsView is well-decomposed with private structs, but extraction to separate files should happen before it hits ~600 lines.
+- **Final verification pass (2026-04-26): Restful Grove redesign is SHIP-READY.** 889 tests, 0 failures. Zero raw `Color.*` or system font literals in Views layer. All `withAnimation` and `.animation` calls are guarded by `reduceMotion`. Design token adoption is 100% across DesignSystem, Components, SettingsView, OverlayView, HomeView, and all Onboarding screens. `IconContainer.font(.system(...))` is the sole computed-size exception — intentional, since the icon scales relative to its container `size` parameter. Architecture is clean MVVM with protocol-injected dependencies.
+- **SVG-to-SwiftUI-Path conversion via `addArc()` is cleaner than translating SVG `d` paths.** For geometric shapes like yin-yang, expressing the geometry as arc operations is more maintainable and readable than raw cubic bezier control points. Document the approach in ARCHITECTURE.md when introducing custom Shape conformers.
+- **Phase-based animation state machines should use `@State` booleans with `DispatchQueue.main.asyncAfter` for sequencing.** SwiftUI's `withAnimation` doesn't natively support chained phases — the asyncAfter pattern is the established workaround. Always guard with `hasStarted` to prevent re-triggering on view re-render.
+
+### 2026-04-27: YinYangEyeView Architecture Pattern Documentation
+
+- **Context:** Documented the established architectural pattern for custom animated branding components in the app.
+- **Decision:** `YinYangEyeView` uses custom SwiftUI `Shape` / `Path` drawing (not SF Symbols or image assets) with a two-phase animation state machine (Spin → Breathe).
+- **Rationale:** Resolution-independent, direct design-token integration, per-layer animation control. Two-phase state machine sequences animations cleanly (SwiftUI lacks native chaining). Reduce-motion compliance via `@Environment(\.accessibilityReduceMotion)`.
+- **ARCHITECTURE.md updates:** Documented pattern in §4.8. Any future custom animated branding components should follow the same Shape + phase-based approach.
+- **Design tokens used:** Existing Restful Grove tokens (`AppColor.primaryRest`, `AppColor.surfaceTint`) — no new tokens introduced.
+- **Decision artifact:** `.squad/decisions/inbox/rusty-yinyang-arch.md` → merged into decisions.md

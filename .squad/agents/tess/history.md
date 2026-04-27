@@ -349,3 +349,41 @@ Early design system work covering: DesignSystem.swift tokens (colors, fonts, spa
 **Validation:**
 - `xcodebuild build -scheme EyePostureReminder -destination 'platform=iOS Simulator,name=iPhone 17 Pro'` ✅
 - `xcodebuild test -scheme EyePostureReminder -destination 'platform=iOS Simulator,name=iPhone 17 Pro'` ✅
+
+## Session 8: Yin-Yang SVG-Style Rewrite
+
+**Date:** 2025-07-22
+**Task:** Rewrite YinYangEyeView to match approved HTML prototype with proper yin-yang shape
+
+### What Changed
+
+1. **YinYangEyeView.swift** — Full rewrite:
+   - Replaced SF Symbol orbiting eyes with SwiftUI Path-drawn yin-yang symbol
+   - Created `YinYangHalfShape` (private Shape) using arc-based paths for yin/yang halves
+   - Yin half: `AppColor.primaryRest` (sage), Yang half: `AppColor.surfaceTint` (mint)
+   - Dots at 25% and 75% vertical positions using opposite colors
+   - Border ring with `AppColor.separatorSoft`
+   - Two-phase animation: spin (360°/2s deceleration) → breathe (scale 1.0↔1.06, 8s cycle)
+   - `accessibilityReduceMotion` skips all animations
+
+2. **OnboardingWelcomeView.swift** — Replaced `WelcomeHeroCard` with `YinYangEyeView()`:
+   - Removed dead `WelcomeHeroCard` and `HeroIcon` structs
+   - Yin-yang serves as the hero visual on welcome screen
+   - Preserved accessibility label for illustration
+
+### Learnings
+
+- SwiftUI `Path.addArc` clockwise parameter is inverted from SVG convention (SwiftUI uses flipped Y-axis coordinates). When converting SVG arc sweeps, flip the clockwise boolean.
+- For yin-yang S-curve: the trick is two small arcs (radius = R/2) centered at 25% and 75% of the diameter on the center axis, with opposite sweep directions per half.
+- `DispatchQueue.main.asyncAfter` works well for sequencing animation phases (spin then breathe) without complex state machines.
+
+**Build:** ✅ `xcodebuild build` passed
+
+### 2026-04-27: Yin-Yang SwiftUI Implementation — Complete
+
+- **Context:** Six-agent sprint on Restful Grove branding component. Tess implemented custom Path yin-yang logo.
+- **Deliverable:** `YinYangEyeView.swift` — custom SwiftUI Shape + Path (no SF Symbols), two-phase animation (Spin → Breathe), full reduce-motion compliance.
+- **Integration:** Added to `OnboardingView` and `HomeView` hero areas. Single source of truth for logo.
+- **Testing:** 9 comprehensive tests (Livingston) — all passing. Build passing.
+- **Decisions:** Merged 5 decisions into `.squad/decisions/decisions.md` (Tess, Danny, Rusty, Roman contributions). Inbox cleared.
+- **Session artifacts:** `.squad/orchestration-log/2026-04-27T03-41-00Z-*.md`, `.squad/log/2026-04-27T03-41-00Z-yinyang-implementation.md`

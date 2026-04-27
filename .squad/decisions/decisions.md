@@ -2008,3 +2008,148 @@ After:
 2. Should eye and posture reminders remain two distinct colors, or should both live under a unified sage/teal wellness palette with icon differences?
 3. Is a Phase 2 Home/dashboard screen in scope, given prior audit notes that `HomeView` may be dead code?
 4. Can Danny approve adding one short supportive overlay line, or should the redesign stay purely visual for now?
+
+---
+
+# Decision: Yin-Yang Shape Drawn with SwiftUI Path (not SF Symbols)
+
+**Author:** Tess (UI/UX)  
+**Date:** 2025-07-22  
+**Status:** Implemented
+
+## Context
+
+The original `YinYangEyeView` used SF Symbol eye icons orbiting around a circle. The approved HTML prototype specified a proper yin-yang symbol drawn as vector paths.
+
+## Decision
+
+- The yin-yang is now drawn entirely with SwiftUI `Path` arcs — no SF Symbols, no images.
+- `YinYangHalfShape` is a reusable private `Shape` conformance producing each half.
+- Colors use existing design tokens only (`AppColor.primaryRest`, `AppColor.surfaceTint`, `AppColor.separatorSoft`).
+- Animation is two-phase: spin then breathe. Reduce-motion disables both.
+- `WelcomeHeroCard` in onboarding was replaced by the same `YinYangEyeView()` component — single source of truth for the logo.
+
+## Impact
+
+- **HomeView** — no changes needed, already uses `YinYangEyeView()`.
+- **OnboardingWelcomeView** — now uses `YinYangEyeView()` instead of `WelcomeHeroCard`.
+- **Tests** — `home.statusIcon` accessibility identifier preserved. Dead `HeroIcon`/`WelcomeHeroCard` structs removed.
+
+---
+
+# Decision: Home Yin-Yang Eye Animation
+
+**Author:** Tess  
+**Date:** 2026-04-26  
+**Status:** Implemented  
+**Branch:** feature/restful-grove
+
+## Context
+
+Yashasg requested a Home screen animation based on a yin-yang concept: one open eye and one closed eye come together, rotate around each other briefly, then stop. The animation may later become the app logo, but the immediate scope is HomeView.
+
+## Decision
+
+Implement a self-contained `YinYangEyeView` and place it in HomeView's hero/status area above the title and status copy.
+
+Design choices:
+- Use SF Symbols `eye.fill` and `eye.slash.fill` for stronger visual weight at hero size.
+- Use `AppColor.primaryRest` for the open eye and `AppColor.secondaryCalm` for the closed eye.
+- Use a soft `AppColor.surfaceTint` circular field with two subtle tinted inner circles so the resting pose reads as a simplified yin-yang mark.
+- Animate once on appear for 1.35 seconds with `.easeInOut`, with no bounce or looping.
+- Start the symbols apart, pull them inward while rotating around the center, and settle vertically as a quiet logo-like composition.
+- Respect Reduce Motion by rendering the final settled state immediately.
+
+## Consequences
+
+- HomeView now has a calmer branded hero moment while keeping the existing title and active/paused status copy.
+- The old status icon no longer changes between active and paused; the status text remains the state indicator.
+- The animation is isolated in `YinYangEyeView`, making future extraction into an app-logo component straightforward.
+- Existing UI test identifiers remain available, including `home.statusIcon`.
+
+## Validation
+
+- Build passed with `xcodebuild build -scheme EyePostureReminder -destination 'platform=iOS Simulator,name=iPhone 17 Pro'`.
+- Tests passed with `xcodebuild test -scheme EyePostureReminder -destination 'platform=iOS Simulator,name=iPhone 17 Pro'`.
+
+---
+
+# Decision: Yin-Yang Logo Animation — Roadmap Placement & Documentation
+
+**Date:** 2026-04-26  
+**Author:** Danny (Product Manager)  
+**Status:** Approved  
+**Related Issues:** #158–#169 (Restful Grove redesign)
+
+## Decision
+
+The yin-yang logo animation is classified as a **Phase 2 (Polish) milestone (M2.10)**, not Phase 3, because it is part of the Restful Grove visual redesign — a branding/polish effort, not an advanced feature.
+
+## Key Design Choices Documented
+
+1. **Custom SwiftUI `Path`** over SF Symbols — unique brand identity, precise color control
+2. **Colors:** Sage (`#2F6F5E` / `AppColor.primaryRest`) + Mint (`#EEF6F1` / `AppColor.surfaceTint`) — Restful Grove palette
+3. **Animation:** Spin once (360°, 2s deceleration) → Breathing pulse (4s in, 4s out, infinite)
+4. **Reduce Motion:** Static logo, no animation — WCAG AA compliance
+5. **Placement:** `HomeView` and `OnboardingView`
+
+## Artifacts Updated
+
+- `ROADMAP.md` — M2.10 milestone, timeline, dependency map, key decisions, final status
+- `UX_FLOWS.md` — §5.4 animation flow description
+
+## Team Impact
+
+- Tess owns implementation (SwiftUI Path + animation)
+- Linus may assist with integration into existing views
+- No architecture changes required — purely additive UI work
+
+---
+
+# Decision: YinYangEyeView Architecture — Custom Path + Phase-Based Animation
+
+**Author:** Rusty (iOS Architect)  
+**Date:** 2026-04-27  
+**Status:** Documented
+
+## Decision
+
+`YinYangEyeView` uses custom SwiftUI `Shape` / `Path` drawing (not SF Symbols or image assets) with a two-phase animation state machine (Spin → Breathe). This is now the established pattern for custom branded visual components in the app.
+
+## Rationale
+
+1. **Custom Path over assets:** Resolution-independent, direct design-token integration (`AppColor.primaryRest`, `AppColor.surfaceTint`), and per-layer animation control.
+2. **Two-phase state machine:** SwiftUI lacks native animation chaining. The `@State` + `DispatchQueue.main.asyncAfter` pattern sequences spin → breathe cleanly.
+3. **Reduce-motion compliance:** All animated views must check `@Environment(\.accessibilityReduceMotion)` and skip to static state — consistent with the CalmingEntrance pattern.
+
+## Impact
+
+- ARCHITECTURE.md §4.8 now documents this pattern.
+- Any future custom animated branding components should follow the same Shape + phase-based approach.
+- No new design tokens were introduced; fully composed from existing Restful Grove tokens.
+
+---
+
+# Decision: App Name Candidates
+
+**Author:** Roman (Market Researcher)  
+**Date:** 2026-04-27  
+**Status:** Proposed — awaiting team review
+
+## Summary
+
+Researched 13 name candidates for the app (currently "Eye & Posture Reminder"). Top 3 recommendation:
+
+1. **Restwell** — strongest all-around. Warm, memorable, brandable, aligns with Restful Grove aesthetic.
+2. **Softsight** — most premium feel. Distinctive, elegant, uncontested.
+3. **Respite** — most sophisticated. Real English word meaning exactly what the app delivers.
+
+## Action Needed
+
+- Danny: visual/aesthetic fit check with Restful Grove design
+- Yashas: final name preference
+- Frank: formal trademark search on chosen name before App Store submission
+
+## Full Research
+
+See `docs/app-naming-research.md` for all 13 candidates, scoring matrix, and ASO strategy.

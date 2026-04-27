@@ -314,3 +314,11 @@ Consolidated 2026-04-24 planning entries covering early architecture decisions (
   4. **Section 10 Summary** — Updated onboarding bullet to reflect the 3-screen flow.
 - **Key learning:** When a Phase 2 feature replaces Phase 1 behavior, all doc sections referencing the old behavior must be audited — not just the primary section. UX_FLOWS.md had 4 separate sections describing the old first-launch flow.
 - **Commit:** `docs: update UX_FLOWS.md to reflect actual onboarding flow` (Fixes #112)
+
+### 2026-04-27: Yin-Yang Roadmap & UX Flow Documentation Sprint
+
+- **Context:** Team sprint to document yin-yang logo animation feature as M2.10 (Phase 2 Polish). Decision merged into decisions.md.
+- **ROADMAP.md update:** Classified yin-yang as M2.10, Phase 2 (part of Restful Grove redesign, not Phase 3 advanced feature). Updated timeline table, dependency map, key decisions (Decision 2.4 mapped to 5 architectural choices).
+- **UX_FLOWS.md §5.4:** Documented animation flow — spin (360°, 2s deceleration) → breathing pulse (4s in/out, infinite). Reduce-motion fallback (static logo). Placement: HomeView + OnboardingView.
+- **Decision artifact:** `.squad/decisions/inbox/danny-yinyang-roadmap.md` → merged into decisions.md
+- **Team collaboration:** Tess (implementation), Rusty (architecture docs), Livingston (9 tests), Roman (app naming research)

@@ -96,3 +96,18 @@
   5. No test coverage for 9 new RG* color tokens in asset catalog
 - **Positives:** Design system adoption is thorough across all redesigned views, accessibility is excellent (labels, hints, identifiers, reduce-motion guards throughout), Dynamic Type properly preserved via relativeTo:, SoftElevation pattern is clean, CalmingEntrance handles re-appear correctly, OnboardingPermissionView DI injection now correct
 - **Key learning:** When adding a "reusable components" file during a redesign, verify each component is actually adopted by at least one view before shipping — otherwise you get dead code that duplicates bespoke implementations already in the views (SettingsRowIcon vs IconContainer, SettingsSectionHeader vs SectionHeader)
+
+### 2026-04-26: Restful Grove Final Verification (Post-Fix Pass)
+- **Scope:** Final verification that all P1/P2 findings from the Restful Grove review were properly addressed
+- **Verdict:** ✅ APPROVED — All previous findings resolved. Ship it.
+- **Checklist results:**
+  1. ✅ **shadowCard** — moved to asset catalog (`RGShadowCard.colorset`), zero raw `Color(red:green:blue:)` calls anywhere in codebase
+  2. ✅ **Dead components** — `StatusPill` and generic `SectionHeader` removed from `Components.swift`; `IconContainer` kept and actively used in `SettingsView.swift` (2 callsites) + tests
+  3. ✅ **Dead tokens** — `overlayCornerRadius`, `cardCornerRadius`, `permissionBanner`, `permissionBannerText` all removed from `DesignSystem.swift`
+  4. ✅ **HomeView** — fully migrated to RG tokens (`AppColor.primaryRest`, `AppColor.textPrimary`, `AppColor.textSecondary`, `AppColor.background`, `AppTypography.*`, `AppSpacing.*`, `AppAnimation.*`, `AppSymbol.*`); zero raw `.secondary` or `reminderBlue` references
+  5. ✅ **Duplicate styles** — `OnboardingPrimaryButtonStyle` removed; `OnboardingScreenWrapper` replaced by `.calmingEntrance()` (confirmed by comment in OnboardingView.swift)
+  6. ✅ **No new issues** introduced by fixes
+- **Minor note (non-blocking):** `PermissionBanner.colorset` and `PermissionBannerText.colorset` still exist as orphaned asset catalog entries — no Swift code references them. Stale comment in `DarkModeTests.swift:11` references them. Cleanup candidate for a future housekeeping pass.
+- **Build:** ✅ BUILD SUCCEEDED (xcodebuild, iPhone 17 Simulator, iOS 26.4)
+- **Tests:** ✅ 889 tests, 0 failures
+- **Key learning:** When removing design tokens from Swift code, also audit the asset catalog for orphaned `.colorset` entries and test comments that reference deleted tokens — these artifacts survive code-level cleanup and accumulate as noise
