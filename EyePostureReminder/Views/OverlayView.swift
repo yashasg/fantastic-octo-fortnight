@@ -220,6 +220,7 @@ struct OverlayView: View {
             }
     }
 
+    /// Prepares haptic generators, fires entrance animation, and starts the countdown timer.
     private func handleAppear() {
         let impact = UIImpactFeedbackGenerator(style: .medium)
         impact.prepare()
@@ -239,6 +240,7 @@ struct OverlayView: View {
 
     // MARK: - Manual dismiss (× button, swipe up, or Settings tap)
 
+    /// Animates the overlay out and invokes `onDismiss` after the exit transition completes.
     private func performDismiss(method: AnalyticsEvent.DismissMethod = .button) {
         guard !isDismissing else { return }
         isDismissing = true
@@ -264,6 +266,7 @@ struct OverlayView: View {
 
     // MARK: - Auto-dismiss (countdown reaches zero)
 
+    /// Fades out the overlay when the countdown expires and invokes `onDismiss`.
     private func performAutoDismiss() {
         guard !isDismissing else { return }
         isDismissing = true
@@ -280,6 +283,7 @@ struct OverlayView: View {
 
     // MARK: - Timer
 
+    /// Starts a one-second repeating timer that decrements `secondsRemaining` and triggers auto-dismiss at zero.
     private func startTimer() {
         guard timer == nil else { return }
         let newTimer = Timer(timeInterval: 1, repeats: true) { _ in
@@ -297,6 +301,7 @@ struct OverlayView: View {
 
     // MARK: - Haptic Feedback
 
+    /// Fires an impact haptic when the break completes, if haptics are enabled.
     private func triggerCompletionHaptic() {
         guard hapticsEnabled else { return }
         impactGenerator?.impactOccurred()
