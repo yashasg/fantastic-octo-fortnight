@@ -17,28 +17,15 @@ struct HomeView: View {
         }
     }
 
-    private var statusIcon: String {
-        settings.globalEnabled ? AppSymbol.eyeBreak : AppSymbol.snoozed
-    }
-
-    private var statusColor: Color {
-        settings.globalEnabled ? AppColor.primaryRest : AppColor.textSecondary
-    }
-
     var body: some View {
         VStack(spacing: AppSpacing.lg) {
             Spacer()
 
-            // Status block — crossfades as a unit when globalEnabled changes.
-            ZStack {
-                VStack(spacing: AppSpacing.sm) {
-                    Image(systemName: statusIcon)
-                        .symbolRenderingMode(.hierarchical)
-                        .font(AppTypography.overlayIcon)
-                        .foregroundStyle(statusColor)
-                        .accessibilityHidden(true)
-                        .accessibilityIdentifier("home.statusIcon")
+            VStack(spacing: AppSpacing.lg) {
+                YinYangEyeView()
 
+                // Status copy crossfades as a unit when globalEnabled changes.
+                ZStack {
                     VStack(spacing: AppSpacing.sm) {
                         Text("home.title", bundle: .module)
                             .font(AppTypography.headline)
@@ -52,11 +39,11 @@ struct HomeView: View {
                             .multilineTextAlignment(.center)
                             .accessibilityIdentifier("home.statusLabel")
                     }
+                    .id(settings.globalEnabled)
+                    .transition(.opacity)
                 }
-                .id(settings.globalEnabled)
-                .transition(.opacity)
+                .animation(reduceMotion ? nil : AppAnimation.statusCrossfadeCurve, value: settings.globalEnabled)
             }
-            .animation(reduceMotion ? nil : AppAnimation.statusCrossfadeCurve, value: settings.globalEnabled)
 
             Spacer()
         }

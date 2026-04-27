@@ -333,3 +333,19 @@ Early design system work covering: DesignSystem.swift tokens (colors, fonts, spa
 **Report filed:** `.squad/decisions/inbox/tess-design-audit.md`
 
 **Learning:** Restful Grove is now consistently applied at the visual-token level. Remaining opportunities are mostly component-consolidation work: onboarding cards manually duplicate `WellnessCard`, onboarding primary CTAs duplicate `PrimaryButtonStyle`, and caption-emphasis could use a formal typography token instead of local `.fontWeight(.semibold)`.
+
+### 2026-04-26: Home Yin-Yang Eye Animation
+
+**Task:** Added a calming HomeView hero animation for the Restful Grove redesign.
+**Status:** ✅ Complete — build and tests passed.
+
+**What changed:**
+- Replaced the single status icon in `HomeView` with `YinYangEyeView`, a reusable SwiftUI component intended to be extractable as a future app logo.
+- The open eye (`eye.fill`) and closed eye (`eye.slash.fill`) begin separated, ease inward, orbit once around each other, and settle into a simplified vertical yin-yang composition.
+- Used Restful Grove design tokens: `AppColor.primaryRest`, `AppColor.secondaryCalm`, `AppColor.surfaceTint`, `AppSpacing`, `AppLayout`, and the new `AppTypography.homeLogoIcon` token.
+- Respected `accessibilityReduceMotion` by showing the final resting state immediately.
+- Kept existing Home screen UI test hooks (`home.statusIcon`, `home.title`, `home.statusLabel`, `home.settingsButton`).
+
+**Validation:**
+- `xcodebuild build -scheme EyePostureReminder -destination 'platform=iOS Simulator,name=iPhone 17 Pro'` ✅
+- `xcodebuild test -scheme EyePostureReminder -destination 'platform=iOS Simulator,name=iPhone 17 Pro'` ✅

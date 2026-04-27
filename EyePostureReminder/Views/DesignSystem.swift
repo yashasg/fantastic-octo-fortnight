@@ -267,12 +267,15 @@ enum AppLayout {
 extension AppTypography {
     /// Overlay / home-screen status icon — SF Symbol sized to `overlayIconSize` (decorative).
     static let overlayIcon: Font = .system(size: AppLayout.overlayIconSize)
+    /// Home yin-yang logo symbol — sized relative to the home hero icon frame.
+    static let homeLogoIcon: Font = .system(size: AppLayout.overlayIconSize * 0.42, weight: .semibold)
     /// Onboarding hero illustration icon — SF Symbol sized to `onboardingIllustrationSize` (decorative).
     static let illustrationIcon: Font = .system(size: AppLayout.onboardingIllustrationSize, weight: .semibold)
 }
 
 extension AppFont {
     static let overlayIcon = AppTypography.overlayIcon
+    static let homeLogoIcon = AppTypography.homeLogoIcon
     static let illustrationIcon = AppTypography.illustrationIcon
 }
 
