@@ -13,7 +13,7 @@ Shipped **Phase 1 MVP** with core reminder scheduling and overlay functionality.
 
 - **Phase 0: Foundation** ✅ – Project scaffolding, CI/CD, architecture, design system
 - **Phase 1: MVP** ✅ – Reminders, overlay, settings (shipped)
-- **Phase 2: Polish** 🔄 – Onboarding, haptics, snooze, smart pause, accessibility, data-driven config (~80% done)
+- **Phase 2: Polish** 🔄 – Onboarding, haptics, snooze, smart pause, accessibility, data-driven config, yin-yang logo (~85% done)
 - **Phase 3: Advanced** 🔄 – iCloud sync, widgets, watchOS, dependency injection refactoring (started)
 
 ---
@@ -333,6 +333,24 @@ Shipped **Phase 1 MVP** with core reminder scheduling and overlay functionality.
     - `SettingsStore.resetToDefaults()` re-seeds from JSON (same code path)
   - Unit tests for `DefaultsLoader` with fixture bundle injection
 
+#### M2.10: Yin-Yang Logo Animation (Restful Grove Redesign) ✅
+- **Owner:** Tess (UI/UX Designer) + Linus (iOS UI Dev)
+- **Status:** ✅ Complete (design approved, implementation in progress)
+- **Context:** Part of the Restful Grove visual redesign (issues #158–#169). HTML prototype iterated through 10+ versions before final design approved.
+- **Delivered:**
+  - Custom yin-yang symbol drawn with SwiftUI `Path` (not SF Symbol icons)
+  - Colors: Sage (`#2F6F5E` / `AppColor.primaryRest`) + Mint (`#EEF6F1` / `AppColor.surfaceTint`)
+  - Two-phase animation sequence:
+    1. **Spin:** 360° rotation over 2s with deceleration easing
+    2. **Breathing pulse:** 4s scale-up, 4s scale-down, infinite loop
+  - `accessibilityReduceMotion` support: static logo with no animation when Reduce Motion is enabled
+  - Used on `HomeView` and `OnboardingView` as the primary brand mark
+- **Design Decisions:**
+  - SwiftUI `Path` chosen over SF Symbols for unique brand identity and precise color control
+  - Sage/Mint palette aligns with Restful Grove's calming wellness aesthetic
+  - Spin → breathe sequence conveys "settle in, then relax" — mirrors the app's purpose
+  - Reduce-motion fallback ensures WCAG AA accessibility compliance
+
 #### M2.9: App Store Preparation 🔄
 - **Owner:** Danny (Product Manager) + Frank (Legal Advisor)
 - **Status:** 🔄 IN PROGRESS
@@ -471,7 +489,7 @@ Shipped **Phase 1 MVP** with core reminder scheduling and overlay functionality.
 |---|---|---|---|
 | **Phase 0** | ✅ Complete | M0.1–M0.6 | 2 weeks; all foundation work shipped |
 | **Phase 1** | ✅ Complete | M1.1–M1.8 | 3 weeks; MVP with 65+ unit tests, notifications, overlay |
-| **Phase 2** | 🔄 ~80% | M2.1–M2.9 | 4 weeks; screen-time triggers, smart pause, onboarding, haptics, data-driven config; App Store prep in progress |
+| **Phase 2** | 🔄 ~85% | M2.1–M2.10 | 4 weeks; screen-time triggers, smart pause, onboarding, haptics, data-driven config, yin-yang logo animation; App Store prep in progress |
 | **Phase 3** | 🔄 Started | M3.1–M3.5 | Planned 3+ weeks; DI refactoring in progress (issues #13-14); iCloud sync, widgets, watchOS deferred |
 
 **Current Project Status:** Main branch 36 commits ahead of origin. Awaiting decision on App Store submission (Phase 2 complete, Phase 3 optional).
@@ -561,6 +579,7 @@ Shipped **Phase 1 MVP** with core reminder scheduling and overlay functionality.
 - **Decision 2.1 (Rusty + Basher, Phase 2):** Screen-time triggers replace wall-clock intervals; 5s grace period on app backgrounding
 - **Decision 2.2 (Basher, Phase 2):** Dual snooze wake mechanism (in-process Task + silent notification); max 2 consecutive snoozes
 - **Decision 2.3 (Basher, Phase 2):** Data-driven config via native Apple formats (Asset Catalog, String Catalog, defaults.json)
+- **Decision 2.4 (Tess + Danny, Phase 2):** Yin-yang logo uses custom SwiftUI Path (not SF Symbols); Sage/Mint colors; spin→breathe animation with reduce-motion fallback (Restful Grove redesign)
 - **Decision 3.1 (Livingston + Rusty, Phase 3):** Dependency injection refactoring to extract Lifecycle protocol and inject services via protocols
 
 ---
@@ -600,6 +619,7 @@ Phase 2: Polish 🔄 ~80%
   M1.2 + M1.5 → M2.6 (Accessibility) ✅
   Phase 1 → M2.7 (Screen-Time Triggers) ✅
   M1.1 + M0.4 + M2.1 → M2.8 (Data-Driven Config) ✅
+  M0.4 + M2.5 → M2.10 (Yin-Yang Logo Animation) ✅
   M2.6 → M2.9 (App Store Prep) 🔄
 
 Phase 3: Advanced 🔄 Partially Started
@@ -616,7 +636,7 @@ Phase 3: Advanced 🔄 Partially Started
 
 **What's Been Built:**
 - ✅ Full MVP (Phase 1): Settings, notifications, overlay with countdown, haptics, snooze
-- ✅ Polish (Phase 2): Onboarding (3 screens), smart pause (Focus/CarPlay/driving), accessibility (WCAG AA), data-driven config (Asset Catalog + String Catalog + defaults.json), screen-time triggers (continuous screen-on time with grace period)
+- ✅ Polish (Phase 2): Onboarding (3 screens), smart pause (Focus/CarPlay/driving), accessibility (WCAG AA), data-driven config (Asset Catalog + String Catalog + defaults.json), screen-time triggers (continuous screen-on time with grace period), yin-yang logo animation (Restful Grove redesign — custom SwiftUI Path, spin→breathe, reduce-motion support)
 - ✅ Test Coverage: 71+ unit tests, XCUITest scaffold (HomeScreen, Settings, Onboarding flows)
 - ✅ Architecture: MVVM established, ScreenTimeTracker service, PauseConditionManager with three detectors, protocols for testability
 - ✅ Team: 13 members (PM, Design, Architect, 2 iOS Devs, Tester, Code Reviewer, Legal, CI/CD, Data Analyst, Formatter, Scribe)

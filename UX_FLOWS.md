@@ -653,6 +653,50 @@ OverlayManager checks: is an overlay currently visible?
 ❌ **No upsell or "Pro" feature gates** (not in scope)
 ❌ **No feature tour or coach marks** (the 3 screens cover value, permission, and setup — nothing more)
 
+### 5.4 Yin-Yang Logo Animation (Restful Grove Redesign)
+
+The yin-yang logo is the app's primary brand mark, appearing on both `OnboardingView` (Welcome screen) and `HomeView`. It is a custom-drawn symbol using SwiftUI `Path`, not an SF Symbol.
+
+**Visual Design:**
+- Two interlocking teardrops forming a yin-yang circle
+- Colors: Sage (`#2F6F5E` / `AppColor.primaryRest`) + Mint (`#EEF6F1` / `AppColor.surfaceTint`)
+- Inner dots use the opposing color (Sage dot on Mint half, Mint dot on Sage half)
+
+**Animation Sequence (when Reduce Motion is OFF):**
+
+```
+Logo appears (static, centered)
+    │
+    ▼
+Phase 1 — Spin (one-time)
+    360° rotation over 2 seconds
+    Easing: deceleration curve (fast start → gentle stop)
+    Purpose: draws attention on screen entry
+    │
+    ▼
+Phase 2 — Breathing Pulse (infinite loop)
+    Scale up slightly over 4 seconds (ease-in-out)
+    Scale down to original size over 4 seconds (ease-in-out)
+    Repeats indefinitely
+    Purpose: conveys calm, living presence — mirrors breathing rhythm
+```
+
+**When Reduce Motion is ON:**
+- Logo renders as a static image — no spin, no pulse
+- Ensures WCAG AA compliance for motion-sensitive users
+
+**Where it appears:**
+| Screen | Placement | Behavior |
+|---|---|---|
+| `OnboardingView` (Welcome) | Above headline text | Full animation sequence on appear |
+| `HomeView` | Header area | Full animation sequence on appear |
+
+**Design rationale:**
+- SwiftUI `Path` (not SF Symbols) gives full control over shape and color
+- Sage/Mint palette chosen for Restful Grove's wellness aesthetic — calming, nature-inspired
+- The spin → breathe transition mirrors "settle in, then relax" — the core app promise
+- 10+ HTML prototype iterations refined timing and easing before final approval
+
 ---
 
 ## 6. Edge Case UX

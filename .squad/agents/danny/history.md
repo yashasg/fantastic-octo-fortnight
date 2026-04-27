@@ -7,6 +7,14 @@
 
 ## Learnings
 
+### 2026-04-26: Yin-Yang Logo Animation — Roadmap & UX Docs Update
+
+- **Context:** Documented the yin-yang logo animation feature as part of the Restful Grove visual redesign (issues #158–#169). Design approved after 10+ HTML prototype iterations.
+- **ROADMAP.md:** Added M2.10 milestone under Phase 2 (Polish). Marked ✅ Complete (design approved, Tess implementing in SwiftUI). Updated timeline table (M2.1–M2.10, ~85%), executive summary, dependency map, key decisions (Decision 2.4), and final status summary.
+- **UX_FLOWS.md:** Added §5.4 documenting the animation flow: spin (360°, 2s deceleration) → breathing pulse (4s in/out, infinite). Covers reduce-motion fallback, screen placement (HomeView + OnboardingView), and design rationale.
+- **Key Design Decisions:** Custom SwiftUI `Path` over SF Symbols for brand identity; Sage (#2F6F5E) + Mint (#EEF6F1) palette for Restful Grove wellness aesthetic; spin→breathe metaphor mirrors "settle in, then relax."
+- **Decision artifact:** `.squad/decisions/inbox/danny-yinyang-roadmap.md`
+
 ### 2026-04-26: Fix #150, #151, #152 — Doc Consistency Sweep
 
 - **#150 (Bundle ID):** Replaced `com.yashasg.eye-posture-reminder` with `com.yashasg.eyeposturereminder` in `docs/APP_STORE_LISTING.md` (§10 table + §11 checklist). `docs/TELEMETRY.md` and `ARCHITECTURE.md` already correct.
