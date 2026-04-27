@@ -1,0 +1,126 @@
+@testable import EyePostureReminder
+import XCTest
+
+/// Tests for `AnalyticsEvent` enum — validates associated values, exhaustiveness,
+/// and the `DismissMethod` nested enum.
+final class AnalyticsEventTests: XCTestCase {
+
+    // MARK: - DismissMethod: Exhaustiveness
+
+    func test_dismissMethod_allCases_areThree() {
+        let all: [AnalyticsEvent.DismissMethod] = [.button, .swipe, .settingsTap]
+        XCTAssertEqual(all.count, 3)
+    }
+
+    func test_dismissMethod_switchExhaustiveness() {
+        let methods: [AnalyticsEvent.DismissMethod] = [.button, .swipe, .settingsTap]
+        for method in methods {
+            switch method {
+            case .button:      XCTAssertEqual(method.rawValue, "button")
+            case .swipe:       XCTAssertEqual(method.rawValue, "swipe")
+            case .settingsTap: XCTAssertEqual(method.rawValue, "settings_tap")
+            }
+        }
+    }
+
+    // MARK: - DismissMethod: Init from rawValue
+
+    func test_dismissMethod_initFromRawValue_button() {
+        XCTAssertEqual(AnalyticsEvent.DismissMethod(rawValue: "button"), .button)
+    }
+
+    func test_dismissMethod_initFromRawValue_swipe() {
+        XCTAssertEqual(AnalyticsEvent.DismissMethod(rawValue: "swipe"), .swipe)
+    }
+
+    func test_dismissMethod_initFromRawValue_settingsTap() {
+        XCTAssertEqual(AnalyticsEvent.DismissMethod(rawValue: "settings_tap"), .settingsTap)
+    }
+
+    func test_dismissMethod_initFromRawValue_unknownReturnsNil() {
+        XCTAssertNil(AnalyticsEvent.DismissMethod(rawValue: "unknown"))
+    }
+
+    func test_dismissMethod_initFromRawValue_emptyReturnsNil() {
+        XCTAssertNil(AnalyticsEvent.DismissMethod(rawValue: ""))
+    }
+
+    // MARK: - AnalyticsEvent: Session Events
+
+    func test_appSessionStart_allCombinations() {
+        let bools: [Bool] = [true, false]
+        for eye in bools {
+            for posture in bools {
+                for snooze in bools {
+                    let event = AnalyticsEvent.appSessionStart(
+                        eyeEnabled: eye, postureEnabled: posture, snoozeActive: snooze)
+                    AnalyticsLogger.log(event) // crash-safety
+                }
+            }
+        }
+    }
+
+    func test_appSessionEnd_zeroAndNegative() {
+        AnalyticsLogger.log(.appSessionEnd(sessionDurationS: 0))
+        AnalyticsLogger.log(.appSessionEnd(sessionDurationS: -1))
+    }
+
+    func test_appSessionEnd_veryLarge() {
+        AnalyticsLogger.log(.appSessionEnd(sessionDurationS: 86400))
+    }
+
+    // MARK: - AnalyticsEvent: Reminder Events
+
+    func test_reminderTriggered_allTypes() {
+        for type in ReminderType.allCases {
+            AnalyticsLogger.log(.reminderTriggered(type: type, thresholdS: 1200))
+        }
+    }
+
+    func test_reminderTriggered_zeroThreshold() {
+        AnalyticsLogger.log(.reminderTriggered(type: .eyes, thresholdS: 0))
+    }
+
+    // MARK: - AnalyticsEvent: Overlay Events
+
+    func test_overlayDismissed_allTypesAndMethods() {
+        let methods: [AnalyticsEvent.DismissMethod] = [.button, .swipe, .settingsTap]
+        for type in ReminderType.allCases {
+            for method in methods {
+                AnalyticsLogger.log(.overlayDismissed(type: type, method: method, elapsedS: 5.0))
+            }
+        }
+    }
+
+    func test_overlayAutoDismissed_allTypes() {
+        for type in ReminderType.allCases {
+            AnalyticsLogger.log(.overlayAutoDismissed(type: type, durationS: 20))
+        }
+    }
+
+    // MARK: - AnalyticsEvent: Snooze Events
+
+    func test_snoozeCancelled_canBeLogged() {
+        AnalyticsLogger.log(.snoozeCancelled)
+    }
+
+    func test_snoozeActivated_emptyString() {
+        AnalyticsLogger.log(.snoozeActivated(durationOption: ""))
+    }
+
+    // MARK: - AnalyticsEvent: Settings Events
+
+    func test_settingChanged_emptyValues() {
+        AnalyticsLogger.log(.settingChanged(setting: "", oldValue: "", newValue: ""))
+    }
+
+    // MARK: - AnalyticsEvent: Pause Events
+
+    func test_pauseActivated_emptyType() {
+        AnalyticsLogger.log(.pauseActivated(conditionType: ""))
+    }
+
+    func test_pauseDeactivated_emptyType() {
+        AnalyticsLogger.log(.pauseDeactivated(conditionType: ""))
+    }
+}
