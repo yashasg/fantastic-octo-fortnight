@@ -1,5 +1,5 @@
 // UITestHelpers.swift
-// EyePostureReminderUITests
+// kshana UI Tests
 //
 // Shared launch-argument constants and XCUIApplication helpers for UI test setup.
 // All arguments are handled in AppDelegate.applyUITestLaunchArguments().

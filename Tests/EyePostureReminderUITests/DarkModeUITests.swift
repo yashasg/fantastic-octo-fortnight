@@ -1,5 +1,5 @@
 // DarkModeUITests.swift
-// EyePostureReminderUITests
+// kshana UI Tests
 //
 // XCUITest suite — Dark Mode variant checks.
 //

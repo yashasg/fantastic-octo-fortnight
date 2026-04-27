@@ -1,5 +1,5 @@
 // SettingsFlowTests.swift
-// EyePostureReminderUITests
+// kshana UI Tests
 //
 // XCUITest suite — Settings sheet flow.
 

@@ -1,5 +1,5 @@
 // HomeScreenTests.swift
-// EyePostureReminderUITests
+// kshana UI Tests
 //
 // XCUITest suite — Home screen verification.
 

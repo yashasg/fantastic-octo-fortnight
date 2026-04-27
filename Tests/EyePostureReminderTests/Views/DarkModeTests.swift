@@ -8,7 +8,6 @@ import XCTest
 // **Coverage (distinct from ColorTokenTests and DesignSystemTests):**
 // - AppColor tokens resolve with explicit `UITraitCollection` overrides (not just "resolves non-nil")
 // - Color component values are checked against the documented spec (brightness, opacity)
-// - Static colors (`PermissionBanner`, `PermissionBannerText`) are equal in both modes
 // - AppFont text styles scale with Dynamic Type even in dark mode trait contexts
 // - All SF Symbol names load as valid `UIImage` instances in dark mode
 final class DarkModeTests: XCTestCase {

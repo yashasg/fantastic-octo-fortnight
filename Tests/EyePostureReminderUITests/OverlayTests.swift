@@ -1,5 +1,5 @@
 // OverlayTests.swift
-// EyePostureReminderUITests
+// kshana UI Tests
 //
 // XCUITest suite — Overlay view accessibility and dismiss behavior.
 //

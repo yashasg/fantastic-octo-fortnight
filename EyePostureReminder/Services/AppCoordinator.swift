@@ -83,10 +83,16 @@ final class AppCoordinator: ObservableObject {
 
     // MARK: - Pending Overlay
 
+    /// A stashed overlay request awaiting an active scene.
+    private struct PendingOverlay {
+        let type: ReminderType
+        let duration: TimeInterval
+    }
+
     /// When a notification-tap launches the app, `didReceive` fires before any
     /// `UIWindowScene` reaches `.foregroundActive`. We stash the overlay here
     /// and present it once `scenePhase` transitions to `.active`.
-    private var pendingOverlay: (type: ReminderType, duration: TimeInterval)?
+    private var pendingOverlay: PendingOverlay?
 
     // MARK: - Reschedule Debounce
 
@@ -351,7 +357,7 @@ final class AppCoordinator: ObservableObject {
                 hapticsEnabled: settings.hapticsEnabled,
                 pauseMediaEnabled: settings.pauseMediaDuringBreaks) {}
         } else {
-            pendingOverlay = (type: type, duration: duration)
+            pendingOverlay = PendingOverlay(type: type, duration: duration)
             Logger.lifecycle.info("Queued pending overlay for \(type.rawValue) (no active scene)")
         }
     }

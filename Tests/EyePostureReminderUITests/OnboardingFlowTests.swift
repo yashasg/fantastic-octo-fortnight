@@ -1,5 +1,5 @@
 // OnboardingFlowTests.swift
-// EyePostureReminderUITests
+// kshana UI Tests
 //
 // XCUITest suite — Onboarding flow.
 
