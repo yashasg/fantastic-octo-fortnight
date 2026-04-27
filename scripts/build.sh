@@ -252,13 +252,35 @@ cmd_uitest() {
   fi
 
   info "Step 2/2 — running UI tests…"
-  run_xcodebuild test-without-building \
-    -xctestrun "$xctestrun" \
-    -destination "$dest" \
-    -derivedDataPath "$DERIVED_DATA_PATH" \
-    -resultBundlePath "${PACKAGE_PATH}/UITestResults.xcresult" \
-    -parallel-testing-enabled YES \
-    -maximum-concurrent-test-simulator-destinations 3
+
+  # Retry logic: simulator app launch can fail transiently in CI when
+  # SpringBoard hasn't fully settled. Retry up to 3 times with increasing
+  # delays to handle FBSOpenApplicationServiceErrorDomain / RequestDenied.
+  local max_attempts=3
+  local attempt=1
+  while true; do
+    info "Attempt $attempt/$max_attempts…"
+    rm -rf "${PACKAGE_PATH}/UITestResults.xcresult"
+
+    if run_xcodebuild test-without-building \
+      -xctestrun "$xctestrun" \
+      -destination "$dest" \
+      -derivedDataPath "$DERIVED_DATA_PATH" \
+      -resultBundlePath "${PACKAGE_PATH}/UITestResults.xcresult" \
+      -disable-concurrent-destination-testing \
+      -parallel-testing-enabled NO; then
+      break
+    fi
+
+    if (( attempt >= max_attempts )); then
+      fail "UI tests failed after $max_attempts attempts"
+      exit 1
+    fi
+
+    warn "Attempt $attempt failed — retrying in $((attempt * 15))s…"
+    sleep $((attempt * 15))
+    attempt=$((attempt + 1))
+  done
 
   pass "UI tests passed"
 }
