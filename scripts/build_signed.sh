@@ -403,10 +403,10 @@ cmd_archive() {
     -destination "generic/platform=iOS" \
     -derivedDataPath "$DERIVED_DATA_PATH" \
     -archivePath "$ARCHIVE_PATH" \
-    "${PROVISIONING_FLAGS[@]}" \
-    "${AUTH_FLAGS[@]}" \
+    "${PROVISIONING_FLAGS[@]+"${PROVISIONING_FLAGS[@]}"}" \
+    "${AUTH_FLAGS[@]+"${AUTH_FLAGS[@]}"}" \
     archive \
-    "${SIGNING_BUILD_SETTINGS[@]}"
+    "${SIGNING_BUILD_SETTINGS[@]+"${SIGNING_BUILD_SETTINGS[@]}"}"
 
   pass "Archive created: $ARCHIVE_PATH"
 }
@@ -429,8 +429,8 @@ cmd_export() {
     -archivePath "$ARCHIVE_PATH" \
     -exportPath "$EXPORT_PATH" \
     -exportOptionsPlist "$EXPORT_OPTIONS_PLIST" \
-    "${PROVISIONING_FLAGS[@]}" \
-    "${AUTH_FLAGS[@]}"
+    "${PROVISIONING_FLAGS[@]+"${PROVISIONING_FLAGS[@]}"}" \
+    "${AUTH_FLAGS[@]+"${AUTH_FLAGS[@]}"}"
 
   pass "Export complete: $EXPORT_PATH"
 }
@@ -453,8 +453,8 @@ cmd_upload() {
     -archivePath "$ARCHIVE_PATH" \
     -exportPath "$EXPORT_PATH" \
     -exportOptionsPlist "$EXPORT_OPTIONS_PLIST" \
-    "${PROVISIONING_FLAGS[@]}" \
-    "${AUTH_FLAGS[@]}"
+    "${PROVISIONING_FLAGS[@]+"${PROVISIONING_FLAGS[@]}"}" \
+    "${AUTH_FLAGS[@]+"${AUTH_FLAGS[@]}"}"
 
   pass "Upload submitted to App Store Connect"
 }

@@ -156,8 +156,26 @@
 **Task:** Explain Apple Developer/App Store Connect implications of Puzzle Quest LLC being registered in wrong state (WA instead of NM).
 **Outcome:** ✅ Advisory delivered. Decision written to inbox.
 
+## Wave 14 — Fix AUTH_FLAGS unbound variable (2026-05-XX)
+
+**Task:** Fix `AUTH_FLAGS[@]: unbound variable` crash in `scripts/build_signed.sh` under `set -euo pipefail` on macOS Bash 3.2.  
+**Outcome:** ✅ Fixed. Bug confirmed gone; archive proceeds past the crash to Xcode signing phase.
+
+**Root cause:** macOS ships Bash 3.2.57. Under `set -u` (nounset), expanding an empty indexed array with `"${array[@]}"` throws "unbound variable". This is Bash 3.2-specific; Bash 4+ handles it cleanly.
+
+**Fix:** Replace all three array expansions (`PROVISIONING_FLAGS`, `AUTH_FLAGS`, `SIGNING_BUILD_SETTINGS`) in every `xcodebuild` call with the `${var+value}` guard pattern:
+```bash
+# BEFORE (breaks on empty array with nounset + Bash 3.2)
+"${AUTH_FLAGS[@]}"
+# AFTER (safe: expands to nothing when empty, full array when populated)
+"${AUTH_FLAGS[@]+"${AUTH_FLAGS[@]}"}"
+```
+
+**Post-fix archive result:** Archive now proceeds past the array expansion, then fails with a pre-existing Xcode signing conflict (`conflicting provisioning settings` — SPM sub-targets are automatically signed for development but `CODE_SIGN_IDENTITY=Apple Distribution` is passed). This is a separate unrelated issue.
+
 ## Learnings
 
+- **macOS Bash 3.2 empty-array nounset pattern:** Use `"${array[@]+"${array[@]}"}"`  — the outer `${var+word}` substitution returns nothing if unset/empty, so the inner expansion is never evaluated on an empty array. This is the canonical portable fix for Bash 3.2 `set -u` + empty array. See: https://stackoverflow.com/a/61551944
 - **D-U-N-S + Apple enrollment state matching:** Apple verifies D-U-N-S against the legal entity at Organization enrollment time. If the registered state is wrong, the D-U-N-S will reflect the wrong state — correct the legal entity BEFORE applying for D-U-N-S.
 - **Individual → Organization migration is destructive:** Different Team ID = all existing certificates and provisioning profiles invalidated. Always enroll as Organization if an LLC is the publishing entity.
 - **State of registration ≠ home office address:** Apple cares about legal formation state (for D-U-N-S match). Business mailing address can be the home office in a different state — that's fine.
