@@ -44,6 +44,30 @@ All build, test, and lint commands are standardised through `scripts/build.sh`.
 > **Note:** `swift build` does not work for this project because SwiftUI/UIKit are iOS-only frameworks.
 > The script uses `xcodebuild` and automatically falls back to Mac Catalyst if no iOS Simulator runtime is found.
 
+### Signed TestFlight builds
+
+Use the separate signed runner when you want a local archive, IPA export, or App Store Connect upload. It does not run unit tests or UI tests; run `./scripts/build.sh all` separately when you want validation.
+
+```bash
+# Check local signing prerequisites
+./scripts/build_signed.sh doctor
+
+# Create a signed archive
+APPLE_TEAM_ID=<team-id> ./scripts/build_signed.sh archive
+
+# Export a signed IPA
+APPLE_TEAM_ID=<team-id> ./scripts/build_signed.sh export
+
+# Upload for TestFlight
+APPLE_TEAM_ID=<team-id> ./scripts/build_signed.sh upload
+```
+
+**Auto-detection:** If exactly one Apple Distribution certificate is present in your local macOS Keychain, `APPLE_TEAM_ID` is inferred automatically and you can omit it. If no matching cert is found, or if multiple Team IDs are present, you must set `APPLE_TEAM_ID` explicitly. Run `./scripts/build_signed.sh doctor` to check the detected state.
+
+Provisioning profiles are handled by Xcode automatic signing (the default) or by setting `PROVISIONING_PROFILE_SPECIFIER` for manual signing — not via Keychain look-up.
+
+Keep private signing values in environment variables only. Do not commit Team IDs, provisioning profile UUIDs, App Store Connect API key IDs, issuer IDs, `.p8` paths, certificates, or profiles.
+
 ### Prerequisites
 
 | Tool | Install |

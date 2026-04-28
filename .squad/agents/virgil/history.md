@@ -130,3 +130,82 @@
 - **Part 2:** Added `uitest` job to `.github/workflows/ci.yml` — parallel to `build-and-test`, `macos-15`, installs xcodegen, runs setup, boots simulator, runs xcodebuild with `-parallel-testing-enabled YES -maximum-concurrent-test-simulator-destinations 3`. xcpretty fallback pattern. Uploads `UITestResults.xcresult`.
 - **Part 3:** Added `cmd_uitest()` to `scripts/build.sh`. Uses `-workspace` (required for local package resolution). Auto-runs setup if workspace not present. Uses same `detect_destination()` and `DERIVED_DATA_PATH` as other subcommands.
 - **Supporting:** `.gitignore` updated with `UITests/*.xcodeproj/` and `UITests/*.xcworkspace/` (generated artefacts). `Tests/EyePostureReminderUITests/README.md` updated to remove "not yet runnable" caveat and document setup steps.
+
+## 2026-04-28 — Code Signing & Provisioning Checklist
+
+**Session:** 2026-04-28T22:46:23Z (Rusty + Virgil parallel)
+
+**Task:** Provide CI/CD code signing and provisioning checklist for TestFlight/App Store distribution setup.
+
+**Outcome:** ✅ Complete + Issue identified
+
+**Deliverables:**
+- Code signing checklist (certificates, provisioning profiles, GitHub secrets)
+- Standard GitHub secret names: `ASC_API_KEY_ID`, `ASC_API_KEY_ISSUER_ID`, `ASC_API_KEY_P8`
+- Xcode signing verification guidance
+
+**Repository issue identified:**
+- **Bundle ID mismatch:** Documentation uses `com.yashasg.eyeposturereminder` (lowercase); UITests/project.yml uses `com.yashasg.EyePostureReminder` (mixed case)
+- **Impact:** Must be resolved before archive workflow
+- **Recommendation:** Coordinate with Rusty (Apple Developer guidance) and Danny (docs owner) to unify on `com.yashasg.eyeposturereminder` and correct UITests config
+
+**Coordination outcome:** Rusty confirmed `com.yashasg.eyeposturereminder` as canonical Bundle ID. Virgil awaits UITests correction to validate CI/CD workflows against unified ID.
+
+## Wave 13 — Apple Developer Entity Guidance (2026-04-28)
+
+**Task:** Explain Apple Developer/App Store Connect implications of Puzzle Quest LLC being registered in wrong state (WA instead of NM).
+**Outcome:** ✅ Advisory delivered. Decision written to inbox.
+
+## Learnings
+
+- **D-U-N-S + Apple enrollment state matching:** Apple verifies D-U-N-S against the legal entity at Organization enrollment time. If the registered state is wrong, the D-U-N-S will reflect the wrong state — correct the legal entity BEFORE applying for D-U-N-S.
+- **Individual → Organization migration is destructive:** Different Team ID = all existing certificates and provisioning profiles invalidated. Always enroll as Organization if an LLC is the publishing entity.
+- **State of registration ≠ home office address:** Apple cares about legal formation state (for D-U-N-S match). Business mailing address can be the home office in a different state — that's fine.
+- **Certificates NOT affected by state-of-registration changes** as long as the LLC name stays the same (Team ID unchanged).
+
+### 2026-04-28 — Apple Developer Enrollment Sequencing for LLC Entity Correction
+
+- **Task:** Assess operational implications of Puzzle Quest LLC being currently registered in Washington when user intends New Mexico, with home office in Washington.
+- **Guidance:** Technical sequencing advice issued via `.squad/decisions/inbox/virgil-apple-developer-entity-state.md` (later merged to main decisions.md).
+- **Key Decisions:**
+  - Do NOT enroll as Organization until D-U-N-S reflects corrected (New Mexico) state
+  - Organization enrollment is correct (not Individual); D-U-N-S must match final legal entity
+  - State of formation matters for D-U-N-S/legal entity match; Washington home office is fine as mailing address
+  - Code signing profiles/certs tied to Team ID (legal entity name + D-U-N-S), not formation state
+  - All local dev and CI/CD pipeline can proceed unblocked
+  - Bundle ID `com.yashasg.eyeposturereminder` is confirmed technical identifier (does not need LLC name)
+- **Order of Operations:**
+  1. Correct LLC registration to New Mexico
+  2. Verify NM registration active
+  3. Request D-U-N-S
+  4. Wait for D-U-N-S verification (~14 business days)
+  5. Enroll as Organization ($99/year)
+  6. App Store Connect & TestFlight setup
+- **Blocked Items:** D-U-N-S application, Organization enrollment, App Store Connect app record, distribution certs, TestFlight upload
+- **Go-Ahead Items:** All local dev, CI/CD pipeline, code signing (dev team), TestFlight workflow prep
+- **Coordination:** Virgil work synchronized with Frank (legal implications) and Coordinator (team directive capture).
+
+
+## Wave 9 — Focus Status Portal Capability Question (2026-04-28)
+
+**Task:** Explain why Focus Status doesn't appear in Apple Developer portal capabilities and what to do about it.
+**Outcome:** ✅ Guidance provided, skill documented.
+
+**Key finding:** Focus Status (`com.apple.developer.focus-status`) is an **entitlement-only capability** — it does NOT appear as a checkbox in Apple Developer portal > Identifiers > Capabilities. This is expected Apple behavior. The entitlement in `.entitlements` is sufficient. Project already has it correctly set. No portal action needed; don't block App ID creation.
+
+**Skill written:** `.squad/skills/apple-focus-status-capability/SKILL.md`
+
+**Manifest processed:** 2026-04-28T22:56:22Z
+- Orchestration log: `.squad/orchestration-log/2026-04-28T22:56:22Z-virgil.md`
+- Session log: `.squad/log/2026-04-28T22:56:22Z-focus-status-capability.md`
+
+## Learnings
+
+### 2026-05-XX — Keychain Team ID auto-detection pattern for build scripts
+
+- **Pattern:** Use `security find-identity -p codesigning -v | grep "Apple Distribution" | grep -oE '\([A-Z0-9]{10}\)' | tr -d '()' | sort -u` to extract unique Team IDs from Keychain code-signing identities without exposing their values.
+- **Single-team detection:** If exactly one unique Team ID is extracted, it can be used silently. Never print the value in any output path. In doctor/status output, print "detected from Keychain" — not the value.
+- **Ambiguous case:** If multiple Team IDs are found, fail with guidance to set `APPLE_TEAM_ID` explicitly. Do not guess or use the first match.
+- **Priority order:** Explicit env var override (`APPLE_TEAM_ID` / `DEVELOPMENT_TEAM`) always wins; Keychain detection is a fallback only.
+- **Provisioning profiles are not Keychain-sourced:** Always handled by Xcode automatic signing or explicit env vars — document this explicitly in scripts and README to avoid confusion.
+- **Security note:** Use `|| true` after the pipeline in strict `set -euo pipefail` scripts to guard against no-match exit codes from grep.
