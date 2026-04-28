@@ -227,3 +227,20 @@
 - **Priority order:** Explicit env var override (`APPLE_TEAM_ID` / `DEVELOPMENT_TEAM`) always wins; Keychain detection is a fallback only.
 - **Provisioning profiles are not Keychain-sourced:** Always handled by Xcode automatic signing or explicit env vars — document this explicitly in scripts and README to avoid confusion.
 - **Security note:** Use `|| true` after the pipeline in strict `set -euo pipefail` scripts to guard against no-match exit codes from grep.
+
+## Wave 15 — Fix signing conflict in build_signed.sh (CODE_SIGN_STYLE vs CODE_SIGN_IDENTITY)
+
+**Task:** Fix Xcode exit 65 conflict: `EyePostureReminder is automatically signed for development, but a conflicting code signing identity Apple Distribution has been manually specified.`  
+**Outcome:** ✅ Fixed. Conflict gone; archive progresses past signing to a separate (expected) provisioning issue.
+
+**Root cause:** `build_signing_build_settings()` always injected `CODE_SIGN_IDENTITY=Apple Distribution` as an xcodebuild build setting override even when `CODE_SIGN_STYLE=Automatic`. Xcode treats this as a contradiction: automatic signing selects the identity itself (development for local, distribution for archive actions), but an explicit `CODE_SIGN_IDENTITY` override forces a specific cert, causing the conflict.
+
+**Fix:** Only inject `CODE_SIGN_IDENTITY` when `SIGNING_STYLE=manual`. In automatic mode, omit it entirely — Xcode picks the appropriate identity for the action. Also normalised the `CODE_SIGN_STYLE` value to properly-cased `Automatic`/`Manual` as Xcode expects.
+
+**Post-fix archive result:** Exit 65 conflict resolved. Archive proceeds to provisioning phase and fails with `No Accounts` / `No profiles found` — this is a separate, expected credential issue (Apple ID not signed into Xcode on this machine), not a script bug.
+
+## Learnings
+
+- **Never set CODE_SIGN_IDENTITY with CODE_SIGN_STYLE=Automatic:** Automatic signing owns identity selection; overriding CODE_SIGN_IDENTITY simultaneously causes Xcode exit 65 "conflicting provisioning settings". Remove CODE_SIGN_IDENTITY from the xcodebuild command entirely when using automatic signing.
+- **CODE_SIGN_STYLE capitalisation:** Xcode build setting values are properly-cased: `Automatic` and `Manual` (not lowercase). While xcodebuild accepts lowercase on the command line, use the canonical form to avoid surprises.
+- **Distribute via ExportOptions, not archive flags:** The signing certificate for distribution (Apple Distribution) belongs in `ExportOptions.plist` (as `signingCertificate`), not as a build setting during archive. Archive phase uses automatic signing; export phase applies the distribution identity.

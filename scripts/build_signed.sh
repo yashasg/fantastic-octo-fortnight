@@ -209,18 +209,31 @@ build_provisioning_flags() {
 }
 
 build_signing_build_settings() {
+  # Capitalise signing style for the Xcode build setting value ("Automatic"/"Manual").
+  local style_value
+  if [[ "$SIGNING_STYLE" == "manual" ]]; then
+    style_value="Manual"
+  else
+    style_value="Automatic"
+  fi
+
   SIGNING_BUILD_SETTINGS=(
-    "PRODUCT_BUNDLE_IDENTIFIER=${APP_BUNDLE_ID}" \
-    "DEVELOPMENT_TEAM=${APPLE_TEAM_ID}" \
-    "CODE_SIGN_STYLE=${SIGNING_STYLE}" \
-    "CODE_SIGN_IDENTITY=${SIGNING_CERTIFICATE}" \
-    "CODE_SIGNING_ALLOWED=YES" \
-    "CODE_SIGNING_REQUIRED=YES" \
+    "PRODUCT_BUNDLE_IDENTIFIER=${APP_BUNDLE_ID}"
+    "DEVELOPMENT_TEAM=${APPLE_TEAM_ID}"
+    "CODE_SIGN_STYLE=${style_value}"
+    "CODE_SIGNING_ALLOWED=YES"
+    "CODE_SIGNING_REQUIRED=YES"
     "ENABLE_BITCODE=NO"
   )
 
-  if [[ "$SIGNING_STYLE" == "manual" && -n "$PROVISIONING_PROFILE_SPECIFIER" ]]; then
-    SIGNING_BUILD_SETTINGS+=("PROVISIONING_PROFILE_SPECIFIER=${PROVISIONING_PROFILE_SPECIFIER}")
+  # With automatic signing Xcode selects the identity; injecting CODE_SIGN_IDENTITY
+  # at the same time causes exit 65 ("conflicting provisioning settings").
+  # Only override CODE_SIGN_IDENTITY for manual signing.
+  if [[ "$SIGNING_STYLE" == "manual" ]]; then
+    SIGNING_BUILD_SETTINGS+=("CODE_SIGN_IDENTITY=${SIGNING_CERTIFICATE}")
+    if [[ -n "$PROVISIONING_PROFILE_SPECIFIER" ]]; then
+      SIGNING_BUILD_SETTINGS+=("PROVISIONING_PROFILE_SPECIFIER=${PROVISIONING_PROFILE_SPECIFIER}")
+    fi
   fi
 }
 
