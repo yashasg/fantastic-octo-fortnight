@@ -147,6 +147,51 @@ final class WatchdogHeartbeatTests: XCTestCase {
         )
     }
 
+    func test_status_afterSessionStart_ignoresPriorSessionHeartbeats() {
+        // Session A heartbeat at T=100 — fresh on its own, but belongs to a prior session.
+        let priorSessionHeartbeat = WatchdogHeartbeat.event(
+            .deviceActivityIntervalEnded,
+            timestamp: Date(timeIntervalSince1970: 100)
+        )
+        // Session B started at T=105; its extension never fired a heartbeat.
+        let sessionBStart = Date(timeIntervalSince1970: 105)
+        let now = Date(timeIntervalSince1970: 115)
+
+        let status = WatchdogHeartbeat.status(
+            from: [priorSessionHeartbeat],
+            now: now,
+            staleAfter: 130,
+            matching: WatchdogHeartbeatDetail.deviceActivityLifecycleDetails,
+            after: sessionBStart
+        )
+
+        // Must be .missing — the prior-session heartbeat must not suppress recovery.
+        XCTAssertEqual(status, .missing)
+    }
+
+    func test_status_afterSessionStart_allowsCurrentSessionHeartbeat() {
+        let sessionStart = Date(timeIntervalSince1970: 105)
+        // A heartbeat timestamped exactly at sessionStart (boundary — inclusive).
+        let currentSessionHeartbeat = WatchdogHeartbeat.event(
+            .deviceActivityIntervalStarted,
+            timestamp: sessionStart
+        )
+        let now = Date(timeIntervalSince1970: 115)
+
+        let status = WatchdogHeartbeat.status(
+            from: [currentSessionHeartbeat],
+            now: now,
+            staleAfter: 130,
+            matching: WatchdogHeartbeatDetail.deviceActivityLifecycleDetails,
+            after: sessionStart
+        )
+
+        XCTAssertEqual(
+            status,
+            .fresh(lastSeenAt: sessionStart, detail: .deviceActivityIntervalStarted)
+        )
+    }
+
     func test_allHeartbeatDetailsHaveStableRawValues() {
         let rawValues = WatchdogHeartbeatDetail.allCases.map(\.rawValue)
 

@@ -66,7 +66,8 @@ public enum WatchdogHeartbeat {
         from events: [AppGroupIPCEvent],
         now: Date = Date(),
         staleAfter staleThreshold: TimeInterval,
-        matching details: Set<WatchdogHeartbeatDetail>? = nil
+        matching details: Set<WatchdogHeartbeatDetail>? = nil,
+        after sessionStart: Date? = nil
     ) -> WatchdogHeartbeatStatus {
         precondition(
             staleThreshold.isFinite && staleThreshold > 0,
@@ -75,6 +76,7 @@ public enum WatchdogHeartbeat {
 
         let matchingEvents = events.filter { event in
             guard event.kind == .watchdogHeartbeat else { return false }
+            if let sessionStart, event.timestamp < sessionStart { return false }
             guard let details else { return true }
             guard let detail = event.detail.flatMap(WatchdogHeartbeatDetail.init(rawValue:)) else {
                 return false
