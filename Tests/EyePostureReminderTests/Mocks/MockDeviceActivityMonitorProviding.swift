@@ -25,6 +25,7 @@ final class MockDeviceActivityMonitorProviding: DeviceActivityMonitorProviding {
 
     /// When non-nil, `scheduleBreakMonitoring(for:)` throws this error.
     var stubbedScheduleError: Error?
+    var scheduleDelayNanoseconds: UInt64 = 0
     /// When non-nil, `cancelBreakMonitoring()` throws this error.
     var stubbedCancelError: Error?
 
@@ -45,6 +46,9 @@ final class MockDeviceActivityMonitorProviding: DeviceActivityMonitorProviding {
         scheduleCallCount += 1
         operationLog.append("schedule")
         scheduledSessions.append(session)
+        if scheduleDelayNanoseconds > 0 {
+            try await Task.sleep(nanoseconds: scheduleDelayNanoseconds)
+        }
         if let error = stubbedScheduleError { throw error }
         activeSession = session
     }
@@ -71,6 +75,7 @@ final class MockDeviceActivityMonitorProviding: DeviceActivityMonitorProviding {
     func reset() {
         stubbedIsAvailable = false
         stubbedScheduleError = nil
+        scheduleDelayNanoseconds = 0
         stubbedCancelError = nil
         activeSession = nil
         scheduleCallCount = 0

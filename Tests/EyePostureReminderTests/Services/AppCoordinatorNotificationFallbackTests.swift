@@ -205,6 +205,28 @@ final class AppCoordinatorNotificationFallbackTests: XCTestCase {
         XCTAssertEqual(event.detail, "device_activity_schedule_failed")
         XCTAssertFalse(ipcStore.recordedKinds.contains(.notificationFallbackSuppressed))
     }
+
+    func test_deviceActivityScheduleFailure_afterOverlayDismiss_suppressesFallbackNotification() async throws {
+        struct ScheduleFailure: Error {}
+        deviceActivityMonitor.stubbedIsAvailable = true
+        deviceActivityMonitor.stubbedScheduleError = ScheduleFailure()
+        deviceActivityMonitor.scheduleDelayNanoseconds = 100_000_000
+        ipcStore.trueInterruptEnabled = true
+        ipcStore.selectApps()
+        await coordinator.refreshAuthStatus()
+
+        tracker.simulateThresholdReached(for: .eyes)
+        overlay.simulateDismiss()
+        try await Task.sleep(nanoseconds: 250_000_000)
+
+        XCTAssertEqual(deviceActivityMonitor.scheduleCallCount, 1)
+        XCTAssertEqual(deviceActivityMonitor.cancelCallCount, 1)
+        XCTAssertTrue(notificationCenter.addedRequests.isEmpty)
+        let event = try XCTUnwrap(ipcStore.events.first { $0.kind == .notificationFallbackSuppressed })
+        XCTAssertEqual(event.reasonRaw, ReminderType.eyes.shieldReason.rawValue)
+        XCTAssertEqual(event.detail, "device_activity_schedule_failed_overlay_dismissed")
+        XCTAssertFalse(ipcStore.recordedKinds.contains(.notificationFallbackScheduled))
+    }
 }
 
 private extension MockAppGroupIPCRecorder {

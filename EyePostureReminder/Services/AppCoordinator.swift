@@ -119,12 +119,12 @@ final class AppCoordinator: ObservableObject {
     }
 
     private enum DeviceActivityMonitorOperation: Sendable {
-        case schedule(ShieldSession)
-        case cancel
+        case schedule(ShieldSession, presentationID: UUID)
+        case cancel(presentationID: UUID?)
 
         var logDescription: String {
             switch self {
-            case .schedule(let session):
+            case .schedule(let session, _):
                 "schedule \(session.reason.rawValue)"
             case .cancel:
                 "cancel"
@@ -152,6 +152,7 @@ final class AppCoordinator: ObservableObject {
     /// Serializes DeviceActivity start/cancel operations so a fast dismiss cannot
     /// race an in-flight schedule call and leave OS-level monitoring active.
     private var deviceActivityMonitorTask: Task<Void, Never>?
+    private var dismissedDeviceActivityPresentationIDs: Set<UUID> = []
 
     // MARK: - Session Timing
 
@@ -621,6 +622,7 @@ extension AppCoordinator {
     // MARK: - Private
 
     private func showBreakOverlay(for type: ReminderType, duration: TimeInterval) {
+        let presentationID = UUID()
         overlayManager.showOverlay(
             for: type,
             duration: duration,
@@ -628,23 +630,36 @@ extension AppCoordinator {
             pauseMediaEnabled: settings.pauseMediaDuringBreaks,
             callbacks: OverlayLifecycleCallbacks(
                 onPresent: { [weak self] in
-                    self?.scheduleDeviceActivityMonitoring(for: type, duration: duration)
+                    self?.scheduleDeviceActivityMonitoring(
+                        for: type,
+                        duration: duration,
+                        presentationID: presentationID
+                    )
                 },
                 onDismiss: { [weak self] in
-                    self?.cancelDeviceActivityMonitoring()
+                    self?.cancelDeviceActivityMonitoring(presentationID: presentationID)
                 }
             )
         )
     }
 
-    private func scheduleDeviceActivityMonitoring(for type: ReminderType, duration: TimeInterval) {
+    private func scheduleDeviceActivityMonitoring(
+        for type: ReminderType,
+        duration: TimeInterval,
+        presentationID: UUID
+    ) {
         guard shouldUseShieldPath else { return }
-        enqueueDeviceActivityMonitorOperation(.schedule(ShieldSession(type: type, durationSeconds: duration)))
+        enqueueDeviceActivityMonitorOperation(
+            .schedule(ShieldSession(type: type, durationSeconds: duration), presentationID: presentationID)
+        )
     }
 
-    private func cancelDeviceActivityMonitoring() {
+    private func cancelDeviceActivityMonitoring(presentationID: UUID? = nil) {
         guard deviceActivityMonitor.isAvailable else { return }
-        enqueueDeviceActivityMonitorOperation(.cancel)
+        if let presentationID {
+            dismissedDeviceActivityPresentationIDs.insert(presentationID)
+        }
+        enqueueDeviceActivityMonitorOperation(.cancel(presentationID: presentationID))
     }
 
     private func enqueueDeviceActivityMonitorOperation(_ operation: DeviceActivityMonitorOperation) {
@@ -655,7 +670,7 @@ extension AppCoordinator {
 
             do {
                 switch operation {
-                case .schedule(let session):
+                case .schedule(let session, _):
                     try await deviceActivityMonitor.scheduleBreakMonitoring(for: session)
                     recordIPCEvent(
                         .shieldStarted,
@@ -671,11 +686,17 @@ extension AppCoordinator {
                     Logger.scheduling.info("DeviceActivity monitoring cancelled")
                 }
             } catch {
-                if case .schedule(let session) = operation,
+                if case .schedule(let session, let presentationID) = operation,
                    notificationAuthStatus == .authorized,
                    settings.notificationFallbackEnabled,
                    let fallbackType = session.reason.reminderType {
-                    if overlayManager.isOverlayVisible {
+                    if dismissedDeviceActivityPresentationIDs.remove(presentationID) != nil {
+                        recordIPCEvent(
+                            .notificationFallbackSuppressed,
+                            reasonRaw: session.reason.rawValue,
+                            detail: "device_activity_schedule_failed_overlay_dismissed"
+                        )
+                    } else if overlayManager.isOverlayVisible {
                         recordIPCEvent(
                             .notificationFallbackSuppressed,
                             reasonRaw: session.reason.rawValue,
@@ -693,6 +714,9 @@ extension AppCoordinator {
                 Logger.scheduling.error(
                     "DeviceActivity monitor \(operation.logDescription) failed: \(error.localizedDescription)"
                 )
+            }
+            if case .cancel(let presentationID?) = operation {
+                dismissedDeviceActivityPresentationIDs.remove(presentationID)
             }
         }
     }
