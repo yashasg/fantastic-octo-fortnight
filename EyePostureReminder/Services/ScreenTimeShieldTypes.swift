@@ -1,0 +1,46 @@
+/// Domain types for the Screen Time shield integration.
+///
+/// These types are used by `ScreenTimeShieldProviding` and written to the shared
+/// App Group `UserDefaults` so the `DeviceActivityMonitorExtension` can read them
+/// without importing the main app module.
+///
+/// **Entitlement status:** The types compile unconditionally. The real
+/// `FamilyControls`/`ManagedSettings` integration is gated behind `#201` and
+/// lives in a separate extension target (not expressible in SPM alone).
+
+import Foundation
+
+// MARK: - ShieldTriggerReason
+
+/// Why the Screen Time shield was triggered.
+///
+/// Drives the copy shown inside the `ShieldConfigurationExtension`
+/// (title, subtitle, icon) and is stored in the shared App Group so
+/// the extension can read it without importing the main app module.
+enum ShieldTriggerReason: String, Sendable, Equatable {
+    /// A scheduled eye-strain break (20-20-20 rule or configured interval).
+    case scheduledEyesBreak = "eyes"
+    /// A scheduled posture/movement break.
+    case scheduledPostureBreak = "posture"
+}
+
+// MARK: - ShieldSession
+
+/// Describes a single, discrete screen-time shielding session.
+///
+/// Created by `AppCoordinator` when a break begins and passed to
+/// `ScreenTimeShieldProviding.beginShield(for:)`.
+struct ShieldSession: Sendable, Equatable {
+    /// The reason the shield is being applied.
+    let reason: ShieldTriggerReason
+    /// How long the shield should remain active, in seconds.
+    let durationSeconds: TimeInterval
+    /// Wall-clock time at which the break was triggered.
+    let triggeredAt: Date
+
+    // MARK: Shared UserDefaults keys (App Group: group.com.yashasgujjar.kshana)
+
+    static let reasonKey = "shield.breakReason"
+    static let durationKey = "shield.durationSeconds"
+    static let triggeredAtKey = "shield.triggeredAt"
+}
