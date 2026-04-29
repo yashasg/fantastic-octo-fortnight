@@ -13,7 +13,7 @@ final class YinYangEyeViewTests: XCTestCase {
 
     /// The view instantiates and produces a valid SwiftUI body without crashing.
     func test_yinYangEyeView_instantiatesWithoutCrash() {
-        let view = YinYangEyeView()
+        let view = YinYangEyeView(reduceMotionOverride: false)
         _ = view.body
     }
 
@@ -26,7 +26,7 @@ final class YinYangEyeViewTests: XCTestCase {
         // Verify the view renders and its full description is non-empty.
         // The actual identifier is validated by UI tests; here we confirm
         // the view compiles with the modifier applied and renders normally.
-        let view = YinYangEyeView()
+        let view = YinYangEyeView(reduceMotionOverride: false)
         let described = String(describing: view.body)
         XCTAssertFalse(described.isEmpty,
                        "YinYangEyeView body must produce a non-empty description (includes accessibilityIdentifier)")
@@ -53,7 +53,7 @@ final class YinYangEyeViewTests: XCTestCase {
     /// animations. Verify the view renders a non-empty description regardless of
     /// that setting (layout is identical, only animations differ).
     func test_yinYangEyeView_reduceMotion_rendersWithoutCrash() {
-        let view = YinYangEyeView()
+        let view = YinYangEyeView(reduceMotionOverride: false)
         let described = String(describing: view.body)
         XCTAssertFalse(described.isEmpty,
                        "View must render a non-empty body even when reduce-motion may be active")

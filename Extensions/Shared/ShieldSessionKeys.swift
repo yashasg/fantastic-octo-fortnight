@@ -6,13 +6,13 @@
 ///
 /// App Group: `group.com.yashasgujjar.kshana`
 
-enum ShieldSessionKeys {
+public enum ShieldSessionKeys {
     /// Raw string value of `ShieldTriggerReason` ("eyes" or "posture").
-    static let breakReason = "shield.breakReason"
+    public static let breakReason = "shield.breakReason"
     /// Break duration in seconds (`TimeInterval` stored as Double).
-    static let durationSeconds = "shield.durationSeconds"
+    public static let durationSeconds = "shield.durationSeconds"
     /// Wall-clock trigger time stored as `timeIntervalSince1970` (`Double`).
-    static let triggeredAt = "shield.triggeredAt"
+    public static let triggeredAt = "shield.triggeredAt"
     /// Shared App Group suite name.
-    static let appGroupID = "group.com.yashasgujjar.kshana"
+    public static let appGroupID = "group.com.yashasgujjar.kshana"
 }

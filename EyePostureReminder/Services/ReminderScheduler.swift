@@ -69,10 +69,19 @@ final class ReminderScheduler: ReminderScheduling {
 
     // MARK: - Dependencies
 
-    private let notificationCenter: NotificationScheduling
+    typealias SchedulingFailureLogger = (ReminderType, Error) -> Void
 
-    init(notificationCenter: NotificationScheduling = UNUserNotificationCenter.current()) {
+    private let notificationCenter: NotificationScheduling
+    private let logSchedulingFailure: SchedulingFailureLogger
+
+    init(
+        notificationCenter: NotificationScheduling = UNUserNotificationCenter.current(),
+        logSchedulingFailure: @escaping SchedulingFailureLogger = { type, error in
+            Logger.scheduling.error("Failed to schedule \(type.rawValue): \(error.localizedDescription)")
+        }
+    ) {
         self.notificationCenter = notificationCenter
+        self.logSchedulingFailure = logSchedulingFailure
     }
 
     // MARK: - ReminderScheduling
@@ -124,7 +133,7 @@ final class ReminderScheduler: ReminderScheduling {
             try await notificationCenter.add(request)
             Logger.scheduling.info("Scheduled \(type.rawValue) every \(reminderSettings.interval)s")
         } catch {
-            Logger.scheduling.error("Failed to schedule \(type.rawValue): \(error.localizedDescription)")
+            logSchedulingFailure(type, error)
         }
     }
 

@@ -9,6 +9,23 @@ struct ReminderRowView: View {
     let onChanged: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    private let reduceMotionOverride: Bool?
+
+    init(
+        type: ReminderType,
+        isEnabled: Binding<Bool>,
+        interval: Binding<TimeInterval>,
+        breakDuration: Binding<TimeInterval>,
+        onChanged: @escaping () -> Void,
+        reduceMotionOverride: Bool? = nil
+    ) {
+        self.type = type
+        _isEnabled = isEnabled
+        _interval = interval
+        _breakDuration = breakDuration
+        self.onChanged = onChanged
+        self.reduceMotionOverride = reduceMotionOverride
+    }
 
     var body: some View {
         Group {
@@ -62,10 +79,14 @@ struct ReminderRowView: View {
                 )
             }
         }
-        .animation(reduceMotion ? nil : AppAnimation.settingsExpandCurve, value: isEnabled)
+        .animation(shouldReduceMotion ? nil : AppAnimation.settingsExpandCurve, value: isEnabled)
     }
 
     // MARK: - Formatting
+
+    private var shouldReduceMotion: Bool {
+        reduceMotionOverride ?? reduceMotion
+    }
 
     private func formatInterval(_ seconds: TimeInterval) -> String {
         SettingsViewModel.labelForInterval(seconds)

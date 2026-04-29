@@ -1,11 +1,17 @@
 import Foundation
 
-struct ShieldSessionSnapshot: Equatable {
-    let reasonRaw: String?
-    let durationSeconds: Double
-    let triggeredAt: Date?
+public struct ShieldSessionSnapshot: Equatable {
+    public let reasonRaw: String?
+    public let durationSeconds: Double
+    public let triggeredAt: Date?
 
-    static func read(from defaults: UserDefaults?) -> ShieldSessionSnapshot {
+    public init(reasonRaw: String?, durationSeconds: Double, triggeredAt: Date?) {
+        self.reasonRaw = reasonRaw
+        self.durationSeconds = durationSeconds
+        self.triggeredAt = triggeredAt
+    }
+
+    public static func read(from defaults: UserDefaults?) -> ShieldSessionSnapshot {
         let timestamp = defaults?.object(forKey: ShieldSessionKeys.triggeredAt) as? Double
         return ShieldSessionSnapshot(
             reasonRaw: defaults?.string(forKey: ShieldSessionKeys.breakReason),
@@ -14,18 +20,23 @@ struct ShieldSessionSnapshot: Equatable {
         )
     }
 
-    func remainingSeconds(at now: Date = Date()) -> Int? {
+    public func remainingSeconds(at now: Date = Date()) -> Int? {
         guard durationSeconds > 0, let triggeredAt else { return nil }
         let remaining = durationSeconds - now.timeIntervalSince(triggeredAt)
         return max(0, Int(ceil(remaining)))
     }
 }
 
-struct ShieldConfigurationCopy: Equatable {
-    let title: String
-    let subtitle: String
+public struct ShieldConfigurationCopy: Equatable {
+    public let title: String
+    public let subtitle: String
 
-    static func make(
+    public init(title: String, subtitle: String) {
+        self.title = title
+        self.subtitle = subtitle
+    }
+
+    public static func make(
         for snapshot: ShieldSessionSnapshot,
         now: Date = Date()
     ) -> ShieldConfigurationCopy {

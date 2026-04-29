@@ -38,7 +38,8 @@ final class TrueInterruptViewCoverageTests: XCTestCase {
     func test_onboardingInterruptModeView_unavailable_bodyEvaluation() {
         let view = OnboardingInterruptModeView(
             onGetStarted: {},
-            authorizationStatus: .unavailable
+            authorizationStatus: .unavailable,
+            accessibilityEnabledOverride: false
         )
         let described = String(describing: view.body)
         XCTAssertFalse(described.isEmpty)
@@ -48,7 +49,8 @@ final class TrueInterruptViewCoverageTests: XCTestCase {
         let view = OnboardingInterruptModeView(
             onGetStarted: {},
             onSetUp: {},
-            authorizationStatus: .unavailable
+            authorizationStatus: .unavailable,
+            accessibilityEnabledOverride: false
         )
         let described = String(describing: view.body)
         XCTAssertFalse(described.isEmpty)
@@ -58,7 +60,8 @@ final class TrueInterruptViewCoverageTests: XCTestCase {
         let view = OnboardingInterruptModeView(
             onGetStarted: {},
             onSetUp: {},
-            authorizationStatus: .notDetermined
+            authorizationStatus: .notDetermined,
+            accessibilityEnabledOverride: false
         )
         let described = String(describing: view.body)
         XCTAssertFalse(described.isEmpty)
@@ -68,7 +71,8 @@ final class TrueInterruptViewCoverageTests: XCTestCase {
         let view = OnboardingInterruptModeView(
             onGetStarted: {},
             onSetUp: {},
-            authorizationStatus: .approved
+            authorizationStatus: .approved,
+            accessibilityEnabledOverride: false
         )
         let described = String(describing: view.body)
         XCTAssertFalse(described.isEmpty)

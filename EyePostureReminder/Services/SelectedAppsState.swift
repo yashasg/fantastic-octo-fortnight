@@ -18,6 +18,7 @@
 
 import Combine
 import Foundation
+import ScreenTimeExtensionShared
 
 // MARK: - SelectedAppsMetadata
 
@@ -52,11 +53,11 @@ final class SelectedAppsState: ObservableObject {
     // MARK: App Group + Persistence Keys
 
     /// Shared App Group suite used by the main app and extension targets.
-    static let appGroupSuiteName = "group.com.yashasgujjar.kshana"
+    static let appGroupSuiteName = AppGroupIPCKeys.appGroupID
     /// UserDefaults key for the serialised `SelectedAppsMetadata`.
-    static let metadataKey = "trueInterrupt.selectionMetadata"
+    static let metadataKey = AppGroupIPCKeys.selectionMetadata
     /// UserDefaults key for the user's True Interrupt Mode enabled intent.
-    static let enabledKey = "trueInterrupt.enabled"
+    static let enabledKey = AppGroupIPCKeys.trueInterruptEnabled
 
     // MARK: Published State
 
@@ -74,7 +75,7 @@ final class SelectedAppsState: ObservableObject {
     /// - Parameter defaults: Defaults suite to read/write.  Defaults to the
     ///   shared App Group suite; pass an isolated suite in tests.
     init(
-        defaults: UserDefaults = UserDefaults(suiteName: "group.com.yashasgujjar.kshana") ?? .standard
+        defaults: UserDefaults = UserDefaults(suiteName: AppGroupIPCKeys.appGroupID) ?? .standard
     ) {
         self.defaults = defaults
         isTrueInterruptEnabled = defaults.bool(forKey: SelectedAppsState.enabledKey)

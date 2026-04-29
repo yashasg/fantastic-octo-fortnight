@@ -9,6 +9,7 @@
 /// lives in a separate extension target (not expressible in SPM alone).
 
 import Foundation
+import ScreenTimeExtensionShared
 
 // MARK: - ShieldTriggerReason
 
@@ -41,10 +42,10 @@ struct ShieldSession: Sendable, Equatable {
 
     // MARK: Shared UserDefaults keys (App Group: group.com.yashasgujjar.kshana)
 
-    static let reasonKey = "shield.breakReason"
-    static let durationKey = "shield.durationSeconds"
+    static let reasonKey = ShieldSessionKeys.breakReason
+    static let durationKey = ShieldSessionKeys.durationSeconds
     /// Wall-clock trigger time stored as `timeIntervalSince1970` (`Double`).
-    static let triggeredAtKey = "shield.triggeredAt"
+    static let triggeredAtKey = ShieldSessionKeys.triggeredAt
 }
 
 // MARK: - ShieldSession + ReminderType

@@ -21,17 +21,20 @@ struct OnboardingInterruptModeView: View {
     let onGetStarted: () -> Void
     let onSetUp: (() -> Void)?
     let authorizationStatus: ScreenTimeAuthorizationStatus
+    private let accessibilityEnabledOverride: Bool?
 
     @Environment(\.accessibilityEnabled) private var accessibilityEnabled
 
     init(
         onGetStarted: @escaping () -> Void,
         onSetUp: (() -> Void)? = nil,
-        authorizationStatus: ScreenTimeAuthorizationStatus = .unavailable
+        authorizationStatus: ScreenTimeAuthorizationStatus = .unavailable,
+        accessibilityEnabledOverride: Bool? = nil
     ) {
         self.onGetStarted = onGetStarted
         self.onSetUp = onSetUp
         self.authorizationStatus = authorizationStatus
+        self.accessibilityEnabledOverride = accessibilityEnabledOverride
     }
 
     var body: some View {
@@ -116,7 +119,7 @@ struct OnboardingInterruptModeView: View {
             .frame(maxWidth: AppLayout.onboardingMaxContentWidth)
             .frame(maxWidth: .infinity)
             .highPriorityGesture(
-                DragGesture(minimumDistance: accessibilityEnabled ? .infinity : 10)
+                DragGesture(minimumDistance: shouldUseAccessibilityGestures ? .infinity : 10)
                     .onChanged { _ in }
             )
         }
@@ -140,6 +143,10 @@ struct OnboardingInterruptModeView: View {
 
     private var isPrimaryButtonDisabled: Bool {
         authorizationStatus == .unavailable && onSetUp == nil
+    }
+
+    private var shouldUseAccessibilityGestures: Bool {
+        accessibilityEnabledOverride ?? accessibilityEnabled
     }
 }
 
