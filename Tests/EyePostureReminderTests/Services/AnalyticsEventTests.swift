@@ -73,12 +73,12 @@ final class AnalyticsEventTests: XCTestCase {
 
     func test_reminderTriggered_allTypes() {
         for type in ReminderType.allCases {
-            AnalyticsLogger.log(.reminderTriggered(type: type, thresholdS: 1200))
+            AnalyticsLogger.log(.reminderTriggered(type: type, thresholdS: 1200, deliveryPath: .screenTimeThreshold))
         }
     }
 
     func test_reminderTriggered_zeroThreshold() {
-        AnalyticsLogger.log(.reminderTriggered(type: .eyes, thresholdS: 0))
+        AnalyticsLogger.log(.reminderTriggered(type: .eyes, thresholdS: 0, deliveryPath: .unknown))
     }
 
     // MARK: - AnalyticsEvent: Overlay Events
@@ -189,5 +189,77 @@ final class AnalyticsEventTests: XCTestCase {
                 AnalyticsLogger.log(.ipcOperationFailed(operation: op, reason: reason))
             }
         }
+    }
+
+    // MARK: - ReminderDeliveryPath
+
+    func test_reminderDeliveryPath_rawValues() {
+        XCTAssertEqual(AnalyticsEvent.ReminderDeliveryPath.screenTimeThreshold.rawValue, "screen_time_threshold")
+        XCTAssertEqual(AnalyticsEvent.ReminderDeliveryPath.notificationFallback.rawValue, "notification_fallback")
+        XCTAssertEqual(AnalyticsEvent.ReminderDeliveryPath.unknown.rawValue, "unknown")
+    }
+
+    func test_reminderTriggered_allDeliveryPaths_canBeConstructed() {
+        let paths: [AnalyticsEvent.ReminderDeliveryPath] = [
+            .screenTimeThreshold, .notificationFallback, .unknown
+        ]
+        for path in paths {
+            let event = AnalyticsEvent.reminderTriggered(type: .eyes, thresholdS: 1200, deliveryPath: path)
+            _ = event
+        }
+    }
+
+    // MARK: - SchedulePath / SchedulePathReason
+
+    func test_schedulePath_rawValues() {
+        XCTAssertEqual(AnalyticsEvent.SchedulePath.shield.rawValue, "shield")
+        XCTAssertEqual(AnalyticsEvent.SchedulePath.notificationFallback.rawValue, "notification_fallback")
+    }
+
+    func test_schedulePathReason_rawValues() {
+        XCTAssertEqual(AnalyticsEvent.SchedulePathReason.deviceActivityAvailable.rawValue, "device_activity_available")
+        XCTAssertEqual(AnalyticsEvent.SchedulePathReason.shieldUnavailable.rawValue, "shield_unavailable")
+        XCTAssertEqual(AnalyticsEvent.SchedulePathReason.trueInterruptDisabled.rawValue, "true_interrupt_disabled")
+        XCTAssertEqual(
+            AnalyticsEvent.SchedulePathReason.trueInterruptEmptySelection.rawValue,
+            "true_interrupt_empty_selection"
+        )
+    }
+
+    func test_schedulePathSelected_allCombinations_doNotCrash() {
+        let paths: [AnalyticsEvent.SchedulePath] = [.shield, .notificationFallback]
+        let reasons: [AnalyticsEvent.SchedulePathReason] = [
+            .deviceActivityAvailable, .shieldUnavailable,
+            .trueInterruptDisabled, .trueInterruptEmptySelection
+        ]
+        for path in paths {
+            for reason in reasons {
+                AnalyticsLogger.log(.schedulePathSelected(path: path, reason: reason))
+            }
+        }
+    }
+
+    // MARK: - Shield Lifecycle
+
+    func test_shieldActivated_canBeConstructed() {
+        let event = AnalyticsEvent.shieldActivated(reason: "eye_care")
+        _ = event
+    }
+
+    func test_shieldActivationFailed_canBeConstructed() {
+        let event = AnalyticsEvent.shieldActivationFailed(reason: "posture")
+        _ = event
+    }
+
+    func test_shieldDeactivated_canBeConstructed() {
+        let event = AnalyticsEvent.shieldDeactivated
+        _ = event
+    }
+
+    func test_shieldLifecycle_allCases_doNotCrash() {
+        AnalyticsLogger.log(.shieldActivated(reason: "eye_care"))
+        AnalyticsLogger.log(.shieldActivated(reason: "posture"))
+        AnalyticsLogger.log(.shieldActivationFailed(reason: "eye_care"))
+        AnalyticsLogger.log(.shieldDeactivated)
     }
 }

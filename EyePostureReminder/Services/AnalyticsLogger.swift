@@ -17,8 +17,49 @@ enum AnalyticsEvent: Sendable {
 
     // MARK: Reminders
 
-    /// Fired when the screen-time tracker crosses a threshold and triggers an overlay.
-    case reminderTriggered(type: ReminderType, thresholdS: TimeInterval)
+    /// Fired when a reminder is triggered. `deliveryPath` records whether the reminder
+    /// was surfaced via the foreground screen-time threshold or the notification fallback.
+    case reminderTriggered(type: ReminderType, thresholdS: TimeInterval, deliveryPath: ReminderDeliveryPath)
+
+    /// The mechanism that actually surfaced a reminder to the user.
+    enum ReminderDeliveryPath: String {
+        case screenTimeThreshold  = "screen_time_threshold"
+        case notificationFallback = "notification_fallback"
+        case unknown              = "unknown"
+    }
+
+    // MARK: Schedule Path Selection
+
+    /// Fired when `scheduleReminders()` selects a delivery path.
+    /// Emitted after IPC recording — provides the same routing decision in the analytics stream.
+    case schedulePathSelected(path: SchedulePath, reason: SchedulePathReason)
+
+    /// Non-PII code for the path chosen by `scheduleReminders()`.
+    enum SchedulePath: String {
+        case shield               = "shield"
+        case notificationFallback = "notification_fallback"
+    }
+
+    /// Non-PII reason code explaining why a particular schedule path was selected.
+    enum SchedulePathReason: String {
+        case deviceActivityAvailable    = "device_activity_available"
+        case shieldUnavailable          = "shield_unavailable"
+        case trueInterruptDisabled      = "true_interrupt_disabled"
+        case trueInterruptEmptySelection = "true_interrupt_empty_selection"
+    }
+
+    // MARK: Shield Lifecycle
+
+    /// Fired when a DeviceActivity shield session starts successfully.
+    /// `reason` is the non-PII shield reason raw value.
+    case shieldActivated(reason: String)
+
+    /// Fired when a DeviceActivity shield activation attempt fails.
+    /// `reason` is the non-PII shield reason raw value.
+    case shieldActivationFailed(reason: String)
+
+    /// Fired when a DeviceActivity shield session is cancelled/deactivated.
+    case shieldDeactivated
 
     // MARK: Overlay
 
@@ -123,11 +164,12 @@ enum AnalyticsLogger {
                 session_duration_s=\(durationS, format: .fixed(precision: 1), privacy: .public)
                 """)
 
-        case let .reminderTriggered(type, thresholdS):
+        case let .reminderTriggered(type, thresholdS, deliveryPath):
             logger.info("""
                 event=reminder_triggered \
                 type=\(type.rawValue, privacy: .public) \
-                threshold_s=\(thresholdS, format: .fixed(precision: 0), privacy: .public)
+                threshold_s=\(thresholdS, format: .fixed(precision: 0), privacy: .public) \
+                delivery_path=\(deliveryPath.rawValue, privacy: .public)
                 """)
 
         case let .overlayDismissed(type, method, elapsedS):
@@ -165,6 +207,15 @@ enum AnalyticsLogger {
                 new_value=\(newValue, privacy: .private)
                 """)
 
+        default:
+            logExtended(event)
+        }
+    }
+
+    // Logs extended event cases to keep `log(_:)` within cyclomatic-complexity limits.
+    private static func logExtended(_ event: AnalyticsEvent) {
+        switch event {
+
         case let .pauseActivated(conditionType):
             logger.info("""
                 event=pause_activated \
@@ -191,12 +242,37 @@ enum AnalyticsLogger {
                 fallback_scheduled=\(fallbackScheduled, privacy: .public)
                 """)
 
+        case let .schedulePathSelected(path, reason):
+            logger.info("""
+                event=schedule_path_selected \
+                path=\(path.rawValue, privacy: .public) \
+                reason=\(reason.rawValue, privacy: .public)
+                """)
+
+        case let .shieldActivated(reason):
+            logger.info("""
+                event=shield_activated \
+                reason=\(reason, privacy: .public)
+                """)
+
+        case let .shieldActivationFailed(reason):
+            logger.error("""
+                event=shield_activation_failed \
+                reason=\(reason, privacy: .public)
+                """)
+
+        case .shieldDeactivated:
+            logger.info("event=shield_deactivated")
+
         case let .ipcOperationFailed(operation, reason):
             logger.error("""
                 event=ipc_operation_failed \
                 operation=\(operation.rawValue, privacy: .public) \
                 reason=\(reason.rawValue, privacy: .public)
                 """)
+
+        default:
+            break
         }
     }
 }
