@@ -22758,3 +22758,120 @@ The app provides **overlay-based break reminders** that appear as full-screen ov
 **Validation:** JSON valid, build passed  
 **Committed:** `4805aa9 copy: use reminders language instead of notifications`
 
+
+---
+
+# Decision: Onboarding Reminder Pickers — SettingsStore DI via EnvironmentObject
+
+**Author:** Linus (iOS Dev — UI)
+**Date:** 2026-04-28
+**Status:** Implemented
+
+## Decision
+
+`OnboardingSetupView` uses `@EnvironmentObject private var settings: SettingsStore` to bind
+its interval and duration pickers directly to persisted values. No separate sync step;
+whatever the user picks in onboarding is exactly what Settings shows on first open.
+
+## Rationale
+
+- `SettingsStore` is already in the environment from `EyePostureReminderApp.swift`
+  (`.environmentObject(coordinator.settings)`) — no new injection plumbing needed.
+- Direct binding eliminates a class of bugs where onboarding "defaults" diverge from
+  what the scheduler actually uses on first launch.
+- Reuses `SettingsViewModel.intervalOptions`, `breakDurationOptions`, `labelForInterval`,
+  `labelForBreakDuration` — canonical source of truth, no duplicated magic values.
+
+## Removed: onCustomize / finishOnboardingAndCustomize
+
+The "Customize Settings" secondary button and `finishOnboardingAndCustomize()` were removed.
+Users now configure inline on the setup screen — a dedicated "go to Settings" flow during
+onboarding no longer makes sense. Single "Get Started" CTA is cleaner.
+
+If a future feature needs a deep-link from onboarding to a specific Settings section, add
+a `deepLinkOnLaunch` key to `AppStorageKey` at that time.
+
+## Test Pattern
+
+Views with `@EnvironmentObject` MUST NOT call `view.body` or `render()` in the SPM test
+host — they crash (`bundleProxyForCurrentProcess is nil`). OnboardingSetupView tests are
+callback-contract only. `OnboardingViewTests` is marked `@MainActor` so
+`SettingsViewModel` static helpers (also `@MainActor`) can be called from test methods.
+
+## Accessibility Identifiers
+
+Stable IDs use a `typeID` param ("eyes" / "posture") rather than derived from translated
+title strings. Committed identifiers:
+- `onboarding.eyes.intervalPicker`, `onboarding.eyes.durationPicker`
+- `onboarding.posture.intervalPicker`, `onboarding.posture.durationPicker`
+
+---
+
+# Decision: Onboarding Picker Accessibility Identifier Convention
+
+**Author:** Livingston (Tester)  
+**Date:** 2026-04-28  
+**Status:** Implemented
+
+## Decision
+
+Onboarding reminder picker accessibility identifiers follow the pattern:
+
+```
+onboarding.{typeID}.intervalPicker
+onboarding.{typeID}.durationPicker
+```
+
+Where `typeID` is `"eyes"` or `"posture"` (the stable, localisation-safe strings passed to `OnboardingReminderPickerCard`).
+
+**Full set of identifiers:**
+- `onboarding.eyes.intervalPicker`
+- `onboarding.eyes.durationPicker`
+- `onboarding.posture.intervalPicker`
+- `onboarding.posture.durationPicker`
+- `onboarding.setup.changeInSettings` (reassurance Text element)
+
+## Rationale
+
+- Dynamic interpolation in `OnboardingReminderPickerCard.body` avoids duplicating the identifier pattern in 4 places
+- `typeID` must be stable English (not localised) to ensure consistent automation queries across locales
+- Convention mirrors `settings.reminder.{type}.intervalPicker` in SettingsView for consistency
+
+## Testability note
+
+The reassurance `Text("onboarding.setup.changeInSettings")` now carries `.accessibilityIdentifier("onboarding.setup.changeInSettings")` so UI tests can query by identifier rather than text content. This was added by Livingston as a testability fix.
+
+## Impact
+
+- `OnboardingFlowTests` can query pickers via `app.descendants(matching: .any).matching(identifier: "onboarding.eyes.intervalPicker")`
+- Any rename of `typeID` in `OnboardingReminderPickerCard` must be reflected in `OnboardingFlowTests` and documented here
+
+---
+
+## Decision: User Directive — Add 1-Minute Interval Testing Option
+
+**Author:** Yashasg (via Copilot)
+**Date:** 2026-04-28T20:21:21-07:00
+**Status:** Implemented
+
+### Directive
+
+Add a 1 minute reminder window as a test option, but do not make it the default.
+
+### Rationale
+
+Testing with 1-minute intervals allows rapid validation of reminder behavior without needing to wait for standard intervals (15, 30, 45 minutes, etc.). Keeping it non-default ensures production behavior is unchanged.
+
+### Implementation
+
+**Linus (iOS Dev — UI):** Added 1-minute interval to picker options in `SettingsViewModel.intervalOptions` with a test-only designation.
+- 1-minute interval available in both onboarding and settings pickers
+- All default intervals remain unchanged (15, 30, 45 minutes as primary options)
+- **Committed:** `3c094e7 feat: add 1-minute interval option for testing reminder popups`
+- **Test coverage:** 247 targeted tests pass
+
+### Impact
+
+- Testers can now set 1-minute reminders to verify popup behavior rapidly during QA cycles
+- No change to user-facing defaults or production UX
+- Feature remains available for future test frameworks or debug modes

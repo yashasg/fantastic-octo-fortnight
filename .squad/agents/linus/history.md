@@ -391,3 +391,63 @@ Tess completed comprehensive wellness design research proposing "Restful Grove" 
 
 **Status:** ✅ Complete. JSON validated. Build passed. Commit pushed.
 
+
+### 2026-04-28 — Onboarding Interactive Reminder Pickers
+
+**Task:** Let users choose their reminder windows on the onboarding setup screen.
+
+**What changed:**
+- `OnboardingSetupView` now uses `@EnvironmentObject private var settings: SettingsStore`; replaced read-only `SetupPreviewCard` with private `OnboardingReminderPickerCard`
+- Pickers bind directly to `settings.eyesInterval`, `settings.eyesBreakDuration`, `settings.postureInterval`, `settings.postureBreakDuration` — no sync step needed
+- `OnboardingReminderPickerCard` uses `SettingsViewModel.intervalOptions` / `breakDurationOptions` and `labelForInterval` / `labelForBreakDuration` — no duplicated magic values
+- Removed `onCustomize` callback and `finishOnboardingAndCustomize()` from `OnboardingView` — single "Get Started" CTA is cleaner
+- Footer uses existing `onboarding.setup.changeInSettings` key: "You can always change these in Settings."
+- New string catalog keys: `onboarding.setup.picker.every`, `onboarding.setup.picker.breakFor`; removed 6 stale static value keys
+- `OnboardingView` forwards `SettingsStore` as `.environmentObject(settings)` explicitly to `OnboardingSetupView`
+
+**Key decisions:**
+- `@EnvironmentObject` over `@ObservedObject` param — matches SettingsView/HomeView pattern; store already in environment from `EyePostureReminderApp.swift`
+- Tests with `@EnvironmentObject` can NOT call `view.body` or `render()` in SPM test host (crashes). Convert to callback-only tests per project convention
+- `OnboardingViewTests` marked `@MainActor` so `SettingsViewModel.labelForInterval/labelForBreakDuration` (both `@MainActor`) can be called from tests
+- `typeID` param (e.g. "eyes", "posture") provides stable, localisation-safe accessibility identifiers instead of deriving from translated title strings
+
+**Accessibility identifiers committed:**
+- `onboarding.eyes.intervalPicker`, `onboarding.eyes.durationPicker`
+- `onboarding.posture.intervalPicker`, `onboarding.posture.durationPicker`
+
+**Status:** ✅ Complete. 1386 tests, 0 failures. Build verified.
+
+### 2026-04-28 — 1-Minute Test Interval Option
+
+- **Added `1 * 60` (60s) as first entry in `SettingsViewModel.intervalOptions`** for rapid reminder testing. Not the default — SettingsStore defaults are untouched.
+- **Label renders as "1 min"** via existing `settings.picker.minuteFormat` (`%d min`). No pluralization concern — "min" is already singular-safe.
+- **Test suite:** Updated `test_intervalOptions_hasExpectedCount` (5→6), `test_intervalOptions_containsExpectedValues` (added 60), and added `test_labelForInterval_60s_returns1Min` in `SettingsViewModelFormatterTests`.
+- **Affected files:** `SettingsViewModel.swift`, `SettingsViewModelExtendedTests.swift`, `SettingsViewModelFormatterTests.swift`
+- **All 247 tests pass** post-change.
+
+### 2026-04-28 — Onboarding Reminder Pickers & 1-Minute Interval Testing Option
+
+**Session:** Onboarding reminder picker implementation  
+**Outcome:** Interactive reminder picker cards bound to SettingsStore (1386 tests ✓) + 1-minute interval testing option (247 tests ✓)
+
+**Phase 1 — Interactive Pickers (d76ba3f):**
+- Decision: `OnboardingSetupView` uses `@EnvironmentObject private var settings: SettingsStore` for direct binding
+- No separate sync step — onboarding values immediately reflect in Settings on first open
+- Reuses canonical `SettingsViewModel` options (intervalOptions, breakDurationOptions)
+- Removed "Customize Settings" secondary flow — inline configuration on setup screen is cleaner
+- All 1386 tests pass
+
+**Phase 2 — 1-Minute Testing Interval (3c094e7):**
+- Applied user directive: Add 1-minute reminder window as test option (non-default)
+- Allows rapid QA cycles without waiting for standard intervals (15, 30, 45 minutes)
+- Default intervals unchanged — production UX unaffected
+- 247 targeted tests pass
+
+**Key Insights:**
+- `@EnvironmentObject` views cannot be rendered in SPM test hosts (`bundleProxyForCurrentProcess is nil`) — use callback-contract-only tests, mark with `@MainActor`
+- Stable accessibility identifiers using `typeID` ("eyes" / "posture") enable locale-independent UI automation
+- 1-minute interval is low-risk test tool; non-default status preserves production behavior
+
+**Commits:**
+- `d76ba3f` — `feat(onboarding): interactive reminder pickers on setup screen`
+- `3c094e7` — `feat: add 1-minute interval option for testing reminder popups`

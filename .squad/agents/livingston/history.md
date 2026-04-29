@@ -528,3 +528,47 @@ Only the double-resign path is tested. A single resign followed by return-to-act
 **Key insight:** For overlay dismiss tests, assert the positive outcome (Home screen reappears) rather than the negative (overlay elements disappear). Overlay windows with animation delays cause the negative assertion to be timing-dependent.
 
 **Result:** 53 total UI tests (37 → 53). 46/46 passed in the test run; DarkMode suite (7 tests) compiled but didn't schedule within the parallel execution time window — infrastructure timeout, not a test failure.
+
+### 2026-04-28 — Onboarding Reminder-Window Selection Tests
+
+**Task:** Add tests for onboarding reminder window selection feature per acceptance criteria.
+
+**Context:** Arrived to find Linus had already shipped the implementation (interactive Picker cards in `OnboardingSetupView`, `@EnvironmentObject SettingsStore`, pickers with `onboarding.{typeID}.intervalPicker` / `onboarding.{typeID}.durationPicker` identifiers). String catalog already had `picker.every` and `picker.breakFor`. Keys `customizeButton`, `eyeBreaks.interval/duration`, `postureChecks.interval/duration` were removed.
+
+**Pre-existing breakage fixed:**
+- `StringCatalogTests` comprehensive key-set test referenced 7 removed catalog keys
+- `StringCatalogTests` had two value-equality tests for removed keys (`eyeBreaks.interval`, `postureChecks.interval`)
+- All three broke silently as test-compile errors rather than runtime failures
+
+**String catalog change:**
+- Added `onboarding.setup.changeInSettings` = "You can always change these in Settings." (required by feature spec but not yet in catalog)
+
+**Implementation fix (testability):**
+- Added `.accessibilityIdentifier("onboarding.setup.changeInSettings")` to the reassurance `Text` in `OnboardingSetupView` so the UI test can query by identifier
+
+**Tests added (169 total, 0 failures):**
+- `OnboardingViewTests` (+6): SettingsStore DI seam, changeInSettings catalog key (resolves + mentions Settings), picker identifier naming convention, `withSettingsStoreEnvironment_instantiatesWithoutCrash`
+- `StringCatalogTests` (+5): `picker.every` and `picker.breakFor` resolver tests, changeInSettings resolver/content/non-empty
+- Replaced 2 removed-key value tests with 2 new picker-label resolver tests
+- `OnboardingFlowTests` (+2 UI): live reassurance text test + eye interval picker presence test; removed XCTSkip stubs
+
+**Key insight:** When Linus changes a SwiftUI view's initializer (e.g., drops `onCustomize`), ALL test files instantiating that view break at compile time. Check `grep -rn "ViewName(" Tests/` before assuming test files are clean.
+
+**Key insight:** Picker accessibility identifiers in `OnboardingReminderPickerCard` use dynamic typeID interpolation: `"onboarding.\(typeID).intervalPicker"`. Unit test guards the naming convention; UI test verifies runtime presence.
+
+**Key decision:** Body evaluation of `@EnvironmentObject`-dependent views is skipped in unit tests (project convention from `ViewBodyCoverageTests` NOTE). Only initializer contract and catalog key assertions in unit tests; runtime behavior in UI tests.
+
+### 2026-04-28 — Onboarding Reminder Picker Tests & Accessibility Coverage
+
+**Session:** Onboarding reminder-window selection tests  
+**Outcome:** Fixed string catalog tests, added focused onboarding/string tests and UI coverage for reassurance/picker presence  
+**Test results:** 169 unit tests passing ✓  
+
+**Decisions Implemented:**
+- Onboarding Picker Accessibility Identifier Convention (`onboarding.{typeID}.{pickerType}` pattern)
+- Accessibility coverage for reassurance text element (`onboarding.setup.changeInSettings`)
+
+**Commits:**
+- `bd477c6` — `test(onboarding): add reminder-window selection coverage`
+
+**Key Insight:** Stable accessibility identifiers using `typeID` ("eyes" / "posture") rather than localized strings enables consistent UI automation across all locales. The reassurance text element gained an explicit accessibility identifier for testability.
