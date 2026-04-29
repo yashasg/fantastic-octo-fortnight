@@ -174,6 +174,37 @@ final class AppCoordinatorNotificationFallbackTests: XCTestCase {
         XCTAssertEqual(event.detail, "device_activity_schedule_failed_overlay_visible")
         XCTAssertFalse(ipcStore.recordedKinds.contains(.notificationFallbackScheduled))
     }
+
+    func test_deviceActivityScheduleFailure_whenOverlayNotVisible_coalescesFallbackNotification() async throws {
+        struct ScheduleFailure: Error {}
+        deviceActivityMonitor.stubbedIsAvailable = true
+        deviceActivityMonitor.stubbedScheduleError = ScheduleFailure()
+        ipcStore.trueInterruptEnabled = true
+        ipcStore.selectApps()
+        overlay.autoInvokeOnPresent = false
+        await coordinator.refreshAuthStatus()
+
+        tracker.simulateThresholdReached(for: .eyes)
+        try await Task.sleep(nanoseconds: 100_000_000)
+        XCTAssertEqual(overlay.showCallCount, 1)
+        XCTAssertTrue(notificationCenter.addedRequests.isEmpty)
+
+        overlay.dismissOverlay()
+        let onPresent = try XCTUnwrap(overlay.onPresentCalls.first)
+        onPresent()
+        try await Task.sleep(nanoseconds: 100_000_000)
+
+        XCTAssertEqual(deviceActivityMonitor.scheduleCallCount, 1)
+        XCTAssertEqual(notificationCenter.addedRequests.count, 1)
+        XCTAssertEqual(
+            notificationCenter.removedIdentifiers,
+            [["com.yashasg.eyeposturereminder.eyes"]]
+        )
+        let event = try XCTUnwrap(ipcStore.events.first { $0.kind == .notificationFallbackScheduled })
+        XCTAssertEqual(event.reasonRaw, ReminderType.eyes.shieldReason.rawValue)
+        XCTAssertEqual(event.detail, "device_activity_schedule_failed")
+        XCTAssertFalse(ipcStore.recordedKinds.contains(.notificationFallbackSuppressed))
+    }
 }
 
 private extension MockAppGroupIPCRecorder {
