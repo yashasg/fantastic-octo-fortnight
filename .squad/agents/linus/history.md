@@ -345,3 +345,25 @@ Tess completed comprehensive wellness design research proposing "Restful Grove" 
 - `onboarding.permission.body1` was the specific string the user flagged — now reads clearly.
 - JSON structure preserved; validated with `python3 json.load` + full build on iPhone 17 Pro simulator.
 - Build command: `xcodebuild -scheme EyePostureReminder -destination 'platform=iOS Simulator,id=179149FE-BAFF-4464-893B-7468D06F49B7' build`
+
+## 2026-04-28 — Screen-Relevant Copy Scope Refinement Implementation
+
+**Task:** Apply Danny's scope refinement — refine the clarity pass by removing snooze references from non-snooze screens while preserving snooze language on snooze-specific screens.
+
+**Work Summary:**
+- Applied three targeted replacements to `EyePostureReminder/Resources/Localizable.xcstrings`:
+  - `onboarding.permission.body1`: "Notifications keep your break reminders on schedule."
+  - `settings.notifications.disabledBody`: "Turn on notifications in Settings so break reminders stay on schedule."
+  - `settings.notifications.disabledLabel`: "Notifications are off. Turn them on in Settings so break reminders stay on schedule."
+- Validated JSON structure (Python `json.load` successful; no syntax errors)
+- Built clean: `./scripts/build.sh build` → BUILD SUCCEEDED; no warnings
+- Committed: `dd6a2fd fix: remove snooze references from notification copy on non-snooze screens`
+- All `settings.snooze.*` and `settings.section.snooze` keys left untouched — snooze language is correct and expected on snooze-specific screens
+- `settings.reset.body` unchanged — "clears your snooze history" is correct in reset context
+
+**Key insights:**
+- Screen context matters: snooze language is welcome on snooze settings, inappropriate on onboarding/permission screens
+- Clarity pass + scope refinement work together: readability improvements stay; context-inappropriate references removed
+- Coordinator-driven refinement process allows team to catch scope issues after initial implementation
+
+**Status:** ✅ Complete. JSON validated. Build passed. Commit pushed.

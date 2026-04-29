@@ -101,3 +101,20 @@ Consolidated 2026-04-24 planning entries covering early architecture decisions (
 - `settings.notifications.disabledBody`: "Enable notifications in Settings so reminders resume after snoozing, even when the app is in the background." → "Turn on notifications in Settings so breaks resume after a snooze."
 
 **Status:** Proposed for Linus implementation
+
+## 2026-04-28 — Screen-Relevant Copy Scope Refinement
+
+**Task:** Coordinator passed user directive for screen-relevant copy. Refine scope: identify which of the 14 clarity pass strings should be retained vs. removed based on screen context.
+
+**Work Summary:**
+- User correctly flagged: screen copy should not mention snooze on screens that are not about snooze (e.g., onboarding permission screen, notification-disabled banners)
+- Onboarding permission screen appears *before* snooze is introduced — snooze language is contextually wrong
+- Notification-disabled screens should explain impact on break reminders, not snooze-specific behavior
+- **Three strings require scope reversion:**
+  - `onboarding.permission.body1`: Revert from clarity pass → "Notifications keep your break reminders on schedule." (no snooze mention)
+  - `settings.notifications.disabledBody`: Revert from clarity pass → "Turn on notifications in Settings so break reminders stay on schedule." (no snooze mention)
+  - `settings.notifications.disabledLabel`: Revert from clarity pass → "Notifications are off. Turn them on in Settings so break reminders stay on schedule." (no snooze mention)
+- All `settings.snooze.*` keys remain untouched — snooze language is correct on snooze-specific screens
+- **Correct decision:** Clarity pass improved readability; scope refinement removes context-inappropriate snooze references; two efforts are complementary, not conflicting
+
+**Status:** Recommendation delivered to Linus for implementation

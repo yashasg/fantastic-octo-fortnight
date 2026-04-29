@@ -2842,3 +2842,52 @@ kshana does not support iPad at the moment; signed TestFlight builds should rema
 
 User request — captured for team memory.
 
+
+---
+
+# User Directive: Screen-relevant copy (2026-04-28)
+
+**By:** yashasg (via Copilot CLI)  
+**Date:** 2026-04-28T20:00:03Z  
+**Status:** Guidance
+
+## Directive
+
+Screen copy should be relevant to the screen itself; avoid introducing unrelated feature details such as snooze copy on non-snooze screens.
+
+## Context
+
+User request — captured for team memory.
+
+---
+
+# Decision: Remove snooze references from notification copy on non-snooze screens
+
+**Author:** Danny (Product Manager)  
+**Date:** 2026-04-28  
+**Status:** Implemented (commit: dd6a2fd)
+
+## Decision
+
+Three copy strings in `EyePostureReminder/Resources/Localizable.xcstrings` have been updated to remove snooze/resume language and use schedule-focused replacements:
+
+| Key | Previous | Updated |
+|-----|----------|---------|
+| `onboarding.permission.body1` | "Notifications let your breaks resume on time after a snooze." | "Notifications keep your break reminders on schedule." |
+| `settings.notifications.disabledBody` | "Turn on notifications in Settings so breaks resume after a snooze." | "Turn on notifications in Settings so break reminders stay on schedule." |
+| `settings.notifications.disabledLabel` | "Notifications are off. Turn them on in Settings so breaks resume after a snooze." | "Notifications are off. Turn them on in Settings so break reminders stay on schedule." |
+
+## Rationale
+
+The onboarding permission screen appears early in the UX flow before snooze has been introduced. Mentioning snooze at this stage is contextually inappropriate. The permission screen should explain *why* notifications matter (they power break reminders), not describe a specific feature the user hasn't encountered yet.
+
+The same principle applies to the settings notification-disabled banners — they should explain the impact on break reminders, not reference snooze-specific behavior.
+
+## Not Changed
+
+- All `settings.snooze.*` and `settings.section.snooze` keys — snooze language is correct and expected on snooze-specific screens
+- `settings.reset.body` mentioning "clears your snooze history" — correct in context
+
+## Implementation
+
+Applied by Linus. JSON validation passed. Build validated.
