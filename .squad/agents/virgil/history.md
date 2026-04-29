@@ -244,3 +244,35 @@
 - **Never set CODE_SIGN_IDENTITY with CODE_SIGN_STYLE=Automatic:** Automatic signing owns identity selection; overriding CODE_SIGN_IDENTITY simultaneously causes Xcode exit 65 "conflicting provisioning settings". Remove CODE_SIGN_IDENTITY from the xcodebuild command entirely when using automatic signing.
 - **CODE_SIGN_STYLE capitalisation:** Xcode build setting values are properly-cased: `Automatic` and `Manual` (not lowercase). While xcodebuild accepts lowercase on the command line, use the canonical form to avoid surprises.
 - **Distribute via ExportOptions, not archive flags:** The signing certificate for distribution (Apple Distribution) belongs in `ExportOptions.plist` (as `signingCertificate`), not as a build setting during archive. Archive phase uses automatic signing; export phase applies the distribution identity.
+
+## Wave 16 — Signed Build Parity Audit
+
+**Task:** Audit and reconcile `build_signed.sh` vs `build.sh`/`run.sh` — "only difference should be signing."
+**Outcome:** ✅ Fixed. Three concrete discrepancies removed (ba18867).
+
+### Discrepancies found and resolved
+
+**1. Missing CFBundleVersion injection (critical for TestFlight)**
+- `build.sh` / `run.sh` — simulator builds, no build number needed.
+- `testflight.yml` (before) — mutated *source* `Info.plist` with PlistBuddy before xcodebuild.
+- `build_signed.sh` (before) — no injection at all. Every archive carried `CFBundleVersion=1`; TestFlight rejects duplicate build numbers.
+- **Fix:** Added `inject_build_number()` to `build_signed.sh`. Patches the *archive's* built `Info.plist` after `xcodebuild archive` succeeds. Never touches source `Info.plist`. Uses `$BUILD_NUMBER` when set, falls back to `YYYYMMDDHHmm` timestamp.
+
+**2. testflight.yml bypassed build_signed.sh entirely (broken CI path)**
+- The CI archive step was `xcodebuild archive -scheme EyePostureReminder` with no `-project` flag on a pure SPM package. SPM `.executable` targets cannot be archived for iOS distribution without a `.xcodeproj` app-wrapper target — this would always fail.
+- **Fix:** Replaced the two-step archive + export/upload with a single `./scripts/build_signed.sh upload` call. Added `brew install xcodegen`. Removed source Info.plist CFBundleVersion mutation (now handled by `inject_build_number`).
+
+**3. Bundle ID case mismatch in UITests/project.yml**
+- Canonical ID: `com.yashasg.eyeposturereminder` (confirmed Wave 13).
+- `UITests/project.yml` was using mixed-case `com.yashasg.EyePostureReminder`.
+- **Fix:** Aligned to `com.yashasg.eyeposturereminder` / `com.yashasg.eyeposturereminder.uitests`.
+
+### Why XcodeGen is unavoidable in build_signed.sh
+
+`xcodebuild archive` for iOS distribution requires a `.xcodeproj` with a signed app-wrapper (`application`) target. Swift Package `.executable` targets cannot be directly archived. The generated project mirrors the UITests project pattern (app-wrapper + SPM package dependency), differing only in signing settings. **This complexity is justified, not avoidable.**
+
+## Learnings
+
+- **Inject build numbers into archive, not source:** Patch `<archive>.xcarchive/Products/Applications/<App>.app/Info.plist` post-archive to avoid dirty working tree on CI. Source Info.plist should only carry the static placeholder value; build numbers are ephemeral.
+- **CI workflow must use build_signed.sh:** A workflow that raw-calls `xcodebuild archive -scheme X` on an SPM package without a `-project` flag will fail silently (or with an obscure error). The script's XcodeGen wrapper is mandatory for iOS distribution archives.
+- **Bundle IDs are case-sensitive in iOS:** `com.yashasg.EyePostureReminder` ≠ `com.yashasg.eyeposturereminder` from Apple's perspective. Keep all project files and scripts aligned to the canonical form registered in App Store Connect.
