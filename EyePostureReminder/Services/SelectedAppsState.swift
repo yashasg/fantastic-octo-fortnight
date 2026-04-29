@@ -20,29 +20,8 @@ import Combine
 import Foundation
 import ScreenTimeExtensionShared
 
-// MARK: - SelectedAppsMetadata
-
-/// Lightweight, `Codable` metadata describing a `FamilyActivitySelection`.
-///
-/// Safe to use in SPM unit tests without the FamilyControls entitlement.
-struct SelectedAppsMetadata: Codable, Equatable, Sendable {
-    /// Number of app categories included in the selection.
-    var categoryCount: Int
-    /// Number of individual apps included in the selection.
-    var appCount: Int
-    /// When the selection was last updated by the user.
-    var lastUpdated: Date
-
-    /// `true` when neither apps nor categories have been chosen.
-    var isEmpty: Bool { categoryCount == 0 && appCount == 0 }
-
-    /// Empty selection sentinel used as the default pre-configuration state.
-    static let empty = SelectedAppsMetadata(
-        categoryCount: 0,
-        appCount: 0,
-        lastUpdated: .distantPast
-    )
-}
+/// App-facing name for the shared App Group selection payload.
+typealias SelectedAppsMetadata = AppGroupSelectionSnapshot
 
 // MARK: - SelectedAppsState
 
@@ -66,7 +45,6 @@ final class SelectedAppsState: ObservableObject {
 
     // MARK: Dependency
 
-    private let defaults: UserDefaults?
     private let ipcStore: AppGroupIPCStore
 
     // MARK: Init
@@ -80,15 +58,8 @@ final class SelectedAppsState: ObservableObject {
     init(
         defaults: UserDefaults? = AppGroupDefaults.resolve(consumer: "SelectedAppsState")
     ) {
-        self.defaults = defaults
         ipcStore = AppGroupIPCStore(defaults: defaults)
-        let initialMetadata: SelectedAppsMetadata
-        if let data = defaults?.data(forKey: SelectedAppsState.metadataKey),
-           let decoded = try? JSONDecoder().decode(SelectedAppsMetadata.self, from: data) {
-            initialMetadata = decoded
-        } else {
-            initialMetadata = .empty
-        }
+        let initialMetadata = (try? ipcStore.readSelection()) ?? .empty
         selectionMetadata = initialMetadata
         let storedEnabled = ipcStore.isTrueInterruptEnabled()
         isTrueInterruptEnabled = storedEnabled && !initialMetadata.isEmpty
@@ -102,7 +73,7 @@ final class SelectedAppsState: ObservableObject {
     /// Toggle the user's intent to use True Interrupt Mode.
     @discardableResult
     func setEnabled(_ enabled: Bool) -> Bool {
-        guard defaults != nil else {
+        guard ipcStore.isAvailable else {
             isTrueInterruptEnabled = false
             return false
         }
@@ -119,16 +90,13 @@ final class SelectedAppsState: ObservableObject {
     /// Persist updated selection metadata (called after a real `FamilyActivityPicker` session).
     @discardableResult
     func updateMetadata(_ metadata: SelectedAppsMetadata) -> Bool {
-        guard let defaults else {
-            selectionMetadata = .empty
-            return false
-        }
-        guard let data = try? JSONEncoder().encode(metadata) else {
+        do {
+            try ipcStore.writeSelection(metadata)
+        } catch {
             selectionMetadata = .empty
             return false
         }
         selectionMetadata = metadata
-        defaults.set(data, forKey: SelectedAppsState.metadataKey)
         if metadata.isEmpty {
             isTrueInterruptEnabled = false
             _ = ipcStore.setTrueInterruptEnabled(false)

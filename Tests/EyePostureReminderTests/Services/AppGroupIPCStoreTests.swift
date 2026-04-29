@@ -159,7 +159,7 @@ final class AppGroupIPCStoreTests: XCTestCase {
         }
     }
 
-    func test_selectionSnapshot_roundTripsAndMatchesSelectedAppsMetadataShape() throws {
+    func test_selectionSnapshot_roundTripsThroughSharedType() throws {
         let snapshot = AppGroupSelectionSnapshot(
             categoryCount: 2,
             appCount: 4,
@@ -169,11 +169,8 @@ final class AppGroupIPCStoreTests: XCTestCase {
         try store.writeSelection(snapshot)
 
         XCTAssertEqual(try store.readSelection(), snapshot)
-        let data = try XCTUnwrap(defaults.data(forKey: AppGroupIPCKeys.selectionMetadata))
-        let decodedByMainApp = try JSONDecoder().decode(SelectedAppsMetadata.self, from: data)
-        XCTAssertEqual(decodedByMainApp.categoryCount, snapshot.categoryCount)
-        XCTAssertEqual(decodedByMainApp.appCount, snapshot.appCount)
-        XCTAssertEqual(decodedByMainApp.lastUpdated, snapshot.lastUpdated)
+        let appMetadata: SelectedAppsMetadata = snapshot
+        XCTAssertEqual(appMetadata, snapshot)
     }
 
     func test_readSelection_missingValue_returnsEmptySnapshot() throws {
