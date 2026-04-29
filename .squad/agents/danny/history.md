@@ -83,3 +83,21 @@ Consolidated 2026-04-24 planning entries covering early architecture decisions (
 - **UX_FLOWS.md §5.4:** Documented animation flow — spin (360°, 2s deceleration) → breathing pulse (4s in/out, infinite). Reduce-motion fallback (static logo). Placement: HomeView + OnboardingView.
 - **Decision artifact:** `.squad/decisions/inbox/danny-yinyang-roadmap.md` → merged into decisions.md
 - **Team collaboration:** Tess (implementation), Rusty (architecture docs), Livingston (9 tests), Roman (app naming research)
+
+## 2026-04-28 — xcstrings Readability Clarity Pass
+
+**Task:** Explain the phrase "Notifications wake reminders back up when a snooze ends" and propose readability/clarity improvements to `.xcstrings` copy.
+
+**Work Summary:**
+- Explained meaning: After snoozed reminders expire, the app uses a notification to restart break reminders on schedule
+- Reviewed full `Localizable.xcstrings` (77 keys) for clarity opportunities
+- Proposed 14 string replacements emphasizing simpler, plain-English phrasing
+- Preserved all placeholders (`%@`, `%d`, `%lld`); left legal copy unchanged
+- Decision filed: `.squad/decisions/inbox/danny-xcstrings-clarity-pass.md`
+
+**Example changes:**
+- `onboarding.permission.body1`: "Notifications wake reminders back up when a snooze ends — so your next break arrives right on time." → "Notifications let your breaks resume on time after a snooze."
+- `onboarding.welcome.body`: "Takes less than a minute to set up. Works quietly in the background — you'll barely know it's there." → "Quick to set up. Runs quietly — you'll barely notice it."
+- `settings.notifications.disabledBody`: "Enable notifications in Settings so reminders resume after snoozing, even when the app is in the background." → "Turn on notifications in Settings so breaks resume after a snooze."
+
+**Status:** Proposed for Linus implementation

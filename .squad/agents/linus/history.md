@@ -314,3 +314,34 @@ Tess completed comprehensive wellness design research proposing "Restful Grove" 
 - Logo-specific tokens avoid collateral breakage (surfaceTint used elsewhere).
 - iOS 16 is our deployment floor — dark AppIcon appearances require iOS 18+. Document platform limitations in token comments.
 - Icon regeneration script is maintainable; documented in generate_icons.py comments.
+
+## 2026-04-28 — xcstrings Readability Clarity Pass Implementation
+
+**Task:** Apply Danny's 14 string clarity improvements to `.xcstrings`, validate, build, and commit.
+
+**Work Summary:**
+- Applied all 14 recommended string replacements to `EyePostureReminder/Resources/Localizable.xcstrings`
+- Examples applied:
+  - `onboarding.permission.body1`: "Notifications let your breaks resume on time after a snooze."
+  - `onboarding.welcome.body`: "Quick to set up. Runs quietly — you'll barely notice it."
+  - `settings.snooze.limitReached.hint`: "Snooze limit reached. You can snooze again after your next reminder."
+- Validated JSON schema (no syntax errors; Python `json.load` successful)
+- Built clean: `./scripts/build.sh build` → BUILD SUCCEEDED; no warnings
+- Committed: `e47a7bf strings: apply readability/clarity pass to xcstrings copy` (branch: fix/legal-placeholders)
+
+**Key insights:**
+- Plain-English phrasing resonates better than "wake … back up" mechanics-speak
+- All 77 keys reviewed; only 14 needed improvement; legal copy left unchanged
+- Placeholders preserved exactly; no functional changes; copy-only win
+- Ready for merge into main branch
+
+**Status:** ✅ Complete
+
+## Learnings
+
+### 2026-04-28 — xcstrings clarity pass (Danny's recommendations)
+- Applied 14 string replacements to `EyePostureReminder/Resources/Localizable.xcstrings` per Danny's readability review in `.squad/decisions/inbox/danny-xcstrings-clarity-pass.md`.
+- Key pattern: shorter, plain-English phrasing wins over verbose/formal copy (e.g. "Notifications wake reminders back up when a snooze ends" → "Notifications let your breaks resume on time after a snooze.").
+- `onboarding.permission.body1` was the specific string the user flagged — now reads clearly.
+- JSON structure preserved; validated with `python3 json.load` + full build on iPhone 17 Pro simulator.
+- Build command: `xcodebuild -scheme EyePostureReminder -destination 'platform=iOS Simulator,id=179149FE-BAFF-4464-893B-7468D06F49B7' build`

@@ -22673,3 +22673,57 @@ User confirmed LLC name is **Puzzle Quest LLC**, currently registered in Washing
 - Distribution certificates (App Store, Ad Hoc)
 - TestFlight upload (requires App Store Connect app record)
 
+---
+
+## Decision: Localizable.xcstrings Readability Pass
+
+**Author:** Danny (PM)  
+**Date:** 2026-04-28  
+**Status:** Implemented  
+
+### The Quoted Phrase
+
+> "Notifications wake reminders back up when a snooze ends"
+
+This means: **After you snooze your reminders and the snooze timer expires, the app uses a notification to restart your break reminders on schedule.** The original phrasing is awkward because "wake … back up" is vague and "when a snooze ends" is overly mechanical.
+
+### Recommended Replacements
+
+Only strings recommended for change are listed. Preserve all `%@`, `%d`, `%lld` tokens exactly.
+
+| Key | Current | Recommended |
+|---|---|---|
+| `onboarding.permission.body1` | Notifications wake reminders back up when a snooze ends — so your next break arrives right on time. | **Notifications let your breaks resume on time after a snooze.** |
+| `onboarding.permission.body2` | No spam. Just the breaks you asked for, when you need them. | **No spam — just your breaks, right on schedule.** |
+| `onboarding.setup.body` | You'll get a gentle reminder to look away and sit up straight — no effort required from you. | **You'll get gentle reminders to look away and sit up straight.** |
+| `onboarding.setup.subtitle` | Here's how we've set things up for you: | **Here's your setup:** |
+| `onboarding.welcome.body` | Takes less than a minute to set up. Works quietly in the background — you'll barely know it's there. | **Quick to set up. Runs quietly — you'll barely notice it.** |
+| `settings.notifications.disabledBody` | Enable notifications in Settings so reminders resume after snoozing, even when the app is in the background. | **Turn on notifications in Settings so breaks resume after a snooze.** |
+| `settings.notifications.disabledLabel` | Notifications disabled. Enable them in Settings so reminders resume after snoozing, even when the app is in the background. | **Notifications are off. Turn them on in Settings so breaks resume after a snooze.** |
+| `settings.masterToggle.footer` | Reminders only appear while this app is open. | **Reminders only work while the app is open.** |
+| `settings.resetToDefaults.confirmMessage` | This will restore all settings to their original values. Your snooze history will also be cleared. | **This resets all settings to their defaults and clears your snooze history.** |
+| `settings.resetToDefaults.hint` | Opens a confirmation before resetting all settings to factory defaults | **Confirms before resetting all settings to defaults** |
+| `settings.reminder.section.footer` | Timer resets when you lock your phone. | **The timer resets when you lock your phone.** |
+| `settings.smartPause.footer` | Reminders resume automatically when conditions clear. | **Reminders resume when conditions end.** |
+| `overlay.dismissButton.hint` | Ends the break early and returns to the app | **Skips this break and goes back to the app** |
+| `settings.snooze.limitReached.hint` | Snooze limit reached. Wait for the next reminder before snoozing again. | **Snooze limit reached. You can snooze again after your next reminder.** |
+
+### Strings Reviewed & Left Unchanged
+
+All other strings are clear and appropriate — legal copy, simple labels, picker formats, and VoiceOver hints are fine as-is. Legal text should not be simplified (it needs to stay precise).
+
+### Guidelines Followed
+
+- Brand name `kshana` kept lowercase
+- No placeholders altered
+- No meaning or behavior changed
+- No invented legal/contact/PII details
+
+### Implementation Status
+
+- **Linus:** Applied all 14 replacements to `Localizable.xcstrings`
+- **Validated:** JSON schema (no errors)
+- **Built:** `./scripts/build.sh build` → BUILD SUCCEEDED
+- **Committed:** `e47a7bf strings: apply readability/clarity pass to xcstrings copy`
+- **Branch:** fix/legal-placeholders
+
