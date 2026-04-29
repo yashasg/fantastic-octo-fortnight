@@ -11,7 +11,7 @@
 
 **kshana**
 
-*Subtitle:* Eye & Posture Wellness
+*App Store subtitle:* Eye & Posture Wellness
 
 *Origin:* Sanskrit (क्षण) — "a moment, an instant"
 
@@ -21,14 +21,9 @@
 
 ## 2. Subtitle
 
-**Your breaks, your timing, your control.**
+**Eye & Posture Wellness**
 
-*(31 characters — within 30-char limit) — OVER by 1, need to adjust*
-
-**Alternative:** `Healthy app breaks on your terms` (31 chars)
-**Alternative:** `Breaks you choose, breaks you need` (34 chars — too long)
-**Alternative:** `Choose your breaks, keep control` (31 chars)
-**Alternative:** `App breaks, your way.` (21 chars — good option)
+*(22 characters — within Apple's 30-character App Store subtitle limit)*
 
 ---
 
