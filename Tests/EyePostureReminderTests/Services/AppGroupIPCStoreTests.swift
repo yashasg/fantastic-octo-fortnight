@@ -42,6 +42,42 @@ final class AppGroupIPCStoreTests: XCTestCase {
         XCTAssertTrue(defaults.bool(forKey: AppGroupIPCKeys.trueInterruptEnabled))
     }
 
+    func test_trueInterruptEnabled_postsChangeNotificationWithEnabledValue() throws {
+        var observedValues: [Bool] = []
+        let observer = NotificationCenter.default.addObserver(
+            forName: AppGroupIPCStore.trueInterruptEnabledDidChangeNotification,
+            object: nil,
+            queue: nil
+        ) { notification in
+            let key = AppGroupIPCStore.trueInterruptEnabledValueUserInfoKey
+            if let value = notification.userInfo?[key] as? Bool {
+                observedValues.append(value)
+            }
+        }
+        defer { NotificationCenter.default.removeObserver(observer) }
+        try store.writeSelection(AppGroupSelectionSnapshot(categoryCount: 0, appCount: 1, lastUpdated: Date()))
+
+        XCTAssertTrue(store.setTrueInterruptEnabled(true))
+
+        XCTAssertEqual(observedValues, [true])
+    }
+
+    func test_trueInterruptEnabled_doesNotPostChangeNotificationWhenValueUnchanged() {
+        var notificationCount = 0
+        let observer = NotificationCenter.default.addObserver(
+            forName: AppGroupIPCStore.trueInterruptEnabledDidChangeNotification,
+            object: nil,
+            queue: nil
+        ) { _ in
+            notificationCount += 1
+        }
+        defer { NotificationCenter.default.removeObserver(observer) }
+
+        XCTAssertTrue(store.setTrueInterruptEnabled(false))
+
+        XCTAssertEqual(notificationCount, 0)
+    }
+
     func test_trueInterruptEnabled_emptySelection_refusesEnable() {
         XCTAssertFalse(store.setTrueInterruptEnabled(true))
 
