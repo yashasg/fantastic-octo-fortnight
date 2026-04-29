@@ -9,6 +9,13 @@ import Foundation
 @MainActor
 final class MockOverlayPresenting: OverlayPresenting {
 
+    enum LifecycleEvent: Equatable {
+        case show(ReminderType)
+        case dismiss
+        case clearQueue
+        case clearQueueForType(ReminderType)
+    }
+
     // MARK: - Call Counts
 
     private(set) var showCallCount = 0
@@ -39,6 +46,7 @@ final class MockOverlayPresenting: OverlayPresenting {
     /// `onDismiss` closures passed to `showOverlay`, in call order.
     /// Stored so tests can verify the post-dismiss callback chain.
     private(set) var onDismissCalls: [() -> Void] = []
+    private(set) var lifecycleEvents: [LifecycleEvent] = []
 
     // MARK: - State
 
@@ -59,6 +67,7 @@ final class MockOverlayPresenting: OverlayPresenting {
         showCallPauseMediaEnabled = []
         onPresentCalls = []
         onDismissCalls = []
+        lifecycleEvents = []
         isOverlayVisible = false
         autoInvokeOnPresent = true
     }
@@ -93,6 +102,7 @@ final class MockOverlayPresenting: OverlayPresenting {
         callbacks: OverlayLifecycleCallbacks
     ) {
         showCallCount += 1
+        lifecycleEvents.append(.show(type))
         showCallOrder.append(type)
         showCallDurations.append(duration)
         showCallHapticsEnabled.append(hapticsEnabled)
@@ -107,15 +117,18 @@ final class MockOverlayPresenting: OverlayPresenting {
 
     func dismissOverlay() {
         dismissCallCount += 1
+        lifecycleEvents.append(.dismiss)
         isOverlayVisible = false
     }
 
     func clearQueue() {
         clearQueueCallCount += 1
+        lifecycleEvents.append(.clearQueue)
     }
 
     func clearQueue(for type: ReminderType) {
         clearQueueForTypeCallCount += 1
         clearQueueForTypeArgs.append(type)
+        lifecycleEvents.append(.clearQueueForType(type))
     }
 }
