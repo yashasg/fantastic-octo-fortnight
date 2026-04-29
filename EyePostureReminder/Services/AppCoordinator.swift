@@ -3,11 +3,12 @@ import ScreenTimeExtensionShared
 import UIKit
 import UserNotifications
 
-protocol AppGroupIPCRecording {
+protocol AppGroupIPCProviding {
     func recordEvent(_ event: AppGroupIPCEvent) throws
+    func isTrueInterruptEnabled() -> Bool
 }
 
-extension AppGroupIPCStore: AppGroupIPCRecording {}
+extension AppGroupIPCStore: AppGroupIPCProviding {}
 
 /// Central dependency owner and app-lifecycle coordinator.
 ///
@@ -87,7 +88,7 @@ final class AppCoordinator: ObservableObject {
 
     /// Records shield/notification routing events into the App Group container so
     /// app extensions and watchdog diagnostics can observe the selected path.
-    private let ipcStore: AppGroupIPCRecording
+    private let ipcStore: AppGroupIPCProviding
 
     // MARK: - Screen-Time Tracker
 
@@ -179,7 +180,7 @@ final class AppCoordinator: ObservableObject {
         pauseConditionProvider: PauseConditionProviding? = nil,
         screenTimeAuthorization: ScreenTimeAuthorizationProviding? = nil,
         deviceActivityMonitor: DeviceActivityMonitorProviding? = nil,
-        ipcStore: AppGroupIPCRecording = AppGroupIPCStore()
+        ipcStore: AppGroupIPCProviding = AppGroupIPCStore()
     ) {
         self.settings = settings ?? SettingsStore()
         self.scheduler = scheduler ?? ReminderScheduler()
@@ -633,7 +634,7 @@ extension AppCoordinator {
     }
 
     private func scheduleDeviceActivityMonitoring(for type: ReminderType, duration: TimeInterval) {
-        guard deviceActivityMonitor.isAvailable else { return }
+        guard shouldUseShieldPath else { return }
         enqueueDeviceActivityMonitorOperation(.schedule(ShieldSession(type: type, durationSeconds: duration)))
     }
 
@@ -737,11 +738,17 @@ extension AppCoordinator {
     }
 
     private var shouldScheduleNotificationFallback: Bool {
-        settings.notificationFallbackEnabled && !deviceActivityMonitor.isAvailable && hasEnabledReminder
+        settings.notificationFallbackEnabled &&
+            hasEnabledReminder &&
+            (!deviceActivityMonitor.isAvailable || !isTrueInterruptEnabled)
     }
 
     private var shouldUseShieldPath: Bool {
-        deviceActivityMonitor.isAvailable && hasEnabledReminder
+        deviceActivityMonitor.isAvailable && isTrueInterruptEnabled && hasEnabledReminder
+    }
+
+    private var isTrueInterruptEnabled: Bool {
+        ipcStore.isTrueInterruptEnabled()
     }
 
     private var hasEnabledReminder: Bool {

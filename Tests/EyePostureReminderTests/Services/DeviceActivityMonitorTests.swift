@@ -253,8 +253,10 @@ final class DeviceActivityMonitorTests: XCTestCase {
         let mockTracker = MockScreenTimeTracker()
         let mockOverlay = MockOverlayPresenting()
         let mockMonitor = MockDeviceActivityMonitorProviding()
+        let ipcStore = MockAppGroupIPCRecorder()
         mockOverlay.autoInvokeOnPresent = false
         mockMonitor.stubbedIsAvailable = true
+        ipcStore.trueInterruptEnabled = true
         let coordinator = AppCoordinator(
             settings: makeSettings(),
             scheduler: ReminderScheduler(notificationCenter: mockNotif),
@@ -263,7 +265,7 @@ final class DeviceActivityMonitorTests: XCTestCase {
             screenTimeTracker: mockTracker,
             pauseConditionProvider: MockPauseConditionProvider(),
             deviceActivityMonitor: mockMonitor,
-            ipcStore: MockAppGroupIPCRecorder()
+            ipcStore: ipcStore
         )
         defer { coordinator.stopFallbackTimers() }
 
@@ -283,7 +285,9 @@ final class DeviceActivityMonitorTests: XCTestCase {
         let mockTracker = MockScreenTimeTracker()
         let mockOverlay = MockOverlayPresenting()
         let mockMonitor = MockDeviceActivityMonitorProviding()
+        let ipcStore = MockAppGroupIPCRecorder()
         mockMonitor.stubbedIsAvailable = true
+        ipcStore.trueInterruptEnabled = true
         let coordinator = AppCoordinator(
             settings: makeSettings(),
             scheduler: ReminderScheduler(notificationCenter: mockNotif),
@@ -292,7 +296,7 @@ final class DeviceActivityMonitorTests: XCTestCase {
             screenTimeTracker: mockTracker,
             pauseConditionProvider: MockPauseConditionProvider(),
             deviceActivityMonitor: mockMonitor,
-            ipcStore: MockAppGroupIPCRecorder()
+            ipcStore: ipcStore
         )
         defer { coordinator.stopFallbackTimers() }
 
@@ -303,6 +307,39 @@ final class DeviceActivityMonitorTests: XCTestCase {
         XCTAssertEqual(mockMonitor.operationLog, ["schedule", "cancel"],
             "Fast dismiss must serialize cancel after the in-flight schedule operation")
         XCTAssertNil(mockMonitor.activeSession)
+    }
+
+    func test_coordinator_overlayDismiss_cancelsActiveShield_afterTrueInterruptDisabled() async throws {
+        let mockNotif = MockNotificationCenter()
+        let mockTracker = MockScreenTimeTracker()
+        let mockOverlay = MockOverlayPresenting()
+        let mockMonitor = MockDeviceActivityMonitorProviding()
+        let ipcStore = MockAppGroupIPCRecorder()
+        mockMonitor.stubbedIsAvailable = true
+        ipcStore.trueInterruptEnabled = true
+        let coordinator = AppCoordinator(
+            settings: makeSettings(),
+            scheduler: ReminderScheduler(notificationCenter: mockNotif),
+            notificationCenter: mockNotif,
+            overlayManager: mockOverlay,
+            screenTimeTracker: mockTracker,
+            pauseConditionProvider: MockPauseConditionProvider(),
+            deviceActivityMonitor: mockMonitor,
+            ipcStore: ipcStore
+        )
+        defer { coordinator.stopFallbackTimers() }
+
+        mockTracker.simulateThresholdReached(for: .eyes)
+        try await Task.sleep(nanoseconds: 50_000_000)
+        ipcStore.trueInterruptEnabled = false
+        mockOverlay.simulateDismiss()
+        try await Task.sleep(nanoseconds: 100_000_000)
+
+        XCTAssertEqual(
+            mockMonitor.operationLog,
+            ["schedule", "cancel"],
+            "Dismiss must cancel an already-active shield even if True Interrupt was disabled after scheduling"
+        )
     }
 
     // MARK: - Helpers
