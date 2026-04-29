@@ -69,7 +69,7 @@ struct SettingsView: View {
                 AccessibleToggle(
                     isOn: $settings.globalEnabled,
                     tint: AppColor.primaryRest,
-                    accessibilityIdentifier: "home.masterToggle",
+                    accessibilityIdentifier: "settings.masterToggle",
                     accessibilityHint: Text("settings.masterToggle.hint", bundle: .module),
                     onChange: { _ in viewModel?.globalToggleChanged() },
                     label: {

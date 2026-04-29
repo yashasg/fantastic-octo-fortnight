@@ -174,10 +174,11 @@ final class SettingsFlowTests: XCTestCase {
     func test_settings_globalToggle_isVisible() throws {
         openSettings()
 
-        let globalToggle = app.switches.firstMatch
+        let globalToggle = app.switches["settings.masterToggle"]
         XCTAssertTrue(
             globalToggle.waitForExistence(timeout: 5),
-            "The global toggle must be visible at the top of the Settings form."
+            "The global toggle must be visible at the top of the Settings form. " +
+            "AccessibleToggle must use .accessibilityIdentifier(\"settings.masterToggle\") in SettingsView."
         )
     }
 
@@ -187,7 +188,7 @@ final class SettingsFlowTests: XCTestCase {
     func test_settings_globalToggle_changesStateOnTap() throws {
         openSettings()
 
-        let globalToggle = app.switches.firstMatch
+        let globalToggle = app.switches["settings.masterToggle"]
         XCTAssertTrue(globalToggle.waitForExistence(timeout: 5))
 
         let initialValue = globalToggle.value as? String
