@@ -12,6 +12,10 @@ extension AppCoordinator {
             session = try ipcStore.readShieldSession()
         } catch {
             Logger.scheduling.error("Watchdog recovery could not read shield session: \(error.localizedDescription)")
+            AnalyticsLogger.log(.ipcOperationFailed(
+                operation: .readShieldSession,
+                reason: ipcFailureReason(from: error)
+            ))
             return false
         }
         guard session.reason != nil, let triggeredAt = session.triggeredAt else { return false }
@@ -24,6 +28,10 @@ extension AppCoordinator {
             events = try ipcStore.readEvents()
         } catch {
             Logger.scheduling.error("Watchdog recovery could not read heartbeat events: \(error.localizedDescription)")
+            AnalyticsLogger.log(.ipcOperationFailed(
+                operation: .readEvents,
+                reason: ipcFailureReason(from: error)
+            ))
             return false
         }
 
@@ -49,6 +57,7 @@ extension AppCoordinator {
         let sessionCleared = ipcStore.clearShieldSession(endedAt: now)
         if !sessionCleared {
             Logger.scheduling.error("Watchdog recovery failed to clear stale shield session")
+            AnalyticsLogger.log(.ipcOperationFailed(operation: .clearShieldSession, reason: .unavailable))
         }
         cancelDeviceActivityMonitoring()
         var fallbackScheduled = false
@@ -63,5 +72,16 @@ extension AppCoordinator {
             fallbackScheduled: fallbackScheduled
         ))
         return true
+    }
+
+    private func ipcFailureReason(from error: Error) -> AnalyticsEvent.IPCFailureReason {
+        switch error as? AppGroupIPCStore.StoreError {
+        case .appGroupSuiteUnavailable:
+            return .unavailable
+        case .corruptEventLog, .corruptSelectionMetadata, .corruptShieldSession:
+            return .corrupt
+        case .none:
+            return .unknown
+        }
     }
 }

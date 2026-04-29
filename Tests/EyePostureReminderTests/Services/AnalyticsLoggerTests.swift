@@ -164,6 +164,37 @@ final class AnalyticsLoggerTests: XCTestCase {
         AnalyticsLogger.log(.watchdogRecoveryCompleted(sessionCleared: false, fallbackScheduled: false))
     }
 
+    // MARK: - IPC Health
+
+    func test_log_ipcOperationFailed_unavailable_doesNotCrash() {
+        AnalyticsLogger.log(.ipcOperationFailed(operation: .readShieldSession, reason: .unavailable))
+    }
+
+    func test_log_ipcOperationFailed_corrupt_doesNotCrash() {
+        AnalyticsLogger.log(.ipcOperationFailed(operation: .readEvents, reason: .corrupt))
+    }
+
+    func test_log_ipcOperationFailed_writeFailed_doesNotCrash() {
+        AnalyticsLogger.log(.ipcOperationFailed(operation: .clearShieldSession, reason: .writeFailed))
+    }
+
+    func test_log_ipcOperationFailed_allOperations_doNotCrash() {
+        let operations: [AnalyticsEvent.IPCOperation] = [
+            .readShieldSession, .readEvents, .clearShieldSession,
+            .writeEvent, .writeShieldSession, .readSelection
+        ]
+        for op in operations {
+            AnalyticsLogger.log(.ipcOperationFailed(operation: op, reason: .unavailable))
+        }
+    }
+
+    func test_log_ipcOperationFailed_allReasons_doNotCrash() {
+        let reasons: [AnalyticsEvent.IPCFailureReason] = [.unavailable, .corrupt, .writeFailed, .unknown]
+        for reason in reasons {
+            AnalyticsLogger.log(.ipcOperationFailed(operation: .readShieldSession, reason: reason))
+        }
+    }
+
     // MARK: - Repeated logging
 
     func test_log_calledRepeatedly_doesNotCrash() {
