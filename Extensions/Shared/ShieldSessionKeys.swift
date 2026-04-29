@@ -11,7 +11,7 @@ enum ShieldSessionKeys {
     static let breakReason = "shield.breakReason"
     /// Break duration in seconds (`TimeInterval` stored as Double).
     static let durationSeconds = "shield.durationSeconds"
-    /// Wall-clock trigger time stored as `Date` via `UserDefaults.set(_:forKey:)`.
+    /// Wall-clock trigger time stored as `timeIntervalSince1970` (`Double`).
     static let triggeredAt = "shield.triggeredAt"
     /// Shared App Group suite name.
     static let appGroupID = "group.com.yashasgujjar.kshana"

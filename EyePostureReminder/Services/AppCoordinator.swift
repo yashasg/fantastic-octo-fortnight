@@ -71,6 +71,13 @@ final class AppCoordinator: ObservableObject {
     /// is provisioned. Exposed so the Settings and onboarding UI can observe status.
     let screenTimeAuthorization: ScreenTimeAuthorizationProviding
 
+    // MARK: - DeviceActivity Monitor
+
+    /// Schedules and cancels OS-level DeviceActivity monitoring windows for break sessions.
+    /// Defaults to `DeviceActivityMonitorNoop` until the FamilyControls entitlement (#201)
+    /// is provisioned and the user has granted authorization.
+    private let deviceActivityMonitor: DeviceActivityMonitorProviding
+
     // MARK: - Screen-Time Tracker
 
     /// Tracks continuous screen-on time per reminder type and fires callbacks
@@ -99,6 +106,20 @@ final class AppCoordinator: ObservableObject {
         let duration: TimeInterval
     }
 
+    private enum DeviceActivityMonitorOperation: Sendable {
+        case schedule(ShieldSession)
+        case cancel
+
+        var logDescription: String {
+            switch self {
+            case .schedule(let session):
+                "schedule \(session.reason.rawValue)"
+            case .cancel:
+                "cancel"
+            }
+        }
+    }
+
     /// When a notification-tap launches the app, `didReceive` fires before any
     /// `UIWindowScene` reaches `.foregroundActive`. We stash the overlay here
     /// and present it once `scenePhase` transitions to `.active`.
@@ -115,6 +136,10 @@ final class AppCoordinator: ObservableObject {
     /// In-process wake task — cancels the snooze and reschedules reminders
     /// when the snooze period expires while the app is in the foreground.
     private var snoozeWakeTask: Task<Void, Never>?
+
+    /// Serializes DeviceActivity start/cancel operations so a fast dismiss cannot
+    /// race an in-flight schedule call and leave OS-level monitoring active.
+    private var deviceActivityMonitorTask: Task<Void, Never>?
 
     // MARK: - Session Timing
 
@@ -141,13 +166,15 @@ final class AppCoordinator: ObservableObject {
         overlayManager: OverlayPresenting? = nil,
         screenTimeTracker: ScreenTimeTracking? = nil,
         pauseConditionProvider: PauseConditionProviding? = nil,
-        screenTimeAuthorization: ScreenTimeAuthorizationProviding? = nil
+        screenTimeAuthorization: ScreenTimeAuthorizationProviding? = nil,
+        deviceActivityMonitor: DeviceActivityMonitorProviding? = nil
     ) {
         self.settings = settings ?? SettingsStore()
         self.scheduler = scheduler ?? ReminderScheduler()
         self.notificationCenter = notificationCenter
         self.overlayManager = overlayManager ?? OverlayManager()
         self.screenTimeAuthorization = screenTimeAuthorization ?? ScreenTimeAuthorizationNoop()
+        self.deviceActivityMonitor = deviceActivityMonitor ?? DeviceActivityMonitorNoop()
         // In UI test mode, use no-op stubs for services that register UIKit lifecycle
         // observers and start 1-second timers — they prevent XCUITest from settling
         // the accessibility tree between interactions, causing stale element reads.
@@ -174,11 +201,7 @@ final class AppCoordinator: ObservableObject {
                 self.settings.snoozeCount = 0
                 let duration = self.settings.settings(for: type).breakDuration
                 let thresholdS = self.settings.settings(for: type).interval
-                self.overlayManager.showOverlay(
-                    for: type,
-                    duration: duration,
-                    hapticsEnabled: self.settings.hapticsEnabled,
-                    pauseMediaEnabled: self.settings.pauseMediaDuringBreaks) {}
+                self.showBreakOverlay(for: type, duration: duration)
                 AnalyticsLogger.log(.reminderTriggered(type: type, thresholdS: thresholdS))
                 Logger.scheduling.info("Reminder triggered by screen-time threshold: \(type.rawValue)")
                 // Reschedule the background notification from now so its interval restarts
@@ -226,6 +249,7 @@ final class AppCoordinator: ObservableObject {
     deinit {
         rescheduleDebounce.values.forEach { $0.cancel() }
         snoozeWakeTask?.cancel()
+        deviceActivityMonitorTask?.cancel()
     }
 
     // MARK: - Notification Permission
@@ -378,11 +402,7 @@ final class AppCoordinator: ObservableObject {
             .contains { $0.activationState == .foregroundActive }
 
         if hasActiveScene {
-            overlayManager.showOverlay(
-                for: type,
-                duration: duration,
-                hapticsEnabled: settings.hapticsEnabled,
-                pauseMediaEnabled: settings.pauseMediaDuringBreaks) {}
+            showBreakOverlay(for: type, duration: duration)
         } else {
             pendingOverlay = PendingOverlay(type: type, duration: duration)
             Logger.lifecycle.info("Queued pending overlay for \(type.rawValue) (no active scene)")
@@ -399,11 +419,7 @@ final class AppCoordinator: ObservableObject {
         guard let pending = pendingOverlay else { return }
         pendingOverlay = nil
         Logger.lifecycle.info("Presenting queued overlay for \(pending.type.rawValue)")
-        overlayManager.showOverlay(
-            for: pending.type,
-            duration: pending.duration,
-            hapticsEnabled: settings.hapticsEnabled,
-            pauseMediaEnabled: settings.pauseMediaDuringBreaks) {}
+        showBreakOverlay(for: pending.type, duration: pending.duration)
     }
 
     // MARK: - App Lifecycle Hooks
@@ -575,6 +591,58 @@ final class AppCoordinator: ObservableObject {
 
     // MARK: - Private
 
+    private func showBreakOverlay(for type: ReminderType, duration: TimeInterval) {
+        overlayManager.showOverlay(
+            for: type,
+            duration: duration,
+            hapticsEnabled: settings.hapticsEnabled,
+            pauseMediaEnabled: settings.pauseMediaDuringBreaks,
+            callbacks: OverlayLifecycleCallbacks(
+                onPresent: { [weak self] in
+                    self?.scheduleDeviceActivityMonitoring(for: type, duration: duration)
+                },
+                onDismiss: { [weak self] in
+                    self?.cancelDeviceActivityMonitoring()
+                }
+            )
+        )
+    }
+
+    private func scheduleDeviceActivityMonitoring(for type: ReminderType, duration: TimeInterval) {
+        guard deviceActivityMonitor.isAvailable else { return }
+        enqueueDeviceActivityMonitorOperation(.schedule(ShieldSession(type: type, durationSeconds: duration)))
+    }
+
+    private func cancelDeviceActivityMonitoring() {
+        guard deviceActivityMonitor.isAvailable else { return }
+        enqueueDeviceActivityMonitorOperation(.cancel)
+    }
+
+    private func enqueueDeviceActivityMonitorOperation(_ operation: DeviceActivityMonitorOperation) {
+        let previousTask = deviceActivityMonitorTask
+        deviceActivityMonitorTask = Task { @MainActor [weak self, previousTask, operation] in
+            _ = await previousTask?.result
+            guard let self, !Task.isCancelled else { return }
+
+            do {
+                switch operation {
+                case .schedule(let session):
+                    try await deviceActivityMonitor.scheduleBreakMonitoring(for: session)
+                    Logger.scheduling.info(
+                        "DeviceActivity monitoring scheduled for \(session.reason.rawValue)"
+                    )
+                case .cancel:
+                    try await deviceActivityMonitor.cancelBreakMonitoring()
+                    Logger.scheduling.info("DeviceActivity monitoring cancelled")
+                }
+            } catch {
+                Logger.scheduling.error(
+                    "DeviceActivity monitor \(operation.logDescription) failed: \(error.localizedDescription)"
+                )
+            }
+        }
+    }
+
     /// Update the ScreenTimeTracker threshold and background notification for a
     /// single type after the debounce window has elapsed.
     private func performReschedule(for type: ReminderType) async {
@@ -659,6 +727,8 @@ extension AppCoordinator: ReminderScheduling {
         }
         overlayManager.clearQueue()
         pendingOverlay = nil
+
+        cancelDeviceActivityMonitoring()
 
         // If snooze was just applied (snoozedUntil set before this call),
         // arm the in-process wake task immediately so the app resumes on time
