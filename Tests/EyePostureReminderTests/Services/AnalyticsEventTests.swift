@@ -123,4 +123,35 @@ final class AnalyticsEventTests: XCTestCase {
     func test_pauseDeactivated_emptyType() {
         AnalyticsLogger.log(.pauseDeactivated(conditionType: ""))
     }
+
+    // MARK: - AnalyticsEvent: Watchdog Recovery Events
+
+    func test_watchdogRecoveryTriggered_canBeConstructed() {
+        let event = AnalyticsEvent.watchdogRecoveryTriggered(
+            reason: "eye_care",
+            detail: "watchdog_device_activity_heartbeat_missing"
+        )
+        _ = event
+    }
+
+    func test_watchdogRecoveryTriggered_staleDetail_canBeLogged() {
+        AnalyticsLogger.log(.watchdogRecoveryTriggered(
+            reason: "posture",
+            detail: "watchdog_device_activity_heartbeat_stale:device_activity_interval_started"
+        ))
+    }
+
+    func test_watchdogRecoveryTriggered_missingDetail_canBeLogged() {
+        AnalyticsLogger.log(.watchdogRecoveryTriggered(
+            reason: "eye_care",
+            detail: "watchdog_device_activity_heartbeat_missing"
+        ))
+    }
+
+    func test_watchdogRecoveryCompleted_allCombinations() {
+        AnalyticsLogger.log(.watchdogRecoveryCompleted(sessionCleared: true, fallbackScheduled: true))
+        AnalyticsLogger.log(.watchdogRecoveryCompleted(sessionCleared: true, fallbackScheduled: false))
+        AnalyticsLogger.log(.watchdogRecoveryCompleted(sessionCleared: false, fallbackScheduled: false))
+        AnalyticsLogger.log(.watchdogRecoveryCompleted(sessionCleared: false, fallbackScheduled: true))
+    }
 }

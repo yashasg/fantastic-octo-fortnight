@@ -149,6 +149,21 @@ final class AnalyticsLoggerTests: XCTestCase {
         AnalyticsLogger.log(.pauseDeactivated(conditionType: "all_cleared"))
     }
 
+    func test_log_watchdogRecoveryTriggered_doesNotCrash() {
+        AnalyticsLogger.log(.watchdogRecoveryTriggered(
+            reason: "eye_care",
+            detail: "watchdog_device_activity_heartbeat_stale:device_activity_interval_started"
+        ))
+    }
+
+    func test_log_watchdogRecoveryCompleted_cleared_doesNotCrash() {
+        AnalyticsLogger.log(.watchdogRecoveryCompleted(sessionCleared: true, fallbackScheduled: true))
+    }
+
+    func test_log_watchdogRecoveryCompleted_failed_doesNotCrash() {
+        AnalyticsLogger.log(.watchdogRecoveryCompleted(sessionCleared: false, fallbackScheduled: false))
+    }
+
     // MARK: - Repeated logging
 
     func test_log_calledRepeatedly_doesNotCrash() {
