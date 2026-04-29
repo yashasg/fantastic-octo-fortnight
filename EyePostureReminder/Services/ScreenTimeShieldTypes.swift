@@ -29,7 +29,8 @@ enum ShieldTriggerReason: String, Sendable, Equatable {
 /// Describes a single, discrete screen-time shielding session.
 ///
 /// Created by `AppCoordinator` when a break begins and passed to
-/// `ScreenTimeShieldProviding.beginShield(for:)`.
+/// `ScreenTimeShieldProviding.beginShield(for:)` and
+/// `DeviceActivityMonitorProviding.scheduleBreakMonitoring(for:)`.
 struct ShieldSession: Sendable, Equatable {
     /// The reason the shield is being applied.
     let reason: ShieldTriggerReason
@@ -42,5 +43,24 @@ struct ShieldSession: Sendable, Equatable {
 
     static let reasonKey = "shield.breakReason"
     static let durationKey = "shield.durationSeconds"
+    /// Wall-clock trigger time stored as `timeIntervalSince1970` (`Double`).
     static let triggeredAtKey = "shield.triggeredAt"
+}
+
+// MARK: - ShieldSession + ReminderType
+
+extension ShieldSession {
+    /// Convenience initialiser that derives the `ShieldTriggerReason` from a `ReminderType`.
+    ///
+    /// Used by `AppCoordinator` when bridging the `ScreenTimeTracker.onThresholdReached`
+    /// callback into a `DeviceActivityMonitorProviding.scheduleBreakMonitoring(for:)` call.
+    ///
+    /// - Parameters:
+    ///   - type: The reminder type that reached its threshold.
+    ///   - durationSeconds: Break duration in seconds (read from `SettingsStore`).
+    ///   - triggeredAt: Wall-clock trigger time. Defaults to `Date()`.
+    init(type: ReminderType, durationSeconds: TimeInterval, triggeredAt: Date = Date()) {
+        let reason: ShieldTriggerReason = type == .eyes ? .scheduledEyesBreak : .scheduledPostureBreak
+        self.init(reason: reason, durationSeconds: durationSeconds, triggeredAt: triggeredAt)
+    }
 }

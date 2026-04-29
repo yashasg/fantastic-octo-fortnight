@@ -5,6 +5,19 @@ import UIKit
 
 // MARK: - OverlayPresenting Protocol
 
+struct OverlayLifecycleCallbacks {
+    let onPresent: () -> Void
+    let onDismiss: () -> Void
+
+    init(
+        onPresent: @escaping () -> Void = {},
+        onDismiss: @escaping () -> Void = {}
+    ) {
+        self.onPresent = onPresent
+        self.onDismiss = onDismiss
+    }
+}
+
 /// Abstracts UIWindow overlay lifecycle for testability.
 ///
 /// The concrete implementation creates a secondary `UIWindow` at
@@ -24,13 +37,13 @@ protocol OverlayPresenting: AnyObject {
     ///               for a countdown UI).
     ///   - hapticsEnabled: Whether haptic feedback should fire on this overlay.
     ///   - pauseMediaEnabled: Whether to interrupt external audio during this overlay.
-    ///   - onDismiss: Called on the main thread after the overlay is dismissed.
+    ///   - callbacks: Lifecycle hooks called after presentation and dismissal.
     func showOverlay(
         for type: ReminderType,
         duration: TimeInterval,
         hapticsEnabled: Bool,
         pauseMediaEnabled: Bool,
-        onDismiss: @escaping () -> Void
+        callbacks: OverlayLifecycleCallbacks
     )
 
     /// Programmatically dismiss the overlay (e.g. user tapped "Done" or timer expired).
@@ -45,6 +58,24 @@ protocol OverlayPresenting: AnyObject {
     /// Drop all queued overlays for a specific reminder type (e.g. when a single
     /// reminder type is cancelled without affecting other queued types).
     func clearQueue(for type: ReminderType)
+}
+
+extension OverlayPresenting {
+    func showOverlay(
+        for type: ReminderType,
+        duration: TimeInterval,
+        hapticsEnabled: Bool,
+        pauseMediaEnabled: Bool,
+        onDismiss: @escaping () -> Void
+    ) {
+        showOverlay(
+            for: type,
+            duration: duration,
+            hapticsEnabled: hapticsEnabled,
+            pauseMediaEnabled: pauseMediaEnabled,
+            callbacks: OverlayLifecycleCallbacks(onDismiss: onDismiss)
+        )
+    }
 }
 
 // MARK: - OverlayManager
@@ -79,7 +110,7 @@ final class OverlayManager: OverlayPresenting {
         let duration: TimeInterval
         let hapticsEnabled: Bool
         let pauseMediaEnabled: Bool
-        let onDismiss: () -> Void
+        let callbacks: OverlayLifecycleCallbacks
     }
 
     /// Pending show requests queued while an overlay is already on screen.
@@ -117,7 +148,7 @@ final class OverlayManager: OverlayPresenting {
         duration: TimeInterval,
         hapticsEnabled: Bool,
         pauseMediaEnabled: Bool,
-        onDismiss: @escaping () -> Void
+        callbacks: OverlayLifecycleCallbacks
     ) {
         guard !isOverlayVisible else {
             // Queue instead of stacking windows — dequeued after current overlay dismisses.
@@ -126,7 +157,7 @@ final class OverlayManager: OverlayPresenting {
                 duration: duration,
                 hapticsEnabled: hapticsEnabled,
                 pauseMediaEnabled: pauseMediaEnabled,
-                onDismiss: onDismiss))
+                callbacks: callbacks))
             Logger.overlay.info("Overlay for \(type.rawValue) queued (overlay already visible). Queue depth: \(self.overlayQueue.count)")
             return
         }
@@ -141,7 +172,7 @@ final class OverlayManager: OverlayPresenting {
                 duration: duration,
                 hapticsEnabled: hapticsEnabled,
                 pauseMediaEnabled: pauseMediaEnabled,
-                onDismiss: onDismiss))
+                callbacks: callbacks))
             Logger.overlay.warning(
                 "No active UIWindowScene — overlay for \(type.rawValue) queued (depth: \(self.overlayQueue.count))"
             )
@@ -151,7 +182,7 @@ final class OverlayManager: OverlayPresenting {
         if pauseMediaEnabled {
             audioManager.pauseExternalAudio()
         }
-        dismissCallback = onDismiss
+        dismissCallback = callbacks.onDismiss
 
         // Do NOT set window.overrideUserInterfaceStyle — the window must inherit the
         // scene's appearance so the overlay renders correctly in both light and dark mode.
@@ -180,6 +211,7 @@ final class OverlayManager: OverlayPresenting {
 
         overlayWindow = window
         Logger.overlay.info("Overlay shown for type=\(type.rawValue), duration=\(duration)s")
+        callbacks.onPresent()
     }
 
     func dismissOverlay() {
@@ -244,6 +276,6 @@ final class OverlayManager: OverlayPresenting {
             duration: next.duration,
             hapticsEnabled: next.hapticsEnabled,
             pauseMediaEnabled: next.pauseMediaEnabled,
-            onDismiss: next.onDismiss)
+            callbacks: next.callbacks)
     }
 }

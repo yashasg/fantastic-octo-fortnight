@@ -25,6 +25,9 @@ let package = Package(
             path: "Tests/EyePostureReminderTests",
             resources: [
                 .process("Fixtures")
+            ],
+            linkerSettings: [
+                .linkedFramework("AppIntents", .when(platforms: [.iOS]))
             ]
         )
     ]
