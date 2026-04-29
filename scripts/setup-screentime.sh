@@ -80,6 +80,9 @@ if [[ "${1:-}" == "--build" ]]; then
     exit 1
   fi
 
+  BUILD_LOG="$(mktemp "${TMPDIR:-/tmp}/kshana-screentime-build.XXXXXX.log")"
+  trap 'rm -f "$BUILD_LOG"' EXIT
+
   # Detect first available iPhone simulator
   DEST="platform=iOS Simulator,OS=latest"
   if xcrun simctl list runtimes 2>/dev/null | grep -q "iOS"; then
@@ -101,9 +104,14 @@ if [[ "${1:-}" == "--build" ]]; then
     ENABLE_BITCODE=NO \
     ENABLE_APP_INTENTS_METADATA_EXTRACTION=NO \
     ENABLE_APPINTENTS_METADATA_EXTRACTION=NO \
-    | grep -E "^(Build|error:|warning:|✓|✗)"
+    2>&1 | tee "$BUILD_LOG"
   build_status="${PIPESTATUS[0]}"
   set -e
+
+  if grep -En '(^|[^[:alpha:]])warning:' "$BUILD_LOG"; then
+    fail "Build validation emitted warnings"
+    exit 1
+  fi
 
   if [[ "$build_status" -ne 0 ]]; then
     fail "Build validation failed"

@@ -24,7 +24,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  XCODE_VERSION: "26.3"
+  XCODE_VERSION: "26.4"
   SCHEME: "EyePostureReminder"
   # No .xcodeproj — project uses Swift Package Manager.
   # xcodebuild resolves the package directly from Package.swift.
