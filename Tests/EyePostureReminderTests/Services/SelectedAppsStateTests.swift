@@ -98,15 +98,27 @@ final class SelectedAppsStateTests: XCTestCase {
 
     // MARK: - setEnabled
 
-    func test_setEnabled_true_persistsToDefaults() {
+    func test_setEnabled_trueWithSelection_persistsToDefaults() {
         let sut = makeSUT()
-        sut.setEnabled(true)
+        sut.updateMetadata(SelectedAppsMetadata(categoryCount: 0, appCount: 1, lastUpdated: Date()))
+        XCTAssertTrue(sut.setEnabled(true))
+
         XCTAssertTrue(sut.isTrueInterruptEnabled)
         XCTAssertTrue(testDefaults.bool(forKey: SelectedAppsState.enabledKey))
     }
 
+    func test_setEnabled_trueWithEmptySelection_refusesAndPersistsFalse() {
+        let sut = makeSUT()
+
+        XCTAssertFalse(sut.setEnabled(true))
+
+        XCTAssertFalse(sut.isTrueInterruptEnabled)
+        XCTAssertFalse(testDefaults.bool(forKey: SelectedAppsState.enabledKey))
+    }
+
     func test_setEnabled_false_persistsToDefaults() {
         let sut = makeSUT()
+        sut.updateMetadata(SelectedAppsMetadata(categoryCount: 0, appCount: 1, lastUpdated: Date()))
         sut.setEnabled(true)
         sut.setEnabled(false)
         XCTAssertFalse(sut.isTrueInterruptEnabled)
@@ -173,10 +185,10 @@ final class SelectedAppsStateTests: XCTestCase {
 
     func test_clearSelection_resetsMetadataAndEnabled() {
         let sut = makeSUT()
-        sut.setEnabled(true)
         sut.updateMetadata(
             SelectedAppsMetadata(categoryCount: 1, appCount: 3, lastUpdated: Date())
         )
+        sut.setEnabled(true)
 
         sut.clearSelection()
 
@@ -189,10 +201,20 @@ final class SelectedAppsStateTests: XCTestCase {
 
     func test_reinit_loadsPersistedEnabled() {
         let sut1 = makeSUT()
+        sut1.updateMetadata(SelectedAppsMetadata(categoryCount: 0, appCount: 1, lastUpdated: Date()))
         sut1.setEnabled(true)
 
         let sut2 = SelectedAppsState(defaults: testDefaults)
         XCTAssertTrue(sut2.isTrueInterruptEnabled)
+    }
+
+    func test_reinit_storedEnabledWithEmptySelection_selfHealsDisabled() {
+        testDefaults.set(true, forKey: SelectedAppsState.enabledKey)
+
+        let sut = makeSUT()
+
+        XCTAssertFalse(sut.isTrueInterruptEnabled)
+        XCTAssertFalse(testDefaults.bool(forKey: SelectedAppsState.enabledKey))
     }
 
     func test_reinit_loadsPersistedMetadata() {
@@ -207,15 +229,26 @@ final class SelectedAppsStateTests: XCTestCase {
 
     func test_reinit_afterClear_returnsEmptyState() {
         let sut1 = makeSUT()
-        sut1.setEnabled(true)
         sut1.updateMetadata(
             SelectedAppsMetadata(categoryCount: 1, appCount: 1, lastUpdated: Date())
         )
+        sut1.setEnabled(true)
         sut1.clearSelection()
 
         let sut2 = SelectedAppsState(defaults: testDefaults)
         XCTAssertTrue(sut2.selectionMetadata.isEmpty)
         XCTAssertFalse(sut2.isTrueInterruptEnabled)
+    }
+
+    func test_updateMetadata_emptySelection_disablesTrueInterrupt() {
+        let sut = makeSUT()
+        sut.updateMetadata(SelectedAppsMetadata(categoryCount: 1, appCount: 1, lastUpdated: Date()))
+        sut.setEnabled(true)
+
+        sut.updateMetadata(.empty)
+
+        XCTAssertFalse(sut.isTrueInterruptEnabled)
+        XCTAssertFalse(testDefaults.bool(forKey: SelectedAppsState.enabledKey))
     }
 
     private func preservingStandardDefaults(for keys: [String], _ action: () -> Void) {

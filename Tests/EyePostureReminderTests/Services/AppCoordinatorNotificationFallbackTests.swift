@@ -90,6 +90,7 @@ final class AppCoordinatorNotificationFallbackTests: XCTestCase {
     func test_scheduleReminders_whenShieldAvailable_suppressesNotificationFallback() async throws {
         deviceActivityMonitor.stubbedIsAvailable = true
         ipcStore.trueInterruptEnabled = true
+        ipcStore.selectApps()
 
         await coordinator.scheduleReminders()
 
@@ -113,11 +114,24 @@ final class AppCoordinatorNotificationFallbackTests: XCTestCase {
     func test_scheduleReminders_whenShieldAvailableAndAllRemindersDisabled_doesNotRecordShieldPath() async {
         deviceActivityMonitor.stubbedIsAvailable = true
         ipcStore.trueInterruptEnabled = true
+        ipcStore.selectApps()
         settings.globalEnabled = false
 
         await coordinator.scheduleReminders()
 
         XCTAssertTrue(notificationCenter.addedRequests.isEmpty)
+        XCTAssertFalse(ipcStore.recordedKinds.contains(.shieldPathSelected))
+    }
+
+    func test_scheduleReminders_whenTrueInterruptEnabledButSelectionEmpty_schedulesFallback() async throws {
+        deviceActivityMonitor.stubbedIsAvailable = true
+        ipcStore.trueInterruptEnabled = true
+
+        await coordinator.scheduleReminders()
+
+        XCTAssertEqual(notificationCenter.addedRequests.count, 2)
+        let event = try XCTUnwrap(ipcStore.events.first { $0.kind == .notificationFallbackScheduled })
+        XCTAssertEqual(event.detail, "true_interrupt_empty_selection")
         XCTAssertFalse(ipcStore.recordedKinds.contains(.shieldPathSelected))
     }
 
@@ -148,6 +162,7 @@ final class AppCoordinatorNotificationFallbackTests: XCTestCase {
         deviceActivityMonitor.stubbedIsAvailable = true
         deviceActivityMonitor.stubbedScheduleError = ScheduleFailure()
         ipcStore.trueInterruptEnabled = true
+        ipcStore.selectApps()
         await coordinator.refreshAuthStatus()
 
         tracker.simulateThresholdReached(for: .eyes)

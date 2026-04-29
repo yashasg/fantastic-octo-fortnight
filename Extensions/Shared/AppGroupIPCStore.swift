@@ -93,6 +93,17 @@ public final class AppGroupIPCStore {
     public func setTrueInterruptEnabled(_ enabled: Bool) -> Bool {
         withLock {
             guard let defaults else { return false }
+            if enabled {
+                do {
+                    guard try !readSelectionLocked(from: defaults).isEmpty else {
+                        defaults.set(false, forKey: AppGroupIPCKeys.trueInterruptEnabled)
+                        return false
+                    }
+                } catch {
+                    defaults.set(false, forKey: AppGroupIPCKeys.trueInterruptEnabled)
+                    return false
+                }
+            }
             defaults.set(enabled, forKey: AppGroupIPCKeys.trueInterruptEnabled)
             return true
         }
@@ -114,14 +125,7 @@ public final class AppGroupIPCStore {
     public func readSelection() throws -> AppGroupSelectionSnapshot {
         try withLock {
             guard let defaults else { throw StoreError.appGroupSuiteUnavailable }
-            guard let data = defaults.data(forKey: AppGroupIPCKeys.selectionMetadata) else {
-                return .empty
-            }
-            do {
-                return try decoder.decode(AppGroupSelectionSnapshot.self, from: data)
-            } catch {
-                throw StoreError.corruptSelectionMetadata
-            }
+            return try readSelectionLocked(from: defaults)
         }
     }
 
@@ -211,6 +215,17 @@ public final class AppGroupIPCStore {
             return try decoder.decode([AppGroupIPCEvent].self, from: data)
         } catch {
             throw StoreError.corruptEventLog
+        }
+    }
+
+    private func readSelectionLocked(from defaults: UserDefaults) throws -> AppGroupSelectionSnapshot {
+        guard let data = defaults.data(forKey: AppGroupIPCKeys.selectionMetadata) else {
+            return .empty
+        }
+        do {
+            return try decoder.decode(AppGroupSelectionSnapshot.self, from: data)
+        } catch {
+            throw StoreError.corruptSelectionMetadata
         }
     }
 
