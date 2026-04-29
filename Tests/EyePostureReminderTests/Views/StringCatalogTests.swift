@@ -1161,6 +1161,21 @@ final class StringCatalogTests: XCTestCase {
             "'settings.masterToggle.footer' must not claim all reminders require the app open — got: \(value)")
     }
 
+    /// Approved picker copy must not ask users to wait for access they already granted.
+    func test_appCategoryPickerApprovedPlaceholder_acknowledgesAccessIsReady() {
+        let value = str("appCategoryPicker.approved.pickerPlaceholder")
+
+        XCTAssertTrue(
+            value.localizedCaseInsensitiveContains("access is ready"),
+            "'appCategoryPicker.approved.pickerPlaceholder' must acknowledge access is ready — got: \(value)")
+        XCTAssertFalse(
+            value.localizedCaseInsensitiveContains("once Screen Time access is approved"),
+            "'appCategoryPicker.approved.pickerPlaceholder' must not ask approved users to wait — got: \(value)")
+        XCTAssertFalse(
+            value.localizedCaseInsensitiveContains("awaiting"),
+            "'appCategoryPicker.approved.pickerPlaceholder' must not imply pending approval — got: \(value)")
+    }
+
     /// The permission screen title must be non-empty and resolve from the catalog.
     func test_onboardingPermission_title_resolvesFromCatalog() {
         XCTAssertTrue(
