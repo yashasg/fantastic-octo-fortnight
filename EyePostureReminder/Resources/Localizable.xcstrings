@@ -2247,6 +2247,52 @@
         }
       }
     },
+    "appCategoryPicker.approved.appCount": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "1 app"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld apps"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "appCategoryPicker.approved.categoryCount": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "1 category"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld categories"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "appCategoryPicker.approved.noSelection": {
       "extractionState": "manual",
       "localizations": {
