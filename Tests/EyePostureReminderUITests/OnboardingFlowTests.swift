@@ -167,10 +167,10 @@ final class OnboardingFlowTests: XCTestCase {
         }
     }
 
-    // MARK: - test_onboarding_permissionScreen_enableNotificationsButtonExists
+    // MARK: - test_onboarding_permissionScreen_allowReminderAlertsButtonExists
 
-    /// Verifies the "Enable Notifications" primary CTA button is visible on the Permission screen.
-    func test_onboarding_permissionScreen_enableNotificationsButtonExists() throws {
+    /// Verifies the "Allow Reminder Alerts" primary CTA button is visible on the Permission screen.
+    func test_onboarding_permissionScreen_allowReminderAlertsButtonExists() throws {
         let nextButton = app.buttons["onboarding.welcome.nextButton"]
         XCTAssertTrue(nextButton.waitForExistence(timeout: 5))
         nextButton.tap()
@@ -178,10 +178,10 @@ final class OnboardingFlowTests: XCTestCase {
         let enableButton = app.buttons["onboarding.enableNotifications"]
         XCTAssertTrue(
             enableButton.waitForExistence(timeout: 5),
-            "Enable Notifications button must exist on the Permission screen. " +
+            "Allow Reminder Alerts button must exist on the Permission screen. " +
             "Add .accessibilityIdentifier(\"onboarding.enableNotifications\") in OnboardingPermissionView."
         )
-        XCTAssertTrue(enableButton.isHittable, "Enable Notifications button must be tappable.")
+        XCTAssertTrue(enableButton.isHittable, "Allow Reminder Alerts button must be tappable.")
     }
 
     // MARK: - test_onboarding_setupScreen_customizeButtonIdentifierExists

@@ -74,7 +74,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Reminders keep your breaks on schedule."
+            "value": "Your reminders arrive as alerts — even while you're in another app."
           }
         }
       }
@@ -85,7 +85,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "No spam — just your breaks, right on schedule."
+            "value": "Tap any alert to open your full-screen break in kshana."
           }
         }
       }
@@ -96,7 +96,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Enable Reminders"
+            "value": "Allow Reminder Alerts"
           }
         }
       }
@@ -107,7 +107,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Opens system notification permission prompt"
+            "value": "Allows kshana to send reminder alerts while you use other apps"
           }
         }
       }
