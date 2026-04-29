@@ -1,6 +1,6 @@
 import Foundation
 
-public struct ShieldSessionSnapshot: Equatable {
+public struct ShieldSessionSnapshot: Equatable, Sendable {
     public let reasonRaw: String?
     public let durationSeconds: Double
     public let triggeredAt: Date?
@@ -11,12 +11,47 @@ public struct ShieldSessionSnapshot: Equatable {
         self.triggeredAt = triggeredAt
     }
 
+    public static let empty = ShieldSessionSnapshot(reasonRaw: nil, durationSeconds: 0, triggeredAt: nil)
+
+    public static func encodedData(
+        reasonRaw: String,
+        durationSeconds: Double,
+        triggeredAt: Date,
+        encoder: JSONEncoder = JSONEncoder()
+    ) throws -> Data {
+        try encoder.encode(
+            ShieldSessionPayload(
+                reasonRaw: reasonRaw,
+                durationSeconds: durationSeconds,
+                triggeredAtSeconds: triggeredAt.timeIntervalSince1970
+            )
+        )
+    }
+
+    public static func decode(from data: Data, decoder: JSONDecoder = JSONDecoder()) throws -> ShieldSessionSnapshot {
+        try decoder.decode(ShieldSessionPayload.self, from: data).snapshot
+    }
+
     public static func read(from defaults: UserDefaults?) -> ShieldSessionSnapshot {
-        let timestamp = defaults?.object(forKey: ShieldSessionKeys.triggeredAt) as? Double
+        guard let defaults else { return .empty }
+        if let data = defaults.data(forKey: ShieldSessionKeys.sessionData) {
+            return (try? decode(from: data)) ?? .empty
+        }
+        return readLegacySnapshot(from: defaults)
+    }
+
+    private static func readLegacySnapshot(from defaults: UserDefaults) -> ShieldSessionSnapshot {
+        guard
+            let reasonRaw = defaults.string(forKey: ShieldSessionKeys.breakReason),
+            let durationSeconds = defaults.object(forKey: ShieldSessionKeys.durationSeconds) as? Double,
+            let timestamp = defaults.object(forKey: ShieldSessionKeys.triggeredAt) as? Double
+        else {
+            return .empty
+        }
         return ShieldSessionSnapshot(
-            reasonRaw: defaults?.string(forKey: ShieldSessionKeys.breakReason),
-            durationSeconds: defaults?.double(forKey: ShieldSessionKeys.durationSeconds) ?? 0,
-            triggeredAt: timestamp.map { Date(timeIntervalSince1970: $0) }
+            reasonRaw: reasonRaw,
+            durationSeconds: durationSeconds,
+            triggeredAt: Date(timeIntervalSince1970: timestamp)
         )
     }
 
@@ -24,6 +59,20 @@ public struct ShieldSessionSnapshot: Equatable {
         guard durationSeconds > 0, let triggeredAt else { return nil }
         let remaining = durationSeconds - now.timeIntervalSince(triggeredAt)
         return max(0, Int(ceil(remaining)))
+    }
+}
+
+private struct ShieldSessionPayload: Codable {
+    let reasonRaw: String
+    let durationSeconds: Double
+    let triggeredAtSeconds: Double
+
+    var snapshot: ShieldSessionSnapshot {
+        ShieldSessionSnapshot(
+            reasonRaw: reasonRaw,
+            durationSeconds: durationSeconds,
+            triggeredAt: Date(timeIntervalSince1970: triggeredAtSeconds)
+        )
     }
 }
 

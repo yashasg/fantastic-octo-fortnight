@@ -48,14 +48,14 @@ protocol DeviceActivityMonitorProviding: ServiceLifecycle {
 
     /// Schedule a DeviceActivity monitoring window for the given break session.
     ///
-    /// Writes `session` metadata to the shared App Group `UserDefaults` so the
+    /// Writes an encoded `session` payload to the shared App Group `UserDefaults` so the
     /// `DeviceActivityMonitorExtension` can read break context in its `intervalDidStart`
     /// callback. Then starts a `DeviceActivityCenter` monitoring window scoped to
     /// `session.durationSeconds`.
     ///
     /// - Pre-entitlement noop: returns immediately without side effects.
     /// - Post-#201 real implementation:
-    ///   1. Writes `session` to `UserDefaults(suiteName: ShieldSessionKeys.appGroupID)`.
+    ///   1. Writes `session` through `AppGroupIPCStore.writeShieldSession`.
     ///   2. Calls `DeviceActivityCenter.shared.startMonitoring(activity:events:schedule:)`
     ///      with a `DeviceActivitySchedule` from `triggeredAt` to `triggeredAt + durationSeconds`.
     ///   3. Sets `activeSession = session`.

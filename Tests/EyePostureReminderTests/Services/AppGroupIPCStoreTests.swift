@@ -26,6 +26,7 @@ final class AppGroupIPCStoreTests: XCTestCase {
         XCTAssertEqual(AppGroupIPCKeys.appGroupID, SelectedAppsState.appGroupSuiteName)
         XCTAssertEqual(AppGroupIPCKeys.selectionMetadata, SelectedAppsState.metadataKey)
         XCTAssertEqual(AppGroupIPCKeys.trueInterruptEnabled, SelectedAppsState.enabledKey)
+        XCTAssertEqual(ShieldSessionKeys.sessionData, ShieldSession.sessionDataKey)
         XCTAssertEqual(ShieldSessionKeys.breakReason, ShieldSession.reasonKey)
         XCTAssertEqual(ShieldSessionKeys.durationSeconds, ShieldSession.durationKey)
         XCTAssertEqual(ShieldSessionKeys.triggeredAt, ShieldSession.triggeredAtKey)
@@ -71,6 +72,7 @@ final class AppGroupIPCStoreTests: XCTestCase {
             AppGroupIPCKeys.eventLog,
             AppGroupIPCKeys.lastShieldStartedAt,
             AppGroupIPCKeys.lastShieldEndedAt,
+            ShieldSessionKeys.sessionData,
             ShieldSessionKeys.breakReason,
             ShieldSessionKeys.durationSeconds,
             ShieldSessionKeys.triggeredAt
@@ -135,8 +137,20 @@ final class AppGroupIPCStoreTests: XCTestCase {
 
     func test_shieldSession_roundTripsAndStoresLastStartedTimestamp() throws {
         let triggeredAt = Date(timeIntervalSince1970: 2_000)
+        defaults.set("stale", forKey: ShieldSessionKeys.breakReason)
+        defaults.set(1, forKey: ShieldSessionKeys.durationSeconds)
+        defaults.set(1, forKey: ShieldSessionKeys.triggeredAt)
 
         store.writeShieldSession(reasonRaw: "eyes", durationSeconds: 20, triggeredAt: triggeredAt)
+
+        let data = try XCTUnwrap(defaults.data(forKey: ShieldSessionKeys.sessionData))
+        let decoded = try ShieldSessionSnapshot.decode(from: data)
+        XCTAssertEqual(decoded.reasonRaw, "eyes")
+        XCTAssertEqual(decoded.durationSeconds, 20)
+        XCTAssertEqual(decoded.triggeredAt, triggeredAt)
+        XCTAssertNil(defaults.object(forKey: ShieldSessionKeys.breakReason))
+        XCTAssertNil(defaults.object(forKey: ShieldSessionKeys.durationSeconds))
+        XCTAssertNil(defaults.object(forKey: ShieldSessionKeys.triggeredAt))
 
         let snapshot = try store.readShieldSession()
         XCTAssertEqual(snapshot.reasonRaw, "eyes")
@@ -158,10 +172,41 @@ final class AppGroupIPCStoreTests: XCTestCase {
 
         store.clearShieldSession(endedAt: endedAt)
 
+        XCTAssertNil(defaults.data(forKey: ShieldSessionKeys.sessionData))
         XCTAssertNil(defaults.string(forKey: ShieldSessionKeys.breakReason))
         XCTAssertEqual(defaults.double(forKey: ShieldSessionKeys.durationSeconds), 0)
         XCTAssertEqual(defaults.double(forKey: ShieldSessionKeys.triggeredAt), 0)
         XCTAssertEqual(defaults.double(forKey: AppGroupIPCKeys.lastShieldEndedAt), endedAt.timeIntervalSince1970)
+    }
+
+    func test_readShieldSession_corruptPayload_throws() {
+        defaults.set(Data("not-json".utf8), forKey: ShieldSessionKeys.sessionData)
+
+        XCTAssertThrowsError(try store.readShieldSession()) { error in
+            XCTAssertEqual(error as? AppGroupIPCStore.StoreError, .corruptShieldSession)
+        }
+    }
+
+    func test_readShieldSession_legacyKeysOnly_returnsPopulatedSnapshot() throws {
+        let triggeredAt = Date(timeIntervalSince1970: 2_000)
+        defaults.set("eyes", forKey: ShieldSessionKeys.breakReason)
+        defaults.set(20, forKey: ShieldSessionKeys.durationSeconds)
+        defaults.set(triggeredAt.timeIntervalSince1970, forKey: ShieldSessionKeys.triggeredAt)
+
+        let snapshot = try store.readShieldSession()
+
+        XCTAssertEqual(snapshot.reasonRaw, "eyes")
+        XCTAssertEqual(snapshot.durationSeconds, 20)
+        XCTAssertEqual(snapshot.triggeredAt, triggeredAt)
+    }
+
+    func test_readShieldSession_partialLegacyKeys_returnsEmptySnapshot() throws {
+        defaults.set("eyes", forKey: ShieldSessionKeys.breakReason)
+        defaults.set(20, forKey: ShieldSessionKeys.durationSeconds)
+
+        let snapshot = try store.readShieldSession()
+
+        XCTAssertEqual(snapshot, .empty)
     }
 
     func test_recordEvent_appendsAndCapsLog() throws {
