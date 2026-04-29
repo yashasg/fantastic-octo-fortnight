@@ -37,6 +37,20 @@ struct ShieldSession: Sendable, Equatable {
     /// Wall-clock time at which the break was triggered.
     let triggeredAt: Date
 
+    init(reason: ShieldTriggerReason, durationSeconds: TimeInterval, triggeredAt: Date) {
+        precondition(
+            Self.isValidDurationSeconds(durationSeconds),
+            "ShieldSession durationSeconds must be positive and finite"
+        )
+        self.reason = reason
+        self.durationSeconds = durationSeconds
+        self.triggeredAt = triggeredAt
+    }
+
+    static func isValidDurationSeconds(_ durationSeconds: TimeInterval) -> Bool {
+        ShieldSessionSnapshot.isValidDurationSeconds(durationSeconds)
+    }
+
     // MARK: Shared UserDefaults keys (App Group: group.com.yashasgujjar.kshana)
 
     static let sessionDataKey = ShieldSessionKeys.sessionData

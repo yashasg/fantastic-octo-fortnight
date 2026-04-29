@@ -129,6 +129,90 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertEqual(reloaded.postureBreakDuration, 60)
     }
 
+    func test_init_invalidEyesBreakDuration_fallsBackToConfigDefault() {
+        for invalidDuration in [0, -1, Double.infinity, Double.nan] {
+            let persistence = MockSettingsPersisting()
+            persistence.set(invalidDuration, forKey: "kshana.eyes.breakDuration")
+
+            let reloaded = SettingsStore(store: persistence, config: .fallback)
+
+            XCTAssertEqual(reloaded.eyesBreakDuration, AppConfig.fallback.defaults.eyeBreakDuration)
+        }
+    }
+
+    func test_init_invalidPostureBreakDuration_fallsBackToConfigDefault() {
+        for invalidDuration in [0, -1, Double.infinity, Double.nan] {
+            let persistence = MockSettingsPersisting()
+            persistence.set(invalidDuration, forKey: "kshana.posture.breakDuration")
+
+            let reloaded = SettingsStore(store: persistence, config: .fallback)
+
+            XCTAssertEqual(
+                reloaded.postureBreakDuration,
+                AppConfig.fallback.defaults.postureBreakDuration
+            )
+        }
+    }
+
+    func test_init_invalidConfiguredBreakDurations_fallBackToHardcodedDefaults() {
+        let invalidConfig = AppConfig(
+            defaults: AppConfig.Defaults(
+                eyeInterval: 1200,
+                eyeBreakDuration: 0,
+                postureInterval: 1800,
+                postureBreakDuration: -1
+            ),
+            features: AppConfig.Features(globalEnabledDefault: true, maxSnoozeCount: 3)
+        )
+
+        let reloaded = SettingsStore(store: MockSettingsPersisting(), config: invalidConfig)
+
+        XCTAssertEqual(reloaded.eyesBreakDuration, AppConfig.fallback.defaults.eyeBreakDuration)
+        XCTAssertEqual(reloaded.postureBreakDuration, AppConfig.fallback.defaults.postureBreakDuration)
+    }
+
+    func test_resetToDefaults_invalidConfiguredBreakDurations_fallBackToHardcodedDefaults() {
+        let invalidConfig = AppConfig(
+            defaults: AppConfig.Defaults(
+                eyeInterval: 1200,
+                eyeBreakDuration: 0,
+                postureInterval: 1800,
+                postureBreakDuration: -1
+            ),
+            features: AppConfig.Features(globalEnabledDefault: true, maxSnoozeCount: 3)
+        )
+
+        sut.eyesBreakDuration = 30
+        sut.postureBreakDuration = 30
+        sut.resetToDefaults(config: invalidConfig)
+
+        XCTAssertEqual(sut.eyesBreakDuration, AppConfig.fallback.defaults.eyeBreakDuration)
+        XCTAssertEqual(sut.postureBreakDuration, AppConfig.fallback.defaults.postureBreakDuration)
+    }
+
+    func test_appConfigFallbackBreakDurations_areValidShieldDurations() {
+        XCTAssertTrue(ShieldSession.isValidDurationSeconds(AppConfig.fallback.defaults.eyeBreakDuration))
+        XCTAssertTrue(ShieldSession.isValidDurationSeconds(AppConfig.fallback.defaults.postureBreakDuration))
+    }
+
+    func test_setInvalidEyesBreakDuration_retainsAndPersistsPreviousValidDuration() {
+        sut.eyesBreakDuration = 30
+
+        sut.eyesBreakDuration = 0
+
+        XCTAssertEqual(sut.eyesBreakDuration, 30)
+        XCTAssertEqual(mockPersistence.double(forKey: "kshana.eyes.breakDuration", defaultValue: 0), 30)
+    }
+
+    func test_setInvalidPostureBreakDuration_retainsAndPersistsPreviousValidDuration() {
+        sut.postureBreakDuration = 45
+
+        sut.postureBreakDuration = -1
+
+        XCTAssertEqual(sut.postureBreakDuration, 45)
+        XCTAssertEqual(mockPersistence.double(forKey: "kshana.posture.breakDuration", defaultValue: 0), 45)
+    }
+
     // MARK: - settings(for:) convenience accessor
 
     func test_settingsForEyes_returnsCurrentEyesInterval() {

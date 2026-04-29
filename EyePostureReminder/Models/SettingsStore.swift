@@ -57,11 +57,27 @@ final class SettingsStore: ObservableObject {
     // MARK: - Per-Type Break Durations (seconds)
 
     @Published var eyesBreakDuration: TimeInterval {
-        didSet { store.set(eyesBreakDuration, forKey: Keys.eyesBreakDuration) }
+        didSet {
+            eyesBreakDuration = Self.validBreakDurationForAssignment(
+                eyesBreakDuration,
+                previousValue: oldValue,
+                fallbackValue: AppConfig.fallback.defaults.eyeBreakDuration,
+                key: Keys.eyesBreakDuration
+            )
+            store.set(eyesBreakDuration, forKey: Keys.eyesBreakDuration)
+        }
     }
 
     @Published var postureBreakDuration: TimeInterval {
-        didSet { store.set(postureBreakDuration, forKey: Keys.postureBreakDuration) }
+        didSet {
+            postureBreakDuration = Self.validBreakDurationForAssignment(
+                postureBreakDuration,
+                previousValue: oldValue,
+                fallbackValue: AppConfig.fallback.defaults.postureBreakDuration,
+                key: Keys.postureBreakDuration
+            )
+            store.set(postureBreakDuration, forKey: Keys.postureBreakDuration)
+        }
     }
 
     // MARK: - Snooze
@@ -143,17 +159,33 @@ final class SettingsStore: ObservableObject {
 
     init(store: SettingsPersisting = UserDefaults.standard, config: AppConfig = AppConfig.load()) {
         self.store = store
+        let defaultEyesBreakDuration = Self.sanitizedBreakDuration(
+            config.defaults.eyeBreakDuration,
+            defaultValue: AppConfig.fallback.defaults.eyeBreakDuration,
+            key: Keys.eyesBreakDuration
+        )
+        let defaultPostureBreakDuration = Self.sanitizedBreakDuration(
+            config.defaults.postureBreakDuration,
+            defaultValue: AppConfig.fallback.defaults.postureBreakDuration,
+            key: Keys.postureBreakDuration
+        )
 
-        globalEnabled       = store.bool(forKey: Keys.globalEnabled, defaultValue: config.features.globalEnabledDefault)
-        eyesEnabled         = store.bool(forKey: Keys.eyesEnabled, defaultValue: true)
-        postureEnabled      = store.bool(forKey: Keys.postureEnabled, defaultValue: true)
+        globalEnabled = store.bool(forKey: Keys.globalEnabled, defaultValue: config.features.globalEnabledDefault)
+        eyesEnabled = store.bool(forKey: Keys.eyesEnabled, defaultValue: true)
+        postureEnabled = store.bool(forKey: Keys.postureEnabled, defaultValue: true)
 
-        eyesInterval        = store.double(forKey: Keys.eyesInterval, defaultValue: config.defaults.eyeInterval)
-        eyesBreakDuration   = store.double(
-            forKey: Keys.eyesBreakDuration, defaultValue: config.defaults.eyeBreakDuration)
-        postureInterval     = store.double(forKey: Keys.postureInterval, defaultValue: config.defaults.postureInterval)
-        postureBreakDuration = store.double(
-            forKey: Keys.postureBreakDuration, defaultValue: config.defaults.postureBreakDuration)
+        eyesInterval = store.double(forKey: Keys.eyesInterval, defaultValue: config.defaults.eyeInterval)
+        eyesBreakDuration = Self.sanitizedBreakDuration(
+            store.double(forKey: Keys.eyesBreakDuration, defaultValue: defaultEyesBreakDuration),
+            defaultValue: defaultEyesBreakDuration,
+            key: Keys.eyesBreakDuration
+        )
+        postureInterval = store.double(forKey: Keys.postureInterval, defaultValue: config.defaults.postureInterval)
+        postureBreakDuration = Self.sanitizedBreakDuration(
+            store.double(forKey: Keys.postureBreakDuration, defaultValue: defaultPostureBreakDuration),
+            defaultValue: defaultPostureBreakDuration,
+            key: Keys.postureBreakDuration
+        )
 
         let rawSnooze = store.double(forKey: Keys.snoozedUntil, defaultValue: 0)
         snoozedUntil = rawSnooze > 0 ? Date(timeIntervalSince1970: rawSnooze) : nil
@@ -161,9 +193,9 @@ final class SettingsStore: ObservableObject {
         snoozeCount = store.integer(forKey: Keys.snoozeCount, defaultValue: 0)
 
         pauseMediaDuringBreaks = store.bool(forKey: Keys.pauseMediaDuringBreaks, defaultValue: false)
-        hapticsEnabled         = store.bool(forKey: Keys.hapticsEnabled, defaultValue: true)
-        pauseDuringFocus       = store.bool(forKey: Keys.pauseDuringFocus, defaultValue: true)
-        pauseWhileDriving      = store.bool(forKey: Keys.pauseWhileDriving, defaultValue: true)
+        hapticsEnabled = store.bool(forKey: Keys.hapticsEnabled, defaultValue: true)
+        pauseDuringFocus = store.bool(forKey: Keys.pauseDuringFocus, defaultValue: true)
+        pauseWhileDriving = store.bool(forKey: Keys.pauseWhileDriving, defaultValue: true)
         notificationFallbackEnabled = store.bool(
             forKey: Keys.notificationFallbackEnabled,
             defaultValue: true
@@ -176,21 +208,76 @@ final class SettingsStore: ObservableObject {
 
     /// Restores all user-configurable settings to the values specified in `defaults.json`.
     func resetToDefaults(config: AppConfig = AppConfig.load()) {
-        globalEnabled        = config.features.globalEnabledDefault
-        eyesEnabled          = true
-        postureEnabled       = true
-        eyesInterval         = config.defaults.eyeInterval
-        eyesBreakDuration    = config.defaults.eyeBreakDuration
-        postureInterval      = config.defaults.postureInterval
-        postureBreakDuration = config.defaults.postureBreakDuration
-        hapticsEnabled       = true
+        globalEnabled = config.features.globalEnabledDefault
+        eyesEnabled = true
+        postureEnabled = true
+        eyesInterval = config.defaults.eyeInterval
+        eyesBreakDuration = Self.sanitizedBreakDuration(
+            config.defaults.eyeBreakDuration,
+            defaultValue: AppConfig.fallback.defaults.eyeBreakDuration,
+            key: Keys.eyesBreakDuration
+        )
+        postureInterval = config.defaults.postureInterval
+        postureBreakDuration = Self.sanitizedBreakDuration(
+            config.defaults.postureBreakDuration,
+            defaultValue: AppConfig.fallback.defaults.postureBreakDuration,
+            key: Keys.postureBreakDuration
+        )
+        hapticsEnabled = true
         pauseMediaDuringBreaks = false
-        pauseDuringFocus     = true
-        pauseWhileDriving    = true
+        pauseDuringFocus = true
+        pauseWhileDriving = true
         notificationFallbackEnabled = true
-        snoozedUntil         = nil
-        snoozeCount          = 0
+        snoozedUntil = nil
+        snoozeCount = 0
         Logger.settings.debug("SettingsStore reset to defaults")
+    }
+
+    private static func sanitizedBreakDuration(
+        _ duration: TimeInterval,
+        defaultValue: TimeInterval,
+        key: String
+    ) -> TimeInterval {
+        guard ShieldSession.isValidDurationSeconds(duration) else {
+            Logger.settings.error("Invalid break duration for \(key, privacy: .public); using default")
+            guard ShieldSession.isValidDurationSeconds(defaultValue) else {
+                Logger.settings.error("Invalid break duration default for \(key, privacy: .public); using fallback")
+                return hardcodedBreakDurationFallback(for: key)
+            }
+            return defaultValue
+        }
+        return duration
+    }
+
+    private static func validBreakDurationForAssignment(
+        _ duration: TimeInterval,
+        previousValue: TimeInterval,
+        fallbackValue: TimeInterval,
+        key: String
+    ) -> TimeInterval {
+        guard ShieldSession.isValidDurationSeconds(duration) else {
+            Logger.settings.error("Rejected invalid break duration assignment for \(key, privacy: .public)")
+            return sanitizedBreakDuration(previousValue, defaultValue: fallbackValue, key: key)
+        }
+        return duration
+    }
+
+    private static func hardcodedBreakDurationFallback(for key: String) -> TimeInterval {
+        let fallback: TimeInterval
+        switch key {
+        case Keys.eyesBreakDuration:
+            fallback = 20
+        case Keys.postureBreakDuration:
+            fallback = 10
+        default:
+            preconditionFailure("Unknown break duration key: \(key)")
+        }
+
+        precondition(
+            ShieldSession.isValidDurationSeconds(fallback),
+            "Hardcoded break duration fallback must be positive and finite"
+        )
+        return fallback
     }
 }
 

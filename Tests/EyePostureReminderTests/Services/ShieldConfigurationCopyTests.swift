@@ -50,6 +50,32 @@ final class ShieldConfigurationCopyTests: XCTestCase {
         XCTAssertEqual(snapshot, .empty)
     }
 
+    func test_snapshotEncode_invalidDuration_throws() {
+        XCTAssertThrowsError(
+            try ShieldSessionSnapshot.encodedData(
+                reasonRaw: ShieldTriggerReason.scheduledEyesBreak.rawValue,
+                durationSeconds: 0,
+                triggeredAt: Date(timeIntervalSince1970: 1_000)
+            )
+        ) { error in
+            XCTAssertEqual(
+                error as? ShieldSessionSnapshotEncodingError,
+                .invalidDurationSeconds(0)
+            )
+        }
+    }
+
+    func test_snapshotRead_payloadWithInvalidDuration_returnsEmptySnapshot() {
+        let invalidDurationPayload = Data(
+            #"{"reasonRaw":"eyes","durationSeconds":0,"triggeredAtSeconds":1000}"#.utf8
+        )
+        defaults.set(invalidDurationPayload, forKey: ShieldSessionKeys.sessionData)
+
+        let snapshot = ShieldSessionSnapshot.read(from: defaults)
+
+        XCTAssertEqual(snapshot, .empty)
+    }
+
     func test_snapshotRead_mismatchedPayloadSchema_returnsEmptySnapshot() throws {
         let schemaMismatch = try JSONEncoder().encode(["reasonRaw": "eyes"])
         defaults.set(schemaMismatch, forKey: ShieldSessionKeys.sessionData)
@@ -85,6 +111,16 @@ final class ShieldConfigurationCopyTests: XCTestCase {
     func test_snapshotRead_partialLegacyKeys_returnsEmptySnapshot() {
         defaults.set(ShieldTriggerReason.scheduledEyesBreak.rawValue, forKey: ShieldSessionKeys.breakReason)
         defaults.set(20, forKey: ShieldSessionKeys.durationSeconds)
+
+        let snapshot = ShieldSessionSnapshot.read(from: defaults)
+
+        XCTAssertEqual(snapshot, .empty)
+    }
+
+    func test_snapshotRead_legacyKeysWithInvalidDuration_returnsEmptySnapshot() {
+        defaults.set(ShieldTriggerReason.scheduledEyesBreak.rawValue, forKey: ShieldSessionKeys.breakReason)
+        defaults.set(0, forKey: ShieldSessionKeys.durationSeconds)
+        defaults.set(1_000, forKey: ShieldSessionKeys.triggeredAt)
 
         let snapshot = ShieldSessionSnapshot.read(from: defaults)
 
