@@ -7,6 +7,8 @@
 /// App Group: `group.com.yashasgujjar.kshana`
 
 public enum ShieldSessionKeys {
+    /// Encoded `ShieldSessionSnapshot` payload for atomic cross-process session reads.
+    public static let sessionData = "shield.session"
     /// Raw string value of `ShieldTriggerReason` ("eyes" or "posture").
     public static let breakReason = "shield.breakReason"
     /// Break duration in seconds (`TimeInterval` stored as Double).

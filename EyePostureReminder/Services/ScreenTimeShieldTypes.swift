@@ -51,6 +51,7 @@ struct ShieldSession: Sendable, Equatable {
 
     // MARK: Shared UserDefaults keys (App Group: group.com.yashasgujjar.kshana)
 
+    static let sessionDataKey = ShieldSessionKeys.sessionData
     static let reasonKey = ShieldSessionKeys.breakReason
     static let durationKey = ShieldSessionKeys.durationSeconds
     /// Wall-clock trigger time stored as `timeIntervalSince1970` (`Double`).

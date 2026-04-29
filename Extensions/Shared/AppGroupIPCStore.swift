@@ -68,6 +68,7 @@ public final class AppGroupIPCStore {
         case appGroupSuiteUnavailable
         case corruptEventLog
         case corruptSelectionMetadata
+        case corruptShieldSession
     }
 
     private let defaults: UserDefaults?
@@ -132,9 +133,16 @@ public final class AppGroupIPCStore {
     ) -> Bool {
         withLock {
             guard let defaults else { return false }
-            defaults.set(reasonRaw, forKey: ShieldSessionKeys.breakReason)
-            defaults.set(durationSeconds, forKey: ShieldSessionKeys.durationSeconds)
-            defaults.set(triggeredAt.timeIntervalSince1970, forKey: ShieldSessionKeys.triggeredAt)
+            guard let data = try? ShieldSessionSnapshot.encodedData(
+                reasonRaw: reasonRaw,
+                durationSeconds: durationSeconds,
+                triggeredAt: triggeredAt,
+                encoder: encoder
+            ) else {
+                return false
+            }
+            defaults.set(data, forKey: ShieldSessionKeys.sessionData)
+            removeLegacyShieldSessionKeys(from: defaults)
             defaults.set(triggeredAt.timeIntervalSince1970, forKey: AppGroupIPCKeys.lastShieldStartedAt)
             return true
         }
@@ -143,6 +151,13 @@ public final class AppGroupIPCStore {
     public func readShieldSession() throws -> ShieldSessionSnapshot {
         try withLock {
             guard let defaults else { throw StoreError.appGroupSuiteUnavailable }
+            if let data = defaults.data(forKey: ShieldSessionKeys.sessionData) {
+                do {
+                    return try ShieldSessionSnapshot.decode(from: data, decoder: decoder)
+                } catch {
+                    throw StoreError.corruptShieldSession
+                }
+            }
             return ShieldSessionSnapshot.read(from: defaults)
         }
     }
@@ -151,9 +166,8 @@ public final class AppGroupIPCStore {
     public func clearShieldSession(endedAt: Date = Date()) -> Bool {
         withLock {
             guard let defaults else { return false }
-            defaults.removeObject(forKey: ShieldSessionKeys.breakReason)
-            defaults.removeObject(forKey: ShieldSessionKeys.durationSeconds)
-            defaults.removeObject(forKey: ShieldSessionKeys.triggeredAt)
+            removeLegacyShieldSessionKeys(from: defaults)
+            defaults.removeObject(forKey: ShieldSessionKeys.sessionData)
             defaults.set(endedAt.timeIntervalSince1970, forKey: AppGroupIPCKeys.lastShieldEndedAt)
             return true
         }
@@ -198,6 +212,12 @@ public final class AppGroupIPCStore {
         } catch {
             throw StoreError.corruptEventLog
         }
+    }
+
+    private func removeLegacyShieldSessionKeys(from defaults: UserDefaults) {
+        defaults.removeObject(forKey: ShieldSessionKeys.breakReason)
+        defaults.removeObject(forKey: ShieldSessionKeys.durationSeconds)
+        defaults.removeObject(forKey: ShieldSessionKeys.triggeredAt)
     }
 
     private func withLock<T>(_ action: () throws -> T) rethrows -> T {

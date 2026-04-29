@@ -26,11 +26,14 @@ final class ShieldConfigurationCopyTests: XCTestCase {
         XCTAssertNil(snapshot.triggeredAt)
     }
 
-    func test_snapshotRead_readsSharedDefaultsContract() {
+    func test_snapshotRead_readsSharedDefaultsContract() throws {
         let triggeredAt = Date(timeIntervalSince1970: 1_000)
-        defaults.set("eyes", forKey: ShieldSessionKeys.breakReason)
-        defaults.set(20.0, forKey: ShieldSessionKeys.durationSeconds)
-        defaults.set(triggeredAt.timeIntervalSince1970, forKey: ShieldSessionKeys.triggeredAt)
+        let data = try ShieldSessionSnapshot.encodedData(
+            reasonRaw: "eyes",
+            durationSeconds: 20,
+            triggeredAt: triggeredAt
+        )
+        defaults.set(data, forKey: ShieldSessionKeys.sessionData)
 
         let snapshot = ShieldSessionSnapshot.read(from: defaults)
 

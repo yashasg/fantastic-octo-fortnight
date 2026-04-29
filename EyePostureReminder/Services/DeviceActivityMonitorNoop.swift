@@ -26,10 +26,11 @@ final class DeviceActivityMonitorNoop: DeviceActivityMonitorProviding {
     /// Real implementation (post-#201):
     /// ```swift
     /// // 1. Write session to App Group UserDefaults
-    /// let defaults = UserDefaults(suiteName: ShieldSessionKeys.appGroupID)
-    /// defaults?.set(session.reason.rawValue, forKey: ShieldSessionKeys.breakReason)
-    /// defaults?.set(session.durationSeconds, forKey: ShieldSessionKeys.durationSeconds)
-    /// defaults?.set(session.triggeredAt.timeIntervalSince1970, forKey: ShieldSessionKeys.triggeredAt)
+    /// AppGroupIPCStore().writeShieldSession(
+    ///     reasonRaw: session.reason.rawValue,
+    ///     durationSeconds: session.durationSeconds,
+    ///     triggeredAt: session.triggeredAt
+    /// )
     /// // 2. Schedule the monitoring window
     /// try DeviceActivityCenter.shared.startMonitoring(
     ///     activity: .breakActivity(for: session.reason),

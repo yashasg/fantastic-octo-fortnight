@@ -1,4 +1,5 @@
 @testable import EyePostureReminder
+@testable import ScreenTimeExtensionShared
 import XCTest
 
 /// Pre-implementation validation tests for M3.5 "DeviceActivity Monitoring Service" (#205).
@@ -14,7 +15,7 @@ import XCTest
 /// - Extension process lifecycle — requires Xcode project migration (M3.3).
 ///
 /// ## Coverage targets
-/// 1. App Group UserDefaults serialisation round-trip for `ShieldSession` (three keys).
+/// 1. App Group UserDefaults serialisation round-trip for `ShieldSession` (single payload key).
 /// 2. `ReminderType` → `ShieldTriggerReason` raw-value alignment (implicit bridge contract).
 /// 3. `ScreenTimeShieldProviding.isAvailable` guard — only begin monitoring when available.
 /// 4. `MockScreenTimeShieldProviding` captures the correct `ShieldSession` payload.
@@ -41,50 +42,51 @@ final class DeviceActivityMonitoringValidationTests: XCTestCase {
 
     // MARK: - 1. App Group UserDefaults Serialisation Round-Trip
 
-    /// The `DeviceActivityMonitorExtension` reads these three keys from the shared
-    /// App Group in `intervalDidStart(for:)` to populate the shield UI.
-    /// Basher's `DeviceActivityMonitorService.beginShield(for:)` must write them
-    /// in this exact format; a key name or type mismatch causes a silent blank shield.
-    func test_shieldSession_appGroupWrite_reasonKey_roundTrips() {
+    /// The `DeviceActivityMonitorExtension` reads this single payload key from the shared
+    /// App Group in `intervalDidStart(for:)` to populate the shield UI. Basher's
+    /// `DeviceActivityMonitorService.beginShield(for:)` must write it atomically; a key
+    /// name or payload mismatch causes a silent blank shield.
+    func test_shieldSession_appGroupWrite_payloadRoundTrips() throws {
         let session = makeEyesSession()
-        writeShieldSession(session, to: testDefaults)
+        try writeShieldSession(session, to: testDefaults)
 
-        let rawValue = testDefaults.string(forKey: ShieldSession.reasonKey)
-        XCTAssertEqual(rawValue, ShieldTriggerReason.scheduledEyesBreak.rawValue,
-                       "reasonKey must store the ShieldTriggerReason raw value as a String")
+        let data = try XCTUnwrap(
+            testDefaults.data(forKey: ShieldSession.sessionDataKey),
+            "sessionDataKey must store the encoded ShieldSessionSnapshot payload"
+        )
+        let snapshot = try ShieldSessionSnapshot.decode(from: data)
+        XCTAssertEqual(snapshot.reasonRaw, ShieldTriggerReason.scheduledEyesBreak.rawValue)
+        XCTAssertEqual(snapshot.durationSeconds, session.durationSeconds, accuracy: 0.001)
+        let triggeredAtSeconds = try XCTUnwrap(snapshot.triggeredAt?.timeIntervalSince1970)
+        XCTAssertEqual(
+            triggeredAtSeconds,
+            session.triggeredAt.timeIntervalSince1970,
+            accuracy: 0.001
+        )
     }
 
-    func test_shieldSession_appGroupWrite_durationKey_roundTrips() {
+    func test_shieldSession_appGroupWrite_doesNotUseLegacySplitKeys() throws {
         let session = makeSession(reason: .scheduledPostureBreak, duration: 30)
-        writeShieldSession(session, to: testDefaults)
+        try writeShieldSession(session, to: testDefaults)
 
-        let stored = testDefaults.double(forKey: ShieldSession.durationKey)
-        XCTAssertEqual(stored, 30, accuracy: 0.001,
-                       "durationKey must persist durationSeconds as a Double")
+        XCTAssertNil(testDefaults.object(forKey: ShieldSession.reasonKey))
+        XCTAssertNil(testDefaults.object(forKey: ShieldSession.durationKey))
+        XCTAssertNil(testDefaults.object(forKey: ShieldSession.triggeredAtKey))
     }
 
-    func test_shieldSession_appGroupWrite_triggeredAtKey_roundTrips() {
-        let fixedDate = Date(timeIntervalSince1970: 1_000_000)
-        let session = ShieldSession(reason: .scheduledEyesBreak, durationSeconds: 20, triggeredAt: fixedDate)
-        writeShieldSession(session, to: testDefaults)
-
-        let stored = testDefaults.double(forKey: ShieldSession.triggeredAtKey)
-        XCTAssertEqual(stored, fixedDate.timeIntervalSince1970, accuracy: 0.001,
-                       "triggeredAtKey must persist the date as a timeIntervalSince1970 Double")
+    /// Extension reads must fail safe when no session payload has been written.
+    func test_shieldSession_appGroupRead_missingPayload_returnsEmptySnapshot() {
+        let snapshot = ShieldSessionSnapshot.read(from: testDefaults)
+        XCTAssertEqual(snapshot, .empty)
     }
 
-    /// Extension reads reason key first; a missing key must not crash the extension.
-    func test_shieldSession_appGroupRead_missingReasonKey_returnsNil() {
-        let rawValue = testDefaults.string(forKey: ShieldSession.reasonKey)
-        XCTAssertNil(rawValue, "No session written — reasonKey must be absent")
-    }
-
-    /// Clearing the shield must remove all three keys so a stale extension read
+    /// Clearing the shield must remove the payload and legacy keys so a stale extension read
     /// doesn't re-apply an old break session.
-    func test_shieldSession_appGroupClear_removesAllKeys() {
-        writeShieldSession(makeEyesSession(), to: testDefaults)
+    func test_shieldSession_appGroupClear_removesAllKeys() throws {
+        try writeShieldSession(makeEyesSession(), to: testDefaults)
         clearShieldSession(from: testDefaults)
 
+        XCTAssertNil(testDefaults.data(forKey: ShieldSession.sessionDataKey))
         XCTAssertNil(testDefaults.string(forKey: ShieldSession.reasonKey))
         XCTAssertEqual(testDefaults.double(forKey: ShieldSession.durationKey), 0,
                        "durationKey should be absent (double returns 0 when missing)")
@@ -225,15 +227,19 @@ final class DeviceActivityMonitoringValidationTests: XCTestCase {
     /// Simulates what `DeviceActivityMonitorService.beginShield(for:)` must write
     /// to the shared App Group `UserDefaults` before calling
     /// `DeviceActivityCenter.startMonitoring(...)`.
-    private func writeShieldSession(_ session: ShieldSession, to defaults: UserDefaults) {
-        defaults.set(session.reason.rawValue, forKey: ShieldSession.reasonKey)
-        defaults.set(session.durationSeconds, forKey: ShieldSession.durationKey)
-        defaults.set(session.triggeredAt.timeIntervalSince1970, forKey: ShieldSession.triggeredAtKey)
+    private func writeShieldSession(_ session: ShieldSession, to defaults: UserDefaults) throws {
+        let data = try ShieldSessionSnapshot.encodedData(
+            reasonRaw: session.reason.rawValue,
+            durationSeconds: session.durationSeconds,
+            triggeredAt: session.triggeredAt
+        )
+        defaults.set(data, forKey: ShieldSession.sessionDataKey)
     }
 
     /// Simulates what `DeviceActivityMonitorService.endShield()` must do to prevent
     /// the extension from re-reading a stale session on the next `intervalDidStart`.
     private func clearShieldSession(from defaults: UserDefaults) {
+        defaults.removeObject(forKey: ShieldSession.sessionDataKey)
         defaults.removeObject(forKey: ShieldSession.reasonKey)
         defaults.removeObject(forKey: ShieldSession.durationKey)
         defaults.removeObject(forKey: ShieldSession.triggeredAtKey)

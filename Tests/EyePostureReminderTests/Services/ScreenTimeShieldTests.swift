@@ -81,6 +81,7 @@ final class ScreenTimeShieldTests: XCTestCase {
     func test_shieldSession_sharedDefaultsKeys_areStable() {
         // Keys are written by main app, read by extension — must not change
         // without a coordinated migration of both targets.
+        XCTAssertEqual(ShieldSession.sessionDataKey, "shield.session")
         XCTAssertEqual(ShieldSession.reasonKey, "shield.breakReason")
         XCTAssertEqual(ShieldSession.durationKey, "shield.durationSeconds")
         XCTAssertEqual(ShieldSession.triggeredAtKey, "shield.triggeredAt")
