@@ -21,6 +21,7 @@
 #   ASC_AUTH_ISSUER_ID                    optional App Store Connect issuer ID
 #   TESTFLIGHT_INTERNAL_ONLY              YES or NO (default)
 #   BUILD_NUMBER                          default: YYYYMMDDHHmm timestamp; set for unique TestFlight builds
+#   SIGNED_ENTITLEMENTS_PATH              default: App Store-safe distribution entitlements
 
 set -euo pipefail
 
@@ -53,6 +54,7 @@ EXPORT_PATH="${SIGNED_BUILD_PATH}/Export"
 EXPORT_OPTIONS_PLIST="${SIGNED_BUILD_PATH}/ExportOptions.plist"
 
 APP_BUNDLE_ID="${APP_BUNDLE_ID:-com.yashasg.eyeposturereminder}"
+SIGNED_ENTITLEMENTS_PATH="${SIGNED_ENTITLEMENTS_PATH:-${PACKAGE_PATH}/EyePostureReminder/EyePostureReminder.Distribution.entitlements}"
 APPLE_TEAM_ID="${APPLE_TEAM_ID:-${DEVELOPMENT_TEAM:-}}"
 CONFIGURATION="${CONFIGURATION:-Release}"
 SIGNING_STYLE="${SIGNING_STYLE:-manual}"
@@ -165,7 +167,6 @@ require_team_id() {
 
 AUTH_FLAGS=()
 PROVISIONING_FLAGS=()
-SIGNING_BUILD_SETTINGS=()
 
 build_auth_flags() {
   AUTH_FLAGS=()
@@ -207,6 +208,34 @@ build_provisioning_flags() {
   if [[ "$ALLOW_PROVISIONING_UPDATES" == "YES" ]]; then
     PROVISIONING_FLAGS=("-allowProvisioningUpdates")
   fi
+}
+
+code_sign_style_value() {
+  if [[ "$SIGNING_STYLE" == "manual" ]]; then
+    echo "Manual"
+  else
+    echo "Automatic"
+  fi
+}
+
+yaml_quote() {
+  local value="$1"
+  local escaped
+  escaped=$(printf '%s' "$value" | sed "s/'/''/g")
+  printf "'%s'" "$escaped"
+}
+
+require_signed_entitlements() {
+  if [[ ! -f "$SIGNED_ENTITLEMENTS_PATH" ]]; then
+    fail "Signed entitlements file not found: $SIGNED_ENTITLEMENTS_PATH"
+    fail "Set SIGNED_ENTITLEMENTS_PATH to an existing entitlements file, or restore the default distribution entitlements file."
+    exit 1
+  fi
+}
+
+entitlements_requests_focus_status() {
+  local entitlements_path="$1"
+  /usr/libexec/PlistBuddy -c "Print :com.apple.developer.focus-status" "$entitlements_path" >/dev/null 2>&1
 }
 
 profile_dir_path() {
@@ -336,36 +365,6 @@ ensure_manual_distribution_profile() {
   exit 1
 }
 
-build_signing_build_settings() {
-  # Capitalise signing style for the Xcode build setting value ("Automatic"/"Manual").
-  local style_value
-  if [[ "$SIGNING_STYLE" == "manual" ]]; then
-    style_value="Manual"
-  else
-    style_value="Automatic"
-  fi
-
-  SIGNING_BUILD_SETTINGS=(
-    "PRODUCT_BUNDLE_IDENTIFIER=${APP_BUNDLE_ID}"
-    "DEVELOPMENT_TEAM=${APPLE_TEAM_ID}"
-    "CODE_SIGN_STYLE=${style_value}"
-    "CODE_SIGNING_ALLOWED=YES"
-    "CODE_SIGNING_REQUIRED=YES"
-    "ENABLE_BITCODE=NO"
-  )
-
-  # With automatic signing Xcode selects the identity; injecting CODE_SIGN_IDENTITY
-  # at the same time causes exit 65 ("conflicting provisioning settings").
-  # Manual signing is the default for TestFlight so the archive never tries to
-  # create a device-bound development profile.
-  if [[ "$SIGNING_STYLE" == "manual" ]]; then
-    SIGNING_BUILD_SETTINGS+=("CODE_SIGN_IDENTITY=${SIGNING_CERTIFICATE}")
-    if [[ -n "$PROVISIONING_PROFILE_SPECIFIER" ]]; then
-      SIGNING_BUILD_SETTINGS+=("PROVISIONING_PROFILE_SPECIFIER=${PROVISIONING_PROFILE_SPECIFIER}")
-    fi
-  fi
-}
-
 # Inject CFBundleVersion into the already-built archive's Info.plist.
 # Does NOT touch source Info.plist — safe to call on any commit without
 # leaving a dirty working tree.  Uses BUILD_NUMBER env var when set (CI),
@@ -433,14 +432,33 @@ redact_stream() {
       next unless length $value;
       s/\Q$value\E/$replacement/g;
     }
+    s/Apple Distribution: [^"\n]*\(<TEAM_ID_REDACTED>\)/Apple Distribution: <SIGNING_IDENTITY_REDACTED> (<TEAM_ID_REDACTED>)/g;
+    s/--sign\s+[A-Fa-f0-9]{40}/--sign <CERTIFICATE_SHA1_REDACTED>/g;
+    s/\([0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}\)/(<PROFILE_UUID_REDACTED>)/g;
   '
 }
 
 generate_project() {
   header "GENERATE SIGNED PROJECT"
   require_xcodegen
+  require_signed_entitlements
 
   mkdir -p "$PROJECT_DIR"
+
+  local style_value
+  local manual_signing_settings=""
+  style_value="$(code_sign_style_value)"
+
+  # Scope manual signing only to the generated app-wrapper target. Passing these
+  # as command-line build settings makes Xcode apply them to Swift Package
+  # targets too, and SPM targets cannot consume provisioning profiles.
+  if [[ "$SIGNING_STYLE" == "manual" ]]; then
+    manual_signing_settings="        CODE_SIGN_IDENTITY: $(yaml_quote "$SIGNING_CERTIFICATE")"
+    if [[ -n "$PROVISIONING_PROFILE_SPECIFIER" ]]; then
+      manual_signing_settings="${manual_signing_settings}
+        PROVISIONING_PROFILE_SPECIFIER: $(yaml_quote "$PROVISIONING_PROFILE_SPECIFIER")"
+    fi
+  fi
 
   # Archive for iOS distribution requires a proper .xcodeproj with a signed
   # app-wrapper target.  SPM executable targets cannot be archived for device
@@ -459,7 +477,7 @@ options:
 
 packages:
   EyePostureReminder:
-    path: "${PACKAGE_PATH}"
+    path: $(yaml_quote "$PACKAGE_PATH")
 
 targets:
   ${APP_TARGET}:
@@ -468,13 +486,21 @@ targets:
     deploymentTarget: "16.0"
     dependencies:
       - package: EyePostureReminder
+    sources:
+      - path: $(yaml_quote "${PACKAGE_PATH}/EyePostureReminder/AppIcon.xcassets")
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: ${APP_BUNDLE_ID}
-        TARGETED_DEVICE_FAMILY: "1,2"
-        INFOPLIST_FILE: "${PACKAGE_PATH}/EyePostureReminder/Info.plist"
-        CODE_SIGN_ENTITLEMENTS: "${PACKAGE_PATH}/EyePostureReminder/EyePostureReminder.entitlements"
+        PRODUCT_BUNDLE_IDENTIFIER: $(yaml_quote "$APP_BUNDLE_ID")
+        TARGETED_DEVICE_FAMILY: "1"
+        INFOPLIST_FILE: $(yaml_quote "${PACKAGE_PATH}/EyePostureReminder/Info.plist")
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        CODE_SIGN_ENTITLEMENTS: $(yaml_quote "$SIGNED_ENTITLEMENTS_PATH")
+        DEVELOPMENT_TEAM: $(yaml_quote "$APPLE_TEAM_ID")
+        CODE_SIGN_STYLE: $(yaml_quote "$style_value")
+        CODE_SIGNING_ALLOWED: "YES"
+        CODE_SIGNING_REQUIRED: "YES"
         ENABLE_BITCODE: "NO"
+${manual_signing_settings}
     postBuildScripts:
       - name: "Assemble App Bundle"
         script: |
@@ -605,6 +631,16 @@ cmd_doctor() {
     info "BUILD_NUMBER: not set — timestamp will be used for CFBundleVersion in archive"
   fi
 
+  if [[ -f "$SIGNED_ENTITLEMENTS_PATH" ]]; then
+    if entitlements_requests_focus_status "$SIGNED_ENTITLEMENTS_PATH"; then
+      warn "Signed entitlements request Focus Status. The App ID/profile must include that capability."
+    else
+      pass "Signed entitlements: App Store profile-safe"
+    fi
+  else
+    warn "Signed entitlements file missing: $SIGNED_ENTITLEMENTS_PATH"
+  fi
+
   pass "Doctor complete"
 }
 
@@ -653,7 +689,6 @@ cmd_archive() {
 
   build_auth_flags
   build_provisioning_flags
-  build_signing_build_settings
 
   info "Scheme:      $SCHEME"
   info "Bundle ID:   $APP_BUNDLE_ID"
@@ -668,8 +703,7 @@ cmd_archive() {
     -archivePath "$ARCHIVE_PATH" \
     "${PROVISIONING_FLAGS[@]+"${PROVISIONING_FLAGS[@]}"}" \
     "${AUTH_FLAGS[@]+"${AUTH_FLAGS[@]}"}" \
-    archive \
-    "${SIGNING_BUILD_SETTINGS[@]+"${SIGNING_BUILD_SETTINGS[@]}"}"; then
+    archive; then
     print_archive_failure_hint
     exit 1
   fi

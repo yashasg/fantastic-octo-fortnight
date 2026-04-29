@@ -7,21 +7,7 @@
       "size": "20x20"
     },
     {
-      "appearances": [{ "appearance": "luminosity", "value": "dark" }],
-      "filename": "AppIcon-Dark-40.png",
-      "idiom": "iphone",
-      "scale": "2x",
-      "size": "20x20"
-    },
-    {
       "filename": "AppIcon-60.png",
-      "idiom": "iphone",
-      "scale": "3x",
-      "size": "20x20"
-    },
-    {
-      "appearances": [{ "appearance": "luminosity", "value": "dark" }],
-      "filename": "AppIcon-Dark-60.png",
       "idiom": "iphone",
       "scale": "3x",
       "size": "20x20"
@@ -33,21 +19,7 @@
       "size": "29x29"
     },
     {
-      "appearances": [{ "appearance": "luminosity", "value": "dark" }],
-      "filename": "AppIcon-Dark-58.png",
-      "idiom": "iphone",
-      "scale": "2x",
-      "size": "29x29"
-    },
-    {
       "filename": "AppIcon-87.png",
-      "idiom": "iphone",
-      "scale": "3x",
-      "size": "29x29"
-    },
-    {
-      "appearances": [{ "appearance": "luminosity", "value": "dark" }],
-      "filename": "AppIcon-Dark-87.png",
       "idiom": "iphone",
       "scale": "3x",
       "size": "29x29"
@@ -59,34 +31,13 @@
       "size": "40x40"
     },
     {
-      "appearances": [{ "appearance": "luminosity", "value": "dark" }],
-      "filename": "AppIcon-Dark-80.png",
-      "idiom": "iphone",
-      "scale": "2x",
-      "size": "40x40"
-    },
-    {
       "filename": "AppIcon-120.png",
       "idiom": "iphone",
       "scale": "3x",
       "size": "40x40"
     },
     {
-      "appearances": [{ "appearance": "luminosity", "value": "dark" }],
-      "filename": "AppIcon-Dark-120.png",
-      "idiom": "iphone",
-      "scale": "3x",
-      "size": "40x40"
-    },
-    {
       "filename": "AppIcon-120.png",
-      "idiom": "iphone",
-      "scale": "2x",
-      "size": "60x60"
-    },
-    {
-      "appearances": [{ "appearance": "luminosity", "value": "dark" }],
-      "filename": "AppIcon-Dark-120.png",
       "idiom": "iphone",
       "scale": "2x",
       "size": "60x60"
@@ -98,21 +49,7 @@
       "size": "60x60"
     },
     {
-      "appearances": [{ "appearance": "luminosity", "value": "dark" }],
-      "filename": "AppIcon-Dark-180.png",
-      "idiom": "iphone",
-      "scale": "3x",
-      "size": "60x60"
-    },
-    {
       "filename": "AppIcon-1024.png",
-      "idiom": "ios-marketing",
-      "scale": "1x",
-      "size": "1024x1024"
-    },
-    {
-      "appearances": [{ "appearance": "luminosity", "value": "dark" }],
-      "filename": "AppIcon-Dark-1024.png",
       "idiom": "ios-marketing",
       "scale": "1x",
       "size": "1024x1024"

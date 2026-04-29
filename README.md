@@ -1,16 +1,18 @@
 # kshana — Eye & Posture Wellness
 
-A calming iOS wellness app — redesigned as **Restful Grove** with a yin-yang–inspired logo — that delivers gentle eye-break and posture reminders based on actual screen time. Built exclusively with SwiftUI, UserNotifications, and UIKit to minimise battery and memory usage.
+A calming iOS wellness app — redesigned as **Restful Grove** with a yin-yang–inspired logo — that delivers healthy app breaks based on your screen time. **Phase 3 pivot: Now integrating Apple Screen Time APIs (FamilyControls + DeviceActivity + ManagedSettings) for True Interrupt Mode** — when breaks fire, kshana shields distracting apps, enforcing the break. Local notifications are fallback/noise. Choose which apps to shield, set your break timing, and kshana ensures you actually take them. Built exclusively with SwiftUI, UserNotifications, UIKit, and ScreenTime frameworks to minimise battery and memory usage.
 
 ## Features
 
 - 👁 **Eye-rest reminders** – configurable interval and break duration (e.g. 20-20-20 rule)
 - 🧍 **Posture reminders** – configurable interval and break duration
+- 🚀 **True Interrupt Mode (beta)** – Screen Time Shield-based break suggestions over selected apps/categories when Apple entitlement is approved. Until then, fallback local alerts.
 - 🧠 **Smart Pause** – automatically pauses reminders during Focus Mode, CarPlay navigation, or when driving
-- Full-screen dismissible overlay with countdown timer
+- Full-screen break screen with countdown timer
 - Dropdown pickers for reminder interval and break length
 - Foreground screen-time tracking via a 1-second `Timer` — reminders fire based on actual eyes-on-screen time, not wall-clock intervals
-- 🚀 **Onboarding flow** – 3-screen first-launch guide (Welcome → Permissions → Setup)
+- 🎯 **App Selection** – choose which apps and categories trigger breaks (roadmap feature)
+- 🚀 **Onboarding flow** – 4-screen first-launch guide with calm pre-permission education
 - 📳 **Haptic feedback** – tactile notifications on reminder appear and dismiss (toggle in Settings)
 - 💤 **Snooze** – snooze active reminders with configurable limits
 - ♿ **Accessibility** – Dynamic Type, VoiceOver labels/hints, Reduce Motion support
@@ -66,6 +68,8 @@ APPLE_TEAM_ID=<team-id> ./scripts/build_signed.sh upload
 
 For TestFlight, use a **Distribution → App Store Connect** provisioning profile. Do not add devices just for TestFlight; device registration is only needed for development/ad hoc installs outside TestFlight. If multiple matching profiles exist, pass `PROVISIONING_PROFILE_SPECIFIER=<profile-name>` through the environment.
 
+The signed runner uses `EyePostureReminder/EyePostureReminder.Distribution.entitlements` by default so App Store profiles that do not include Focus Status can still archive/export. If you enable the Focus Status capability on the App ID and regenerate the distribution profile, you can opt into the full app entitlements with `SIGNED_ENTITLEMENTS_PATH=EyePostureReminder/EyePostureReminder.entitlements`.
+
 Keep private signing values in environment variables only. Do not commit Team IDs, provisioning profile UUIDs, App Store Connect API key IDs, issuer IDs, `.p8` paths, certificates, or profiles.
 
 ### Troubleshooting signed builds
@@ -76,6 +80,7 @@ Keep private signing values in environment variables only. Do not commit Team ID
 | *"No profiles for canonical app bundle ID"* | No App Store Connect Distribution profile installed locally | Create a Distribution → App Store Connect profile at [developer.apple.com → Profiles](https://developer.apple.com/account/resources/profiles/list), download and double-click it, or set `PROVISIONING_PROFILE_SPECIFIER` |
 | *`export` or `upload` reports no signed IPA* | `export` / `upload` requires a successful `archive` first | Re-run `export`; it will re-archive automatically. Transporter only accepts a fully signed `.ipa` |
 | *"conflicting provisioning settings" (exit 65)* | `CODE_SIGN_IDENTITY` injected alongside automatic signing | Use `SIGNING_STYLE=manual` (the default) to avoid the conflict |
+| *"Entitlement com.apple.developer.focus-status not found"* | The App Store profile was generated without Focus Status capability | Use the default distribution entitlements, or enable Focus Status on the App ID, regenerate/download the profile, and set `SIGNED_ENTITLEMENTS_PATH=EyePostureReminder/EyePostureReminder.entitlements` |
 
 > **Sequence reminder:** `archive` → `export` → `upload`. Each step depends on the previous one completing successfully. Running `export` or `upload` re-runs `archive` automatically.
 

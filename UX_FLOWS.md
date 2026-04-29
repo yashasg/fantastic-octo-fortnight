@@ -11,16 +11,16 @@
 These principles guide every UX decision in the app:
 
 ### 1.1 **Interruptions Should Feel Helpful, Not Annoying**
-Every reminder exists to improve the user's wellbeing. The overlay should feel like a gentle nudge from a caring friend, not a jarring interruption. Visual design, timing, and dismissibility all support this feeling.
+Every break exists to improve the user's wellbeing. The break screen should feel like a gentle nudge from a caring friend, not a jarring interruption. Calm visual design, user choice, and immediate dismissibility all support this feeling.
 
 ### 1.2 **Friction is the Enemy of Habit Formation**
-The app must fade into the background of the user's life. Setup should take seconds, not minutes. No mandatory onboarding tours. No confusing settings. The user should forget the app is running — until it helpfully reminds them.
+The app must fade into the background of the user's life. Setup should take seconds, not minutes. No mandatory onboarding tours. No confusing settings. The user should forget the app is running — until it helpfully reminds them to take a break.
 
 ### 1.3 **Respect User Autonomy**
-Every overlay is immediately dismissible. No forced delays. No guilt-tripping messages. The user knows their body and context best. If they need to skip a break, that's their call. The app trusts them.
+The user chooses which apps or categories to monitor. They set the timing. They can disable at any time. The app is transparent: kshana does not read messages, content, or report activity beyond what's needed to suggest breaks.
 
 ### 1.4 **Battery Life is a Feature**
-Users shouldn't worry that enabling this app will drain their battery. The implementation leverages iOS's native scheduling APIs to minimize CPU and memory usage. The UX should reflect this lightness — simple, fast, efficient.
+Users shouldn't worry that enabling this app will drain their battery. The implementation leverages iOS's native scheduling APIs and system-managed interruption to minimize CPU and memory usage. The UX should reflect this lightness — simple, fast, efficient.
 
 ### 1.5 **Accessibility is Not Optional**
 Every screen and interaction must work perfectly with VoiceOver, Dynamic Type, and Reduce Motion. Designing for accessibility improves the experience for everyone.
@@ -29,9 +29,11 @@ Every screen and interaction must work perfectly with VoiceOver, Dynamic Type, a
 
 ## 2. Complete User Flows
 
-### 2.1 First Launch → Onboarding → Permission Request → Home Screen
+### 2.1 First Launch → Onboarding → Permissions → Home Screen
 
-The app uses a 3-screen onboarding flow (`OnboardingView`) shown once on first launch. `ContentView` checks the `hasSeenOnboarding` flag in `@AppStorage` and routes to either `OnboardingView` or `HomeView`.
+The app uses a 4-screen onboarding flow (`OnboardingView`) shown once on first launch. `ContentView` checks the `hasSeenOnboarding` flag in `@AppStorage` and routes to either `OnboardingView` or `HomeView`.
+
+**Current reality:** Local reminder alerts are a fallback. The core future promise is Screen Time Shield-based interruption over selected apps/categories once Apple's entitlement is approved.
 
 ```
 User taps app icon (first time)
@@ -49,74 +51,114 @@ ContentView checks @AppStorage("hasSeenOnboarding")
     │  │  SCREEN 1 — Welcome (OnboardingWelcomeView) │
     │  │                                              │
     │  │  Illustration: eye + figure SF Symbols       │
-    │  │  Headline: "Welcome to Eye & Posture         │
-    │  │            Reminder"                         │
-    │  │  Subheadline + value prop body text          │
-    │  │  Legal disclaimer (privacy note)             │
+    │  │  Headline: "Welcome to kshana"               │
+    │  │  Subheadline: "Healthy app breaks,          │
+    │  │               on your terms"                 │
+    │  │  Body: "Gentle nudges to rest your eyes      │
+    │  │  and check your posture. Choose which        │
+    │  │  apps get break screens. You're in control." │
     │  │                                              │
     │  │  [ Next → ]  (borderedProminent, blue)       │
-    │  │  Page dots: ● ○ ○                            │
+    │  │  Page dots: ● ○ ○ ○                          │
     │  └─────────────────────────────────────────────┘
     │      │
     │      ▼  User taps "Next" (or swipes left)
     │
     │  ┌──────────────────────────────────────────────────┐
-    │  │  SCREEN 2 — Permissions (OnboardingPermissionView)│
+    │  │  SCREEN 2 — App Break Access (Pre-Permission)    │
     │  │                                                   │
-    │  │  Mock notification preview card                   │
-    │  │  Headline: "Stay on track, effortlessly."         │
-    │  │  Explanation: why notifications are needed         │
-    │  │  Reassurance: "No spam. Just the breaks you       │
-    │  │               asked for."                         │
+    │  │  Headline: "How does kshana work?"                │
+    │  │  Body: "kshana monitors which apps you use        │
+    │  │  (like Safari or social media) and gently         │
+    │  │  suggests breaks. Think of it as a friendly       │
+    │  │  reminder card—not a blocker.                     │
     │  │                                                   │
-    │  │  [ Enable Notifications ]  ← triggers system      │
-    │  │                              permission prompt     │
-    │  │  "Not now" skip link      ← advances without      │
-    │  │                              prompting             │
-    │  │  Page dots: ○ ● ○                                 │
+    │  │  You choose which apps to monitor, when breaks    │
+    │  │  happen, and can disable anytime.                 │
+    │  │                                                   │
+    │  │  kshana does not:                                 │
+    │  │  • Read messages or see content                   │
+    │  │  • Report your activity anywhere                  │
+    │  │  • Require an account"                            │
+    │  │                                                   │
+    │  │  [ Next → ]  (borderedProminent, blue)            │
+    │  │  "Maybe Later" skip link                          │
+    │  │  Page dots: ○ ● ○ ○                               │
+    │  └──────────────────────────────────────────────────┘
+    │      │
+    │      ├─ User taps "Next"
+    │      │      │
+    │      │      ▼  (advances to Screen 3)
+    │      │
+    │      └─ User taps "Maybe Later"
+    │             │
+    │             ▼  (skips to Screen 4 Setup Preview)
+    │
+    │  ┌──────────────────────────────────────────────────┐
+    │  │  SCREEN 3 — App Break Access Permission          │
+    │  │  (OnboardingScreenTimePermissionView)             │
+    │  │                                                   │
+    │  │  Headline: "Permission to suggest breaks"        │
+    │  │  Body: "kshana needs access to see which apps     │
+    │  │  you're using so it can suggest breaks at the     │
+    │  │  right time.                                      │
+    │  │                                                   │
+    │  │  Your privacy matters. This does not give kshana  │
+    │  │  access to your messages, photos, or any other    │
+    │  │  content."                                        │
+    │  │                                                   │
+    │  │  [ Grant App Break Access ]  ← triggers          │
+    │  │    system Screen Time/Family Controls prompt      │
+    │  │  "Not now" skip link  ← advances without          │
+    │  │                          requesting permission    │
+    │  │  Page dots: ○ ○ ● ○                               │
     │  │                                                   │
     │  │  ⚠ Horizontal swipe is blocked on this screen     │
     │  │    (highPriorityGesture prevents accidental skip)  │
     │  └──────────────────────────────────────────────────┘
     │      │
-    │      ├─ User taps "Enable Notifications"
+    │      ├─ User taps "Grant App Break Access"
     │      │      │
     │      │      ▼
     │      │  System permission prompt appears:
-    │      │  "kshana Would Like to
-    │      │   Send You Notifications"
-    │      │  [Don't Allow] [Allow]
+    │      │  "kshana" requests access to Screen Time
+    │      │  [Allow] [Don't Allow]
     │      │      │
     │      │      ├─ User taps "Allow" → permission granted ✓
     │      │      └─ User taps "Don't Allow" → permission denied
     │      │      │
-    │      │      ▼  (either way, advances to Screen 3)
+    │      │      ▼  (either way, advances to Screen 4)
     │      │
     │      └─ User taps "Not now"
     │             │
-    │             ▼  (advances to Screen 3 without prompting)
+    │             ▼  (advances to Screen 4 without prompting)
     │
     │  ┌──────────────────────────────────────────────────┐
-    │  │  SCREEN 3 — Setup Preview (OnboardingSetupView)  │
+    │  │  SCREEN 4 — Setup Preview (OnboardingSetupView)  │
     │  │                                                   │
     │  │  Headline: "You're all set"                       │
-    │  │  Default config preview cards:                     │
-    │  │    • Eye Breaks: 20 min interval, 20 s break      │
-    │  │    • Posture Checks: 30 min interval, 10 s break  │
-    │  │  Reassurance body copy                             │
+    │  │  Body: "kshana will help you build better         │
+    │  │  habits. Your breaks, your timing, your control." │
+    │  │                                                   │
+    │  │  Default config preview:                           │
+    │  │    • Eye Breaks: every 20 min                     │
+    │  │    • Posture Checks: every 30 min                 │
+    │  │    • Fallback local alerts when Screen Time       │
+    │  │      access is unavailable                        │
     │  │                                                   │
     │  │  [ Get Started ]    ← sets hasSeenOnboarding,     │
     │  │                       transitions to HomeView     │
     │  │  "Customize Settings" ← sets hasSeenOnboarding    │
     │  │                         + openSettingsOnLaunch,    │
     │  │                         opens Settings on arrival  │
-    │  │  Page dots: ○ ○ ●                                 │
+    │  │  Page dots: ○ ○ ○ ●                               │
     │  └──────────────────────────────────────────────────┘
     │      │
     │      ▼
     │  hasSeenOnboarding = true (written to UserDefaults)
     │  ContentView transitions to HomeView (opacity crossfade, 0.4s)
-    │  Reminders scheduled with default values
+    │  If permission granted, app begins monitoring selected apps
+    │  If permission denied, fallback to local alerts when app runs
     │
     └─ true (returning user)
            │
@@ -125,13 +167,14 @@ ContentView checks @AppStorage("hasSeenOnboarding")
 ```
 
 **Key UX decisions:**
-- **3-screen onboarding educates before asking.** The permission request is on Screen 2, after the user understands the app's value (Screen 1). This increases grant rates.
-- **Permission screen blocks accidental swipe-past.** A `highPriorityGesture` prevents horizontal swiping on Screen 2, ensuring the user makes a deliberate choice.
-- **"Not now" skip is always available.** The user can skip the notification prompt and still proceed. A banner on the Home/Settings screen later offers recovery (see Section 2.4).
-- **Defaults are pre-configured.** Screen 3 previews the defaults so the user knows what to expect. No mandatory customization.
+- **4-screen onboarding educates before asking.** Screen 1 explains value. Screen 2 educates on how kshana works (privacy-first). Screen 3 requests the Screen Time access permission. This order builds confidence.
+- **Pre-permission education screen (Screen 2).** Many users find the system Screen Time/Family Controls prompt scary. A calm pre-screen explains what kshana does (and doesn't do) in plain language, reducing anxiety.
+- **Permission screen blocks accidental swipe-past.** A `highPriorityGesture` prevents horizontal swiping on Screen 3, ensuring the user makes a deliberate choice.
+- **"Maybe Later" / "Not now" paths are always available.** The user can skip permissions and still proceed. A banner on the Home/Settings screen later offers recovery (see Section 2.4). The app works in degraded mode with local alerts as fallback.
+- **Defaults are pre-configured.** Screen 4 previews the defaults so the user knows what to expect. No mandatory customization.
 - **"Customize Settings" path.** Users who want to adjust before starting can tap the secondary CTA, which opens Settings immediately after onboarding.
 - **Onboarding is shown exactly once.** The `hasSeenOnboarding` flag is only set on explicit completion ("Get Started" or "Customize"). Force-quitting mid-onboarding means it shows again next launch.
-- **Graceful degradation.** If permission is denied (either via "Don't Allow" or "Not now"), the app works in foreground-only mode. A persistent banner on the Home/Settings screen provides a path to fix (see Section 2.4).
+- **Graceful degradation.** If permission is denied, the app works in foreground-only mode with local alerts. A persistent banner on the Home/Settings screen provides a path to fix (see Section 2.4).
 
 ---
 

@@ -3,8 +3,12 @@
 generate_icons.py — Regenerate AppIcon PNGs from a 1024x1024 source or template.
 
 Produces:
-  - Improved light-mode icons (pale mint → saturated #50C4A4)
-  - New dark-mode icons  (dark bg, light sage, mid-green mint)
+  - Light/default icons only (pale mint → saturated #50C4A4)
+
+NOTE: This project targets iOS 16. Dark-mode AppIcon catalog entries
+(appearances=dark) are not supported until iOS 18+ and actool treats them
+as unassigned children on iOS 16 targets. Dark-icon generation has been
+intentionally removed to avoid recreating unsupported AppIcon-Dark-* files.
 
 Usage:
   python3 scripts/generate_icons.py
@@ -24,19 +28,13 @@ ORIG_BG   = np.array([248, 244, 236], dtype=float)  # #F8F4EC
 ORIG_SAGE = np.array([ 47, 111,  94], dtype=float)  # #2F6F5E
 ORIG_MINT = np.array([238, 246, 241], dtype=float)  # #EEF6F1
 
-# ── Target palettes ──────────────────────────────────────────────────────────
+# ── Target palette (light/default icons only) ────────────────────────────────
 # Light-improved: keep bg + sage, replace barely-visible mint with #50C4A4
 LIGHT_BG   = ORIG_BG.copy()
 LIGHT_SAGE = ORIG_SAGE.copy()
 LIGHT_MINT = np.array([ 80, 196, 164], dtype=float)  # #50C4A4
 
-# Dark: deep-forest background; in dark mode the halves swap luminance —
-# the sage half maps to the lighter #8ED2B1 (matches primaryRest dark),
-# the mint/yang half maps to mid-green #2A6A52 (matches LogoYangMint dark).
-# Contrast: sage vs mint 3.7:1, sage vs bg 10.4:1.
-DARK_BG   = np.array([ 16,  23,  20], dtype=float)  # #101714
-DARK_SAGE = np.array([142, 210, 177], dtype=float)  # #8ED2B1
-DARK_MINT = np.array([ 42, 106,  82], dtype=float)  # #2A6A52
+# Dark-mode icon palette intentionally omitted — not supported on iOS 16.
 
 # ── Sizes required ───────────────────────────────────────────────────────────
 SIZES = [40, 58, 60, 80, 87, 120, 180, 1024]
@@ -98,19 +96,15 @@ def main():
     if not os.path.exists(src_path):
         raise FileNotFoundError(f"Source icon not found: {src_path}")
 
-    print("Generating light-improved icons…")
+    print("Generating light/default icons…")
     make_icon_set(
         src_path, suffix="",
         old_palette=(ORIG_BG, ORIG_SAGE, ORIG_MINT),
         new_palette=(LIGHT_BG, LIGHT_SAGE, LIGHT_MINT),
     )
 
-    print("Generating dark-mode icons…")
-    make_icon_set(
-        src_path, suffix="-Dark",
-        old_palette=(ORIG_BG, ORIG_SAGE, ORIG_MINT),
-        new_palette=(DARK_BG, DARK_SAGE, DARK_MINT),
-    )
+    # Dark-mode icon generation removed — not supported on iOS 16 deployment target.
+    # actool treats appearance=dark entries as unassigned children on iOS 16.
 
     print("Done.")
 

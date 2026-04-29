@@ -1,20 +1,21 @@
 # kshana — iOS App Roadmap
 
-> **Status:** v0.2.0 (Restful Grove) shipped — Phase 1 complete, Phase 2 ~95% complete  
-> **Target Platform:** iOS 16+, Swift, SwiftUI + UIKit  
-> **Architecture:** MVVM, ScreenTimeTracker, UIWindow overlay, native config (Asset Catalog, String Catalog, defaults.json)  
+> **Status:** v0.2.0 (Restful Grove) shipped — Phase 1+2 complete; **PIVOT to True Interrupt Mode (Screen Time APIs)** — Phase 3 (Interrupt Mode MVP)  
+> **Core Value Proposition:** True Interrupt Mode via Apple Screen Time APIs (FamilyControls + DeviceActivity + ManagedSettings) to pause distracting apps during break reminders. Local notifications are fallback/noise, not core.  
+> **Target Platform:** iOS 16+ (17+ for full Screen Time API support)  
+> **Architecture:** MVVM + Screen Time APIs (DeviceActivity, ManagedSettings, ShieldConfiguration), app groups, extension communication  
 > **Team:** 13 members across PM, Design, Architecture, Dev, QA, Review, Legal, DevOps, Analytics
 
 ---
 
 ## Executive Summary
 
-Shipped **v0.2.0 (Restful Grove)** — the definitive quality and branding milestone. Phase 1 MVP fully delivered. **Phase 2 (Polish)** is ~95% complete: screen-time triggers, smart pause, onboarding, haptics, snooze, data-driven config, Restful Grove visual identity with yin-yang logo animation, 7 quality passes, 1,382 unit tests, 53 UI tests, 81%+ coverage. App Store prep in final stages. **Phase 3 (Advanced)** partially started with DI protocols and UI test scaffolding.
+**kshana pivots to True Interrupt Mode.** Shipped **v0.2.0 (Restful Grove)** — Phase 1+2 complete with overlay reminders, smart pause, accessibility, yin-yang branding, 1,382 unit tests, 81%+ coverage. **Now pivoting to Phase 3 (Interrupt Mode MVP):** Core product value is Apple Screen Time APIs (FamilyControls authorization + DeviceActivity monitoring + ManagedSettings to shield distracting apps during breaks). Local notification reminders become fallback/noise, not the primary product promise. Phase 3 unblocks on entitlement approval (Case ID 102881605113). New phase includes: extension targets (ShieldConfiguration), device activity monitoring, app/category picker, managed settings + shield actions, app group shared state, pre-permission UX refinement, and legal/privacy updates for data controller terminology.
 
 - **Phase 0: Foundation** ✅ – Project scaffolding, CI/CD, architecture, design system
 - **Phase 1: MVP** ✅ – Reminders, overlay, settings (shipped)
-- **Phase 2: Polish** 🔄 – Onboarding, haptics, snooze, smart pause, accessibility, data-driven config, Restful Grove identity, yin-yang logo (~95% done)
-- **Phase 3: Advanced** 🔄 – iCloud sync, widgets, watchOS, dependency injection refactoring (started)
+- **Phase 2: Polish** ✅ – Onboarding, haptics, snooze, smart pause, accessibility, data-driven config, Restful Grove identity, yin-yang logo (shipped)
+- **Phase 3: Interrupt Mode MVP** 🔄 – Screen Time APIs, app shielding, extension architecture, pre-permission UX, legal updates (in progress)
 
 ---
 
@@ -377,76 +378,244 @@ Shipped **v0.2.0 (Restful Grove)** — the definitive quality and branding miles
 
 ---
 
-## Phase 3: Advanced Features 🔄 PARTIALLY STARTED
+## Phase 3: Interrupt Mode MVP 🔄 IN PROGRESS
 
-**Goal:** Refactor for dependency injection, add iCloud sync, widgets, and watchOS companion for power users.
+**Goal:** Pivot core product to Apple Screen Time APIs (FamilyControls + DeviceActivity + ManagedSettings) to shield distracting apps during break reminders. Local notifications become fallback only.
 
-**Status:** Partially started. Dependency injection protocol work in progress (issues #13, #14). XCUITest scaffold created. Scope remains post-v1.0; can be deferred if App Store submission prioritized.
+**Status:** In progress. Entitlement approval pending (Case ID 102881605113). Architecture spike complete. Extension targets and app/category picker in scope.
 
-### Milestones
+**Why This Pivot:**
+kshana's overlay reminders are valuable, but iOS allows truly **interruptive** behavior only through Screen Time APIs. By integrating FamilyControls and DeviceActivity, we can:
+1. **Shield apps** (block category or specific app) when a break reminder fires
+2. **Enforce** the break (user cannot dismiss the shield immediately)
+3. **Resume** monitoring when break ends
+4. Provide **true interruption** (not just a reminder notification)
 
-#### M3.1: Dependency Injection Refactoring 🔄
-- **Owner:** Livingston (Tester) + Rusty (Architect)
-- **Status:** 🔄 IN PROGRESS (issues #13-14 pending)
+Local notification fallback ensures we gracefully degrade if Screen Time APIs unavailable or if user hasn't granted FamilyControls permission.
+
+### Architecture Changes (Phase 3)
+
+#### New Targets & Frameworks
+- **App Group:** `group.com.kshana.screentime` (shared between main app and extensions)
+- **Main App Entitlements:** `com.apple.developer.family-controls` (FamilyControls)
+- **ShieldConfiguration Extension:** Implements `ShieldConfigurationProvider` protocol (ManagedSettingsUI)
+- **ShieldAction Extension:** Implements `ShieldActionProvider` protocol for app/website unblocker buttons
+- **New Services:**
+  - `DeviceActivityMonitor` — observes screen time via DeviceActivity.monitoredDevices
+  - `ManagedSettingsCoordinator` — configures shields via ManagedSettings
+  - `AppCategoryPicker` — UI for category/app selection
+  - `AppGroupBridge` — inter-process communication (main app ↔ extensions)
+
+#### Data Flow (Phase 3)
+```
+Reminder fires (via ScreenTimeTracker)
+    ↓
+AppCoordinator.handleBreakNeeded()
+    ↓
+ManagedSettingsCoordinator.shieldAppsForBreak()
+    ↓
+ManagedSettings.apply() — shield config pushed to DeviceActivity
+    ↓
+ShieldConfiguration extension receives via ShieldConfigurationProvider
+    ↓
+Shield renders on device (user cannot bypass immediately)
+    ↓
+Break duration elapses
+    ↓
+ManagedSettingsCoordinator.clearShields()
+    ↓
+Device resumes normal activity
+    ↓
+(If break dismissed/snoozed, notification fallback sent)
+```
+
+### Milestones (Phase 3)
+
+#### M3.1: Entitlement Approval Follow-up 🔴 BLOCKER
+- **Owner:** Frank (Legal) + Danny (PM)
+- **Status:** 🔴 BLOCKED (Case ID 102881605113)
 - **Scope:**
-  - Extract common `Lifecycle` protocol for start/stop services
-  - Inject `PauseConditionProvider` into `AppCoordinator` via protocol
-  - Inject `ScreenTimeTracking` protocol for testability
-  - Update mocks to reflect protocol injection
-- **Dependencies:** Phase 2 complete
-- **Duration:** 3 days (estimated)
+  - Follow up on FamilyControls entitlement approval with Apple
+  - Prepare entitlement request submission if rejected
+  - Ensure privacy policy + terms updated for data controller role (Screen Time data)
+- **Dependencies:** None (parallel track)
+- **Duration:** 2–5 days (Apple review SLA)
 - **Acceptance Criteria:**
-  - All services injectable via protocols
-  - Existing tests pass with mock injection
-  - No production logic changed
+  - Entitlement approved OR clear rejection reason received
+  - Privacy policy updated if needed
 
-#### M3.2: iCloud Settings Sync
-- **Owner:** Basher (Services Dev)
-- **Status:** 🔄 PLANNED
-- **Deliverables:**
-  - Migrate `SettingsStore` to use `NSUbiquitousKeyValueStore` in addition to `UserDefaults`
-  - Conflict resolution: last-write-wins
-  - Sync status indicator in settings ("Syncing…" / "Synced ✓")
-  - Graceful fallback to local `UserDefaults` if iCloud unavailable
-  - Unit tests for sync edge cases (account switch, airplane mode)
-- **Dependencies:** Phase 1 complete, M3.1 (if refactoring first)
+#### M3.2: Screen Time Shield Spike 🔄
+- **Owner:** Rusty (Architect)
+- **Status:** 🔄 IN PROGRESS
+- **Scope:**
+  - Research ShieldConfiguration protocol, ManagedSettingsUI extension architecture
+  - Prototype extension target scaffolding in Xcode
+  - Validate app group communication (UserDefaults + file sharing)
+  - Performance testing: extension launch time, shield render latency
+- **Dependencies:** M3.1 (need entitlement approved)
 - **Duration:** 4 days
 - **Acceptance Criteria:**
-  - Settings sync across devices within 5 seconds
-  - No data loss on conflict
-  - Works offline (local UserDefaults fallback)
+  - Extension compiles and runs in simulator
+  - App group communication verified (main app → extension)
+  - Shield renders on DeviceActivity trigger
 
-#### M3.3: Home Screen Widget (WidgetKit)
-- **Owner:** Linus (iOS UI Dev)
+#### M3.3: Project & Extension Target Setup
+- **Owner:** Basher (Services Dev) + Virgil (CI/CD)
 - **Status:** 🔄 PLANNED
-- **Deliverables:**
-  - WidgetKit extension target
-  - Display: "Next eye break in 12 min" + "Next posture check in 18 min"
-  - Timeline provider updates every minute
-  - Widget sizes: small, medium, large
-  - Deep link to settings on tap
-  - Battery impact < 1% per day
-- **Dependencies:** M1.1 (SettingsStore), M3.2 (iCloud sync recommended for multi-device sync)
+- **Scope:**
+  - Add ShieldConfiguration extension target to Xcode project
+  - Add ShieldAction extension target (optional first phase)
+  - Configure Info.plist for extensions (NSExtensionPointIdentifier)
+  - Add app group to main app + both extensions
+  - Update CI/CD to build/test both targets
+  - Code signing: ensure extension provisioning profiles included
+- **Dependencies:** M3.2 spike complete
+- **Duration:** 3 days
+- **Acceptance Criteria:**
+  - Both extension targets build without errors
+  - CI/CD pipeline builds and signs both targets
+  - App group shared container accessible from both targets
+
+#### M3.4: Authorization + App/Category Picker
+- **Owner:** Linus (iOS UI Dev) + Basher (Services Dev)
+- **Status:** 🔄 PLANNED
+- **Scope:**
+  - FamilyControls authorization flow (request + gating)
+  - App/category selection UI (form picker, category browser)
+  - Persist selection to app group shared state
+  - Fallback UI if authorization denied (show notification-only reminder)
+  - UX copy for authorization screen (explain why we need Screen Time access)
+- **Dependencies:** M3.3 targets ready
 - **Duration:** 5 days
 - **Acceptance Criteria:**
-  - Widget displays accurate countdown
-  - Updates on schedule without excessive battery drain
-  - Renders correctly in all sizes
+  - User can authorize FamilyControls on first launch
+  - App/category picker populated with device apps
+  - Selection persisted to app group store
+  - Authorization denial gracefully falls back to notification reminders
 
-#### M3.4: watchOS Companion App
-- **Owner:** Linus (iOS UI Dev) + Basher (Services Dev)
-- **Status:** 🔄 PLANNED (Post-Phase 3.3)
-- **Deliverables:**
-  - watchOS target in Xcode project
-  - Glance view: countdown to next reminder
-  - Haptic feedback when reminder fires (if phone nearby)
-  - Settings sync from iOS app (read-only on watch)
-  - Complications for watch faces (corner, circular)
-- **Dependencies:** M3.2 (iCloud sync for settings replication)
-- **Duration:** 7 days
+#### M3.5: DeviceActivity Monitoring
+- **Owner:** Basher (Services Dev)
+- **Status:** 🔄 PLANNED
+- **Scope:**
+  - `DeviceActivityMonitor` service tracks screen-on time per app/category (via ScreenTime APIs)
+  - Integrate with existing ScreenTimeTracker (bridge to new API)
+  - Test DeviceActivity schedule updates
+  - Edge cases: app backgrounding, device lock, multi-app scenarios
+- **Dependencies:** M3.3, M3.4
+- **Duration:** 4 days
 - **Acceptance Criteria:**
-  - watchOS app installs with iOS app
-  - Complications show accurate countdowns
+  - DeviceActivityMonitor detects apps launched by user
+  - Screen time accrual matches expected thresholds
+  - Transitions to shield state on break reminder
+
+#### M3.6: ManagedSettings Shielding + ShieldAction Extension
+- **Owner:** Basher (Services Dev) + Linus (iOS UI Dev)
+- **Status:** 🔄 PLANNED
+- **Scope:**
+  - `ManagedSettingsCoordinator` applies ManagedSettings.store.shield(applications: [...])
+  - ShieldConfiguration extension provides customized shield UI (logo, messaging)
+  - ShieldAction extension allows user to request app access ("I need 1 min" button) with confirmation
+  - Shield dismissal triggers ManagedSettingsCoordinator.clearShields()
+  - Logging: track shield duration, user interactions
+- **Dependencies:** M3.5
+- **Duration:** 6 days
+- **Acceptance Criteria:**
+  - ManagedSettings shield applies successfully during break
+  - Shield UI renders with custom branding
+  - User can request access; coordinator logs request
+  - Shield clears after break or manual request
+
+#### M3.7: App Group Shared State & Watchdog
+- **Owner:** Basher (Services Dev)
+- **Status:** 🔄 PLANNED
+- **Scope:**
+  - App Group (group.com.kshana.screentime) UserDefaults syncing config + state
+  - Main app writes: authorized apps, shield schedule, last shield time
+  - Extensions read: config for shield rendering
+  - Optional watchdog: separate app extension that monitors break compliance (logs to shared container)
+  - Testing: verify consistency across app/extensions under edge cases (app restart, extension crash)
+- **Dependencies:** M3.6 (shield logic ready)
+- **Duration:** 3 days
+- **Acceptance Criteria:**
+  - Main app and extensions share UserDefaults via app group
+  - Extensions can read shield configuration
+  - No race conditions under concurrent access
+  - Logs persistent in app group container
+
+#### M3.8: Pre-Permission UX Refinement
+- **Owner:** Reuben (Product Designer) + Linus (iOS UI Dev)
+- **Status:** 🔄 PLANNED
+- **Scope:**
+  - Onboarding redesign (Phase 2 was notification-centric; Phase 3 emphasizes Screen Time interruption)
+  - New permission screen: "Let kshana pause distracting apps during breaks" (explain benefit + privacy)
+  - App/category picker introduced as setup step (after permission granted)
+  - Fallback messaging if FamilyControls unavailable (older iOS or denial)
+  - Copy review: ensure language avoids "surveillance" (emphasize user control)
+- **Dependencies:** M3.4 (authorization flow) + M3.8 design time
+- **Duration:** 4 days
+- **Acceptance Criteria:**
+  - Onboarding flow explains Screen Time interruption
+  - User understands privacy (data is local only, no cloud logging)
+  - App picker reachable before first break reminder
+  - Fallback messaging clear if permission denied
+
+#### M3.9: Privacy & Legal Updates
+- **Owner:** Frank (Legal) + Danny (PM)
+- **Status:** 🔄 PLANNED
+- **Scope:**
+  - Privacy policy: disclose Screen Time data handling (only local device, no cloud storage)
+  - Terms of Service: clarify app is not parental control software (user is device owner)
+  - New disclaimer: "kshana uses Apple FamilyControls APIs for user-owned devices only"
+  - Lawyer review before App Store resubmission
+- **Dependencies:** M3.1 entitlement approval
+- **Duration:** 3 days
+- **Acceptance Criteria:**
+  - Privacy policy reviewed by legal team
+  - Terms clarify use case (wellness, not parental control)
+  - No App Store rejection on data handling grounds
+
+#### M3.10: CI/CD & Code Signing for Extensions
+- **Owner:** Virgil (CI/CD Dev)
+- **Status:** 🔄 PLANNED
+- **Scope:**
+  - Update GitHub Actions to build + sign extension targets
+  - Extension provisioning profiles (development + distribution)
+  - Entitlements file for extensions (app group, family controls, shield points)
+  - TestFlight build includes extensions
+  - App Store Connect setup: extension availability
+- **Dependencies:** M3.3 targets + M3.1 entitlement approved
+- **Duration:** 3 days
+- **Acceptance Criteria:**
+  - CI builds extensions without errors
+  - TestFlight build includes both extensions
+  - Code signing validation passes
+  - App Store Connect accepts app + extensions
+
+#### M3.11: Local Notification Fallback Positioning
+- **Owner:** Basher (Services Dev) + Linus (iOS UI Dev)
+- **Status:** 🔄 PLANNED
+- **Scope:**
+  - Refactor notification scheduling: only send if Screen Time shield fails/unavailable
+  - Update notification copy to clarify it's a fallback ("Reminder: take a break")
+  - New setting: "Remind me if shielding unavailable" (toggle, default on)
+  - Logging: track which reminders used shielding vs. notification
+- **Dependencies:** M3.6 (shields working)
+- **Duration:** 2 days
+- **Acceptance Criteria:**
+  - Shields prioritized; notifications sent only as fallback
+  - Fallback copy is distinct from shield messaging
+  - Setting controls notification sending
+  - Metrics distinguish shield vs. notification reminders
+
+### Phase 3 Success Criteria
+- ✅ FamilyControls entitlement approved (or clear path to approval)
+- ✅ App successfully shields distracting apps during break reminders
+- ✅ Extension targets compile and sign in CI/CD
+- ✅ App group communication verified (main app ↔ extensions)
+- ✅ User can authorize, select apps/categories, and receive interruptions
+- ✅ Graceful fallback to notifications if Screen Time APIs unavailable
+- ✅ Legal review complete; privacy policy updated
+- ✅ TestFlight build includes extensions; ready for beta distribution
   - Haptics fire reliably on watch
 
 #### M3.5: Advanced Testing & v1.1 Release

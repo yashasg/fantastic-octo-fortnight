@@ -4,10 +4,9 @@
 #
 # Prerequisites before this workflow can succeed:
 #   1. Apple Developer account enrolled in App Store Connect
-#   2. Distribution certificate + provisioning profile uploaded as GitHub secrets
+#   2. Distribution certificate + App Store Connect provisioning profile uploaded as GitHub secrets
 #   3. App Store Connect API key created and stored as secrets (see below)
-#   4. An Xcode project (.xcodeproj) with correct bundle ID and entitlements
-#   5. ExportOptions.plist committed to repo root (see template below)
+#   4. Bundle ID registered and App Store Connect app record created
 #
 # Required GitHub Secrets:
 #   BUILD_CERTIFICATE_BASE64        — p12 distribution cert, base64-encoded
@@ -18,15 +17,6 @@
 #   ASC_KEY_ID                      — API key ID (e.g. ABCDEF1234)
 #   ASC_ISSUER_ID                   — API issuer ID (UUID from App Store Connect)
 #
-# ExportOptions.plist template (save as ExportOptions.plist in repo root):
-#   <?xml version="1.0" encoding="UTF-8"?>
-#   <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" ...>
-#   <plist version="1.0"><dict>
-#     <key>method</key><string>app-store</string>
-#     <key>uploadBitcode</key><false/>
-#     <key>uploadSymbols</key><true/>
-#   </dict></plist>
-
 name: TestFlight Deploy
 
 on:
@@ -126,7 +116,8 @@ jobs:
         run: |
           ASC_KEY_FILE="$RUNNER_TEMP/asc_api_key.p8"
           echo -n "$ASC_API_KEY_BASE64" | base64 --decode -o "$ASC_KEY_FILE"
-          ASC_AUTH_KEY_PATH="$ASC_KEY_FILE" \
+          SIGNING_STYLE=manual \
+            ASC_AUTH_KEY_PATH="$ASC_KEY_FILE" \
             ./scripts/build_signed.sh upload
 
       # ── Clean up API key ──────────────────────────────────────────────────

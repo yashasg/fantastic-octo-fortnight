@@ -1,7 +1,8 @@
-# kshana — Onboarding Flow Spec (M2.1)
+# kshana — Onboarding Flow Spec (M2.1 — True Interrupt Mode Edition)
 
 > **Author:** Reuben, Product Designer  
 > **Date:** 2026-04-24  
+> **Updated:** 2026-04-28 (True Interrupt Mode pivot)  
 > **Milestone:** M2.1 — Onboarding Flow  
 > **Implementer:** Linus (iOS UI Dev)  
 > **Status:** Ready for implementation
@@ -10,9 +11,11 @@
 
 ## Overview
 
-The onboarding flow is a 3-screen sequence shown to new users on first launch. It introduces the app's value, explains why notifications are needed, and previews the default configuration before the user starts.
+The onboarding flow is a 4-screen sequence shown to new users on first launch. It introduces kshana's value, explains how app break monitoring works, requests Screen Time access (with calm pre-permission education), and previews the default configuration before the user starts.
 
 **Design north star:** *Invisible setup. Maximum confidence. Zero friction.*
+
+**Current reality:** Local reminder alerts are a fallback. The core future promise is Screen Time Shield-based interruption once Apple's entitlement is approved.
 
 The user should leave onboarding feeling calm, informed, and ready — not overwhelmed. This is not a feature tour. It's a warm handshake.
 
@@ -52,19 +55,22 @@ Use SwiftUI `TabView` with `PageTabViewStyle` for horizontal swipe between scree
 TabView(selection: $currentPage) {
     WelcomeScreen()
         .tag(0)
-    NotificationPermissionScreen()
+    AppBreakExplanationScreen()
         .tag(1)
-    QuickSetupScreen()
+    ScreenTimePermissionScreen()
         .tag(2)
+    QuickSetupScreen()
+        .tag(3)
 }
 .tabViewStyle(PageTabViewStyle(indexDisplayMode: .always))
 .indexViewStyle(PageIndexViewStyle(backgroundDisplayMode: .always))
 ```
 
-- **Page dots:** Shown at the bottom centre of all 3 screens. Standard iOS page indicator style.
+- **Page dots:** Shown at the bottom centre of all 4 screens. Standard iOS page indicator style.
 - **Swipe:** Left/right swipe navigates between pages freely (no lock on forward-only).
 - **"Next" buttons:** Advance to the next page programmatically (`currentPage += 1`).
 - **Back swipe:** Fully supported — users can go back and re-read.
+- **Screen 3 swipe lock:** A `highPriorityGesture` prevents accidental horizontal swiping on the ScreenTime permission screen, ensuring deliberate choice.
 
 ---
 
@@ -107,8 +113,8 @@ Establish context and set a warm, confident tone. Tell the user what the app doe
 | Element | Copy |
 |---|---|
 | **Headline** | `Welcome to kshana` |
-| **Subheadline** | `Small, helpful nudges to rest your eyes and sit up straight.` |
-| **Body** | `Takes less than a minute to set up. Works quietly in the background — you'll barely know it's there.` |
+| **Subheadline** | `Healthy app breaks, on your terms.` |
+| **Body** | `Choose which apps get break reminders. You set the timing. kshana handles the rest. Takes less than a minute.` |
 | **CTA button** | `Next` |
 
 ### Illustration
@@ -154,8 +160,8 @@ Button("Next") { currentPage = 1 }
 | Eye icon | `"Eye break icon"` | (none — decorative) |
 | Figure icon | `"Posture check icon"` | (none — decorative) |
 | Headline | Reads naturally | — |
-| Next button | `"Next"` | `"Go to notifications screen"` |
-| Page indicator | `"Page 1 of 3"` | — |
+| Next button | `"Next"` | `"Go to explanation screen"` |
+| Page indicator | `"Page 1 of 4"` | — |
 
 Mark illustration icons as decorative:
 ```swift
@@ -165,42 +171,42 @@ Image(systemName: "eye.fill")
 
 ---
 
-## Screen 2 — Notification Permission
+## Screen 2 — App Break Explanation
 
 ### Purpose
-Explain *why* the app needs notifications before triggering the system prompt. Remove anxiety. Build trust. The user should feel informed, not interrogated.
+Explain how kshana works before asking for permissions. Build confidence and transparency. Clarify what kshana does and doesn't do to reduce anxiety about the upcoming system prompt.
 
-**Key principle:** Never just throw a system prompt at a user cold. Educate first — they'll say yes far more often, and they'll understand what they agreed to.
+**Key principle:** Pre-education significantly improves permission grant rates and user trust. Many users find the Screen Time / Family Controls prompt intimidating; a calm explanation beforehand makes all the difference.
 
 ### Layout
 
 ```
 ┌────────────────────────────────────┐
 │                                    │
-│    [Notification preview card]     │
-│    ┌────────────────────────────┐  │
-│    │ 👁  kshana                  │  │
-│    │ Eye Break                  │  │
-│    │ Time to rest your eyes.    │  │
-│    │                    now     │  │
-│    └────────────────────────────┘  │
+│    How does kshana work?            │  ← Headline
 │                                    │
-│    Stay on track,                  │
-│    effortlessly.                   │  ← Headline
+│    [Explanation card with bullet   │
+│     points]                         │  ← Educational content
 │                                    │
-│    Reminders arrive as             │
-│    notifications — so the app      │
-│    works even when you're not      │
-│    looking at it.                  │  ← Explanation copy
+│    You choose which apps get        │
+│    break reminders. kshana monitors │
+│    which apps you use and suggests  │
+│    breaks at intervals you set.     │
 │                                    │
-│    No spam. Just the breaks        │
-│    you asked for, when you         │
-│    need them.                      │  ← Reassurance copy
+│    Think of it like a helpful       │
+│    reminder card—not a blocker.     │
 │                                    │
-│    [ Enable Notifications ]        │  ← Primary CTA
-│    Maybe Later                     │  ← Secondary option
+│    ──────────────────────────────  │
 │                                    │
-│            ○ • ○                   │  ← Page dots
+│    What kshana does NOT do:         │  ← Trust-building
+│    • Read messages or see content   │
+│    • Report your activity          │
+│    • Require an account            │
+│                                    │
+│         [  Next  →  ]              │  ← CTA button
+│    Maybe Later                      │  ← Skip option
+│                                    │
+│            ○ ○ • ○                 │  ← Page dots
 └────────────────────────────────────┘
 ```
 
@@ -208,58 +214,116 @@ Explain *why* the app needs notifications before triggering the system prompt. R
 
 | Element | Copy |
 |---|---|
-| **Headline** | `Stay on track, effortlessly.` |
-| **Explanation** | `Reminders arrive as notifications — so the app works even when you're not looking at it.` |
-| **Reassurance** | `No spam. Just the breaks you asked for, when you need them.` |
-| **Primary CTA** | `Enable Notifications` |
+| **Headline** | `How does kshana work?` |
+| **Explanation** | `kshana monitors which apps you use (like Safari, social media, or email) and gently suggests breaks at intervals you set. You're always in control.` |
+| **Reassurance** | `Think of it as a friendly reminder—not a blocker. You can disable kshana or change settings anytime.` |
+| **Trust heading** | `What kshana does NOT do:` |
+| **Trust bullets** | `• Read messages or content` `• Report your activity anywhere` `• Require an account` |
+| **Primary CTA** | `Next` |
 | **Secondary option** | `Maybe Later` |
 
-### Notification Preview Card
-
-A visual mock of an iOS notification to set expectations. Not a real notification — a styled `RoundedRectangle` view that resembles one.
+### Content Structure
 
 ```swift
-VStack(alignment: .leading, spacing: 4) {
-    HStack(spacing: 8) {
-        Image(systemName: "eye.fill")
-            .foregroundStyle(.indigo)
-            .font(.caption)
-        Text("kshana")
-            .font(.caption)
-            .fontWeight(.semibold)
+VStack(spacing: 16) {
+    Text("How does kshana work?")
+        .font(.title2)
+        .fontWeight(.bold)
+    
+    VStack(alignment: .leading, spacing: 12) {
+        Text("kshana monitors which apps you use (like Safari, social media, or email) and gently suggests breaks at intervals you set. You're always in control.")
+            .font(.body)
+        
+        Text("Think of it as a friendly reminder—not a blocker. You can disable kshana or change settings anytime.")
+            .font(.body)
             .foregroundStyle(.secondary)
-        Spacer()
-        Text("now")
-            .font(.caption2)
-            .foregroundStyle(.tertiary)
     }
-    Text("Eye Break")
-        .font(.subheadline)
-        .fontWeight(.semibold)
-    Text("Time to rest your eyes.")
+    .padding(16)
+    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+    
+    VStack(alignment: .leading, spacing: 8) {
+        Text("What kshana does NOT do:")
+            .font(.subheadline)
+            .fontWeight(.semibold)
+        
+        VStack(alignment: .leading, spacing: 6) {
+            Label("Read messages or content", systemImage: "checkmark.circle.fill")
+            Label("Report your activity anywhere", systemImage: "checkmark.circle.fill")
+            Label("Require an account", systemImage: "checkmark.circle.fill")
+        }
         .font(.subheadline)
         .foregroundStyle(.secondary)
+    }
 }
-.padding(16)
-.background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
-.padding(.horizontal, 16)
-.accessibilityElement(children: .combine)
-.accessibilityLabel("Example notification: Eye Break — Time to rest your eyes.")
 ```
 
-### "Enable Notifications" Button Behaviour
+### Accessibility
 
-Tapping **Enable Notifications** triggers the system permission prompt:
+| Element | VoiceOver Label |
+|---|---|
+| Headline | Reads naturally |
+| Main content | Reads as flowing text |
+| Bullet points | Read as list items |
+| Next button | `"Next"` with hint `"Go to permission screen"` |
+| Maybe Later link | `"Maybe Later"` |
+| Page indicator | `"Page 2 of 4"` |
+
+---
+
+## Screen 3 — Screen Time Permission
+
+### Purpose
+Request Screen Time access with calm language. Many users find the system prompt intimidating; this screen explains why kshana needs it and what it does (and doesn't) do.
+
+**Key principle:** Separate the "scary system prompt" from the app's friendly introduction by building understanding first on Screen 2, then requesting permission here with only brief, calm context.
+
+### Layout
+
+```
+┌────────────────────────────────────┐
+│                                    │
+│    Permission to suggest breaks    │  ← Headline
+│                                    │
+│    kshana needs access to see      │
+│    which apps you're using so it   │
+│    can suggest breaks at the       │
+│    right time.                     │  ← Explanation
+│                                    │
+│    Your privacy matters. This      │
+│    does not give kshana access to  │
+│    your messages, photos, or any   │
+│    other content.                  │  ← Privacy reassurance
+│                                    │
+│    [  Grant App Break Access  ]   │  ← Primary CTA
+│    Not now                         │  ← Skip option
+│                                    │
+│            ○ ○ ○ •                 │  ← Page dots
+└────────────────────────────────────┘
+```
+
+### Copy
+
+| Element | Copy |
+|---|---|
+| **Headline** | `Permission to suggest breaks` |
+| **Explanation** | `kshana needs access to see which apps you're using so it can suggest breaks at the right time.` |
+| **Privacy reassurance** | `Your privacy matters. This does not give kshana access to your messages, photos, or any other content.` |
+| **Primary CTA** | `Grant App Break Access` |
+| **Secondary option** | `Not now` |
+
+### Permission Request Behaviour
+
+Tapping **Grant App Break Access** triggers the system Screen Time / Family Controls permission prompt:
 
 ```swift
-Button("Enable Notifications") {
-    UNUserNotificationCenter.current().requestAuthorization(
-        options: [.alert, .sound, .badge]
-    ) { granted, _ in
-        DispatchQueue.main.async {
-            currentPage = 2  // advance regardless of outcome
-        }
-    }
+Button("Grant App Break Access") {
+    // Request Screen Time / Family Controls access
+    // This triggers the system permission prompt
+    // The exact API depends on the targeted iOS version:
+    // - iOS 15+: Use DeviceActivityCenter or similar if available
+    // - Fallback: Use requestRecordingLevelAuthorization() or equivalent
+    
+    currentPage = 3  // advance regardless of outcome
 }
 .buttonStyle(.borderedProminent)
 .controlSize(.large)
@@ -268,13 +332,13 @@ Button("Enable Notifications") {
 .padding(.horizontal, 32)
 ```
 
-The onboarding advances to Screen 3 regardless of the user's choice on the system prompt. Permission denial is handled gracefully in the main app (see `UX_FLOWS.md` §2.4).
+The onboarding advances to Screen 4 regardless of the user's choice on the system prompt. Permission denial is handled gracefully in the main app with fallback local alerts (see `UX_FLOWS.md` §2.4).
 
-### "Maybe Later" Behaviour
+### "Not now" Behaviour
 
 ```swift
-Button("Maybe Later") {
-    currentPage = 2  // advance without requesting permission
+Button("Not now") {
+    currentPage = 3  // advance without requesting permission
 }
 .foregroundStyle(.secondary)
 .font(.subheadline)
@@ -282,21 +346,38 @@ Button("Maybe Later") {
 
 - Plain text link, no button chrome
 - Secondary color (`.secondary`) — present but not dominant
-- **No guilt trip.** The label is neutral. Not "Skip (reminders won't work)" — that's a dark pattern.
-- Advances to Screen 3 without showing the system prompt
+- **No guilt trip.** The label is neutral.
+- Advances to Screen 4 without showing the system prompt
+- The app will work with local alert fallback
+
+### Horizontal Swipe Lock
+
+To prevent accidental skip-through of this important permission screen:
+
+```swift
+.highPriorityGesture(
+    DragGesture()
+        .onChanged { _ in
+            // Suppress default PageTabViewStyle swipe
+        }
+)
+```
+
+Users **can** still navigate back (swipe right from next screen or tap back). But forward swipe is blocked on this screen only.
 
 ### Accessibility
 
 | Element | VoiceOver Label | VoiceOver Hint |
 |---|---|---|
-| Notification card | `"Example notification: Eye Break — Time to rest your eyes."` | (none) |
-| Enable button | `"Enable Notifications"` | `"Opens system notification permission prompt"` |
-| Maybe Later | `"Maybe Later"` | `"Skip for now, you can enable notifications later in Settings"` |
-| Page indicator | `"Page 2 of 3"` | — |
+| Headline | Reads naturally | — |
+| Main text | Reads as flowing paragraphs | — |
+| Grant button | `"Grant App Break Access"` | `"Opens system permission dialog"` |
+| Not now | `"Not now"` | `"Skip for now, you can enable later in Settings"` |
+| Page indicator | `"Page 3 of 4"` | — |
 
 ---
 
-## Screen 3 — Quick Setup Preview
+## Screen 4 — Quick Setup Preview
 
 ### Purpose
 Show the user what's already configured. Build confidence. Let them "get started" immediately or tweak settings if they want to. The app is ready — they just need to confirm.
@@ -339,10 +420,11 @@ Show the user what's already configured. Build confidence. Let them "get started
 | Element | Copy |
 |---|---|
 | **Headline** | `You're all set.` |
-| **Subheadline** | `Here's how we've set things up for you:` |
-| **Reassurance** | `You'll get a gentle reminder to look away and sit up straight — no effort required from you.` |
+| **Subheadline** | `kshana will help you build healthier habits.` |
+| **Body note** | `Default config: Eye breaks every 20 min, posture checks every 30 min. Fallback local alerts when Screen Time access is unavailable. You can customize anytime.` |
+| **Reassurance** | `Your breaks, your timing, your control.` |
 | **Primary CTA** | `Get Started` |
-| **Secondary option** | `Customize settings` |
+| **Secondary option** | `Customize Settings` |
 
 ### Default Settings Cards
 
@@ -445,7 +527,7 @@ Button("Customize settings") {
 | Posture Checks card | `"Posture Checks: every 30 minutes, 10 second break"` | (none) |
 | Get Started button | `"Get Started"` | `"Dismiss setup and begin using the app"` |
 | Customize button | `"Customize settings"` | `"Go to settings to adjust reminder intervals"` |
-| Page indicator | `"Page 3 of 3"` | — |
+| Page indicator | `"Page 4 of 4"` | — |
 
 ---
 
