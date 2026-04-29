@@ -50,23 +50,12 @@ final class ShieldConfigurationDataSourceImpl: ShieldConfigurationDataSource {
 
     private func makeConfiguration() -> ShieldConfiguration {
         let suite = UserDefaults(suiteName: ShieldSessionKeys.appGroupID)
-        let reasonRaw = suite?.string(forKey: ShieldSessionKeys.breakReason) ?? ""
-        let (title, subtitle) = copy(for: reasonRaw)
+        let snapshot = ShieldSessionSnapshot.read(from: suite)
+        let copy = ShieldConfigurationCopy.make(for: snapshot)
         return ShieldConfiguration(
             backgroundBlurStyle: .systemUltraThinMaterialDark,
-            title: ShieldConfiguration.Label(text: title, color: .white),
-            subtitle: ShieldConfiguration.Label(text: subtitle, color: .white)
+            title: ShieldConfiguration.Label(text: copy.title, color: .white),
+            subtitle: ShieldConfiguration.Label(text: copy.subtitle, color: .white)
         )
-    }
-
-    private func copy(for reasonRaw: String) -> (String, String) {
-        switch reasonRaw {
-        case "eyes":
-            return ("Eye Break", "Look 20 feet away for 20 seconds.")
-        case "posture":
-            return ("Posture Break", "Stand up and stretch.")
-        default:
-            return ("Break Time", "Take a moment to rest.")
-        }
     }
 }

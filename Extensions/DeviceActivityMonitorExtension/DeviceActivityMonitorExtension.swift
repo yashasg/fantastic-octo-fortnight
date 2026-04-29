@@ -45,11 +45,12 @@ final class DeviceActivityMonitorExtensionImpl: DeviceActivityMonitor {
     static func readSession(
         from defaults: UserDefaults? = UserDefaults(suiteName: ShieldSessionKeys.appGroupID)
     ) -> (reason: String?, durationSeconds: Double, triggeredAt: Date?) {
-        let reason = defaults?.string(forKey: ShieldSessionKeys.breakReason)
-        let duration = defaults?.double(forKey: ShieldSessionKeys.durationSeconds) ?? 0
-        let timestamp = defaults?.object(forKey: ShieldSessionKeys.triggeredAt) as? Double
-        let triggeredAt = timestamp.map { Date(timeIntervalSince1970: $0) }
-        return (reason: reason, durationSeconds: duration, triggeredAt: triggeredAt)
+        let snapshot = ShieldSessionSnapshot.read(from: defaults)
+        return (
+            reason: snapshot.reasonRaw,
+            durationSeconds: snapshot.durationSeconds,
+            triggeredAt: snapshot.triggeredAt
+        )
     }
 
     // MARK: DeviceActivityMonitor overrides
