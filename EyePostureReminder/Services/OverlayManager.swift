@@ -259,6 +259,11 @@ final class OverlayManager: OverlayPresenting {
     // MARK: - Private
 
     private func presentNextQueuedOverlay() {
+        // Guard: do not dequeue while an overlay is already visible.
+        // Without this, a UIScene.didActivateNotification arriving mid-display
+        // would remove the queue head, call showOverlay (which re-appends it at
+        // the tail because isOverlayVisible is true), corrupting FIFO order. (#289)
+        guard !isOverlayVisible else { return }
         guard !overlayQueue.isEmpty else { return }
         guard UIApplication.shared.connectedScenes
             .compactMap({ $0 as? UIWindowScene })
