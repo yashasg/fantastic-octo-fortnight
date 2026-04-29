@@ -154,4 +154,40 @@ final class AnalyticsEventTests: XCTestCase {
         AnalyticsLogger.log(.watchdogRecoveryCompleted(sessionCleared: false, fallbackScheduled: false))
         AnalyticsLogger.log(.watchdogRecoveryCompleted(sessionCleared: false, fallbackScheduled: true))
     }
+
+    // MARK: - AnalyticsEvent: IPC Health
+
+    func test_ipcOperationFailed_canBeConstructed() {
+        let event = AnalyticsEvent.ipcOperationFailed(operation: .readShieldSession, reason: .unavailable)
+        _ = event
+    }
+
+    func test_ipcOperation_rawValues() {
+        XCTAssertEqual(AnalyticsEvent.IPCOperation.readShieldSession.rawValue, "read_shield_session")
+        XCTAssertEqual(AnalyticsEvent.IPCOperation.readEvents.rawValue, "read_events")
+        XCTAssertEqual(AnalyticsEvent.IPCOperation.clearShieldSession.rawValue, "clear_shield_session")
+        XCTAssertEqual(AnalyticsEvent.IPCOperation.writeEvent.rawValue, "write_event")
+        XCTAssertEqual(AnalyticsEvent.IPCOperation.writeShieldSession.rawValue, "write_shield_session")
+        XCTAssertEqual(AnalyticsEvent.IPCOperation.readSelection.rawValue, "read_selection")
+    }
+
+    func test_ipcFailureReason_rawValues() {
+        XCTAssertEqual(AnalyticsEvent.IPCFailureReason.unavailable.rawValue, "unavailable")
+        XCTAssertEqual(AnalyticsEvent.IPCFailureReason.corrupt.rawValue, "corrupt")
+        XCTAssertEqual(AnalyticsEvent.IPCFailureReason.writeFailed.rawValue, "write_failed")
+        XCTAssertEqual(AnalyticsEvent.IPCFailureReason.unknown.rawValue, "unknown")
+    }
+
+    func test_ipcOperationFailed_allCombinations_doNotCrash() {
+        let operations: [AnalyticsEvent.IPCOperation] = [
+            .readShieldSession, .readEvents, .clearShieldSession,
+            .writeEvent, .writeShieldSession, .readSelection
+        ]
+        let reasons: [AnalyticsEvent.IPCFailureReason] = [.unavailable, .corrupt, .writeFailed, .unknown]
+        for op in operations {
+            for reason in reasons {
+                AnalyticsLogger.log(.ipcOperationFailed(operation: op, reason: reason))
+            }
+        }
+    }
 }

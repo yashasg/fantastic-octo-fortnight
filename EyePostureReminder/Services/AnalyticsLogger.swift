@@ -68,6 +68,30 @@ enum AnalyticsEvent: Sendable {
     /// `sessionCleared` – whether the stale shield session was successfully cleared.
     /// `fallbackScheduled` – whether a fallback notification was rescheduled.
     case watchdogRecoveryCompleted(sessionCleared: Bool, fallbackScheduled: Bool)
+
+    // MARK: IPC Health
+
+    /// Fired when an App Group IPC read or write operation fails.
+    /// Both fields are enumerated codes — no PII, no bundle identifiers, no raw errors.
+    case ipcOperationFailed(operation: IPCOperation, reason: IPCFailureReason)
+
+    /// Non-PII operation codes for IPC health events.
+    enum IPCOperation: String {
+        case readShieldSession  = "read_shield_session"
+        case readEvents         = "read_events"
+        case clearShieldSession = "clear_shield_session"
+        case writeEvent         = "write_event"
+        case writeShieldSession = "write_shield_session"
+        case readSelection      = "read_selection"
+    }
+
+    /// Non-PII reason codes for IPC health events.
+    enum IPCFailureReason: String {
+        case unavailable = "unavailable"
+        case corrupt     = "corrupt"
+        case writeFailed = "write_failed"
+        case unknown     = "unknown"
+    }
 }
 
 // MARK: - AnalyticsLogger
@@ -165,6 +189,13 @@ enum AnalyticsLogger {
                 event=watchdog_recovery_completed \
                 session_cleared=\(sessionCleared, privacy: .public) \
                 fallback_scheduled=\(fallbackScheduled, privacy: .public)
+                """)
+
+        case let .ipcOperationFailed(operation, reason):
+            logger.error("""
+                event=ipc_operation_failed \
+                operation=\(operation.rawValue, privacy: .public) \
+                reason=\(reason.rawValue, privacy: .public)
                 """)
         }
     }
