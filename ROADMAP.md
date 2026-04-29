@@ -618,7 +618,7 @@ Device resumes normal activity
 - ✅ TestFlight build includes extensions; ready for beta distribution
   - Haptics fire reliably on watch
 
-#### M3.5: Advanced Testing & v1.1 Release
+#### M4.1: Advanced Testing & v1.1 Release
 - **Owner:** Livingston (Tester) + Saul (Code Reviewer)
 - **Status:** 🔄 PLANNED
 - **Deliverables:**
@@ -635,7 +635,7 @@ Device resumes normal activity
   - Performance benchmarks met (battery < 2% additional per day)
   - v1.1.0 submitted to App Store
 
-### Phase 3 Success Criteria
+### Phase 4 Success Criteria
 - ✅ Dependency injection protocols in place (all services injectable)
 - ✅ Settings sync via iCloud across devices
 - ✅ Home Screen widget displays next reminder times accurately
@@ -644,7 +644,7 @@ Device resumes normal activity
 - ✅ XCUITest suite comprehensive (80%+ coverage of user flows)
 - ✅ v1.1.0 released successfully
 
-### Phase 3 Risks & Open Questions
+### Phase 4 Risks & Open Questions
 - **Risk:** watchOS development expertise gap on team → **Mitigation:** Linus to complete watchOS tutorial early in M3.4
 - **Risk:** Widget timeline updates impact battery more than expected → **Mitigation:** Early measurement in M3.3, adjust update frequency as needed
 - **Question:** Should we add Siri Shortcuts? → **Decision:** Evaluate post-Phase 3 based on user feedback
