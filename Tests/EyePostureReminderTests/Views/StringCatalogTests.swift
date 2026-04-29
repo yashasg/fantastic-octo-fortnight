@@ -1176,6 +1176,26 @@ final class StringCatalogTests: XCTestCase {
             "'appCategoryPicker.approved.pickerPlaceholder' must not imply pending approval — got: \(value)")
     }
 
+    /// Unavailable True Interrupt copy must not expose internal App Store review details.
+    func test_trueInterruptUnavailableCopy_hidesReviewProcessDetails() {
+        let valuesByKey = [
+            "onboarding.interrupt.pendingNote": str("onboarding.interrupt.pendingNote"),
+            "appCategoryPicker.unavailable.body": str("appCategoryPicker.unavailable.body")
+        ]
+
+        for (key, value) in valuesByKey {
+            XCTAssertTrue(
+                value.localizedCaseInsensitiveContains("update"),
+                "'\(key)' must use user-facing future-update language — got: \(value)")
+            XCTAssertFalse(
+                value.localizedCaseInsensitiveContains("App Store approval"),
+                "'\(key)' must not expose App Store approval details — got: \(value)")
+            XCTAssertFalse(
+                value.localizedCaseInsensitiveContains("Apple review"),
+                "'\(key)' must not expose Apple review details — got: \(value)")
+        }
+    }
+
     /// The permission screen title must be non-empty and resolve from the catalog.
     func test_onboardingPermission_title_resolvesFromCatalog() {
         XCTAssertTrue(

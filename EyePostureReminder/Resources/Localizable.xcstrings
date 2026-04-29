@@ -1956,7 +1956,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Screen Time access is awaiting App Store approval. You can set up True Interrupt Mode once it becomes available."
+            "value": "True Interrupt Mode is coming soon. You can set it up once it is available in a future update."
           }
         }
       }
@@ -2198,7 +2198,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Screen Time access is awaiting Apple review. True Interrupt Mode setup will become available once approved."
+            "value": "True Interrupt Mode setup will be available in an upcoming update."
           }
         }
       }
