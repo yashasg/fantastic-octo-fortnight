@@ -2891,3 +2891,44 @@ The same principle applies to the settings notification-disabled banners — the
 ## Implementation
 
 Applied by Linus. JSON validation passed. Build validated.
+
+---
+
+# Decision: manageAppVersionAndBuildNumber during export
+
+**Date:** 2026-04-28  
+**Author:** Virgil  
+**Status:** Observed — recommend explicit opt-out for CI predictability
+
+## Observation
+
+`xcodebuild -exportArchive` for the `app-store-connect` method defaults to
+`manageAppVersionAndBuildNumber=true`. During a local `export` run this wave,
+Xcode:
+1. Connected to App Store Connect  
+2. Found build `1` already submitted for version `0.2.0`  
+3. Auto-assigned `CFBundleVersion = 2` in the exported IPA  
+
+This silently overrides `inject_build_number()` (which had set `202604282122`
+in the archive). The IPA's final `CFBundleVersion = 2` is correct and valid.
+
+## Recommendation
+
+For **local exports** (non-CI): current behavior is fine. Xcode manages the
+number automatically when an Apple ID with App Store Connect access is present.
+
+For **CI uploads** (no interactive Apple ID): `manageAppVersionAndBuildNumber`
+should be explicitly set to `false` in `ExportOptions.plist`, and
+`inject_build_number()` / `BUILD_NUMBER` env var should own the number. This
+avoids CI needing App Store Connect query credentials just for the export step.
+
+## Suggested change (optional, non-blocking)
+
+Add to `create_export_options()` in `build_signed.sh`:
+
+```bash
+/usr/libexec/PlistBuddy -c "Add :manageVersionAndBuildNumber bool NO" "$EXPORT_OPTIONS_PLIST"
+```
+
+This makes build number injection deterministic regardless of Xcode account
+state on the runner, and aligns the archive and IPA `CFBundleVersion` values.
