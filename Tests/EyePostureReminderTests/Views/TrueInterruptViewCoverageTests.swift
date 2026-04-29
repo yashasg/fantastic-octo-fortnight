@@ -394,4 +394,52 @@ final class TrueInterruptViewCoverageTests: XCTestCase {
         XCTAssertFalse(summary.contains("appCategoryPicker.approved.categoryCount"))
         XCTAssertFalse(summary.contains("appCategoryPicker.approved.appCount"))
     }
+
+    // MARK: - TrueInterruptSkippedBanner (#258)
+
+    func test_trueInterruptSkippedBanner_bodyEvaluation() {
+        let view = TrueInterruptSkippedBanner(onSetUp: {}, onDismiss: {})
+        let described = String(describing: view.body)
+        XCTAssertFalse(described.isEmpty)
+    }
+
+    func test_trueInterruptSkippedBanner_renders() {
+        render(TrueInterruptSkippedBanner(onSetUp: {}, onDismiss: {}))
+    }
+
+    func test_trueInterruptSkippedBanner_onSetUpIsInvocable() {
+        var setUpCalled = false
+        let view = TrueInterruptSkippedBanner(onSetUp: { setUpCalled = true }, onDismiss: {})
+        view.onSetUp()
+        XCTAssertTrue(setUpCalled)
+    }
+
+    func test_trueInterruptSkippedBanner_onDismissIsInvocable() {
+        var dismissCalled = false
+        let view = TrueInterruptSkippedBanner(onSetUp: {}, onDismiss: { dismissCalled = true })
+        view.onDismiss()
+        XCTAssertTrue(dismissCalled)
+    }
+
+    // MARK: - Contrast regression (#260)
+
+    /// Verifies the placeholder body description does NOT contain a reduced-opacity modifier
+    /// on the pickerPlaceholder text. Using `.opacity(0.6)` on `textSecondary` failed WCAG 1.4.3.
+    func test_appCategoryApprovedCard_placeholderTextUsesFullOpacity_noReducedOpacity() {
+        let metadata = SelectedAppsMetadata(categoryCount: 0, appCount: 0, lastUpdated: Date())
+        let described = String(describing: AppCategoryApprovedCard(metadata: metadata).body)
+        // The body description must not contain a 0.6 opacity literal applied to the placeholder.
+        XCTAssertFalse(
+            described.contains("opacity: 0.6"),
+            "Placeholder text must not reduce textSecondary opacity — that fails WCAG 1.4.3 contrast")
+    }
+
+    /// Verifies the approved-card placeholder body renders successfully when selection is non-empty.
+    func test_appCategoryApprovedCard_withSelections_placeholderUsesFullOpacity() {
+        let metadata = SelectedAppsMetadata(categoryCount: 1, appCount: 2, lastUpdated: Date())
+        let described = String(describing: AppCategoryApprovedCard(metadata: metadata).body)
+        XCTAssertFalse(
+            described.contains("opacity: 0.6"),
+            "Placeholder text must not use reduced opacity regardless of selection state")
+    }
 }
