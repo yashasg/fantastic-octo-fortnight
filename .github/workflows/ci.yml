@@ -140,13 +140,13 @@ jobs:
       - name: Report coverage
         if: always()
         run: |
-          xcrun xccov view --report TestResults.xcresult 2>/dev/null || true
+          xcrun xccov view --report TestResults.xcresult
 
       - name: Enforce coverage threshold
         if: success()
         run: |
           COVERAGE=$(xcrun xccov view --report --json TestResults.xcresult \
-            | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['lineCoverage']*100)" 2>/dev/null || echo "0")
+            | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['lineCoverage']*100)")
           echo "Line coverage: ${COVERAGE}%"
           if (( $(echo "$COVERAGE < 80" | bc -l) )); then
             echo "Coverage ${COVERAGE}% is below the minimum threshold (80%)"
@@ -166,7 +166,7 @@ jobs:
           name: dSYMs-${{ env.MARKETING_VERSION }}-build${{ github.run_number }}
           path: "*.dSYM"
           retention-days: 90
-          if-no-files-found: ignore
+          if-no-files-found: warn
 
       - name: Upload test results
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
@@ -175,6 +175,7 @@ jobs:
           name: test-results-${{ env.MARKETING_VERSION }}-build${{ github.run_number }}
           path: TestResults.xcresult
           retention-days: 30
+          if-no-files-found: error
 
   uitest:
     name: UI Tests
@@ -249,3 +250,4 @@ jobs:
           name: ui-test-results-build${{ github.run_number }}
           path: UITestResults.xcresult
           retention-days: 30
+          if-no-files-found: error
