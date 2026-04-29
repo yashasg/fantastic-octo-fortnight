@@ -94,6 +94,15 @@ jobs:
       - name: Build (simulator, no signing)
         run: ./scripts/build.sh build
 
+      # ── Screen Time extension scaffold ──────────────────────────────────────
+      # Compile-only validation. Runtime FamilyControls/DeviceActivity behavior
+      # still requires #201 entitlement approval and physical-device testing.
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Build Screen Time extensions (simulator, no signing)
+        run: ./scripts/setup-screentime.sh --build
+
       # ── Test ─────────────────────────────────────────────────────────────────
       - name: Test (simulator)
         run: ./scripts/build.sh test

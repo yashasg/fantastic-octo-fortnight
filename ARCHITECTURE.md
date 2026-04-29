@@ -238,7 +238,13 @@ final class AudioInterruptionManager: MediaControlling { ... }
 
 ## 3. Project Structure
 
-This project uses **Swift Package Manager** (`Package.swift`) — there is no `.xcodeproj`. Build and test via `xcodebuild` with `-scheme EyePostureReminder`.
+This project uses **Swift Package Manager** (`Package.swift`) for the main app and unit tests. Generated Xcode projects are used only where Apple requires target types that SPM cannot express:
+
+- `UITests/project.yml` → `scripts/setup-uitests.sh` → UI test app wrapper.
+- `project.yml` → `scripts/setup-screentime.sh` → Screen Time app-extension scaffold.
+- `scripts/build_signed.sh` generates a temporary signed archive project under `DerivedData/SignedBuild/Project`.
+
+Do not commit generated `.xcodeproj` output; the XcodeGen specs and scripts are the source of truth.
 
 **Note:** Protocols are co-located with their primary implementation (no separate `Protocols/` folder).
 
@@ -300,6 +306,18 @@ EyePostureReminder/                  (SPM executable target)
     ├── defaults.json                 First-launch seed values for intervals + feature flags
     └── PrivacyInfo.xcprivacy         Apple privacy manifest for App Store Connect compliance
 
+Extensions/                           (XcodeGen app-extension targets)
+├── Shared/
+│   └── ShieldSessionKeys.swift       App Group UserDefaults keys mirrored from ShieldSession
+├── ShieldConfigurationExtension/
+│   ├── Info.plist                    com.apple.ManagedSettingsUI.shield-configuration-service
+│   ├── ShieldConfigurationDataSource.swift
+│   └── ShieldConfigurationExtension.entitlements
+└── DeviceActivityMonitorExtension/
+    ├── Info.plist                    com.apple.deviceactivity.monitor-extension
+    ├── DeviceActivityMonitorExtension.swift
+    └── DeviceActivityMonitorExtension.entitlements
+
 Tests/
 ├── EyePostureReminderTests/          (SPM test target, depends on EyePostureReminder)
 │   ├── Fixtures/
@@ -355,6 +373,8 @@ Tests/
   - Push Notifications (for `UNUserNotificationCenter`)
   - Motion usage (`NSMotionUsageDescription` — driving detection)
   - Focus status usage (`NSFocusStatusUsageDescription` — Focus Mode detection)
+  - App Groups (`group.com.yashasgujjar.kshana`) for main app ↔ Screen Time extension state
+  - FamilyControls entitlement (`com.apple.developer.family-controls`) for runtime Screen Time shielding, blocked on Apple approval in #201
   - No `UIBackgroundModes: audio` (audio session is foreground-only)
 
 ---
