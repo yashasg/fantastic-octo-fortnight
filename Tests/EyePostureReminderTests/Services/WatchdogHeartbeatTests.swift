@@ -121,6 +121,32 @@ final class WatchdogHeartbeatTests: XCTestCase {
         )
     }
 
+    func test_status_matchingDeviceActivityDetails_ignoresNewerCoordinatorHeartbeat() {
+        let staleExtensionHeartbeat = WatchdogHeartbeat.event(
+            .deviceActivityIntervalStarted,
+            timestamp: Date(timeIntervalSince1970: 1)
+        )
+        let freshCoordinatorHeartbeat = WatchdogHeartbeat.event(
+            .appForeground,
+            timestamp: Date(timeIntervalSince1970: 19)
+        )
+
+        let status = WatchdogHeartbeat.status(
+            from: [staleExtensionHeartbeat, freshCoordinatorHeartbeat],
+            now: Date(timeIntervalSince1970: 20),
+            staleAfter: 5,
+            matching: WatchdogHeartbeatDetail.deviceActivityLifecycleDetails
+        )
+
+        XCTAssertEqual(
+            status,
+            .stale(
+                lastSeenAt: Date(timeIntervalSince1970: 1),
+                detail: .deviceActivityIntervalStarted
+            )
+        )
+    }
+
     func test_allHeartbeatDetailsHaveStableRawValues() {
         let rawValues = WatchdogHeartbeatDetail.allCases.map(\.rawValue)
 

@@ -13,6 +13,11 @@ public enum WatchdogHeartbeatDetail: String, CaseIterable, Sendable {
     case appBackground = "app_background"
     case deviceActivityIntervalStarted = "device_activity_interval_started"
     case deviceActivityIntervalEnded = "device_activity_interval_ended"
+
+    public static let deviceActivityLifecycleDetails: Set<WatchdogHeartbeatDetail> = [
+        .deviceActivityIntervalStarted,
+        .deviceActivityIntervalEnded
+    ]
 }
 
 public enum WatchdogHeartbeatStatus: Equatable, Sendable {
@@ -60,17 +65,24 @@ public enum WatchdogHeartbeat {
     public static func status(
         from events: [AppGroupIPCEvent],
         now: Date = Date(),
-        staleAfter staleThreshold: TimeInterval
+        staleAfter staleThreshold: TimeInterval,
+        matching details: Set<WatchdogHeartbeatDetail>? = nil
     ) -> WatchdogHeartbeatStatus {
         precondition(
             staleThreshold.isFinite && staleThreshold > 0,
             "Watchdog heartbeat stale threshold must be positive and finite"
         )
 
-        guard let latest = events
-            .filter({ $0.kind == .watchdogHeartbeat })
-            .max(by: { $0.timestamp < $1.timestamp })
-        else {
+        let matchingEvents = events.filter { event in
+            guard event.kind == .watchdogHeartbeat else { return false }
+            guard let details else { return true }
+            guard let detail = event.detail.flatMap(WatchdogHeartbeatDetail.init(rawValue:)) else {
+                return false
+            }
+            return details.contains(detail)
+        }
+
+        guard let latest = matchingEvents.max(by: { $0.timestamp < $1.timestamp }) else {
             return .missing
         }
 
