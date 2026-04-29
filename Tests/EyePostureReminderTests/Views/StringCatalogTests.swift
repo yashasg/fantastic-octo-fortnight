@@ -1401,4 +1401,95 @@ final class StringCatalogTests: XCTestCase {
             value.localizedCaseInsensitiveContains("Reminder"),
             "'settings.notifications.disabledTitle' must use 'Reminder' language — got: \(value)")
     }
+
+    // MARK: - True Interrupt recovery keys (#250, #252, #258)
+
+    func test_settingsTrueInterruptFooterUnavailable_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("settings.trueInterrupt.footer.unavailable"),
+            "'settings.trueInterrupt.footer.unavailable' must resolve from catalog")
+    }
+
+    func test_settingsTrueInterruptFooterUnavailable_mentionsFutureUpdate() {
+        let value = str("settings.trueInterrupt.footer.unavailable")
+        XCTAssertTrue(
+            value.localizedCaseInsensitiveContains("update") || value.localizedCaseInsensitiveContains("coming"),
+            "'settings.trueInterrupt.footer.unavailable' must hint at future availability — got: \(value)")
+        XCTAssertTrue(
+            value.localizedCaseInsensitiveContains("local alerts") || value.localizedCaseInsensitiveContains("alerts"),
+            "'settings.trueInterrupt.footer.unavailable' must reassure that local alerts work — got: \(value)")
+    }
+
+    func test_settingsTrueInterruptDeniedTitle_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("settings.trueInterrupt.denied.title"),
+            "'settings.trueInterrupt.denied.title' must resolve from catalog")
+    }
+
+    func test_settingsTrueInterruptDeniedBody_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("settings.trueInterrupt.denied.body"),
+            "'settings.trueInterrupt.denied.body' must resolve from catalog")
+    }
+
+    func test_settingsTrueInterruptDeniedLabel_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("settings.trueInterrupt.denied.label"),
+            "'settings.trueInterrupt.denied.label' must resolve from catalog")
+    }
+
+    func test_settingsTrueInterruptOpenSettings_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("settings.trueInterrupt.openSettings"),
+            "'settings.trueInterrupt.openSettings' must resolve from catalog")
+    }
+
+    func test_settingsTrueInterruptOpenSettingsHint_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("settings.trueInterrupt.openSettings.hint"),
+            "'settings.trueInterrupt.openSettings.hint' must resolve from catalog")
+    }
+
+    func test_homeTrueInterruptSkippedBannerBody_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("home.trueInterrupt.skippedBanner.body"),
+            "'home.trueInterrupt.skippedBanner.body' must resolve from catalog")
+    }
+
+    func test_homeTrueInterruptSkippedBannerBody_mentionsLocalAlerts() {
+        let value = str("home.trueInterrupt.skippedBanner.body")
+        XCTAssertTrue(
+            value.localizedCaseInsensitiveContains("local alerts") || value.localizedCaseInsensitiveContains("alerts"),
+            "'home.trueInterrupt.skippedBanner.body' must reassure about local alerts — got: \(value)")
+    }
+
+    func test_homeTrueInterruptSkippedBannerSetUp_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("home.trueInterrupt.skippedBanner.setUp"),
+            "'home.trueInterrupt.skippedBanner.setUp' must resolve from catalog")
+    }
+
+    func test_homeTrueInterruptSkippedBannerSetUpHint_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("home.trueInterrupt.skippedBanner.setUp.hint"),
+            "'home.trueInterrupt.skippedBanner.setUp.hint' must resolve from catalog")
+    }
+
+    func test_homeTrueInterruptSkippedBannerDismiss_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("home.trueInterrupt.skippedBanner.dismiss"),
+            "'home.trueInterrupt.skippedBanner.dismiss' must resolve from catalog")
+    }
+
+    func test_homeTrueInterruptSkippedBannerDismissHint_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("home.trueInterrupt.skippedBanner.dismiss.hint"),
+            "'home.trueInterrupt.skippedBanner.dismiss.hint' must resolve from catalog")
+    }
+
+    func test_homeTrueInterruptSkippedBannerLabel_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("home.trueInterrupt.skippedBanner.label"),
+            "'home.trueInterrupt.skippedBanner.label' must resolve from catalog")
+    }
 }

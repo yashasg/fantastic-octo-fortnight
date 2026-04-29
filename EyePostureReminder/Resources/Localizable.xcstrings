@@ -68,6 +68,72 @@
         }
       }
     },
+    "home.trueInterrupt.skippedBanner.body": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "True Interrupt is optional — your local alerts are already working."
+          }
+        }
+      }
+    },
+    "home.trueInterrupt.skippedBanner.dismiss": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dismiss"
+          }
+        }
+      }
+    },
+    "home.trueInterrupt.skippedBanner.dismiss.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hides this True Interrupt setup suggestion"
+          }
+        }
+      }
+    },
+    "home.trueInterrupt.skippedBanner.label": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "True Interrupt is optional. Local alerts are working. Activate to set up app-level shielding."
+          }
+        }
+      }
+    },
+    "home.trueInterrupt.skippedBanner.setUp": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Set Up True Interrupt"
+          }
+        }
+      }
+    },
+    "home.trueInterrupt.skippedBanner.setUp.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opens Settings to set up True Interrupt Mode"
+          }
+        }
+      }
+    },
     "onboarding.permission.body1": {
       "extractionState": "manual",
       "localizations": {
@@ -2056,6 +2122,72 @@
           "stringUnit": {
             "state": "translated",
             "value": "Opens the app and category selection for True Interrupt Mode"
+          }
+        }
+      }
+    },
+    "settings.trueInterrupt.denied.body": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Settings to re-enable Screen Time access and unlock True Interrupt Mode."
+          }
+        }
+      }
+    },
+    "settings.trueInterrupt.denied.label": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Screen Time access denied. Open Settings to re-enable access for True Interrupt Mode."
+          }
+        }
+      }
+    },
+    "settings.trueInterrupt.denied.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Screen Time Access Denied"
+          }
+        }
+      }
+    },
+    "settings.trueInterrupt.footer.unavailable": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "True Interrupt isn't available yet. A future kshana update will bring app-level shielding. Your local alerts are working now."
+          }
+        }
+      }
+    },
+    "settings.trueInterrupt.openSettings": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open System Settings"
+          }
+        }
+      }
+    },
+    "settings.trueInterrupt.openSettings.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opens iOS Settings to restore Screen Time access for True Interrupt Mode"
           }
         }
       }
