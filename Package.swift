@@ -10,6 +10,10 @@ let package = Package(
         .executable(name: "EyePostureReminder", targets: ["EyePostureReminder"])
     ],
     targets: [
+        .target(
+            name: "ScreenTimeExtensionShared",
+            path: "Extensions/Shared"
+        ),
         .executableTarget(
             name: "EyePostureReminder",
             path: "EyePostureReminder",
@@ -21,7 +25,10 @@ let package = Package(
         ),
         .testTarget(
             name: "EyePostureReminderTests",
-            dependencies: ["EyePostureReminder"],
+            dependencies: [
+                "EyePostureReminder",
+                "ScreenTimeExtensionShared"
+            ],
             path: "Tests/EyePostureReminderTests",
             resources: [
                 .process("Fixtures")
