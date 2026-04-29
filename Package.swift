@@ -3,6 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "EyePostureReminder",
+    defaultLocalization: "en",
     platforms: [
         .iOS(.v16)
     ],
@@ -12,7 +13,10 @@ let package = Package(
     targets: [
         .target(
             name: "ScreenTimeExtensionShared",
-            path: "Extensions/Shared"
+            path: "Extensions/Shared",
+            resources: [
+                .process("Resources")
+            ]
         ),
         .executableTarget(
             name: "EyePostureReminder",
