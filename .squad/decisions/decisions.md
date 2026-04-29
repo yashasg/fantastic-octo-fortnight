@@ -2400,3 +2400,445 @@ Yashas requested a codebase-wide rename from "Eye & Posture Reminder" to **kshan
 
 - `CFBundleName` is now hardcoded. If a future PR renames the SPM target to `Kshana`, `CFBundleName` can revert to `$(PRODUCT_NAME)`.
 - Legal text references "kshana" — ensure legal review if the name changes again.
+
+---
+
+# Decision: Apple Developer — Certificates, Identifiers & Profiles Setup
+
+**Author:** Rusty  
+**Date:** 2026-04-26  
+**Status:** Guidance provided  
+**Session:** 2026-04-28T22:46:23Z (Rusty + Virgil parallel sprint)
+
+## Context
+
+Yashasg has Apple Developer account working and is setting up Certificates, Identifiers & Profiles for TestFlight/App Store submission. Critical step before archive and distribution workflows.
+
+## Decisions
+
+1. **Bundle ID:** `com.yashasg.eyeposturereminder` — matches APP_STORE_LISTING.md and codebase references.
+   - **Note:** Case mismatch detected in UITests/project.yml (`com.yashasg.EyePostureReminder`). Must align before archive.
+
+2. **Capabilities to register:** Push Notifications + Focus Status Reading. No Background Modes, App Groups, or HealthKit needed.
+
+3. **Certificate type:** Apple Distribution (covers both TestFlight and App Store). No separate Ad Hoc needed if using TestFlight only.
+
+4. **Provisioning:** Use Xcode Automatic Signing for development. For distribution, create an App Store provisioning profile tied to the distribution certificate.
+
+5. **Xcode project:** Since the app is SPM-only (no .xcodeproj), Yashasg will need to open Package.swift in Xcode, which creates an implicit project, or create an .xcodeproj for archive/upload workflows.
+
+## GitHub Secrets (per Virgil)
+
+Standard CI/CD secret names for App Store Connect:
+- `ASC_API_KEY_ID` — API Key ID from App Store Connect
+- `ASC_API_KEY_ISSUER_ID` — Issuer ID from App Store Connect  
+- `ASC_API_KEY_P8` — Private key file (.p8) contents
+
+## Who needs to know
+
+- **Danny:** Bundle ID and app name are locked — no changes without re-registering. Case mismatch in UITests must be resolved.
+- **All:** Distribution certificate is team-scoped; if CI is added later, it needs the same cert/profile.
+- **Virgil:** Ensure CI/CD workflows reference final unified Bundle ID once UITests is corrected.
+
+---
+
+# Decision: LogoYangMint — logo-scoped color token for the yin-yang yang half
+
+**Author:** Linus  
+**Date:** 2026-04-28
+
+## Decision
+Added `AppColor.logoYangMint` (`LogoYangMint` color asset) as a **logo-only** token.  
+- Light: `#50C4A4` — saturated mint, visible against sage and cream background  
+- Dark: `#2A6A52` — mid-green, 3.7:1 contrast vs `primaryRest` dark `#8ED2B1`
+
+## Rationale
+`AppColor.surfaceTint` is used as a surface/panel background in SettingsView, OnboardingView, and other screens. Globally changing it to a more saturated colour would have broken those surfaces. A logo-scoped token avoids this regression entirely.
+
+## Scope
+`YinYangEyeView` only. The comment in DesignSystem.swift explicitly marks it as logo-only.
+
+## App Icon
+Light and dark icon PNGs regenerated using the same palette. Dark variants registered via `appearances` entries in `AppIcon.appiconset/Contents.json` — iOS 18+ automatic theming, no extra icon set name required.
+
+---
+
+# Design Direction: Adaptive Yin-Yang Logo Contrast + App Icon Variants
+
+**Author:** Tess (UI/UX Designer)  
+**Date:** 2026-04-28  
+**Status:** Implemented
+
+---
+
+## Problem
+
+The yin-yang logo (`YinYangEyeView`) uses `AppColor.surfaceTint` for the "yang" (mint) half. `surfaceTint` was designed as a *surface wash* for card backgrounds — not a filled logo element. The result:
+
+- **Light mode:** `#EEF6F1` (near-white pale green) on `#F8F4EC` (warm off-white background) → contrast ratio ~1.01:1 — effectively invisible.
+- **Dark mode:** `#203128` (near-black dark sage) on `#101714` (deep forest background) → contrast ratio ~1.37:1 — barely distinguishable.
+
+The `primaryRest` yin half is fine in both modes and should not change.
+
+---
+
+## Root Cause
+
+`AppColor.surfaceTint` is the right token for card tint backgrounds (pale wash). It is the wrong token for a logo fill. Changing `surfaceTint` broadly would break card surfaces — this is a logo-specific fix.
+
+---
+
+## Recommended Fix: New `logoMint` Color Token
+
+Introduce **`AppColor.logoMint`** (or a private logo-local color in `YinYangEyeView`) with these values:
+
+| Appearance | Hex | Role | Contrast on background |
+|---|---|---|---|
+| Light | `#3CA882` | Bright mint-teal, yang half | ~3.6:1 on `#F8F4EC` ✅ WCAG 1.4.11 |
+| Dark | `#446E58` | Mid sage-green, yang half | ~3.8:1 on `#101714` ✅ WCAG 1.4.11 |
+
+Visual rationale:
+- **Light mode `#3CA882`:** A proper mid-tone mint. Clearly reads as mint, visually contrasts with the dark yin half (`#2F6F5E` forest green). Remains on-brand Restful Grove palette.
+- **Dark mode `#446E58`:** A mid-depth sage. Contrasts the bright yin half (`#8ED2B1` light mint). Remains visibly brand-green without washing into the background.
+
+**Do NOT change `AppColor.surfaceTint`** — it is correctly `#EEF6F1`/`#203128` for card surface washes.
+
+### Implementation path for Linus
+
+**Option A (preferred — clean token):**
+1. Add `RGLogoMint.colorset` to `Colors.xcassets` with light `#3CA882`, dark `#446E58`
+2. Add `static let logoMint = Color("RGLogoMint", bundle: .module)` to `AppColor` in `DesignSystem.swift`
+3. In `YinYangEyeView.swift`, replace all uses of `AppColor.surfaceTint` with `AppColor.logoMint`
+
+**Option B (local, no new token):**
+Add a private adaptive color directly in `YinYangEyeView.swift` using `UIColor(dynamicProvider:)` — acceptable if the team prefers not to add a token used in only one view.
+
+---
+
+## App Icon: Light/Dark Appearance Variants
+
+**Current state:** `AppIcon.appiconset/Contents.json` has a single set of PNG images — no dark variant. The icon always shows the light-background version regardless of system appearance.
+
+**iOS 18 / Xcode 16 support:** Automatic dark/tinted icon variants are supported by adding a dark-appearance image entry in `Contents.json`. The system automatically shows the appropriate variant based on the user's appearance setting (Settings → Display & Brightness → App Icons on iOS 18).
+
+**Direction for Linus / Virgil:**
+1. Design a **dark-background icon variant**: swap the icon background from warm forest green to near-black (`#101714`), use the logo with boosted mint and sage contrast (values above apply). The yin half should use `#8ED2B1` (or brighter), the yang half `#3CA882`.
+2. In `AppIcon.appiconset/Contents.json`, add dark appearance entries:
+```json
+{
+  "filename": "AppIcon-Dark-1024.png",
+  "idiom": "ios-marketing",
+  "scale": "1x",
+  "size": "1024x1024",
+  "appearances": [
+    { "appearance": "luminosity", "value": "dark" }
+  ]
+}
+```
+3. Repeat for all required sizes.
+4. This requires iOS 18+ — below iOS 18 the system ignores the dark entry and falls back to the universal icon. No degradation.
+
+---
+
+# Decision: Detect Missing Provisioning Profiles Before Archive
+
+**Date:** 2026-04  
+**Author:** Virgil (CI/CD Dev)  
+**Status:** Implemented
+
+## Problem
+
+Running `./scripts/build_signed.sh export` failed at the archive step with:
+
+```
+No Accounts: Add a new account in Accounts settings.
+No profiles for 'com.yashasg.eyeposturereminder' were found:
+  Xcode couldn't find any iOS App Development provisioning profiles
+  matching 'com.yashasg.eyeposturereminder'.
+```
+
+This occurred even after the developer logged into Xcode. Root cause: **0 provisioning profiles existed in `~/Library/MobileDevice/Provisioning Profiles/`**. The Apple Distribution certificate was present in the Keychain, but `xcodebuild` requires profiles to be physically downloaded before it can use automatic signing — even with `-allowProvisioningUpdates`.
+
+Logging into Xcode is necessary but not sufficient. "Download Manual Profiles" must also be triggered.
+
+## Decision
+
+Add early detection in `cmd_doctor` and `cmd_archive` in `scripts/build_signed.sh`:
+
+1. Check `~/Library/MobileDevice/Provisioning Profiles/` for any `.mobileprovision` files matching the bundle ID via `grep -rl`.
+2. If none found, emit a `warn` with the exact remediation steps (Xcode → Settings → Accounts → team → "Download Manual Profiles").
+3. In `cmd_archive`, emit the same warning pre-flight so developers see it before xcodebuild starts and produces a cryptic error.
+
+## Remediation Steps for Developers
+
+When you see "No Accounts" or "No profiles found" from `xcodebuild`:
+
+1. Open Xcode
+2. `⌘,` → Accounts
+3. Select your Apple ID → select your team
+4. Click **"Download Manual Profiles"** and wait for it to finish
+5. Confirm `com.yashasg.eyeposturereminder` is registered at [developer.apple.com → Identifiers](https://developer.apple.com/account/resources/identifiers/list)
+6. Re-run `./scripts/build_signed.sh doctor` — should show profiles found
+7. Re-run `./scripts/build_signed.sh export`
+
+## Why Not Automate Profile Download?
+
+`xcodebuild` with `-allowProvisioningUpdates` *would* download profiles — but only if the Apple ID session is already established. When there are zero profiles and xcodebuild has no active session (even after GUI login), it errors immediately before even attempting the download. This is an Xcode session bootstrap issue that must be resolved through the GUI once.
+
+---
+
+# Decision: Automatic Signing Must Not Override CODE_SIGN_IDENTITY
+
+**Date:** 2026-04-28  
+**Author:** Virgil (CI/CD)  
+**Status:** Implemented
+
+## Problem
+
+`scripts/build_signed.sh` was passing both `CODE_SIGN_STYLE=Automatic` and
+`CODE_SIGN_IDENTITY=Apple Distribution` to xcodebuild during `archive`. Xcode
+exit-65 error: _"EyePostureReminder is automatically signed for development, but
+a conflicting code signing identity Apple Distribution has been manually
+specified."_ The same conflict appeared on SPM sub-targets.
+
+## Decision
+
+**Do not inject `CODE_SIGN_IDENTITY` into xcodebuild build settings when using
+automatic signing.** Only inject it in manual signing mode (`SIGNING_STYLE=manual`).
+
+Rationale:
+- With `CODE_SIGN_STYLE=Automatic`, Xcode owns certificate selection for each
+  build action. For `archive`, it automatically chooses an Apple Distribution
+  identity if one is present in the Keychain. No override is needed or allowed.
+- Specifying `CODE_SIGN_IDENTITY` alongside automatic signing instructs Xcode to
+  use a specific cert while also telling it to manage certs automatically. These
+  two instructions are mutually exclusive; Xcode treats it as a conflict and fails.
+- The distribution identity (`Apple Distribution`) for export/upload belongs in
+  `ExportOptions.plist` (`signingCertificate` key), not in the archive build
+  settings command line. The two phases — archive and export — are separate and
+  have different signing concerns.
+
+## Pattern
+
+```bash
+build_signing_build_settings() {
+  local style_value
+  if [[ "$SIGNING_STYLE" == "manual" ]]; then style_value="Manual"; else style_value="Automatic"; fi
+
+  SIGNING_BUILD_SETTINGS=(
+    "DEVELOPMENT_TEAM=${APPLE_TEAM_ID}"
+    "CODE_SIGN_STYLE=${style_value}"
+    "CODE_SIGNING_ALLOWED=YES"
+    "CODE_SIGNING_REQUIRED=YES"
+    # ... other flags
+  )
+
+  # Only override CODE_SIGN_IDENTITY for manual signing.
+  # Automatic signing selects the identity; overriding causes exit 65.
+  if [[ "$SIGNING_STYLE" == "manual" ]]; then
+    SIGNING_BUILD_SETTINGS+=("CODE_SIGN_IDENTITY=${SIGNING_CERTIFICATE}")
+  fi
+}
+```
+
+`ExportOptions.plist` (written by `create_export_options`) continues to include
+`signingCertificate: Apple Distribution` — that is the correct place to declare
+the distribution identity for the export/upload step.
+
+## Applies To
+
+- `scripts/build_signed.sh`
+- Any future CI workflow that calls `xcodebuild archive` with automatic signing
+
+---
+
+# Decision: build_signed.sh — Fix empty-array nounset crash (macOS Bash 3.2)
+
+**Date:** 2026-04-28  
+**Author:** Virgil  
+**Status:** Implemented
+
+## Context
+
+`scripts/build_signed.sh` uses `set -euo pipefail`. On macOS, `/usr/bin/env bash` resolves to Bash **3.2.57** (the Apple-shipped version). Under `nounset` (`-u`), expanding an empty indexed array with `"${array[@]}"` throws:
+
+```
+scripts/build_signed.sh: line 400: AUTH_FLAGS[@]: unbound variable
+```
+
+This was triggered on the `archive` command when no App Store Connect API key vars were set (`AUTH_FLAGS` remained an empty array) and `ALLOW_PROVISIONING_UPDATES` was `YES` (so `PROVISIONING_FLAGS` had one element — but the same pattern would crash on an empty `PROVISIONING_FLAGS` too).
+
+## Decision
+
+Replace all three array expansions (`PROVISIONING_FLAGS`, `AUTH_FLAGS`, `SIGNING_BUILD_SETTINGS`) across all `xcodebuild` calls with the `${var+word}` guard pattern:
+
+```bash
+# Before
+"${AUTH_FLAGS[@]}"
+
+# After
+"${AUTH_FLAGS[@]+"${AUTH_FLAGS[@]}"}"
+```
+
+**Why this pattern:** `${var+word}` substitutes `word` only when `var` is set. For an empty array, the outer substitution short-circuits and produces nothing, so the inner `${AUTH_FLAGS[@]}` is never evaluated and nounset cannot trigger. When the array is non-empty, both substitutions expand normally and all elements are passed correctly to xcodebuild.
+
+## Alternatives Considered
+
+| Option | Reason rejected |
+|---|---|
+| `set +u` around xcodebuild calls | Turns off nounset for those lines — unsafe, masks other bugs |
+| `[[ ${#AUTH_FLAGS[@]} -gt 0 ]] && args+=...` | Verbose; requires duplicating the xcodebuild call |
+| Upgrade to Bash 5 via Homebrew | Adds an implicit dependency; system Bash 3.2 is the common denominator |
+| `${AUTH_FLAGS[@]:-}` | Does NOT fix the problem on Bash 3.2 arrays |
+
+## Post-fix Status
+
+- `bash -n scripts/build_signed.sh` ✅ syntax OK  
+- `./scripts/build_signed.sh doctor` ✅ passes  
+- `bash scripts/build_signed.sh archive` ✅ passes the array expansion; then fails on a **pre-existing, unrelated** Xcode signing conflict:  
+  `conflicting provisioning settings — automatically signed for development but Apple Distribution identity specified`  
+  This is a separate issue not caused by this fix.
+
+## No Secrets Policy
+
+Diff contains no Team IDs, profile UUIDs, API key values, certificate hashes, or email addresses. All signing values continue to flow exclusively through environment variables.
+
+---
+
+# Decision: Provisioning Failure Guidance Pattern
+
+**Author:** Virgil  
+**Date:** 2026-04-27  
+**Status:** Implemented
+
+## Context
+
+`bash scripts/build_signed.sh export` reaches `xcodebuild archive` and fails with one of two errors:
+- *"No Accounts: Add a new account in Accounts settings"* — automatic signing, no Xcode account or ASC API key present
+- *"No profiles for canonical app bundle ID were found"* — manual signing (default), no matching App Store Connect Distribution profile installed locally
+
+Both errors cause the script to exit via `set -e` with no actionable guidance printed to the user.
+
+## Decision
+
+1. **Redact sensitive values from xcodebuild output** via the existing `redact_stream` Perl filter, which already handles Team ID, profile specifier, and ASC key values. Merge stderr into stdout (`2>&1`) before the pipe so both streams are filtered.
+
+2. **Wrap the archive `run_xcodebuild` call** with `if ! run_xcodebuild ...; then print_archive_failure_hint; exit 1; fi`. The `if !` construct prevents `set -e` from firing before guidance can print.
+
+3. **`print_archive_failure_hint` explains both failure modes inline:**
+   - Automatic signing → add Xcode account or supply `ASC_AUTH_KEY_PATH` / `ASC_AUTH_KEY_ID` / `ASC_AUTH_ISSUER_ID`
+   - Manual signing → create/install App Store Connect Distribution profile or set `PROVISIONING_PROFILE_SPECIFIER`
+   - Reminder that Transporter / `upload` require a successful `export` first
+
+4. **README Troubleshooting table** maps common xcodebuild error messages to fixes — reducing support burden for developers new to the signing workflow.
+
+## Rationale
+
+- The `ensure_manual_distribution_profile` guard catches the manual-signing case before xcodebuild runs, but only when no profile is installed at all. If a profile name is set/guessed but xcodebuild cannot resolve it, xcodebuild fails with no prior warning.
+- For automatic signing failures ("No Accounts"), there is no pre-flight check — the error can only surface from xcodebuild.
+- In-band guidance (printed by the script at the point of failure) is far more discoverable than README-only documentation.
+
+## Consequences
+
+- No secrets policy change: all guidance is generic, never printing actual Team ID, profile UUID, or key values.
+- `set -e` remains active globally; only the specific `run_xcodebuild` call is wrapped in a conditional.
+- `redact_stream` already merges stderr, so no structural change to the redaction mechanism.
+
+---
+
+# Decision: Keychain Auto-Detection for APPLE_TEAM_ID in build_signed.sh
+
+**Author:** Virgil  
+**Date:** 2026-04-28  
+**Status:** Implemented  
+
+## Context
+
+`scripts/build_signed.sh` required `APPLE_TEAM_ID` to be set explicitly for every archive/export/upload invocation. On a local macOS machine with a single Apple Distribution certificate installed, this was friction — the Team ID is already implicit in the Keychain cert.
+
+## Decision
+
+Implement automatic Team ID detection from the local macOS Keychain as a convenience fallback, with the following rules:
+
+1. **Explicit env var always wins.** `APPLE_TEAM_ID` (or `DEVELOPMENT_TEAM`) set in the environment is never overridden.
+2. **Single-cert auto-detection.** If `security find-identity -p codesigning -v` returns Apple Distribution identities containing exactly one unique Team ID (10-char alphanumeric), that value is used silently. Doctor prints "detected from Keychain" — not the value itself.
+3. **Ambiguous Keychain fails loudly.** If multiple Team IDs are found, archive/export/upload fail with a message instructing the user to set `APPLE_TEAM_ID` explicitly.
+4. **Empty Keychain fails with guidance.** No change from prior behavior; failure message now mentions Keychain cert installation as an alternative to explicit env var.
+5. **No ASC API key extraction from Keychain.** App Store Connect auth keys are not looked up from Keychain — only certificate-based Team ID detection is added.
+6. **Provisioning profiles stay out of scope.** Profiles are handled by Xcode automatic signing (default) or `PROVISIONING_PROFILE_SPECIFIER` env var — not Keychain lookup.
+
+## Rationale
+
+- Reduces friction for solo/local workflows where only one distribution cert is present.
+- Does not compromise CI/CD: CI always sets `APPLE_TEAM_ID` explicitly; auto-detection is never reachable.
+- No sensitive value is ever printed or logged — "detected from Keychain" is the only output.
+- Consistent with Apple toolchain conventions: `security find-identity` is the canonical way to enumerate code-signing identities.
+
+## Implementation
+
+- `infer_team_id_from_keychain()` added to `scripts/build_signed.sh` helpers section.
+- Called once at startup when `APPLE_TEAM_ID` is empty.
+- `require_team_id()` updated to distinguish ambiguous vs. not-found cases.
+- `cmd_doctor()` updated to display detection source without revealing the value.
+- `README.md` "Signed TestFlight builds" section updated with auto-detection note and provisioning profile clarification.
+
+---
+
+# Decision: Signed Build Parity — build_signed.sh vs build.sh
+
+**Filed by:** Virgil  
+**Date:** 2026-04-28  
+**Status:** Implemented
+
+## Context
+
+`build_signed.sh` and `build.sh` share the same core build step pattern
+(SPM package → app-wrapper → xcodebuild) but the signed script had three
+concrete divergences that were not signing-related.
+
+## Decisions Made
+
+### 1. Build number injection belongs in build_signed.sh, patching the archive
+
+- **Decision:** `inject_build_number()` patches `<archive>.xcarchive/Products/Applications/<App>.app/Info.plist` *after* a successful `xcodebuild archive`.
+- **Rationale:** Avoids mutating source `Info.plist` (no dirty working tree; safe for local ad-hoc builds). CI passes `BUILD_NUMBER=${{ github.run_number }}`; local builds fall back to a timestamp.
+- **NOT chosen:** Patching source `Info.plist` before archive (used by the old `testflight.yml`). That approach leaves a modified file in the working tree and risks accidental commits.
+
+### 2. testflight.yml must call build_signed.sh, not raw xcodebuild
+
+- **Decision:** Replace the raw `xcodebuild archive` + `xcodebuild -exportArchive` steps in `testflight.yml` with `./scripts/build_signed.sh upload`.
+- **Rationale:** SPM `.executable` targets cannot be archived for iOS distribution without a `.xcodeproj` app-wrapper. `build_signed.sh` generates that wrapper via XcodeGen. Calling raw xcodebuild without `-project` on a pure SPM repo would always fail.
+- **Required additions:** `brew install xcodegen` step in the workflow; `ASC_AUTH_KEY_PATH`, `ASC_AUTH_KEY_ID`, `ASC_AUTH_ISSUER_ID` env vars passed to match `build_signed.sh` interface.
+
+### 3. Canonical bundle ID is all-lowercase
+
+- **Decision:** `com.yashasg.eyeposturereminder` is the canonical bundle ID across all project files and scripts.
+- **Rationale:** Confirmed by Rusty (Wave 13). Bundle IDs are case-sensitive in Apple systems. `UITests/project.yml` was the only outlier; corrected.
+
+## Interface Contract for build_signed.sh
+
+| Env var | Required? | Notes |
+|---|---|---|
+| `APPLE_TEAM_ID` | Auto-detected from Keychain if unset | |
+| `BUILD_NUMBER` | Optional | Defaults to `YYYYMMDDHHmm` timestamp |
+| `ASC_AUTH_KEY_PATH` | Required for upload | Must be an absolute path outside the repo |
+| `ASC_AUTH_KEY_ID` | Required for upload | |
+| `ASC_AUTH_ISSUER_ID` | Required for upload | |
+| `APP_BUNDLE_ID` | Optional | Defaults to `com.yashasg.eyeposturereminder` |
+
+---
+
+# User Directive: TestFlight iPhone-only App
+
+**By:** yashasg  
+**Date:** 2026-04-28  
+**Status:** Guidance  
+
+## Directive
+
+kshana does not support iPad at the moment; signed TestFlight builds should remain iPhone-only.
+
+## Context
+
+User request — captured for team memory.
+

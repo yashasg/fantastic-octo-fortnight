@@ -5,106 +5,6 @@
 - **Stack:** Swift, SwiftUI (iOS 16+), MVVM, UserNotifications, UIKit overlay, UserDefaults
 - **Created:** 2026-04-24
 
-## Session 6 Update: Screen-Time UX Review Complete
-
-**Session:** 2026-04-24T20:58Z – 2026-04-24T21:37Z  
-**Review Status:** ✅ COMPLETE (Decision 3.3)
-
-### UX Recommendation Summary
-
-**No structural UI changes required.** The behavioral change is sound and UX is clean.
-
-### Copy Changes (8 strings, prioritized)
-
-#### 🔴 High Priority (blockers for release)
-
-1. **Settings Picker Label** (`ReminderRowView.swift`)
-   - Current: `"Remind me every"`
-   - Change to: `"Remind me after"`
-   - Reason: "After" correctly implies accumulation; "every" implies clock intervals
-
-2. **Settings Section Footer** (NEW in `Localizable.xcstrings`)
-   - New text: `"Timer resets when you lock your phone."`
-   - Reason: Closes the mental model gap — users understand what happens during phone lock
-
-3. **Onboarding Permission Body** (`onboarding.permission.body1`)
-   - Current: `"Reminders arrive as notifications — so the app works even when you're not looking at it."`
-   - Change to: `"Notifications let the app wake back up after a snooze — so your next reminder arrives right on time."`
-   - Reason: Old text is factually false under new model. Notifications now serve snooze-wake only, not primary delivery. Critical: if users read the old text and grant permission expecting background reminders, they'll be actively misled.
-
-#### 🟡 Medium Priority (mental model clarity)
-
-4. **Onboarding Welcome Body** (`onboarding.welcome.body`)
-   - Current: `"Takes less than a minute to set up. Works quietly in the background — you'll barely know it's there."`
-   - Change to: `"Takes less than a minute to set up. Keeps an eye on your screen time — you'll barely know it's there."`
-   - Reason: Remove false "background" claim; prime "screen time" framing
-
-5. **Onboarding Setup Card** (`onboarding.setup.card.label` format string)
-   - Current: `"%1$@: every %2$@, %3$@ break"`
-   - Change to: `"%1$@: after %2$@ of screen time, %3$@ break"`
-   - Reason: Reinforces mental model at the final "Get Started" confirmation moment
-
-6. **Master Toggle Footer** (NEW in `Localizable.xcstrings`)
-   - New text: `"Reminders only appear while this app is open."`
-   - Reason: Answers Danny's open question. Placed in Settings footer (low-friction) for users who return to Settings wondering why they missed a reminder
-
-#### 🟢 Low Priority (vocabulary consistency)
-
-7. **Picker Row Accessibility Hint** (`ReminderRowView.swift`)
-   - Update to reflect screen-time context (wording pending Linus implementation)
-
-8. **Customize Button Hint** (`onboarding.setup.customizeButton.hint`)
-   - Current: `"Go to settings to adjust reminder intervals"`
-   - Change to: `"Go to settings to adjust screen time intervals"`
-   - Reason: Vocabulary alignment
-
-### Implementation Handoff
-
-Linus implemented all 7 strings (Dec 3.6) — build verified successful.
-
-### Accessibility Audit
-
-✅ **No new issues.** SwiftUI Form + Picker + standard text controls inherit Dynamic Type automatically. VoiceOver already has appropriate labels + hints. The grace period remains invisible (implementation detail).
-
-**One considered-and-rejected enhancement:** Progress bar showing elapsed screen time on HomeView. Rejected because:
-- Creates anxiety/gamification (users race the timer)
-- Contradicts app's positioning as "passive nudge"
-- Edge case: grace period expiry causes confusing resets in the progress bar
-- Existing "Reminders active/paused" status is sufficient
-
-### Interaction with Rusty's Grace Period
-
-The 5-second grace period is a pure implementation detail. No user should ever be aware of it. If they are (e.g., "Why didn't my timer reset when I got a notification?"), the feature has failed. The goal: users think "I got interrupted, my session kept going" — not "oh, there's a 5s debounce." ✅ Achieved through UX invisibility.
-
-
-## 2026-04-25 — UX Spec: Pause Status Indicator
-
-**Status:** ✅ Complete  
-**Scope:** Pause status indicator visual design and spec
-
-### Orchestration Summary
-
-- **Pause Status Indicator Design:** Top-right corner, always visible, non-intrusive
-- **Visual States:** Idle (gray), paused-network (blue), paused-screentime (orange), paused-gamemode (red)
-- **Format:** Icon + label, scales for iPhone/iPad
-- **Accessibility:** Color + icon combo for clarity
-- **Spec Filed:** `/docs/PAUSE_STATUS_INDICATOR.md`
-- **Orchestration Log:** Filed at `.squad/orchestration-log/2026-04-24T23-19-18Z-tess.md`
-
-### Handoff
-
-Design spec delivered to Basher and Linus for implementation.
-
-### Next Phase
-
-Ready for Phase 2 design expansion.
-
-## Archive
-
-### 2026-04-24 — Design System Foundation & Color Adaptation
-
-Early design system work covering: DesignSystem.swift tokens (colors, fonts, spacing, animations, symbols), Design System documentation spec, dark mode color adaptation strategy (adaptive UIColor, system colors, WCAG contrast fixes), Asset Catalog color migration (6 color sets with light/dark variants), pause status indicator UX spec. All implementations verified and build green. Preserved for reference; current focus on Phase 2 UI/design expansion.
-
 ## Learnings
 
 ### 2026-04-26: Full UI/UX Audit — TestFlight Quality Pass
@@ -387,3 +287,49 @@ Early design system work covering: DesignSystem.swift tokens (colors, fonts, spa
 - **Testing:** 9 comprehensive tests (Livingston) — all passing. Build passing.
 - **Decisions:** Merged 5 decisions into `.squad/decisions/decisions.md` (Tess, Danny, Rusty, Roman contributions). Inbox cleared.
 - **Session artifacts:** `.squad/orchestration-log/2026-04-27T03-41-00Z-*.md`, `.squad/log/2026-04-27T03-41-00Z-yinyang-implementation.md`
+
+### 2026-04-28: Logo Contrast + App Icon Adaptive Direction
+
+**Task:** Visual direction for improving yin-yang logo visibility across light/dark mode and enabling adaptive app icon variants.
+
+**Root cause identified:** `YinYangEyeView` uses `AppColor.surfaceTint` for the yang (mint) half. `surfaceTint` values (`#EEF6F1` light / `#203128` dark) are designed as card background washes — not filled logo elements. Against the Restful Grove backgrounds (`#F8F4EC` warm white / `#101714` deep forest), contrast ratios are ~1.01:1 and ~1.37:1 respectively — essentially invisible.
+
+**Direction filed:** `.squad/decisions/inbox/tess-logo-contrast-direction.md`
+
+**Key color decisions:**
+- New `AppColor.logoMint` token needed: Light `#3CA882` (~3.6:1 on `#F8F4EC` ✅), Dark `#446E58` (~3.8:1 on `#101714` ✅)
+- `AppColor.surfaceTint` must NOT change — card surfaces are correct; logo is the wrong use of that token
+- `AppColor.primaryRest` (yin half) is correct in both modes — no change needed
+
+**App icon dark/light variants:** iOS 18 / Xcode 16 supports dark appearance entries in `AppIcon.appiconset/Contents.json`. Current asset has no dark variant. Direction given to add dark entries with deep forest background + contrast-boosted logo.
+
+**Key file paths confirmed:**
+- `EyePostureReminder/Views/YinYangEyeView.swift` — logo component (surfaceTint → logoMint swap target)
+- `EyePostureReminder/Resources/Colors.xcassets/RGSurfaceTint.colorset/Contents.json` — current wrong token values
+- `EyePostureReminder/Resources/Colors.xcassets/RGPrimaryRest.colorset/Contents.json` — correct, no change
+- `EyePostureReminder/AppIcon.xcassets/AppIcon.appiconset/Contents.json` — no dark variant yet
+
+### 2026-04-28 — Logo Contrast Analysis & Design Direction (Wave 17)
+
+**Task:** Identify and fix yin-yang logo contrast issues in light/dark mode.
+
+**Outcome:** ✅ Direction delivered — design analysis and implementation guidance filed.
+
+**Work completed:**
+- Analyzed contrast failure in `YinYangEyeView`: `AppColor.surfaceTint` insufficient for logo fill
+  - Light: `#EEF6F1` vs `#F8F4EC` background = ~1.01:1 contrast (invisible)
+  - Dark: `#203128` vs `#101714` background = ~1.37:1 contrast (barely visible)
+- Root cause: `surfaceTint` is correct for surface washes (card tints), wrong for logo fills
+- Recommended `AppColor.logoMint` with values meeting WCAG 1.4.11:
+  - Light: `#3CA882` — ~3.6:1 contrast ✅
+  - Dark: `#446E58` — ~3.8:1 contrast ✅
+- Provided visual rationale and two implementation paths (Option A: clean token; Option B: local private color)
+- Dark icon appearance guidance for iOS 18+ (using `appearances` entries in Contents.json)
+- Acceptance criteria documented for light/dark visibility and no regression to other surfaces
+
+**Decisions filed:**
+- `.squad/decisions/decisions.md` — Design Direction (full analysis + acceptance criteria)
+
+**Coordination:**
+- Design direction reviewed by Linus (engineer) for feasibility
+- Linus selected Option A (clean token) and implemented with successful outcome

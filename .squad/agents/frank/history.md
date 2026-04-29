@@ -111,3 +111,24 @@
 - Clarified that `os.Logger` logs normally remain on-device with private/redacted values, while diagnostic logs may be shared through Apple's diagnostic-sharing/TestFlight settings if the user opts in.
 - Preserved the privacy posture: no third-party analytics SDKs, no IDFA, no user accounts, no tracking, no sale of data, local settings stay on-device, and motion/Focus data remain transient.
 - Commits created: `797bdc2` (`docs(legal): add Apple EULA supplement to TERMS.md`) and `63a5ac1` (`docs(legal): update PRIVACY.md for MetricKit analytics disclosure`).
+
+### 2026-04-28 — Puzzle Quest LLC Registration Status
+
+- User stated the intended App Store/legal entity name is **Puzzle Quest LLC**.
+- User stated the LLC is currently registered in **Washington**, but that this is a mistake and it should be registered in **New Mexico**.
+- User stated the home office is in **Washington**.
+- Practical legal posture: do not finalize App Store publisher/entity details, governing-law placeholders, or owner legal documents until entity domicile, foreign registration/nexus, tax, and address facts are confirmed by qualified professionals.
+
+### 2026-04-28 — LLC Registration State & App Store Publisher Risk
+
+- **Task:** Assess legal implications of Puzzle Quest LLC being currently registered in Washington when user intends New Mexico, with home office in Washington.
+- **Guidance:** Protective risk assessment issued via `.squad/decisions/inbox/frank-llc-registration-guidance.md` (later merged to main decisions.md).
+- **Key Points:**
+  - Do not finalize Puzzle Quest LLC as App Store publisher until entity formation cleaned up
+  - Consult WA/NM business attorney on correction path (dissolve/form/convert/domesticate)
+  - Washington home office creates nexus even with NM formation
+  - Prepare draft placeholders; do not lock into legal docs until counsel/CPA confirm final structure
+  - Owner-only legal document fields remain untouched by agents per user directive 2026-04-27
+- **Output Files:** `docs/legal/TERMS.md`, `docs/legal/PRIVACY.md` (not edited this session; Frank assessed but did not modify)
+- **Coordination:** Frank work synchronized with Virgil (CI/CD implications) and Coordinator (team directive capture).
+

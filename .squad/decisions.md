@@ -22535,3 +22535,141 @@ Nunito is the best fit for the Restful Grove direction from parent plan #158: ro
 ## Accessibility
 
 All text tokens except the existing countdown token use Dynamic Type-relative SwiftUI custom fonts. The countdown remains a documented fixed-size decorative exception with VoiceOver labels.
+
+### 2026-04-27T16:32: User directive
+**By:** Yashas (via Copilot)
+**What:** Legal document PII fields — [PUBLISHER NAME], [CONTACT EMAIL], [JURISDICTION] in docs/legal/TERMS.md and docs/legal/PRIVACY.md — must ONLY be edited by Yashas. Squad agents must never fill in, guess, or modify these placeholders. They contain PII and business decisions that only the project owner can make.
+**Why:** User request — these fields were previously filled with incorrect information by agents. Captured to prevent recurrence.
+
+# Decision: Battery & Performance Audit Results — No Critical Issues
+
+**Author:** Rusty (iOS Architect)  
+**Date:** 2025-07-18  
+**Status:** Informational
+
+## Summary
+
+Full battery and performance audit completed across all 33 Swift source files. **No critical (🔴) issues found.** The app is battery-efficient by design.
+
+## Key Validations
+
+1. **Timer architecture is correct.** ScreenTimeTracker uses a 1s timer with 0.5s tolerance, pauses on `willResignActive`, resumes on `didBecomeActive`. Zero CPU usage when backgrounded.
+2. **No background modes.** The app declares no `UIBackgroundModes` — it performs zero work when suspended. This is the right choice for a foreground reminder app.
+3. **All detection is event-driven.** Focus (KVO), CarPlay (`routeChangeNotification`), driving (`CMMotionActivityManager`) — no polling anywhere.
+4. **No retain cycles.** Consistent `[weak self]` across all closures.
+5. **Animations are GPU-efficient.** All use transform-based operations (`.scaleEffect`, `.rotationEffect`), all respect `accessibilityReduceMotion`.
+
+## 3 Minor Warnings (P3/P4)
+
+| ID | Issue | Fix Effort |
+|----|-------|-----------|
+| PERF-001 | OverlayView countdown timer missing `tolerance` | 1 line |
+| PERF-002 | YinYang breathing animation lacks `onDisappear` lifecycle | Small |
+| PERF-003 | OnboardingView `UIPageControl.appearance()` in struct init | Small |
+
+None of these will cause measurable battery drain. They are best-practice improvements.
+
+## Recommendation
+
+No blocking action required. The three P3/P4 items can be addressed opportunistically when touching those files. The app is production-ready from a battery/performance perspective.
+
+## Artifacts
+
+- Full report: `docs/performance-audit.md`
+- Machine-readable issues: `rusty-issues.json`
+
+---
+
+# 2026-04-28: LLC Registration & Apple Entity Guidance
+
+## Decision: Puzzle Quest LLC Registration State Must Be Corrected Before Publisher Finalization
+
+**Author:** Frank (Legal Advisor)  
+**Date:** 2026-04-28  
+**Requested by:** yashasg  
+**Status:** Action required before App Store publisher finalization
+
+### Context
+
+The user stated that the company name is **Puzzle Quest LLC**. It is currently registered in **Washington**, but the user says that is a mistake and it should be registered in **New Mexico**. The user's home office is in **Washington**.
+
+This is practical risk guidance, not formal legal advice.
+
+### Protective Guidance
+
+1. **Do not finalize Puzzle Quest LLC as the App Store publisher yet.** Apple Developer enrollment, App Store Connect tax/banking, D-U-N-S/entity verification, privacy policy owner fields, Terms governing-law language, and public publisher identity should wait until the entity's legal home and authority to operate are clean.
+
+2. **Fix the entity formation record first.** If Washington registration was accidental, the user should ask a business attorney/CPA whether to dissolve/cancel the Washington LLC and form a New Mexico LLC, convert/domesticate if available and appropriate, or keep Washington and register elsewhere. The right answer depends on filing history, taxes, contracts, bank accounts, EIN use, and timing.
+
+3. **Washington home office likely still matters.** Even if Puzzle Quest LLC becomes a New Mexico LLC, operating from a Washington home office can create Washington nexus/foreign-registration, business-license, registered-agent, tax, and reporting obligations. Do not assume New Mexico formation eliminates Washington compliance.
+
+4. **Prepare but do not finalize legal documents.** It is safe to prepare draft placeholders for:
+   - entity name: Puzzle Quest LLC;
+   - possible principal/home office mailing address;
+   - support email;
+   - draft New Mexico governing-law option;
+   - Apple publisher/tax checklist.
+
+   Do not lock these into `docs/legal/TERMS.md`, `docs/legal/PRIVACY.md`, App Store Connect, or Apple Developer enrollment until counsel/CPA confirms the final structure.
+
+5. **Use interim public wording carefully.** Until fixed, use personal/developer wording internally or mark entity fields as pending. Do not represent that Puzzle Quest LLC is a New Mexico LLC if the public state record still says Washington.
+
+### Professional Help to Seek
+
+- **Business attorney** licensed/experienced in Washington and New Mexico LLC filings: formation correction, dissolution/domestication/foreign registration, registered agent, operating agreement, and publisher identity.
+- **CPA or tax advisor** familiar with WA/NM small software businesses: nexus, state tax/reporting, federal EIN handling, and Apple tax forms.
+- **Optional trademark counsel** before relying on Puzzle Quest as a public brand/publisher name because it is distinctive and may have marketplace conflicts.
+
+### Team Decision
+
+Owner-only legal placeholders must remain untouched by agents until the user confirms the final entity state, publisher name, address, jurisdiction, and tax/legal structure.
+
+---
+
+## Decision: Apple Developer Enrollment — Puzzle Quest LLC Entity Correction Sequencing
+
+**Author:** Virgil (CI/CD Dev)  
+**Date:** 2026-04-28  
+**Status:** Advisory — awaiting user action on legal entity
+
+### Context
+
+User confirmed LLC name is **Puzzle Quest LLC**, currently registered in Washington (by mistake — should be New Mexico). Home office is in Washington.
+
+### Decision: Do NOT Enroll as Organization Until D-U-N-S Reflects Corrected State
+
+**Rationale:** Apple verifies D-U-N-S record against the legal entity at enrollment time. Enrolling with a Washington-registered D-U-N-S and then correcting to New Mexico creates a mismatch in Apple's records that requires contacting Apple Developer support to fix. Correct the legal entity first, then get D-U-N-S, then enroll.
+
+### Key Points
+
+- **Organization vs Individual:** Enroll as **Organization** (not Individual). Puzzle Quest LLC is a legal entity — Individual ties the account to a person, not the company. Migrating Individual → Organization requires Apple support and produces a new Team ID, which invalidates all existing certificates and provisioning profiles.
+- **D-U-N-S:** Must match the final legal entity (New Mexico registration). Do NOT apply for D-U-N-S with the Washington record.
+- **State of registration vs. home office:** State of formation matters for D-U-N-S/legal entity match. The Washington home office address can be the business mailing address — that's fine. The legal registration state must match the D-U-N-S.
+- **Certificates/profiles:** NOT affected by state of registration changes. They bind to Team ID (legal entity name + D-U-N-S). Since the LLC name is NOT changing, any certificates issued after correct enrollment remain valid.
+
+### Order of Operations
+
+1. **Correct LLC registration** — file to change state of formation to New Mexico (or dissolve WA and form NM, depending on legal advice)
+2. **Verify NM registration is active** — get the official certificate/articles of organization
+3. **Request D-U-N-S number** — at https://developer.apple.com/enroll/duns-lookup/ using NM registration details
+4. **Wait for D-U-N-S verification** — Apple's process: up to 14 business days
+5. **Enroll in Apple Developer Program as Organization** — $99/year, use Puzzle Quest LLC
+6. **App Store Connect setup** — bundle ID `com.yashasg.eyeposturereminder`, app record
+7. **CI/CD secrets** — `ASC_API_KEY_ID`, `ASC_API_KEY_ISSUER_ID`, `ASC_API_KEY_P8`
+
+### What Can Proceed Now (No Blocker)
+
+- All local development and builds
+- CI/CD pipeline (GitHub Actions) — fully operational
+- Code signing with automatic signing (development team)
+- TestFlight workflow prep — scripts and workflow YAML ready
+- Bundle ID is confirmed: `com.yashasg.eyeposturereminder`
+
+### What Must Wait
+
+- D-U-N-S number application
+- Apple Developer Organization enrollment
+- App Store Connect app record creation
+- Distribution certificates (App Store, Ad Hoc)
+- TestFlight upload (requires App Store Connect app record)
+

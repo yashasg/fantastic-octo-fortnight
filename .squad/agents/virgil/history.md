@@ -280,3 +280,51 @@
 - **Redact Team IDs from xcodebuild pipeline output using Perl:** The existing `redact_stream` Perl filter handles all secret values (Team ID, profile specifier, ASC key path/ID/issuer). Pass env vars via `REDACT_*` prefix and inline the script with `-pe`. Merge stderr into stdout with `2>&1` before the pipe so redaction covers both streams.
 - **Provisioning failure guidance must be in-band (not docs-only):** When `xcodebuild archive` fails, the script exits via `set -e` before any guidance can print. Wrap the call with `if ! run_xcodebuild ...; then print_hint; exit 1; fi` to fire guidance inline. `if !` suppresses `set -e` for the condition and enters the else branch on failure.
 - **"No profiles for canonical app bundle ID" vs "No Accounts":** The former is a manual-signing failure (profile not installed locally). The latter is an automatic-signing failure (no Xcode account logged in AND no ASC API key). Both are provisioning failures but require different remedies. The early `ensure_manual_distribution_profile` guard catches the manual-signing case before xcodebuild runs; the "No Accounts" error surfaces only when SIGNING_STYLE=automatic.
+
+### 2026-04-28 — Build Signing & Provisioning Enhancements (Wave 17 Parallel)
+
+**Task:** Improve CI/CD build signing, provisioning, and error handling in `scripts/build_signed.sh`.
+
+**Outcome:** ✅ Complete — all signing workflows refined, error guidance improved.
+
+**Work completed:**
+
+1. **Keychain Auto-Detection for APPLE_TEAM_ID**
+   - Implemented `infer_team_id_from_keychain()` in `build_signed.sh`
+   - Uses `security find-identity -p codesigning -v` to detect single Team ID
+   - Pattern: explicit env var always wins; ambiguous Keychain fails with guidance
+   - No sensitive output — "detected from Keychain" only
+
+2. **Automatic Signing vs CODE_SIGN_IDENTITY Conflict Fix**
+   - Pattern: do NOT inject `CODE_SIGN_IDENTITY` when `CODE_SIGN_STYLE=Automatic`
+   - Fixes Xcode exit-65 error (conflicting manual/automatic identity)
+   - Distribution identity now flows through `ExportOptions.plist` only (export phase)
+
+3. **Empty Array Expansion Fix (macOS Bash 3.2 nounset crash)**
+   - Replaced all array expansions with `${var[@]+"${var[@]}"}` guard pattern
+   - Fixes unbound variable crash on empty `AUTH_FLAGS`, `PROVISIONING_FLAGS`, `SIGNING_BUILD_SETTINGS`
+   - Validated: `bash -n scripts/build_signed.sh` ✅, manual archive ✅
+
+4. **Provisioning Failure Guidance Pattern**
+   - Added `print_archive_failure_hint()` for automatic & manual signing failures
+   - Merged stderr into stdout before redaction (`2>&1`)
+   - In-band guidance at point of failure (more discoverable than README)
+
+5. **Early Profile Detection & Guidance**
+   - Added `cmd_doctor` and `cmd_archive` pre-flight checks
+   - Detects empty `~/Library/MobileDevice/Provisioning Profiles/` directory
+   - Emits exact remediation steps (Xcode → Accounts → Download Manual Profiles)
+
+**Decisions filed:**
+- `.squad/decisions/decisions.md` — 6 decisions:
+  - Keychain auto-detection
+  - CODE_SIGN_IDENTITY conflict fix
+  - Empty array nounset crash fix
+  - Provisioning failure guidance
+  - Early profile detection
+  - Signed build parity (build_signed.sh vs build.sh)
+
+**Key patterns:**
+- Keychain queries for convenience, but CI/CD always explicit (no auto-detection reachable in CI)
+- Error guidance inline at failure point, not README-only
+- All signing workflow improvements backward-compatible

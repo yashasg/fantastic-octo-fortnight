@@ -146,3 +146,106 @@ Livingston will implement ScreenTimeTracker unit tests using mock factories + mo
 Testing infrastructure documented and ready. XCUITest blocker (Phase 2) documented in decisions.md.
 
 
+## Learnings
+
+### 2026-04-25 — ARCHITECTURE.md Codebase Audit
+
+Performed a full audit of the production codebase vs ARCHITECTURE.md (which was written early and had drifted significantly). Key findings:
+
+**Structural deltas from early doc:**
+- No `Protocols/` folder exists — all protocols are co-located with their primary implementation file. This is actually a better DX than a separate folder for a project at this scale.
+- Project is SPM (`Package.swift`), not `.xcodeproj`. Build commands in the doc referenced `-project` flags that don't work.
+- `DefaultsLoader` was documented but never existed — the real class is `AppConfig` with a static `AppConfig.load(from:)` factory. The design is cleaner than the doc described (Codable struct + `fallback` static, no separate loader type needed).
+
+**Net-new services not documented at all:**
+- `ScreenTimeTracker` — the entire trigger model changed from periodic `UNNotification` repeating triggers to a continuous screen-on timer. This is a big architectural shift: `ReminderScheduler` is now narrowed to snooze-wake notifications only.
+- `AudioInterruptionManager` — `MediaControlling` protocol + `AVAudioSession.soloAmbient` approach, with the invariant that `resumeExternalAudio()` must be called in every dismiss path.
+- `AppCoordinator` now conforms to `ReminderScheduling` — this is the injection point for `SettingsViewModel`, not the raw `ReminderScheduler`.
+
+**Onboarding:** Fully implemented (4 files, 3-screen PageTabView), `hasSeenOnboarding` gate in `ContentView`, `OnboardingScreenWrapper` animation helper with reduced-motion support.
+
+**Phase 2 features shipped:**
+- Haptics (`hapticsEnabled` in SettingsStore)
+- Snooze (full snooze state machine in SettingsStore + AppCoordinator)
+- Smart Pause (PauseConditionManager + three live detectors, all tested)
+
+**Protocol signature update:** `SettingsPersisting` now requires explicit `defaultValue:` parameters on all read methods — this eliminates the silent-zero/false class of bug that bit us before. The old doc showed the pre-fix signature.
+
+**Lesson:** Architecture docs written at project start become actively misleading within a few sprints. Consider requiring ARCHITECTURE.md to be in the PR diff for any service-layer change.
+
+### 2025-07-25 — Full Architecture Quality Review (READ-ONLY)
+
+Performed a comprehensive architecture quality audit across all 6 dimensions. Summary:
+
+**MVVM compliance (Strong):** Clean 3-layer separation (Views → ViewModels → Services). One issue: `SettingsView` uses a `SettingsViewModelBox` wrapper pattern that leaves `viewModel` nil during first render, requiring `?.` chaining everywhere. Should refactor to inject VM directly.
+
+**Protocol usage (Strong):** Every service has a testable protocol: `NotificationScheduling`, `ReminderScheduling`, `OverlayPresenting`, `MediaControlling`, `ScreenTimeTracking`, `SettingsPersisting`, `PauseConditionProviding`, plus 3 detector protocols. Mocks exist for all. `AppCoordinator.scheduler` is correctly typed as `ReminderScheduling` (protocol).
+
+**Module structure (Good):** Clean folder layout: App/, Models/, Services/, ViewModels/, Views/, Utilities/, Resources/. Protocols co-located with implementations (pragmatic for this scale). No misplaced files found.
+
+**Swift concurrency (Good):** `@MainActor` correctly applied to all UI-touching types (SettingsStore, OverlayManager, AppCoordinator, PauseConditionManager, ScreenTimeTracker). `async/await` used for notification center calls. One concern: `OverlayView` uses `DispatchQueue.main.asyncAfter` for animation callbacks — not a bug but mixes paradigms.
+
+**DI (Good with one issue):** `AppCoordinator` init accepts all dependencies as optional protocol types — excellent. `OverlayManager.shared` singleton still exists (line 63) but is only used as a default; the coordinator injects it via `OverlayPresenting`. `MetricKitSubscriber.shared` is a true singleton — acceptable for a diagnostic service.
+
+**Battery/performance (Excellent):** `ScreenTimeTracker` uses a 1-second Timer with 0.5s tolerance (coalescing-friendly). Grace period mechanism prevents unnecessary resets on brief interruptions. No polling or background processing. Audio session activated only during overlays. Reschedule debounce (300ms) prevents slider thrashing.
+
+
+## Team Sync — 2026-04-25T04:35
+
+**Corrections Validated:**
+- Module graph, protocols, SPM structure, trigger model, AppConfig, onboarding all corrected
+- Basher's DI design (ScreenTimeTracking, PauseConditionProviding injection) aligns with updated architecture
+- Livingston's coverage analysis confirms Services layer strength (46%)
+
+**Next:** ARCHITECTURE.md now authoritative for Phase 2 completion and Phase 3 planning
+
+
+## Archive
+
+### 2025-07-25 — Initial Architecture Scaffolding
+
+Early architecture foundational work: Models, Services, ViewModels, DesignSystem scaffolding with all protocol, service skeleton definitions. Pre-Phase 1 architecture decisions. Preserved for reference; superseded by Phase 1-2 implementations and updated ARCHITECTURE.md audit (2026-04-25).
+
+### 2026-04-26 — Quality Sweep: Architecture Review (Grade A)
+
+**Quality sweep findings from 8-agent parallel audit:**
+
+1. **OverlayManager singleton is dead code** — `static let shared` duplicates DI protocol. Coordinator is the only correct owner. Refactor post-Phase-1.
+
+2. **SettingsView ViewModel box pattern needs refactoring** — `@StateObject` wrapping optional means `viewModel` is `nil` during first render, forcing optional chaining. Should construct in init or pass as parameter.
+
+3. **Protocol extraction per ARCHITECTURE.md** — `SettingsPersisting`, `NotificationScheduling`, `MediaControlling` scattered across services. Recommend `Protocols/` directory for future discoverability (not urgent for Phase 1).
+
+4. **Timer.publish more idiomatic** — `OverlayView` uses `Timer(timeInterval:repeats:)` + `RunLoop.main`. Consider `Timer.publish(...).onReceive` for iOS 16+ (suggestion, not blocking).
+
+5. **Cross-cutting impact:** Linus audit identified SettingsView body decomposition as priority W-1. Coordinate with Linus on extraction strategy (Snooze section ~90 lines, Smart Pause section ~80 lines).
+
+6. **Documentation stale:** ARCHITECTURE.md build instructions ("swift build / swift test") contradict README (xcodebuild required). Update Section 3 pre-submission.
+
+**Next owner action:** Post-Phase-1, ~~remove OverlayManager singleton~~ ✅ Done (Issue #114) and refactor SettingsView ViewModel pattern.
+
+### 2025-07-25 — Issue #114: Removed OverlayManager.shared singleton
+
+**What I did:**
+- Deleted `static let shared = OverlayManager()` from `OverlayManager.swift` (was line 63).
+- Changed `AppCoordinator.init` default from `OverlayManager.shared` to `OverlayManager()` — each coordinator now owns a fresh instance, proper DI.
+- Rewrote `OverlayManagerTests` to use `makeManager()` factory instead of `.shared`. Removed 2 singleton-identity tests (`test_shared_isNotNil`, `test_shared_returnsSameInstance`) that no longer apply. Eliminated `tearDown` that cleaned shared state.
+- Updated doc comments in `AppCoordinator.swift` and `AppCoordinatorTests.swift`.
+- All 38 OverlayManager + AppCoordinator tests pass. Build clean, zero warnings on changed files.
+
+### 2026-04-26 — Issue #110: UI Test Architecture Proposal
+
+**What I did:**
+- Analyzed all 31 XCUITest methods across 4 files (`HomeScreenTests`, `OnboardingFlowTests`, `SettingsFlowTests`, `OverlayTests`) — all use `XCUIApplication` launch/query patterns incompatible with SPM test targets.
+- Evaluated 5 options: minimal xcodeproj, full xcodeproj, ViewInspector, Xcode-generated project, Swift Testing macros.
+- **Recommended Option 1: Minimal .xcodeproj containing only the UITest bundle target.** App and unit tests stay in Package.swift. Zero changes to existing test files.
+- Ruled out ViewInspector — cannot test app launch, multi-view flows, overlay window presentation, or accessibility in rendered context. Would require full rewrite of all 31 tests.
+- Ruled out Swift Testing — no XCUITest equivalent; irrelevant to the problem.
+- Ruled out `swift package generate-xcodeproj` — deprecated/removed; Xcode's transient workspace doesn't support adding targets.
+- Proposed CI integration: separate `ui-test` job in ci.yml (UI tests are slower and flakier than unit tests).
+- Proposed `uitest` subcommand for `scripts/build.sh`.
+- Estimated effort: 3-4 hours total across team.
+
+**Documentation:** `.squad/decisions/inbox/rusty-ui-test-architecture.md`
+
+
