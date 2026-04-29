@@ -4190,3 +4190,444 @@ Navigate to: [https://developer.apple.com/contact/request/family-controls-distri
 **What:** Local reminder alerts are noise and not the core product. Prioritize proving Apple Screen Time / interrupt mode; if kshana only sets ordinary reminders or Screen Time-like settings without meaningful interruption, the app is not worth pursuing.
 **Why:** User request — captured for team memory
 
+
+---
+
+## Phase 3: True Interrupt Mode Pivot — Screen Time APIs Integration
+
+### Decision 3.1: Product Pivot to True Interrupt Mode via Screen Time APIs (Danny)
+**Date:** 2026-04-29  
+**Status:** 🔄 APPROVED (implementing)  
+**Related Issues:** #201-#211 (Phase 3 backlog)
+
+#### Problem
+Current Phase 1-2 model (notification + dismissible overlay) cannot enforce breaks — users can ignore reminders indefinitely. iOS prevents app-initiated interruptions users cannot bypass. Notification + overlay model is "best effort" only.
+
+#### Solution
+Pivot kshana's core value from "gentle reminders" to "True Interrupt Mode via Apple Screen Time APIs." When a break reminder fires, kshana shields user's selected apps (e.g., Instagram, Twitter, games) using FamilyControls. User cannot bypass shield immediately; must request access (logged). Privacy-first: all data is local device-only; no cloud storage or third-party sharing. Notification reminders remain fallback if shield unavailable.
+
+#### Architecture Changes
+| Aspect | Phase 1–2 | Phase 3+ |
+|---|---|---|
+| **Primary Interruption** | Notification + dismissible overlay | Non-dismissible shield (Screen Time APIs) |
+| **Authorization** | UNUserNotificationCenter | FamilyControls (new permission) |
+| **Extension Targets** | None | ShieldConfiguration + ShieldAction (2 new targets) |
+| **Data Model** | ReminderSettings only | + ShieldedAppCategory (user-selected apps) |
+| **App Group** | None | group.com.yashasg.eyeposturereminder (main app ↔ extensions) |
+| **Fallback** | N/A | Notifications sent if shield fails |
+
+#### Critical Dependencies
+1. **FamilyControls Entitlement Approval** — Case ID 102881605113 (P0 blocker #201)
+2. **Extension Target Setup** (#203) — ShieldConfiguration + ShieldAction with app group entitlements
+3. **Authorization + App Picker** (#204) — User opt-in to FamilyControls + app selection
+
+#### Timeline
+- Blocked on entitlement approval (Apple SLA: 2–5 days)
+- Spike work (M3.2) required before full build-out (3 weeks estimated for full Phase 3)
+- Phase 3 is now critical path to MVP (not optional Polish/Advanced)
+
+#### Acceptance Criteria
+- ✅ FamilyControls entitlement approved (or clear rejection reason + remediation path)
+- ✅ All extension targets build and sign in CI/CD
+- ✅ App group communication verified (main app ↔ extensions)
+- ✅ User can authorize FamilyControls + select apps to shield
+- ✅ Shields apply correctly during breaks (non-dismissible)
+- ✅ Notifications sent as fallback if shield unavailable
+- ✅ Privacy policy + legal docs updated
+- ✅ TestFlight build includes extensions; ready for beta distribution
+
+**Approved by:** Yashasg (Owner)
+
+---
+
+### Decision 3.2: True Interrupt Mode Privacy & Legal Disclosure (Frank)
+**Date:** 2026-04-29  
+**Status:** Implemented  
+**Priority:** HIGH — affects App Store submission readiness
+
+#### Scope
+1. **Truthful Data Handling Disclosure** — Screen Time integration reads only aggregate, user-authorized data; never reads message/browser/call content
+2. **Approval Uncertainty** — Clear statement that feature is pending Apple approval and not yet available to users
+3. **Wellness Disclaimer Consistency** — "Not medical advice" language maintained across all formats
+4. **Privacy Label Preparation** — Updated guidance for pre- and post-approval privacy labeling
+
+#### Changes Made
+**docs/legal/PRIVACY.md:**
+- Updated Overview section to introduce optional Screen Time monitoring
+- Section 1: Added subsection on device activity & screen time data (aggregate-only, in-memory, no persistence)
+- Section 2: Added explicit statement about NOT reading message content, browser history, etc.
+
+**docs/legal/DISCLAIMER.md:**
+- Added approval status note with case ID 102881605113
+- Added comprehensive Screen Time feature section (pending approval, pending release)
+
+**docs/PRIVACY_NUTRITION_LABELS.md:**
+- Added new row to "Data the App Accesses but Does NOT Collect" table
+- New section: "If Screen Time / Device Activity Features Are Added (Pending Approval)" with Device Status privacy label template
+
+#### Owner-Only Fields Preserved
+⚠️ **Untouched per Frank's charter:**
+- `[PUBLISHER NAME]` in PRIVACY.md — owner-only
+- `[CONTACT EMAIL]` in PRIVACY.md — owner-only
+- `[JURISDICTION]` in TERMS.md Section 10 — owner-only
+
+#### GitHub Issues Created
+- **#199:** Legal & Privacy Docs Updated: True Interrupt Mode (closed with redirect to #209)
+- **#200:** App Store Listing: Coordinate Legal Disclaimer Updates for Screen Time Feature (kept open)
+
+---
+
+### Decision 3.3: True Interrupt Mode UX & Onboarding (Reuben)
+**Date:** 2026-04-28  
+**Status:** Implemented — UX docs updated  
+**Scope:** Onboarding, messaging, permissions flow, user-facing terminology
+
+#### Key UX Decisions
+
+**1. Four-Screen Onboarding (was 3 screens)**
+- Added Screen 2 — "App Break Explanation" — a calm, pre-permission education screen before the system prompt
+- Rationale: iOS Screen Time / Family Controls prompt is intimidating; pre-screen improves permission grant rates and user trust
+- Flow: Welcome → App Break Explanation (NEW) → Screen Time Permission → Setup Preview
+
+**2. Calm Pre-Permission Language**
+- Renamed to "Screen Time Permission"; updated copy to avoid scary framing
+- Focus on user benefit, not system capability
+- Reassurance: "Your privacy matters. This does not give kshana access to your messages, photos, or any other content."
+
+**3. Avoided "Family Controls" User-Facing**
+- Rule: Never use "Family Controls" in app UI or user-facing copy
+- Use instead: "Screen Time access", "app break access", "True Interrupt Mode", "break screen"
+- Why: "Family Controls" has parental-control connotations; users worry app will restrict their use
+- Exception: Developer/legal context (IMPLEMENTATION_PLAN.md, etc.) may use "Family Controls" technically
+
+**4. Acknowledged Technical Reality: Local Alerts as Fallback**
+- Current reality: Local reminder alerts (fallback)
+- Future promise: Screen Time Shield-based interruption (when entitlement approved)
+- Updated materials: README.md, ONBOARDING_SPEC.md, TESTFLIGHT_METADATA.md
+
+**5. Swipe Lock on Screen 3 (Permission Screen)**
+- Implemented `highPriorityGesture` to block accidental forward-swipe
+- Encourages conscious interaction ("I choose to skip" vs. "I accidentally swiped")
+
+#### Terminology Lock-In
+**User-facing:**
+- ✅ "App break", "break screen", "break reminders"
+- ✅ "Screen Time access", "app break access"
+- ✅ "True Interrupt Mode" (product marketing language)
+- ❌ No "Family Controls" in UI
+- ❌ No "Notifications" unless discussing iOS system
+
+#### Files Updated
+1. **UX_FLOWS.md** — Section 1.3 autonomy principle, Section 2.1 4-screen onboarding
+2. **docs/ONBOARDING_SPEC.md** — Complete rewrite: 4 screens, pre-permission education, swipe lock
+3. **README.md** — Feature list repositioned, True Interrupt Mode highlighted
+4. **docs/APP_STORE_LISTING.md** — Subtitle and description for user control / app selection
+5. **docs/TESTFLIGHT_METADATA.md** — Beta description updated, testing scope expanded
+
+---
+
+### Decision 3.4: True Interrupt Mode Architecture — FamilyControls & DeviceActivityMonitor (Rusty)
+**Date:** 2026-04-28  
+**Status:** Decision — Architecture Reference  
+**Phase:** 3+
+
+#### Four-Target Extension Architecture
+
+| Target | Type | Bundle ID | Role |
+|---|---|---|---|
+| Main App | App | `com.yashasg.eyeposturereminder` | Core app: settings, FamilyControls auth request, fallback overlay, local notification fallback |
+| DeviceActivityMonitor | Extension | `com.yashasg.eyeposturereminder.monitor` | System-triggered when thresholds reach; applies shields via ManagedSettingsStore |
+| ShieldConfiguration | Extension | `com.yashasg.eyeposturereminder.shieldconfiguration` | Returns shield UI data (title, subtitle, icon, buttons); system renders |
+| ShieldAction | Extension | `com.yashasg.eyeposturereminder.shieldaction` | Handles button taps; writes to App Groups, cannot directly open main app |
+
+**All four targets must:**
+- Live in the same Xcode project (not SPM — `.xcodeproj` required)
+- Share App Groups entitlement (`com.apple.security.application-groups` = `group.com.yashasg.eyeposturereminder`)
+- Carry FamilyControls entitlement (`com.apple.developer.family-controls` = `individual` scope)
+
+#### FamilyControls Authorization Flow
+User sees native iOS prompt once in main app. If approved, FamilyControls remains enabled for session. If denied, shield mode unavailable until user manually re-enables in Settings → Screen Time → [App Name].
+
+```swift
+try await AuthorizationCenter.shared.requestAuthorization(for: .individual)
+```
+
+#### Extension Communication: App Groups Only
+Extensions and main app cannot share memory directly. **Communication channel:** `UserDefaults(suiteName: "group.com.yashasg.eyeposturereminder")`
+
+**State schema:**
+```
+shieldedApps: [String]              Apps to block (set by main app)
+shieldActive: Bool                  Set by extension during threshold
+shieldStartTime: Double             Timestamp when shield applied
+breakStartedAt: Double?             Button tap time from ShieldAction
+preferredShieldInterrupt: String    "shield" or "overlay" (user preference)
+fallbackToNotification: Bool        Enable Phase 2 fallback (default true)
+```
+
+#### ShieldConfiguration: Data-Only, No Animations
+**Critical constraint:** ShieldConfiguration is a **data structure**, not a SwiftUI canvas. Apple renders the shield UI.
+
+**What you CAN customize:**
+| Property | iOS Support | Type |
+|---|---|---|
+| `title` | 16+ | Custom string, up to ~50 chars |
+| `subtitle` | 16+ | Custom string, up to ~100 chars |
+| `icon` | 16+ | SF Symbol (system or custom) |
+| `primaryButton` | 16+ | Custom label + verdict (`.close` or `.defer`) |
+| `secondaryButton` | 16+ | Optional second button |
+| `backgroundColor` | 17+ | Solid color |
+
+**What you CANNOT do:**
+- Animated SwiftUI views
+- Custom layouts or positioning
+- Font face customization
+- Button styling (Apple controls colors, shapes)
+- Arbitrary images (SF Symbols only)
+- Any UIKit or SwiftUI composition
+
+**YinYangEyeView in Shield: Impossible.** Static logo via custom SF Symbol is the only visual customization.
+
+#### Local Notification Fallback (Phase 2-3 Bridge)
+Both modes active simultaneously during transition:
+1. Shield appears (iOS 16+, FamilyControls authorized, device allows)
+2. If user defers (.defer verdict), main app detects via App Group state
+3. Main app shows Phase 2 overlay + local notification as fallback
+4. User can snooze via overlay or notification action
+5. Next threshold or user interaction triggers shield again
+
+**Graceful degradation:**
+- User disables FamilyControls → Phase 2 overlay activates
+- iOS 15 device → Phase 2 overlay only (Shield APIs not available)
+- Device under MDM with Shield disabled → Phase 2 overlay only
+
+#### Distribution Gating: FamilyControls Entitlement
+`com.apple.developer.family-controls` is **restricted** and requires manual Apple approval. Blocks Phase 3 external distribution.
+
+| Phase | Status | Distribution | Entitlement |
+|---|---|---|---|
+| **Phase 1-2** | Live | TestFlight / App Store | Not required |
+| **Phase 3 (dev)** | Pending approval | Local dev + internal device testing only | Entitlement not yet granted |
+| **Phase 3+ (post-approval)** | Ready | TestFlight / App Store | Approved and active |
+
+**Timeline:**
+- Entitlement request filed: 2026-04-29 (case ID 102881605113)
+- Typical SLA: 3–10 business days (no guarantee)
+- Phase 3 code CAN be written and tested locally while approval in progress
+- **External distribution BLOCKED** until approved
+
+#### Phase 3 Spike Scope (~1 day)
+After FamilyControls entitlement approval:
+1. Add three extension targets to Xcode project
+2. Implement `DeviceActivityMonitor` subclass — apply shield to test app on 1-min schedule
+3. Implement `ShieldConfigurationDataSource` — return title/subtitle/icon/buttons
+4. Implement `ShieldActionDelegate` — handle button taps, write to App Group
+5. Test on physical device (iOS 16+)
+6. Verify: shield appears, custom text visible, buttons fire correct verdicts, main app reads App Group flag
+
+**Risk:** Zero — extension targets are additive. Main app binary unchanged.
+
+#### Testing Implications
+**Unit Testing:**
+- `MockManagedSettingsStore` — tracks shield application calls
+- `MockAppGroupUserDefaults` — isolated shared state per test
+- `MockAuthorizationCenter` — mocks FamilyControls auth without OS prompt
+- 80%+ coverage target for non-system-API logic
+
+**Device Testing (Manual):**
+- 10 manual test cases (EXT-01 through EXT-10)
+- Physical device required (simulator does not support Screen Time APIs)
+- Test matrix: iOS 16.0, iOS 17.x, multiple device sizes
+- Regression on each entitlement approval + every new OS version
+
+#### Key Learnings
+1. **ShieldConfiguration is a data struct, not a view.** Blocks ambitious visual customization (animated YinYang, complex layouts). Static logo via SF Symbol is practical limit.
+2. **Static logo via custom SF Symbol recommended.** Design yin-yang geometry as SVG, import to Xcode as Symbol Set.
+3. **Extensions cannot open the main app directly.** Indirect path (write App Group flag + schedule notification with deep link) is only user-initiated way.
+4. **App Groups are the only extension-main app bridge.** No shared memory, no direct calls. All state serialized to `UserDefaults(suiteName:)`.
+5. **Simulator does not support Screen Time APIs.** Physical device mandatory for any Screen Time / FamilyControls testing.
+6. **Both Phase 2 overlay and Phase 3 shield coexist during transition.** Enables graceful degradation if authorization denied or OS version < 16.
+7. **Entitlement approval is only external blocker.** All Phase 3 code can be written, compiled, verified locally immediately.
+
+#### Files Updated
+- `ARCHITECTURE.md` § 5.5 (full technical reference)
+- `docs/TEST_STRATEGY.md` § 3.5, § 4.7 (extension mocks and device tests)
+
+---
+
+### Decision 3.5: Screen Time Shield Implementation — Build & Signing Implications (Virgil)
+**Filed:** 2026-04-29 (Virgil, CI/CD Dev)  
+**Status:** Initial assessment — Phase 3 blockers identified  
+**Priority:** P0 — External dependency (FamilyControls entitlement approval) gates feature
+
+#### Executive Summary
+Implementing Screen Time Shield requires significant build system and code-signing changes. Primary blocker is **FamilyControls entitlement approval**, but infrastructure changes can proceed in parallel:
+
+1. **Current state:** Single app target (SPM executable), single provisioning profile, manual signing for TestFlight
+2. **Phase 3 target state:** 4 targets (main app + 3 extensions), 4 provisioning profiles, 4 entitlements files, explicit provisioning mapping in CI
+3. **Timeline:** Build system work can begin now. External distribution (TestFlight + App Store) blocked until Apple approves entitlement
+
+#### Extension Target Architecture
+Screen Time Shield requires three extension targets in addition to the main app:
+
+| Target | Bundle ID | Purpose | Signing |
+|--------|-----------|---------|---------|
+| Main app | `com.yashasg.eyeposturereminder` | Existing; enhanced for Shield UI setup + state management | Yes (manual) |
+| **DeviceActivityMonitor** | `com.yashasg.eyeposturereminder.monitor` | Detects when user reaches configured threshold; triggers Shield UI | Yes (manual) |
+| **ShieldConfiguration** | `com.yashasg.eyeposturereminder.shieldconfiguration` | UI shown when Shield first appears; user picks options | Yes (manual) |
+| **ShieldAction** | `com.yashasg.eyeposturereminder.shieldaction` | Action handler when user taps Shield (e.g., "Extend Limit") | Yes (manual) |
+
+#### Why XcodeGen + project.yml
+**Current:** SPM executable target works for single-app builds. **Problem:** SPM does NOT support extension targets.
+
+**Solution:** Create new `.xcodeproj` (via XcodeGen) that:
+- Declares all 4 targets (main app + 3 extensions)
+- References SPM executable as package dependency for main app target
+- Applies entitlements, capabilities, signing configuration uniformly
+
+**Impact on CI:**
+- `scripts/build.sh` (dev/test) continues using SPM → no workflow changes for unit/UI tests
+- `scripts/build_signed.sh` (archive/export/upload) must generate + use new root-level `.xcodeproj`
+- Local development can use `.xcodeproj` directly for faster extension iteration
+
+#### Provisioning Profile & Signing Strategy
+
+**4 Profiles Required:**
+
+| App ID | Profile Specifier | Environment Variable | Used By |
+|--------|-------------------|----------------------|---------|
+| Main app | E.g., "kshana Distribution" | `MAIN_APP_PROFILE` | Main target |
+| Monitor ext. | E.g., "kshana Monitor Distribution" | `MONITOR_EXT_PROFILE` | DeviceActivityMonitor target |
+| Configuration ext. | E.g., "kshana Configuration Distribution" | `CONFIG_EXT_PROFILE` | ShieldConfiguration target |
+| Action ext. | E.g., "kshana Action Distribution" | `ACTION_EXT_PROFILE` | ShieldAction target |
+
+**ExportOptions.plist Changes:**
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>method</key><string>app-store</string>
+  <key>uploadBitcode</key><false/>
+  <key>uploadSymbols</key><true/>
+  <key>provisioningProfiles</key>
+  <dict>
+    <key>com.yashasg.eyeposturereminder</key>
+    <string>kshana Distribution</string>
+    <key>com.yashasg.eyeposturereminder.monitor</key>
+    <string>kshana Monitor Distribution</string>
+    <key>com.yashasg.eyeposturereminder.shieldconfiguration</key>
+    <string>kshana Configuration Distribution</string>
+    <key>com.yashasg.eyeposturereminder.shieldaction</key>
+    <string>kshana Action Distribution</string>
+  </dict>
+</dict></plist>
+```
+
+#### Entitlements & Capabilities
+
+**Required Entitlements (All 4 Targets):**
+
+1. **FamilyControls** (Approval-gated)
+```xml
+<key>com.apple.developer.family-controls</key>
+<array><string>individual</string></array>
+```
+- Restricted entitlement: Manual approval required
+- Scope: `individual` (user controls own usage)
+- Approval target: Team ID (one approval covers all targets)
+
+2. **App Groups** (Self-service)
+```xml
+<key>com.apple.security.application-groups</key>
+<array><string>group.com.yashasg.eyeposturereminder</string></array>
+```
+- Normal capability (no special approval)
+- Enable on each of 4 App IDs in Developer Portal
+
+3. **Focus Status** (Existing)
+```xml
+<key>com.apple.developer.focus-status</key>
+<true/>
+```
+- Already in EyePostureReminder.entitlements (Phase 2)
+- Include on all 4 targets
+
+#### CI/CD Changes
+
+**build_signed.sh Enhancements:**
+
+1. **XcodeGen project generation** — Check for root `project.yml`; generate `.xcodeproj` with all 4 targets + proper settings; fall back gracefully if `project.yml` doesn't exist
+2. **Multi-profile provisioning** — Read 4 profile specifiers from environment; validate all 4 profiles exist locally; inject into ExportOptions.plist
+3. **Entitlements validation** — Check that entitlements include FamilyControls + App Groups; warn if FamilyControls present but approval not visible in provisioning profiles
+4. **Archive injection** — Verify all 4 extensions bundled in `.app/Frameworks`
+
+**GitHub Actions Workflow Changes:**
+
+`testflight.yml`:
+1. Update prerequisites to mention 4 App IDs + 4 profiles
+2. Add secrets: `MONITOR_EXT_PROVISION_PROFILE_BASE64`, `CONFIG_EXT_PROVISION_PROFILE_BASE64`, `ACTION_EXT_PROVISION_PROFILE_BASE64`
+3. Decode and install all 4 profiles before archive step
+4. Pass profile specifiers as environment variables to `build_signed.sh`
+
+#### Pre-Approval Development (Local + Internal TestFlight)
+
+**Development Profile Path:**
+
+1. Generate development provisioning profiles for all 4 App IDs
+2. Use automatic signing locally: `SIGNING_STYLE=automatic` + development profiles
+3. Run `./scripts/build_signed.sh export` locally — generates unsigned IPA
+4. Install unsigned IPA on personal device via Xcode or `ios-deploy`
+5. All FamilyControls APIs work immediately (no runtime rejection)
+
+**Internal TestFlight (Same Apple Account):**
+
+1. Keep using distribution profiles + FamilyControls entitlements in code
+2. Build signed archive with distribution profiles
+3. Upload to App Store Connect → TestFlight → Internal only
+4. Apple's upload validator checks provisioning profile capabilities, NOT entitlements pre-approval
+5. Internal testers can install + run; Shield UI won't function (FamilyControls APIs rejected at runtime), but app boots and reminder system works
+
+**External TestFlight / App Store (Approval Required):**
+
+1. After Apple approves FamilyControls entitlement:
+2. Distribution profiles automatically updated with FamilyControls capability
+3. No code changes needed; re-run `build_signed.sh upload`
+4. ASC validator now permits FamilyControls entitlements
+5. External testers receive Shield functionality
+
+#### Risk Mitigation
+
+| Risk | Likelihood | Impact | Mitigation |
+|------|-----------|--------|-----------|
+| **FamilyControls approval denied** | Low | Entire Phase 3 blocked | Request early; provide detailed app description. Approval SLA = unpredictable. |
+| **Provisioning profile mismatch at export** | High | Export fails; tedious re-download cycle | Script validation: auto-detect + explicit error on missing profiles. |
+| **Entitlements signature mismatch** | Medium | Archive succeeds; ASC upload fails with cryptic error | Validate entitlements before archive; include FamilyControls check in `build_signed.sh doctor`. |
+| **Extension not bundled in .app** | Medium | App boots; Shield features silently absent | Add post-build script to verify `.app/Frameworks` contains extension binaries. |
+| **CI secrets management (4 profiles = 4 secrets)** | Low | Secrets leak / false negatives in deploy | Rotate profiles regularly; use GitHub OIDC for future secrets. |
+
+#### Action Items (For Yashasg / Reuben)
+
+**Immediate (Today):**
+1. File FamilyControls entitlement approval request: `developer.apple.com/contact/request/family-controls-distribution`
+   - Use `individual` scope (self-care use case, not parental controls)
+   - Explain: "Personal digital wellbeing — users set own reminder thresholds and Shield preferences"
+2. Create 4 App IDs in Developer Portal:
+   - `com.yashasg.eyeposturereminder` (main)
+   - `com.yashasg.eyeposturereminder.monitor` (DeviceActivityMonitor)
+   - `com.yashasg.eyeposturereminder.shieldconfiguration` (ShieldConfiguration)
+   - `com.yashasg.eyeposturereminder.shieldaction` (ShieldAction)
+3. Enable App Groups capability on all 4 App IDs (self-service in portal)
+
+**While Waiting for Approval (Parallel Work — Virgil + Reuben):**
+1. Create root-level `project.yml` (XcodeGen) with all 4 targets
+2. Create `.entitlements` files for 3 new extensions
+3. Update `build_signed.sh` to detect + use new `.xcodeproj`
+4. Document multi-profile flow in README
+
+**After Approval:**
+1. Regenerate 4 distribution profiles (now with FamilyControls capability)
+2. Add 3 new profile secrets to GitHub Actions
+3. Run full CI cycle on dev branch
+4. Merge to main + tag for TestFlight release
+

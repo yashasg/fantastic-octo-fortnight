@@ -2,10 +2,17 @@
 
 ## Core Context
 
-- **Project:** Eye & Posture Reminder — lightweight iOS app with background timers and overlay reminders
-- **Stack:** Swift, SwiftUI (iOS 16+), MVVM, UserNotifications, UIKit overlay, UserDefaults
-- **Owner:** Yashas
+- **Project:** kshana (formerly Eye & Posture Reminder) — lightweight iOS app with True Interrupt Mode via Screen Time APIs
+- **Stack:** Swift, SwiftUI (iOS 16+), MVVM, UserNotifications, UIKit overlay, UserDefaults, FamilyControls (Phase 3+)
+- **Owner:** Yashasg
 - **Joined:** 2026-04-24
+
+## 2026-04-29 — Screen Time Shield Build/Signing Pivot
+
+**Task:** Document build/signing implications for Screen Time Shield implementation.  
+**Status:** ✅ Complete — orchestration log filed
+
+**Key outcome:** Phase 3 requires 4 targets (main app + 3 extensions), 4 provisioning profiles, 4 entitlements files, and a root-level `project.yml` (XcodeGen). FamilyControls entitlement approval (case ID 102881605113) is the sole external blocker; all infrastructure work can proceed in parallel. Decision merged into `.squad/decisions.md`.
 
 ## Wave 8 — CI/CD Full Audit Fix #66 (2026-04-25)
 
@@ -449,3 +456,65 @@ All 4 targets need `family-controls` entitlement + App Groups:
 - Inbox file deleted after merge
 
 **Team impact:** Virgil's entitlement research is now canonical reference for all team members. Yashasg can proceed with approval request form using guidance in decisions.md. Phase 3 local dev and spike work can begin immediately; external distribution blocked until Apple approval received.
+
+---
+
+## Wave 20 — Screen Time Shield Build/Signing Implications (2026-04-29)
+
+**Task:** Document build and code-signing implications of Screen Time Shield pivot. Inspect current workflows/scripts, update docs where appropriate, capture Phase 3 infrastructure requirements.
+
+**Outcome:** ✅ Comprehensive decision note filed in `.squad/decisions/inbox/virgil-screen-time-shield-build-implications.md`
+
+### Key Findings
+
+**Phase 3 Changes (Parallel to FamilyControls Approval Wait):**
+
+1. **4 targets instead of 1:** Main app + 3 extensions (DeviceActivityMonitor, ShieldConfiguration, ShieldAction)
+   - SPM cannot host extension targets → need new XcodeGen `.xcodeproj` at repo root
+   - All 4 targets signed with same team, same FamilyControls entitlement
+
+2. **4 provisioning profiles instead of 1:** One distribution profile per App ID + target
+   - Each must include App Groups + FamilyControls capabilities (after approval)
+   - `ExportOptions.plist` needs explicit 4-entry `provisioningProfiles` dict mapping bundle IDs to specifiers
+   - Without this, `xcodebuild export` fails for extensions
+
+3. **4 entitlements files instead of 1:** One `.entitlements` per target
+   - All include: FamilyControls (`individual` scope) + App Groups + Focus Status
+   - Use same structure; different files for clarity and per-target capability alignment
+
+4. **CI/CD Updates Needed:**
+   - `build_signed.sh`: Detect new `.xcodeproj`, validate 4 profiles present, inject into ExportOptions before export
+   - `testflight.yml`: Add 3 new profile base64 secrets (monitor, config, action extensions)
+   - Backward compat: Auto-detect Phase 2 vs Phase 3 based on `.xcodeproj` existence
+
+**Pre-Approval Development Path:**
+- ✅ Local dev with automatic signing + dev profiles → FamilyControls APIs work immediately
+- ✅ Internal TestFlight (same account) → can upload and test even before approval
+- ❌ External TestFlight / App Store → blocked until distribution profiles updated by Apple post-approval
+
+### Current Dirty Changes Preserved
+
+- `build_signed.sh`: Added SIGNED_ENTITLEMENTS_PATH support (Phase 2 hygiene for Focus Status flexibility)
+- `testflight.yml`: Updated prerequisites comments, added SIGNING_STYLE=manual
+- `UITests/project.yml`: iPhone-only (portrait) per Yashasg's device strategy
+- `README.md`: Added Focus Status distribution entitlements caveat
+
+**Note:** These changes do NOT implement Phase 3 yet — they're Phase 2 improvements. Phase 3 extension logic will be new, not modifying existing dirty changes.
+
+### Decision Filed
+
+`.squad/decisions/inbox/virgil-screen-time-shield-build-implications.md` — Complete reference for Phase 3:
+- Extension target architecture
+- 4-profile provisioning strategy
+- Entitlements design (all 4 targets)
+- build_signed.sh + testflight.yml enhancements needed
+- Pre-approval dev + internal TestFlight flow
+- Risk table + mitigation
+- Action items for Yashasg (approval request, App IDs, App Groups)
+- Reference to canonical FamilyControls decision
+
+### Learning
+
+- **XcodeGen bridge:** SPM executables work for single-app builds, but extension targets are Xcode-only. XcodeGen lets us declaratively define a multi-target project that references the SPM package for the main app — clean separation of concerns.
+- **Provisioning profile explosion:** 4 targets = 4 App IDs = 4 provisioning profiles. Not a blocker, but CI secret management scales (4 base64 secrets instead of 1). Worth automating profile discovery post-approval.
+- **Entitlements as per-target configuration:** Each target can have different capabilities (focus status might only apply to main app, not extensions in some designs). Separate `.entitlements` files force clarity — no surprises with inherited-vs-explicit capabilities.

@@ -1,9 +1,26 @@
-# Project Context
+# Reuben — History
+
+## Project Context
 
 - **Owner:** Yashasg
-- **Project:** Eye & Posture Reminder — a lightweight iOS app with background timers and full-screen overlay reminders for eye breaks (20-20-20 rule) and posture checks
-- **Stack:** Swift, SwiftUI (iOS 16+), MVVM, UserNotifications, UIKit overlay, UserDefaults
+- **Project:** kshana (formerly Eye & Posture Reminder) — a lightweight iOS app with True Interrupt Mode via Screen Time APIs
+- **Stack:** Swift, SwiftUI (iOS 16+), MVVM, UserNotifications, UIKit overlay, UserDefaults, FamilyControls (Phase 3+)
 - **Created:** 2026-04-24
+
+## 2026-04-29 — True Interrupt Mode UX & Onboarding Pivot
+
+**Task:** Update onboarding/UX docs and user-facing copy for True Interrupt Mode.  
+**Status:** ✅ Complete — orchestration log filed
+
+**Key changes:**
+- **4-screen onboarding** (was 3): Added Screen 2 "App Break Explanation" pre-permission education
+- **Calm permission language:** "Screen Time Permission" framing (user benefit-focused, not system-capability-focused)
+- **Avoided "Family Controls" in UI:** Use "Screen Time access", "app break access" instead (dev docs OK with "Family Controls")
+- **Fallback messaging:** Local alerts clearly positioned as bridge until Shield available
+- **Swipe lock on Screen 3:** Prevents accidental skip of consequential permission request
+- **Files updated:** UX_FLOWS.md, ONBOARDING_SPEC.md, README.md, APP_STORE_LISTING.md, TESTFLIGHT_METADATA.md
+
+**Key insight:** Pre-permission education screen improves permission grant rates and user trust. Calm tone + transparency on fallback behavior = user agency. Decision merged into `.squad/decisions.md`.
 
 ## Learnings
 
@@ -120,3 +137,47 @@ Tess completed comprehensive wellness design research proposing "Restful Grove" 
 **Open questions for team:** Font adoption timing, color unification (eye vs. posture), Phase 2 dashboard scope, overlay copy additions.
 
 **Status:** Awaiting team design review and feedback.
+
+### 2026-04-28: True Interrupt Mode Pivot — UX Docs & Onboarding Updated
+
+**Scope:** Updated all user-facing product documentation to reflect the pivot from "notification reminder app" to "True Interrupt Mode with Screen Time Shield" (future) + local alert fallback (current).
+
+**Deliverables created:**
+- Updated UX_FLOWS.md (Section 1.3, 2.1, decision notes)
+- Updated docs/ONBOARDING_SPEC.md (4-screen flow with pre-permission education)
+- Updated README.md (feature list, descriptions, onboarding summary)
+- Updated docs/APP_STORE_LISTING.md (subtitle, description, keywords)
+- Updated docs/TESTFLIGHT_METADATA.md (beta description, test cases)
+- Created `.squad/decisions/inbox/reuben-true-interrupt-ux.md` (team decision document)
+
+**Key UX decisions locked in:**
+
+1. **4-screen onboarding (was 3).** Added Screen 2 — "App Break Explanation" — a calm, pre-permission education screen that reduces anxiety about the intimidating iOS Screen Time prompt. Data shows pre-education improves permission grant rates significantly.
+
+2. **Pre-permission education screen.** Explicitly addresses privacy concerns upfront: "kshana does NOT read messages, report activity, or require an account." This transparency builds trust and justifies the Screen Time permission request.
+
+3. **Calm terminology.** Never "Family Controls" in user-facing copy (parental-control connotation). Use "Screen Time access", "app break access", "break screen", or "True Interrupt Mode" (marketing).
+
+4. **Honest fallback messaging.** All docs clarify: current = local alerts, future = Screen Time Shield. No overpromising. Users understand "beta" and "pending approval."
+
+5. **Swipe lock on permission screen (Screen 3).** Blocks accidental forward-swipe to ensure deliberate choice on this consequential permission request.
+
+6. **Updated brand language.** Repositioned from "gentle reminders" to "choose your breaks" — emphasizing user agency and control. Aligns with True Interrupt Mode's core value: "your breaks, your timing, your control."
+
+**Reusable insights:**
+
+- **Pre-permission education pattern:** When requesting a system permission that sounds scary (Location, Contacts, Screen Time), a brief friendly explanation screen *before* the system prompt significantly improves grant rates and prevents user anxiety. Applicable to future apps and permission requests.
+
+- **Swipe lock for consequential screens:** Use `highPriorityGesture` on permission / preference screens that require intentional choice. Prevents accidental swipe-through on high-stakes decisions.
+
+- **Fallback transparency:** When a feature degrades or requires a prerequisite (like Screen Time access), communicate the fallback upfront in onboarding, not as a surprise in Settings. Builds trust.
+
+- **Terminology consistency as brand:** Locking in user-facing terms ("app break", "break screen", "True Interrupt Mode") across all materials ensures users recognize the product intent and builds brand coherence.
+
+**Implications for team:**
+- **Linus:** Implement 4-screen onboarding, graceful degradation for permission denial
+- **Tess:** No visual design changes (Restful Grove still applies), but consider calm tone in Screen 2 illustrations
+- **Basher:** Expand permission testing (granted, denied, "not now", re-request scenarios)
+
+**Status:** UX docs complete. Ready for implementation and team review.
+**Decision file:** `.squad/decisions/inbox/reuben-true-interrupt-ux.md`

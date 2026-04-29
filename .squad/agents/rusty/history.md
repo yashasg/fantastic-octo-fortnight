@@ -1,9 +1,32 @@
-# Project Context
+# Rusty — History
+
+## Project Context
 
 - **Owner:** Yashasg
-- **Project:** Eye & Posture Reminder — a lightweight iOS app with background timers and full-screen overlay reminders for eye breaks (20-20-20 rule) and posture checks
-- **Stack:** Swift, SwiftUI (iOS 16+), MVVM, UserNotifications, UIKit overlay, UserDefaults
+- **Project:** kshana (formerly Eye & Posture Reminder) — a lightweight iOS app with True Interrupt Mode via Screen Time APIs
+- **Stack:** Swift, SwiftUI (iOS 16+), MVVM, UserNotifications, UIKit overlay, UserDefaults, FamilyControls (Phase 3+)
 - **Created:** 2026-04-24
+
+## 2026-04-29 — True Interrupt Mode Architecture & Test Strategy
+
+**Task:** Update architecture and test strategy docs for True Interrupt Mode.  
+**Status:** ✅ Complete — orchestration log filed
+
+**Key deliverables:**
+- **Four-target extension architecture:** Main app + DeviceActivityMonitor + ShieldConfiguration + ShieldAction
+- **App Groups communication:** UserDefaults bridge (no shared memory, no direct calls)
+- **ShieldConfiguration constraints:** Data-only, no animations. Static logo via custom SF Symbol is practical limit. YinYangEyeView impossible.
+- **Graceful degradation:** Both Phase 2 (overlay) and Phase 3 (shield) coexist. Falls back to notifications if shield unavailable.
+- **Distribution gating:** FamilyControls entitlement approval required for external distribution (case ID 102881605113)
+- **Files updated:** ARCHITECTURE.md § 5.5, TEST_STRATEGY.md § 3.5 & 4.7 (EXT-01 through EXT-10 device tests)
+
+**Key learnings:**
+1. ShieldConfiguration is a data struct, not a view — no custom layouts/animations
+2. Extensions cannot open main app directly — use App Group flag + deep-link notification
+3. Simulator does not support Screen Time APIs — physical device testing mandatory
+4. All Phase 3 code can be written locally immediately; external distribution blocked until approval
+
+**Decision merged into `.squad/decisions.md`.**
 
 ## Core Context
 
@@ -487,3 +510,59 @@ Provided step-by-step guide for Certificates, Identifiers & Profiles setup. Bund
 - Inbox file deleted after merge
 
 **Team impact:** Rusty's Shield UI research is now canonical reference for all team members. Team can review customization constraints and spike scope. Spike ready to execute immediately upon FamilyControls entitlement approval by Apple. Product decision on app-restriction feature should drive Phase 3 scheduling.
+
+---
+
+## 2026-04-28: True Interrupt Mode Architecture Documentation
+
+**What I did:**
+- Comprehensive architecture documentation for Phase 3+ True Interrupt Mode pivot
+- Updated ARCHITECTURE.md with new §5.5 (10+ sections) covering FamilyControls + extension architecture
+- Updated docs/TEST_STRATEGY.md with §3.5 extension mocks, §4.7 device-only tests, Phase 3 regression matrix
+- Documented distribution gating, entitlement approval dependency, design constraints
+
+**Key documentation added:**
+
+1. **ARCHITECTURE.md §5.5.1–5.5.10:**
+   - Two-mode interrupt strategy (overlay Phase 1-2, shield Phase 3+)
+   - Four-target app extension architecture (main + 3 extensions)
+   - FamilyControls authorization flow (one-time user prompt)
+   - DeviceActivityMonitor extension entry point + ManagedSettingsStore API usage
+   - ShieldConfiguration data-only limitations (text/icon/buttons only, no animations)
+   - ShieldAction extension button handling + App Group communication patterns
+   - Local notification fallback (Phase 2-3 bridge)
+   - OverlayManager role in Phase 3 (fallback, not primary)
+   - App Group state schema (11 keys defined)
+   - Distribution gating: entitlement approval blocks external distribution
+
+2. **TEST_STRATEGY.md §3.5 Extension Mocks:**
+   - `MockManagedSettingsStore` — tracks shield application calls
+   - `MockAppGroupUserDefaults` — isolated App Group state for testing
+   - `MockAuthorizationCenter` — mocks FamilyControls auth without prompts
+   - Extension target test structure with fixtures
+
+3. **TEST_STRATEGY.md §4.7 Device-Only Tests:**
+   - 10 manual test cases (EXT-01 to EXT-10)
+   - Prerequisites (entitlement, physical device, SDK support)
+   - Coverage: shield triggering, text rendering, button behavior, state sync, fallback, authorization denial, notification fallback, threshold repetition, snooze
+
+4. **Phase 3 Regression Matrix:**
+   - File change triggers for extension targets
+   - Device-only requirement emphasized
+   - Regression gate updates for CI
+
+**Critical decisions documented:**
+- Shield UI cannot host YinYangEyeView animation — data struct limitation
+- Static logo via custom SF Symbol is the only visual customization
+- Both Phase 2 overlay and Phase 3 shield can coexist (graceful degradation)
+- FamilyControls entitlement required for all 4 targets
+- Simulator does not support Screen Time APIs (physical device mandatory)
+- Extension communication only via App Groups shared container
+- ShieldAction cannot directly open main app — use local notification indirect path
+
+**References established:**
+- Apple case ID 102881605113 (pending entitlement approval)
+- Entitlement request form: https://developer.apple.com/contact/request/family-controls-distribution
+- Depends on Virgil's CI/CD provisioning profile setup for 4 targets × 2 signing modes
+
+**Outcome:** Complete architecture reference for Phase 3+ implementation. Product team can now make informed decision on app-restriction feature scope. Dev team has clear spike definition and device test matrix. No code written; pure architecture + documentation.
