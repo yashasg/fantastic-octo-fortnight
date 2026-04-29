@@ -367,3 +367,27 @@ Tess completed comprehensive wellness design research proposing "Restful Grove" 
 - Coordinator-driven refinement process allows team to catch scope issues after initial implementation
 
 **Status:** ✅ Complete. JSON validated. Build passed. Commit pushed.
+
+## 2026-04-28 — User Directive: Reminders Terminology Implementation
+
+**Task:** Apply user directive to replace "Notifications" terminology with "Reminders" in user-facing copy; validate and commit.
+
+**Work Summary:**
+- Received terminology guidance from Danny: standardize on "reminders" language vs. "notifications" to reflect overlay nature
+- Applied 7 string replacements to `EyePostureReminder/Resources/Localizable.xcstrings`:
+  - `onboarding.permission.body1`: "Notifications keep your break reminders on schedule."
+  - `settings.notifications.disabledBody`: "Turn on notifications in Settings so break reminders stay on schedule."
+  - `settings.notifications.disabledLabel`: "Notifications are off. Turn them on in Settings so break reminders stay on schedule."
+  - (4 additional settings strings updated similarly)
+- Preserved OS/accessibility terminology in settings hints (unavoidable iOS concepts)
+- Validated JSON schema (Python `json.load` successful; no syntax errors)
+- Built clean: `./scripts/build.sh build` → BUILD SUCCEEDED; no warnings
+- Committed: `4805aa9 copy: use reminders language instead of notifications`
+
+**Key insights:**
+- Terminology matters: "Reminders" vs. "Notifications" accurately reflects overlay-based feature
+- App architecture (overlay vs. notification service) should match user-facing language
+- Accessibility/OS terminology preserved only where unavoidable (Settings permissions)
+
+**Status:** ✅ Complete. JSON validated. Build passed. Commit pushed.
+

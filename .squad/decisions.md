@@ -22727,3 +22727,34 @@ All other strings are clear and appropriate — legal copy, simple labels, picke
 - **Committed:** `e47a7bf strings: apply readability/clarity pass to xcstrings copy`
 - **Branch:** fix/legal-placeholders
 
+
+---
+
+## Decision: User Directive — Reminders Terminology
+
+**Author:** yashasg (via Copilot)  
+**Date:** 2026-04-28T20:04:19Z  
+**Status:** Implemented  
+
+### Directive
+
+Avoid user-facing copy that makes kshana sound like it sends push notifications. Prefer language around local break reminders / overlay reminders where accurate. Reserve iOS notification-permission terminology for accessibility hints or unavoidable OS concepts.
+
+### Rationale
+
+The app provides **overlay-based break reminders** that appear as full-screen overlays, not push notifications. User-facing copy should reflect this nature and avoid terminology that implies the app sends notifications to the user's home screen or notification center.
+
+### Implementation
+
+**Danny:** Reviewed directive and identified terminology guidance for the team.
+**Linus:** Applied 7 string replacements to `Localizable.xcstrings`:
+- Replaced "Notifications" (user-facing) with "Reminders" where contextually appropriate
+- Preserved OS/accessibility terminology in settings hints (e.g., "Enable notifications in Settings")
+- Key changes:
+  - `onboarding.permission.body1`: Now references "break reminders on schedule" (not notifications)
+  - `settings.notifications.disabledBody`: Now explains impact on "break reminders" (not push notifications)
+  - `settings.notifications.disabledLabel`: Clarified context as overlay reminders
+
+**Validation:** JSON valid, build passed  
+**Committed:** `4805aa9 copy: use reminders language instead of notifications`
+

@@ -118,3 +118,17 @@ Consolidated 2026-04-24 planning entries covering early architecture decisions (
 - **Correct decision:** Clarity pass improved readability; scope refinement removes context-inappropriate snooze references; two efforts are complementary, not conflicting
 
 **Status:** Recommendation delivered to Linus for implementation
+
+## 2026-04-28 — User Directive: Reminders Terminology
+
+**Task:** Review user directive to standardize terminology — avoid "push notifications" language that misrepresents the app's overlay reminder nature.
+
+**Work Summary:**
+- User directive received: "Avoid user-facing copy that makes kshana sound like it sends push notifications. Prefer reminders/break reminders/overlay reminders where accurate."
+- Reviewed terminology: App provides overlay-based break reminders, not push notifications
+- Identified terminology guidance: Replace user-facing "Notifications" with "Reminders"; preserve OS/accessibility terminology only in settings hints
+- Recommended 7 key strings for terminology updates to align with overlay reminder nature
+- Rationale: Full-screen overlays are fundamentally different from push notifications
+
+**Status:** ✅ Complete. Handoff to Linus for implementation.
+
