@@ -13,6 +13,12 @@ struct OnboardingView: View {
     @State private var currentPage = 0
     @State private var showAppCategoryPicker = false
 
+    private let accessibilityNotificationPoster: AccessibilityNotificationPosting
+
+    init(accessibilityNotificationPoster: AccessibilityNotificationPosting = LiveAccessibilityNotificationPoster()) {
+        self.accessibilityNotificationPoster = accessibilityNotificationPoster
+    }
+
     private static let configurePageControl: Void = {
         UIPageControl.appearance().currentPageIndicatorTintColor = UIColor(AppColor.primaryRest)
         UIPageControl.appearance().pageIndicatorTintColor = UIColor(AppColor.separatorSoft)
@@ -48,6 +54,9 @@ struct OnboardingView: View {
         .indexViewStyle(PageIndexViewStyle(backgroundDisplayMode: .always))
         .background(AppColor.background.ignoresSafeArea())
         .onAppear { _ = Self.configurePageControl }
+        .onChange(of: currentPage) { _ in
+            accessibilityNotificationPoster.postScreenChanged()
+        }
         .sheet(isPresented: $showAppCategoryPicker) {
             AppCategoryPickerView(
                 appsState: selectedAppsState,

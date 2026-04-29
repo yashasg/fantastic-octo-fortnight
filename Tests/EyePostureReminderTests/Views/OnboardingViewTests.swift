@@ -282,4 +282,59 @@ final class OnboardingViewTests: XCTestCase {
         let style = OnboardingSecondaryButtonStyle()
         _ = style
     }
+
+    // MARK: - AccessibilityNotificationPosting / VoiceOver screen-change (#285)
+
+    /// `MockAccessibilityNotificationPoster` starts with zero recorded calls.
+    func test_mockPoster_initialCallCount_isZero() {
+        let mock = MockAccessibilityNotificationPoster()
+        XCTAssertEqual(mock.postScreenChangedCallCount, 0)
+    }
+
+    /// `MockAccessibilityNotificationPoster` increments call count on each invocation.
+    func test_mockPoster_postScreenChanged_incrementsCallCount() {
+        let mock = MockAccessibilityNotificationPoster()
+        mock.postScreenChanged(focusElement: nil)
+        XCTAssertEqual(mock.postScreenChangedCallCount, 1)
+        mock.postScreenChanged(focusElement: nil)
+        XCTAssertEqual(mock.postScreenChangedCallCount, 2)
+    }
+
+    /// `MockAccessibilityNotificationPoster` records the focus element argument.
+    func test_mockPoster_postScreenChanged_recordsFocusElement() {
+        let mock = MockAccessibilityNotificationPoster()
+        let sentinel = "headline" as AnyObject
+        mock.postScreenChanged(focusElement: sentinel)
+        XCTAssertTrue(mock.lastFocusElement as AnyObject === sentinel)
+    }
+
+    /// The default `postScreenChanged()` overload passes `nil` as focus element.
+    func test_mockPoster_defaultOverload_passesFocusElementNil() {
+        let mock = MockAccessibilityNotificationPoster()
+        mock.postScreenChanged()
+        XCTAssertEqual(mock.postScreenChangedCallCount, 1)
+        XCTAssertNil(mock.lastFocusElement)
+    }
+
+    /// `reset()` zeroes out recorded state.
+    func test_mockPoster_reset_clearsState() {
+        let mock = MockAccessibilityNotificationPoster()
+        mock.postScreenChanged(focusElement: "x" as AnyObject)
+        mock.reset()
+        XCTAssertEqual(mock.postScreenChangedCallCount, 0)
+        XCTAssertNil(mock.lastFocusElement)
+    }
+
+    /// `LiveAccessibilityNotificationPoster` conforms to the protocol (compile-time check).
+    func test_livePoster_conformsToProtocol() {
+        let poster: AccessibilityNotificationPosting = LiveAccessibilityNotificationPoster()
+        XCTAssertNotNil(poster)
+    }
+
+    /// `OnboardingView` can be instantiated with a custom `AccessibilityNotificationPosting`.
+    func test_onboardingView_acceptsAccessibilityNotificationPoster_withoutCrash() {
+        let mock = MockAccessibilityNotificationPoster()
+        let view = OnboardingView(accessibilityNotificationPoster: mock)
+        _ = view
+    }
 }
