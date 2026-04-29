@@ -39,6 +39,11 @@ UITestResults.xcresult/
 UITests/*.xcodeproj/
 UITests/*.xcworkspace/
 
+# XcodeGen-generated Screen Time extensions project (generated from project.yml)
+# Generated to ScreenTimeExtensions/ by scripts/setup-screentime.sh.
+ScreenTimeExtensions/*.xcodeproj/
+ScreenTimeExtensions/*.xcworkspace/
+
 # One-time scripts and tool output logs
 fix_multiline.py
 manual_violations.txt

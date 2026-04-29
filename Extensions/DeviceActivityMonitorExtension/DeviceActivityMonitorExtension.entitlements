@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- App Group: enables writing break reason/duration that extensions read. -->
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.com.yashasgujjar.kshana</string>
+	</array>
+	<!--
+	  com.apple.developer.family-controls is intentionally ABSENT.
+	  FamilyControls entitlement is blocked on issue #201 (external Apple approval).
+	  Add it here only after:
+	    1. Apple approves the App ID capability at developer.apple.com
+	    2. Distribution provisioning profiles are regenerated to include FamilyControls
+	  See docs/SPIKE_SCREEN_TIME_APIS.md § Entitlement Blocker for full details.
+	-->
+</dict>
+</plist>
