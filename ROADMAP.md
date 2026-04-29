@@ -357,14 +357,20 @@
 - **Status:** 🔄 IN PROGRESS
 - **Delivered so far:**
   - App Store listing documented: description, keywords, privacy policy
-  - Screenshots planned (5 key screens)
   - Privacy Policy filed: MetricKit diagnostics and App Store Connect analytics disclosed; no third-party SDKs
   - Disclaimer & legal docs completed (Frank)
   - Version scheme: v0.1.0-beta (TestFlight), v1.0+ (App Store)
-  - **Outstanding:** Final code review, TestFlight submission (awaiting decision)
+  - Messaging aligned: v0.2.0 is Phase 1+2 (local alerts + Smart Pause); True Interrupt Mode is Phase 3 (blocked by entitlement #201)
+- **Outstanding (metadata assets):**
+  - Screenshots for all required device sizes (iPhone 6.1", 6.7" planned; completion pending)
+  - App Preview video(s) if required for App Store category
+  - Content ratings questionnaire and age rating finalization
+  - Localization status and supported languages confirmation
+  - Bundle ID and Team ID confirmation with App Store Connect
+  - Final code review and TestFlight submission (awaiting product decision)
 
 ### Phase 2 Success Criteria
-- ✅ Onboarding guides new users smoothly
+- ✅ Onboarding guides new users smoothly with clear pre-permission education
 - ✅ Haptic feedback enhances tactile experience (optional toggle)
 - ✅ Snooze action functional with limits (max 2 consecutive)
 - ✅ Smart Pause pauses reminders during Focus Mode, CarPlay, or driving
@@ -374,7 +380,9 @@
 - ✅ Accessibility meets WCAG AA (all screens tested)
 - ✅ Data-driven config: colors via Asset Catalog, copy via String Catalog, settings seeded from defaults.json
 - ✅ All devices tested (iPhone SE, iPhone 14 Pro, iPad Pro, accessibility modes)
-- 🔄 App Store listing ready (awaiting submission decision)
+- ✅ Messaging aligned: local alerts are primary in v0.2.0; True Interrupt Mode is Phase 3/future
+- 🔄 App Store metadata assets pending (screenshots, App Preview, localization, age ratings, etc.)
+- 🔄 TestFlight/App Store submission awaiting product decision
 
 ---
 
