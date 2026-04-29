@@ -49,7 +49,7 @@ final class ShieldConfigurationDataSourceImpl: ShieldConfigurationDataSource {
     // MARK: Private
 
     private func makeConfiguration() -> ShieldConfiguration {
-        let suite = UserDefaults(suiteName: ShieldSessionKeys.appGroupID)
+        let suite = AppGroupDefaults.resolve(consumer: "ShieldConfigurationDataSource")
         let snapshot = ShieldSessionSnapshot.read(from: suite)
         let copy = ShieldConfigurationCopy.make(for: snapshot)
         return ShieldConfiguration(

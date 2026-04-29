@@ -40,6 +40,70 @@ final class AppGroupIPCStoreTests: XCTestCase {
         XCTAssertTrue(defaults.bool(forKey: AppGroupIPCKeys.trueInterruptEnabled))
     }
 
+    func test_unavailableSuiteResolver_reportsDiagnosticAndDoesNotReturnStandardDefaults() throws {
+        var diagnostics: [AppGroupDefaultsUnavailableDiagnostic] = []
+
+        let resolved = AppGroupDefaults.resolve(
+            consumer: "UnitTest",
+            suiteFactory: { _ in nil },
+            diagnosticHandler: { diagnostics.append($0) },
+            assertOnFailure: false
+        )
+
+        XCTAssertNil(resolved)
+        let diagnostic = try XCTUnwrap(diagnostics.first)
+        XCTAssertEqual(diagnostics.count, 1)
+        XCTAssertEqual(
+            diagnostic,
+            AppGroupDefaultsUnavailableDiagnostic(
+                suiteName: AppGroupIPCKeys.appGroupID,
+                consumer: "UnitTest"
+            )
+        )
+        XCTAssertTrue(diagnostic.message.contains("extension-critical state was not written"))
+    }
+
+    func test_unavailableStoreDoesNotFallBackToStandardDefaults() throws {
+        let store = AppGroupIPCStore(defaults: nil)
+        let standardKeys = [
+            AppGroupIPCKeys.trueInterruptEnabled,
+            AppGroupIPCKeys.selectionMetadata,
+            AppGroupIPCKeys.eventLog,
+            AppGroupIPCKeys.lastShieldStartedAt,
+            AppGroupIPCKeys.lastShieldEndedAt,
+            ShieldSessionKeys.breakReason,
+            ShieldSessionKeys.durationSeconds,
+            ShieldSessionKeys.triggeredAt
+        ]
+
+        try preservingStandardDefaults(for: standardKeys) {
+            XCTAssertFalse(store.isAvailable)
+            XCTAssertFalse(store.setTrueInterruptEnabled(true))
+            XCTAssertFalse(store.isTrueInterruptEnabled())
+            XCTAssertThrowsError(try store.writeSelection(.empty)) { error in
+                XCTAssertEqual(error as? AppGroupIPCStore.StoreError, .appGroupSuiteUnavailable)
+            }
+            XCTAssertFalse(
+                store.writeShieldSession(
+                    reasonRaw: "eyes",
+                    durationSeconds: 20,
+                    triggeredAt: Date(timeIntervalSince1970: 2_000)
+                )
+            )
+            XCTAssertThrowsError(try store.readShieldSession()) { error in
+                XCTAssertEqual(error as? AppGroupIPCStore.StoreError, .appGroupSuiteUnavailable)
+            }
+            XCTAssertFalse(store.clearShieldSession(endedAt: Date(timeIntervalSince1970: 2_100)))
+            XCTAssertThrowsError(try store.recordEvent(AppGroupIPCEvent(kind: .watchdogHeartbeat))) { error in
+                XCTAssertEqual(error as? AppGroupIPCStore.StoreError, .appGroupSuiteUnavailable)
+            }
+            XCTAssertFalse(store.clearEvents())
+            for key in standardKeys {
+                XCTAssertNil(UserDefaults.standard.object(forKey: key), "Unexpected standard-default write for \(key)")
+            }
+        }
+    }
+
     func test_selectionSnapshot_roundTripsAndMatchesSelectedAppsMetadataShape() throws {
         let snapshot = AppGroupSelectionSnapshot(
             categoryCount: 2,
@@ -69,12 +133,12 @@ final class AppGroupIPCStoreTests: XCTestCase {
         }
     }
 
-    func test_shieldSession_roundTripsAndStoresLastStartedTimestamp() {
+    func test_shieldSession_roundTripsAndStoresLastStartedTimestamp() throws {
         let triggeredAt = Date(timeIntervalSince1970: 2_000)
 
         store.writeShieldSession(reasonRaw: "eyes", durationSeconds: 20, triggeredAt: triggeredAt)
 
-        let snapshot = store.readShieldSession()
+        let snapshot = try store.readShieldSession()
         XCTAssertEqual(snapshot.reasonRaw, "eyes")
         XCTAssertEqual(snapshot.durationSeconds, 20)
         XCTAssertEqual(snapshot.triggeredAt, triggeredAt)
@@ -143,5 +207,20 @@ final class AppGroupIPCStoreTests: XCTestCase {
         store.clearEvents()
 
         XCTAssertEqual(try store.readEvents(), [])
+    }
+
+    private func preservingStandardDefaults(for keys: [String], _ action: () throws -> Void) rethrows {
+        let oldValues = Dictionary(uniqueKeysWithValues: keys.map { ($0, UserDefaults.standard.object(forKey: $0)) })
+        keys.forEach { UserDefaults.standard.removeObject(forKey: $0) }
+        defer {
+            for (key, oldValue) in oldValues {
+                if let oldValue {
+                    UserDefaults.standard.set(oldValue, forKey: key)
+                } else {
+                    UserDefaults.standard.removeObject(forKey: key)
+                }
+            }
+        }
+        try action()
     }
 }

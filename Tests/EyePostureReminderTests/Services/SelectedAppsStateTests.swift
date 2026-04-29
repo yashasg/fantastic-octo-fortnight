@@ -113,6 +113,46 @@ final class SelectedAppsStateTests: XCTestCase {
         XCTAssertFalse(testDefaults.bool(forKey: SelectedAppsState.enabledKey))
     }
 
+    func test_setEnabled_whenAppGroupUnavailable_doesNotPersistToStandardDefaults() {
+        preservingStandardDefaults(for: [SelectedAppsState.enabledKey]) {
+            let sut = SelectedAppsState(defaults: nil)
+
+            XCTAssertFalse(sut.setEnabled(true))
+
+            XCTAssertFalse(sut.isTrueInterruptEnabled)
+            XCTAssertNil(UserDefaults.standard.object(forKey: SelectedAppsState.enabledKey))
+        }
+    }
+
+    func test_updateMetadata_whenAppGroupUnavailable_doesNotPersistToStandardDefaults() {
+        preservingStandardDefaults(for: [SelectedAppsState.metadataKey]) {
+            let sut = SelectedAppsState(defaults: nil)
+            let metadata = SelectedAppsMetadata(
+                categoryCount: 1,
+                appCount: 2,
+                lastUpdated: Date(timeIntervalSince1970: 5_000_000)
+            )
+
+            XCTAssertFalse(sut.updateMetadata(metadata))
+
+            XCTAssertEqual(sut.selectionMetadata, .empty)
+            XCTAssertNil(UserDefaults.standard.object(forKey: SelectedAppsState.metadataKey))
+        }
+    }
+
+    func test_clearSelection_whenAppGroupUnavailable_doesNotPersistToStandardDefaults() {
+        preservingStandardDefaults(for: [SelectedAppsState.enabledKey, SelectedAppsState.metadataKey]) {
+            let sut = SelectedAppsState(defaults: nil)
+
+            XCTAssertFalse(sut.clearSelection())
+
+            XCTAssertFalse(sut.isTrueInterruptEnabled)
+            XCTAssertEqual(sut.selectionMetadata, .empty)
+            XCTAssertNil(UserDefaults.standard.object(forKey: SelectedAppsState.enabledKey))
+            XCTAssertNil(UserDefaults.standard.object(forKey: SelectedAppsState.metadataKey))
+        }
+    }
+
     // MARK: - updateMetadata
 
     func test_updateMetadata_persistsAndUpdatesPublished() throws {
@@ -176,5 +216,20 @@ final class SelectedAppsStateTests: XCTestCase {
         let sut2 = SelectedAppsState(defaults: testDefaults)
         XCTAssertTrue(sut2.selectionMetadata.isEmpty)
         XCTAssertFalse(sut2.isTrueInterruptEnabled)
+    }
+
+    private func preservingStandardDefaults(for keys: [String], _ action: () -> Void) {
+        let oldValues = Dictionary(uniqueKeysWithValues: keys.map { ($0, UserDefaults.standard.object(forKey: $0)) })
+        keys.forEach { UserDefaults.standard.removeObject(forKey: $0) }
+        defer {
+            for (key, oldValue) in oldValues {
+                if let oldValue {
+                    UserDefaults.standard.set(oldValue, forKey: key)
+                } else {
+                    UserDefaults.standard.removeObject(forKey: key)
+                }
+            }
+        }
+        action()
     }
 }
