@@ -49,7 +49,7 @@ final class ScreenTimeTracker: ScreenTimeTracking {
     /// Seconds to wait after `willResignActive` before resetting counters to zero.
     /// Brief interruptions (notification banners, incoming calls, Control Center) that
     /// resolve within this window resume counting rather than nuking accumulated time.
-    private let resetGracePeriod: TimeInterval = 5.0
+    private let resetGracePeriod: TimeInterval
 
     // MARK: - State
 
@@ -76,7 +76,18 @@ final class ScreenTimeTracker: ScreenTimeTracking {
 
     // MARK: - Init
 
-    init() {
+    /// - Parameter resetGracePeriod: Seconds to wait after `willResignActive` before
+    ///   clearing counters. Must be ≥ 0. Defaults to 5.0 s for production use; pass a
+    ///   smaller value in tests to exercise grace-period behaviour without long sleeps.
+    init(resetGracePeriod: TimeInterval = 5.0) {
+        if resetGracePeriod < 0 {
+            Logger.scheduling.warning(
+                "ScreenTimeTracker: ignoring negative resetGracePeriod (\(resetGracePeriod)) — using 0"
+            )
+            self.resetGracePeriod = 0
+        } else {
+            self.resetGracePeriod = resetGracePeriod
+        }
         for type in ReminderType.allCases {
             elapsed[type] = 0
         }

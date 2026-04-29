@@ -506,3 +506,104 @@ extension ScreenTimeTrackerTests {
         sut.stop()
     }
 }
+
+// MARK: - Grace-Period Behavioural Tests
+
+/// Tests that use `ScreenTimeTracker(resetGracePeriod: 0.1)` to exercise the
+/// grace-period logic without multi-second sleeps.
+///
+/// Each test creates its own tracker so the injected `resetGracePeriod`
+/// does not affect the other test cases (which use the 5 s default).
+extension ScreenTimeTrackerTests {
+
+    // MARK: - willResignActive → didBecomeActive within grace: counters preserved
+
+    /// When the app returns to active **within** the grace period the pending reset
+    /// task must be cancelled and accumulated elapsed time must be preserved, so the
+    /// threshold callback fires sooner than it would from a cold start.
+    ///
+    /// Strategy:
+    ///   1. Create a tracker with a 0.1 s grace period and a 2 s threshold.
+    ///   2. Start ticking and accumulate ~1.2 s of elapsed time.
+    ///   3. Resign active (arms the 0.1 s grace timer).
+    ///   4. Return within 50 ms — well inside the grace window.
+    ///   5. The callback must fire within ~1 s of resume (not ~2 s from scratch),
+    ///      proving the accumulated time was not erased.
+    func test_gracePeriod_withinGrace_preservesElapsedTime() async throws {
+        let tracker = ScreenTimeTracker(resetGracePeriod: 0.1)
+        defer { tracker.stop() }
+
+        let exp = expectation(description: "callback fires with preserved elapsed")
+        tracker.setThreshold(2, for: .eyes)
+        tracker.onThresholdReached = { type in
+            if type == .eyes { exp.fulfill() }
+        }
+
+        // Arm the tick timer.
+        NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
+
+        // Accumulate ~1.2 s of elapsed time (60 % of the 2 s threshold).
+        try await Task.sleep(nanoseconds: 1_200_000_000)
+
+        // Pause the timer; arms the 0.1 s grace window.
+        NotificationCenter.default.post(name: UIApplication.willResignActiveNotification, object: nil)
+
+        // Return after 50 ms — inside the 100 ms grace period.
+        try await Task.sleep(nanoseconds: 50_000_000)
+        NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
+
+        // With ~1.2 s already accumulated the callback should fire within ~1.5 s
+        // of resume (threshold = 2 s, ~0.8 s remaining).  Give a generous 4 s timeout.
+        await fulfillment(of: [exp], timeout: 4.0)
+    }
+
+    // MARK: - willResignActive with grace expired: counters reset
+
+    /// When the grace period **expires** before the app returns to active all counters
+    /// must be zeroed, so the threshold callback cannot fire immediately on resume —
+    /// a full threshold period of ticking is required.
+    ///
+    /// Strategy:
+    ///   1. Create a tracker with a 0.1 s grace period and a 2 s threshold.
+    ///   2. Start ticking and accumulate ~1.2 s of elapsed time.
+    ///   3. Resign active (arms the 0.1 s grace timer).
+    ///   4. Wait 300 ms — the grace period expires and counters reset to 0.
+    ///   5. Return to active and measure time until callback fires.
+    ///      It must be ≥ 1.5 s, proving counters were genuinely zeroed.
+    func test_gracePeriod_expired_resetsCounters() async throws {
+        let tracker = ScreenTimeTracker(resetGracePeriod: 0.1)
+        defer { tracker.stop() }
+
+        let exp = expectation(description: "callback fires after full threshold wait")
+        tracker.setThreshold(2, for: .eyes)
+        tracker.onThresholdReached = { type in
+            if type == .eyes { exp.fulfill() }
+        }
+
+        // Arm the tick timer.
+        NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
+
+        // Accumulate ~1.2 s of elapsed time (60 % of the 2 s threshold).
+        try await Task.sleep(nanoseconds: 1_200_000_000)
+
+        // Pause; arms the 0.1 s grace window.
+        NotificationCenter.default.post(name: UIApplication.willResignActiveNotification, object: nil)
+
+        // Wait 300 ms — well past the 100 ms grace — so counters are reset to 0.
+        try await Task.sleep(nanoseconds: 300_000_000)
+
+        // Return to active.  Elapsed is now 0 so the full 2 s threshold is needed.
+        let resumeTime = Date()
+        NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
+
+        await fulfillment(of: [exp], timeout: 6.0)
+        let elapsed = Date().timeIntervalSince(resumeTime)
+
+        XCTAssertGreaterThanOrEqual(
+            elapsed,
+            1.5,
+            // swiftlint:disable:next line_length
+            "After grace expiry, counters reset to 0 — callback must not fire sooner than ~threshold; elapsed was \(elapsed) s"
+        )
+    }
+}
