@@ -7,6 +7,7 @@ struct HomeView: View {
 
     @State private var showSettings = false
     @AppStorage(AppStorageKey.openSettingsOnLaunch) private var openSettingsOnLaunch = false
+    @AppStorage(AppStorageKey.trueInterruptSkippedBannerDismissed) private var trueInterruptBannerDismissed = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var statusLabel: String {
@@ -46,6 +47,21 @@ struct HomeView: View {
             }
 
             Spacer()
+
+            // Post-onboarding True Interrupt discoverability banner (#258).
+            // Shown only when setup was skipped (notDetermined) and not yet dismissed.
+            if coordinator.screenTimeAuthorization.authorizationStatus == .notDetermined,
+               !trueInterruptBannerDismissed {
+                TrueInterruptSkippedBanner(
+                    onSetUp: {
+                        trueInterruptBannerDismissed = true
+                        showSettings = true
+                    },
+                    onDismiss: {
+                        trueInterruptBannerDismissed = true
+                    }
+                )
+            }
         }
         .padding(.horizontal, AppSpacing.xl)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -85,6 +101,68 @@ struct HomeView: View {
                 showSettings = true
             }
         }
+    }
+}
+
+// MARK: - True Interrupt Skipped Banner
+
+/// Non-blocking callout shown on Home when the user skipped True Interrupt setup
+/// during onboarding and the feature is in the notDetermined state (#258).
+///
+/// The banner is dismiss-safe: tapping "Dismiss" persists the choice via
+/// `@AppStorage` so it never reappears. Tapping "Set Up True Interrupt" opens
+/// Settings where the user can configure the feature at any time.
+///
+/// Accepts plain callbacks so the struct has no `@EnvironmentObject` dependency
+/// and can be instantiated directly in unit tests.
+struct TrueInterruptSkippedBanner: View {
+    let onSetUp: () -> Void
+    let onDismiss: () -> Void
+
+    var body: some View {
+        HStack(alignment: .top, spacing: AppSpacing.sm) {
+            Image(systemName: AppSymbol.trueInterrupt)
+                .font(AppFont.caption)
+                .foregroundStyle(AppColor.primaryRest)
+                .padding(.top, 2)
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: AppSpacing.xs) {
+                Text("home.trueInterrupt.skippedBanner.body", bundle: .module)
+                    .font(AppFont.caption)
+                    .foregroundStyle(AppColor.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                HStack(spacing: AppSpacing.sm) {
+                    Button(action: onSetUp) {
+                        Text("home.trueInterrupt.skippedBanner.setUp", bundle: .module)
+                            .font(AppFont.captionEmphasized)
+                    }
+                    .foregroundStyle(AppColor.primaryRest)
+                    .accessibilityHint(Text("home.trueInterrupt.skippedBanner.setUp.hint", bundle: .module))
+                    .accessibilityIdentifier("home.trueInterrupt.skippedBanner.setUp")
+
+                    Button(action: onDismiss) {
+                        Text("home.trueInterrupt.skippedBanner.dismiss", bundle: .module)
+                            .font(AppFont.caption)
+                    }
+                    .foregroundStyle(AppColor.textSecondary)
+                    .accessibilityHint(Text("home.trueInterrupt.skippedBanner.dismiss.hint", bundle: .module))
+                    .accessibilityIdentifier("home.trueInterrupt.skippedBanner.dismiss")
+                }
+            }
+        }
+        .padding(AppSpacing.sm)
+        .background(AppColor.surface, in: RoundedRectangle(cornerRadius: 10))
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .strokeBorder(AppColor.separatorSoft, lineWidth: 0.5)
+        )
+        .padding(.horizontal, AppSpacing.xl)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text("home.trueInterrupt.skippedBanner.label", bundle: .module))
+        .accessibilityAction(named: Text("home.trueInterrupt.skippedBanner.setUp", bundle: .module), onSetUp)
+        .accessibilityAction(named: Text("home.trueInterrupt.skippedBanner.dismiss", bundle: .module), onDismiss)
     }
 }
 

@@ -514,11 +514,7 @@ private struct SettingsSmartPauseSection: View {
 
 /// Settings section presenting True Interrupt Mode authorization status and
 /// a "Configure App Break Access" button that launches `AppCategoryPickerView`.
-///
-/// In the pre-entitlement state (authorizationStatus == .unavailable) the
-/// section shows a greyed status row and a disabled configure button,
-/// clearly communicating that the feature is coming — without over-promising
-/// runtime interruption while #201 is pending.
+/// Shows an inline denied-recovery warning (#252) and a status-aware footer (#250).
 private struct SettingsTrueInterruptSection: View {
     @EnvironmentObject private var coordinator: AppCoordinator
     @StateObject private var selectedAppsState = SelectedAppsState()
@@ -537,14 +533,11 @@ private struct SettingsTrueInterruptSection: View {
                     Text("settings.trueInterrupt.statusLabel", bundle: .module)
                         .font(AppFont.body)
                         .foregroundStyle(AppColor.textPrimary)
-                    Text(
-                        LocalizedStringKey(authStatus.localizedStatusKey),
-                        bundle: .module
-                    )
-                    .font(AppFont.caption)
-                    .foregroundStyle(
-                        authStatus == .approved ? AppColor.primaryRest : AppColor.textSecondary
-                    )
+                    Text(LocalizedStringKey(authStatus.localizedStatusKey), bundle: .module)
+                        .font(AppFont.caption)
+                        .foregroundStyle(
+                            authStatus == .approved ? AppColor.primaryRest : AppColor.textSecondary
+                        )
                 }
                 Spacer()
             }
@@ -553,7 +546,38 @@ private struct SettingsTrueInterruptSection: View {
             .accessibilityElement(children: .combine)
             .accessibilityIdentifier("settings.trueInterrupt.statusRow")
 
-            // Configure button
+            // Denied recovery: warning card + direct Settings link (#252)
+            if authStatus == .denied {
+                HStack(spacing: AppSpacing.sm) {
+                    IconContainer(icon: AppSymbol.warning, color: AppColor.accentWarm, size: 36)
+                        .accessibilityHidden(true)
+                    VStack(alignment: .leading, spacing: AppSpacing.xs) {
+                        Text("settings.trueInterrupt.denied.title", bundle: .module)
+                            .font(AppFont.bodyEmphasized)
+                            .foregroundStyle(AppColor.textPrimary)
+                        Text("settings.trueInterrupt.denied.body", bundle: .module)
+                            .font(AppFont.caption)
+                            .foregroundStyle(AppColor.textSecondary)
+                    }
+                }
+                .padding(.vertical, AppSpacing.xs)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(Text("settings.trueInterrupt.denied.label", bundle: .module))
+                .listRowBackground(AppColor.accentWarm.opacity(AppOpacity.warningBackground))
+                .listRowSeparatorTint(AppColor.accentWarm.opacity(AppOpacity.warningSeparator))
+                Button(
+                    action: openApplicationSettings,
+                    label: { Text("settings.trueInterrupt.openSettings", bundle: .module) }
+                )
+                .font(AppFont.body)
+                .foregroundStyle(AppColor.accentWarm)
+                .accessibilityHint(Text("settings.trueInterrupt.openSettings.hint", bundle: .module))
+                .accessibilityIdentifier("settings.trueInterrupt.openSettings")
+                .listRowBackground(AppColor.accentWarm.opacity(AppOpacity.warningBackground))
+                .listRowSeparatorTint(AppColor.accentWarm.opacity(AppOpacity.warningSeparator))
+            }
+
+            // Configure button (disabled when entitlement is unavailable — #250)
             Button {
                 showPicker = true
             } label: {
@@ -583,9 +607,12 @@ private struct SettingsTrueInterruptSection: View {
                 iconTint: AppColor.primaryRest
             )
         } footer: {
-            Text("settings.trueInterrupt.footer", bundle: .module)
-                .font(AppFont.caption)
-                .foregroundStyle(AppColor.textSecondary)
+            // Pending-approval explanation when unavailable (#250); standard copy otherwise.
+            Text(LocalizedStringKey(authStatus == .unavailable
+                ? "settings.trueInterrupt.footer.unavailable"
+                : "settings.trueInterrupt.footer"), bundle: .module)
+            .font(AppFont.caption)
+            .foregroundStyle(AppColor.textSecondary)
         }
         .sheet(isPresented: $showPicker) {
             AppCategoryPickerView(
