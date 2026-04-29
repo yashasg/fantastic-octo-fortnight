@@ -129,7 +129,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fallback alert: time to rest your eyes."
+            "value": "Backup reminder: time to rest your eyes."
           }
         }
       }
@@ -140,7 +140,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Example backup reminder: Reminder: rest your eyes — fallback alert."
+            "value": "Example backup reminder from kshana: rest your eyes."
           }
         }
       }
@@ -493,7 +493,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fallback alert: look 20 ft away for 20 seconds."
+            "value": "Backup reminder: look 20 ft away for 20 seconds."
           }
         }
       }
@@ -537,7 +537,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fallback alert: sit up straight and roll your shoulders."
+            "value": "Backup reminder: sit up straight and roll your shoulders."
           }
         }
       }

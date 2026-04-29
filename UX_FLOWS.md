@@ -143,7 +143,7 @@ ContentView checks @AppStorage("hasSeenOnboarding")
     │  │  Default config preview:                           │
     │  │    • Eye Breaks: every 20 min                     │
     │  │    • Posture Checks: every 30 min                 │
-    │  │    • Fallback local alerts when Screen Time       │
+    │  │    • Backup local alerts when Screen Time         │
     │  │      access is unavailable                        │
     │  │                                                   │
     │  │  [ Get Started ]    ← sets hasSeenOnboarding,     │

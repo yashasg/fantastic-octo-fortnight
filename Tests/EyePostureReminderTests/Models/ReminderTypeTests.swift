@@ -80,7 +80,7 @@ final class ReminderTypeTests: XCTestCase {
     }
 
     func test_eyes_notificationBody_matchesSpec() {
-        XCTAssertEqual(ReminderType.eyes.notificationBody, "Fallback alert: look 20 ft away for 20 seconds.")
+        XCTAssertEqual(ReminderType.eyes.notificationBody, "Backup reminder: look 20 ft away for 20 seconds.")
     }
 
     func test_posture_notificationTitle_matchesSpec() {
@@ -90,7 +90,7 @@ final class ReminderTypeTests: XCTestCase {
     func test_posture_notificationBody_matchesSpec() {
         XCTAssertEqual(
             ReminderType.posture.notificationBody,
-            "Fallback alert: sit up straight and roll your shoulders."
+            "Backup reminder: sit up straight and roll your shoulders."
         )
     }
 

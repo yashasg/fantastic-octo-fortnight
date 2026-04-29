@@ -1,7 +1,7 @@
 # kshana — iOS App Roadmap
 
 > **Status:** v0.2.0 (Restful Grove) shipped — Phase 1+2 complete; **PIVOT to True Interrupt Mode (Screen Time APIs)** — Phase 3 (Interrupt Mode MVP)  
-> **Core Value Proposition:** True Interrupt Mode via Apple Screen Time APIs (FamilyControls + DeviceActivity + ManagedSettings) to pause distracting apps during break reminders. Local notifications are fallback/noise, not core.  
+> **Core Value Proposition:** True Interrupt Mode via Apple Screen Time APIs (FamilyControls + DeviceActivity + ManagedSettings) to pause distracting apps during break reminders. Local notifications are backup-only, not core.  
 > **Target Platform:** iOS 16+ (17+ for full Screen Time API support)  
 > **Architecture:** MVVM + Screen Time APIs (DeviceActivity, ManagedSettings, ShieldConfiguration), app groups, extension communication  
 > **Team:** 13 members across PM, Design, Architecture, Dev, QA, Review, Legal, DevOps, Analytics
@@ -10,7 +10,7 @@
 
 ## Executive Summary
 
-**kshana pivots to True Interrupt Mode.** Shipped **v0.2.0 (Restful Grove)** — Phase 1+2 complete with overlay reminders, smart pause, accessibility, yin-yang branding, 1,382 unit tests, 81%+ coverage. **Now pivoting to Phase 3 (Interrupt Mode MVP):** Core product value is Apple Screen Time APIs (FamilyControls authorization + DeviceActivity monitoring + ManagedSettings to shield distracting apps during breaks). Local notification reminders become fallback/noise, not the primary product promise. Phase 3 unblocks on entitlement approval (Case ID 102881605113). New phase includes: extension targets (ShieldConfiguration), device activity monitoring, app/category picker, managed settings + shield actions, app group shared state, pre-permission UX refinement, and legal/privacy updates for data controller terminology.
+**kshana pivots to True Interrupt Mode.** Shipped **v0.2.0 (Restful Grove)** — Phase 1+2 complete with overlay reminders, smart pause, accessibility, yin-yang branding, 1,382 unit tests, 81%+ coverage. **Now pivoting to Phase 3 (Interrupt Mode MVP):** Core product value is Apple Screen Time APIs (FamilyControls authorization + DeviceActivity monitoring + ManagedSettings to shield distracting apps during breaks). Local notification reminders become backup-only, not the primary product promise. Phase 3 unblocks on entitlement approval (Case ID 102881605113). New phase includes: extension targets (ShieldConfiguration), device activity monitoring, app/category picker, managed settings + shield actions, app group shared state, pre-permission UX refinement, and legal/privacy updates for data controller terminology.
 
 - **Phase 0: Foundation** ✅ – Project scaffolding, CI/CD, architecture, design system
 - **Phase 1: MVP** ✅ – Reminders, overlay, settings (shipped)
