@@ -74,12 +74,12 @@ final class ViewBodyCoverageTests: XCTestCase {
     // MARK: - OnboardingWelcomeView
 
     func test_onboardingWelcomeView_renders() {
-        render(OnboardingWelcomeView {})
+        render(OnboardingWelcomeView(onNext: {}))
     }
 
     func test_onboardingWelcomeView_callbackFires() {
         var called = false
-        let view = OnboardingWelcomeView { called = true }
+        let view = OnboardingWelcomeView(onNext: { called = true })
         render(view)
         view.onNext()
         XCTAssertTrue(called)
