@@ -5,6 +5,7 @@ import UserNotifications
 
 protocol AppGroupIPCProviding: AppGroupIPCEventRecording {
     func isTrueInterruptEnabled() -> Bool
+    func readSelection() throws -> AppGroupSelectionSnapshot
 }
 
 extension AppGroupIPCStore: AppGroupIPCProviding {}
@@ -354,7 +355,7 @@ final class AppCoordinator: ObservableObject {
             await scheduler.scheduleReminders(using: settings)
             recordIPCEvent(
                 .notificationFallbackScheduled,
-                detail: "shield_unavailable"
+                detail: notificationFallbackDetail
             )
         } else {
             scheduler.cancelAllReminders()
@@ -751,15 +752,42 @@ extension AppCoordinator {
     private var shouldScheduleNotificationFallback: Bool {
         settings.notificationFallbackEnabled &&
             hasEnabledReminder &&
-            (!deviceActivityMonitor.isAvailable || !isTrueInterruptEnabled)
+            (!deviceActivityMonitor.isAvailable || !isTrueInterruptEnabled || !hasTrueInterruptSelection)
     }
 
     private var shouldUseShieldPath: Bool {
-        deviceActivityMonitor.isAvailable && isTrueInterruptEnabled && hasEnabledReminder
+        deviceActivityMonitor.isAvailable &&
+            isTrueInterruptEnabled &&
+            hasTrueInterruptSelection &&
+            hasEnabledReminder
+    }
+
+    private var notificationFallbackDetail: String {
+        guard deviceActivityMonitor.isAvailable else { return "shield_unavailable" }
+        guard isTrueInterruptEnabled else { return "true_interrupt_disabled" }
+        guard hasTrueInterruptSelection else { return "true_interrupt_empty_selection" }
+        assertionFailure("notificationFallbackDetail called while shield routing is available")
+        return "unexpected_shield_routing_state"
     }
 
     private var isTrueInterruptEnabled: Bool {
         ipcStore.isTrueInterruptEnabled()
+    }
+
+    private var hasTrueInterruptSelection: Bool {
+        do {
+            let selection = try ipcStore.readSelection()
+            if selection.isEmpty {
+                Logger.scheduling.debug("True Interrupt disabled because no apps or categories are selected")
+                return false
+            }
+            return true
+        } catch {
+            Logger.scheduling.error(
+                "True Interrupt selection unavailable: \(String(describing: error), privacy: .public)"
+            )
+            return false
+        }
     }
 
     private var hasEnabledReminder: Bool {

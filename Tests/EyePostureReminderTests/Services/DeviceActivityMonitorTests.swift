@@ -257,6 +257,7 @@ final class DeviceActivityMonitorTests: XCTestCase {
         mockOverlay.autoInvokeOnPresent = false
         mockMonitor.stubbedIsAvailable = true
         ipcStore.trueInterruptEnabled = true
+        ipcStore.selectApps()
         let coordinator = AppCoordinator(
             settings: makeSettings(),
             scheduler: ReminderScheduler(notificationCenter: mockNotif),
@@ -280,6 +281,33 @@ final class DeviceActivityMonitorTests: XCTestCase {
             "DeviceActivity monitoring must start only after the overlay is actually visible")
     }
 
+    func test_coordinator_thresholdScheduling_skipsMonitorWhenSelectionEmpty() async throws {
+        let mockNotif = MockNotificationCenter()
+        let mockTracker = MockScreenTimeTracker()
+        let mockOverlay = MockOverlayPresenting()
+        let mockMonitor = MockDeviceActivityMonitorProviding()
+        let ipcStore = MockAppGroupIPCRecorder()
+        mockMonitor.stubbedIsAvailable = true
+        ipcStore.trueInterruptEnabled = true
+        let coordinator = AppCoordinator(
+            settings: makeSettings(),
+            scheduler: ReminderScheduler(notificationCenter: mockNotif),
+            notificationCenter: mockNotif,
+            overlayManager: mockOverlay,
+            screenTimeTracker: mockTracker,
+            pauseConditionProvider: MockPauseConditionProvider(),
+            deviceActivityMonitor: mockMonitor,
+            ipcStore: ipcStore
+        )
+        defer { coordinator.stopFallbackTimers() }
+
+        mockTracker.simulateThresholdReached(for: .eyes)
+        try await Task.sleep(nanoseconds: 50_000_000)
+
+        XCTAssertEqual(mockMonitor.scheduleCallCount, 0)
+        XCTAssertNil(mockMonitor.activeSession)
+    }
+
     func test_coordinator_overlayDismiss_cancelsAfterSchedule_whenMonitorAvailable() async throws {
         let mockNotif = MockNotificationCenter()
         let mockTracker = MockScreenTimeTracker()
@@ -288,6 +316,7 @@ final class DeviceActivityMonitorTests: XCTestCase {
         let ipcStore = MockAppGroupIPCRecorder()
         mockMonitor.stubbedIsAvailable = true
         ipcStore.trueInterruptEnabled = true
+        ipcStore.selectApps()
         let coordinator = AppCoordinator(
             settings: makeSettings(),
             scheduler: ReminderScheduler(notificationCenter: mockNotif),
@@ -317,6 +346,7 @@ final class DeviceActivityMonitorTests: XCTestCase {
         let ipcStore = MockAppGroupIPCRecorder()
         mockMonitor.stubbedIsAvailable = true
         ipcStore.trueInterruptEnabled = true
+        ipcStore.selectApps()
         let coordinator = AppCoordinator(
             settings: makeSettings(),
             scheduler: ReminderScheduler(notificationCenter: mockNotif),

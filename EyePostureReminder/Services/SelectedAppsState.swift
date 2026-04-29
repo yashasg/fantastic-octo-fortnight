@@ -80,12 +80,18 @@ final class SelectedAppsState: ObservableObject {
         defaults: UserDefaults? = AppGroupDefaults.resolve(consumer: "SelectedAppsState")
     ) {
         self.defaults = defaults
-        isTrueInterruptEnabled = defaults?.bool(forKey: SelectedAppsState.enabledKey) ?? false
+        let initialMetadata: SelectedAppsMetadata
         if let data = defaults?.data(forKey: SelectedAppsState.metadataKey),
            let decoded = try? JSONDecoder().decode(SelectedAppsMetadata.self, from: data) {
-            selectionMetadata = decoded
+            initialMetadata = decoded
         } else {
-            selectionMetadata = .empty
+            initialMetadata = .empty
+        }
+        selectionMetadata = initialMetadata
+        let storedEnabled = defaults?.bool(forKey: SelectedAppsState.enabledKey) ?? false
+        isTrueInterruptEnabled = storedEnabled && !initialMetadata.isEmpty
+        if storedEnabled && initialMetadata.isEmpty {
+            defaults?.set(false, forKey: SelectedAppsState.enabledKey)
         }
     }
 
@@ -96,6 +102,11 @@ final class SelectedAppsState: ObservableObject {
     func setEnabled(_ enabled: Bool) -> Bool {
         guard let defaults else {
             isTrueInterruptEnabled = false
+            return false
+        }
+        guard !enabled || !selectionMetadata.isEmpty else {
+            isTrueInterruptEnabled = false
+            defaults.set(false, forKey: SelectedAppsState.enabledKey)
             return false
         }
         isTrueInterruptEnabled = enabled
@@ -116,6 +127,10 @@ final class SelectedAppsState: ObservableObject {
         }
         selectionMetadata = metadata
         defaults.set(data, forKey: SelectedAppsState.metadataKey)
+        if metadata.isEmpty {
+            isTrueInterruptEnabled = false
+            defaults.set(false, forKey: SelectedAppsState.enabledKey)
+        }
         return true
     }
 

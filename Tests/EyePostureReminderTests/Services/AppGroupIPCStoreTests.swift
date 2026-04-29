@@ -32,13 +32,30 @@ final class AppGroupIPCStoreTests: XCTestCase {
         XCTAssertEqual(ShieldSessionKeys.triggeredAt, ShieldSession.triggeredAtKey)
     }
 
-    func test_trueInterruptEnabled_roundTripsThroughDefaults() {
+    func test_trueInterruptEnabled_withSelection_roundTripsThroughDefaults() throws {
         XCTAssertFalse(store.isTrueInterruptEnabled())
+        try store.writeSelection(AppGroupSelectionSnapshot(categoryCount: 0, appCount: 1, lastUpdated: Date()))
 
-        store.setTrueInterruptEnabled(true)
+        XCTAssertTrue(store.setTrueInterruptEnabled(true))
 
         XCTAssertTrue(store.isTrueInterruptEnabled())
         XCTAssertTrue(defaults.bool(forKey: AppGroupIPCKeys.trueInterruptEnabled))
+    }
+
+    func test_trueInterruptEnabled_emptySelection_refusesEnable() {
+        XCTAssertFalse(store.setTrueInterruptEnabled(true))
+
+        XCTAssertFalse(store.isTrueInterruptEnabled())
+        XCTAssertFalse(defaults.bool(forKey: AppGroupIPCKeys.trueInterruptEnabled))
+    }
+
+    func test_trueInterruptEnabled_corruptSelection_refusesEnableAndWritesFalse() {
+        defaults.set(Data("not-json".utf8), forKey: AppGroupIPCKeys.selectionMetadata)
+
+        XCTAssertFalse(store.setTrueInterruptEnabled(true))
+
+        XCTAssertFalse(store.isTrueInterruptEnabled())
+        XCTAssertFalse(defaults.bool(forKey: AppGroupIPCKeys.trueInterruptEnabled))
     }
 
     func test_unavailableSuiteResolver_reportsDiagnosticAndDoesNotReturnStandardDefaults() throws {
