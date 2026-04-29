@@ -138,7 +138,7 @@ Five screenshots required for App Store listing. Capture on iPhone 15 Pro (6.1")
 |---|--------|-------------|-----------------|
 | 1 | **Settings View** | Main settings screen with eye and posture reminder rows, interval/duration pickers visible, toggle ON | "Customize your reminders in seconds" |
 | 2 | **Eye Break Overlay** | Full-screen eye break overlay with countdown ring, blurred background, eye icon | "Gentle eye breaks with the 20-20-20 rule" |
-| 3 | **Posture Check Overlay** | Full-screen posture overlay with countdown, posture icon, dismiss button visible | "Posture nudges that actually help" |
+| 3 | **Posture Check Overlay** | Full-screen posture overlay with countdown, posture icon, dismiss button visible | "Posture check reminders" |
 | 4 | **Onboarding Welcome** | First onboarding screen with app icon, welcome message, get-started flow | "Set up in seconds — no account needed" |
 | 5 | **Snooze Options** | Overlay or settings showing snooze choices (5 min / 15 min / rest of day) | "Snooze when you need to — no guilt" |
 
