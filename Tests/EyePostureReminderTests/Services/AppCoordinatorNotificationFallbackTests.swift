@@ -151,6 +151,48 @@ final class AppCoordinatorNotificationFallbackTests: XCTestCase {
         XCTAssertTrue(ipcStore.recordedKinds.contains(.notificationFallbackScheduled))
     }
 
+    func test_trueInterruptEnabledChangeNotification_whenEnabledAndShieldAvailable_switchesToShieldPath() async throws {
+        deviceActivityMonitor.stubbedIsAvailable = false
+        await coordinator.scheduleReminders()
+        XCTAssertEqual(notificationCenter.pendingRequests.count, 2)
+
+        deviceActivityMonitor.stubbedIsAvailable = true
+        ipcStore.trueInterruptEnabled = true
+        ipcStore.selectApps()
+        NotificationCenter.default.post(
+            name: AppGroupIPCStore.trueInterruptEnabledDidChangeNotification,
+            object: nil,
+            userInfo: [AppGroupIPCStore.trueInterruptEnabledValueUserInfoKey: true]
+        )
+        try await Task.sleep(nanoseconds: 200_000_000)
+
+        XCTAssertTrue(notificationCenter.pendingRequests.isEmpty)
+        XCTAssertEqual(notificationCenter.removeAllCallCount, 1)
+        let event = try XCTUnwrap(ipcStore.events.last { $0.kind == .shieldPathSelected })
+        XCTAssertEqual(event.detail, "device_activity_available")
+    }
+
+    func test_trueInterruptEnabledChangeNotification_whenDisabled_switchesToNotificationFallback() async throws {
+        deviceActivityMonitor.stubbedIsAvailable = true
+        ipcStore.trueInterruptEnabled = true
+        ipcStore.selectApps()
+        await coordinator.scheduleReminders()
+        XCTAssertTrue(notificationCenter.pendingRequests.isEmpty)
+        XCTAssertTrue(ipcStore.recordedKinds.contains(.shieldPathSelected))
+
+        ipcStore.trueInterruptEnabled = false
+        NotificationCenter.default.post(
+            name: AppGroupIPCStore.trueInterruptEnabledDidChangeNotification,
+            object: nil,
+            userInfo: [AppGroupIPCStore.trueInterruptEnabledValueUserInfoKey: false]
+        )
+        try await Task.sleep(nanoseconds: 200_000_000)
+
+        XCTAssertEqual(notificationCenter.addedRequests.count, 2)
+        let event = try XCTUnwrap(ipcStore.events.last { $0.kind == .notificationFallbackScheduled })
+        XCTAssertEqual(event.detail, "true_interrupt_disabled")
+    }
+
     func test_handleNotification_recordsDeliveredFallbackEvent() throws {
         coordinator.handleNotification(for: .eyes)
 
