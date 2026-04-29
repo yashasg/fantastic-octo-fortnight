@@ -245,7 +245,7 @@ struct AppCategoryApprovedCard: View {
             // Placeholder note — remove when FamilyActivityPicker is embedded.
             Text("appCategoryPicker.approved.pickerPlaceholder", bundle: .module)
                 .font(AppFont.caption)
-                .foregroundStyle(AppColor.textSecondary.opacity(0.6))
+                .foregroundStyle(AppColor.textSecondary)
                 .multilineTextAlignment(.center)
                 .padding(.top, AppSpacing.xs)
         }

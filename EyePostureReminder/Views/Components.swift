@@ -51,7 +51,7 @@ struct PrimaryButtonStyle: ButtonStyle {
                 .font(AppTypography.bodyEmphasized)
                 .foregroundStyle(AppColor.background)
                 .padding(.horizontal, AppSpacing.lg)
-                .padding(.vertical, AppSpacing.sm + 4)
+                .frame(minHeight: AppLayout.minTapTarget)
                 .background(AppColor.primaryRest)
                 .clipShape(RoundedRectangle(cornerRadius: AppLayout.radiusPill, style: .continuous))
                 .scaleEffect((!reduceMotion && configuration.isPressed) ? 0.98 : 1.0)
