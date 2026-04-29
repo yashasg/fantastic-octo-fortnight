@@ -22875,3 +22875,252 @@ Testing with 1-minute intervals allows rapid validation of reminder behavior wit
 - Testers can now set 1-minute reminders to verify popup behavior rapidly during QA cycles
 - No change to user-facing defaults or production UX
 - Feature remains available for future test frameworks or debug modes
+
+---
+
+## Decision: FamilyControls Entitlement — Restricted, Manual Approval Required
+
+**Author:** Virgil (CI/CD Dev)  
+**Date:** 2026-04-29  
+**Status:** Reference / Actionable — approval required before Phase 3 external distribution  
+
+### Summary
+
+`com.apple.developer.family-controls` is a **restricted, manually-approved entitlement** required for all Screen Time APIs (FamilyControls, DeviceActivity, ManagedSettings). It gates Phase 3 Shield UI implementation and must be approved by Apple before external TestFlight or App Store submission. Local development and device testing can proceed immediately.
+
+### Entitlement Details
+
+**Entitlement key:** `com.apple.developer.family-controls`
+
+**Value for kshana (self-care/wellbeing scope):**
+```xml
+<key>com.apple.developer.family-controls</key>
+<array>
+    <string>individual</string>
+</array>
+```
+
+Use `individual` scope, not `system`. Individual allows users to manage their own screen time. System is for parental controls. kshana is self-care, so `individual` is correct and easier to approve.
+
+### Approval Status and Timeline
+
+- ✅ Request-only: Apple does NOT auto-grant this entitlement
+- Request URL: https://developer.apple.com/contact/request/family-controls-distribution
+- SLA: None guaranteed; typically days to a few weeks
+- Action: File immediately — this is the only external time-gated dependency blocking Phase 3 distribution
+
+### Which Targets Require the Entitlement
+
+All 4 targets that import FamilyControls, DeviceActivity, or ManagedSettings must declare the entitlement:
+- Main app (`EyePostureReminder` / `com.yashasg.eyeposturereminder`)
+- DeviceActivityMonitor extension (`com.yashasg.eyeposturereminder.monitor`)
+- ShieldConfiguration extension (`com.yashasg.eyeposturereminder.shieldconfiguration`)
+- ShieldAction extension (`com.yashasg.eyeposturereminder.shieldaction`)
+
+### App Groups (No Approval Needed)
+
+App Groups (`com.apple.security.application-groups`) is self-service. Required for shared state between main app and extensions.
+
+**App Group ID:** `group.com.yashasg.eyeposturereminder`
+
+All 4 targets need App Groups enabled in their respective App IDs.
+
+### Pre- vs. Post-Approval Work
+
+| Activity | Before Approval | After Approval |
+|---|---|---|
+| Compile extension targets locally | ✅ | ✅ |
+| Run tests for monitor/shield logic | ✅ | ✅ |
+| Install on personal device via dev profile | ✅ | ✅ |
+| Use FamilyControls APIs on device | ✅ APIs work | ✅ |
+| Internal TestFlight (same account) | ✅ | ✅ |
+| **External TestFlight** | ❌ Upload rejected | ✅ |
+| **App Store submission** | ❌ Upload rejected | ✅ |
+
+**Practical consequence:** All Phase 3 code can be written, compiled, and verified locally before Apple approves. The approval only blocks external distribution.
+
+### Provisioning Profile Count and CI/CD Impact
+
+Phase 3 requires **4 App IDs** and **4 provisioning profiles** (one per target per signing mode):
+
+| Item | Current | Phase 3 |
+|---|---|---|
+| `.entitlements` files | 1 | 4 |
+| App IDs in portal | 1 | 4 |
+| Provisioning profiles | 1 | 4 |
+| GitHub secrets | 1 (`BUILD_PROVISION_PROFILE_BASE64`) | 4 |
+| `ExportOptions.plist` | Single profile | Explicit 4-entry dict |
+
+`build_signed.sh` `ExportOptions.plist` must have a `provisioningProfiles` dictionary mapping all 4 bundle IDs to their profile names.
+
+### Request Steps for Yashasg
+
+1. **Verify prerequisites:**
+   - Apple Developer Program enrollment complete (Organization, not Individual)
+   - App ID `com.yashasg.eyeposturereminder` registered
+   - App Store Connect app record created
+
+2. **Navigate to request form:**
+   - URL: https://developer.apple.com/contact/request/family-controls-distribution
+
+3. **Fill in the form:**
+   - App Name: `kshana (Eye & Posture Reminder)`
+   - Bundle ID: `com.yashasg.eyeposturereminder`
+   - Team ID: Your 10-character Team ID
+   - App Category: Health & Fitness
+   - Scope: Individual (not system)
+   - Use case: "kshana is a self-care app for personal screen time management. Users configure blocked apps/categories for their own focus sessions. When a restricted app opens, a gentle mindfulness shield reminds them of their intention. No data shared externally. Entitlement required for AuthorizationCenter and to host DeviceActivityMonitor, ShieldConfiguration, and ShieldAction extensions."
+
+4. **After approval:**
+   - Apple emails confirmation within days
+   - Regenerate 4 provisioning profiles in Developer Portal
+   - Add 4 profiles to GitHub Secrets
+   - Update CI/CD `ExportOptions.plist` with 4-profile mapping
+
+### References
+
+- FamilyControls documentation: https://developer.apple.com/documentation/familycontrols
+- Entitlement request: https://developer.apple.com/contact/request/family-controls-distribution
+- DeviceActivity: https://developer.apple.com/documentation/deviceactivity
+- ManagedSettings: https://developer.apple.com/documentation/managedsettings
+
+---
+
+## Decision: Shield UI Customization — Data-Only, No Arbitrary Views Allowed
+
+**Author:** Rusty (iOS Architect / Lead)  
+**Date:** 2026-04-29  
+**Status:** Research complete — spike ready after entitlement approval  
+
+### Summary
+
+`ShieldConfiguration` is a **data-only structure**, not a SwiftUI canvas. It cannot host arbitrary views, animations, or custom layouts. Animated YinYangEyeView in the shield is impossible. Static custom logo as an SF Symbol is possible (iOS 17+). Shield UI is dependent on FamilyControls entitlement approval.
+
+### What ShieldConfiguration Can Customize
+
+| Property | Supported | Notes |
+|---|---|---|
+| `title` | ✅ Yes | Custom string via `ShieldConfiguration.Label` |
+| `subtitle` | ✅ Yes | Custom string via `ShieldConfiguration.Label` |
+| `icon` | ✅ Yes (SF Symbol) | See below — raster images not supported |
+| `primaryButton` | ✅ Yes | Text + verdict (`.close` or `.defer`) |
+| `secondaryButton` | ✅ Yes | Optional second button with same verdicts |
+| `backgroundColor` | ✅ iOS 17+ only | Solid color disables default blur |
+| `backgroundBlurStyle` | ✅ iOS 17+ only | System blur material |
+
+### Cannot Be Customized
+
+- Layout / positioning of any element — Apple controls the entire layout
+- Font face / typeface — system font only
+- Button shape, corner radius, colors — system-defined
+- Animation of any kind inside the shield
+- Arbitrary SwiftUI views
+- Arbitrary UIKit views
+- Shield dismissal behavior (user cannot be forced to stay)
+
+### Animated YinYangEyeView in Shield — Impossible
+
+`YinYangEyeView` is a SwiftUI `View` using `@State`-driven `rotationEffect`, `scaleEffect`, and `DispatchQueue.main.asyncAfter` animations. The Shield extension is **not a SwiftUI surface** — it returns a `ShieldConfiguration` data structure that the system renders using its own layout engine. **You cannot inject any SwiftUI view, UIKit view, or animation.**
+
+### Static Logo in Shield — Possible
+
+Yes, with constraints:
+
+| Icon type | Supported | Path |
+|---|---|---|
+| SF Symbol (system) | ✅ Any named symbol | `ShieldConfiguration.Icon(systemName:)` |
+| Custom SF Symbol | ✅ iOS 17+ via SVG Symbol Set | Add SVG to app asset catalog as Symbol Set |
+| Custom PNG / raster | ❌ Not supported | iOS 16/17 ignore or fall back to default |
+
+**Recommended approach:** Create a custom SF Symbol from the YinYang SVG geometry (two-tone circle), add it to `Assets.xcassets` as a Symbol Set (Xcode: New Symbol Image Set). Reference it in `ShieldConfiguration.Icon` on iOS 17+. On iOS 16, use a closest-fit system symbol (e.g., `circle.lefthalf.filled`) as fallback.
+
+**Asset location:** The custom symbol SVG must live in the **main app target's** asset catalog, since the Shield Configuration extension reads resources from the host app bundle. Name suggestion: `kshana.yinyang`.
+
+Apple docs: [Creating custom SF Symbols](https://developer.apple.com/documentation/sf_symbols/creating_custom_symbols)
+
+### Extension Architecture
+
+Three separate Xcode targets required:
+
+```
+Main App Target (kshana)
+├── FamilyControls framework (+ AuthorizationCenter)
+├── ManagedSettings framework
+├── DeviceActivity framework
+│
+Extension Targets (separate, same app group):
+├── DeviceActivityMonitor extension — triggered on schedule; applies shields
+├── ShieldConfiguration extension — returns ShieldConfiguration data
+└── ShieldAction extension — handles button taps
+```
+
+All three extension targets must:
+- Be in the same Xcode project
+- Share App Groups entitlement (`com.apple.security.application-groups`)
+- Carry FamilyControls entitlement (`com.apple.developer.family-controls`)
+
+### ShieldAction Extension — Button Handling
+
+`ShieldAction` receives button taps and returns a verdict (`.close` or `.defer`):
+
+| Action | Allowed | Notes |
+|---|---|---|
+| Return `.close` | ✅ | Dismisses shield |
+| Return `.defer` | ✅ | Keeps shield up |
+| Write to App Group shared container | ✅ | Share data with main app |
+| Open main app directly | ❌ | Cannot call `UIApplication.shared.open()` |
+| Schedule local notification | ✅ | User taps → main app opens via URL scheme |
+| Make network requests | ❌ | Sandboxed, no outbound |
+| Call DeviceActivity APIs | ❌ | Route through main app |
+
+**Button mapping example:**
+
+| Button | Verdict | Mechanism |
+|---|---|---|
+| "Start Break" | `.defer` + write flag to App Group | Main app reads on next foreground |
+| "Snooze 15m" | `.defer` + write snooze timestamp | Main app reads, schedules snooze |
+| "Skip" | `.close` | Shield dismisses |
+| "Open kshana" | Cannot direct. Use: `.defer` + local notification with deep-link | User taps notification → main app |
+
+### Simulator Support
+
+❌ **No.** Physical device required. Simulator does not support Screen Time APIs.
+
+### Minimum Spike Scope (~1 day) — After Entitlement Approval
+
+Prove static logo + title/subtitle + button behavior on a physical device:
+
+1. Add `ShieldConfigurationExtension` target
+2. Add `ShieldActionExtension` target
+3. Add `DeviceActivityMonitorExtension` target
+4. Subclass `ShieldConfigurationDataSource` — return title "kshana break", subtitle "Time for your eye rest", static SF Symbol icon (or system fallback for iOS 16)
+5. Subclass `ShieldActionExtension` — handle primary button (`.defer` + write to App Group), secondary button (`.close`)
+6. Subclass `DeviceActivityMonitor` — apply shield to test app (e.g., Safari) on a 1-minute schedule
+7. Run on physical device
+8. Verify: shield appears, custom text visible, buttons fire correct verdicts, main app can read App Group flag
+
+**Risk:** Zero — extension targets are additive. Main app binary unchanged.
+
+### Decision for Team
+
+| Question | Answer | Notes |
+|---|---|---|
+| Animated SwiftUI YinYang in Shield? | ❌ Impossible | Shield is a data struct, not a view |
+| Static logo in Shield? | ✅ Possible | Custom SF Symbol (iOS 17+), system fallback (iOS 16) |
+| Custom title/subtitle? | ✅ Yes | Both iOS 16 and 17 |
+| Custom button labels? | ✅ Yes | Both iOS 16 and 17 |
+| Button that opens kshana? | ⚠️ Indirect | Via local notification + URL scheme |
+| Custom background/blur? | ✅ iOS 17+ only | Solid color disables blur |
+| Entitlement required? | ✅ Yes | `com.apple.developer.family-controls`, requires Apple approval |
+| Physical device required? | ✅ Yes | Simulator does NOT support Screen Time APIs |
+| When to build? | Phase 3+ | Dependent on entitlement approval + product decision |
+
+### Recommended Next Action
+
+Do not begin Shield UI work until:
+1. Product decision to restrict apps is confirmed
+2. FamilyControls entitlement is approved by Apple (see Virgil's research)
+
+Once approved, the spike above can run within 1 day.
+
+---

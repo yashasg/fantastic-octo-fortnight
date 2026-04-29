@@ -421,3 +421,69 @@ Provided step-by-step guide for Certificates, Identifiers & Profiles setup. Bund
 **Session log:** `.squad/log/2026-04-29T05-05-06Z-interrupt-mode-pivot.md`
 
 **Decisions merged:** All 9 inbox files → canonical `.squad/decisions/decisions.md`, inbox cleared.
+
+---
+
+### 2026-04-28: Shield UI Customization — Detailed Research (Yashasg question)
+
+**Trigger:** Yashasg asked whether the animated SwiftUI `YinYangEyeView` can be used inside the Shield, whether a special entitlement is really required, and what it actually takes to implement Shield UI customization.
+
+**Research summary:**
+
+1. **What ShieldConfiguration can customize:**
+   - Title text, subtitle text, primary button label, secondary button label — all iOS 16+
+   - Custom background color (disables system blur) — iOS 17+ only
+   - Background blur material — iOS 17+ only
+   - Icon — SF Symbol only (iOS 16), or custom SF Symbol from asset catalog (iOS 17+ via `Image("symbolName")`)
+   - Layout, font face, button style, animations — **completely locked, cannot be changed**
+
+2. **YinYangEyeView in the Shield: Impossible.**
+   - The Shield is a data struct (`ShieldConfiguration`), not a view canvas. No SwiftUI, no UIKit views, no animations can be injected.
+   - Static logo IS possible as a custom SF Symbol: design the yin-yang geometry as an SVG following SF Symbols spec, import into `Assets.xcassets` as a Symbol Set (Xcode: New Symbol Image Set), reference via `Image("kshana.yinyang")`.
+   - Custom PNG raster is NOT reliably supported — SF Symbol is the only safe path.
+   - iOS 16 fallback: use a system SF Symbol (e.g., `circle.lefthalf.filled`).
+
+3. **ShieldAction button handling:**
+   - Primary + secondary buttons only. `.close` or `.defer` verdicts.
+   - Extension CAN write to App Group shared container (pass data to main app).
+   - Extension CANNOT directly open the main app via URL scheme.
+   - Indirect "open kshana" path: write flag to App Group → schedule local notification with kshana:// deep link → user taps → kshana opens.
+   - Network requests, DeviceActivity direct calls, complex logic: all blocked in extension sandbox.
+   - "Start Break" → `.defer` + App Group flag. "Snooze" → `.defer` + snooze timestamp to App Group. "Skip" → `.close`.
+
+4. **Frameworks involved:**
+   - Main app: `FamilyControls`, `ManagedSettings`, `DeviceActivity`
+   - Extension targets (3): `DeviceActivityMonitor`, `ShieldConfigurationExtension`, `ShieldActionExtension`
+   - All targets share App Group entitlement
+
+5. **Entitlement — why it's not self-service:**
+   - `com.apple.developer.family-controls` is NOT a standard capability checkbox. Requires manual Apple approval via https://developer.apple.com/contact/request/screenshielding/
+   - Apple screens for legitimate digital wellbeing / parental control use cases
+   - Reason: Screen Time APIs can restrict any app on the device — Apple gates this to prevent stalkerware abuse
+   - kshana's self-wellness use case qualifies under `.individual` mode
+
+6. **Minimum spike to prove Shield UI customization:**
+   - ~1 dev day, 3 new extension targets, physical device only (Simulator does not support Screen Time APIs)
+   - Verify: custom title/subtitle, system blur background, primary "Start Break" button → App Group flag, secondary "Skip" → `.close`
+   - BLOCKED until FamilyControls entitlement approved
+
+**Decision artifact filed:** `.squad/decisions/inbox/rusty-shield-ui-customization.md`
+
+**New learnings added:**
+- Custom PNG raster images are NOT supported for ShieldConfiguration icon — SF Symbol or custom SF Symbol only
+- iOS 17 adds `backgroundColor` and `backgroundBlurStyle` to ShieldConfiguration — iOS 16 is blur-only, no background control
+- ShieldAction extension cannot open the main app directly — indirect path via App Group + local notification is the correct pattern
+- Shield extension targets cannot live in SPM Package.swift — requires `.xcodeproj`
+
+---
+
+## Scribe Orchestration (2026-04-29)
+
+**Action:** Orchestration log filed + decisions merged to canonical decisions.md
+
+- Orchestration log: `.squad/orchestration-log/2026-04-29T05-19-56Z-rusty-shield-ui-customization.md`
+- Session log: `.squad/log/2026-04-29T05-19-56Z-shield-ui-entitlement-research.md`
+- Merged into: `.squad/decisions.md` — "Decision: Shield UI Customization — Data-Only, No Arbitrary Views Allowed"
+- Inbox file deleted after merge
+
+**Team impact:** Rusty's Shield UI research is now canonical reference for all team members. Team can review customization constraints and spike scope. Spike ready to execute immediately upon FamilyControls entitlement approval by Apple. Product decision on app-restriction feature should drive Phase 3 scheduling.

@@ -385,3 +385,67 @@ Or drag `DerivedData/SignedBuild/Export/kshana.ipa` into Transporter.app.
 **Decisions merged:** All 9 inbox files → canonical `.squad/decisions/decisions.md`.
 
 **Key takeaway:** FamilyControls entitlement is the gating external dependency for Phase 3. File request immediately at developer.apple.com/contact/request/family-controls-distribution. All build system work (new project.yml, extension targets, 4 provisioning profiles, CI mapping) can proceed in parallel while waiting for approval.
+
+## Wave 19 — FamilyControls Entitlement Deep-Dive (2026-04-29)
+
+**Task:** Research and document everything Yashasg needs to know about `com.apple.developer.family-controls` for the Screen Time / Shield UI implementation.
+**Outcome:** ✅ Comprehensive reference written. Decision filed in inbox.
+
+**Decision filed:** `.squad/decisions/inbox/virgil-familycontrols-entitlement-requirements.md`
+
+### Key findings
+
+**Entitlement nature:**
+- `com.apple.developer.family-controls` is a **restricted, manually-approved entitlement** — not auto-granted
+- Does NOT appear as a portal capabilities checkbox (Apple Developer Portal → Identifiers)
+- Does NOT appear in Xcode's Signing & Capabilities UI (as of Xcode 15/16); add manually to `.entitlements` file
+- Approval is at **Team ID** level (one approval covers all targets under the same team)
+- Request form: `developer.apple.com/contact/request/family-controls-distribution`
+- No SLA; expect days to weeks
+
+**Entitlement value (kshana — self-care use case):**
+```xml
+<key>com.apple.developer.family-controls</key>
+<array><string>individual</string></array>
+```
+Use `individual` scope, not `system`. Individual = user manages their own screen time. System = parental controls governing other users. Apple is more permissive with `individual` for wellbeing apps.
+
+**Target coverage:**
+All 4 targets need `family-controls` entitlement + App Groups:
+- Main app: `com.yashasg.eyeposturereminder`
+- DeviceActivityMonitor: `com.yashasg.eyeposturereminder.monitor`
+- ShieldConfiguration: `com.yashasg.eyeposturereminder.shieldconfiguration`
+- ShieldAction: `com.yashasg.eyeposturereminder.shieldaction`
+
+**Pre-approval testing scope:**
+- ✅ Compile + run on personal device via development profile (APIs work in dev mode)
+- ✅ Internal TestFlight (same Apple account)
+- ❌ External TestFlight / App Store upload — rejected by ASC until approval
+
+**CI/CD Phase 3 delta:**
+- 4 App IDs, 4 provisioning profiles, 4 `.entitlements` files
+- `ExportOptions.plist` needs explicit 4-entry `provisioningProfiles` dict
+- New root-level `project.yml` (XcodeGen) for 4-target app project
+- 4 GitHub Secrets for distribution profiles
+
+**App Groups:** Self-service (no special approval), portal toggle. Required on all 4 targets for shared state between app and extensions. Group ID: `group.com.yashasg.eyeposturereminder`.
+
+## Learnings
+
+- **`individual` vs `system` scope for FamilyControls:** For self-care / digital wellbeing apps (user controls their own usage), use `individual`. For parental controls apps (governing other family members), use `system`. Apple is stricter about approving `system`. The kshana use case is squarely `individual`.
+- **FamilyControls entitlement is not a portal toggle:** Unlike Push Notifications, HealthKit, or iCloud, Family Controls does not appear as a checkbox in the Apple Developer Portal's Identifiers → Capabilities section. It is an approval-gated entitlement that Apple enables at the Team ID level server-side. Add it manually to `.entitlements` files.
+- **Approval gates distribution, not compilation:** Development provisioning profiles let you run FamilyControls APIs on a personal device immediately. Apple's gating only applies to distribution profiles (App Store / external TestFlight). Code all of Phase 3 now; file the request and wait in parallel.
+- **App Groups is the data bridge for extensions:** DeviceActivityMonitor, ShieldConfiguration, and ShieldAction all need to read/write shared state from the main app. App Groups (`group.com.yashasg.eyeposturereminder`) is the standard mechanism. It IS a normal portal capability — enable it on each App ID without any special approval.
+
+---
+
+## Scribe Orchestration (2026-04-29)
+
+**Action:** Orchestration log filed + decisions merged to canonical decisions.md
+
+- Orchestration log: `.squad/orchestration-log/2026-04-29T05-19-56Z-virgil-familycontrols-entitlement.md`
+- Session log: `.squad/log/2026-04-29T05-19-56Z-shield-ui-entitlement-research.md`
+- Merged into: `.squad/decisions.md` — "Decision: FamilyControls Entitlement — Restricted, Manual Approval Required"
+- Inbox file deleted after merge
+
+**Team impact:** Virgil's entitlement research is now canonical reference for all team members. Yashasg can proceed with approval request form using guidance in decisions.md. Phase 3 local dev and spike work can begin immediately; external distribution blocked until Apple approval received.
