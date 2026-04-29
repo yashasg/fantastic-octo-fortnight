@@ -260,6 +260,86 @@ iOS fires Eye Reminder notification
 
 ---
 
+### 2.6 True Interrupt Mode: Shield Path vs. Notification Fallback
+
+> **Fixes:** #255 — Notification and True Interrupt fallback expectations unclear
+
+#### Precedence rule (single source of truth)
+
+When True Interrupt mode is **enabled and a Screen Time shield is configured for at least one app or category**, the shield path is **primary**. The notification fallback is **suppressed for that reminder event**.
+
+```
+Reminder fires
+    │
+    ▼
+AppCoordinator evaluates shouldUseShieldPath
+    │
+    ├─ YES (shield available, configured, entitlement granted)
+    │      │
+    │      ▼
+    │  ManagedSettingsCoordinator applies shield to selected apps
+    │  Notification scheduling SKIPPED for this event
+    │  (no concurrent banner, no lock-screen notification)
+    │
+    └─ NO  (any of the conditions below is true)
+           │
+           ▼
+       Notification fallback path runs normally (Section 2.2)
+```
+
+**Notification fallback fires ONLY when the shield path is unavailable, i.e.:**
+- True Interrupt mode is disabled in Settings
+- No apps or categories are selected for shielding
+- FamilyControls entitlement not yet approved (#201 BLOCKER)
+- `ManagedSettingsCoordinator` throws an error applying the shield
+- Device does not support Screen Time (e.g., Simulator, MDM restrictions)
+
+**The two paths are mutually exclusive per reminder event.** There is no scenario where both a shield and a notification fire for the same break event.
+
+---
+
+#### Minimized / background app behavior
+
+When the shield path is active:
+
+- The **Screen Time shield is the interruption UI**. It is presented by iOS at the system level when the user attempts to open or interact with a shielded app.
+- The **overlay (`OverlayManager.show()`) must NOT fire** when the shield path is the active path. The `AppCoordinator` shield path skips the `handleNotification()` → `OverlayManager` chain entirely.
+- If the user taps a notification banner from a **previous** (fallback-path) event while a shield is active, `AppDelegate.didReceive` routes to `handleNotification()` which would normally show an overlay. Implementation must guard against this by checking `shouldUseShieldPath` before presenting the overlay — if the shield path is currently active, the overlay is suppressed.
+
+> **Risk (identified in #255):** `AppDelegate.didReceive` currently routes all notification taps to `handleNotification()`, which calls `OverlayManager.show()`. This creates a double-presentation risk (shield + overlay) if a stale notification is tapped while a shield is active. The guard check must be added before `OverlayManager.show()` is called.
+
+---
+
+#### ShieldActionProvider / "I need 5 minutes" request flow
+
+> **Status: NOT YET IMPLEMENTED — pending #201 (FamilyControls entitlement approval)**
+
+The `ShieldActionProvider` extension point allows a shielded app to surface a custom action button (e.g., "I need 5 minutes"). The intended flow when implemented:
+
+```
+User sees Screen Time shield on shielded app
+    │
+    ▼
+User taps "I need 5 minutes" (custom ShieldActionProvider button)
+    │
+    ▼
+ShieldActionProvider receives action
+    │
+    ▼
+Delegates to AppCoordinator: requestTemporaryAccess(duration: 5 min)
+    │
+    ▼
+ManagedSettingsCoordinator temporarily removes shield (5-min window)
+User can use app normally for 5 minutes
+    │
+    ▼
+Timer expires → shield reapplied
+```
+
+**This flow does NOT exist in the current codebase.** `ShieldActionProvider` is not implemented. Documentation of this flow is aspirational — it describes intended post-#201 behaviour only. No UI or confirmation screen should be built until the entitlement is approved and `ShieldActionProvider` is scaffolded.
+
+---
+
 ### 2.3 Settings Adjustment Flow
 
 ```
@@ -862,6 +942,97 @@ Phase 2 — Breathing Pulse (infinite loop)
 
 ---
 
+### 6.7 Snooze Activated While True Interrupt Shield is Active
+
+> **Fixes:** #259 — Snooze behavior while True Interrupt enabled unclear
+
+**Scenario:** The user activates snooze (via Settings → Pause Reminders) while a Screen Time shield is currently active on one or more apps, or while overlay reminders are queued.
+
+#### Expected behavior when snooze is triggered
+
+```
+User taps snooze button in Settings (5 min / 1 hr / Rest of day)
+    │
+    ▼
+AppCoordinator.cancelAllReminders() is called
+    │
+    ▼
+Step 1: overlayManager.clearQueue()    ← MUST run first (see #267)
+    │
+    ▼
+Step 2: if overlayManager.isOverlayVisible → overlayManager.dismissOverlay()
+         (queue is empty; presentNextQueuedOverlay() sees nothing to show)
+    │
+    ▼
+Step 3: ManagedSettingsCoordinator.clearAllShields()
+         (active shield removed from all shielded apps immediately)
+    │
+    ▼
+Step 4: scheduler.cancelAllReminders()
+         (all scheduled UNUserNotificationCenter notifications cancelled)
+    │
+    ▼
+Step 5: screenTimeTracker.pauseAll()
+Step 6: Snooze wake notification scheduled for (now + snooze duration)
+    │
+    ▼
+Snooze active: no new overlays, no new shields, no new notifications
+until snooze expires or user taps "Cancel snooze"
+```
+
+> ⚠️ **Ordering matters (#267):** `clearQueue()` must execute before `dismissOverlay()`. If `dismissOverlay()` is called first, it internally calls `presentNextQueuedOverlay()`, which dequeues and shows the next queued overlay before `clearQueue()` can remove it. That orphan overlay has no dismissal path because `screenTimeTracker` is already paused. See **#267** for the code-level fix (`cancelAllReminders()` ordering bug).
+
+#### Shield state when snooze is active
+
+- All Screen Time shields are **removed immediately** on snooze activation.
+- Users can open previously-shielded apps freely during the snooze window.
+- `ManagedSettingsCoordinator` re-applies shields when snooze expires (on snooze-wake).
+
+> **Status:** `ManagedSettingsCoordinator` shield-clearing on snooze is **not yet integrated** (pending #201 entitlement). The `cancelAllReminders()` ordering fix (#267) must land first, then shield-clearing can be wired in.
+
+#### Snooze expiry (snooze-wake) while app is shielded
+
+If the snooze wake fires while the user has re-opened a previously-shielded app:
+
+1. `AppCoordinator` receives the snooze-wake notification.
+2. `screenTimeTracker.resumeAll()` re-enables monitoring.
+3. If `shouldUseShieldPath` → `ManagedSettingsCoordinator` re-applies shields.
+4. Screen Time shield reappears on shielded apps (system-level, iOS-managed).
+5. Snooze-wake overlay / notification fires via normal path (Section 2.2 / 2.6).
+
+There is **no race** between shield re-application and the wake notification because shield application is synchronous via `ManagedSettingsCoordinator` and the wake notification is fired after `resumeAll()` completes.
+
+#### User navigates to Settings mid-shield
+
+```
+User is on shielded app → Screen Time shield displayed
+    │
+    ▼
+User taps shield button (ShieldActionProvider — NOT YET IMPLEMENTED, #201)
+OR: User opens kshana directly via Home Screen icon
+    │
+    ▼
+kshana Settings screen loads
+User sees "Pause Reminders" snooze controls
+    │
+    ▼
+User taps snooze
+    │
+    ▼
+Active shield is cleared (Step 3 above)
+User can return to previously-shielded app freely
+```
+
+#### "Cancel snooze" path
+
+Tapping "Cancel snooze" in Settings calls `AppCoordinator.resumeFromSnooze()`:
+1. Snooze-wake notification cancelled.
+2. `screenTimeTracker.resumeAll()` re-enabled.
+3. Shields re-applied if `shouldUseShieldPath`.
+4. Reminders rescheduled from now.
+
+---
+
 ## 7. Experience Metrics
 
 **How do we measure UX success?**
@@ -928,6 +1099,18 @@ Snooze controls are in the **Settings screen**, not on the overlay. This separat
 - [Rest of day] — **orange warning tint** (consequential; prevents casual selection)
 
 **Snooze access path:** Overlay → tap ⚙️ → Settings screen → snooze button. Two deliberate taps prevents accidental suppression.
+
+**Snooze activation sequence (canonical):**
+1. `overlayManager.clearQueue()` — clears queued overlays first (see #267)
+2. `overlayManager.dismissOverlay()` — dismisses visible overlay (queue already empty; no orphan shown)
+3. `ManagedSettingsCoordinator.clearAllShields()` — removes active True Interrupt shields (pending #201)
+4. `scheduler.cancelAllReminders()` — cancels all scheduled notifications
+5. `screenTimeTracker.pauseAll()` — pauses tracking
+6. Snooze-wake notification scheduled
+
+**While snooze is active:** No new overlays, shields, or notifications are delivered. The snooze-wake notification is the only scheduled event.
+
+**On snooze expiry or "Cancel snooze":** Shields re-applied (if True Interrupt configured), reminders rescheduled from now. See Section 6.7 for the full True Interrupt + snooze interaction.
 
 **Lock screen notification action (Phase 2):** A "Snooze 5 min" notification action on the lock screen remains a Phase 2 enhancement.
 
@@ -1008,8 +1191,8 @@ This document defines the complete user experience for kshana. Key takeaways:
 
 ---
 
-**Document version:** 1.2  
-**Last updated:** 2026-04-25 (onboarding flow correction — Fixes #112)  
+**Document version:** 1.3  
+**Last updated:** 2026-04-30 (True Interrupt fallback + snooze clarifications — Fixes #255, #259)  
 **Owner:** Reuben (Product Designer)
 
 ---
