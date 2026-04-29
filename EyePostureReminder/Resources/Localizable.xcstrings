@@ -74,7 +74,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Notifications let your breaks resume on time after a snooze."
+            "value": "Notifications keep your break reminders on schedule."
           }
         }
       }
@@ -702,7 +702,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Turn on notifications in Settings so breaks resume after a snooze."
+            "value": "Turn on notifications in Settings so break reminders stay on schedule."
           }
         }
       }
@@ -713,7 +713,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Notifications are off. Turn them on in Settings so breaks resume after a snooze."
+            "value": "Notifications are off. Turn them on in Settings so break reminders stay on schedule."
           }
         }
       }
