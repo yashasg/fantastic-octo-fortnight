@@ -132,3 +132,51 @@
 - **Output Files:** `docs/legal/TERMS.md`, `docs/legal/PRIVACY.md` (not edited this session; Frank assessed but did not modify)
 - **Coordination:** Frank work synchronized with Virgil (CI/CD implications) and Coordinator (team directive capture).
 
+
+### 2026-04-29 — True Interrupt Mode Privacy & Legal Disclosure
+
+- **Report filed:** `.squad/decisions/inbox/frank-screen-time-privacy.md` (comprehensive decision document)
+- **Task:** Pivot project to support Screen Time / FamilyControls integration for "True Interrupt Mode" capability (Phase 3+). Updated all legal/privacy documentation to disclose pending feature, Apple approval case ID, and truthful data-handling practices.
+
+**Key Updates:**
+
+- **`docs/legal/PRIVACY.md`**
+  - Added Overview section on optional Screen Time monitoring with approval case ID 102881605113
+  - Section 1: expanded to describe aggregate-only, in-memory-only Screen Time data access
+  - Section 2: explicitly clarified app will NOT read message/browser/call content
+  - Notes conditional availability pending Apple approval
+
+- **`docs/legal/DISCLAIMER.md`**
+  - Short variant: added Screen Time feature status note
+  - Full variant: added comprehensive Screen Time section explaining purpose, noting approval status, reiterating wellness-guidance-only nature
+
+- **`docs/PRIVACY_NUTRITION_LABELS.md`**
+  - Updated "Data the App Accesses but Does NOT Collect" table to include Screen Time (pending approval)
+  - Created new "If Screen Time / Device Activity Features Are Added" section with Device Status privacy label template for post-approval
+  - Updated summary table with Screen Time notation
+  - Pre- and post-approval pathways clearly documented
+
+**Legal Rationale:**
+
+- Truthfulness: Current state is "not shipped, pending approval"; future state is "aggregate data, in-memory only, never transmitted"
+- Privacy-by-Design: Explicit denial of access to sensitive content (messages, browser history, call logs)
+- App Store Compliance: Upfront disclosure of Screen Time API usage prevents Review rejection; maintains health/wellness disclaimer language
+- Wellness Framing: Breaks remain optional guidance, not mandatory; "use at your own risk" consistent across formats
+
+**Owner-Only Fields Preserved:**
+
+- `[PUBLISHER NAME]` in PRIVACY.md (Sections 7, 10, 11, 12) — untouched
+- `[CONTACT EMAIL]` in PRIVACY.md (Sections 8, 12) — untouched
+- `[JURISDICTION]` in TERMS.md Section 10 — untouched
+
+**GitHub Issues Created:**
+
+- #199 — Legal & Privacy Docs Updated: True Interrupt Mode (Screen Time/FamilyControls)
+- #200 — App Store Listing: Coordinate Legal Disclaimer Updates for Screen Time Feature
+
+**Next Steps:**
+
+- Confirm Apple approval timeline (case ID 102881605113)
+- Update App Store Connect Privacy Labels when feature is approved
+- Update App Store listing description when feature ships
+- Strike Screen Time sections if Apple approval is denied
