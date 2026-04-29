@@ -11,19 +11,7 @@
 import Foundation
 import ScreenTimeExtensionShared
 
-// MARK: - ShieldTriggerReason
-
-/// Why the Screen Time shield was triggered.
-///
-/// Drives the copy shown inside the `ShieldConfigurationExtension`
-/// (title, subtitle, icon) and is stored in the shared App Group so
-/// the extension can read it without importing the main app module.
-enum ShieldTriggerReason: String, Sendable, Equatable {
-    /// A scheduled eye-strain break (20-20-20 rule or configured interval).
-    case scheduledEyesBreak = "eyes"
-    /// A scheduled posture/movement break.
-    case scheduledPostureBreak = "posture"
-
+extension ShieldTriggerReason {
     var reminderType: ReminderType? {
         switch self {
         case .scheduledEyesBreak:

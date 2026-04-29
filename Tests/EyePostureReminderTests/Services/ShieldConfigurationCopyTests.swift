@@ -29,7 +29,7 @@ final class ShieldConfigurationCopyTests: XCTestCase {
     func test_snapshotRead_readsSharedDefaultsContract() throws {
         let triggeredAt = Date(timeIntervalSince1970: 1_000)
         let data = try ShieldSessionSnapshot.encodedData(
-            reasonRaw: "eyes",
+            reasonRaw: ShieldTriggerReason.scheduledEyesBreak.rawValue,
             durationSeconds: 20,
             triggeredAt: triggeredAt
         )
@@ -37,14 +37,14 @@ final class ShieldConfigurationCopyTests: XCTestCase {
 
         let snapshot = ShieldSessionSnapshot.read(from: defaults)
 
-        XCTAssertEqual(snapshot.reasonRaw, "eyes")
+        XCTAssertEqual(snapshot.reasonRaw, ShieldTriggerReason.scheduledEyesBreak.rawValue)
         XCTAssertEqual(snapshot.durationSeconds, 20)
         XCTAssertEqual(snapshot.triggeredAt, triggeredAt)
     }
 
     func test_remainingSeconds_roundsUpAndClampsAtZero() {
         let snapshot = ShieldSessionSnapshot(
-            reasonRaw: "eyes",
+            reasonRaw: ShieldTriggerReason.scheduledEyesBreak.rawValue,
             durationSeconds: 20,
             triggeredAt: Date(timeIntervalSince1970: 100)
         )
@@ -60,8 +60,16 @@ final class ShieldConfigurationCopyTests: XCTestCase {
     }
 
     func test_remainingSeconds_withoutDurationOrTrigger_returnsNil() {
-        let noDuration = ShieldSessionSnapshot(reasonRaw: "eyes", durationSeconds: 0, triggeredAt: Date())
-        let noTrigger = ShieldSessionSnapshot(reasonRaw: "eyes", durationSeconds: 20, triggeredAt: nil)
+        let noDuration = ShieldSessionSnapshot(
+            reasonRaw: ShieldTriggerReason.scheduledEyesBreak.rawValue,
+            durationSeconds: 0,
+            triggeredAt: Date()
+        )
+        let noTrigger = ShieldSessionSnapshot(
+            reasonRaw: ShieldTriggerReason.scheduledEyesBreak.rawValue,
+            durationSeconds: 20,
+            triggeredAt: nil
+        )
 
         XCTAssertNil(noDuration.remainingSeconds())
         XCTAssertNil(noTrigger.remainingSeconds())
@@ -69,7 +77,7 @@ final class ShieldConfigurationCopyTests: XCTestCase {
 
     func test_copy_eyes_includesCountdownWhenMoreThanFiveSecondsRemain() {
         let snapshot = ShieldSessionSnapshot(
-            reasonRaw: "eyes",
+            reasonRaw: ShieldTriggerReason.scheduledEyesBreak.rawValue,
             durationSeconds: 20,
             triggeredAt: Date(timeIntervalSince1970: 100)
         )
@@ -95,7 +103,7 @@ final class ShieldConfigurationCopyTests: XCTestCase {
 
     func test_copy_posture_omitsCountdownAtFiveSecondsOrLess() {
         let snapshot = ShieldSessionSnapshot(
-            reasonRaw: "posture",
+            reasonRaw: ShieldTriggerReason.scheduledPostureBreak.rawValue,
             durationSeconds: 20,
             triggeredAt: Date(timeIntervalSince1970: 100)
         )
@@ -117,5 +125,19 @@ final class ShieldConfigurationCopyTests: XCTestCase {
 
         XCTAssertEqual(copy.title, "Time for a break")
         XCTAssertEqual(copy.subtitle, "Take a moment away from the screen.")
+    }
+
+    func test_copy_usesTypedBranchForEveryKnownShieldTriggerReason() {
+        for reason in ShieldTriggerReason.allCases {
+            let copy = ShieldConfigurationCopy.make(
+                for: ShieldSessionSnapshot(
+                    reasonRaw: reason.rawValue,
+                    durationSeconds: 0,
+                    triggeredAt: nil
+                )
+            )
+
+            XCTAssertNotEqual(copy.title, "Time for a break")
+        }
     }
 }

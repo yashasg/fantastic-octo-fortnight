@@ -1,4 +1,5 @@
 @testable import EyePostureReminder
+@testable import ScreenTimeExtensionShared
 import XCTest
 
 /// Unit tests for the Screen Time shield abstraction layer.
@@ -47,6 +48,10 @@ final class ScreenTimeShieldTests: XCTestCase {
         // extension processes — they must never change without a migration.
         XCTAssertEqual(ShieldTriggerReason.scheduledEyesBreak.rawValue, "eyes")
         XCTAssertEqual(ShieldTriggerReason.scheduledPostureBreak.rawValue, "posture")
+    }
+
+    func test_shieldTriggerReason_allCases_areExhaustiveForKnownBreakReasons() {
+        XCTAssertEqual(ShieldTriggerReason.allCases, [.scheduledEyesBreak, .scheduledPostureBreak])
     }
 
     func test_shieldTriggerReason_equality() {

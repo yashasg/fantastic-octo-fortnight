@@ -50,10 +50,10 @@ final class DeviceActivityMonitorExtensionImpl: DeviceActivityMonitor {
     ///   shared `group.com.yashasgujjar.kshana` suite.
     static func readSession(
         from defaults: UserDefaults? = AppGroupDefaults.resolve(consumer: "DeviceActivityMonitorExtension")
-    ) -> (reason: String?, durationSeconds: Double, triggeredAt: Date?) {
+    ) -> (reason: ShieldTriggerReason?, durationSeconds: Double, triggeredAt: Date?) {
         let snapshot = ShieldSessionSnapshot.read(from: defaults)
         return (
-            reason: snapshot.reasonRaw,
+            reason: snapshot.reason,
             durationSeconds: snapshot.durationSeconds,
             triggeredAt: snapshot.triggeredAt
         )

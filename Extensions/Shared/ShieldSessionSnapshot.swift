@@ -13,6 +13,10 @@ public struct ShieldSessionSnapshot: Equatable, Sendable {
 
     public static let empty = ShieldSessionSnapshot(reasonRaw: nil, durationSeconds: 0, triggeredAt: nil)
 
+    public var reason: ShieldTriggerReason? {
+        reasonRaw.flatMap(ShieldTriggerReason.init(rawValue:))
+    }
+
     public static func encodedData(
         reasonRaw: String,
         durationSeconds: Double,
@@ -90,7 +94,7 @@ public struct ShieldConfigurationCopy: Equatable {
         now: Date = Date(),
         bundle: Bundle? = nil
     ) -> ShieldConfigurationCopy {
-        let action = actionCopy(for: snapshot.reasonRaw, bundle: bundle)
+        let action = actionCopy(for: snapshot.reason, bundle: bundle)
         if let remaining = snapshot.remainingSeconds(at: now), remaining > 5 {
             return ShieldConfigurationCopy(
                 title: action.title,
@@ -105,24 +109,26 @@ public struct ShieldConfigurationCopy: Equatable {
     }
 
     private static func actionCopy(
-        for reasonRaw: String?,
+        for reason: ShieldTriggerReason?,
         bundle: Bundle?
     ) -> (title: String, subtitle: String) {
-        switch reasonRaw {
-        case "eyes":
+        guard let reason else {
+            return (
+                ShieldConfigurationCopyLocalization.localizedString(for: .genericTitle, bundle: bundle),
+                ShieldConfigurationCopyLocalization.localizedString(for: .genericSubtitle, bundle: bundle)
+            )
+        }
+
+        switch reason {
+        case .scheduledEyesBreak:
             return (
                 ShieldConfigurationCopyLocalization.localizedString(for: .eyesTitle, bundle: bundle),
                 ShieldConfigurationCopyLocalization.localizedString(for: .eyesSubtitle, bundle: bundle)
             )
-        case "posture":
+        case .scheduledPostureBreak:
             return (
                 ShieldConfigurationCopyLocalization.localizedString(for: .postureTitle, bundle: bundle),
                 ShieldConfigurationCopyLocalization.localizedString(for: .postureSubtitle, bundle: bundle)
-            )
-        default:
-            return (
-                ShieldConfigurationCopyLocalization.localizedString(for: .genericTitle, bundle: bundle),
-                ShieldConfigurationCopyLocalization.localizedString(for: .genericSubtitle, bundle: bundle)
             )
         }
     }
