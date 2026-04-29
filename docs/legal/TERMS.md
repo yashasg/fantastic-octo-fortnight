@@ -16,14 +16,16 @@ These Terms apply to all users of the App. [PUBLISHER NAME] reserves the right t
 
 ## 2. Description of the App
 
-kshana is a wellness reminder tool for iOS. It monitors screen-on time and notifies you at configurable intervals to:
+kshana is a personal wellness reminder tool for iOS. It monitors screen-on time and notifies you at configurable intervals to:
 
 - Take short eye breaks using the 20-20-20 guideline (look at something 20 feet away for 20 seconds every 20 minutes)
 - Check and correct your posture
 
 The App also reads device motion activity data (via `CMMotionActivityManager`) in memory, solely to automatically pause reminders while you are driving. This data is never stored or transmitted. See the Privacy Policy for full details.
 
-**The App is a reminder tool only.** It does not monitor, measure, diagnose, or treat any health condition. It does not track your physical state, assess your actual eye health, or evaluate your posture biomechanics. It simply delivers reminders at intervals you configure.
+If approved and released in a future version, the App may use Apple's Screen Time, FamilyControls, DeviceActivity, ManagedSettings, and ManagedSettingsUI APIs to place user-configured wellness break screens over apps or categories you choose. These features are intended only for your own personal device and self-care routine. kshana is not parental control software, employee monitoring software, or a tool for supervising another person's device usage.
+
+**The App is a reminder tool only.** It does not monitor, measure, diagnose, or treat any health condition. It does not track your physical state, assess your actual eye health, evaluate your posture biomechanics, read app content, or report device activity to another person. It simply delivers reminders at intervals you configure.
 
 ---
 
@@ -89,6 +91,7 @@ By using the App, you agree that:
 - You will configure reminder intervals that are appropriate for your individual situation
 - You are responsible for ensuring the App is compatible with your device and iOS version
 - You will not use the App in any manner that violates applicable law
+- You will use any Screen Time interruption features only on devices you own or control for your own self-care, and not to monitor, supervise, or restrict another person's device usage
 
 ---
 
