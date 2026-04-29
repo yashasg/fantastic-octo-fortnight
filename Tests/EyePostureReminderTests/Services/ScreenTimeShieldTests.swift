@@ -66,9 +66,9 @@ final class ScreenTimeShieldTests: XCTestCase {
 
     func test_shieldSession_equality_sameValues() {
         let now = Date(timeIntervalSince1970: 1_000_000)
-        let a = ShieldSession(reason: .scheduledPostureBreak, durationSeconds: 30, triggeredAt: now)
-        let b = ShieldSession(reason: .scheduledPostureBreak, durationSeconds: 30, triggeredAt: now)
-        XCTAssertEqual(a, b)
+        let first = ShieldSession(reason: .scheduledPostureBreak, durationSeconds: 30, triggeredAt: now)
+        let second = ShieldSession(reason: .scheduledPostureBreak, durationSeconds: 30, triggeredAt: now)
+        XCTAssertEqual(first, second)
     }
 
     func test_shieldSession_equality_differentReason() {

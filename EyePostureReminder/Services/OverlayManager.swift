@@ -160,11 +160,18 @@ final class OverlayManager: OverlayPresenting {
         window.backgroundColor = .clear
 
         let hostingController = UIHostingController(
-            rootView: OverlayView(type: type, duration: duration, hapticsEnabled: hapticsEnabled, onAnalyticsEvent: AnalyticsLogger.log, onSettingsTap: {
-                UserDefaults.standard.set(true, forKey: AppStorageKey.openSettingsOnLaunch)
-            }) { [weak self] in
-                Task { @MainActor in self?.dismissOverlay() }
-            }
+            rootView: OverlayView(
+                type: type,
+                duration: duration,
+                hapticsEnabled: hapticsEnabled,
+                onAnalyticsEvent: AnalyticsLogger.log,
+                onSettingsTap: {
+                    UserDefaults.standard.set(true, forKey: AppStorageKey.openSettingsOnLaunch)
+                },
+                onDismiss: { [weak self] in
+                    Task { @MainActor in self?.dismissOverlay() }
+                }
+            )
         )
         hostingController.view.backgroundColor = .clear
         hostingController.view.accessibilityViewIsModal = true
@@ -212,7 +219,7 @@ final class OverlayManager: OverlayPresenting {
         let removed = before - overlayQueue.count
         if removed > 0 {
             Logger.overlay.info(
-                "Overlay queue: removed \(removed) queued item(s) for \(type.rawValue). Remaining: \(self.overlayQueue.count)"
+                "Overlay queue removed \(removed) item(s) for \(type.rawValue); remaining \(self.overlayQueue.count)"
             )
         }
     }

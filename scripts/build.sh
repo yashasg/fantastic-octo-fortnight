@@ -39,6 +39,8 @@ XCODE_FLAGS=(
   CODE_SIGNING_REQUIRED=NO
   CODE_SIGNING_ALLOWED=NO
   ENABLE_BITCODE=NO
+  ENABLE_APP_INTENTS_METADATA_EXTRACTION=NO
+  ENABLE_APPINTENTS_METADATA_EXTRACTION=NO
 )
 
 # ── Guards ───────────────────────────────────────────────────────────────────
@@ -151,12 +153,11 @@ cmd_lint() {
 
   if command -v swiftlint &>/dev/null; then
     info "Running SwiftLint…"
-    swiftlint lint "$PACKAGE_PATH"
+    swiftlint lint --strict --quiet "$PACKAGE_PATH"
     pass "Lint passed (took $(elapsed "$start"))"
   else
-    warn "swiftlint not found — skipping lint"
-    warn "Install with:  brew install swiftlint"
-    return 0
+    fail "swiftlint not found. Install with: brew install swiftlint"
+    exit 1
   fi
 }
 

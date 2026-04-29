@@ -35,27 +35,27 @@ final class ReminderSettingsTests: XCTestCase {
     // MARK: - Equatable
 
     func test_equatable_sameValues_areEqual() {
-        let a = ReminderSettings(interval: 1200, breakDuration: 20)
-        let b = ReminderSettings(interval: 1200, breakDuration: 20)
-        XCTAssertEqual(a, b)
+        let first = ReminderSettings(interval: 1200, breakDuration: 20)
+        let second = ReminderSettings(interval: 1200, breakDuration: 20)
+        XCTAssertEqual(first, second)
     }
 
     func test_equatable_differentInterval_areNotEqual() {
-        let a = ReminderSettings(interval: 1200, breakDuration: 20)
-        let b = ReminderSettings(interval: 600, breakDuration: 20)
-        XCTAssertNotEqual(a, b)
+        let first = ReminderSettings(interval: 1200, breakDuration: 20)
+        let second = ReminderSettings(interval: 600, breakDuration: 20)
+        XCTAssertNotEqual(first, second)
     }
 
     func test_equatable_differentBreakDuration_areNotEqual() {
-        let a = ReminderSettings(interval: 1200, breakDuration: 20)
-        let b = ReminderSettings(interval: 1200, breakDuration: 30)
-        XCTAssertNotEqual(a, b)
+        let first = ReminderSettings(interval: 1200, breakDuration: 20)
+        let second = ReminderSettings(interval: 1200, breakDuration: 30)
+        XCTAssertNotEqual(first, second)
     }
 
     func test_equatable_bothDifferent_areNotEqual() {
-        let a = ReminderSettings(interval: 1200, breakDuration: 20)
-        let b = ReminderSettings(interval: 600, breakDuration: 30)
-        XCTAssertNotEqual(a, b)
+        let first = ReminderSettings(interval: 1200, breakDuration: 20)
+        let second = ReminderSettings(interval: 600, breakDuration: 30)
+        XCTAssertNotEqual(first, second)
     }
 
     // MARK: - Static Defaults

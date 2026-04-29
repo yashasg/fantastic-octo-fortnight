@@ -10,9 +10,9 @@
 /// `ShieldConfigurationDataSource` is an ObjC-rooted class; Swift subclasses are
 /// automatically visible to the ObjC runtime without `@objc`.
 
-import ManagedSettingsUI
-import ManagedSettings
 import Foundation
+import ManagedSettings
+import ManagedSettingsUI
 
 // MARK: - ShieldConfigurationDataSourceImpl
 

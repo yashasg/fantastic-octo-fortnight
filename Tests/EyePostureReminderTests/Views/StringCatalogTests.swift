@@ -1151,7 +1151,7 @@ final class StringCatalogTests: XCTestCase {
             "reminder.eyes.notificationTitle",
             "reminder.eyes.notificationBody",
             "reminder.posture.notificationTitle",
-            "reminder.posture.notificationBody",
+            "reminder.posture.notificationBody"
         ]
         for key in notificationKeys {
             let value = str(key)

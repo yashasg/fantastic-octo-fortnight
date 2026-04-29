@@ -68,10 +68,13 @@ targets:
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         CODE_SIGN_ENTITLEMENTS: ../EyePostureReminder/EyePostureReminder.entitlements
         ENABLE_BITCODE: "NO"
+        ENABLE_APP_INTENTS_METADATA_EXTRACTION: "NO"
+        ENABLE_APPINTENTS_METADATA_EXTRACTION: "NO"
         MARKETING_VERSION: "0.2.0"
         CURRENT_PROJECT_VERSION: "1"
     postBuildScripts:
       - name: "Assemble App Bundle"
+        basedOnDependencyAnalysis: false
         script: |
           set -e
           BIN_SRC="${BUILT_PRODUCTS_DIR}/${EXECUTABLE_NAME}"
@@ -118,6 +121,8 @@ targets:
         INFOPLIST_FILE: ../Extensions/ShieldConfigurationExtension/Info.plist
         CODE_SIGN_ENTITLEMENTS: ../Extensions/ShieldConfigurationExtension/ShieldConfigurationExtension.entitlements
         ENABLE_BITCODE: "NO"
+        ENABLE_APP_INTENTS_METADATA_EXTRACTION: "NO"
+        ENABLE_APPINTENTS_METADATA_EXTRACTION: "NO"
         MARKETING_VERSION: "0.2.0"
         CURRENT_PROJECT_VERSION: "1"
 
@@ -149,6 +154,8 @@ targets:
         INFOPLIST_FILE: ../Extensions/DeviceActivityMonitorExtension/Info.plist
         CODE_SIGN_ENTITLEMENTS: ../Extensions/DeviceActivityMonitorExtension/DeviceActivityMonitorExtension.entitlements
         ENABLE_BITCODE: "NO"
+        ENABLE_APP_INTENTS_METADATA_EXTRACTION: "NO"
+        ENABLE_APPINTENTS_METADATA_EXTRACTION: "NO"
         MARKETING_VERSION: "0.2.0"
         CURRENT_PROJECT_VERSION: "1"
 

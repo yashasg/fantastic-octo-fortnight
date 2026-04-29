@@ -11,8 +11,8 @@
 /// The principal class is registered via `Info.plist` (`NSExtensionPrincipalClass`).
 
 import DeviceActivity
-import ManagedSettings
 import Foundation
+import ManagedSettings
 
 // MARK: - DeviceActivityMonitorExtensionImpl
 
@@ -23,7 +23,7 @@ final class DeviceActivityMonitorExtensionImpl: DeviceActivityMonitor {
     // MARK: DeviceActivityMonitor overrides
 
     override func intervalDidStart(for activity: DeviceActivityName) {
-        // TODO (#201): Apply app shield restrictions via store.shield.applications
+        // Pending #201: Apply app shield restrictions via store.shield.applications
         // when FamilyControls entitlement is provisioned.
         // Example (requires authorized ManagedSettingsStore):
         //   store.shield.applications = .all
@@ -40,6 +40,6 @@ final class DeviceActivityMonitorExtensionImpl: DeviceActivityMonitor {
         _ event: DeviceActivityEvent.Name,
         activity: DeviceActivityName
     ) {
-        // TODO (#201): Handle threshold events (e.g. warn user break is ending).
+        // Pending #201: Handle threshold events (e.g. warn user break is ending).
     }
 }

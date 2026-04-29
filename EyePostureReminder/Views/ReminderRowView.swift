@@ -25,10 +25,11 @@ struct ReminderRowView: View {
                             format: String(localized: "settings.reminder.toggle.disabled.hint", bundle: .module),
                             type.title)
                 ),
-                onChange: { _ in onChanged() }
-            ) {
-                Label(type.title, systemImage: type.symbolName)
-            }
+                onChange: { _ in onChanged() },
+                label: {
+                    Label(type.title, systemImage: type.symbolName)
+                }
+            )
 
             if isEnabled {
                 Picker(String(localized: "settings.reminder.intervalPicker", bundle: .module), selection: $interval) {

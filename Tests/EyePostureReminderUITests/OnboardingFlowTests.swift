@@ -35,7 +35,7 @@ final class OnboardingFlowTests: XCTestCase {
 
     // MARK: - test_onboarding_fullFlow_completesSuccessfully
 
-    /// Taps through all three onboarding screens and verifies the app transitions
+    /// Taps through onboarding and verifies the app transitions
     /// to the Home screen upon completion.
     func test_onboarding_fullFlow_completesSuccessfully() throws {
         // --- Screen 1: Welcome ---
@@ -65,6 +65,14 @@ final class OnboardingFlowTests: XCTestCase {
             "Add .accessibilityIdentifier(\"onboarding.setup.getStartedButton\") in OnboardingSetupView."
         )
         getStartedButton.tap()
+
+        // --- Screen 4: True Interrupt Mode ---
+        let interruptSkipButton = app.buttons["onboarding.interrupt.skipButton"]
+        XCTAssertTrue(
+            interruptSkipButton.waitForExistence(timeout: 5),
+            "Skip button must exist on the True Interrupt Mode screen."
+        )
+        interruptSkipButton.tap()
 
         // --- Post-onboarding: Home screen should be visible ---
         let homeNav = app.navigationBars.firstMatch
@@ -149,10 +157,10 @@ final class OnboardingFlowTests: XCTestCase {
         )
     }
 
-    // MARK: - test_onboarding_setupScreen_getStartedCompletesOnboarding
+    // MARK: - test_onboarding_setupScreen_getStartedReachesInterruptMode
 
-    /// Tapping Get Started on the setup screen completes onboarding from the picker-based flow.
-    func test_onboarding_setupScreen_getStartedCompletesOnboarding() throws {
+    /// Tapping Get Started on the setup screen reaches the True Interrupt Mode education screen.
+    func test_onboarding_setupScreen_getStartedReachesInterruptMode() throws {
         let nextButton = app.buttons["onboarding.welcome.nextButton"]
         XCTAssertTrue(nextButton.waitForExistence(timeout: 5))
         nextButton.tap()
@@ -165,10 +173,10 @@ final class OnboardingFlowTests: XCTestCase {
         XCTAssertTrue(getStartedButton.waitForExistence(timeout: 5))
         getStartedButton.tap()
 
-        let homeNav = app.navigationBars.firstMatch
+        let interruptSkipButton = app.buttons["onboarding.interrupt.skipButton"]
         XCTAssertTrue(
-            homeNav.waitForExistence(timeout: 5),
-            "After tapping Get Started, the app should transition to the Home screen."
+            interruptSkipButton.waitForExistence(timeout: 5),
+            "After tapping Get Started, the app should show the True Interrupt Mode screen."
         )
     }
 

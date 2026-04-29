@@ -558,6 +558,8 @@ generate_project() {
         CODE_SIGNING_ALLOWED: \"YES\"
         CODE_SIGNING_REQUIRED: \"YES\"
         ENABLE_BITCODE: \"NO\"
+        ENABLE_APP_INTENTS_METADATA_EXTRACTION: \"NO\"
+        ENABLE_APPINTENTS_METADATA_EXTRACTION: \"NO\"
 ${sc_manual_signing_settings}
 ${sc_profile_line}
 
@@ -585,6 +587,8 @@ ${sc_profile_line}
         CODE_SIGNING_ALLOWED: \"YES\"
         CODE_SIGNING_REQUIRED: \"YES\"
         ENABLE_BITCODE: \"NO\"
+        ENABLE_APP_INTENTS_METADATA_EXTRACTION: \"NO\"
+        ENABLE_APPINTENTS_METADATA_EXTRACTION: \"NO\"
 ${da_manual_signing_settings}
 ${da_profile_line}"
   else
@@ -633,9 +637,12 @@ ${ext_app_deps}
         CODE_SIGNING_ALLOWED: "YES"
         CODE_SIGNING_REQUIRED: "YES"
         ENABLE_BITCODE: "NO"
+        ENABLE_APP_INTENTS_METADATA_EXTRACTION: "NO"
+        ENABLE_APPINTENTS_METADATA_EXTRACTION: "NO"
 ${manual_signing_settings}
     postBuildScripts:
       - name: "Assemble App Bundle"
+        basedOnDependencyAnalysis: false
         script: |
           set -e
           BIN_SRC="\${BUILT_PRODUCTS_DIR}/\${EXECUTABLE_NAME}"

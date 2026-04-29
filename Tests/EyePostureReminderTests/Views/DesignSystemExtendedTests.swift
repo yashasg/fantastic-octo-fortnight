@@ -211,8 +211,8 @@ final class DesignSystemExtendedTests: XCTestCase {
             AppAnimation.onboardingFadeInDelay,
             AppAnimation.countdownRingTick
         ]
-        for d in durations {
-            XCTAssertGreaterThan(d, 0, "Animation duration must be > 0")
+        for duration in durations {
+            XCTAssertGreaterThan(duration, 0, "Animation duration must be > 0")
         }
     }
 

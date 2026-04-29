@@ -76,7 +76,7 @@ struct IconContainer: View {
     var body: some View {
         Image(systemName: icon)
             .symbolRenderingMode(.hierarchical)
-            .font(.system(size: size * 0.44, weight: .semibold))
+            .font(AppFont.iconContainer(size: size))
             .foregroundStyle(color)
             .frame(width: size, height: size)
             .background(AppColor.surfaceTint)

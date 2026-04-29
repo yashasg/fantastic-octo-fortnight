@@ -640,7 +640,7 @@ final class DataDrivenDefaultsRegressionTests: XCTestCase {
 /// - If the seed call is removed, `isPaused` stays `false` despite Focus being active
 ///   at construction time — exactly the cold-launch bug.
 @MainActor
-final class PauseConditionManagerColdStartRegressionTests: XCTestCase {
+final class PauseConditionColdStartTests: XCTestCase {
 
     /// Core cold-start regression: a detector that already reports `isFocused = true`
     /// when `startMonitoring()` is called must immediately set `isPaused = true`.
@@ -755,7 +755,7 @@ final class PauseConditionManagerColdStartRegressionTests: XCTestCase {
 /// needs another 6 ticks and fires at ~11 s.
 /// Timeout of 9 s: passes with the fix (~6 s actual), times out without it (~11 s).
 @MainActor
-final class ScreenTimeTrackerDoubleResignRegressionTests: XCTestCase {
+final class ScreenTimeDoubleResignTests: XCTestCase {
 
     var sut: ScreenTimeTracker!
 
@@ -829,7 +829,7 @@ final class ScreenTimeTrackerDoubleResignRegressionTests: XCTestCase {
 /// `presentPendingOverlayIfNeeded()` is called, see
 /// `AppCoordinatorTests.test_handleNotification_eyes_thenPresentPending_callsShowOverlayWithEyes`.
 @MainActor
-final class OverlayManagerQueueOnNoSceneRegressionTests: XCTestCase {
+final class OverlayQueueNoSceneTests: XCTestCase {
 
     /// Core regression: `showOverlay` must not crash when there is no active
     /// UIWindowScene (the headless test runner has none). Before the fix the path
