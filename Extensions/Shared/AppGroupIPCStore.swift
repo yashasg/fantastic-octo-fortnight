@@ -39,6 +39,7 @@ public enum AppGroupIPCEventKind: String, Codable, Sendable {
     case notificationFallbackDelivered
     case accessRequested
     case watchdogHeartbeat
+    case watchdogRecoveryTriggered
 }
 
 public struct AppGroupIPCEvent: Codable, Equatable, Sendable {

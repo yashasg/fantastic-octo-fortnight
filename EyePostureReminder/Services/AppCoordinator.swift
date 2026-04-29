@@ -6,6 +6,9 @@ import UserNotifications
 protocol AppGroupIPCProviding: AppGroupIPCEventRecording {
     func isTrueInterruptEnabled() -> Bool
     func readSelection() throws -> AppGroupSelectionSnapshot
+    func readShieldSession() throws -> ShieldSessionSnapshot
+    func clearShieldSession(endedAt: Date) -> Bool
+    func readEvents() throws -> [AppGroupIPCEvent]
 }
 
 extension AppGroupIPCStore: AppGroupIPCProviding {}
@@ -84,12 +87,13 @@ final class AppCoordinator: ObservableObject {
     /// Schedules and cancels OS-level DeviceActivity monitoring windows for break sessions.
     /// Defaults to `DeviceActivityMonitorNoop` until the FamilyControls entitlement (#201)
     /// is provisioned and the user has granted authorization.
-    private let deviceActivityMonitor: DeviceActivityMonitorProviding
+    let deviceActivityMonitor: DeviceActivityMonitorProviding
 
     /// Records shield/notification routing events into the App Group container so
     /// app extensions and watchdog diagnostics can observe the selected path.
-    private let ipcStore: AppGroupIPCProviding
+    let ipcStore: AppGroupIPCProviding
     private var trueInterruptEnabledObserver: NSObjectProtocol?
+    let watchdogHeartbeatGraceInterval: TimeInterval
 
     // MARK: - Screen-Time Tracker
 
@@ -182,8 +186,13 @@ final class AppCoordinator: ObservableObject {
         pauseConditionProvider: PauseConditionProviding? = nil,
         screenTimeAuthorization: ScreenTimeAuthorizationProviding? = nil,
         deviceActivityMonitor: DeviceActivityMonitorProviding? = nil,
-        ipcStore: AppGroupIPCProviding = AppGroupIPCStore()
+        ipcStore: AppGroupIPCProviding = AppGroupIPCStore(),
+        watchdogHeartbeatGraceInterval: TimeInterval = 10
     ) {
+        precondition(
+            watchdogHeartbeatGraceInterval.isFinite && watchdogHeartbeatGraceInterval >= 0,
+            "Watchdog heartbeat grace interval must be finite and non-negative"
+        )
         self.settings = settings ?? SettingsStore()
         self.scheduler = scheduler ?? ReminderScheduler()
         self.notificationCenter = notificationCenter
@@ -191,6 +200,7 @@ final class AppCoordinator: ObservableObject {
         self.screenTimeAuthorization = screenTimeAuthorization ?? ScreenTimeAuthorizationNoop()
         self.deviceActivityMonitor = deviceActivityMonitor ?? DeviceActivityMonitorNoop()
         self.ipcStore = ipcStore
+        self.watchdogHeartbeatGraceInterval = watchdogHeartbeatGraceInterval
         // In UI test mode, use no-op stubs for services that register UIKit lifecycle
         // observers and start 1-second timers — they prevent XCUITest from settling
         // the accessibility tree between interactions, causing stale element reads.
@@ -482,6 +492,7 @@ final class AppCoordinator: ObservableObject {
     /// restart is required here.
     func handleForegroundTransition() async {
         await refreshAuthStatus()
+        await recoverStaleDeviceActivityWatchdogIfNeeded()
         recordWatchdogHeartbeat(.appForeground)
 
         // P1-1: Handle snooze state on foreground.
@@ -667,7 +678,7 @@ extension AppCoordinator {
         )
     }
 
-    private func cancelDeviceActivityMonitoring(presentationID: UUID? = nil) {
+    func cancelDeviceActivityMonitoring(presentationID: UUID? = nil) {
         guard deviceActivityMonitor.isAvailable else { return }
         if let presentationID {
             dismissedDeviceActivityPresentationIDs.insert(presentationID)
@@ -831,7 +842,7 @@ extension AppCoordinator {
         ReminderType.allCases.contains { settings.isEnabled(for: $0) }
     }
 
-    private func recordIPCEvent(
+    func recordIPCEvent(
         _ kind: AppGroupIPCEventKind,
         reasonRaw: String? = nil,
         detail: String? = nil
