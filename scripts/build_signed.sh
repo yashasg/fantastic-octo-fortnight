@@ -65,6 +65,15 @@ EXPORT_METHOD="${EXPORT_METHOD:-app-store-connect}"
 TESTFLIGHT_INTERNAL_ONLY="${TESTFLIGHT_INTERNAL_ONLY:-NO}"
 UPLOAD_SYMBOLS="${UPLOAD_SYMBOLS:-YES}"
 
+# Extension target support (future-safe; set YES only when extension provisioning
+# profiles are available — requires FamilyControls entitlement approval, issue #201).
+# When NO (default), the signed archive builds the main app only (current TestFlight path).
+EXTENSION_PROFILES_AVAILABLE="${EXTENSION_PROFILES_AVAILABLE:-NO}"
+# Individual extension provisioning profile specifiers (manual signing only).
+# Leave empty to use automatic signing when EXTENSION_PROFILES_AVAILABLE=YES.
+SHIELD_CONFIG_PROFILE="${SHIELD_CONFIG_PROFILE:-}"
+DEVICE_ACTIVITY_PROFILE="${DEVICE_ACTIVITY_PROFILE:-}"
+
 ASC_AUTH_KEY_PATH="${ASC_AUTH_KEY_PATH:-${APP_STORE_CONNECT_API_KEY_PATH:-}}"
 ASC_AUTH_KEY_ID="${ASC_AUTH_KEY_ID:-${APP_STORE_CONNECT_API_KEY_ID:-}}"
 ASC_AUTH_ISSUER_ID="${ASC_AUTH_ISSUER_ID:-${APP_STORE_CONNECT_ISSUER_ID:-}}"
@@ -122,6 +131,11 @@ usage() {
   echo ""
   echo "Private values must be passed through environment variables only."
   echo "Do not edit Team IDs, profile UUIDs, API key IDs, or .p8 paths into this file."
+  echo ""
+  echo "Extension support (blocked on issue #201 — FamilyControls entitlement approval):"
+  echo "  EXTENSION_PROFILES_AVAILABLE=YES   Include extension targets in signed archive"
+  echo "  SHIELD_CONFIG_PROFILE=<name>       Profile specifier for ShieldConfigurationExtension"
+  echo "  DEVICE_ACTIVITY_PROFILE=<name>     Profile specifier for DeviceActivityMonitorExtension"
 }
 
 elapsed() {
@@ -460,6 +474,92 @@ generate_project() {
     fi
   fi
 
+  # Build extension dependency and target YAML snippets.
+  # These are injected into the heredoc only when EXTENSION_PROFILES_AVAILABLE=YES.
+  # Blocked on issue #201 (FamilyControls entitlement) — set NO until profiles are ready.
+  local ext_app_deps=""
+  local ext_targets=""
+  if [[ "$EXTENSION_PROFILES_AVAILABLE" == "YES" ]]; then
+    warn "EXTENSION_PROFILES_AVAILABLE=YES — including extension targets in signed archive."
+    warn "This requires FamilyControls entitlement approval (#201) and extension profiles."
+
+    local sc_profile_line=""
+    local da_profile_line=""
+    if [[ "$SIGNING_STYLE" == "manual" ]]; then
+      if [[ -n "$SHIELD_CONFIG_PROFILE" ]]; then
+        sc_profile_line="        PROVISIONING_PROFILE_SPECIFIER: $(yaml_quote "$SHIELD_CONFIG_PROFILE")"
+      fi
+      if [[ -n "$DEVICE_ACTIVITY_PROFILE" ]]; then
+        da_profile_line="        PROVISIONING_PROFILE_SPECIFIER: $(yaml_quote "$DEVICE_ACTIVITY_PROFILE")"
+      fi
+    fi
+
+    ext_app_deps="      - target: ShieldConfigurationExtension
+        embed: true
+        link: false
+      - target: DeviceActivityMonitorExtension
+        embed: true
+        link: false"
+
+    ext_targets="
+  ShieldConfigurationExtension:
+    type: app-extension
+    platform: iOS
+    deploymentTarget: \"16.0\"
+    sources:
+      - path: $(yaml_quote "${PACKAGE_PATH}/Extensions/ShieldConfigurationExtension")
+        excludes:
+          - \"*.entitlements\"
+          - Info.plist
+      - path: $(yaml_quote "${PACKAGE_PATH}/Extensions/Shared")
+    dependencies:
+      - sdk: ManagedSettingsUI.framework
+      - sdk: ManagedSettings.framework
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.yashasg.eyeposturereminder.shieldconfiguration
+        TARGETED_DEVICE_FAMILY: \"1\"
+        INFOPLIST_FILE: $(yaml_quote "${PACKAGE_PATH}/Extensions/ShieldConfigurationExtension/Info.plist")
+        CODE_SIGN_ENTITLEMENTS: $(yaml_quote "${PACKAGE_PATH}/Extensions/ShieldConfigurationExtension/ShieldConfigurationExtension.entitlements")
+        DEVELOPMENT_TEAM: $(yaml_quote "$APPLE_TEAM_ID")
+        CODE_SIGN_STYLE: $(yaml_quote "$style_value")
+        CODE_SIGNING_ALLOWED: \"YES\"
+        CODE_SIGNING_REQUIRED: \"YES\"
+        ENABLE_BITCODE: \"NO\"
+        CODE_SIGN_IDENTITY: $(yaml_quote "$SIGNING_CERTIFICATE")
+${sc_profile_line}
+
+  DeviceActivityMonitorExtension:
+    type: app-extension
+    platform: iOS
+    deploymentTarget: \"16.0\"
+    sources:
+      - path: $(yaml_quote "${PACKAGE_PATH}/Extensions/DeviceActivityMonitorExtension")
+        excludes:
+          - \"*.entitlements\"
+          - Info.plist
+      - path: $(yaml_quote "${PACKAGE_PATH}/Extensions/Shared")
+    dependencies:
+      - sdk: DeviceActivity.framework
+      - sdk: ManagedSettings.framework
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.yashasg.eyeposturereminder.deviceactivitymonitor
+        TARGETED_DEVICE_FAMILY: \"1\"
+        INFOPLIST_FILE: $(yaml_quote "${PACKAGE_PATH}/Extensions/DeviceActivityMonitorExtension/Info.plist")
+        CODE_SIGN_ENTITLEMENTS: $(yaml_quote "${PACKAGE_PATH}/Extensions/DeviceActivityMonitorExtension/DeviceActivityMonitorExtension.entitlements")
+        DEVELOPMENT_TEAM: $(yaml_quote "$APPLE_TEAM_ID")
+        CODE_SIGN_STYLE: $(yaml_quote "$style_value")
+        CODE_SIGNING_ALLOWED: \"YES\"
+        CODE_SIGNING_REQUIRED: \"YES\"
+        ENABLE_BITCODE: \"NO\"
+        CODE_SIGN_IDENTITY: $(yaml_quote "$SIGNING_CERTIFICATE")
+${da_profile_line}"
+  else
+    info "EXTENSION_PROFILES_AVAILABLE=NO — building main app only (current TestFlight path)."
+    info "Set EXTENSION_PROFILES_AVAILABLE=YES with extension profiles to include extensions."
+  fi
+
   # Archive for iOS distribution requires a proper .xcodeproj with a signed
   # app-wrapper target.  SPM executable targets cannot be archived for device
   # distribution without one.  This generated project mirrors the pattern used
@@ -486,6 +586,7 @@ targets:
     deploymentTarget: "16.0"
     dependencies:
       - package: EyePostureReminder
+${ext_app_deps}
     sources:
       - path: $(yaml_quote "${PACKAGE_PATH}/EyePostureReminder/AppIcon.xcassets")
     settings:
@@ -525,7 +626,7 @@ ${manual_signing_settings}
           if [ -f "\$PRIVACY_SRC" ]; then
             cp "\$PRIVACY_SRC" "\$PRIVACY_DST"
           fi
-
+${ext_targets}
 schemes:
   ${SCHEME}:
     build:
@@ -639,6 +740,12 @@ cmd_doctor() {
     fi
   else
     warn "Signed entitlements file missing: $SIGNED_ENTITLEMENTS_PATH"
+  fi
+
+  if [[ "$EXTENSION_PROFILES_AVAILABLE" == "YES" ]]; then
+    warn "EXTENSION_PROFILES_AVAILABLE=YES — extension targets will be included (requires #201 FamilyControls approval)"
+  else
+    info "EXTENSION_PROFILES_AVAILABLE=NO — extension targets excluded from archive (blocked on #201)"
   fi
 
   pass "Doctor complete"
