@@ -451,3 +451,32 @@ Tess completed comprehensive wellness design research proposing "Restful Grove" 
 **Commits:**
 - `d76ba3f` — `feat(onboarding): interactive reminder pickers on setup screen`
 - `3c094e7` — `feat: add 1-minute interval option for testing reminder popups`
+
+## Learnings
+
+### 2026-04-28 — Reminder Alert Copy Pass (OnboardingPermissionView)
+
+**Platform truth corrected:** iOS has no cross-app overlay permission. kshana delivers breaks via local notifications (alerts); tapping the alert opens the app and shows the full-screen break. Onboarding copy now reflects this accurately.
+
+**Copy decisions:**
+- `onboarding.permission.body1`: "Your reminders arrive as alerts — even while you're in another app." — sets expectation that alerts fire outside the app
+- `onboarding.permission.body2`: "Tap any alert to open your full-screen break in kshana." — explains the tap-to-break mechanic explicitly
+- `onboarding.permission.enableButton`: "Enable Reminders" → "Allow Reminder Alerts" — clearer about what system permission is being granted
+- `onboarding.permission.enableButton.hint`: Updated to "Allows kshana to send reminder alerts while you use other apps" — accurate scope description
+
+**No view code changes needed** — `OnboardingPermissionView.swift` uses catalog keys throughout; copy lives entirely in `Localizable.xcstrings`.
+
+**Denied-permission flow already exists** — `SettingsView` already shows `settings.notifications.disabledTitle` / `disabledBody` / `openSettings` banner via `coordinator.notificationAuthStatus`. No new UI needed.
+
+**UI test updated** — `OnboardingFlowTests.swift` renamed `test_onboarding_permissionScreen_enableNotificationsButtonExists` → `test_onboarding_permissionScreen_allowReminderAlertsButtonExists` and updated failure messages. Accessibility identifier `"onboarding.enableNotifications"` kept stable — changing it would break the test query.
+
+**Build verified:** `./scripts/build.sh build` → BUILD SUCCEEDED.
+
+## 2026-04-29T05:05:06Z: Squad Orchestration — Interrupt Mode Pivot
+
+**Orchestration log filed:**
+- `2026-04-29T05-05-06Z-linus-reminder-alert-copy.md` — copy governance, adopted pattern, commit d06b1e0
+
+**Session log:** `.squad/log/2026-04-29T05-05-06Z-interrupt-mode-pivot.md`
+
+**Decisions merged:** All 9 inbox files → canonical `.squad/decisions/decisions.md`.

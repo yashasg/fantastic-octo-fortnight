@@ -572,3 +572,36 @@ Only the double-resign path is tested. A single resign followed by return-to-act
 - `bd477c6` — `test(onboarding): add reminder-window selection coverage`
 
 **Key Insight:** Stable accessibility identifiers using `typeID` ("eyes" / "posture") rather than localized strings enables consistent UI automation across all locales. The reassurance text element gained an explicit accessibility identifier for testability.
+
+### 2026-04-28 — Background Reminder Scheduling Regression Coverage (P0)
+
+**Task:** Add regression coverage that makes it hard to disable background reminder scheduling again.
+
+**Context:** P0 — the app previously reminded users only while foregrounded because `AppCoordinator.scheduleReminders()` used `ScreenTimeTracker` exclusively with no periodic `UNNotificationRequest` scheduling. Basher restored a hybrid trigger model before I arrived; my job was to lock it in with tests.
+
+**What I found:** Basher had already committed the fix. `AppCoordinator.scheduleReminders()` now conditionally calls `await scheduler.scheduleReminders(using: settings)` when `notificationAuthStatus == .authorized`, falling back to `scheduler.cancelAllReminders()` when denied. The docstring was updated to document the "Hybrid trigger model". Linus's copy pass was also complete: permission screen and settings banner use "Reminders" language throughout.
+
+**Tests added (23, commit dc42ad3):**
+
+| File | Tests Added | Coverage |
+|------|------------|----------|
+| `ReminderSchedulerTests` | 6 | 60s boundary (repeats=true), UNTimeIntervalNotificationTrigger type, disable-eyes/posture removes from queue, non-empty identifier |
+| `AppCoordinatorTests` | 7 | scheduleReminders() adds periodic requests for both/eyes-only/posture-only/none/global-off; trigger type; repeats=true |
+| `StringCatalogTests` | 10 | Enable Reminders button language, body1/body2 reminder language, no "overlay" in body2, notification content keys non-empty, settings banner uses "Reminder" |
+
+**Result:** All 3 suites pass (23/23 new tests, 0 failures). Previously established test count was 1209; new total is 1232.
+
+**Key decisions:**
+- Tests target behavior that must NOT regress, not the bug state — all tests are GREEN now and will stay green as long as the scheduling code exists.
+- AppCoordinator tests use the shared `MockNotificationCenter` injected into both the coordinator and the ReminderScheduler so scheduling calls from the scheduler propagate to `addedRequests` naturally.
+- `reminderRequests(from:)` helper filters snooze-wake notification requests (`categoryIdentifier == snoozeWakeCategory`) so periodic-reminder assertions are not contaminated by the silent wake notification path.
+- String catalog tests target semantic properties (contains "Reminder", does not contain "Notification"/"overlay") rather than exact string equality, making them resilient to copy refinements while still catching language regressions.
+
+## 2026-04-29T05:05:06Z: Squad Orchestration — Interrupt Mode Pivot
+
+**Orchestration log filed:**
+- `2026-04-29T05-05-06Z-livingston-background-reminder-coverage.md` — test contract coverage, commit dc42ad3
+
+**Session log:** `.squad/log/2026-04-29T05-05-06Z-interrupt-mode-pivot.md`
+
+**Decisions merged:** All 9 inbox files → canonical `.squad/decisions/decisions.md`.

@@ -2932,3 +2932,1261 @@ Add to `create_export_options()` in `build_signed.sh`:
 
 This makes build number injection deterministic regardless of Xcode account
 state on the runner, and aligns the archive and IPA `CFBundleVersion` values.
+
+---
+
+# Decision Inbox: Background Reminder Capability Gap
+
+**Author:** Basher (iOS Dev — Services)  
+**Date:** 2026-04-28  
+**Status:** NEEDS TEAM DECISION  
+**Priority:** P0 — Core product promise broken
+
+---
+
+## Context
+
+The app's stated purpose is reminders **while using other apps** (eye breaks, posture checks). An architectural change in a prior sprint moved the reminder trigger from `UNTimeIntervalNotificationTrigger` periodic scheduling to `ScreenTimeTracker` — an in-process 1-second tick timer that only runs while the app is `UIApplication.applicationState == .active`.
+
+`AppCoordinator.scheduleReminders()` now explicitly calls `scheduler.cancelAllReminders()` at every entry point, removing all periodic `UNNotification` requests from the system queue. `ReminderScheduler.rescheduleReminder(for:using:)` is marked "Superseded — never called in production."
+
+## The Problem
+
+**The ScreenTimeTracker cannot run in the background.** iOS suspends the app process and the `Timer` tick stops. When the app goes to the background:
+1. `willResignActiveNotification` fires → tick timer stops → 5-second grace period starts → all counters reset to zero.
+2. No periodic `UNNotification` is scheduled to take over.
+3. No `BGTaskScheduler` background task is registered.
+4. **Result: zero reminders fire while the user is using another app.**
+
+## What Does Work Today
+
+- **In-app only:** ScreenTimeTracker fires the overlay correctly while the user stays inside the app.
+- **Snooze-wake:** One-time silent `UNTimeIntervalNotificationTrigger` is correctly scheduled as a background wake mechanism for the snooze-expiry path.
+- **Notification delivery plumbing:** `AppDelegate.willPresent` and `didReceive` handlers exist and correctly route to `coordinator.handleNotification(for:)` → `OverlayManager.showOverlay()`. This wiring is complete and correct — it will work immediately if notifications are re-enabled.
+- **Overlay tap-from-background:** `pendingOverlay` stash + `presentPendingOverlayIfNeeded()` handles the scene-activation race correctly.
+
+## iOS Platform Reality
+
+- `UNTimeIntervalNotificationTrigger(timeInterval: interval, repeats: true)` fires while the app is backgrounded or killed — this is the standard approach for reminder apps. Requires `interval >= 60`; OS silently rejects shorter intervals (already handled: `repeats: interval >= 60` in `ReminderScheduler`).
+- iOS limit: 64 pending `UNNotificationRequest`s per app. With 2 types (eyes, posture), 1 request each with `repeats: true`, this cap is irrelevant.
+- There is no iOS API for "count seconds of screen-on time while backgrounded." ScreenTimeTracker cannot be extended to cover background operation.
+- Background execution modes (`BGTaskScheduler`, background audio, location) are all inappropriate for a wellness reminder app.
+
+## Required Decisions
+
+### Decision 1 (BLOCKING): Re-enable periodic UNNotification scheduling
+The `ReminderScheduler` already has the correct implementation. `AppCoordinator.scheduleReminders()` must call `scheduler.scheduleReminders(using: settings)` (or `rescheduleReminder(for:using:)` per type) instead of `scheduler.cancelAllReminders()`.
+
+**Coordination needed:** When `ScreenTimeTracker` fires the overlay in-app, cancel and immediately reschedule the notification for that type to avoid a duplicate system banner arriving while the overlay is visible. `AppDelegate.willPresent` already suppresses the banner (`completionHandler([])`), but the trigger fires and creates the next delivery point — resetting it on overlay fire keeps timing accurate.
+
+### Decision 2: Hybrid trigger model
+Run both `ScreenTimeTracker` (foreground, for instant overlay without requiring the user to tap a banner) and `UNNotification` periodic scheduling (background, for delivery while user is in another app) simultaneously. On notification delivery while in-foreground, `AppDelegate.willPresent` suppresses the banner and fires the overlay — this already works.
+
+### Decision 3: Onboarding — denied permission recovery path
+`OnboardingPermissionView` calls `onNext()` after the system prompt regardless of outcome. A denied user sees no recovery path in onboarding. `SettingsView` does have a "Open Settings" button (behind a warning row), and the overlay gear icon sets `openSettingsOnLaunch=true` which routes there. **This is functional but indirect.** Consider adding a conditional "Go to Settings" button in `OnboardingPermissionView` if permission was denied.
+
+Note: since ScreenTimeTracker works regardless of notification auth status, denied-permission users still get in-app reminders. The gap is background delivery only, making Decision 1 + 2 the priority.
+
+## Affected Files
+
+- `EyePostureReminder/Services/AppCoordinator.swift` — remove `cancelAllReminders()` safety net, add `scheduler.scheduleReminders(using:)` call
+- `EyePostureReminder/Services/ReminderScheduler.swift` — un-supersede `rescheduleReminder(for:using:)`, call from production
+- `EyePostureReminder/Views/Onboarding/OnboardingPermissionView.swift` — optional: denied-permission recovery path
+
+# Decision: Restore Hybrid Trigger Model for Background Reminders
+
+**Author:** Basher (iOS Dev — Services)  
+**Date:** 2026-04-28  
+**Status:** Implemented (commit aa7be3e)  
+**Resolves:** P0 — zero reminders delivered while user is in another app
+
+---
+
+## Problem
+
+`AppCoordinator.scheduleReminders()` called `scheduler.cancelAllReminders()` and configured only `ScreenTimeTracker`. `ScreenTimeTracker` is a 1-second foreground `Timer` that pauses on `willResignActiveNotification`; it cannot run in the background. Result: no reminders ever fired in other apps.
+
+## Decision
+
+**Restore the hybrid trigger model:** periodic `UNNotificationRequest` (background) + `ScreenTimeTracker` (foreground precision). Neither replaces the other.
+
+### Rule 1 — Background notifications gate on auth status
+- `scheduleReminders()` calls `scheduler.scheduleReminders(using: settings)` when `notificationAuthStatus == .authorized`.
+- When denied, it calls `cancelAllReminders()` to clean up stale entries.
+- ScreenTimeTracker remains active regardless of auth — users without notification permission still get foreground overlays.
+
+### Rule 2 — Foreground threshold resets the background notification
+When `ScreenTimeTracker.onThresholdReached` fires for a type, after showing the overlay, `AppCoordinator` spawns a Task to call `scheduler.rescheduleReminder(for: type, using: settings)`. This resets the background notification's interval from the moment of the foreground trigger, keeping the two paths synchronized and preventing a near-simultaneous double-banner when the user immediately switches to another app.
+
+### Rule 3 — Notification delivery resets the foreground counter
+`handleNotification(for:)` (called from both `willPresent` and `didReceive`) calls `screenTimeTracker.reset(for: type)` after showing/queuing the overlay. This prevents the foreground timer from re-firing immediately after a notification-triggered overlay.
+
+### Rule 4 — Per-type reschedule maintains both paths
+`performReschedule(for:)` now calls `scheduler.rescheduleReminder(for:using:)` for enabled types (when authorized) and `scheduler.cancelReminder(for:)` for disabled types. Both paths also update `ScreenTimeTracker` as before.
+
+### Rule 5 — Snooze guard is unchanged
+The existing early-return in `scheduleReminders()` for active snooze prevents scheduling in both the ScreenTimeTracker and notification paths. Snooze-wake notification and in-process Task remain intact.
+
+## iOS Constraints
+- `UNTimeIntervalNotificationTrigger(repeats: true)` requires `timeInterval >= 60`. The dynamic `repeats: interval >= 60` guard in `ReminderScheduler` satisfies this; the newly added 1-minute test interval is valid.
+- No background modes, `BGTaskScheduler`, or `UIBackgroundTaskIdentifier` are needed for this pattern.
+
+## Impact
+- Users with notification permission now receive reminders cross-app (banner → tap → overlay or no-tap → overlay on next app open).
+- Users without permission receive foreground-only reminders as before (no regression).
+- All 33 `AppCoordinatorTests` pass. Full unit suite clean.
+
+# Decision: Reminder Permission Screen Copy — "Alert" not "Overlay"
+
+**Date:** 2026-04-28  
+**Author:** Linus (iOS Dev UI)  
+**Status:** Adopted
+
+## Context
+
+A platform audit confirmed: iOS has no permission for drawing over other apps (TikTok, Safari, etc.). kshana's cross-app interruption mechanism is exclusively via local notifications (alert banners). Tapping the banner opens kshana and presents the full-screen break overlay.
+
+The previous onboarding permission screen copy ("Reminders keep your breaks on schedule." / "No spam — just your breaks, right on schedule.") did not explain this mechanic, leaving users potentially confused about what they were consenting to.
+
+## Decision
+
+**Use "reminder alerts" language in onboarding.** Never imply a cross-app overlay or system-level interruption beyond standard iOS notification alerts.
+
+### Adopted copy pattern for `OnboardingPermissionView`:
+
+| Key | Value |
+|-----|-------|
+| `onboarding.permission.body1` | "Your reminders arrive as alerts — even while you're in another app." |
+| `onboarding.permission.body2` | "Tap any alert to open your full-screen break in kshana." |
+| `onboarding.permission.enableButton` | "Allow Reminder Alerts" |
+| `onboarding.permission.enableButton.hint` | "Allows kshana to send reminder alerts while you use other apps" |
+
+## Rules Going Forward
+
+1. **Never use "overlay" when describing cross-app behavior** — that's only valid for the in-app full-screen break view.
+2. **Use "reminder alerts" or "reminders"** in all user-facing copy; reserve "notification" for describing the iOS system prompt itself (where the platform term is unavoidable).
+3. **Denied-permission route** is handled by `SettingsView` (`settings.notifications.disabledTitle` banner with `openSettings` deep-link). Do not build a parallel flow in onboarding.
+4. **Accessibility identifier `"onboarding.enableNotifications"`** is kept stable for UI test stability; do not rename it.
+
+## Files Changed
+
+- `EyePostureReminder/Resources/Localizable.xcstrings`
+- `Tests/EyePostureReminderUITests/OnboardingFlowTests.swift`
+
+# Decision: Background Reminder Scheduling — Regression Test Contract
+
+**Author:** Livingston (Tester)
+**Date:** 2026-04-28
+**Status:** Active
+
+## Context
+
+P0: background reminders were disabled because `AppCoordinator.scheduleReminders()` used
+ScreenTimeTracker exclusively (foreground-only). Basher restored a hybrid trigger model:
+periodic `UNNotificationRequest` scheduling (background) + ScreenTimeTracker (foreground
+precision supplement). Linus updated permission-screen and settings copy to use "Reminders"
+language.
+
+## Decision
+
+Lock in the restored scheduling path with dedicated regression tests rather than relying
+on code review alone.
+
+## Test Contracts Established
+
+### 1. AppCoordinator background scheduling path
+`AppCoordinatorTests` — `MARK: Background Scheduling Regression (P0)`
+
+- `scheduleReminders()` with `notificationAuthStatus == .authorized` and enabled types
+  MUST add periodic `UNNotificationRequest` objects to the notification center.
+- Disabling a type (eyes/posture/global) MUST result in zero periodic requests for that type.
+- All periodic requests MUST use `UNTimeIntervalNotificationTrigger` with `repeats == true`.
+
+These tests fail if anyone removes `scheduler.scheduleReminders(using:settings)` from the
+authorized branch of `AppCoordinator.scheduleReminders()`.
+
+### 2. ReminderScheduler 60-second boundary
+`ReminderSchedulerTests` — `MARK: Background Scheduling Regression (P0)`
+
+- A 60-second interval MUST produce `repeats: true` (system minimum for repeating triggers).
+- Scheduled requests MUST use `UNTimeIntervalNotificationTrigger`.
+- Disabling a type after scheduling MUST remove it from the pending queue.
+- Every scheduled request MUST have a non-empty identifier.
+
+### 3. Copy regression — reminder language
+`StringCatalogTests` — `MARK: Permission Copy Regression (P0 + Linus copy pass)`
+
+- Permission screen "enable" button MUST contain "Reminder", MUST NOT contain "Notification".
+- `body1` MUST reference "Reminder"; `body2` MUST NOT reference "overlay".
+- Notification content keys (title + body, both types) MUST resolve to non-empty strings.
+- Settings disabled-banner MUST use "Reminder" language.
+
+## Rationale
+
+The P0 was silent — no test caught the removal of periodic scheduling. These tests create
+an explicit, named contract so the failure mode is immediately visible if the scheduling
+path is touched again.
+
+## Related Commits
+- `dc42ad3` — `test: add background reminder scheduling regression coverage (P0)`
+
+# Decision: iOS Overlay Feasibility — Reminder Delivery Must Use Local Notifications
+
+**Author:** Rusty (iOS Architect)  
+**Date:** 2026-04-28  
+**Status:** Requires immediate product + engineering resolution  
+**Priority:** CRITICAL — current code does not fulfil the app's core purpose
+
+---
+
+## The Problem
+
+The user's core expectation is: **"reminders appear while I'm in TikTok, Safari, Instagram — not while I'm staring at kshana."**
+
+The current code cannot deliver that. This is not a bug to fix — it is an iOS platform wall.
+
+---
+
+## 1. Can a normal App Store iOS app display a full-screen overlay over other apps?
+
+**No. Hard no. Full stop.**
+
+iOS has a strict process isolation model. Every app runs in its own sandbox. There is no API, no permission dialog, no Settings toggle, and no entitlement available to regular App Store developers that lets you draw custom UI over another app.
+
+The only exceptions are:
+- **Accessibility services** (requires Apple approval + Special Entitlement — not granted via App Store, requires MFi/enterprise process)
+- **Screen Time / Parental Controls** (OS-level, Apple-internal only)
+- **MDM/DEP** — enterprise device management, not App Store
+- **Picture-in-Picture** — only for video content, not arbitrary SwiftUI
+
+There is no "permission settings page" for this. It does not exist in iOS. An app claiming to show overlays over other apps in the App Store will be rejected under Guideline 2.5.1 (undocumented/private APIs) or simply cannot achieve it with any public API.
+
+---
+
+## 2. What CAN kshana do while the user is in another app?
+
+| Mechanism | Works in background? | Can interrupt user in TikTok? | Notes |
+|---|---|---|---|
+| **Local Notifications** (`UNUserNotificationCenter`) | ✅ Yes | ✅ Yes — banner + sound | User must tap to return to app |
+| **Time-Sensitive Notifications** (iOS 15+) | ✅ Yes | ✅ Breaks through Focus Mode | Requires `com.apple.developer.usernotifications.time-sensitive` entitlement + App Review justification |
+| **Critical Alerts** | ✅ Yes | ✅ Breaks through silent mode | Requires special Apple approval — NOT appropriate here |
+| **Live Activities** | ✅ Yes (Dynamic Island/lock screen) | Passive only | No interaction, just ambient info |
+| **Widgets** | ✅ Yes | Passive only | Lock screen / home screen ambient |
+| **Background App Refresh** | ✅ Limited | ❌ No UI allowed | Can pre-compute but can't alert |
+| **Custom UIWindow overlay** (current code) | ❌ Only foreground | ❌ No | This is what kshana currently does |
+
+**The answer for kshana's use case: Local Notifications.** That's the only App Store-legal mechanism to interrupt a user who is actively using another app.
+
+---
+
+## 3. What does the current code actually implement?
+
+### `ScreenTimeTracker.swift`
+- Runs a 1-second `Timer` that ticks **only while kshana is the foreground-active app** (`UIApplication.didBecomeActiveNotification` → start; `willResignActiveNotification` → stop + grace period)
+- When the user is in TikTok, this timer is **stopped**. No time accumulates. No callback ever fires.
+- **Verdict:** Correctly measures time *while kshana is open*. Useless for cross-app reminders.
+
+### `OverlayManager.swift`
+- Creates a `UIWindow` at `windowLevel = .alert + 1` and presents `OverlayView` via `UIHostingController`
+- This window is **inside kshana's process**. It covers kshana's own UI. It cannot reach over another app.
+- The `windowScene` lookup requires `.foregroundActive` — it explicitly requires kshana to be the active scene
+- **Verdict:** A perfectly fine in-app full-screen overlay. Completely useless when user is in TikTok.
+
+### `ReminderScheduler.swift`
+- Has `scheduleReminders(using:)` / `rescheduleReminder(for:using:)` which DO schedule `UNNotificationRequest` objects — the right mechanism for cross-app delivery
+- **Critical problem:** These methods are explicitly commented as **"never called in production"** and **"superseded"** by `ScreenTimeTracker`
+- `AppCoordinator.scheduleReminders()` calls `scheduler.cancelAllReminders()` then configures `ScreenTimeTracker` — notifications are actively cancelled, never rescheduled
+- **Verdict:** The one correct cross-app mechanism was intentionally disabled.
+
+### `AppCoordinator.swift`
+- Trigger model comment: *"Reminders fire after CONTINUOUS screen-on time... ScreenTimeTracker increments per-type counters while the app is active"*
+- `handleNotification(for:)` exists for background notification taps → shows overlay when app is opened. This is the correct *tap-to-open* path. But no notification is ever scheduled to trigger it.
+- **Verdict:** The notification-tap path (`handleNotification`) is wired correctly. The notification scheduling that would feed it is dead.
+
+### `OnboardingPermissionView.swift`
+- Shows a notification permission card that looks exactly like an iOS system notification banner
+- The visual mock + copy correctly implies "you'll get a notification banner"
+- But since no notifications are ever scheduled (only ScreenTimeTracker), the permission request is for a feature that is currently broken
+- **Verdict:** The onboarding correctly sets user expectation (notification banner → tap → app opens). The backend does not honour it.
+
+### Copy audit — problematic strings:
+| Key | Current value | Problem? |
+|---|---|---|
+| `onboarding.welcome.body` | "Runs quietly — you'll barely notice it." | Implies background operation — NOT delivered by current code |
+| `onboarding.permission.body1` | "Reminders keep your breaks on schedule." | Fine if notifications work |
+| `settings.reminder.section.footer` | "The timer resets when you lock your phone." | Correct — but users expect reminders while in other apps, not just after locking |
+
+---
+
+## 4. What product/architecture path should we take?
+
+### The correct iOS model for this app:
+
+**Notification-first with foreground precision refinement.**
+
+**Step 1 (Unblocks the product):** Re-enable `UNNotificationRequest` scheduling as the primary cross-app delivery mechanism.
+- `AppCoordinator.scheduleReminders()` should call `scheduler.scheduleReminders(using:)` instead of `cancelAllReminders()`
+- Remove the "superseded" comments and dead-code guard on `ReminderScheduler`
+- This makes the app work: user is in TikTok, notification fires, user taps, kshana opens, overlay shows
+
+**Step 2 (The honest screen-time story):** `UNTimeIntervalNotificationTrigger` fires on wall-clock intervals (every 20 min regardless of whether the user was actually looking at their phone). `ScreenTimeTracker` gives you actual eyes-on-screen time, but only while kshana is in the foreground.
+
+Hybrid approach options:
+- **Simple (recommend first):** Wall-clock interval notifications. Honest in copy: "every 20 minutes while your phone is in use." Works everywhere. Ship it.
+- **Screen-time aware (Phase 2):** When kshana backgrounds, cancel the existing notification and schedule a new one for `(interval - elapsed)` seconds from now. When kshana foregrounds, cancel the notification and restart ScreenTimeTracker. This preserves the screen-time accuracy. More complex but achievable.
+
+**Step 3 (Copy alignment):** Update `onboarding.welcome.body` if needed to set expectation as "you'll get a notification tap" not "invisible overlay appears over TikTok."
+
+---
+
+## 5. Exact files that need changes
+
+| File | Problem | Required change |
+|---|---|---|
+| `Services/AppCoordinator.swift` | Calls `scheduler.cancelAllReminders()` instead of scheduling; ScreenTimeTracker is the only trigger | Reinstate `scheduler.scheduleReminders(using:)` call; decide on hybrid vs wall-clock model |
+| `Services/ReminderScheduler.swift` | `scheduleReminders()` / `rescheduleReminder()` marked "never called in production" | Remove dead-code comments; wire these methods back into production path |
+| `Services/ScreenTimeTracker.swift` | Stops when app backgrounds — never fires cross-app | Keep for foreground precision, but it cannot be the sole trigger |
+| `Resources/Localizable.xcstrings` | `onboarding.welcome.body` implies silent background running | Audit against the notification-tap UX model; may need copy update |
+| `Views/Onboarding/OnboardingPermissionView.swift` | Shows notification card mock — correct expectation, but backend is broken | No change needed if notifications are re-enabled; verify the round-trip works |
+
+---
+
+## Decision
+
+**Re-enable `UNNotificationRequest` scheduling as the primary cross-app reminder mechanism. ScreenTimeTracker should be a foreground-precision supplement, not the sole trigger path.**
+
+This is a breaking architectural rollback of the "superseded notification scheduling" decision. The previous decision to replace notification scheduling with foreground-only ScreenTimeTracker eliminated the product's core value proposition.
+
+**Immediate action items:**
+1. Reinstate notification scheduling in `AppCoordinator.scheduleReminders()`
+2. Remove "never called in production" dead-code status from `ReminderScheduler`
+3. Validate the notification → tap → overlay round-trip end-to-end
+4. Decide in Sprint: wall-clock intervals (simple) vs hybrid screen-time-aware scheduling (complex)
+
+No overlay will ever appear over TikTok. The product is notification-tap-driven. Accept this and build it correctly.
+
+# Decision: Screen Time Shield Path — Corrected Architecture Assessment
+
+**Author:** Rusty (iOS Architect)  
+**Date:** 2026-04-28  
+**Status:** Architecture assessment — corrects prior incomplete claim  
+**Priority:** HIGH — affects product roadmap and MVP scope
+
+---
+
+## What Triggered This
+
+The user pushed back on our prior statement that "normal iOS apps cannot overlay over other apps," citing apps like LookAway. The user is correct that we were incomplete. This document is the corrected, complete assessment.
+
+---
+
+## Prior Statement Was Incomplete — Here Is the Correction
+
+Our prior statement (`rusty-ios-reminder-feasibility.md`) was **technically accurate but materially incomplete**. We said:
+
+> "iOS has a strict process isolation model… There is no API, no permission dialog, no Settings toggle, and no entitlement available to regular App Store developers that lets you draw custom UI over another app."
+
+This is true for *arbitrary custom UI*. What we missed: there IS a system-provided, OS-enforced mechanism that appears over other apps — Apple's **Screen Time Shield** (ManagedSettings + DeviceActivity + FamilyControls). Apps like LookAway use this path.
+
+We were wrong to list "Screen Time / Parental Controls" as "Apple-internal only." Since iOS 16, the FamilyControls framework is available to third-party developers — with approval. Our prior decision omitted this entirely.
+
+---
+
+## Q1: Can kshana implement cross-app interruptions using Screen Time Shield APIs?
+
+**Yes — with significant constraints.**
+
+The mechanism works as follows:
+
+1. `DeviceActivityMonitor` extension is triggered when a configured screen-time threshold is reached (e.g., 20 minutes of use across all apps)
+2. The extension calls `ManagedSettingsStore().shield.applicationCategories = .all()` (or specific apps)
+3. iOS immediately displays a **system-enforced full-screen shield overlay** — over the *current* app if the user is mid-session in it, or when they try to open any app
+4. The user sees the shield until they take a configured action (tap a button, which fires the `ShieldActionExtension`)
+5. The action extension can remove the shield, resetting the monitoring cycle
+
+**What appears over other apps:** A system-managed full-screen overlay (not custom SwiftUI). The visual is Apple-controlled — a modal sheet with:
+- A system blur/frost glass background (not customizable)
+- Your title (customizable, attributed string)
+- Your subtitle (customizable)
+- Primary button label (customizable text only, not style)
+- Optional secondary button label (customizable text only)
+- System-provided icon (not fully customizable)
+
+**This is NOT arbitrary "draw over any app" UI.** It is a system-gated shield that iOS controls. You cannot render a full custom OverlayView with your animations, color palette, or brand over another app. You get a system sheet with configurable text.
+
+**Critical timing nuance:** The DeviceActivityMonitor fires on threshold events, not on a continuous timer. It is accurate enough for "after 20 minutes of screen use, interrupt the user," but the exact timing is system-batched (not millisecond-precise). If the user is mid-session in TikTok when the threshold fires, the shield DOES appear over TikTok.
+
+---
+
+## Q2: What capabilities, entitlements, and extension targets are required?
+
+### Entitlement (requires Apple approval)
+- **`com.apple.developer.family-controls`** — the FamilyControls entitlement. This is **not granted automatically**. You must request it at [developer.apple.com/contact/request/family-controls-distribution](https://developer.apple.com/contact/request/family-controls-distribution). Apple reviews your stated use case before granting. Without this, the entire Screen Time path is unavailable.
+
+### Frameworks (no special approval, available to all)
+- `FamilyControls` — authorization flow
+- `DeviceActivity` — monitoring schedules + threshold events
+- `ManagedSettings` — applying/removing shields
+
+### Xcode Project Additions Required
+| Target | Type | Purpose |
+|---|---|---|
+| `kshanaDeviceActivityMonitor` | App Extension (DeviceActivityMonitor) | Receives threshold callbacks, applies shields via ManagedSettingsStore |
+| `kshanaShieldConfiguration` | App Extension (ShieldConfigurationExtension) | Returns `ShieldConfiguration` (title/subtitle/button labels) to system |
+| `kshanaShieldAction` | App Extension (ShieldActionExtension) | Handles button taps — remove shield, resume monitoring |
+| App Group | Shared container | State sharing between main app and all three extensions |
+
+### Entitlements file additions
+- `com.apple.developer.family-controls`
+- App Groups entitlement for shared container
+
+---
+
+## Q3: What user onboarding flow is required?
+
+1. **Authorization request** — must call `AuthorizationCenter.shared.requestAuthorization(for: .individual)`. This presents a **system sheet** (cannot be customized) asking the user to grant Screen Time monitoring to your app. If denied, nothing works.
+   - `.individual` mode = monitoring your **own** device (iOS 16+) — this is the self-wellness path
+   - `.family` = parental control path (controlling a child's device under Family Sharing) — not applicable for kshana
+
+2. **App/category selection** (optional or automatic) — you can either:
+   - Let the user select which apps to monitor via `FamilyActivityPicker` (system sheet, shows app icons)
+   - Or automatically shield all app categories (`.all()`) without user selection
+
+3. **Conceptual explanation step** — users need to understand "kshana will pause all apps for a break reminder." This is a bigger UX commitment than a notification banner.
+
+The authorization step alone adds a mandatory new onboarding screen with a system-managed modal. This is non-trivial UX.
+
+---
+
+## Q4: Is this App Store-compliant for a wellness app?
+
+**Likely yes — with caveats — under `.individual` authorization mode.**
+
+Apple added the `.individual` authorization mode specifically in iOS 16 to support self-monitoring apps (not just parental control). This was a deliberate policy expansion.
+
+**What we know:**
+- Multiple wellness/productivity apps have shipped using FamilyControls `.individual` (OpalApp, Roots, one-sec, Freedom, etc.)
+- Apple's documented purpose: "apps whose primary purpose is to help people manage their own device usage" — this covers an eye break / posture wellness app
+- App Review will verify: does the app's onboarding use `.individual` mode, not `.family`? Is the feature genuinely self-wellness?
+
+**Risk factors:**
+- Apple's entitlement request process is manual and takes time (typically days to weeks)
+- If kshana's primary use case reads as "for parents to manage kids" (it won't — it's clearly a self-wellness app), it could be rejected
+- If the app uses `.family` mode or requests permissions beyond its stated scope, rejection is likely
+
+**Verdict:** App Store-compliant for kshana's stated purpose, but entitlement approval is a gating external dependency — not in our control.
+
+---
+
+## Q5: Screen Time Shield vs Local Notifications — MVP vs longer-term?
+
+### Local Notifications (current correct path — MVP ✅)
+| | |
+|---|---|
+| **Entitlement needed** | `com.apple.developer.usernotifications.time-sensitive` (or standard, no special approval) |
+| **User approval required** | Notification permission (single system prompt, standard) |
+| **Interrupt cross-app** | Yes — banner + sound while user is in TikTok |
+| **User action required** | Tap banner to see full overlay |
+| **Customizable** | Full custom overlay after tap |
+| **Complexity** | LOW — already partially wired in current codebase |
+| **App Store risk** | Near zero |
+| **Time to ship** | Days |
+
+### Screen Time Shield (longer-term, Phase 3+ 🔮)
+| | |
+|---|---|
+| **Entitlement needed** | FamilyControls — requires Apple approval (external dependency) |
+| **User approval required** | Screen Time authorization system sheet + notification permission |
+| **Interrupt cross-app** | Yes — full-screen shield appears over current app |
+| **User action required** | Tap button on system shield |
+| **Customizable** | Title + subtitle + button labels only; no custom SwiftUI |
+| **Complexity** | HIGH — 3 new extension targets, App Groups, shared state, new onboarding |
+| **App Store risk** | Low–medium (entitlement approval is a dependency) |
+| **Time to ship** | Weeks minimum |
+
+**Recommendation:**
+
+- **MVP (now):** Local Notifications, as decided in `rusty-ios-reminder-feasibility.md`. This is the correct call. Reinstating notification scheduling in `AppCoordinator` is the immediate unblock.
+- **Phase 3:** Evaluate Screen Time Shield as a premium/opt-in upgrade path. "True interrupt mode" — shield appears over any app. Requires FamilyControls entitlement request as a pre-work step. ONLY pursue if Yashasg decides the product warrants the complexity and external approval dependency.
+
+Local notifications + tap-to-open-overlay is a legitimate, proven UX pattern used by most reminder/wellness apps. It is not a compromise — it is the right tool for the job for MVP.
+
+---
+
+## Q6: What code/project changes are required if we choose Screen Time path?
+
+This is a substantial engineering undertaking. Summary of required changes:
+
+### New Extension Targets (not possible in SPM-only build — requires .xcodeproj)
+- `kshanaDeviceActivityMonitor` — app extension target
+- `kshanaShieldConfiguration` — app extension target
+- `kshanaShieldAction` — app extension target
+
+### New Framework Imports
+- `FamilyControls`, `DeviceActivity`, `ManagedSettings` in main app + relevant extensions
+
+### New App Groups Entitlement
+- `group.com.yashasg.eyeposturereminder` — required for all extensions to share state with main app
+
+### New Service: `ScreenTimeShieldManager`
+- Owns `AuthorizationCenter.shared.requestAuthorization(for: .individual)`
+- Defines `DeviceActivitySchedule` + `DeviceActivityEvent` (one event per break interval)
+- Calls `ManagedSettingsStore.shield.applicationCategories = .all()` on threshold
+- Removes shield after user acknowledges
+
+### `AppCoordinator` changes
+- Wire in `ScreenTimeShieldManager` as an opt-in mode alongside notification scheduling
+- New `ReminderDeliveryMode` enum: `.notification` vs `.screenTimeShield`
+
+### Onboarding changes
+- New mandatory screen: Screen Time authorization request (before or alongside notification permission)
+- `FamilyActivityPicker` optional app selection
+
+### Existing code NOT changed
+- `OverlayManager` — the UIWindow overlay stays; it is used after the user taps the notification or after the app opens from the shield action
+- `ScreenTimeTracker` (our internal tracker) — stays as foreground precision complement
+
+### Note on SPM build
+The current project is SPM-only (no .xcodeproj main target). App extension targets CANNOT be added to SPM `Package.swift`. This path **requires** creating an `.xcodeproj` that hosts the three extension targets (a task already partially anticipated given the TestFlight xcodeproj work).
+
+---
+
+## Q7: What to tell the user
+
+**Correction of prior statement:**
+
+We owe a correction. Our prior statement was not wrong, but it was incomplete. We said normal iOS apps cannot overlay over other apps — this is true for arbitrary custom UI. We failed to mention that iOS provides a system-managed "Shield" mechanism via Screen Time APIs that CAN appear over other apps. Apps like LookAway do use this. We should have known and included it.
+
+**The complete picture:**
+
+1. ✅ The Screen Time Shield path is real and available to third-party developers (since iOS 16)
+2. ✅ It CAN show a system overlay over the app the user is currently using
+3. ⚠️ It is NOT the same as "drawing custom UI over TikTok" — the shield is system-managed with limited text customization (no custom animations, colors, or SwiftUI views)
+4. ⚠️ It requires an Apple-approved entitlement (FamilyControls), which is a real external dependency
+5. ⚠️ It requires 3 new extension targets and App Groups — substantial engineering lift
+6. ✅ For an eye/posture wellness app using `.individual` mode, App Store approval is likely (not guaranteed)
+
+**Recommendation stays:** Local notifications for MVP. Screen Time shield for a future "Pro Interrupt Mode" if the product demands it. The prior architecture decision (`rusty-ios-reminder-feasibility.md`) remains valid in its recommendation — only its claim that the shield path doesn't exist needs to be struck.
+
+---
+
+## Architectural Decision
+
+**The Screen Time Shield path is real, viable, and App-Store-compliant in principle, but is a Phase 3+ feature for kshana.** Local notifications remain the correct MVP mechanism.
+
+If Yashasg wants to pursue Screen Time Shield:
+1. File the FamilyControls entitlement request at developer.apple.com immediately (external dependency with no guaranteed timeline)
+2. Create the `.xcodeproj` extension target structure
+3. Scope a new `ScreenTimeShieldManager` service
+4. Add Screen Time authorization to onboarding
+
+**Status of prior decision `rusty-ios-reminder-feasibility.md`:** The recommendations remain correct. The claim "Screen Time / Parental Controls (OS-level, Apple-internal only)" should be struck — it is available to third-party developers with entitlement approval.
+
+# Decision: Interrupt Mode Deep Proof — DeviceActivity + Screen Time Shield
+
+**Author:** Rusty (iOS Architect)  
+**Date:** 2026-04-29  
+**Status:** Architecture decision — proof/kill investigation. No code changes yet.  
+**Priority:** HIGH — product direction decision  
+**Context:** Yashasg directive: "local reminders are just noise, useless — look into interrupt mode more, if we can leverage Apple Screen Time API, good, but if the app is just setting screen time then it's a waste."  
+**Depends on:** `rusty-screen-time-shield-path.md`, `virgil-screen-time-entitlement-path.md`
+
+---
+
+## Verdict First
+
+**kshana CAN be meaningfully more than a settings/reminder app using Screen Time Shield. The interrupt is real, cross-app, and system-enforced. But the value proposition is earned by how we use the mechanism — not by the mechanism alone.** The architecture is viable. The engineering path is clear. The blocker is an external approval process with Apple.
+
+Local notification work should be **kept as a working fallback, not a product promise**. The product promise is interrupt mode. The notification fallback serves users who don't grant Screen Time permission.
+
+---
+
+## Q1: Can DeviceActivity + ManagedSettings Shield produce recurring break interruptions after selected usage windows?
+
+**Yes — this is the core mechanism and it works.**
+
+The loop looks like this:
+
+```
+DeviceActivityCenter.startMonitoring(activity, during: schedule)
+  → user hits threshold (e.g. 20 min of cumulative app use)
+  → iOS wakes DeviceActivityMonitor extension (background, no app process needed)
+  → extension: ManagedSettingsStore().shield.applicationCategories = .all()
+  → system-enforced full-screen shield appears over whatever the user is in (TikTok, Instagram, browser)
+  → user taps "Start Break" (ShieldAction)
+  → ShieldAction extension: removes shield, writes break-start timestamp to App Group
+  → after break duration, main app or background task calls DeviceActivityCenter.startMonitoring() again
+  → cycle repeats
+```
+
+**Critical details:**
+- The `DeviceActivitySchedule` defines a time window (e.g., 9am–11pm daily). Inside that window, `DeviceActivityEvent` defines the threshold (e.g., 20 minutes of total app use).
+- After the threshold fires, the monitoring session for that schedule is considered complete. **You must restart monitoring** after the break — it does not auto-repeat at the same interval like a repeating timer.
+- Restart can be triggered from the ShieldAction extension (via `DeviceActivityCenter` call in the extension) or from the main app when it next foregrounds.
+- **Timing reliability caveat:** iOS batches threshold delivery — events are NOT millisecond-precise. Real-world reports (including one-sec developer, 2024) show delays of 30–90 seconds past the threshold, especially after device sleep. Plan for "approximately 20 minutes," not exactly 20 minutes.
+- Monitoring the shield-over-app behavior while the user is mid-session: **confirmed working**. If the user is in TikTok when the threshold fires, the shield appears over TikTok immediately. They cannot switch to another app (shield survives app switches) until they dismiss it.
+
+**For eye breaks (20-20-20 rule):** Set threshold to 1200 seconds (20 minutes). The shield fires when the user has accumulated 20 minutes of app usage in the window.
+
+**For posture breaks:** Same mechanism, different threshold and copy.
+
+---
+
+## Q2: Does the user have to select apps/categories up front? What are the restrictions?
+
+**This is the most nuanced question. The answer depends on what you're trying to do.**
+
+### For SHIELDING (blocking apps to trigger the break):
+
+**No picker required.** `ManagedSettingsStore().shield.applicationCategories = .all()` is a direct API call. It shields all app categories system-wide, including social, entertainment, games, utilities — everything except core system functions (Phone app, Emergency calls survive because Apple hard-excludes them).
+
+This means: after the threshold fires, kshana's DeviceActivityMonitor extension can call `.all()` and EVERY app the user might open is shielded. No `FamilyActivityPicker` needed. No user selection ceremony beyond the initial FamilyControls authorization.
+
+### For MONITORING (tracking usage to trigger the threshold):
+
+You also do not need FamilyActivityPicker to monitor total device activity. `DeviceActivityEvent` can be configured against all categories. You're monitoring "total app usage time" in aggregate, not per-app. The user's privacy is protected because you never receive identifiers for specific apps — just that the threshold was crossed.
+
+### What DOES require FamilyActivityPicker:
+
+**Specific app token-level monitoring.** If you want to know "the user spent 20 minutes in social media apps specifically" (not all apps), you need the user to select app tokens via FamilyActivityPicker. This is Apple's privacy gate: specific app identities are protected. Broad category/all monitoring does not require it.
+
+### Summary for kshana's use case:
+
+| Goal | FamilyActivityPicker required? |
+|---|---|
+| Shield all apps after 20 min total use | ❌ Not required |
+| Monitor total device usage (all apps) | ❌ Not required |
+| Shield specific apps only (e.g., social media) | ✅ Required for initial app selection |
+| Track usage by specific app name | ✅ Required |
+
+**kshana's use case (interrupt after N minutes of total device use, shield everything) does NOT require FamilyActivityPicker.** The only required user action is the initial FamilyControls authorization system sheet.
+
+### Hard restrictions (what cannot be done):
+
+- Core system apps (Phone, Emergency SOS) cannot be shielded — Apple hard-excludes them
+- The user can fully revoke Screen Time permission at any time in iOS Settings → Screen Time
+- If the user has Screen Time PIN-protected on their device, your monitoring scope may conflict with their existing setup (rare edge case)
+- Apple Watch usage is not covered by this API path
+- Lock screen and Home Screen interactions are not countable as app usage time
+
+---
+
+## Q3: Can the shield be temporary and automatically lifted after break duration? ShieldAction buttons — what are the limits?
+
+### Shield lift:
+
+**Yes — but it's not automatic via a timer. It requires an explicit API call.**
+
+There is no built-in "lift shield after X seconds" timer in ManagedSettings. The shield stays up until your code removes it.
+
+Two practical patterns for auto-lift after break duration:
+
+**Pattern A — ShieldAction dismisses immediately, break is honour-system:**
+- User taps "Start Break" → ShieldActionExtension returns `.close` + calls `ManagedSettingsStore().shield.applicationCategories = nil` → shield gone → user takes break manually → after break, they return to app → AppCoordinator restarts monitoring
+- Simple. Puts break duration on user trust. Works well for wellness apps (you trust the user).
+
+**Pattern B — Shield stays up for break duration (hard enforcement):**
+- Harder. Extension has limited background execution time (~30s).
+- Requires: ShieldAction writes "break started at X" to App Group → schedules a separate DeviceActivity schedule that fires after break duration → that second monitor removes the shield
+- Or: ShieldAction calls a lightweight background task to sleep and then remove shield
+- This is considerably more complex, and the break timer schedule adds a second DeviceActivity registration
+- For a wellness app, Pattern A is correct. Hard enforcement is parental-control territory.
+
+**Recommended pattern for kshana:** Pattern A. User taps "Start Break", shield lifts, trust the user. After break, main app (on next foreground) or a restart call in ShieldAction restarts monitoring.
+
+### ShieldAction buttons:
+
+**Primary button**: Yes, required. Customizable label text only. You can call it "Start Break", "Take a Break", "20-Second Rest".
+
+**Secondary button**: Optional. Customizable label text only. You can call it "Skip", "Snooze 5 min", "Not Now".
+
+**Third button**: Not available. Two actions maximum.
+
+**What you CANNOT do in ShieldAction:**
+- Custom SwiftUI — not available. The action handler runs in an extension, produces no UI.
+- Custom button styling — system colors, system fonts. Text only.
+- Show a countdown timer IN the shield — not possible. The shield UI is system-controlled. (You can put "20 seconds" in the subtitle as a hint, but the actual countdown timer is honor-system.)
+- Haptic feedback — not available in ShieldAction extensions.
+
+**ShieldConfiguration (the shield's visual):**
+- Title: attributed string (limited formatting — bold, foreground color supported)
+- Body subtitle: attributed string
+- Primary button label: plain string only
+- Secondary button label: plain string only (optional)
+- Icon: `ShieldConfiguration.Image` — you CAN provide a custom image (your logo). This IS customizable since iOS 16.1.
+- Background: system-controlled blur/frosted glass. No custom background.
+- Layout: fixed. No custom layout.
+
+**Practical kshana shield:**
+```
+[kshana logo]
+"Eye Break Time"
+"You've been staring for 20 minutes. Look at something 20 feet away for 20 seconds."
+[Start Break]   [Skip This Once]
+```
+
+This is achievable and looks credible. Not as beautiful as kshana's own OverlayView, but it IS the system-trusted interrupt UI.
+
+---
+
+## Q4: Can kshana enforce posture/eye breaks based on total device use, or only selected app activity? What is impossible?
+
+### What IS possible:
+
+- **Total device app usage threshold**: Monitor cumulative time across all apps in a time window. When user hits 20 min across any/all apps → break fires. This is achievable with `DeviceActivityEvent` using `.all` categories against a daily schedule.
+- **Two separate thresholds**: One for eye breaks (20 min), one for posture breaks (45 min). Both can be registered in the same DeviceActivity schedule.
+- **Recurring throughout the day**: Re-register monitoring after each break → fires again after next 20 min accumulation.
+- **Monitoring works even when kshana is not the foreground app**: The DeviceActivityMonitor extension wakes independently of the main app process. kshana does not need to be running.
+
+### What is IMPOSSIBLE or unreliable:
+
+- **Exact screen-on time** (not just app usage duration): DeviceActivity counts time spent in apps, not raw screen-on seconds. Lock screen pulls, notification handling, Siri don't count. So "20 minutes of active eyes-on-screen use" maps approximately to DeviceActivity's "20 minutes of foreground app time" — close enough for wellness, not millisecond-precise.
+- **Detecting when the user puts the phone down mid-app**: If the user opens TikTok and sets their phone down (screen stays on), DeviceActivity still counts it as usage. kshana cannot distinguish "eyes on screen" from "phone face-up on desk." This is a fundamental limitation. The current foreground `ScreenTimeTracker` has the same problem.
+- **Posture-specific sensor data**: CMMotionActivityManager detects driving/walking but not "seated with neck bent forward." There is no posture sensor API on iPhone. Posture break timing is still interval-based, not posture-detected.
+- **Reliable sub-minute precision**: iOS batches DeviceActivity events. A 5-minute threshold might fire at 5 min 45 sec. A 20-minute threshold might fire at 21 min. Do not build features that depend on exact timing.
+- **Cross-device posture monitoring** (Apple Watch): Out of scope for this phase. DeviceActivity is phone-only.
+- **Monitoring ALL device interactions** (biometric unlock, lock screen widgets, Control Center swipes): Only foreground app usage time counts. Peripheral interactions don't accumulate toward the threshold.
+
+### Bottom line on total device use:
+
+**kshana can fire breaks based on "accumulated time spent in apps" which is the closest available approximation to "screen use time."** This IS the right signal for eye breaks. It's not perfect, but it's the same signal Apple's own Screen Time feature uses for its "daily app limits." The 20-20-20 rule doesn't require millisecond precision.
+
+---
+
+## Q5: Exact targets, capabilities, files, entitlements, and project changes required
+
+This has already been partially documented by Virgil. Complete consolidated view:
+
+### Entitlements
+
+| Entitlement | Where | Approval Process |
+|---|---|---|
+| `com.apple.developer.family-controls` | Main app `.entitlements` | Manual Apple approval — file at developer.apple.com/contact/request/family-controls-distribution |
+| `com.apple.security.application-groups` | Main app + all 3 extensions | Self-service in Developer Portal (no approval queue) |
+| `com.apple.developer.usernotifications.time-sensitive` | Main app | Self-service (already planned) |
+
+### New Extension Targets
+
+| Target | Extension type | Key file | Purpose |
+|---|---|---|---|
+| `kshanaDeviceActivityMonitor` | `com.apple.deviceactivity-monitor` | `DeviceActivityMonitorExtension.swift` | Receives threshold callback, applies shield |
+| `kshanaShieldConfiguration` | `com.apple.shieldconfiguration` | `ShieldConfigurationExtension.swift` | Returns title/subtitle/buttons to system |
+| `kshanaShieldAction` | `com.apple.shieldaction` | `ShieldActionExtension.swift` | Handles button taps, removes shield, restarts cycle |
+
+### New Framework Imports
+
+| Framework | Used in |
+|---|---|
+| `FamilyControls` | Main app (authorization request) |
+| `DeviceActivity` | Main app (start/stop monitoring), DeviceActivityMonitor extension |
+| `ManagedSettings` | DeviceActivityMonitor extension (apply/remove shield), ShieldConfiguration (configuration), ShieldAction (remove shield) |
+
+### App Groups
+
+Single shared container: `group.com.yashasg.eyeposturereminder`
+
+Contents (App Group shared UserDefaults or FileManager):
+- `breakLastStartedAt: Date?` — when the break started
+- `breakDuration: TimeInterval` — configured break length
+- `eyeInterval: TimeInterval` — configured eye break interval
+- `postureInterval: TimeInterval` — configured posture break interval
+- `monitoringActive: Bool` — whether monitoring is currently running
+
+### New Service: `ScreenTimeShieldManager`
+
+Lives in main app. Responsibilities:
+- Owns `AuthorizationCenter.shared.requestAuthorization(for: .individual)` 
+- Defines `DeviceActivitySchedule` (daily window, e.g. 8am–11pm, repeats: true)
+- Registers `DeviceActivityEvent` with threshold per break type
+- Writes configuration to App Group shared container
+- Starts/stops `DeviceActivityCenter` monitoring
+- Provides `isAuthorized: Bool` to drive onboarding UI
+- Provides `isMonitoringActive: Bool` to drive settings UI
+
+### New Onboarding Screen
+
+One new mandatory screen (or integrated into existing Permission screen):
+- Explains what Screen Time interrupt mode does: "kshana will pause all apps and show a break reminder after [interval]"
+- Presents `AuthorizationCenter.shared.requestAuthorization(for: .individual)` trigger button
+- Shows current authorization status
+
+### `AppCoordinator` changes
+
+- New `ReminderDeliveryMode` enum: `.notifications` (current), `.screenTimeShield`, `.hybrid`
+- `ScreenTimeShieldManager` injected and owned by coordinator
+- Shield mode enables/disables based on FamilyControls authorization status
+
+### Build system (Virgil owns this)
+
+- New top-level `project.yml` (XcodeGen) defining all 4 targets
+- Extension targets: separate Info.plist per extension, separate entitlements file
+- `build_signed.sh` ExportOptions.plist: 4 bundle ID → profile mappings
+- 3 new App IDs registered in Developer Portal
+- 4 provisioning profiles (dev + distribution for each)
+
+### Files NOT changed
+
+- `ScreenTimeTracker.swift` — stays, used in foreground precision mode alongside shield
+- `OverlayManager.swift` — stays, shown when user taps notification or when app opens from shield action
+- `ReminderScheduler.swift` — stays, powers notification fallback mode
+- `AppDelegate.swift` — notification handling stays unchanged
+
+---
+
+## Q6: Smallest credible prototype — spike plan and success criteria
+
+**Goal:** Validate that the DeviceActivity → Shield → ShieldAction loop actually works end-to-end on a physical device, before committing to the full engineering scope.
+
+**This spike requires the FamilyControls entitlement to be approved first.** You can build and compile without it, but you cannot validate the shield behavior on device without it.
+
+### Spike plan
+
+**Throw-away Xcode project — not in the kshana repo.**
+
+Create: `KshanaScreenTimeSpike.xcodeproj` with 4 targets:
+1. `SpikeiOSApp` — minimal SwiftUI app, 1 screen
+2. `SpikeDeviceActivityMonitor` — extension
+3. `SpikeShieldConfiguration` — extension
+4. `SpikeShieldAction` — extension
+
+**Step 1: Authorization** (~1h)
+```swift
+// In SpikeiOSApp, on a button tap:
+try await AuthorizationCenter.shared.requestAuthorization(for: .individual)
+```
+Success: System authorization sheet appears. User grants permission. App shows "authorized."
+
+**Step 2: Register monitoring with a 1-minute threshold** (~1h)
+```swift
+let schedule = DeviceActivitySchedule(
+    intervalStart: DateComponents(hour: 0, minute: 0),
+    intervalEnd: DateComponents(hour: 23, minute: 59),
+    repeats: true
+)
+let event = DeviceActivityEvent(
+    applications: ApplicationToken.all,  // or .allApps
+    categories: ActivityCategoryToken.all,
+    threshold: DateComponents(minute: 1)
+)
+try DeviceActivityCenter().startMonitoring(.daily, during: schedule, events: [.breakThreshold: event])
+```
+Note: 1 minute chosen for testability. Production would be 1200 seconds (20 min).
+
+**Step 3: DeviceActivityMonitor applies shield** (~30 min)
+```swift
+class SpikeMonitor: DeviceActivityMonitor {
+    override func intervalDidStart(for activity: DeviceActivityName) { }
+    override func eventDidReachThreshold(_ event: DeviceActivityEvent.Name, activity: DeviceActivityName) {
+        ManagedSettingsStore().shield.applicationCategories = .all()
+    }
+}
+```
+
+**Step 4: ShieldConfiguration returns content** (~30 min)
+```swift
+class SpikeShieldConfig: ShieldConfigurationDataSource {
+    override func configuration(shielding application: Application) -> ShieldConfiguration {
+        ShieldConfiguration(
+            title: AttributedString("Eye Break Time"),
+            subtitle: AttributedString("Look 20 feet away for 20 seconds."),
+            primaryButtonLabel: AttributedString("Start Break"),
+            secondaryButtonLabel: AttributedString("Skip")
+        )
+    }
+}
+```
+
+**Step 5: ShieldAction removes shield and restarts** (~1h)
+```swift
+class SpikeShieldAction: ShieldActionExtension {
+    override func handle(action: ShieldAction, for application: Application) async -> ShieldActionResponse {
+        let store = ManagedSettingsStore()
+        store.shield.applicationCategories = nil  // lift shield
+        // Restart monitoring
+        try? DeviceActivityCenter().startMonitoring(.daily, during: schedule, events: [.breakThreshold: event])
+        return .close
+    }
+}
+```
+
+**Total spike time: ~5-6 hours of coding. Blocked on entitlement approval.**
+
+### Success criteria for the spike:
+
+1. ✅ Authorization sheet appears and grants permission
+2. ✅ DeviceActivityCenter.startMonitoring() does not throw
+3. ✅ After 1 minute of app usage (any app), shield appears over that app
+4. ✅ Shield shows kshana-authored title and "Start Break" button
+5. ✅ Tapping "Start Break" dismisses the shield
+6. ✅ After another 1 minute of use, shield appears again (recurring cycle confirmed)
+7. ✅ Shield survives app switching (user switches from TikTok to Instagram — shield still present)
+
+If all 7 pass: green-light Phase 3 Shield implementation in kshana.
+If 3 or 4 fail (shield doesn't appear): escalate to Apple developer forums, check iOS version. Known issue territory.
+If 6 fails (no recurrence): fix the restart logic. This is a known sharp edge in the API.
+
+---
+
+## Q7: App Store and entitlement review — what Yashasg needs to do
+
+### What Apple reviews for FamilyControls entitlement
+
+The entitlement request form asks:
+1. Your app name and bundle ID
+2. What the app does
+3. How you use FamilyControls
+4. Which authorization mode (`.individual` or `.family`)
+5. Whether Family Sharing is involved
+
+### Suggested request wording
+
+> kshana is a digital wellness iOS app that helps users protect their eye health and maintain good posture during screen use. The app monitors total device usage time and delivers system break reminders when the user has been using their device continuously for their configured interval (e.g., 20 minutes).
+> 
+> We are requesting the FamilyControls entitlement using exclusively `.individual` authorization mode (iOS 16+). There is no parental control, Family Sharing, or child device feature in this app. The user monitors and restricts their own device on their own behalf.
+> 
+> Specifically: after the user's configured break interval of continuous device use, kshana's DeviceActivityMonitor extension triggers a ManagedSettings shield over all app categories. The shield prompts the user to take a break (eye rest, look away, posture check). The user can start the break or skip it. There is no lock-out, no PIN, no parent/guardian approval flow.
+> 
+> This use case is architecturally identical to how one-sec, Opal, and Roots use FamilyControls `.individual` mode. The app's Privacy Policy and onboarding clearly disclose Screen Time API usage to the user.
+
+### Likelihood of approval
+
+**High for self-wellness use case.** Apple added `.individual` mode in iOS 16 specifically for this category. Multiple comparable apps have been approved. The framing is important — emphasize self-wellness, individual mode, user-controlled, not parental control.
+
+**What would cause rejection:**
+- Accidentally referencing `.family` mode or parental controls
+- Ambiguous wording that makes it sound like the app monitors other people's devices
+- No working prototype at the time of submission (have the spike ready)
+
+### Timeline
+
+No SLA. Typical community-reported range: 3–21 days. File the request on the same day as deciding to pursue this path — it's the only hard external dependency. Everything else (code) can happen in parallel.
+
+### App Store Review (after entitlement is granted)
+
+App Review will check:
+- Does the app use `.individual` mode only? ✅ Yes
+- Is there clear user consent flow (Screen Time authorization prompt)? ✅ Yes — system sheet
+- Does PrivacyInfo.xcprivacy declare Screen Time API usage? → Must add this entry when implementing
+- Does the app accurately describe its Screen Time usage in its App Store listing and privacy policy? → Update docs at launch
+
+---
+
+## Q8: What to do with local notification work
+
+**Keep as a functional fallback. Change the product promise.**
+
+Here is the honest analysis:
+
+| Mechanism | Status | UX Mode | User effort |
+|---|---|---|---|
+| Local notifications (current, fixed by AppCoordinator) | Working now | "Gentle tap on shoulder" | Tap banner → open app → see overlay |
+| Screen Time Shield | Phase 3, needs entitlement | "Hard interrupt" | Can't ignore it — shield blocks everything |
+
+These are two different user experiences. For habit change and health intervention, **the Shield is genuinely more effective** — you cannot dismiss a full-screen system block as easily as flicking away a notification banner. This is the product insight Yashasg is pointing at.
+
+However:
+
+- Some users actively DO NOT want hard interrupts. They want the gentle reminder. Notifications serve them correctly.
+- Not every user will grant Screen Time permission. The notification path serves users who don't.
+- FamilyControls approval could take weeks. Notification path works TODAY.
+
+### Recommendation:
+
+1. **Do NOT remove notification work.** It is working (post AppCoordinator fix), it took engineering effort, and it serves a real user population.
+2. **Change the product promise.** kshana's pitch is not "notification reminders." It is "break interrupts." The Shield is the feature that makes that true. Build toward it.
+3. **Ship notifications as the Phase 2 complete deliverable** — working, reliable, across all apps. Keep copy honest: "you'll receive a reminder banner" not "kshana will interrupt whatever you're doing."
+4. **File FamilyControls entitlement request immediately** — this is the only time-gated external dependency.
+5. **Build the spike** once entitlement is approved — validate before full commitment.
+6. **Phase 3: Ship Shield as "Interrupt Mode"** — opt-in toggle in Settings. Users who want hard interrupts enable it; users who prefer notifications keep it off.
+
+The app is NOT a waste as a notifications app. But it is also not fulfilling its potential. The Shield is what makes it genuinely different from setting an iPhone alarm.
+
+---
+
+## Phase-Gate Criteria
+
+Before committing to Phase 3 Shield implementation, ALL of the following must be true:
+
+| Gate | Criteria | Status |
+|---|---|---|
+| G1 — Entitlement | `com.apple.developer.family-controls` granted by Apple | ❌ Not filed yet |
+| G2 — Spike | Spike project passes all 7 success criteria on a physical device | ❌ Blocked on G1 |
+| G3 — Build system | XcodeGen project.yml with 4 extension targets compiles cleanly | ❌ Not started |
+| G4 — Notification baseline | Phase 2 notification path validated working end-to-end in TestFlight | 🟡 In progress |
+| G5 — Product decision | Yashasg confirms interrupt mode is a product priority worth the scope | ❓ Pending this doc |
+
+When G1-G5 are all green: proceed to Phase 3 Shield implementation.
+
+---
+
+## Architectural Decision
+
+**Screen Time Shield interrupt mode is the correct long-term architecture for kshana's core promise. It is not a settings app — it is a health intervention tool. The Shield makes the intervention real.**
+
+**Immediate actions:**
+
+1. **File FamilyControls entitlement request today** — go to developer.apple.com/contact/request/family-controls-distribution, use the wording from Q7 above. This is the only external-dependency step with an unknown timeline. File immediately.
+2. **Complete Phase 2 notification path** — ship notifications as working baseline. Do not remove or deprioritize.
+3. **Keep ScreenTimeTracker for foreground precision** — it complements the Shield mode (measures actual eyes-on-screen time when kshana is foreground).
+4. **After entitlement approval: build the spike** — 5-6 hour validation before committing full Phase 3 scope.
+5. **Phase 3 gate: Virgil builds XcodeGen project.yml** with extension targets before Rusty wires `ScreenTimeShieldManager`.
+
+**What this is NOT:**
+- kshana is not a parental control app.
+- kshana is not a screen time statistics dashboard.
+- kshana uses Screen Time as an interrupt delivery mechanism — not as a feature in its own right. The user doesn't see "Screen Time." They see "break time."
+
+If the app does its job right, the user doesn't know or care that ManagedSettings is involved. They just get interrupted, take a break, and feel better.
+
+# Decision: Screen Time Entitlement & CI/CD Path
+
+**Author:** Virgil (CI/CD Dev)
+**Date:** 2026-04-29
+**Status:** Research report — no code changes
+**Priority:** HIGH — gates Phase 3 architecture
+**Complements:** `rusty-screen-time-shield-path.md` (architecture) — this document covers signing, provisioning, and CI
+
+---
+
+## Context
+
+Rusty's `rusty-screen-time-shield-path.md` correctly identifies that the Screen Time Shield path (FamilyControls + DeviceActivity + ManagedSettings) is real, available to third-party developers since iOS 16, and viable for a self-wellness app. This document covers the **capability/provisioning/signing mechanics** and what the CI/CD pipeline needs to handle.
+
+---
+
+## Q1: Which entitlements and capabilities are required?
+
+### Entitlement requiring Apple approval (NOT automatic)
+
+| Entitlement key | Where to add | Approval required? |
+|---|---|---|
+| `com.apple.developer.family-controls` | Main app `.entitlements` file | **YES — manual Apple approval** |
+
+This is the gating entitlement. Without it, all FamilyControls APIs throw an authorization error at runtime. The entitlement request portal is:
+[https://developer.apple.com/contact/request/family-controls-distribution](https://developer.apple.com/contact/request/family-controls-distribution)
+
+### Entitlements that are automatic (enabled in Developer Portal, no request form)
+
+| Entitlement key | Xcode Capability name | Notes |
+|---|---|---|
+| `com.apple.security.application-groups` | App Groups | Toggle in Developer Portal → App ID → Capabilities |
+| `com.apple.developer.usernotifications.time-sensitive` | Time Sensitive Notifications | Already planned for current notification path |
+
+App Groups must be explicitly configured in the Developer Portal App ID (it is "automatic" in the sense that no separate approval email is needed — you toggle it yourself). The provisioning profile must then be regenerated to include the App Groups entitlement.
+
+### Extension target entitlements (all require separate App IDs)
+
+Each extension target needs its **own** App ID registered in the Developer Portal with the same App Groups entitlement:
+
+| Extension App ID | Entitlements |
+|---|---|
+| `com.yashasg.eyeposturereminder.deviceactivitymonitor` | App Groups (same group as main app) |
+| `com.yashasg.eyeposturereminder.shieldconfiguration` | App Groups |
+| `com.yashasg.eyeposturereminder.shieldaction` | App Groups |
+
+The main app App ID (`com.yashasg.eyeposturereminder`) needs:
+- `com.apple.developer.family-controls` (requires Apple approval)
+- `com.apple.security.application-groups` with value `group.com.yashasg.eyeposturereminder`
+
+---
+
+## Q2: Automatic Xcode capabilities vs manually approved entitlements
+
+### Category A — Toggle yourself in Developer Portal (no approval queue)
+- **App Groups** — add capability to App ID, regenerate provisioning profile
+- **Push Notifications** — add capability to App ID, regenerate profile
+- **Time Sensitive Notifications** — add capability to App ID, regenerate profile
+- **Background Modes** — add capability to App ID, regenerate profile
+
+### Category B — Request-only, Apple reviews and approves
+- **`com.apple.developer.family-controls`** — submit at developer.apple.com/contact/request/family-controls-distribution. Apple reviews the use case. Typical timeline: several days to a few weeks. There is no SLA. Approval is not guaranteed. The entitlement is tied to your Team ID, not to an individual app.
+
+**Practical implication:** You cannot develop or test the live FamilyControls authorization flow on a physical device until this entitlement is granted. Simulator may run partial code paths but will not grant authorization. Local development is blocked on the critical auth flow until Apple approves.
+
+---
+
+## Q3: Project structure changes required
+
+### The SPM-only build cannot support extension targets
+
+`Package.swift` currently declares a single `.executableTarget`. App extension targets (DeviceActivityMonitor, ShieldConfiguration, ShieldAction) **cannot be expressed in `Package.swift`**. This is a hard SPM limitation — extensions require host app embedding, Info.plist with `NSExtension` key, and Xcode build system target types that SPM does not model.
+
+### Required changes to build system
+
+#### 1. New `project.yml` (XcodeGen) for the main app + extensions
+
+The current `UITests/project.yml` is a test-only XcodeGen spec. We need a new top-level `project.yml` that defines:
+
+```
+targets:
+  EyePostureReminder:        (application)
+  DeviceActivityMonitor:     (app extension — com.apple.deviceactivity-monitor)
+  ShieldConfiguration:       (app extension — com.apple.shieldconfiguration)
+  ShieldAction:              (app extension — com.apple.shieldaction)
+```
+
+The main app target wraps the SPM executable as a dependency (same pattern as UITests/project.yml). All four targets share the same App Group.
+
+#### 2. Separate entitlements files per target
+
+Each extension needs its own `.entitlements` file with the App Groups key. The main app entitlements file gets the FamilyControls entitlement added when the Apple approval arrives.
+
+```
+EyePostureReminder/EyePostureReminder.Development.entitlements
+EyePostureReminder/EyePostureReminder.Distribution.entitlements  ← add family-controls + app-groups
+Extensions/DeviceActivityMonitor/DeviceActivityMonitor.entitlements
+Extensions/ShieldConfiguration/ShieldConfiguration.entitlements
+Extensions/ShieldAction/ShieldAction.entitlements
+```
+
+#### 3. Extension Swift files
+
+Each extension target needs a minimal Swift source file (the extension entry point). These are separate from the main app's SPM source tree.
+
+```
+Extensions/
+  DeviceActivityMonitor/
+    DeviceActivityMonitorExtension.swift
+    Info.plist
+    DeviceActivityMonitor.entitlements
+  ShieldConfiguration/
+    ShieldConfigurationExtension.swift
+    Info.plist
+    ShieldConfiguration.entitlements
+  ShieldAction/
+    ShieldActionExtension.swift
+    Info.plist
+    ShieldAction.entitlements
+```
+
+---
+
+## Q4: Impact on signing, TestFlight export, and CI
+
+### Provisioning profiles — what changes
+
+Today there is **one** provisioning profile (distribution, App Store) tied to `com.yashasg.eyeposturereminder`. With three extension targets, we need **four** distribution profiles:
+
+| Profile | App ID |
+|---|---|
+| Main app | `com.yashasg.eyeposturereminder` |
+| DeviceActivityMonitor | `com.yashasg.eyeposturereminder.deviceactivitymonitor` |
+| ShieldConfiguration | `com.yashasg.eyeposturereminder.shieldconfiguration` |
+| ShieldAction | `com.yashasg.eyeposturereminder.shieldaction` |
+
+All four profiles must include the App Groups capability. The main app profile must include the FamilyControls entitlement (only available after Apple approval).
+
+### `scripts/build_signed.sh` — what changes
+
+The `ExportOptions.plist` embedded in `build_signed.sh` will need a `provisioningProfiles` dictionary mapping each bundle ID to its provisioning profile name:
+
+```xml
+<key>provisioningProfiles</key>
+<dict>
+  <key>com.yashasg.eyeposturereminder</key>
+  <string>kshana App Store Distribution</string>
+  <key>com.yashasg.eyeposturereminder.deviceactivitymonitor</key>
+  <string>kshana DeviceActivityMonitor Distribution</string>
+  <key>com.yashasg.eyeposturereminder.shieldconfiguration</key>
+  <string>kshana ShieldConfiguration Distribution</string>
+  <key>com.yashasg.eyeposturereminder.shieldaction</key>
+  <string>kshana ShieldAction Distribution</string>
+</dict>
+```
+
+### `.github/workflows/testflight.yml` — what changes
+
+Currently the workflow installs one provisioning profile. It must be updated to decode and install **four** provisioning profiles, one per target. This means four new GitHub secrets:
+
+| Secret name | Contents |
+|---|---|
+| `BUILD_PROVISION_PROFILE_BASE64` | Main app profile (existing) |
+| `BUILD_PP_DEVICEACTIVITY_BASE64` | DeviceActivityMonitor profile |
+| `BUILD_PP_SHIELDCONFIG_BASE64` | ShieldConfiguration profile |
+| `BUILD_PP_SHIELDACTION_BASE64` | ShieldAction profile |
+
+The install step will loop over all four profiles and copy them to `~/Library/MobileDevice/Provisioning Profiles/`.
+
+### What can be tested locally before entitlement approval
+
+| What | Testable without approval? | Notes |
+|---|---|---|
+| Extension target compilation | ✅ Yes | Code compiles without the entitlement |
+| App Groups shared container | ✅ Yes | Works in development signing with App Groups enabled |
+| DeviceActivityMonitor registration | ⚠️ Partial | Can register schedules, but `AuthorizationCenter.requestAuthorization` will fail |
+| Shield appearing over other apps | ❌ No | Requires entitlement + real authorization |
+| ShieldConfiguration rendering | ⚠️ Simulator only | System may render a placeholder shield in simulator without full auth |
+| ShieldAction button tap | ⚠️ Partial | Action handler code can be unit tested; end-to-end requires entitlement |
+
+**In practice:** You can build the extension targets, wire the shared state via App Groups, and unit test the logic before the entitlement is approved. The live cross-app shield behavior cannot be validated end-to-end on device until approval.
+
+---
+
+## Q5: Steps for Yashasg in Apple Developer / App Store Connect
+
+### Immediate pre-work (no approval needed)
+
+1. **Register three new App IDs** in the Developer Portal under Certificates, Identifiers & Profiles → Identifiers:
+   - `com.yashasg.eyeposturereminder.deviceactivitymonitor`
+   - `com.yashasg.eyeposturereminder.shieldconfiguration`
+   - `com.yashasg.eyeposturereminder.shieldaction`
+
+2. **Enable App Groups capability** on all four App IDs (main app + 3 extensions). Create a new App Group container: `group.com.yashasg.eyeposturereminder`.
+
+3. **Regenerate development and distribution provisioning profiles** for all four App IDs after enabling App Groups.
+
+### Entitlement request — FamilyControls
+
+Navigate to: [https://developer.apple.com/contact/request/family-controls-distribution](https://developer.apple.com/contact/request/family-controls-distribution)
+
+**Suggested wording for the approval request:**
+
+> kshana (Eye & Posture Reminder) is a self-care wellness app that helps users protect their eye health and maintain good posture during screen time. The app reminds users to take breaks and rest their eyes at regular intervals.
+>
+> We are requesting the FamilyControls entitlement to use the `.individual` authorization mode (iOS 16+). This allows the app to trigger a Screen Time Shield — a system-managed full-screen interrupt — when the user has been using their device continuously for longer than their configured break interval (e.g., 20 minutes). The user must explicitly authorize the app via the system Screen Time permission prompt. No Family Sharing, parental control, or child device features are used.
+>
+> The intended use case is strictly self-wellness: the user controls their own break schedule, and the shield is a voluntary interrupt mechanism the user opts into. This is architecturally equivalent to how apps like one-sec, Opal, and Roots use FamilyControls `.individual` mode.
+>
+> Primary framework usage: `FamilyControls` (`.individual` authorization), `DeviceActivity` (threshold-based monitoring), `ManagedSettings` (applying/removing shields on threshold events).
+
+### After entitlement approval
+
+1. Add `com.apple.developer.family-controls` to the main app's `.entitlements` files (both development and distribution).
+2. Regenerate the main app provisioning profiles (development + distribution) — Apple's portal will now allow this capability to be included.
+3. Download and install the new profiles.
+4. Update the `BUILD_PROVISION_PROFILE_BASE64` secret in GitHub with the regenerated distribution profile.
+
+---
+
+## Q6: Risk register
+
+| Risk | Severity | Likelihood | Notes |
+|---|---|---|---|
+| FamilyControls entitlement denied | HIGH | Low–Medium | Apple reviews use case. Self-wellness apps using `.individual` mode have been approved (Opal, one-sec, Roots). Denial is possible if Apple reads the use case as parental control. Mitigation: use the wording above, emphasise `.individual` mode and user-controlled opt-in. |
+| Entitlement approval delay | MEDIUM | HIGH | No SLA. Days to weeks. This is a hard external dependency that blocks all end-to-end testing. Do not let this block extension target development — build the code while waiting. |
+| Extension signing complexity | MEDIUM | Medium | Four profiles instead of one. CI step must install and map all four. A profile mismatch causes a cryptic signing error at archive time. Mitigation: add explicit `provisioningProfiles` mapping to ExportOptions.plist and verify with a dry-run archive before pushing to TestFlight CI. |
+| App Store Review scrutiny | MEDIUM | Low | Review will look at: does the app use `.individual` mode? Is there a clear user-facing onboarding for Screen Time permission? Does the app accurately describe the Screen Time usage in its privacy manifest (`PrivacyInfo.xcprivacy`)? The PrivacyInfo.xcprivacy will need a Screen Time usage entry. |
+| iOS version support floor | LOW | LOW | FamilyControls `.individual` mode requires iOS 16+. The current deployment target is iOS 16.0 — this is already aligned. No version support change needed. |
+| SPM executable target incompatibility | MEDIUM | Certain | Extension targets **cannot** be added to `Package.swift`. A new `project.yml` XcodeGen spec must be created for the main app + extensions. This is build system work that must happen before any extension code can be compiled. |
+| App Group state corruption | LOW | Low | Extensions sharing UserDefaults/FileManager via App Group container can corrupt state if a write happens concurrently from multiple processes. Mitigation: use a simple keyed archive or SQLite via GRDB in the shared container with proper serialization. |
+| ShieldAction extension memory limits | LOW | Low | App extensions have strict memory limits (~60 MB). The ShieldAction handler must be minimal — no heavy logic, no image loading. The main business logic stays in the main app. |
+
+---
+
+## CI/CD Summary
+
+**Today:** 1 app target, 1 entitlements file, 1 provisioning profile, 1 GitHub secret for the profile.
+
+**With Screen Time Shield:** 4 app/extension targets, 4 entitlements files, 4 provisioning profiles, 4 GitHub secrets for profiles, updated ExportOptions.plist with explicit bundle ID → profile mapping.
+
+**Build system:** New top-level `project.yml` (XcodeGen) with all four targets. `build_signed.sh` continues to drive archive + export; only ExportOptions.plist changes structurally.
+
+**Gating dependency:** `com.apple.developer.family-controls` entitlement approval. File the request immediately to start the clock. Build extension targets and write tests while waiting.
+
+**Local pre-approval testing scope:** Compilation, App Groups shared state, unit tests for monitor/shield logic. End-to-end shield behavior on device blocked until approval.
+
+### 2026-04-28T21:56:44-07:00: User directive
+**By:** Yashasg (via Copilot)
+**What:** Local reminder alerts are noise and not the core product. Prioritize proving Apple Screen Time / interrupt mode; if kshana only sets ordinary reminders or Screen Time-like settings without meaningful interruption, the app is not worth pursuing.
+**Why:** User request — captured for team memory
+

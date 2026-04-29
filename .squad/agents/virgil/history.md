@@ -328,3 +328,60 @@
 - Keychain queries for convenience, but CI/CD always explicit (no auto-detection reachable in CI)
 - Error guidance inline at failure point, not README-only
 - All signing workflow improvements backward-compatible
+
+## Wave 18 — TestFlight Export (2026-04-28)
+
+**Task:** Produce a fresh signed export suitable for TestFlight from the current HEAD (dirty worktree with pre-existing onboarding/HomeView/signing changes).
+**Outcome:** ✅ Export succeeded. IPA validated and ready for upload.
+
+**Command run:**
+```
+./scripts/build_signed.sh export
+```
+
+**Artifact:**
+- `DerivedData/SignedBuild/Export/kshana.ipa`
+
+**Validation results:**
+| Field | Value | Status |
+|---|---|---|
+| CFBundleIdentifier | com.yashasg.eyeposturereminder | ✅ |
+| CFBundleShortVersionString | 0.2.0 | ✅ |
+| CFBundleVersion | 2 (App Store Connect managed) | ✅ |
+| UIDeviceFamily | [1] — iPhone only | ✅ |
+| UISupportedInterfaceOrientations | [UIInterfaceOrientationPortrait] | ✅ |
+| CFBundleName | kshana | ✅ |
+| Signing cert | Apple Distribution | ✅ |
+| Provisioning profile | kshana App Store Distribution | ✅ |
+| Architecture | arm64 | ✅ |
+| Dark AppIcon appearances | 0 | ✅ |
+
+**Build number note:** `inject_build_number()` patched the archive to `202604282122`, but `xcodebuild -exportArchive` with `manageAppVersionAndBuildNumber:true` (Xcode default for `app-store-connect` method) overrode it to `2` via App Store Connect query. This is correct — Xcode found build `1` already submitted and assigned the next sequential number. The `inject_build_number()` function is effectively superseded when `manageAppVersionAndBuildNumber=true` is active.
+
+**Dirty worktree included:** Yes — onboarding pickers, 1-min test interval, HomeView, and signing/icon changes are included in this build as intended.
+
+**Upload step (not automated — no ASC API key supplied):**
+```
+./scripts/build_signed.sh upload
+```
+Or drag `DerivedData/SignedBuild/Export/kshana.ipa` into Transporter.app.
+
+## Learnings
+
+- **`manageAppVersionAndBuildNumber=true` is Xcode's default for `app-store-connect` export:** When not explicitly set in ExportOptions.plist, Xcode contacts App Store Connect during `-exportArchive`, queries the current highest build number for that bundle ID + version, and auto-assigns the next one. This means `inject_build_number()` (which patches the archive post-archive) is silently overridden during export. For predictable build numbers in CI, set `manageVersionAndBuildNumber=false` in ExportOptions and rely solely on `inject_build_number()` / `BUILD_NUMBER`.
+- **App Store Connect query during local export is silent:** The `IDEDistributionAnalyzeVersionStep` + `IDEDistributionFetchAppRecordStep` run even for a local `destination=export`. If Xcode has a signed-in Apple ID with access to the App Store Connect record, it will manage the build number automatically. Check xcdistributionlogs for `manageAppVersionAndBuildNumber` to confirm this behavior.
+- **Distribution export succeeds from dirty worktree:** `./scripts/build_signed.sh export` correctly includes all working-tree changes (staged and unstaged). This is expected and correct — the export packages the current source state.
+- **FamilyControls entitlement is request-only (not auto-grant):** `com.apple.developer.family-controls` requires a separate approval request at developer.apple.com/contact/request/family-controls-distribution. The entitlement is tied to the Team ID (not a single app). Without it, all FamilyControls APIs fail at runtime. File the request early — there is no SLA and it can take days to weeks.
+- **Extension targets require 4 provisioning profiles, not 1:** Adding DeviceActivityMonitor + ShieldConfiguration + ShieldAction extensions to kshana means registering 3 new App IDs, enabling App Groups on all 4, and generating 4 distribution provisioning profiles. The `ExportOptions.plist` embedded in `build_signed.sh` must include an explicit `provisioningProfiles` dictionary mapping all 4 bundle IDs to their respective profile names.
+- **SPM executable targets cannot host app extensions:** Extension targets (DeviceActivityMonitor, ShieldConfiguration, ShieldAction) cannot be declared in `Package.swift`. A new XcodeGen `project.yml` at the repo root is required to host all four targets (main app + 3 extensions) before extension code can be compiled or archived.
+
+## 2026-04-29T05:05:06Z: Squad Orchestration — Interrupt Mode Pivot
+
+**Orchestration log filed:**
+- `2026-04-29T05-05-06Z-virgil-screen-time-entitlement-path.md` — entitlements, provisioning, CI/CD mapping
+
+**Session log:** `.squad/log/2026-04-29T05-05-06Z-interrupt-mode-pivot.md`
+
+**Decisions merged:** All 9 inbox files → canonical `.squad/decisions/decisions.md`.
+
+**Key takeaway:** FamilyControls entitlement is the gating external dependency for Phase 3. File request immediately at developer.apple.com/contact/request/family-controls-distribution. All build system work (new project.yml, extension targets, 4 provisioning profiles, CI mapping) can proceed in parallel while waiting for approval.

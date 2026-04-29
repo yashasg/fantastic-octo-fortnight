@@ -133,3 +133,58 @@ All system API calls are properly guarded. No force unwraps, no `try!`, no unhan
 - **Fix:** Register a `UIScene.didActivateNotification` observer in `init` (on `OperationQueue.main`, wrapped in `Task { @MainActor in }`) that calls `presentNextQueuedOverlay()` whenever a scene activates. The observer is stored as `sceneActivationObserver: NSObjectProtocol?` and removed in `deinit`.
 - **Pattern:** Any queue that can only be drained by its own consumer (dismissal) needs a secondary drain trigger for the "nothing is showing" case. Scene-activation notification is the correct hook for UIWindowScene-dependent work.
 - **Observer lifecycle:** Store `NSObjectProtocol` token from `addObserver(forName:object:queue:using:)` and call `NotificationCenter.default.removeObserver(_:)` in `deinit`. Do NOT use `addObserver(_:selector:name:object:)` on `@MainActor` classes — the closure-based API with `[weak self]` is safer for `final` classes.
+
+## Learnings — 2026-04-28 — Background Reminder Capability Audit
+
+### P0 Finding: ScreenTimeTracker-only model breaks background reminders
+- **Root cause:** `AppCoordinator.scheduleReminders()` calls `scheduler.cancelAllReminders()` as a "legacy safety net", then configures only `ScreenTimeTracker`. `ScreenTimeTracker` is a 1-second `Timer` that pauses on `willResignActiveNotification` and resets counters after 5s grace. It cannot run in the background. Result: zero reminders fire while the user is in another app.
+- **Key file evidence:** `AppCoordinator.swift` line 292 ("Cancel any legacy periodic UNNotifications — reminders are now driven exclusively by ScreenTimeTracker"); `ReminderScheduler.swift` lines 80-88 ("Superseded — never called in production").
+- **What works in-app:** `ScreenTimeTracker` → `onThresholdReached` → `overlayManager.showOverlay()` at `.alert + 1` window level. This path is correct for foreground use.
+- **What's already wired correctly:** `AppDelegate.willPresent` + `didReceive` both route to `coordinator.handleNotification(for:)` → overlay or `pendingOverlay` stash. The notification delivery plumbing is complete and will work immediately when periodic notifications are re-enabled.
+- **iOS constraint confirmed:** `UNTimeIntervalNotificationTrigger(repeats: true, timeInterval: ≥60)` is the correct and only mechanism for periodic background delivery. `BGTaskScheduler` and location/audio background modes are inappropriate.
+- **Action filed:** `.squad/decisions/inbox/basher-reminder-background-capability.md` — needs team decision to restore hybrid trigger model (ScreenTimeTracker for foreground + UNNotification for background).
+
+### Key file paths for background reminder work
+- `EyePostureReminder/Services/AppCoordinator.swift` — `scheduleReminders()` (line ~255), `configureScreenTimeTracker()` (line ~579), `handleNotification(for:)` (line ~343)
+- `EyePostureReminder/Services/ReminderScheduler.swift` — `rescheduleReminder(for:using:)` already has correct `UNTimeIntervalNotificationTrigger` implementation; just needs calling
+- `EyePostureReminder/App/AppDelegate.swift` — `willPresent` and `didReceive` notification delegates (complete)
+- `EyePostureReminder/Services/ScreenTimeTracker.swift` — `handleWillResignActive()` at line ~218; `resetGracePeriod = 5.0`
+- `EyePostureReminder/Views/Onboarding/OnboardingPermissionView.swift` — requests `[.alert, .sound, .badge]` correctly; no denied-permission recovery UI
+
+### Notification permission / Settings routing
+- `OnboardingPermissionView` calls `onNext()` after system prompt regardless of outcome. Denied users have no in-onboarding recovery path.
+- `SettingsView` (line ~505) has `UIApplication.openSettingsURLString` button shown when `notificationAuthStatus != .authorized` — this is the current recovery path, reachable via overlay gear icon → `openSettingsOnLaunch` flag → `HomeView` opens `SettingsView`.
+- The routing is functional but indirect. A direct "Go to Settings" button in onboarding post-denial is optional but recommended.
+
+## Learnings — 2026-04-28 — P0 Fix: Restore background periodic notifications
+
+### Implementation decision: Hybrid trigger model
+
+**Decision:** Restore `UNNotificationRequest` periodic scheduling alongside `ScreenTimeTracker`. Neither replaces the other; both are needed for full coverage.
+
+- **Background path (restored):** `AppCoordinator.scheduleReminders()` now calls `scheduler.scheduleReminders(using: settings)` when auth is `.authorized`, scheduling a repeating `UNTimeIntervalNotificationTrigger` per enabled type. When denied it calls `cancelAllReminders()` to clean up any stale entries.
+- **Foreground path (unchanged):** `ScreenTimeTracker` fires the in-app overlay after continuous screen-on time. After firing, it now reschedules the background notification to reset the interval from the moment of the foreground trigger — preventing a near-simultaneous double banner when the user goes to another app.
+- **Notification delivery → overlay:** `handleNotification(for:)` now resets the `ScreenTimeTracker` counter for the delivered type so the foreground timer does not immediately re-fire after a notification-triggered overlay.
+- **Per-type reschedule:** `performReschedule(for:)` now properly reschedules (enabled) or cancels (disabled) the background notification alongside the tracker update.
+- **Snooze guard intact:** The existing early-return in `scheduleReminders()` for active snooze prevents notification scheduling during snooze, preserving snooze behavior end-to-end.
+
+### Key paths changed (commit aa7be3e)
+- `AppCoordinator.scheduleReminders()` — removed "cancel legacy" block, added conditional `scheduler.scheduleReminders(using:)` / `cancelAllReminders()`
+- `AppCoordinator.onThresholdReached` callback — added post-overlay `scheduler.rescheduleReminder` Task
+- `AppCoordinator.handleNotification(for:)` — added `screenTimeTracker.reset(for: type)`
+- `AppCoordinator.performReschedule(for:)` — moved `scheduler.cancelReminder` into disabled branch; added `scheduler.rescheduleReminder` to enabled branch
+- `ReminderScheduler.swift` — updated "Superseded" comment to reflect production use
+
+### Tests run
+- `AppCoordinatorTests` — all 33 tests pass (including 9 P0 regression tests pre-written by Livingston in dc42ad3)
+- Full `EyePostureReminderTests` suite — all suites passed clean
+
+## 2026-04-29T05:05:06Z: Squad Orchestration — Interrupt Mode Pivot
+
+**Orchestration logs filed:**
+- `2026-04-29T05-05-06Z-basher-background-reminder-audit.md` — P0 audit findings
+- `2026-04-29T05-05-06Z-basher-restore-hybrid-reminders.md` — hybrid model implementation, commit aa7be3e
+
+**Session log:** `.squad/log/2026-04-29T05-05-06Z-interrupt-mode-pivot.md`
+
+**Decisions merged:** All 9 inbox files → canonical `.squad/decisions/decisions.md`.
