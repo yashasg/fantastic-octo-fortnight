@@ -64,6 +64,11 @@ public struct AppGroupIPCEvent: Codable, Equatable, Sendable {
 }
 
 public final class AppGroupIPCStore {
+    public static let trueInterruptEnabledDidChangeNotification = Notification.Name(
+        "AppGroupIPCStore.trueInterruptEnabledDidChange"
+    )
+    public static let trueInterruptEnabledValueUserInfoKey = "enabled"
+
     public enum StoreError: Error, Equatable {
         case appGroupSuiteUnavailable
         case corruptEventLog
@@ -91,22 +96,39 @@ public final class AppGroupIPCStore {
 
     @discardableResult
     public func setTrueInterruptEnabled(_ enabled: Bool) -> Bool {
-        withLock {
+        var changedValue: Bool?
+        let didSet = withLock {
             guard let defaults else { return false }
+            let previousValue = defaults.bool(forKey: AppGroupIPCKeys.trueInterruptEnabled)
+            func writeEnabled(_ value: Bool) {
+                defaults.set(value, forKey: AppGroupIPCKeys.trueInterruptEnabled)
+                if previousValue != value {
+                    changedValue = value
+                }
+            }
+
             if enabled {
                 do {
                     guard try !readSelectionLocked(from: defaults).isEmpty else {
-                        defaults.set(false, forKey: AppGroupIPCKeys.trueInterruptEnabled)
+                        writeEnabled(false)
                         return false
                     }
                 } catch {
-                    defaults.set(false, forKey: AppGroupIPCKeys.trueInterruptEnabled)
+                    writeEnabled(false)
                     return false
                 }
             }
-            defaults.set(enabled, forKey: AppGroupIPCKeys.trueInterruptEnabled)
+            writeEnabled(enabled)
             return true
         }
+        if let changedValue {
+            NotificationCenter.default.post(
+                name: Self.trueInterruptEnabledDidChangeNotification,
+                object: self,
+                userInfo: [Self.trueInterruptEnabledValueUserInfoKey: changedValue]
+            )
+        }
+        return didSet
     }
 
     public func isTrueInterruptEnabled() -> Bool {

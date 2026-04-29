@@ -67,6 +67,7 @@ final class SelectedAppsState: ObservableObject {
     // MARK: Dependency
 
     private let defaults: UserDefaults?
+    private let ipcStore: AppGroupIPCStore
 
     // MARK: Init
 
@@ -80,6 +81,7 @@ final class SelectedAppsState: ObservableObject {
         defaults: UserDefaults? = AppGroupDefaults.resolve(consumer: "SelectedAppsState")
     ) {
         self.defaults = defaults
+        ipcStore = AppGroupIPCStore(defaults: defaults)
         let initialMetadata: SelectedAppsMetadata
         if let data = defaults?.data(forKey: SelectedAppsState.metadataKey),
            let decoded = try? JSONDecoder().decode(SelectedAppsMetadata.self, from: data) {
@@ -88,10 +90,10 @@ final class SelectedAppsState: ObservableObject {
             initialMetadata = .empty
         }
         selectionMetadata = initialMetadata
-        let storedEnabled = defaults?.bool(forKey: SelectedAppsState.enabledKey) ?? false
+        let storedEnabled = ipcStore.isTrueInterruptEnabled()
         isTrueInterruptEnabled = storedEnabled && !initialMetadata.isEmpty
         if storedEnabled && initialMetadata.isEmpty {
-            defaults?.set(false, forKey: SelectedAppsState.enabledKey)
+            _ = ipcStore.setTrueInterruptEnabled(false)
         }
     }
 
@@ -100,18 +102,18 @@ final class SelectedAppsState: ObservableObject {
     /// Toggle the user's intent to use True Interrupt Mode.
     @discardableResult
     func setEnabled(_ enabled: Bool) -> Bool {
-        guard let defaults else {
+        guard defaults != nil else {
             isTrueInterruptEnabled = false
             return false
         }
         guard !enabled || !selectionMetadata.isEmpty else {
             isTrueInterruptEnabled = false
-            defaults.set(false, forKey: SelectedAppsState.enabledKey)
+            _ = ipcStore.setTrueInterruptEnabled(false)
             return false
         }
-        isTrueInterruptEnabled = enabled
-        defaults.set(enabled, forKey: SelectedAppsState.enabledKey)
-        return true
+        let didWrite = ipcStore.setTrueInterruptEnabled(enabled)
+        isTrueInterruptEnabled = enabled && didWrite
+        return didWrite
     }
 
     /// Persist updated selection metadata (called after a real `FamilyActivityPicker` session).
@@ -129,7 +131,7 @@ final class SelectedAppsState: ObservableObject {
         defaults.set(data, forKey: SelectedAppsState.metadataKey)
         if metadata.isEmpty {
             isTrueInterruptEnabled = false
-            defaults.set(false, forKey: SelectedAppsState.enabledKey)
+            _ = ipcStore.setTrueInterruptEnabled(false)
         }
         return true
     }

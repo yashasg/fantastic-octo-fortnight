@@ -135,6 +135,22 @@ final class AppCoordinatorNotificationFallbackTests: XCTestCase {
         XCTAssertFalse(ipcStore.recordedKinds.contains(.shieldPathSelected))
     }
 
+    func test_trueInterruptEnabledChangeNotification_reEvaluatesRoutingImmediately() async {
+        deviceActivityMonitor.stubbedIsAvailable = false
+        await coordinator.refreshAuthStatus()
+        notificationCenter.reset()
+
+        NotificationCenter.default.post(
+            name: AppGroupIPCStore.trueInterruptEnabledDidChangeNotification,
+            object: nil,
+            userInfo: [AppGroupIPCStore.trueInterruptEnabledValueUserInfoKey: false]
+        )
+        try? await Task.sleep(nanoseconds: 200_000_000)
+
+        XCTAssertEqual(notificationCenter.addedRequests.count, 2)
+        XCTAssertTrue(ipcStore.recordedKinds.contains(.notificationFallbackScheduled))
+    }
+
     func test_handleNotification_recordsDeliveredFallbackEvent() throws {
         coordinator.handleNotification(for: .eyes)
 

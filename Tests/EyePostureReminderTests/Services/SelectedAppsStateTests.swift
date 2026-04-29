@@ -1,4 +1,5 @@
 @testable import EyePostureReminder
+@testable import ScreenTimeExtensionShared
 import XCTest
 
 /// Unit tests for `SelectedAppsState` and `SelectedAppsMetadata` added in #204.
@@ -105,6 +106,27 @@ final class SelectedAppsStateTests: XCTestCase {
 
         XCTAssertTrue(sut.isTrueInterruptEnabled)
         XCTAssertTrue(testDefaults.bool(forKey: SelectedAppsState.enabledKey))
+    }
+
+    func test_setEnabled_trueWithSelection_postsRoutingChangeNotification() {
+        let sut = makeSUT()
+        var observedValues: [Bool] = []
+        let observer = NotificationCenter.default.addObserver(
+            forName: AppGroupIPCStore.trueInterruptEnabledDidChangeNotification,
+            object: nil,
+            queue: nil
+        ) { notification in
+            let key = AppGroupIPCStore.trueInterruptEnabledValueUserInfoKey
+            if let value = notification.userInfo?[key] as? Bool {
+                observedValues.append(value)
+            }
+        }
+        defer { NotificationCenter.default.removeObserver(observer) }
+        sut.updateMetadata(SelectedAppsMetadata(categoryCount: 0, appCount: 1, lastUpdated: Date()))
+
+        XCTAssertTrue(sut.setEnabled(true))
+
+        XCTAssertEqual(observedValues, [true])
     }
 
     func test_setEnabled_trueWithEmptySelection_refusesAndPersistsFalse() {

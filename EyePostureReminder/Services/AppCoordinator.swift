@@ -89,6 +89,7 @@ final class AppCoordinator: ObservableObject {
     /// Records shield/notification routing events into the App Group container so
     /// app extensions and watchdog diagnostics can observe the selected path.
     private let ipcStore: AppGroupIPCProviding
+    private var trueInterruptEnabledObserver: NSObjectProtocol?
 
     // MARK: - Screen-Time Tracker
 
@@ -260,12 +261,24 @@ final class AppCoordinator: ObservableObject {
             }
         }
         self.pauseConditionManager.startMonitoring()
+        self.trueInterruptEnabledObserver = NotificationCenter.default.addObserver(
+            forName: AppGroupIPCStore.trueInterruptEnabledDidChangeNotification,
+            object: nil,
+            queue: nil
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                await self?.scheduleReminders()
+            }
+        }
     }
 
     deinit {
         rescheduleDebounce.values.forEach { $0.cancel() }
         snoozeWakeTask?.cancel()
         deviceActivityMonitorTask?.cancel()
+        if let trueInterruptEnabledObserver {
+            NotificationCenter.default.removeObserver(trueInterruptEnabledObserver)
+        }
     }
 
     // MARK: - Notification Permission
