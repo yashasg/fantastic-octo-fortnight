@@ -74,7 +74,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Notifications keep your break reminders on schedule."
+            "value": "Reminders keep your breaks on schedule."
           }
         }
       }
@@ -96,7 +96,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Enable Notifications"
+            "value": "Enable Reminders"
           }
         }
       }
@@ -140,7 +140,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Example notification: Eye Break — Time to rest your eyes."
+            "value": "Example reminder: Eye Break — Time to rest your eyes."
           }
         }
       }
@@ -184,7 +184,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Skip for now, you can enable notifications later in Settings"
+            "value": "Skip for now, you can enable reminders later in Settings"
           }
         }
       }
@@ -702,7 +702,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Turn on notifications in Settings so break reminders stay on schedule."
+            "value": "Turn on reminders in Settings so your breaks stay on schedule."
           }
         }
       }
@@ -713,7 +713,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Notifications are off. Turn them on in Settings so break reminders stay on schedule."
+            "value": "Reminders are off. Turn them on in Settings so your breaks stay on schedule."
           }
         }
       }
@@ -724,7 +724,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Notifications Disabled"
+            "value": "Reminders Disabled"
           }
         }
       }
