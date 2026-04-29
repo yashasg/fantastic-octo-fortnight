@@ -35,6 +35,7 @@ public enum AppGroupIPCEventKind: String, Codable, Sendable {
     case shieldEnded
     case shieldPathSelected
     case notificationFallbackScheduled
+    case notificationFallbackSuppressed
     case notificationFallbackDelivered
     case accessRequested
     case watchdogHeartbeat

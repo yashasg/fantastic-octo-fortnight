@@ -671,12 +671,20 @@ extension AppCoordinator {
                    notificationAuthStatus == .authorized,
                    settings.notificationFallbackEnabled,
                    let fallbackType = session.reason.reminderType {
-                    await scheduler.rescheduleReminder(for: fallbackType, using: settings)
-                    recordIPCEvent(
-                        .notificationFallbackScheduled,
-                        reasonRaw: session.reason.rawValue,
-                        detail: "device_activity_schedule_failed"
-                    )
+                    if overlayManager.isOverlayVisible {
+                        recordIPCEvent(
+                            .notificationFallbackSuppressed,
+                            reasonRaw: session.reason.rawValue,
+                            detail: "device_activity_schedule_failed_overlay_visible"
+                        )
+                    } else {
+                        await scheduler.rescheduleReminder(for: fallbackType, using: settings)
+                        recordIPCEvent(
+                            .notificationFallbackScheduled,
+                            reasonRaw: session.reason.rawValue,
+                            detail: "device_activity_schedule_failed"
+                        )
+                    }
                 }
                 Logger.scheduling.error(
                     "DeviceActivity monitor \(operation.logDescription) failed: \(error.localizedDescription)"
