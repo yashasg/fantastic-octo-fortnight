@@ -278,6 +278,30 @@ final class SelectedAppsStateTests: XCTestCase {
         XCTAssertFalse(testDefaults.bool(forKey: SelectedAppsState.enabledKey))
     }
 
+    // MARK: - Regression: write-failure path must clear enabled state (#264)
+
+    func test_updateMetadata_writeFailure_afterEnabledTrue_clearsEnabledState() {
+        let mockStore = MockSelectedAppsIPCStore()
+        // Seed store so SUT initialises with isTrueInterruptEnabled = true.
+        mockStore.storedSnapshot = SelectedAppsMetadata(
+            categoryCount: 0, appCount: 2, lastUpdated: Date()
+        )
+        mockStore.storedEnabled = true
+        let sut = SelectedAppsState(ipcStore: mockStore)
+
+        XCTAssertTrue(sut.isTrueInterruptEnabled, "Precondition: enabled must be true before write failure")
+
+        mockStore.shouldFailWrite = true
+        let didWrite = sut.updateMetadata(
+            SelectedAppsMetadata(categoryCount: 1, appCount: 3, lastUpdated: Date())
+        )
+
+        XCTAssertFalse(didWrite, "updateMetadata must return false on write failure")
+        XCTAssertEqual(sut.selectionMetadata, .empty, "selectionMetadata must be cleared on write failure")
+        XCTAssertFalse(sut.isTrueInterruptEnabled, "isTrueInterruptEnabled must be cleared on write failure")
+        XCTAssertFalse(mockStore.storedEnabled, "persisted enabled must be false after write failure")
+    }
+
     private func preservingStandardDefaults(for keys: [String], _ action: () -> Void) {
         let oldValues = Dictionary(uniqueKeysWithValues: keys.map { ($0, UserDefaults.standard.object(forKey: $0)) })
         keys.forEach { UserDefaults.standard.removeObject(forKey: $0) }

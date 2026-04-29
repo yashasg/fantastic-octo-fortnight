@@ -23,6 +23,20 @@ import ScreenTimeExtensionShared
 /// App-facing name for the shared App Group selection payload.
 typealias SelectedAppsMetadata = AppGroupSelectionSnapshot
 
+// MARK: - SelectedAppsIPCStoring
+
+/// Minimal persistence interface required by `SelectedAppsState`.
+/// Abstracted for testability without exposing the full `AppGroupIPCStore` API.
+protocol SelectedAppsIPCStoring {
+    var isAvailable: Bool { get }
+    func readSelection() throws -> AppGroupSelectionSnapshot
+    func isTrueInterruptEnabled() -> Bool
+    @discardableResult func setTrueInterruptEnabled(_ enabled: Bool) -> Bool
+    func writeSelection(_ snapshot: AppGroupSelectionSnapshot) throws
+}
+
+extension AppGroupIPCStore: SelectedAppsIPCStoring {}
+
 // MARK: - SelectedAppsState
 
 /// Observable store for the True Interrupt Mode app/category selection.
@@ -45,7 +59,7 @@ final class SelectedAppsState: ObservableObject {
 
     // MARK: Dependency
 
-    private let ipcStore: AppGroupIPCStore
+    private let ipcStore: any SelectedAppsIPCStoring
 
     // MARK: Init
 
@@ -55,10 +69,15 @@ final class SelectedAppsState: ObservableObject {
     ///   shared App Group suite; pass an isolated suite in tests. Passing `nil`
     ///   leaves extension-critical persistence unavailable instead of falling
     ///   back to standard defaults.
-    init(
+    convenience init(
         defaults: UserDefaults? = AppGroupDefaults.resolve(consumer: "SelectedAppsState")
     ) {
-        ipcStore = AppGroupIPCStore(defaults: defaults)
+        self.init(ipcStore: AppGroupIPCStore(defaults: defaults))
+    }
+
+    /// Create a state object backed by an explicit IPC store (for testing).
+    init(ipcStore: any SelectedAppsIPCStoring) {
+        self.ipcStore = ipcStore
         let initialMetadata = (try? ipcStore.readSelection()) ?? .empty
         selectionMetadata = initialMetadata
         let storedEnabled = ipcStore.isTrueInterruptEnabled()
@@ -94,6 +113,8 @@ final class SelectedAppsState: ObservableObject {
             try ipcStore.writeSelection(metadata)
         } catch {
             selectionMetadata = .empty
+            isTrueInterruptEnabled = false
+            _ = ipcStore.setTrueInterruptEnabled(false)
             return false
         }
         selectionMetadata = metadata
