@@ -89,6 +89,7 @@ final class AppCoordinatorNotificationFallbackTests: XCTestCase {
 
     func test_scheduleReminders_whenShieldAvailable_suppressesNotificationFallback() async throws {
         deviceActivityMonitor.stubbedIsAvailable = true
+        ipcStore.trueInterruptEnabled = true
 
         await coordinator.scheduleReminders()
 
@@ -98,8 +99,20 @@ final class AppCoordinatorNotificationFallbackTests: XCTestCase {
         XCTAssertEqual(event.detail, "device_activity_available")
     }
 
+    func test_scheduleReminders_whenShieldAvailableButTrueInterruptDisabled_schedulesFallback() async {
+        deviceActivityMonitor.stubbedIsAvailable = true
+        ipcStore.trueInterruptEnabled = false
+
+        await coordinator.scheduleReminders()
+
+        XCTAssertEqual(notificationCenter.addedRequests.count, 2)
+        XCTAssertTrue(ipcStore.recordedKinds.contains(.notificationFallbackScheduled))
+        XCTAssertFalse(ipcStore.recordedKinds.contains(.shieldPathSelected))
+    }
+
     func test_scheduleReminders_whenShieldAvailableAndAllRemindersDisabled_doesNotRecordShieldPath() async {
         deviceActivityMonitor.stubbedIsAvailable = true
+        ipcStore.trueInterruptEnabled = true
         settings.globalEnabled = false
 
         await coordinator.scheduleReminders()
