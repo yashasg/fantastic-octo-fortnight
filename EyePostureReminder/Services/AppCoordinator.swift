@@ -3,8 +3,7 @@ import ScreenTimeExtensionShared
 import UIKit
 import UserNotifications
 
-protocol AppGroupIPCProviding {
-    func recordEvent(_ event: AppGroupIPCEvent) throws
+protocol AppGroupIPCProviding: AppGroupIPCEventRecording {
     func isTrueInterruptEnabled() -> Bool
 }
 
@@ -204,6 +203,7 @@ final class AppCoordinator: ObservableObject {
                 drivingDetector: LiveDrivingActivityDetector()
             ))
         Logger.lifecycle.info("AppCoordinator initialised")
+        recordWatchdogHeartbeat(.coordinatorInitialized)
 
         // Wire ScreenTimeTracker callback — fires on main thread when a type's
         // continuous screen-on threshold is reached.
@@ -314,6 +314,7 @@ final class AppCoordinator: ObservableObject {
     /// Call on launch (`.task`) and whenever settings change.
     func scheduleReminders() async {
         await refreshAuthStatus()
+        recordWatchdogHeartbeat(.scheduleReminders)
 
         // P1-1: Snooze guard — check before doing anything else.
         if let snoozeEnd = settings.snoozedUntil {
@@ -466,6 +467,7 @@ final class AppCoordinator: ObservableObject {
     /// restart is required here.
     func handleForegroundTransition() async {
         await refreshAuthStatus()
+        recordWatchdogHeartbeat(.appForeground)
 
         // P1-1: Handle snooze state on foreground.
         if let snoozeEnd = settings.snoozedUntil {
@@ -513,6 +515,7 @@ final class AppCoordinator: ObservableObject {
         let sessionDuration = sessionStartTime.map { Date().timeIntervalSince($0) } ?? 0
         AnalyticsLogger.log(.appSessionEnd(sessionDurationS: sessionDuration))
         sessionStartTime = nil
+        recordWatchdogHeartbeat(.appBackground)
         Logger.lifecycle.debug("App resigned active — ScreenTimeTracker will auto-reset elapsed counters")
     }
 
@@ -772,6 +775,14 @@ extension AppCoordinator {
             try ipcStore.recordEvent(AppGroupIPCEvent(kind: kind, reasonRaw: reasonRaw, detail: detail))
         } catch {
             Logger.scheduling.error("App Group IPC event write failed: \(error.localizedDescription)")
+        }
+    }
+
+    private func recordWatchdogHeartbeat(_ detail: WatchdogHeartbeatDetail) {
+        do {
+            try WatchdogHeartbeat.record(detail, using: ipcStore)
+        } catch {
+            Logger.scheduling.error("App Group watchdog heartbeat write failed: \(error.localizedDescription)")
         }
     }
 }

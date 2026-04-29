@@ -27,12 +27,18 @@
 import DeviceActivity
 import Foundation
 import ManagedSettings
+import os
 
 // MARK: - DeviceActivityMonitorExtensionImpl
 
 final class DeviceActivityMonitorExtensionImpl: DeviceActivityMonitor {
 
     private let store = ManagedSettingsStore()
+    private let ipcStore = AppGroupIPCStore()
+    private static let ipcLog = OSLog(
+        subsystem: "com.yashasgujjar.kshana",
+        category: "AppGroupIPC"
+    )
 
     /// Reads the active break session written by the main app before
     /// `DeviceActivityCenter.startMonitoring(...)` was called.
@@ -57,6 +63,7 @@ final class DeviceActivityMonitorExtensionImpl: DeviceActivityMonitor {
 
     override func intervalDidStart(for activity: DeviceActivityName) {
         let session = DeviceActivityMonitorExtensionImpl.readSession()
+        recordWatchdogHeartbeat(.deviceActivityIntervalStarted)
 
         // Pending #201: Apply app shield restrictions based on the selected apps from
         // SelectedAppsState (written to the App Group by the main app after the user
@@ -76,6 +83,7 @@ final class DeviceActivityMonitorExtensionImpl: DeviceActivityMonitor {
         // clearAllSettings() is safe to call even without FamilyControls at
         // compile time; it is a no-op until the entitlement is active.
         store.clearAllSettings()
+        recordWatchdogHeartbeat(.deviceActivityIntervalEnded)
     }
 
     override func eventDidReachThreshold(
@@ -83,5 +91,18 @@ final class DeviceActivityMonitorExtensionImpl: DeviceActivityMonitor {
         activity: DeviceActivityName
     ) {
         // Pending #201: Handle threshold events (e.g. warn user break is ending soon).
+    }
+
+    private func recordWatchdogHeartbeat(_ detail: WatchdogHeartbeatDetail) {
+        do {
+            try WatchdogHeartbeat.record(detail, using: ipcStore)
+        } catch {
+            os_log(
+                "DeviceActivity heartbeat IPC write failed: %{public}@",
+                log: Self.ipcLog,
+                type: .error,
+                String(describing: error)
+            )
+        }
     }
 }
