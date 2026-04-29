@@ -81,7 +81,7 @@ App is free with no IAP.
 
 #### Usage Data
 **Answer: Not Collected**  
-No custom analytics events, no session tracking, no feature-usage logging.
+No usage data is transmitted to a developer-operated server or third-party analytics provider. The app writes local `os.Logger` diagnostic events and a capped local App Group IPC event log for shield/fallback/watchdog diagnostics; these remain on device unless the user chooses to share Apple/TestFlight diagnostics.
 
 #### Diagnostics
 **Answer: Collected** — see details below.
@@ -124,14 +124,15 @@ The app uses Apple's **MetricKit** framework. Apple collects diagnostic and perf
 
 ### Data the App Accesses but Does NOT Collect
 
-These data types are accessed transiently in memory and are never stored persistently or transmitted off-device:
+These data types are accessed or stored locally for App Functionality and are not transmitted off-device by kshana:
 
 | Data | Framework | Why Not Collected |
 |---|---|---|
 | App preferences / settings | `UserDefaults` | Stored locally in app sandbox. Never transmitted. |
 | Motion activity state | `CMMotionActivityManager` | Transient, in-memory only. Used to pause reminders while driving. Never stored or sent. |
 | Focus status | `INFocusStatusCenter` | Transient, in-memory only. Used to pause reminders during Focus modes. Never stored or sent. |
-| Screen Time / Device activity data (if authorized) | `FamilyControls` / `DeviceActivity` (pending approval) | Transient, aggregate only. User-authorized data read in memory for interval scheduling. Never stored persistently or transmitted. **Note: This feature is pending Apple approval (case ID 102881605113) and is not yet available to users.** |
+| Screen Time / Device activity data (if authorized) | `FamilyControls` / `DeviceActivity` (pending approval) | User-authorized data is used locally for interval scheduling and selected-app shielding. Current builds keep fallback alerts active while entitlement-gated shielding is pending Apple approval (case ID 102881605113). |
+| App Group IPC metadata | `UserDefaults(suiteName:)` | Local-only enabled/disabled intent, aggregate app/category selection counts, shield-session timestamps, last access-request timestamp, and capped shield/fallback/watchdog event log. Used so the main app and Screen Time extensions coordinate without a backend. Never transmitted by kshana. |
 | Diagnostic logs | `os.Logger` | On-device only in release builds. Sensitive values redacted with `.private`. |
 
 ---
@@ -198,27 +199,26 @@ See Frank's full checklist in `.squad/decisions/inbox/frank-analytics-privacy-up
 
 ---
 
-## If Screen Time / Device Activity Features Are Added (Pending Approval)
+## Screen Time / Device Activity Features (Pending Approval)
 
-When kshana's Screen Time integration feature is approved and released (currently under Apple review, case ID 102881605113), the following privacy label updates will be required:
+kshana's Screen Time integration is under Apple review (case ID 102881605113). The planned implementation uses local-only App Group metadata and Apple's Screen Time frameworks to coordinate selected-app shielding. It does not use a custom backend, advertising identifier, third-party analytics SDK, or cross-app tracking.
 
-### New Data Categories to Disclose
+### App Privacy Label Guidance
 
-| Category | Answer | Reasoning |
-|---|---|---|
-| **Device Status** (Screen Time / Device Activity) | Collected | Aggregate screen-on time and user-authorized app/category selections are read via `FamilyControls` framework to schedule breaks. See details below. |
+If Screen Time data and App Group IPC metadata remain local-only as designed, answer **Not Collected** for Screen Time / Device Activity data in App Store Connect because kshana does not transmit this data off device or make it available to the developer outside user-shared Apple diagnostic packages.
 
-### Device Status — Detailed Disclosure
+If a future release transmits Screen Time, Device Activity, selected-app metadata, IPC event logs, or derived usage analytics to a developer-operated service or third-party provider, this document must be updated before submission and the privacy labels must be reassessed.
 
-| Field | Answer |
-|---|---|
-| **Collected?** | Yes |
-| **Data type** | Device Status |
-| **Linked to user?** | No — Not Linked to User |
-| **Used for tracking?** | No — Not Used for Tracking |
-| **Purpose** | App Functionality |
+### Local Screen Time / IPC Detail
 
-**Rationale:** Screen Time integration reads aggregate screen-on time and user-authorized app/category data **in memory only** for the purpose of triggering wellness reminders at user-configured intervals. This data is never stored persistently by kshana, never transmitted to external servers, and never used for tracking or user identification. Purpose is App Functionality because the data is used to schedule reminder delivery.
+| Local data | Stored? | Transmitted by kshana? | Label impact |
+|---|---:|---:|---|
+| Aggregate app/category selection counts | Yes, local App Group | No | Not Collected |
+| True Interrupt enabled/disabled intent | Yes, local App Group | No | Not Collected |
+| Shield-session timestamps and access-request timestamp | Yes, local App Group | No | Not Collected |
+| Capped shield/fallback/watchdog IPC event log | Yes, local App Group | No | Not Collected |
+
+**Rationale:** This data is local operational state used for App Functionality. It is not linked to identity, not used for tracking, not sold, and not shared with third parties. Apple may separately process diagnostics, crash data, TestFlight feedback, and App Store analytics under Apple's systems and the user's device/TestFlight sharing settings.
 
 ---
 
@@ -227,6 +227,7 @@ When kshana's Screen Time integration feature is approved and released (currentl
 | Data Type | Collected? | Linked? | Tracking? | Purpose |
 |---|---|---|---|---|
 | UserDefaults / settings | ❌ Not Collected | — | — | — |
+| App Group IPC metadata | ❌ Not Collected | — | — | — |
 | Motion activity | ❌ Not Collected | — | — | — |
 | Focus status | ❌ Not Collected | — | — | — |
 | Screen Time (if approved*) | ❌ Not Collected | — | — | — |
@@ -234,4 +235,4 @@ When kshana's Screen Time integration feature is approved and released (currentl
 | MetricKit crash data | ✅ Collected | Not Linked | Not Tracking | App Functionality |
 | MetricKit performance data | ✅ Collected | Not Linked | Not Tracking | Analytics |
 
-*Screen Time data (aggregate screen-on time and user-authorized app selections via FamilyControls) is accessed transiently in memory only for interval scheduling and is never stored persistently or transmitted. It qualifies as "Not Collected" under Apple's App Privacy guidelines. However, when the feature is approved and released, it will need to be disclosed in the "Device Status" category as "Collected" with "Not Linked to User" and "Not Used for Tracking." This document will be updated at that time.
+*Screen Time data and App Group IPC metadata qualify as "Not Collected" only while they remain local-only and are not transmitted by kshana. If a future release exports this data to a developer-operated service or third-party provider, update this guide and App Store Connect before submission.

@@ -12,8 +12,8 @@
 This document defines the complete telemetry strategy for kshana: every log point, every MetricKit subscription, and every dashboard tile we need to ship a healthy, measurable app.
 
 **Guiding principles:**
-- **Native Apple only.** No third-party SDKs. No data leaves the device except through Apple's own channels (os.log → App Store Connect / TestFlight feedback).
-- **Privacy first.** Aggregate data only. No user identifiers, no device fingerprinting, no PII in logs.
+- **Native Apple only.** No third-party SDKs and no developer-operated analytics backend. Apple-managed diagnostics, App Store Connect analytics, TestFlight feedback, and user-shared log bundles may process limited diagnostic data through Apple's systems.
+- **Privacy first.** Aggregate or operational data only. No user identifiers, no device fingerprinting, no PII in logs.
 - **Structured from day one.** `os.Logger` active from Phase 1 (M0.2). MetricKit active from Phase 2. Dashboard requirements defined now so we instrument correctly the first time.
 
 ---
@@ -132,7 +132,7 @@ extension AppDelegate: MXMetricManagerSubscriber {
         for payload in payloads {
             guard let json = String(data: payload.jsonRepresentation(), encoding: .utf8) else { return }
             Logger.appLife.info("metrickit_payload received=\(payload.timeStampBegin, privacy: .public) json=\(json, privacy: .public)")
-            // Phase 3: forward to lightweight backend if needed
+            // Do not forward to a backend without a privacy-label review.
         }
     }
 
@@ -181,7 +181,7 @@ extension AppDelegate: MXMetricManagerSubscriber {
 - `cumulativeFingerprints` — baseline comparison
 - Look for `drain` values during active overlay display windows
 
-**Storage:** For Phase 2, payload JSON is written to `os.log` only. For Phase 3, if aggregate data is needed, write payload JSON to a bounded `UserDefaults` key (last 7 payloads) or a simple file in the app's Documents/Library directory. No external servers required.
+**Storage:** For Phase 2, MetricKit summaries are written to `os.log` only. If aggregate diagnostic history is needed later, keep it local and bounded (for example, last 7 payload summaries in `UserDefaults` or a simple file in the app's Library directory). Do not add external transmission without updating the privacy policy, Privacy Nutrition Labels guide, and App Store/TestFlight copy first.
 
 ---
 
@@ -266,7 +266,7 @@ What Turk, Tess (UX), and Reuben (Product) need to see. These drive the instrume
 
 - [ ] Never log `identifierForVendor` (IDFV)
 - [ ] Never log `advertisingIdentifier` (IDFA) — we have no AdServices entitlement
-- [ ] MetricKit payloads carry no user or device identifier — they are aggregate/diagnostic
+- [ ] MetricKit payloads carry no app-defined user or device identifier — they are aggregate/diagnostic and processed through Apple's systems
 - [ ] App Store Connect Analytics is aggregate-only; individual tester data is not accessible programmatically
 
 ### App Privacy Report Compliance
@@ -284,11 +284,11 @@ For the App Store submission, declare:
 |----------|-----------|-----------|--------------------|--------------------|
 | Diagnostics | Crash data | Yes (via MetricKit/App Store Connect, Apple-managed) | No | No |
 | Diagnostics | Performance data | Yes (via MetricKit, Apple-managed) | No | No |
-| App Usage | Other usage data | No (os.log stays on device) | N/A | N/A |
+| App Usage | Other usage data | No (local os.log and App Group IPC history stay on device unless included in user-shared Apple/TestFlight diagnostics) | N/A | N/A |
 | Contact Info | Any | No | N/A | N/A |
 | Identifiers | Any | No | N/A | N/A |
 
-**Correct declaration:** "Data Not Collected" for all user-linked categories. The crash/performance data is collected by Apple infrastructure, not by our app sending it to our servers. Select "Crash Data" under Diagnostics only if you forward MetricKit payloads to your own server in Phase 3 — in Phase 2, it stays in os.log and Apple's systems.
+**Correct declaration:** "Not Collected" for user-linked categories and local-only usage/IPC state. Disclose Apple-managed crash and performance diagnostics as described in `docs/PRIVACY_NUTRITION_LABELS.md`. If kshana ever transmits MetricKit payloads, Screen Time data, or local IPC history to a developer-operated service, reassess the labels before submission.
 
 ---
 

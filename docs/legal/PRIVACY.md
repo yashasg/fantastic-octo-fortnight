@@ -17,7 +17,8 @@ The App does use Apple's built-in diagnostics and analytics tools, including Met
 If you authorize kshana to monitor your device activity using Apple's FamilyControls framework, the following applies:
 - You grant kshana permission to read aggregate Screen Time data (total screen-on time and user-authorized selected apps/categories) for the sole purpose of detecting when you have reached your configured wellness break intervals
 - This data is used locally on your device to trigger wellness reminders and pause recommendations
-- Device activity data is **never stored persistently by kshana**, **never transmitted to any server**, and **never shared with third parties**
+- kshana stores only local coordination metadata needed for the feature to work across the main app and Screen Time extensions, such as enabled/disabled intent, aggregate app/category selection counts, shield-session timestamps, and a capped local shield/fallback event log. kshana does **not** store app content, raw Screen Time browsing/content details, advertising identifiers, or user-level profiles
+- Device activity and local coordination metadata are **never transmitted to a developer server**, **never sold**, and **never shared with third-party advertisers, analytics vendors, or data brokers**
 - You may withdraw this authorization at any time through your device Settings
 - **Note:** As of April 2026, kshana's Screen Time integration capability is pending Apple approval (Apple case ID 102881605113) and may not be available in current versions. This Privacy Policy describes the intended behavior upon approval. Do not expect this feature to be active until explicitly released in app updates and confirmed in App Store release notes
 
@@ -29,14 +30,15 @@ kshana stores the following data **locally on your device only**, using Apple's 
 
 - **App settings and preferences** — your configured reminder intervals, break durations, and any other in-app settings you adjust
 - **App state** — whether reminders are enabled or disabled
+- **True Interrupt coordination state** — if Screen Time features are available, the App Group container stores local-only operational metadata so the main app and extensions can coordinate: enabled/disabled intent, aggregate app/category selection counts, active shield-session timestamps, last access-request timestamps, and a capped shield/fallback/watchdog event log
 
-This data exists solely to remember your preferences between sessions. It is stored in the app's sandboxed container on your device.
+This data exists solely to remember your preferences and coordinate local reminder/shield behavior between sessions. It is stored in the app's sandboxed container or App Group container on your device.
 
 The App also accesses the following device data **in memory only** — this data is never stored or transmitted by the App:
 
 - **Motion activity data** — the App reads your device's motion activity state (via `CMMotionActivityManager`) to detect when you are driving, so that reminders are automatically paused. This data is read in memory for the sole purpose of pause logic and is discarded immediately; it is never written to disk, sent to any server, or associated with your identity.
 - **Focus mode status** — the App reads your device's Focus mode state (e.g., Do Not Disturb, Work, Personal) to pause reminders during active Focus sessions. This information is read in memory and is never stored or transmitted by the App.
-- **Device activity and screen time data (if authorized)** — If you authorize kshana to access Screen Time information via the FamilyControls framework, the App reads aggregate data about your total continuous screen-on time and any user-authorized app/category selections you have configured. This data is processed in memory to schedule and deliver wellness breaks at your configured intervals. This data is never stored persistently on disk by kshana, never transmitted to external servers, and never shared with third parties. **As of April 2026, Screen Time integration is pending Apple approval (case ID 102881605113) and is not yet available to users.**
+- **Device activity and screen time data (if authorized)** — If you authorize kshana to access Screen Time information via the FamilyControls framework, the App reads aggregate data about your total continuous screen-on time and any user-authorized app/category selections you have configured. This data is used locally to schedule and deliver wellness breaks at your configured intervals. When Screen Time features are configured, kshana stores the local coordination metadata listed above, but it does not transmit Screen Time data or coordination metadata to external servers or share it with third parties. **As of April 2026, Screen Time integration is pending Apple approval (case ID 102881605113) and is not yet available to users.**
 
 The App uses Apple's built-in diagnostics and analytics systems:
 
@@ -65,12 +67,12 @@ To be explicit about what does **not** happen:
 
 ## 3. Local Storage
 
-All preference data stored by the App lives in **Apple's `UserDefaults`**, within the App's sandboxed storage on your device.
+All preference and True Interrupt coordination data stored by the App lives in **Apple's `UserDefaults`**, within the App's sandboxed storage or App Group storage on your device.
 
-- This preference data is not intentionally uploaded by the App
-- This preference data may be included in your general device backup if your iOS backup settings allow it; that backup is controlled by your iOS settings, not by us
-- This preference data is deleted when you delete the App from your device
-- We have no direct access to your locally stored preferences
+- This local data is not intentionally uploaded by the App to a developer server
+- This local data may be included in your general device backup if your iOS backup settings allow it; that backup is controlled by your iOS settings, not by us
+- This local data is deleted when you delete the App from your device
+- We have no direct access to your locally stored preferences or App Group coordination state
 
 ---
 
@@ -118,7 +120,7 @@ If you are a parent or guardian and believe your child has somehow provided pers
 
 ## 9. Data Security
 
-Because the App stores only non-sensitive preference data locally on your device, the primary security protection is your device's own security (passcode, Face ID, Touch ID). We encourage you to keep your device secure and up to date.
+Because the App stores only local preferences and operational coordination metadata on your device, the primary security protection is your device's own security (passcode, Face ID, Touch ID). We encourage you to keep your device secure and up to date.
 
 The App does not transmit local preferences, motion activity data, or Focus status to a developer server. Apple-native diagnostics and analytics are processed through Apple's systems and are subject to Apple's security and privacy practices.
 

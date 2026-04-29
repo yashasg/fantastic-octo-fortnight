@@ -114,7 +114,7 @@ Establish context and set a warm, confident tone. Tell the user what the app doe
 |---|---|
 | **Headline** | `Welcome to kshana` |
 | **Subheadline** | `Healthy app breaks, on your terms.` |
-| **Body** | `Choose which apps get break reminders. You set the timing. kshana handles the rest. Takes less than a minute.` |
+| **Body** | `Set your eye and posture break timing. kshana handles the rest. Takes less than a minute.` |
 | **CTA button** | `Next` |
 
 ### Illustration
@@ -188,10 +188,10 @@ Explain how kshana works before asking for permissions. Build confidence and tra
 │    [Explanation card with bullet   │
 │     points]                         │  ← Educational content
 │                                    │
-│    You choose which apps get        │
-│    break reminders. kshana monitors │
-│    which apps you use and suggests  │
-│    breaks at intervals you set.     │
+│    You set your break timing.       │
+│    kshana tracks local screen-time  │
+│    intervals and suggests breaks    │
+│    when it is time to step away.    │
 │                                    │
 │    Think of it like a helpful       │
 │    reminder card—not a blocker.     │
@@ -332,7 +332,7 @@ Button("Grant App Break Access") {
 .padding(.horizontal, 32)
 ```
 
-The onboarding advances to Screen 4 regardless of the user's choice on the system prompt. Permission denial is handled gracefully in the main app with fallback local alerts (see `UX_FLOWS.md` §2.4).
+The onboarding advances to Screen 4 regardless of the user's choice on the system prompt. Permission denial is handled gracefully in the main app with backup local alerts (see `UX_FLOWS.md` §2.4).
 
 ### "Not now" Behaviour
 
@@ -421,7 +421,7 @@ Show the user what's already configured. Build confidence. Let them "get started
 |---|---|
 | **Headline** | `You're all set.` |
 | **Subheadline** | `kshana will help you build healthier habits.` |
-| **Body note** | `Default config: Eye breaks every 20 min, posture checks every 30 min. Fallback local alerts when Screen Time access is unavailable. You can customize anytime.` |
+| **Body note** | `Default config: Eye breaks every 20 min, posture checks every 30 min. Backup local alerts work while Screen Time access is unavailable. You can customize anytime.` |
 | **Reassurance** | `Your breaks, your timing, your control.` |
 | **Primary CTA** | `Get Started` |
 | **Secondary option** | `Customize Settings` |
