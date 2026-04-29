@@ -23,6 +23,15 @@ enum ShieldTriggerReason: String, Sendable, Equatable {
     case scheduledEyesBreak = "eyes"
     /// A scheduled posture/movement break.
     case scheduledPostureBreak = "posture"
+
+    var reminderType: ReminderType? {
+        switch self {
+        case .scheduledEyesBreak:
+            return .eyes
+        case .scheduledPostureBreak:
+            return .posture
+        }
+    }
 }
 
 // MARK: - ShieldSession
@@ -61,7 +70,17 @@ extension ShieldSession {
     ///   - durationSeconds: Break duration in seconds (read from `SettingsStore`).
     ///   - triggeredAt: Wall-clock trigger time. Defaults to `Date()`.
     init(type: ReminderType, durationSeconds: TimeInterval, triggeredAt: Date = Date()) {
-        let reason: ShieldTriggerReason = type == .eyes ? .scheduledEyesBreak : .scheduledPostureBreak
-        self.init(reason: reason, durationSeconds: durationSeconds, triggeredAt: triggeredAt)
+        self.init(reason: type.shieldReason, durationSeconds: durationSeconds, triggeredAt: triggeredAt)
+    }
+}
+
+extension ReminderType {
+    var shieldReason: ShieldTriggerReason {
+        switch self {
+        case .eyes:
+            return .scheduledEyesBreak
+        case .posture:
+            return .scheduledPostureBreak
+        }
     }
 }

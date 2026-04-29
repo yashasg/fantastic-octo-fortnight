@@ -231,7 +231,8 @@ final class ServiceCoverageBoostTests: XCTestCase {
             notificationCenter: MockNotificationCenter(),
             overlayManager: MockOverlayPresenting(),
             screenTimeTracker: MockScreenTimeTracker(),
-            pauseConditionProvider: MockPauseConditionProvider())
+            pauseConditionProvider: MockPauseConditionProvider(),
+            ipcStore: MockAppGroupIPCRecorder())
         delegate.coordinator = coordinator
         XCTAssertNotNil(delegate.coordinator)
     }
@@ -250,7 +251,8 @@ final class ServiceCoverageBoostTests: XCTestCase {
             notificationCenter: MockNotificationCenter(),
             overlayManager: MockOverlayPresenting(),
             screenTimeTracker: MockScreenTimeTracker(),
-            pauseConditionProvider: MockPauseConditionProvider())
+            pauseConditionProvider: MockPauseConditionProvider(),
+            ipcStore: MockAppGroupIPCRecorder())
         delegate.applicationDidBecomeActive(UIApplication.shared)
     }
 
@@ -274,7 +276,8 @@ final class ServiceCoverageBoostTests2: XCTestCase {
             notificationCenter: MockNotificationCenter(),
             overlayManager: MockOverlayPresenting(),
             screenTimeTracker: MockScreenTimeTracker(),
-            pauseConditionProvider: MockPauseConditionProvider())
+            pauseConditionProvider: MockPauseConditionProvider(),
+            ipcStore: MockAppGroupIPCRecorder())
         coordinator.presentPendingOverlayIfNeeded()
     }
 
@@ -284,7 +287,8 @@ final class ServiceCoverageBoostTests2: XCTestCase {
             notificationCenter: MockNotificationCenter(),
             overlayManager: MockOverlayPresenting(),
             screenTimeTracker: MockScreenTimeTracker(),
-            pauseConditionProvider: MockPauseConditionProvider())
+            pauseConditionProvider: MockPauseConditionProvider(),
+            ipcStore: MockAppGroupIPCRecorder())
         coordinator.appWillResignActive()
     }
 
@@ -294,7 +298,8 @@ final class ServiceCoverageBoostTests2: XCTestCase {
             notificationCenter: MockNotificationCenter(),
             overlayManager: MockOverlayPresenting(),
             screenTimeTracker: MockScreenTimeTracker(),
-            pauseConditionProvider: MockPauseConditionProvider())
+            pauseConditionProvider: MockPauseConditionProvider(),
+            ipcStore: MockAppGroupIPCRecorder())
         coordinator.cancelSnoozeWakeTaskIfNeeded()
     }
 
@@ -305,7 +310,8 @@ final class ServiceCoverageBoostTests2: XCTestCase {
             notificationCenter: MockNotificationCenter(),
             overlayManager: overlay,
             screenTimeTracker: MockScreenTimeTracker(),
-            pauseConditionProvider: MockPauseConditionProvider())
+            pauseConditionProvider: MockPauseConditionProvider(),
+            ipcStore: MockAppGroupIPCRecorder())
         // Exercises the full handleNotification code path.
         // In CI (no foreground scene) the overlay is queued as pending;
         // with an active scene it calls showOverlay. Both paths are valid.
@@ -319,7 +325,8 @@ final class ServiceCoverageBoostTests2: XCTestCase {
             notificationCenter: MockNotificationCenter(),
             overlayManager: overlay,
             screenTimeTracker: MockScreenTimeTracker(),
-            pauseConditionProvider: MockPauseConditionProvider())
+            pauseConditionProvider: MockPauseConditionProvider(),
+            ipcStore: MockAppGroupIPCRecorder())
         coordinator.handleNotification(for: .posture)
     }
 
@@ -330,7 +337,8 @@ final class ServiceCoverageBoostTests2: XCTestCase {
             notificationCenter: MockNotificationCenter(),
             overlayManager: MockOverlayPresenting(),
             screenTimeTracker: MockScreenTimeTracker(),
-            pauseConditionProvider: MockPauseConditionProvider())
+            pauseConditionProvider: MockPauseConditionProvider(),
+            ipcStore: MockAppGroupIPCRecorder())
         await coordinator.scheduleReminders()
     }
 
@@ -340,7 +348,8 @@ final class ServiceCoverageBoostTests2: XCTestCase {
             notificationCenter: MockNotificationCenter(),
             overlayManager: MockOverlayPresenting(),
             screenTimeTracker: MockScreenTimeTracker(),
-            pauseConditionProvider: MockPauseConditionProvider())
+            pauseConditionProvider: MockPauseConditionProvider(),
+            ipcStore: MockAppGroupIPCRecorder())
         await coordinator.refreshAuthStatus()
     }
 
@@ -350,7 +359,8 @@ final class ServiceCoverageBoostTests2: XCTestCase {
             notificationCenter: MockNotificationCenter(),
             overlayManager: MockOverlayPresenting(),
             screenTimeTracker: MockScreenTimeTracker(),
-            pauseConditionProvider: MockPauseConditionProvider())
+            pauseConditionProvider: MockPauseConditionProvider(),
+            ipcStore: MockAppGroupIPCRecorder())
         await coordinator.clearExpiredSnoozeIfNeeded()
     }
 
@@ -360,7 +370,8 @@ final class ServiceCoverageBoostTests2: XCTestCase {
             notificationCenter: MockNotificationCenter(),
             overlayManager: MockOverlayPresenting(),
             screenTimeTracker: MockScreenTimeTracker(),
-            pauseConditionProvider: MockPauseConditionProvider())
+            pauseConditionProvider: MockPauseConditionProvider(),
+            ipcStore: MockAppGroupIPCRecorder())
         await coordinator.handleForegroundTransition()
     }
 

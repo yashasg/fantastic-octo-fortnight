@@ -209,6 +209,21 @@ final class SettingsFlowTests: XCTestCase {
         XCTAssertGreaterThan(allSwitches.count, 0, "At least one toggle must be visible in Settings.")
     }
 
+    // MARK: - test_settings_notificationFallbackToggle_exists
+
+    /// Verifies the backup-alert toggle for notification fallback is present in Settings.
+    func test_settings_notificationFallbackToggle_exists() throws {
+        openSettings()
+
+        app.swipeUp()
+
+        let fallbackToggle = app.switches["settings.notificationFallback"]
+        XCTAssertTrue(
+            fallbackToggle.waitForExistence(timeout: 5),
+            "Notification fallback toggle must exist in the Preferences section."
+        )
+    }
+
     // MARK: - test_settings_termsSheet_dismissReturnsToSettings
 
     /// Opens the Terms sheet, taps Done, and verifies the Settings sheet is restored.

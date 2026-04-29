@@ -1,0 +1,138 @@
+@testable import EyePostureReminder
+@testable import ScreenTimeExtensionShared
+import XCTest
+
+@MainActor
+final class AppCoordinatorNotificationFallbackTests: XCTestCase {
+
+    private var settings: SettingsStore!
+    private var notificationCenter: MockNotificationCenter!
+    private var overlay: MockOverlayPresenting!
+    private var tracker: MockScreenTimeTracker!
+    private var deviceActivityMonitor: MockDeviceActivityMonitorProviding!
+    private var ipcStore: MockAppGroupIPCRecorder!
+    private var coordinator: AppCoordinator!
+
+    override func setUp() async throws {
+        try await super.setUp()
+        settings = SettingsStore(store: MockSettingsPersisting())
+        notificationCenter = MockNotificationCenter()
+        notificationCenter.authorizationGranted = true
+        overlay = MockOverlayPresenting()
+        tracker = MockScreenTimeTracker()
+        deviceActivityMonitor = MockDeviceActivityMonitorProviding()
+        ipcStore = MockAppGroupIPCRecorder()
+        coordinator = AppCoordinator(
+            settings: settings,
+            scheduler: ReminderScheduler(notificationCenter: notificationCenter),
+            notificationCenter: notificationCenter,
+            overlayManager: overlay,
+            screenTimeTracker: tracker,
+            pauseConditionProvider: MockPauseConditionProvider(),
+            deviceActivityMonitor: deviceActivityMonitor,
+            ipcStore: ipcStore
+        )
+    }
+
+    override func tearDown() async throws {
+        coordinator.stopFallbackTimers()
+        coordinator = nil
+        ipcStore = nil
+        deviceActivityMonitor = nil
+        tracker = nil
+        overlay = nil
+        notificationCenter = nil
+        settings = nil
+        try await super.tearDown()
+    }
+
+    func test_scheduleReminders_whenShieldUnavailableAndFallbackEnabled_schedulesNotifications() async {
+        deviceActivityMonitor.stubbedIsAvailable = false
+        settings.notificationFallbackEnabled = true
+
+        await coordinator.scheduleReminders()
+
+        XCTAssertEqual(notificationCenter.addedRequests.count, 2)
+        XCTAssertTrue(ipcStore.recordedKinds.contains(.notificationFallbackScheduled))
+    }
+
+    func test_scheduleReminders_whenShieldUnavailable_recordsFallbackReason() async throws {
+        deviceActivityMonitor.stubbedIsAvailable = false
+
+        await coordinator.scheduleReminders()
+
+        let event = try XCTUnwrap(ipcStore.events.first { $0.kind == .notificationFallbackScheduled })
+        XCTAssertEqual(event.detail, "shield_unavailable")
+    }
+
+    func test_scheduleReminders_whenFallbackDisabled_cancelsNotifications() async {
+        deviceActivityMonitor.stubbedIsAvailable = false
+        settings.notificationFallbackEnabled = false
+
+        await coordinator.scheduleReminders()
+
+        XCTAssertTrue(notificationCenter.addedRequests.isEmpty)
+        XCTAssertEqual(notificationCenter.removeAllCallCount, 1)
+        XCTAssertFalse(ipcStore.recordedKinds.contains(.notificationFallbackScheduled))
+    }
+
+    func test_scheduleReminders_whenAllRemindersDisabled_doesNotRecordFallbackScheduled() async {
+        deviceActivityMonitor.stubbedIsAvailable = false
+        settings.globalEnabled = false
+
+        await coordinator.scheduleReminders()
+
+        XCTAssertTrue(notificationCenter.addedRequests.isEmpty)
+        XCTAssertEqual(notificationCenter.removeAllCallCount, 1)
+        XCTAssertFalse(ipcStore.recordedKinds.contains(.notificationFallbackScheduled))
+    }
+
+    func test_scheduleReminders_whenShieldAvailable_suppressesNotificationFallback() async throws {
+        deviceActivityMonitor.stubbedIsAvailable = true
+
+        await coordinator.scheduleReminders()
+
+        XCTAssertTrue(notificationCenter.addedRequests.isEmpty)
+        XCTAssertEqual(notificationCenter.removeAllCallCount, 1)
+        let event = try XCTUnwrap(ipcStore.events.first { $0.kind == .shieldPathSelected })
+        XCTAssertEqual(event.detail, "device_activity_available")
+    }
+
+    func test_scheduleReminders_whenShieldAvailableAndAllRemindersDisabled_doesNotRecordShieldPath() async {
+        deviceActivityMonitor.stubbedIsAvailable = true
+        settings.globalEnabled = false
+
+        await coordinator.scheduleReminders()
+
+        XCTAssertTrue(notificationCenter.addedRequests.isEmpty)
+        XCTAssertFalse(ipcStore.recordedKinds.contains(.shieldPathSelected))
+    }
+
+    func test_handleNotification_recordsDeliveredFallbackEvent() throws {
+        coordinator.handleNotification(for: .eyes)
+
+        let event = try XCTUnwrap(ipcStore.events.first { $0.kind == .notificationFallbackDelivered })
+        XCTAssertEqual(event.reasonRaw, ReminderType.eyes.shieldReason.rawValue)
+    }
+
+    func test_thresholdReached_whenFallbackActive_reschedulesMatchingNotification() async {
+        deviceActivityMonitor.stubbedIsAvailable = false
+        await coordinator.scheduleReminders()
+        notificationCenter.reset()
+
+        tracker.simulateThresholdReached(for: .eyes)
+        try? await Task.sleep(nanoseconds: 200_000_000)
+
+        XCTAssertEqual(notificationCenter.addedRequests.count, 1)
+        XCTAssertEqual(
+            notificationCenter.removedIdentifiers,
+            [["com.yashasg.eyeposturereminder.eyes"]]
+        )
+    }
+}
+
+private extension MockAppGroupIPCRecorder {
+    var recordedKinds: [AppGroupIPCEventKind] {
+        events.map(\.kind)
+    }
+}

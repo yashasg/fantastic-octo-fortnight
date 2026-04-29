@@ -20,7 +20,8 @@ final class PreviewTests: XCTestCase {
             notificationCenter: MockNotificationCenter(),
             overlayManager: MockOverlayPresenting(),
             screenTimeTracker: MockScreenTimeTracker(),
-            pauseConditionProvider: MockPauseConditionProvider()
+            pauseConditionProvider: MockPauseConditionProvider(),
+            ipcStore: MockAppGroupIPCRecorder()
         )
     }
 

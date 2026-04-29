@@ -57,6 +57,10 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertFalse(sut.pauseMediaDuringBreaks)
     }
 
+    func test_defaults_notificationFallbackEnabled_isTrue() {
+        XCTAssertTrue(sut.notificationFallbackEnabled)
+    }
+
     // MARK: - Persistence: Booleans
 
     func test_setGlobalEnabled_false_persistsAndLoads() {
@@ -81,6 +85,22 @@ final class SettingsStoreTests: XCTestCase {
         sut.pauseMediaDuringBreaks = true
         let reloaded = SettingsStore(store: mockPersistence)
         XCTAssertTrue(reloaded.pauseMediaDuringBreaks)
+    }
+
+    func test_setNotificationFallbackEnabled_false_persistsAndLoads() {
+        sut.notificationFallbackEnabled = false
+        let reloaded = SettingsStore(store: mockPersistence)
+        XCTAssertFalse(reloaded.notificationFallbackEnabled)
+    }
+
+    func test_setNotificationFallbackEnabled_writesExpectedStorageKey() {
+        sut.notificationFallbackEnabled = false
+        XCTAssertFalse(
+            mockPersistence.bool(
+                forKey: "kshana.notificationFallbackEnabled",
+                defaultValue: true
+            )
+        )
     }
 
     // MARK: - Persistence: Doubles (intervals and durations)

@@ -294,4 +294,28 @@ final class SettingsViewModelTests: XCTestCase {
         sut.pauseWhileDriving = false
         XCTAssertFalse(settings.pauseWhileDriving, "Clearing pauseWhileDriving via VM must persist to SettingsStore")
     }
+
+    // MARK: - Notification fallback
+
+    func test_notificationFallbackEnabled_getter_readsSettings() {
+        settings.notificationFallbackEnabled = false
+        XCTAssertFalse(sut.notificationFallbackEnabled)
+    }
+
+    func test_notificationFallbackEnabled_setter_persistsValue() async {
+        sut.notificationFallbackEnabled = false
+
+        try? await Task.sleep(nanoseconds: 200_000_000)
+
+        XCTAssertFalse(settings.notificationFallbackEnabled)
+    }
+
+    func test_notificationFallbackEnabled_setter_schedulesReminders() async {
+        sut.notificationFallbackEnabled = false
+
+        try? await Task.sleep(nanoseconds: 200_000_000)
+
+        XCTAssertEqual(mockScheduler.scheduleRemindersCallCount, 1)
+        XCTAssertTrue(mockScheduler.lastScheduledSettings === settings)
+    }
 }

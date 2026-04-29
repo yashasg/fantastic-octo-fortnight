@@ -1,6 +1,13 @@
 import os
+import ScreenTimeExtensionShared
 import UIKit
 import UserNotifications
+
+protocol AppGroupIPCRecording {
+    func recordEvent(_ event: AppGroupIPCEvent) throws
+}
+
+extension AppGroupIPCStore: AppGroupIPCRecording {}
 
 /// Central dependency owner and app-lifecycle coordinator.
 ///
@@ -77,6 +84,10 @@ final class AppCoordinator: ObservableObject {
     /// Defaults to `DeviceActivityMonitorNoop` until the FamilyControls entitlement (#201)
     /// is provisioned and the user has granted authorization.
     private let deviceActivityMonitor: DeviceActivityMonitorProviding
+
+    /// Records shield/notification routing events into the App Group container so
+    /// app extensions and watchdog diagnostics can observe the selected path.
+    private let ipcStore: AppGroupIPCRecording
 
     // MARK: - Screen-Time Tracker
 
@@ -167,7 +178,8 @@ final class AppCoordinator: ObservableObject {
         screenTimeTracker: ScreenTimeTracking? = nil,
         pauseConditionProvider: PauseConditionProviding? = nil,
         screenTimeAuthorization: ScreenTimeAuthorizationProviding? = nil,
-        deviceActivityMonitor: DeviceActivityMonitorProviding? = nil
+        deviceActivityMonitor: DeviceActivityMonitorProviding? = nil,
+        ipcStore: AppGroupIPCRecording = AppGroupIPCStore()
     ) {
         self.settings = settings ?? SettingsStore()
         self.scheduler = scheduler ?? ReminderScheduler()
@@ -175,6 +187,7 @@ final class AppCoordinator: ObservableObject {
         self.overlayManager = overlayManager ?? OverlayManager()
         self.screenTimeAuthorization = screenTimeAuthorization ?? ScreenTimeAuthorizationNoop()
         self.deviceActivityMonitor = deviceActivityMonitor ?? DeviceActivityMonitorNoop()
+        self.ipcStore = ipcStore
         // In UI test mode, use no-op stubs for services that register UIKit lifecycle
         // observers and start 1-second timers — they prevent XCUITest from settling
         // the accessibility tree between interactions, causing stale element reads.
@@ -207,7 +220,7 @@ final class AppCoordinator: ObservableObject {
                 // Reschedule the background notification from now so its interval restarts
                 // at the same moment the foreground overlay fires, preventing a near-
                 // simultaneous double-trigger when the user returns to another app.
-                if self.notificationAuthStatus == .authorized {
+                if self.notificationAuthStatus == .authorized, self.shouldScheduleNotificationFallback {
                     Task { [weak self] in
                         guard let self else { return }
                         await self.scheduler.rescheduleReminder(for: type, using: self.settings)
@@ -333,13 +346,19 @@ final class AppCoordinator: ObservableObject {
             await requestNotificationPermission()
         }
 
-        // Schedule (or cancel) periodic background UNNotifications.
-        // These fire while the user is in other apps; ScreenTimeTracker
-        // is the foreground precision supplement.
-        if notificationAuthStatus == .authorized {
+        // Schedule periodic background UNNotifications only as the fallback path
+        // while Screen Time shielding is unavailable.
+        if notificationAuthStatus == .authorized, shouldScheduleNotificationFallback {
             await scheduler.scheduleReminders(using: settings)
+            recordIPCEvent(
+                .notificationFallbackScheduled,
+                detail: "shield_unavailable"
+            )
         } else {
             scheduler.cancelAllReminders()
+            if shouldUseShieldPath {
+                recordIPCEvent(.shieldPathSelected, detail: "device_activity_available")
+            }
         }
 
         // Skip the 1-second tick timer in UI test mode — continuous main-thread
@@ -394,6 +413,7 @@ final class AppCoordinator: ObservableObject {
     func handleNotification(for type: ReminderType) {
         // A real reminder fired — reset consecutive snooze count.
         settings.snoozeCount = 0
+        recordIPCEvent(.notificationFallbackDelivered, reasonRaw: type.shieldReason.rawValue)
 
         let duration = settings.settings(for: type).breakDuration
 
@@ -495,7 +515,11 @@ final class AppCoordinator: ObservableObject {
         Logger.lifecycle.debug("App resigned active — ScreenTimeTracker will auto-reset elapsed counters")
     }
 
-    // MARK: - Fallback Timer Shims (backward compatibility)
+}
+
+// MARK: - Fallback Timer Shims and Private Helpers
+
+extension AppCoordinator {
 
     /// Configure the `ScreenTimeTracker` with current settings and start counting.
     ///
@@ -628,14 +652,31 @@ final class AppCoordinator: ObservableObject {
                 switch operation {
                 case .schedule(let session):
                     try await deviceActivityMonitor.scheduleBreakMonitoring(for: session)
+                    recordIPCEvent(
+                        .shieldStarted,
+                        reasonRaw: session.reason.rawValue,
+                        detail: "device_activity_monitor_scheduled"
+                    )
                     Logger.scheduling.info(
                         "DeviceActivity monitoring scheduled for \(session.reason.rawValue)"
                     )
                 case .cancel:
                     try await deviceActivityMonitor.cancelBreakMonitoring()
+                    recordIPCEvent(.shieldEnded, detail: "device_activity_monitor_cancelled")
                     Logger.scheduling.info("DeviceActivity monitoring cancelled")
                 }
             } catch {
+                if case .schedule(let session) = operation,
+                   notificationAuthStatus == .authorized,
+                   settings.notificationFallbackEnabled,
+                   let fallbackType = session.reason.reminderType {
+                    await scheduler.rescheduleReminder(for: fallbackType, using: settings)
+                    recordIPCEvent(
+                        .notificationFallbackScheduled,
+                        reasonRaw: session.reason.rawValue,
+                        detail: "device_activity_schedule_failed"
+                    )
+                }
                 Logger.scheduling.error(
                     "DeviceActivity monitor \(operation.logDescription) failed: \(error.localizedDescription)"
                 )
@@ -658,8 +699,10 @@ final class AppCoordinator: ObservableObject {
             let interval = settings.settings(for: type).interval
             screenTimeTracker.setThreshold(interval, for: type)
             screenTimeTracker.startMonitoring()
-            if notificationAuthStatus == .authorized {
+            if notificationAuthStatus == .authorized, shouldScheduleNotificationFallback {
                 await scheduler.rescheduleReminder(for: type, using: settings)
+            } else {
+                scheduler.cancelReminder(for: type)
             }
             Logger.scheduling.info("Rescheduled \(type.rawValue): screen-time threshold → \(interval)s")
         } else {
@@ -691,6 +734,30 @@ final class AppCoordinator: ObservableObject {
         }
         screenTimeTracker.resumeAll()
         screenTimeTracker.startMonitoring()
+    }
+
+    private var shouldScheduleNotificationFallback: Bool {
+        settings.notificationFallbackEnabled && !deviceActivityMonitor.isAvailable && hasEnabledReminder
+    }
+
+    private var shouldUseShieldPath: Bool {
+        deviceActivityMonitor.isAvailable && hasEnabledReminder
+    }
+
+    private var hasEnabledReminder: Bool {
+        ReminderType.allCases.contains { settings.isEnabled(for: $0) }
+    }
+
+    private func recordIPCEvent(
+        _ kind: AppGroupIPCEventKind,
+        reasonRaw: String? = nil,
+        detail: String? = nil
+    ) {
+        do {
+            try ipcStore.recordEvent(AppGroupIPCEvent(kind: kind, reasonRaw: reasonRaw, detail: detail))
+        } catch {
+            Logger.scheduling.error("App Group IPC event write failed: \(error.localizedDescription)")
+        }
     }
 }
 

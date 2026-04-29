@@ -8,20 +8,22 @@ import os
 /// `SettingsPersisting` dependency so unit tests can inject an in-memory store
 /// without touching the file system.
 ///
-/// Key layout (all prefixed `epr.`):
+/// Key layout (all prefixed `kshana.`):
 /// ```
-/// epr.globalEnabled          Bool   – global on/off toggle
-/// epr.eyes.enabled           Bool
-/// epr.eyes.interval          Double – seconds
-/// epr.eyes.breakDuration     Double – seconds
-/// epr.posture.enabled        Bool
-/// epr.posture.interval       Double – seconds
-/// epr.posture.breakDuration  Double – seconds
-/// epr.snoozedUntil           Double – Date.timeIntervalSince1970, 0 = not snoozed
-/// epr.snoozeCount            Int    – consecutive snoozes since last reminder fired
-/// epr.pauseMediaDuringBreaks Bool   – Phase 2, default false
-/// epr.pauseDuringFocus       Bool   – pause reminders while a Focus mode is active, default true
-/// epr.pauseWhileDriving      Bool   – pause reminders while driving or CarPlay is active, default true
+/// kshana.globalEnabled                  Bool   – global on/off toggle
+/// kshana.eyes.enabled                   Bool
+/// kshana.eyes.interval                  Double – seconds
+/// kshana.eyes.breakDuration             Double – seconds
+/// kshana.posture.enabled                Bool
+/// kshana.posture.interval               Double – seconds
+/// kshana.posture.breakDuration          Double – seconds
+/// kshana.snoozedUntil                   Double – Date.timeIntervalSince1970, 0 = not snoozed
+/// kshana.snoozeCount                    Int    – consecutive snoozes since last reminder fired
+/// kshana.pauseMediaDuringBreaks         Bool   – default false
+/// kshana.hapticsEnabled                 Bool   – default true
+/// kshana.pauseDuringFocus               Bool   – default true
+/// kshana.pauseWhileDriving              Bool   – default true
+/// kshana.notificationFallbackEnabled    Bool   – default true
 /// ```
 @MainActor
 final class SettingsStore: ObservableObject {
@@ -93,6 +95,12 @@ final class SettingsStore: ObservableObject {
         didSet { store.set(pauseWhileDriving, forKey: Keys.pauseWhileDriving) }
     }
 
+    /// When `true`, schedules local notifications only as a backup path while
+    /// Screen Time shielding is unavailable. Default is `true`.
+    @Published var notificationFallbackEnabled: Bool {
+        didSet { store.set(notificationFallbackEnabled, forKey: Keys.notificationFallbackEnabled) }
+    }
+
     // MARK: - Phase 2
 
     /// When `true`, activates `AVAudioSession` on overlay show to interrupt
@@ -156,6 +164,10 @@ final class SettingsStore: ObservableObject {
         hapticsEnabled         = store.bool(forKey: Keys.hapticsEnabled, defaultValue: true)
         pauseDuringFocus       = store.bool(forKey: Keys.pauseDuringFocus, defaultValue: true)
         pauseWhileDriving      = store.bool(forKey: Keys.pauseWhileDriving, defaultValue: true)
+        notificationFallbackEnabled = store.bool(
+            forKey: Keys.notificationFallbackEnabled,
+            defaultValue: true
+        )
 
         Logger.settings.debug("SettingsStore initialised")
     }
@@ -175,6 +187,7 @@ final class SettingsStore: ObservableObject {
         pauseMediaDuringBreaks = false
         pauseDuringFocus     = true
         pauseWhileDriving    = true
+        notificationFallbackEnabled = true
         snoozedUntil         = nil
         snoozeCount          = 0
         Logger.settings.debug("SettingsStore reset to defaults")
@@ -198,6 +211,7 @@ private extension SettingsStore {
         static let hapticsEnabled         = "kshana.hapticsEnabled"
         static let pauseDuringFocus       = "kshana.pauseDuringFocus"
         static let pauseWhileDriving      = "kshana.pauseWhileDriving"
+        static let notificationFallbackEnabled = "kshana.notificationFallbackEnabled"
     }
 }
 
