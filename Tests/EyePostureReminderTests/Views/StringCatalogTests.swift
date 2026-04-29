@@ -869,6 +869,20 @@ final class StringCatalogTests: XCTestCase {
         XCTAssertTrue(isTranslated("settings.notificationFallback.hint"))
     }
 
+    func test_settingsNotificationFallbackFooter_mentionsTrueInterrupt() {
+        let footer = str("settings.notificationFallback.footer")
+        XCTAssertTrue(
+            footer.contains("True Interrupt"),
+            "Fallback footer must reference True Interrupt so users understand when notifications fire")
+    }
+
+    func test_settingsNotificationFallbackFooter_mentionsUnavailableOrDisabled() {
+        let footer = str("settings.notificationFallback.footer")
+        XCTAssertTrue(
+            footer.contains("unavailable") || footer.contains("disabled"),
+            "Fallback footer must clarify when shielding is unavailable or disabled")
+    }
+
     // MARK: - reminder.* Keys: Individual Resolution
 
     func test_reminderEyesTitle_resolvesToEnglish() {

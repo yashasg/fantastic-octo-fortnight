@@ -636,7 +636,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Backup alerts are only scheduled while Screen Time shielding is unavailable. Turn this off if you only want True Interrupt Mode."
+            "value": "Use notifications only when True Interrupt shielding is unavailable, disabled, or not configured."
           }
         }
       }
@@ -647,7 +647,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Toggles backup reminder alerts when Screen Time shielding cannot be used"
+            "value": "Toggles backup notifications when True Interrupt shielding is unavailable, disabled, or not configured"
           }
         }
       }
