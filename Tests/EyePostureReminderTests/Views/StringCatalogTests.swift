@@ -1091,38 +1091,46 @@ final class StringCatalogTests: XCTestCase {
                        "'onboarding.setup.changeInSettings' must not resolve to an empty string")
     }
 
-    // MARK: - Permission Copy Regression (P0 + M3.8 backup copy)
+    // MARK: - Permission Copy Regression (P0 + M3.8 reminder-alert copy)
     //
-    // M3.8: True Interrupt Mode is the primary break experience. Notification
-    // permission copy must position alerts as a backup when Screen Time shielding
-    // is unavailable, not as the core product promise.
+    // The notification permission screen must motivate reminder-alert permission
+    // on its own, without demoting alerts to a backup for True Interrupt Mode.
     //
     // These tests lock in that copy contract so future edits cannot silently revert
-    // to notification-first or overlay promises.
+    // to backup-only framing or overlay promises.
 
-    /// Enable-button must say "Backup Alerts" — not "Notifications".
-    func test_onboardingPermission_enableButton_readsBackupAlerts() {
+    /// Enable-button must say "Reminder Alerts" — not backup-only implementation copy.
+    func test_onboardingPermission_enableButton_readsReminderAlerts() {
         let value = str("onboarding.permission.enableButton")
         XCTAssertTrue(
-            value.localizedCaseInsensitiveContains("Backup"),
-            "'onboarding.permission.enableButton' must use backup language — got: \(value)")
-        XCTAssertTrue(
-            value.localizedCaseInsensitiveContains("Alerts"),
-            "'onboarding.permission.enableButton' must use alert language — got: \(value)")
+            value.localizedCaseInsensitiveContains("Reminder Alerts"),
+            "'onboarding.permission.enableButton' must use reminder-alert language — got: \(value)")
         XCTAssertFalse(
-            value.localizedCaseInsensitiveContains("Notification"),
-            "'onboarding.permission.enableButton' must not use 'Notification' — got: \(value)")
+            value.localizedCaseInsensitiveContains("Backup"),
+            "'onboarding.permission.enableButton' must not demote alerts to backup-only — got: \(value)")
     }
 
-    /// Body line 1 must frame alerts as backup for Screen Time shielding.
-    func test_onboardingPermission_body1_usesFallbackLanguage() {
+    /// Body line 1 must frame alerts as valuable for all users, not as True Interrupt backup.
+    func test_onboardingPermission_body1_valuesReminderAlertsDirectly() {
         let value = str("onboarding.permission.body1")
         XCTAssertTrue(
-            value.localizedCaseInsensitiveContains("backup"),
-            "'onboarding.permission.body1' must contain backup language — got: \(value)")
+            value.localizedCaseInsensitiveContains("gentle alerts"),
+            "'onboarding.permission.body1' must positively frame reminder alerts — got: \(value)")
         XCTAssertTrue(
+            value.localizedCaseInsensitiveContains("rest your eyes"),
+            "'onboarding.permission.body1' must explain the eye-break value — got: \(value)")
+        XCTAssertTrue(
+            value.localizedCaseInsensitiveContains("check your posture"),
+            "'onboarding.permission.body1' must explain the posture-check value — got: \(value)")
+        XCTAssertFalse(
+            value.localizedCaseInsensitiveContains("backup"),
+            "'onboarding.permission.body1' must not frame alerts as backup-only — got: \(value)")
+        XCTAssertFalse(
+            value.localizedCaseInsensitiveContains("True Interrupt"),
+            "'onboarding.permission.body1' must not redirect to True Interrupt setup — got: \(value)")
+        XCTAssertFalse(
             value.localizedCaseInsensitiveContains("Screen Time"),
-            "'onboarding.permission.body1' must reference Screen Time availability — got: \(value)")
+            "'onboarding.permission.body1' must not depend on Screen Time availability — got: \(value)")
     }
 
     /// Body line 2 must be non-empty and not promise a system-level notification popup.
@@ -1207,9 +1215,7 @@ final class StringCatalogTests: XCTestCase {
     func test_reminderNotificationContent_usesBackupReminderCopy() {
         let backupReminderValues = [
             str("reminder.eyes.notificationBody"),
-            str("reminder.posture.notificationBody"),
-            str("onboarding.permission.notificationCard.body"),
-            str("onboarding.permission.notificationCard.label")
+            str("reminder.posture.notificationBody")
         ]
         for value in backupReminderValues {
             XCTAssertTrue(
@@ -1234,6 +1240,21 @@ final class StringCatalogTests: XCTestCase {
                     options: [.regularExpression, .caseInsensitive]
                 ),
                 "Notification copy must not expose fallback implementation jargon — got: \(value)"
+            )
+        }
+
+        let permissionScreenValues = [
+            str("onboarding.permission.title"),
+            str("onboarding.permission.body1"),
+            str("onboarding.permission.enableButton"),
+            str("onboarding.permission.enableButton.hint"),
+            str("onboarding.permission.notificationCard.body"),
+            str("onboarding.permission.notificationCard.label")
+        ]
+        for value in permissionScreenValues {
+            XCTAssertFalse(
+                value.localizedCaseInsensitiveContains("backup"),
+                "Permission-screen copy must not demote notification alerts to backup-only — got: \(value)"
             )
         }
     }
