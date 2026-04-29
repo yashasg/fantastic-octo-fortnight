@@ -57,6 +57,17 @@ enum AnalyticsEvent: Sendable {
 
     /// Fired when a pause condition is cleared and reminders resume.
     case pauseDeactivated(conditionType: String)
+
+    // MARK: Watchdog Recovery
+
+    /// Fired when a stale watchdog session is detected and recovery is initiated.
+    /// `reason` is the non-PII shield reason raw value; `detail` is the heartbeat staleness category.
+    case watchdogRecoveryTriggered(reason: String, detail: String)
+
+    /// Fired at the end of a watchdog recovery attempt.
+    /// `sessionCleared` – whether the stale shield session was successfully cleared.
+    /// `fallbackScheduled` – whether a fallback notification was rescheduled.
+    case watchdogRecoveryCompleted(sessionCleared: Bool, fallbackScheduled: Bool)
 }
 
 // MARK: - AnalyticsLogger
@@ -140,6 +151,20 @@ enum AnalyticsLogger {
             logger.info("""
                 event=pause_deactivated \
                 condition_type=\(conditionType, privacy: .public)
+                """)
+
+        case let .watchdogRecoveryTriggered(reason, detail):
+            logger.info("""
+                event=watchdog_recovery_triggered \
+                reason=\(reason, privacy: .public) \
+                detail=\(detail, privacy: .public)
+                """)
+
+        case let .watchdogRecoveryCompleted(sessionCleared, fallbackScheduled):
+            logger.info("""
+                event=watchdog_recovery_completed \
+                session_cleared=\(sessionCleared, privacy: .public) \
+                fallback_scheduled=\(fallbackScheduled, privacy: .public)
                 """)
         }
     }

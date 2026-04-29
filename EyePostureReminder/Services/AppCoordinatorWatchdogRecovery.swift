@@ -45,15 +45,23 @@ extension AppCoordinator {
         }
 
         recordIPCEvent(.watchdogRecoveryTriggered, reasonRaw: session.reasonRaw, detail: recoveryDetail)
-        if !ipcStore.clearShieldSession(endedAt: now) {
+        AnalyticsLogger.log(.watchdogRecoveryTriggered(reason: session.reasonRaw ?? "unknown", detail: recoveryDetail))
+        let sessionCleared = ipcStore.clearShieldSession(endedAt: now)
+        if !sessionCleared {
             Logger.scheduling.error("Watchdog recovery failed to clear stale shield session")
         }
         cancelDeviceActivityMonitoring()
+        var fallbackScheduled = false
         if notificationAuthStatus == .authorized,
            settings.notificationFallbackEnabled,
            let fallbackType = session.reason?.reminderType {
             await scheduler.rescheduleReminder(for: fallbackType, using: settings)
+            fallbackScheduled = true
         }
+        AnalyticsLogger.log(.watchdogRecoveryCompleted(
+            sessionCleared: sessionCleared,
+            fallbackScheduled: fallbackScheduled
+        ))
         return true
     }
 }
