@@ -36,7 +36,7 @@ targets:
       - package: EyePostureReminder
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.yashasg.EyePostureReminder
+        PRODUCT_BUNDLE_IDENTIFIER: com.yashasg.eyeposturereminder
         TARGETED_DEVICE_FAMILY: "1,2"
         CODE_SIGN_IDENTITY: ""
         CODE_SIGNING_REQUIRED: "NO"
@@ -75,7 +75,7 @@ targets:
           - README.md
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.yashasg.EyePostureReminder.UITests
+        PRODUCT_BUNDLE_IDENTIFIER: com.yashasg.eyeposturereminder.uitests
         TEST_TARGET_NAME: EyePostureReminder
         # UITest bundles launch the app as a separate process; they must NOT
         # set BUNDLE_LOADER or TEST_HOST (those are for unit-test bundles that

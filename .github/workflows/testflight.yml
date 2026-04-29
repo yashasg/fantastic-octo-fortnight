@@ -80,11 +80,9 @@ jobs:
         run: sudo xcode-select -switch /Applications/Xcode_${{ env.XCODE_VERSION }}.app/Contents/Developer
 
       # ── Versioning ────────────────────────────────────────────────────────
-      - name: Set marketing version + build number
+      - name: Set marketing version
         run: |
           ./scripts/build.sh version "${{ github.event.inputs.version }}"
-          PLIST="EyePostureReminder/Info.plist"
-          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${{ github.run_number }}" "$PLIST"
           echo "MARKETING_VERSION=${{ github.event.inputs.version }}" >> $GITHUB_ENV
           echo "BUILD_NUMBER=${{ github.run_number }}" >> $GITHUB_ENV
 
@@ -112,49 +110,24 @@ jobs:
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           cp "$PP_PATH" ~/Library/MobileDevice/Provisioning\ Profiles/
 
-      # ── Archive ───────────────────────────────────────────────────────────
-      - name: Archive (device build)
-        run: |
-          xcodebuild archive \
-            -scheme "${{ env.SCHEME }}" \
-            -destination "generic/platform=iOS" \
-            -configuration Release \
-            -archivePath "${{ github.workspace }}/EyePostureReminder.xcarchive" \
-            -derivedDataPath "${{ env.DERIVED_DATA_PATH }}" \
-            ENABLE_BITCODE=NO
+      # ── xcodegen ─────────────────────────────────────────────────────────
+      - name: Install xcodegen
+        run: brew install xcodegen
 
-      # ── Export IPA + Upload to TestFlight ────────────────────────────────
-      - name: Export IPA and Upload to TestFlight
+      # ── Archive + Upload ──────────────────────────────────────────────────
+      # build_signed.sh generates the required .xcodeproj (SPM executables
+      # cannot be archived for iOS distribution without one), then archives,
+      # injects BUILD_NUMBER into the archive's Info.plist, and uploads.
+      - name: Archive and upload to TestFlight
         env:
           ASC_API_KEY_BASE64: ${{ secrets.ASC_API_KEY_BASE64 }}
-          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
-          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_AUTH_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_AUTH_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
         run: |
-          API_KEY_PATH="$RUNNER_TEMP/asc_api_key.p8"
-          echo -n "$ASC_API_KEY_BASE64" | base64 --decode -o "$API_KEY_PATH"
-
-          # Generate ExportOptions.plist with destination: upload (Xcode 15+)
-          cat > "$RUNNER_TEMP/ExportOptions.plist" << 'EOF'
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-            <key>method</key><string>app-store</string>
-            <key>destination</key><string>upload</string>
-            <key>uploadBitcode</key><false/>
-            <key>uploadSymbols</key><true/>
-          </dict>
-          </plist>
-          EOF
-
-          xcodebuild -exportArchive \
-            -archivePath "${{ github.workspace }}/EyePostureReminder.xcarchive" \
-            -exportPath "${{ github.workspace }}/export" \
-            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
-            -authenticationKeyPath "$API_KEY_PATH" \
-            -authenticationKeyID "$ASC_KEY_ID" \
-            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
-            -allowProvisioningUpdates
+          ASC_KEY_FILE="$RUNNER_TEMP/asc_api_key.p8"
+          echo -n "$ASC_API_KEY_BASE64" | base64 --decode -o "$ASC_KEY_FILE"
+          ASC_AUTH_KEY_PATH="$ASC_KEY_FILE" \
+            ./scripts/build_signed.sh upload
 
       # ── Clean up API key ──────────────────────────────────────────────────
       - name: Clean up API key
@@ -165,8 +138,8 @@ jobs:
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
         with:
-          name: EyePostureReminder-${{ env.MARKETING_VERSION }}-build${{ github.run_number }}.ipa
-          path: export/EyePostureReminder.ipa
+          name: EyePostureReminder-${{ env.MARKETING_VERSION }}-build${{ env.BUILD_NUMBER }}.ipa
+          path: DerivedData/SignedBuild/Export/EyePostureReminder.ipa
           retention-days: 30
 
       # ── Cleanup signing assets ────────────────────────────────────────────

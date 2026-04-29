@@ -20,6 +20,7 @@
 #   ASC_AUTH_KEY_ID                       optional App Store Connect API key ID
 #   ASC_AUTH_ISSUER_ID                    optional App Store Connect issuer ID
 #   TESTFLIGHT_INTERNAL_ONLY              YES or NO (default)
+#   BUILD_NUMBER                          default: YYYYMMDDHHmm timestamp; set for unique TestFlight builds
 
 set -euo pipefail
 
@@ -237,6 +238,30 @@ build_signing_build_settings() {
   fi
 }
 
+# Inject CFBundleVersion into the already-built archive's Info.plist.
+# Does NOT touch source Info.plist — safe to call on any commit without
+# leaving a dirty working tree.  Uses BUILD_NUMBER env var when set (CI),
+# falls back to a YYYYMMDDHHmm timestamp for local signed builds.
+inject_build_number() {
+  local archive_plist="${ARCHIVE_PATH}/Products/Applications/${APP_TARGET}.app/Info.plist"
+
+  if [[ ! -f "$archive_plist" ]]; then
+    warn "Archive Info.plist not found at: $archive_plist — CFBundleVersion not injected"
+    return
+  fi
+
+  local build_num
+  if [[ -n "${BUILD_NUMBER:-}" ]]; then
+    build_num="$BUILD_NUMBER"
+  else
+    build_num="$(date +%Y%m%d%H%M)"
+    info "BUILD_NUMBER not set — using timestamp fallback: $build_num"
+  fi
+
+  /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $build_num" "$archive_plist"
+  pass "CFBundleVersion set to $build_num in archive (source Info.plist unchanged)"
+}
+
 run_xcodebuild() {
   local start
   start=$(date +%s)
@@ -256,8 +281,11 @@ generate_project() {
 
   mkdir -p "$PROJECT_DIR"
 
-  # Build a temporary app-only Xcode project. Do not reuse the UI-test project:
-  # signed archives only need the app target, not test bundles.
+  # Archive for iOS distribution requires a proper .xcodeproj with a signed
+  # app-wrapper target.  SPM executable targets cannot be archived for device
+  # distribution without one.  This generated project mirrors the pattern used
+  # in UITests/project.yml (app-wrapper + SPM package dependency) but enables
+  # distribution signing instead of test-only, unsigned settings.
   cat > "$PROJECT_SPEC" <<EOF
 name: ${APP_TARGET}Signed
 
@@ -389,6 +417,12 @@ cmd_doctor() {
     fi
   fi
 
+  if [[ -n "${BUILD_NUMBER:-}" ]]; then
+    pass "BUILD_NUMBER: set ($BUILD_NUMBER)"
+  else
+    info "BUILD_NUMBER: not set — timestamp will be used for CFBundleVersion in archive"
+  fi
+
   pass "Doctor complete"
 }
 
@@ -421,6 +455,7 @@ cmd_archive() {
     archive \
     "${SIGNING_BUILD_SETTINGS[@]+"${SIGNING_BUILD_SETTINGS[@]}"}"
 
+  inject_build_number
   pass "Archive created: $ARCHIVE_PATH"
 }
 
