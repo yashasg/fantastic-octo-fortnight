@@ -9,7 +9,9 @@ import UIKit
 struct OnboardingView: View {
     @EnvironmentObject private var coordinator: AppCoordinator
     @EnvironmentObject private var settings: SettingsStore
+    @StateObject private var selectedAppsState = SelectedAppsState()
     @State private var currentPage = 0
+    @State private var showAppCategoryPicker = false
 
     private static let configurePageControl: Void = {
         UIPageControl.appearance().currentPageIndicatorTintColor = UIColor(AppColor.primaryRest)
@@ -37,6 +39,7 @@ struct OnboardingView: View {
             // is pending. Users can skip without losing core reminder functionality.
             OnboardingInterruptModeView(
                 onGetStarted: finishOnboarding,
+                onSetUp: { showAppCategoryPicker = true },
                 authorizationStatus: coordinator.screenTimeAuthorization.authorizationStatus
             )
                 .tag(3)
@@ -45,6 +48,16 @@ struct OnboardingView: View {
         .indexViewStyle(PageIndexViewStyle(backgroundDisplayMode: .always))
         .background(AppColor.background.ignoresSafeArea())
         .onAppear { _ = Self.configurePageControl }
+        .sheet(isPresented: $showAppCategoryPicker) {
+            AppCategoryPickerView(
+                appsState: selectedAppsState,
+                authorizationStatus: coordinator.screenTimeAuthorization.authorizationStatus,
+                onRequestAuthorization: {
+                    Task { _ = await coordinator.screenTimeAuthorization.requestAuthorization() }
+                },
+                onDone: { showAppCategoryPicker = false }
+            )
+        }
     }
 
     private func finishOnboarding() {

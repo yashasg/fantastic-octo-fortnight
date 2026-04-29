@@ -74,7 +74,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Your reminders arrive as alerts — even while you're in another app."
+            "value": "True Interrupt Mode is the main break experience. Alerts are a backup when Screen Time access is not available yet."
           }
         }
       }
@@ -85,7 +85,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tap any alert to open your full-screen break in kshana."
+            "value": "You control these alerts, and you can turn them off later in Settings."
           }
         }
       }
@@ -96,7 +96,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Allow Reminder Alerts"
+            "value": "Allow Backup Alerts"
           }
         }
       }
@@ -107,7 +107,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Allows kshana to send reminder alerts while you use other apps"
+            "value": "Allows kshana to send backup reminders if Screen Time shielding is unavailable"
           }
         }
       }
@@ -140,7 +140,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Example reminder: Eye Break — Time to rest your eyes."
+            "value": "Example backup reminder: Eye Break — Time to rest your eyes."
           }
         }
       }
@@ -195,7 +195,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Stay on track,\neffortlessly."
+            "value": "Keep a backup reminder."
           }
         }
       }
@@ -1840,6 +1840,28 @@
         }
       }
     },
+    "onboarding.interrupt.previewButton": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preview App Selection"
+          }
+        }
+      }
+    },
+    "onboarding.interrupt.previewButton.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opens the app and category setup preview for True Interrupt Mode"
+          }
+        }
+      }
+    },
     "onboarding.interrupt.skipButton": {
       "extractionState": "manual",
       "localizations": {
@@ -1858,6 +1880,39 @@
           "stringUnit": {
             "state": "translated",
             "value": "Continue without True Interrupt Mode. You can enable it later in Settings."
+          }
+        }
+      }
+    },
+    "onboarding.interrupt.summary.fallback": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Backup alerts can still remind you if shielding is unavailable"
+          }
+        }
+      }
+    },
+    "onboarding.interrupt.summary.localOnly": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your Screen Time choices stay on this device"
+          }
+        }
+      }
+    },
+    "onboarding.interrupt.summary.selectApps": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You choose which apps are shielded during breaks"
           }
         }
       }

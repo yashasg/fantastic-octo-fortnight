@@ -236,6 +236,10 @@ enum AppSymbol {
     static let chevronUp     = "chevron.up"
     /// Permission warning banner icon
     static let warning       = "exclamationmark.triangle.fill"
+    /// Confirmation / included item icon
+    static let checkmark     = "checkmark.circle.fill"
+    /// Privacy / local-only data icon
+    static let lock          = "lock.fill"
     /// Snoozed / paused state icon
     static let snoozed       = "moon.zzz.fill"
     /// Bell / snooze-cancel icon

@@ -44,6 +44,16 @@ final class TrueInterruptViewCoverageTests: XCTestCase {
         XCTAssertFalse(described.isEmpty)
     }
 
+    func test_onboardingInterruptModeView_unavailableWithSetup_bodyEvaluation() {
+        let view = OnboardingInterruptModeView(
+            onGetStarted: {},
+            onSetUp: {},
+            authorizationStatus: .unavailable
+        )
+        let described = String(describing: view.body)
+        XCTAssertFalse(described.isEmpty)
+    }
+
     func test_onboardingInterruptModeView_notDetermined_bodyEvaluation() {
         let view = OnboardingInterruptModeView(
             onGetStarted: {},
@@ -77,6 +87,19 @@ final class TrueInterruptViewCoverageTests: XCTestCase {
         view.onSetUp?()
 
         XCTAssertTrue(getStartedCalled)
+        XCTAssertTrue(setUpCalled)
+    }
+
+    func test_onboardingInterruptModeView_unavailableSetupCallbackIsInvocable() {
+        var setUpCalled = false
+        let view = OnboardingInterruptModeView(
+            onGetStarted: {},
+            onSetUp: { setUpCalled = true },
+            authorizationStatus: .unavailable
+        )
+
+        view.onSetUp?()
+
         XCTAssertTrue(setUpCalled)
     }
 

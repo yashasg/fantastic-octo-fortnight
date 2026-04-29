@@ -1071,33 +1071,38 @@ final class StringCatalogTests: XCTestCase {
                        "'onboarding.setup.changeInSettings' must not resolve to an empty string")
     }
 
-    // MARK: - Permission Copy Regression (P0 + Linus copy pass)
+    // MARK: - Permission Copy Regression (P0 + M3.8 fallback copy)
     //
-    // P0: background reminders were disabled. As part of the fix Linus updated the
-    // permission screen copy to use "reminders" language instead of "notifications"
-    // to avoid promising system-level overlay delivery that might not be available.
+    // M3.8: True Interrupt Mode is the primary break experience. Notification
+    // permission copy must position alerts as a backup when Screen Time shielding
+    // is unavailable, not as the core product promise.
     //
     // These tests lock in that copy contract so future edits cannot silently revert
-    // to misleading "notification" / "overlay" promises.
+    // to notification-first or overlay promises.
 
-    /// Enable-button must say "Enable Reminders" — not "Enable Notifications".
-    /// Linus renamed this to align with reminder-alert language after P0 was filed.
-    func test_onboardingPermission_enableButton_readsEnableReminders() {
+    /// Enable-button must say "Backup Alerts" — not "Notifications".
+    func test_onboardingPermission_enableButton_readsBackupAlerts() {
         let value = str("onboarding.permission.enableButton")
         XCTAssertTrue(
-            value.localizedCaseInsensitiveContains("Reminder"),
-            "'onboarding.permission.enableButton' must use 'Reminder' language — got: \(value)")
+            value.localizedCaseInsensitiveContains("Backup"),
+            "'onboarding.permission.enableButton' must use backup language — got: \(value)")
+        XCTAssertTrue(
+            value.localizedCaseInsensitiveContains("Alerts"),
+            "'onboarding.permission.enableButton' must use alert language — got: \(value)")
         XCTAssertFalse(
             value.localizedCaseInsensitiveContains("Notification"),
             "'onboarding.permission.enableButton' must not use 'Notification' — got: \(value)")
     }
 
-    /// Body line 1 must reference "Reminders" so users understand what they're enabling.
-    func test_onboardingPermission_body1_usesReminderLanguage() {
+    /// Body line 1 must frame alerts as backup for Screen Time shielding.
+    func test_onboardingPermission_body1_usesFallbackLanguage() {
         let value = str("onboarding.permission.body1")
         XCTAssertTrue(
-            value.localizedCaseInsensitiveContains("Reminder"),
-            "'onboarding.permission.body1' must contain 'Reminder' — got: \(value)")
+            value.localizedCaseInsensitiveContains("backup"),
+            "'onboarding.permission.body1' must contain backup language — got: \(value)")
+        XCTAssertTrue(
+            value.localizedCaseInsensitiveContains("Screen Time"),
+            "'onboarding.permission.body1' must reference Screen Time availability — got: \(value)")
     }
 
     /// Body line 2 must be non-empty and not promise a system-level notification popup.

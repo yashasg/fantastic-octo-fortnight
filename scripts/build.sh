@@ -184,10 +184,12 @@ cmd_uitest() {
   require_xcodebuild
 
   local project="${PACKAGE_PATH}/UITests/EyePostureReminderUITests.xcodeproj"
+  local project_spec="${PACKAGE_PATH}/UITests/project.yml"
+  local project_file="${project}/project.pbxproj"
 
-  # Generate xcodeproj if not present
-  if [[ ! -d "$project" ]]; then
-    info "UITest xcodeproj not found — running setup…"
+  # Generate xcodeproj if not present or if the XcodeGen spec changed.
+  if [[ ! -d "$project" || ! -f "$project_file" || "$project_spec" -nt "$project_file" ]]; then
+    info "UITest xcodeproj missing or stale — running setup…"
     "${PACKAGE_PATH}/scripts/setup-uitests.sh"
   fi
 
