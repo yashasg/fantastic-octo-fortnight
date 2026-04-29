@@ -8,6 +8,10 @@ final class SettingsViewModelFormatterTests: XCTestCase {
 
     // MARK: - labelForInterval
 
+    func test_labelForInterval_60s_returns1Min() {
+        XCTAssertEqual(SettingsViewModel.labelForInterval(60), "1 min")
+    }
+
     func test_labelForInterval_600s_returns10Min() {
         XCTAssertEqual(SettingsViewModel.labelForInterval(600), "10 min")
     }
