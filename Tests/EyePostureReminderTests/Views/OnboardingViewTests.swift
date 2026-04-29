@@ -245,7 +245,7 @@ final class OnboardingViewTests: XCTestCase {
             "onboarding.eyes.intervalPicker",
             "onboarding.eyes.durationPicker",
             "onboarding.posture.intervalPicker",
-            "onboarding.posture.durationPicker",
+            "onboarding.posture.durationPicker"
         ]
         for id in expectedIdentifiers {
             XCTAssertTrue(id.hasPrefix("onboarding."),

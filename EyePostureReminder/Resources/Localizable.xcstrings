@@ -1751,6 +1751,435 @@
           }
         }
       }
+    },
+    "onboarding.interrupt.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "True Interrupt Mode"
+          }
+        }
+      }
+    },
+    "onboarding.interrupt.subtitle": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Make breaks non-skippable"
+          }
+        }
+      }
+    },
+    "onboarding.interrupt.illustrationLabel": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lock shield icon representing True Interrupt Mode"
+          }
+        }
+      }
+    },
+    "onboarding.interrupt.body1": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Screen Time access lets kshana shield your screen during breaks — helping you actually step away from apps."
+          }
+        }
+      }
+    },
+    "onboarding.interrupt.body2": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your selections stay private. kshana only reads what you choose to block, and only during breaks."
+          }
+        }
+      }
+    },
+    "onboarding.interrupt.enableButton": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Set Up Screen Time Access"
+          }
+        }
+      }
+    },
+    "onboarding.interrupt.enableButton.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opens the Screen Time authorization request"
+          }
+        }
+      }
+    },
+    "onboarding.interrupt.pendingButton": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Approval Pending"
+          }
+        }
+      }
+    },
+    "onboarding.interrupt.skipButton": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skip for Now"
+          }
+        }
+      }
+    },
+    "onboarding.interrupt.skipButton.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Continue without True Interrupt Mode. You can enable it later in Settings."
+          }
+        }
+      }
+    },
+    "onboarding.interrupt.pendingNote": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Screen Time access is awaiting App Store approval. You can set up True Interrupt Mode once it becomes available."
+          }
+        }
+      }
+    },
+    "settings.section.trueInterrupt": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "True Interrupt Mode"
+          }
+        }
+      }
+    },
+    "settings.trueInterrupt.statusLabel": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "App Break Access"
+          }
+        }
+      }
+    },
+    "settings.trueInterrupt.footer": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Requires Screen Time access. Shields selected apps during breaks so you fully step away."
+          }
+        }
+      }
+    },
+    "settings.trueInterrupt.statusRow.unavailable": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Awaiting approval"
+          }
+        }
+      }
+    },
+    "settings.trueInterrupt.statusRow.notDetermined": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not configured"
+          }
+        }
+      }
+    },
+    "settings.trueInterrupt.statusRow.approved": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Active"
+          }
+        }
+      }
+    },
+    "settings.trueInterrupt.statusRow.denied": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Access denied — tap Configure"
+          }
+        }
+      }
+    },
+    "settings.trueInterrupt.configure": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Configure App Break Access"
+          }
+        }
+      }
+    },
+    "settings.trueInterrupt.configure.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opens the app and category selection for True Interrupt Mode"
+          }
+        }
+      }
+    },
+    "appCategoryPicker.navTitle": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "App Break Access"
+          }
+        }
+      }
+    },
+    "appCategoryPicker.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose Apps for Breaks"
+          }
+        }
+      }
+    },
+    "appCategoryPicker.subtitle.unavailable": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Screen Time access is pending approval"
+          }
+        }
+      }
+    },
+    "appCategoryPicker.subtitle.notDetermined": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select which apps to shield during breaks"
+          }
+        }
+      }
+    },
+    "appCategoryPicker.subtitle.denied": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allow Screen Time access in Settings to configure"
+          }
+        }
+      }
+    },
+    "appCategoryPicker.subtitle.approved": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select which apps to shield during breaks"
+          }
+        }
+      }
+    },
+    "appCategoryPicker.button.pendingApproval": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Approval Pending"
+          }
+        }
+      }
+    },
+    "appCategoryPicker.button.enableAccess": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enable Screen Time Access"
+          }
+        }
+      }
+    },
+    "appCategoryPicker.button.openSettings": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Settings"
+          }
+        }
+      }
+    },
+    "appCategoryPicker.button.selectApps": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select Apps"
+          }
+        }
+      }
+    },
+    "appCategoryPicker.doneButton": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Done"
+          }
+        }
+      }
+    },
+    "appCategoryPicker.unavailable.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Screen Time Access Pending"
+          }
+        }
+      }
+    },
+    "appCategoryPicker.unavailable.body": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Screen Time access is awaiting Apple review. True Interrupt Mode setup will become available once approved."
+          }
+        }
+      }
+    },
+    "appCategoryPicker.prePermission.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "How It Works"
+          }
+        }
+      }
+    },
+    "appCategoryPicker.prePermission.body": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "kshana shields the apps you choose when a break starts. You pick which apps — kshana only activates shielding during scheduled breaks."
+          }
+        }
+      }
+    },
+    "appCategoryPicker.denied.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Screen Time Access Denied"
+          }
+        }
+      }
+    },
+    "appCategoryPicker.denied.body": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To enable True Interrupt Mode, allow Screen Time access via Settings → Privacy & Security → Screen Time."
+          }
+        }
+      }
+    },
+    "appCategoryPicker.approved.noSelection": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No apps selected yet. Tap 'Select Apps' to choose which apps to shield during breaks."
+          }
+        }
+      }
+    },
+    "appCategoryPicker.approved.pickerPlaceholder": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The app picker will appear here once Screen Time access is approved."
+          }
+        }
+      }
     }
   }
 }

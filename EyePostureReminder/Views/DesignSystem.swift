@@ -135,6 +135,11 @@ enum AppTypography {
 
     /// Reminder card icon — SF Symbol in an onboarding reminder card; scales with Dynamic Type.
     static let reminderCardIcon: Font = .system(.title2)
+
+    /// Generic icon container symbol — sized proportionally to the tokenized badge size.
+    static func iconContainer(size: CGFloat) -> Font {
+        .system(size: size * 0.44, weight: .semibold)
+    }
 }
 
 enum AppFont {
@@ -149,6 +154,10 @@ enum AppFont {
     static let settingsRowIcon = AppTypography.settingsRowIcon
     static let warningIcon = AppTypography.warningIcon
     static let reminderCardIcon = AppTypography.reminderCardIcon
+
+    static func iconContainer(size: CGFloat) -> Font {
+        AppTypography.iconContainer(size: size)
+    }
 }
 
 // MARK: - Spacing (4pt grid)
@@ -239,6 +248,8 @@ enum AppSymbol {
     static let clock             = "clock"
     /// Break duration / timer icon
     static let timer             = "timer"
+    /// True Interrupt Mode / app break access icon
+    static let trueInterrupt     = "lock.shield.fill"
 }
 
 // MARK: - Layout Constants
@@ -301,12 +312,15 @@ extension AppTypography {
     static let homeLogoIcon: Font = .system(size: AppLayout.overlayIconSize * 0.42, weight: .semibold)
     /// Onboarding hero illustration icon — SF Symbol sized to `onboardingIllustrationSize` (decorative).
     static let illustrationIcon: Font = .system(size: AppLayout.onboardingIllustrationSize, weight: .semibold)
+    /// True Interrupt Mode shield icon — SF Symbol sized for onboarding/configuration hero cards.
+    static let trueInterruptIcon: Font = .system(size: AppLayout.onboardingIllustrationSize * 0.55, weight: .semibold)
 }
 
 extension AppFont {
     static let overlayIcon = AppTypography.overlayIcon
     static let homeLogoIcon = AppTypography.homeLogoIcon
     static let illustrationIcon = AppTypography.illustrationIcon
+    static let trueInterruptIcon = AppTypography.trueInterruptIcon
 }
 
 /// Applies a soft shadow in light mode and a flat border in dark mode.

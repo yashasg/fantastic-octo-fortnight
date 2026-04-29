@@ -99,6 +99,8 @@ if [[ "${1:-}" == "--build" ]]; then
     CODE_SIGNING_REQUIRED=NO \
     CODE_SIGN_IDENTITY="" \
     ENABLE_BITCODE=NO \
+    ENABLE_APP_INTENTS_METADATA_EXTRACTION=NO \
+    ENABLE_APPINTENTS_METADATA_EXTRACTION=NO \
     | grep -E "^(Build|error:|warning:|✓|✗)"
   build_status="${PIPESTATUS[0]}"
   set -e

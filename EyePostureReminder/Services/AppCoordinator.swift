@@ -64,6 +64,13 @@ final class AppCoordinator: ObservableObject {
     /// Defaults to a fresh `OverlayManager()` in production.
     private let overlayManager: OverlayPresenting
 
+    // MARK: - Screen-Time Authorization
+
+    /// Manages FamilyControls authorization for True Interrupt Mode.
+    /// Defaults to `ScreenTimeAuthorizationNoop` until the entitlement from #201
+    /// is provisioned. Exposed so the Settings and onboarding UI can observe status.
+    let screenTimeAuthorization: ScreenTimeAuthorizationProviding
+
     // MARK: - Screen-Time Tracker
 
     /// Tracks continuous screen-on time per reminder type and fires callbacks
@@ -133,12 +140,14 @@ final class AppCoordinator: ObservableObject {
         notificationCenter: NotificationScheduling = UNUserNotificationCenter.current(),
         overlayManager: OverlayPresenting? = nil,
         screenTimeTracker: ScreenTimeTracking? = nil,
-        pauseConditionProvider: PauseConditionProviding? = nil
+        pauseConditionProvider: PauseConditionProviding? = nil,
+        screenTimeAuthorization: ScreenTimeAuthorizationProviding? = nil
     ) {
         self.settings = settings ?? SettingsStore()
         self.scheduler = scheduler ?? ReminderScheduler()
         self.notificationCenter = notificationCenter
         self.overlayManager = overlayManager ?? OverlayManager()
+        self.screenTimeAuthorization = screenTimeAuthorization ?? ScreenTimeAuthorizationNoop()
         // In UI test mode, use no-op stubs for services that register UIKit lifecycle
         // observers and start 1-second timers — they prevent XCUITest from settling
         // the accessibility tree between interactions, causing stale element reads.

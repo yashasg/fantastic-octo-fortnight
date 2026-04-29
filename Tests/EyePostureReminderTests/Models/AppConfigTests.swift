@@ -14,8 +14,7 @@ import XCTest
 //
 // **Bundle injection pattern:** `AppConfig.load(from:)` accepts a `Bundle`
 // parameter so tests can inject a fixture bundle without touching `Bundle.main`.
-// swiftlint:disable:next type_body_length
-final class AppConfigTests: XCTestCase { // swiftlint:disable:this type_body_length
+final class AppConfigTests: XCTestCase {
 
     // MARK: - Helpers
 

@@ -243,10 +243,11 @@ final class ViewBodyCoverageTests: XCTestCase {
         var newValue: Bool?
         render(AccessibleToggle(
             isOn: .constant(true),
-            onChange: { newValue = $0 }
-        ) {
-            Text("Callback toggle")
-        })
+            onChange: { newValue = $0 },
+            label: {
+                Text("Callback toggle")
+            }
+        ))
         XCTAssertNil(newValue) // onChange only fires on user interaction
     }
 
@@ -433,8 +434,9 @@ final class ViewBodyCoverageTests: XCTestCase {
             tint: AppColor.primaryRest,
             accessibilityIdentifier: "test",
             accessibilityHint: Text("hint"),
-            onChange: { _ in }
-        ) { Text("Label") }
+            onChange: { _ in },
+            label: { Text("Label") }
+        )
         let described = String(describing: view.body)
         XCTAssertFalse(described.isEmpty)
     }

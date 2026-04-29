@@ -617,7 +617,7 @@ final class AppCoordinatorTests: XCTestCase {
         for request in reminderRequests(from: mockNotif) {
             XCTAssertNotNil(
                 request.trigger as? UNTimeIntervalNotificationTrigger,
-                "Periodic reminder '\(request.identifier)' must use UNTimeIntervalNotificationTrigger for background delivery")
+                "Periodic reminder '\(request.identifier)' must use a time interval trigger.")
         }
     }
 

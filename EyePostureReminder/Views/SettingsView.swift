@@ -28,7 +28,7 @@ private struct SettingsRowIcon: View {
 /// Section header with optional tinted icon and styled caption text.
 private struct SettingsSectionHeader: View {
     let titleKey: String.LocalizationValue
-    var iconName: String? = nil
+    var iconName: String?
     var iconTint: Color = AppColor.primaryRest
 
     var body: some View {
@@ -71,14 +71,15 @@ struct SettingsView: View {
                     tint: AppColor.primaryRest,
                     accessibilityIdentifier: "home.masterToggle",
                     accessibilityHint: Text("settings.masterToggle.hint", bundle: .module),
-                    onChange: { _ in viewModel?.globalToggleChanged() }
-                ) {
-                    HStack(spacing: AppSpacing.sm) {
-                        SettingsRowIcon(systemName: "power", tint: AppColor.primaryRest)
-                        Text("settings.masterToggle", bundle: .module)
-                            .foregroundStyle(AppColor.textPrimary)
+                    onChange: { _ in viewModel?.globalToggleChanged() },
+                    label: {
+                        HStack(spacing: AppSpacing.sm) {
+                            SettingsRowIcon(systemName: "power", tint: AppColor.primaryRest)
+                            Text("settings.masterToggle", bundle: .module)
+                                .foregroundStyle(AppColor.textPrimary)
+                        }
                     }
-                }
+                )
                 .listRowBackground(AppColor.surface)
                 .listRowSeparatorTint(AppColor.separatorSoft)
             } footer: {
@@ -173,6 +174,9 @@ struct SettingsView: View {
 
             // MARK: Smart Pause
             SettingsSmartPauseSection(viewModel: viewModel)
+
+            // MARK: True Interrupt Mode
+            SettingsTrueInterruptSection()
 
             // MARK: Notification permission warning
             SettingsNotificationWarningSection()
@@ -434,32 +438,34 @@ private struct SettingsSmartPauseSection: View {
             AccessibleToggle(
                 isOn: $settings.pauseDuringFocus,
                 tint: AppColor.primaryRest,
-                accessibilityIdentifier: "settings.smartPause.pauseDuringFocus",
-                accessibilityHint: Text("settings.smartPause.pauseDuringFocus.hint", bundle: .module),
-                onChange: { newValue in viewModel?.pauseDuringFocus = newValue }
-            ) {
-                Label(
-                    String(localized: "settings.smartPause.pauseDuringFocus", bundle: .module),
-                    systemImage: AppSymbol.pauseDuringFocus
+                    accessibilityIdentifier: "settings.smartPause.pauseDuringFocus",
+                    accessibilityHint: Text("settings.smartPause.pauseDuringFocus.hint", bundle: .module),
+                    onChange: { newValue in viewModel?.pauseDuringFocus = newValue },
+                    label: {
+                        Label(
+                            String(localized: "settings.smartPause.pauseDuringFocus", bundle: .module),
+                            systemImage: AppSymbol.pauseDuringFocus
+                        )
+                        .foregroundStyle(AppColor.textPrimary)
+                    }
                 )
-                .foregroundStyle(AppColor.textPrimary)
-            }
             .listRowBackground(AppColor.surface)
             .listRowSeparatorTint(AppColor.separatorSoft)
 
             AccessibleToggle(
                 isOn: $settings.pauseWhileDriving,
                 tint: AppColor.primaryRest,
-                accessibilityIdentifier: "settings.smartPause.pauseWhileDriving",
-                accessibilityHint: Text("settings.smartPause.pauseWhileDriving.hint", bundle: .module),
-                onChange: { newValue in viewModel?.pauseWhileDriving = newValue }
-            ) {
-                Label(
-                    String(localized: "settings.smartPause.pauseWhileDriving", bundle: .module),
-                    systemImage: AppSymbol.pauseWhileDriving
+                    accessibilityIdentifier: "settings.smartPause.pauseWhileDriving",
+                    accessibilityHint: Text("settings.smartPause.pauseWhileDriving.hint", bundle: .module),
+                    onChange: { newValue in viewModel?.pauseWhileDriving = newValue },
+                    label: {
+                        Label(
+                            String(localized: "settings.smartPause.pauseWhileDriving", bundle: .module),
+                            systemImage: AppSymbol.pauseWhileDriving
+                        )
+                        .foregroundStyle(AppColor.textPrimary)
+                    }
                 )
-                .foregroundStyle(AppColor.textPrimary)
-            }
             .listRowBackground(AppColor.surface)
             .listRowSeparatorTint(AppColor.separatorSoft)
         } header: {
@@ -472,6 +478,96 @@ private struct SettingsSmartPauseSection: View {
             Text("settings.smartPause.footer", bundle: .module)
                 .font(AppFont.caption)
                 .foregroundStyle(AppColor.textSecondary)
+        }
+    }
+}
+
+// MARK: - True Interrupt Mode Section
+
+/// Settings section presenting True Interrupt Mode authorization status and
+/// a "Configure App Break Access" button that launches `AppCategoryPickerView`.
+///
+/// In the pre-entitlement state (authorizationStatus == .unavailable) the
+/// section shows a greyed status row and a disabled configure button,
+/// clearly communicating that the feature is coming — without over-promising
+/// runtime interruption while #201 is pending.
+private struct SettingsTrueInterruptSection: View {
+    @EnvironmentObject private var coordinator: AppCoordinator
+    @StateObject private var selectedAppsState = SelectedAppsState()
+    @State private var showPicker = false
+
+    private var authStatus: ScreenTimeAuthorizationStatus {
+        coordinator.screenTimeAuthorization.authorizationStatus
+    }
+
+    var body: some View {
+        Section {
+            // Status row
+            HStack(spacing: AppSpacing.sm) {
+                SettingsRowIcon(systemName: AppSymbol.trueInterrupt, tint: AppColor.primaryRest)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("settings.trueInterrupt.statusLabel", bundle: .module)
+                        .font(AppFont.body)
+                        .foregroundStyle(AppColor.textPrimary)
+                    Text(
+                        LocalizedStringKey(authStatus.localizedStatusKey),
+                        bundle: .module
+                    )
+                    .font(AppFont.caption)
+                    .foregroundStyle(
+                        authStatus == .approved ? AppColor.primaryRest : AppColor.textSecondary
+                    )
+                }
+                Spacer()
+            }
+            .listRowBackground(AppColor.surface)
+            .listRowSeparatorTint(AppColor.separatorSoft)
+            .accessibilityElement(children: .combine)
+            .accessibilityIdentifier("settings.trueInterrupt.statusRow")
+
+            // Configure button
+            Button {
+                showPicker = true
+            } label: {
+                HStack(spacing: AppSpacing.sm) {
+                    Image(systemName: "chevron.right")
+                        .font(AppFont.caption)
+                        .foregroundStyle(AppColor.textSecondary)
+                        .accessibilityHidden(true)
+                    Text("settings.trueInterrupt.configure", bundle: .module)
+                        .font(AppFont.body)
+                        .foregroundStyle(
+                            authStatus == .unavailable
+                                ? AppColor.textSecondary
+                                : AppColor.primaryRest
+                        )
+                }
+            }
+            .disabled(authStatus == .unavailable)
+            .listRowBackground(AppColor.surface)
+            .listRowSeparatorTint(AppColor.separatorSoft)
+            .accessibilityHint(Text("settings.trueInterrupt.configure.hint", bundle: .module))
+            .accessibilityIdentifier("settings.trueInterrupt.configureButton")
+        } header: {
+            SettingsSectionHeader(
+                titleKey: "settings.section.trueInterrupt",
+                iconName: AppSymbol.trueInterrupt,
+                iconTint: AppColor.primaryRest
+            )
+        } footer: {
+            Text("settings.trueInterrupt.footer", bundle: .module)
+                .font(AppFont.caption)
+                .foregroundStyle(AppColor.textSecondary)
+        }
+        .sheet(isPresented: $showPicker) {
+            AppCategoryPickerView(
+                appsState: selectedAppsState,
+                authorizationStatus: authStatus,
+                onRequestAuthorization: {
+                    Task { _ = await coordinator.screenTimeAuthorization.requestAuthorization() }
+                },
+                onDone: { showPicker = false }
+            )
         }
     }
 }
