@@ -311,4 +311,16 @@ final class TrueInterruptViewCoverageTests: XCTestCase {
         let described = String(describing: AppCategoryApprovedCard(metadata: metadata).body)
         XCTAssertFalse(described.isEmpty)
     }
+
+    func test_appCategorySelectionSummary_usesLocalizedPluralCounts() {
+        let summary = AppCategorySelectionSummary.text(
+            for: SelectedAppsMetadata(categoryCount: 2, appCount: 3, lastUpdated: Date()),
+            bundle: TestBundle.module
+        )
+
+        XCTAssertTrue(summary.contains("2 categories"))
+        XCTAssertTrue(summary.contains("3 apps"))
+        XCTAssertFalse(summary.contains("appCategoryPicker.approved.categoryCount"))
+        XCTAssertFalse(summary.contains("appCategoryPicker.approved.appCount"))
+    }
 }

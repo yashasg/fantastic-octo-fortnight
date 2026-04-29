@@ -219,7 +219,10 @@ final class StringCatalogTests: XCTestCase {
             "reminder.posture.notificationTitle", "reminder.posture.notificationBody",
             "reminder.posture.overlaySupportiveText",
             // overlay.doneButton — primary CTA on redesigned overlay
-            "overlay.doneButton"
+            "overlay.doneButton",
+            // appCategoryPicker.approved.* count strings — localized plural summary
+            "appCategoryPicker.approved.appCount",
+            "appCategoryPicker.approved.categoryCount"
         ]
         for key in expectedKeys {
             XCTAssertFalse(str(key).isEmpty, "Key '\(key)' must resolve to a non-empty string")
@@ -488,6 +491,24 @@ final class StringCatalogTests: XCTestCase {
         XCTAssertTrue(
             formatted.contains("5"),
             "'overlay.countdown.value' must resolve to a string containing the count")
+    }
+
+    func test_appCategoryPickerApprovedCounts_resolvePluralForms() {
+        let appCount = NSLocalizedString(
+            "appCategoryPicker.approved.appCount",
+            bundle: TestBundle.module,
+            comment: ""
+        )
+        let categoryCount = NSLocalizedString(
+            "appCategoryPicker.approved.categoryCount",
+            bundle: TestBundle.module,
+            comment: ""
+        )
+
+        XCTAssertEqual(String.localizedStringWithFormat(appCount, 1), "1 app")
+        XCTAssertEqual(String.localizedStringWithFormat(appCount, 2), "2 apps")
+        XCTAssertEqual(String.localizedStringWithFormat(categoryCount, 1), "1 category")
+        XCTAssertEqual(String.localizedStringWithFormat(categoryCount, 2), "2 categories")
     }
 
     func test_setupCardLabel_containsPositionalSpecifiers() {

@@ -245,16 +245,35 @@ struct AppCategoryApprovedCard: View {
     }
 
     private var selectionSummary: String {
+        AppCategorySelectionSummary.text(for: metadata)
+    }
+}
+
+enum AppCategorySelectionSummary {
+    static func text(for metadata: SelectedAppsMetadata, bundle: Bundle = .module) -> String {
         var parts: [String] = []
         if metadata.categoryCount > 0 {
-            let noun = metadata.categoryCount == 1 ? "category" : "categories"
-            parts.append("\(metadata.categoryCount) \(noun)")
+            parts.append(localizedCount(
+                key: "appCategoryPicker.approved.categoryCount",
+                count: metadata.categoryCount,
+                bundle: bundle
+            ))
         }
         if metadata.appCount > 0 {
-            let noun = metadata.appCount == 1 ? "app" : "apps"
-            parts.append("\(metadata.appCount) \(noun)")
+            parts.append(localizedCount(
+                key: "appCategoryPicker.approved.appCount",
+                count: metadata.appCount,
+                bundle: bundle
+            ))
         }
-        return parts.joined(separator: ", ")
+        return ListFormatter.localizedString(byJoining: parts)
+    }
+
+    private static func localizedCount(key: String, count: Int, bundle: Bundle) -> String {
+        String.localizedStringWithFormat(
+            NSLocalizedString(key, bundle: bundle, comment: ""),
+            count
+        )
     }
 }
 
