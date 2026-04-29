@@ -8,6 +8,7 @@ import UIKit
 
 struct OnboardingView: View {
     @EnvironmentObject private var coordinator: AppCoordinator
+    @EnvironmentObject private var settings: SettingsStore
     @State private var currentPage = 0
 
     private static let configurePageControl: Void = {
@@ -26,11 +27,11 @@ struct OnboardingView: View {
                 notificationCenter: coordinator.notificationCenter
             )
                 .tag(1)
-            OnboardingSetupView(
-                onGetStarted: finishOnboarding,
-                onCustomize: finishOnboardingAndCustomize
-            )
-            .tag(2)
+            // Settings store is forwarded so picker bindings write directly to
+            // persisted values — no separate sync step needed before first use.
+            OnboardingSetupView(onGetStarted: finishOnboarding)
+                .environmentObject(settings)
+                .tag(2)
         }
         .tabViewStyle(PageTabViewStyle(indexDisplayMode: .always))
         .indexViewStyle(PageIndexViewStyle(backgroundDisplayMode: .always))
@@ -39,11 +40,6 @@ struct OnboardingView: View {
     }
 
     private func finishOnboarding() {
-        UserDefaults.standard.set(true, forKey: AppStorageKey.hasSeenOnboarding)
-    }
-
-    private func finishOnboardingAndCustomize() {
-        UserDefaults.standard.set(true, forKey: AppStorageKey.openSettingsOnLaunch)
         UserDefaults.standard.set(true, forKey: AppStorageKey.hasSeenOnboarding)
     }
 }
@@ -59,4 +55,5 @@ struct OnboardingView: View {
 #Preview {
     OnboardingView()
         .environmentObject(AppCoordinator())
+        .environmentObject(SettingsStore())
 }
