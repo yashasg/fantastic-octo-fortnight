@@ -10,6 +10,9 @@ import UIKit
 protocol AccessibilityNotificationPosting {
     /// Post a `.screenChanged` notification, optionally focusing `element`.
     func postScreenChanged(focusElement: Any?)
+
+    /// Post an `.announcement` notification with the given `message` string.
+    func postAnnouncement(message: String)
 }
 
 extension AccessibilityNotificationPosting {
@@ -20,5 +23,9 @@ extension AccessibilityNotificationPosting {
 struct LiveAccessibilityNotificationPoster: AccessibilityNotificationPosting {
     func postScreenChanged(focusElement: Any?) {
         UIAccessibility.post(notification: .screenChanged, argument: focusElement)
+    }
+
+    func postAnnouncement(message: String) {
+        UIAccessibility.post(notification: .announcement, argument: message)
     }
 }

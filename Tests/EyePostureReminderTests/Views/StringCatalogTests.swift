@@ -228,14 +228,15 @@ final class StringCatalogTests: XCTestCase {
             "appCategoryPicker.button.enableAccess.hint",
             "appCategoryPicker.button.openSettings.hint",
             "appCategoryPicker.button.selectApps.hint",
-            "appCategoryPicker.doneButton.hint"
+            "appCategoryPicker.doneButton.hint",
+            // home.trueInterrupt.setupPill.* — rediscovery affordance keys (#280)
+            "home.trueInterrupt.setupPill",
+            "home.trueInterrupt.setupPill.hint"
         ]
         for key in expectedKeys {
             XCTAssertFalse(str(key).isEmpty, "Key '\(key)' must resolve to a non-empty string")
         }
     }
-
-    // MARK: - No Duplicate Keys
 
     func test_noDuplicateKeys_homeScreen() {
         let keys = [
@@ -394,7 +395,10 @@ final class StringCatalogTests: XCTestCase {
             "reminder.eyes.overlaySupportiveText",
             "reminder.posture.title", "reminder.posture.overlayTitle",
             "reminder.posture.notificationTitle", "reminder.posture.notificationBody",
-            "reminder.posture.overlaySupportiveText"
+            "reminder.posture.overlaySupportiveText",
+            // home.trueInterrupt.setupPill.* — rediscovery affordance (#280)
+            "home.trueInterrupt.setupPill",
+            "home.trueInterrupt.setupPill.hint"
         ]
         XCTAssertEqual(
             Set(allKeys).count,
@@ -1491,5 +1495,27 @@ final class StringCatalogTests: XCTestCase {
         XCTAssertTrue(
             isTranslated("home.trueInterrupt.skippedBanner.label"),
             "'home.trueInterrupt.skippedBanner.label' must resolve from catalog")
+    }
+
+    // MARK: - home.trueInterrupt.setupPill.* Keys (#280)
+
+    func test_homeTrueInterruptSetupPill_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("home.trueInterrupt.setupPill"),
+            "'home.trueInterrupt.setupPill' must resolve from catalog")
+    }
+
+    func test_homeTrueInterruptSetupPillHint_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("home.trueInterrupt.setupPill.hint"),
+            "'home.trueInterrupt.setupPill.hint' must resolve from catalog")
+    }
+
+    func test_homeTrueInterruptSetupPillKeys_areUnique() {
+        let keys = [
+            "home.trueInterrupt.setupPill",
+            "home.trueInterrupt.setupPill.hint"
+        ]
+        XCTAssertEqual(Set(keys).count, keys.count, "Setup pill keys must be unique")
     }
 }

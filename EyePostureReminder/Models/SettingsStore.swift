@@ -230,6 +230,8 @@ final class SettingsStore: ObservableObject {
         notificationFallbackEnabled = true
         snoozedUntil = nil
         snoozeCount = 0
+        // Clear the True Interrupt banner dismissal so the rediscovery affordance reappears.
+        store.set(false, forKey: AppStorageKey.trueInterruptSkippedBannerDismissed)
         Logger.settings.debug("SettingsStore reset to defaults")
     }
 
