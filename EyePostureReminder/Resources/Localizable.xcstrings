@@ -74,7 +74,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "True Interrupt Mode is the main break experience. Alerts are a backup when Screen Time access is not available yet."
+            "value": "kshana sends gentle alerts when it’s time to rest your eyes or check your posture — right when you need them."
           }
         }
       }
@@ -96,7 +96,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Allow Backup Alerts"
+            "value": "Allow Reminder Alerts"
           }
         }
       }
@@ -107,7 +107,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Allows kshana to send backup reminders if Screen Time shielding is unavailable"
+            "value": "Allows kshana to send reminder alerts when it is time for an eye or posture break"
           }
         }
       }
@@ -129,7 +129,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Backup reminder: time to rest your eyes."
+            "value": "Time to rest your eyes."
           }
         }
       }
@@ -140,7 +140,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Example backup reminder from kshana: rest your eyes."
+            "value": "Example reminder alert from kshana: rest your eyes."
           }
         }
       }
@@ -195,7 +195,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Keep a backup reminder."
+            "value": "Stay on track with gentle alerts."
           }
         }
       }
