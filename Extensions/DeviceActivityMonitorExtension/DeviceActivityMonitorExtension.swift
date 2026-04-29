@@ -93,10 +93,9 @@ final class DeviceActivityMonitorExtensionImpl: DeviceActivityMonitor {
         // Pending #201: Handle threshold events (e.g. warn user break is ending soon).
     }
 
-    private func recordWatchdogHeartbeat(_ detail: WatchdogHeartbeatDetail) {
-        do {
-            try WatchdogHeartbeat.record(detail, using: ipcStore)
-        } catch {
+    @discardableResult
+    private func recordWatchdogHeartbeat(_ detail: WatchdogHeartbeatDetail) -> Bool {
+        return WatchdogHeartbeat.record(detail, using: ipcStore) { _, error in
             os_log(
                 "DeviceActivity heartbeat IPC write failed: %{public}@",
                 log: Self.ipcLog,
