@@ -89,6 +89,7 @@ if [[ "${1:-}" == "--build" ]]; then
   fi
   info "Destination: $DEST"
 
+  set +e
   xcodebuild build \
     -project "$XCODEPROJ" \
     -scheme "$SCHEME" \
@@ -98,7 +99,14 @@ if [[ "${1:-}" == "--build" ]]; then
     CODE_SIGNING_REQUIRED=NO \
     CODE_SIGN_IDENTITY="" \
     ENABLE_BITCODE=NO \
-    | grep -E "^(Build|error:|warning:|✓|✗)" || true
+    | grep -E "^(Build|error:|warning:|✓|✗)"
+  build_status="${PIPESTATUS[0]}"
+  set -e
+
+  if [[ "$build_status" -ne 0 ]]; then
+    fail "Build validation failed"
+    exit "$build_status"
+  fi
 
   pass "Build validation succeeded"
 fi

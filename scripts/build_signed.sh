@@ -69,8 +69,11 @@ UPLOAD_SYMBOLS="${UPLOAD_SYMBOLS:-YES}"
 # profiles are available — requires FamilyControls entitlement approval, issue #201).
 # When NO (default), the signed archive builds the main app only (current TestFlight path).
 EXTENSION_PROFILES_AVAILABLE="${EXTENSION_PROFILES_AVAILABLE:-NO}"
+SHIELD_CONFIG_BUNDLE_ID="${SHIELD_CONFIG_BUNDLE_ID:-${APP_BUNDLE_ID}.shieldconfiguration}"
+DEVICE_ACTIVITY_BUNDLE_ID="${DEVICE_ACTIVITY_BUNDLE_ID:-${APP_BUNDLE_ID}.deviceactivitymonitor}"
 # Individual extension provisioning profile specifiers (manual signing only).
-# Leave empty to use automatic signing when EXTENSION_PROFILES_AVAILABLE=YES.
+# Required when EXTENSION_PROFILES_AVAILABLE=YES and SIGNING_STYLE=manual.
+# Leave empty only when SIGNING_STYLE=automatic.
 SHIELD_CONFIG_PROFILE="${SHIELD_CONFIG_PROFILE:-}"
 DEVICE_ACTIVITY_PROFILE="${DEVICE_ACTIVITY_PROFILE:-}"
 
@@ -134,6 +137,8 @@ usage() {
   echo ""
   echo "Extension support (blocked on issue #201 — FamilyControls entitlement approval):"
   echo "  EXTENSION_PROFILES_AVAILABLE=YES   Include extension targets in signed archive"
+  echo "  SHIELD_CONFIG_BUNDLE_ID=<id>       Default: APP_BUNDLE_ID.shieldconfiguration"
+  echo "  DEVICE_ACTIVITY_BUNDLE_ID=<id>     Default: APP_BUNDLE_ID.deviceactivitymonitor"
   echo "  SHIELD_CONFIG_PROFILE=<name>       Profile specifier for ShieldConfigurationExtension"
   echo "  DEVICE_ACTIVITY_PROFILE=<name>     Profile specifier for DeviceActivityMonitorExtension"
 }
@@ -250,6 +255,11 @@ require_signed_entitlements() {
 entitlements_requests_focus_status() {
   local entitlements_path="$1"
   /usr/libexec/PlistBuddy -c "Print :com.apple.developer.focus-status" "$entitlements_path" >/dev/null 2>&1
+}
+
+entitlements_requests_app_groups() {
+  local entitlements_path="$1"
+  /usr/libexec/PlistBuddy -c "Print :com.apple.security.application-groups" "$entitlements_path" >/dev/null 2>&1
 }
 
 profile_dir_path() {
@@ -379,6 +389,20 @@ ensure_manual_distribution_profile() {
   exit 1
 }
 
+ensure_manual_extension_profiles() {
+  [[ "$EXTENSION_PROFILES_AVAILABLE" == "YES" ]] || return 0
+  [[ "$SIGNING_STYLE" == "manual" ]] || return 0
+
+  if [[ -z "$SHIELD_CONFIG_PROFILE" || -z "$DEVICE_ACTIVITY_PROFILE" ]]; then
+    fail "Extension profiles requested with manual signing, but extension profile names are missing."
+    fail "Create App Store Connect profiles for the extension bundle IDs, then set:"
+    fail "  SHIELD_CONFIG_PROFILE=<ShieldConfiguration profile name>"
+    fail "  DEVICE_ACTIVITY_PROFILE=<DeviceActivityMonitor profile name>"
+    fail "Or use SIGNING_STYLE=automatic with Xcode-managed signing."
+    exit 1
+  fi
+}
+
 # Inject CFBundleVersion into the already-built archive's Info.plist.
 # Does NOT touch source Info.plist — safe to call on any commit without
 # leaving a dirty working tree.  Uses BUILD_NUMBER env var when set (CI),
@@ -428,6 +452,8 @@ run_xcodebuild() {
 redact_stream() {
   REDACT_TEAM_ID="${APPLE_TEAM_ID:-}" \
   REDACT_PROFILE_SPECIFIER="${PROVISIONING_PROFILE_SPECIFIER:-}" \
+  REDACT_SHIELD_CONFIG_PROFILE="${SHIELD_CONFIG_PROFILE:-}" \
+  REDACT_DEVICE_ACTIVITY_PROFILE="${DEVICE_ACTIVITY_PROFILE:-}" \
   REDACT_AUTH_KEY_PATH="${ASC_AUTH_KEY_PATH:-}" \
   REDACT_AUTH_KEY_ID="${ASC_AUTH_KEY_ID:-}" \
   REDACT_AUTH_ISSUER_ID="${ASC_AUTH_ISSUER_ID:-}" \
@@ -436,6 +462,8 @@ redact_stream() {
       @pairs = (
         [$ENV{REDACT_TEAM_ID} // "", "<TEAM_ID_REDACTED>"],
         [$ENV{REDACT_PROFILE_SPECIFIER} // "", "<PROFILE_REDACTED>"],
+        [$ENV{REDACT_SHIELD_CONFIG_PROFILE} // "", "<SHIELD_CONFIG_PROFILE_REDACTED>"],
+        [$ENV{REDACT_DEVICE_ACTIVITY_PROFILE} // "", "<DEVICE_ACTIVITY_PROFILE_REDACTED>"],
         [$ENV{REDACT_AUTH_KEY_PATH} // "", "<ASC_KEY_PATH_REDACTED>"],
         [$ENV{REDACT_AUTH_KEY_ID} // "", "<ASC_KEY_ID_REDACTED>"],
         [$ENV{REDACT_AUTH_ISSUER_ID} // "", "<ASC_ISSUER_ID_REDACTED>"],
@@ -485,7 +513,11 @@ generate_project() {
 
     local sc_profile_line=""
     local da_profile_line=""
+    local sc_manual_signing_settings=""
+    local da_manual_signing_settings=""
     if [[ "$SIGNING_STYLE" == "manual" ]]; then
+      sc_manual_signing_settings="        CODE_SIGN_IDENTITY: $(yaml_quote "$SIGNING_CERTIFICATE")"
+      da_manual_signing_settings="        CODE_SIGN_IDENTITY: $(yaml_quote "$SIGNING_CERTIFICATE")"
       if [[ -n "$SHIELD_CONFIG_PROFILE" ]]; then
         sc_profile_line="        PROVISIONING_PROFILE_SPECIFIER: $(yaml_quote "$SHIELD_CONFIG_PROFILE")"
       fi
@@ -517,7 +549,7 @@ generate_project() {
       - sdk: ManagedSettings.framework
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.yashasg.eyeposturereminder.shieldconfiguration
+        PRODUCT_BUNDLE_IDENTIFIER: $(yaml_quote "$SHIELD_CONFIG_BUNDLE_ID")
         TARGETED_DEVICE_FAMILY: \"1\"
         INFOPLIST_FILE: $(yaml_quote "${PACKAGE_PATH}/Extensions/ShieldConfigurationExtension/Info.plist")
         CODE_SIGN_ENTITLEMENTS: $(yaml_quote "${PACKAGE_PATH}/Extensions/ShieldConfigurationExtension/ShieldConfigurationExtension.entitlements")
@@ -526,7 +558,7 @@ generate_project() {
         CODE_SIGNING_ALLOWED: \"YES\"
         CODE_SIGNING_REQUIRED: \"YES\"
         ENABLE_BITCODE: \"NO\"
-        CODE_SIGN_IDENTITY: $(yaml_quote "$SIGNING_CERTIFICATE")
+${sc_manual_signing_settings}
 ${sc_profile_line}
 
   DeviceActivityMonitorExtension:
@@ -544,7 +576,7 @@ ${sc_profile_line}
       - sdk: ManagedSettings.framework
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.yashasg.eyeposturereminder.deviceactivitymonitor
+        PRODUCT_BUNDLE_IDENTIFIER: $(yaml_quote "$DEVICE_ACTIVITY_BUNDLE_ID")
         TARGETED_DEVICE_FAMILY: \"1\"
         INFOPLIST_FILE: $(yaml_quote "${PACKAGE_PATH}/Extensions/DeviceActivityMonitorExtension/Info.plist")
         CODE_SIGN_ENTITLEMENTS: $(yaml_quote "${PACKAGE_PATH}/Extensions/DeviceActivityMonitorExtension/DeviceActivityMonitorExtension.entitlements")
@@ -553,7 +585,7 @@ ${sc_profile_line}
         CODE_SIGNING_ALLOWED: \"YES\"
         CODE_SIGNING_REQUIRED: \"YES\"
         ENABLE_BITCODE: \"NO\"
-        CODE_SIGN_IDENTITY: $(yaml_quote "$SIGNING_CERTIFICATE")
+${da_manual_signing_settings}
 ${da_profile_line}"
   else
     info "EXTENSION_PROFILES_AVAILABLE=NO — building main app only (current TestFlight path)."
@@ -662,6 +694,10 @@ create_export_options() {
   if [[ "$SIGNING_STYLE" == "manual" && -n "$PROVISIONING_PROFILE_SPECIFIER" ]]; then
     /usr/libexec/PlistBuddy -c "Add :provisioningProfiles dict" "$EXPORT_OPTIONS_PLIST"
     /usr/libexec/PlistBuddy -c "Add :provisioningProfiles:${APP_BUNDLE_ID} string ${PROVISIONING_PROFILE_SPECIFIER}" "$EXPORT_OPTIONS_PLIST"
+    if [[ "$EXTENSION_PROFILES_AVAILABLE" == "YES" ]]; then
+      /usr/libexec/PlistBuddy -c "Add :provisioningProfiles:${SHIELD_CONFIG_BUNDLE_ID} string ${SHIELD_CONFIG_PROFILE}" "$EXPORT_OPTIONS_PLIST"
+      /usr/libexec/PlistBuddy -c "Add :provisioningProfiles:${DEVICE_ACTIVITY_BUNDLE_ID} string ${DEVICE_ACTIVITY_PROFILE}" "$EXPORT_OPTIONS_PLIST"
+    fi
   fi
 }
 
@@ -735,6 +771,8 @@ cmd_doctor() {
   if [[ -f "$SIGNED_ENTITLEMENTS_PATH" ]]; then
     if entitlements_requests_focus_status "$SIGNED_ENTITLEMENTS_PATH"; then
       warn "Signed entitlements request Focus Status. The App ID/profile must include that capability."
+    elif entitlements_requests_app_groups "$SIGNED_ENTITLEMENTS_PATH"; then
+      warn "Signed entitlements request App Groups. The App ID/profile must include group.com.yashasgujjar.kshana."
     else
       pass "Signed entitlements: App Store profile-safe"
     fi
@@ -744,6 +782,13 @@ cmd_doctor() {
 
   if [[ "$EXTENSION_PROFILES_AVAILABLE" == "YES" ]]; then
     warn "EXTENSION_PROFILES_AVAILABLE=YES — extension targets will be included (requires #201 FamilyControls approval)"
+    if [[ "$SIGNING_STYLE" == "manual" ]]; then
+      if [[ -n "$SHIELD_CONFIG_PROFILE" && -n "$DEVICE_ACTIVITY_PROFILE" ]]; then
+        pass "Extension profile specifiers: set"
+      else
+        warn "Extension profile specifiers missing — set SHIELD_CONFIG_PROFILE and DEVICE_ACTIVITY_PROFILE before archiving"
+      fi
+    fi
   else
     info "EXTENSION_PROFILES_AVAILABLE=NO — extension targets excluded from archive (blocked on #201)"
   fi
@@ -788,6 +833,7 @@ cmd_archive() {
   require_team_id
 
   ensure_manual_distribution_profile
+  ensure_manual_extension_profiles
 
   generate_project
 
