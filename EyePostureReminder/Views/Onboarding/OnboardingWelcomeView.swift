@@ -73,5 +73,5 @@ struct OnboardingWelcomeView: View {
 }
 
 #Preview {
-    OnboardingWelcomeView { }
+    OnboardingWelcomeView(onNext: { })
 }

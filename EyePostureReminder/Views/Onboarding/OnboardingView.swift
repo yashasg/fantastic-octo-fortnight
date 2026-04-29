@@ -20,7 +20,7 @@ struct OnboardingView: View {
 
     var body: some View {
         TabView(selection: $currentPage) {
-            OnboardingWelcomeView { currentPage = 1 }
+            OnboardingWelcomeView(onNext: { currentPage = 1 })
                 .tag(0)
             // Inject the coordinator's notification center so the permission
             // request can be driven by a mock in UI tests without swizzling.

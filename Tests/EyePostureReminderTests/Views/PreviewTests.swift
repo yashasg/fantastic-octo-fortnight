@@ -83,7 +83,7 @@ final class PreviewTests: XCTestCase {
     // Individual screens (Welcome, Permission, Setup) are tested individually below.
 
     func test_onboardingWelcomeView_preview() {
-        let view = OnboardingWelcomeView {}
+        let view = OnboardingWelcomeView(onNext: {})
         assertPreviewRenders(view)
     }
 
