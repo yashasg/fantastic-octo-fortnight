@@ -322,13 +322,10 @@ final class StringCatalogTests: XCTestCase {
             "onboarding.permission.notificationCard.body",
             "onboarding.permission.notificationCard.label",
             "onboarding.setup.title", "onboarding.setup.subtitle",
-            "onboarding.setup.eyeBreaks.title", "onboarding.setup.eyeBreaks.interval",
-            "onboarding.setup.eyeBreaks.duration",
-            "onboarding.setup.postureChecks.title", "onboarding.setup.postureChecks.interval",
-            "onboarding.setup.postureChecks.duration",
-            "onboarding.setup.body", "onboarding.setup.getStartedButton",
-            "onboarding.setup.getStartedButton.hint", "onboarding.setup.customizeButton",
-            "onboarding.setup.customizeButton.hint", "onboarding.setup.card.label",
+            "onboarding.setup.eyeBreaks.title", "onboarding.setup.postureChecks.title",
+            "onboarding.setup.picker.every", "onboarding.setup.picker.breakFor",
+            "onboarding.setup.changeInSettings", "onboarding.setup.getStartedButton",
+            "onboarding.setup.getStartedButton.hint", "onboarding.setup.card.label",
             "legal.dismissButton",
             "legal.terms.navTitle", "legal.terms.notMedical.heading", "legal.terms.notMedical.body",
             "legal.terms.professional.heading", "legal.terms.professional.body",
@@ -542,18 +539,16 @@ final class StringCatalogTests: XCTestCase {
             "settings.doneButton must equal 'Done'")
     }
 
-    func test_onboardingSetupEyeBreaksInterval_value_is20min() {
-        XCTAssertEqual(
-            str("onboarding.setup.eyeBreaks.interval"),
-            "20 min",
-            "Setup card must show '20 min' eye break interval (matches AppConfig defaults)")
+    func test_onboardingSetupPickerEvery_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("onboarding.setup.picker.every"),
+            "'onboarding.setup.picker.every' must resolve from catalog (label for interval picker)")
     }
 
-    func test_onboardingSetupPostureChecksInterval_value_is30min() {
-        XCTAssertEqual(
-            str("onboarding.setup.postureChecks.interval"),
-            "30 min",
-            "Setup card must show '30 min' posture check interval (matches AppConfig defaults)")
+    func test_onboardingSetupPickerBreakFor_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("onboarding.setup.picker.breakFor"),
+            "'onboarding.setup.picker.breakFor' must resolve from catalog (label for duration picker)")
     }
 
     // MARK: - Legal Screen: No Duplicate Keys
@@ -1049,5 +1044,30 @@ final class StringCatalogTests: XCTestCase {
         XCTAssertTrue(
             value.contains("%@"),
             "'settings.reminder.durationPicker.hint' must contain %%@ — received: \(value)")
+    }
+
+    // MARK: - Onboarding Setup — Reminder Window Selection
+
+    /// `onboarding.setup.changeInSettings` is the reassurance copy on the Setup screen
+    /// telling users they can adjust their reminder schedule in Settings later.
+    func test_onboardingSetup_changeInSettings_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("onboarding.setup.changeInSettings"),
+            "'onboarding.setup.changeInSettings' must resolve from catalog, not fall back to the key string")
+    }
+
+    /// The resolved value must reference "Settings" so users understand where to go.
+    func test_onboardingSetup_changeInSettings_mentionsSettings() {
+        let value = str("onboarding.setup.changeInSettings")
+        XCTAssertTrue(
+            value.localizedCaseInsensitiveContains("Settings"),
+            "'onboarding.setup.changeInSettings' must reference 'Settings' — got: \(value)")
+    }
+
+    /// `onboarding.setup.changeInSettings` must be non-empty.
+    func test_onboardingSetup_changeInSettings_isNonEmpty() {
+        let value = str("onboarding.setup.changeInSettings")
+        XCTAssertFalse(value.isEmpty,
+                       "'onboarding.setup.changeInSettings' must not resolve to an empty string")
     }
 }
