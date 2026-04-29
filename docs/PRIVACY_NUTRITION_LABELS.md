@@ -131,7 +131,7 @@ These data types are accessed or stored locally for App Functionality and are no
 | App preferences / settings | `UserDefaults` | Stored locally in app sandbox. Never transmitted. |
 | Motion activity state | `CMMotionActivityManager` | Transient, in-memory only. Used to pause reminders while driving. Never stored or sent. |
 | Focus status | `INFocusStatusCenter` | Transient, in-memory only. Used to pause reminders during Focus modes. Never stored or sent. |
-| Screen Time / Device activity data (if authorized) | `FamilyControls` / `DeviceActivity` (pending approval) | User-authorized data is used locally for interval scheduling and selected-app shielding. Current builds keep fallback alerts active while entitlement-gated shielding is pending Apple approval (case ID 102881605113). |
+| Screen Time / Device activity data (if authorized) | `FamilyControls` / `DeviceActivity` (pending approval) | User-authorized data is used locally for interval scheduling and selected-app shielding. Current builds keep backup alerts active while entitlement-gated shielding is pending Apple approval (case ID 102881605113). |
 | App Group IPC metadata | `UserDefaults(suiteName:)` | Local-only enabled/disabled intent, aggregate app/category selection counts, shield-session timestamps, last access-request timestamp, and capped shield/fallback/watchdog event log. Used so the main app and Screen Time extensions coordinate without a backend. Never transmitted by kshana. |
 | Diagnostic logs | `os.Logger` | On-device only in release builds. Sensitive values redacted with `.private`. |
 

@@ -1,17 +1,17 @@
 # kshana — Eye & Posture Wellness
 
-A calming iOS wellness app — redesigned as **Restful Grove** with a yin-yang–inspired logo — that delivers healthy app breaks based on your screen time. **Phase 3 pivot: Now integrating Apple Screen Time APIs (FamilyControls + DeviceActivity + ManagedSettings) for True Interrupt Mode** — when breaks fire, kshana shields distracting apps, enforcing the break. Local notifications are fallback/noise. Choose which apps to shield, set your break timing, and kshana ensures you actually take them. Built exclusively with SwiftUI, UserNotifications, UIKit, and ScreenTime frameworks to minimise battery and memory usage.
+A calming iOS wellness app — redesigned as **Restful Grove** with a yin-yang–inspired logo — that delivers healthy app breaks based on your screen time. **Phase 3 pivot: Integrating Apple Screen Time APIs (FamilyControls + DeviceActivity + ManagedSettings) for True Interrupt Mode** — once Apple entitlement approval is complete, kshana will shield selected apps during breaks. Current builds use backup local alerts and an in-app break screen while entitlement-gated shielding is pending. Built exclusively with SwiftUI, UserNotifications, UIKit, and ScreenTime frameworks to minimise battery and memory usage.
 
 ## Features
 
 - 👁 **Eye-rest reminders** – configurable interval and break duration (e.g. 20-20-20 rule)
 - 🧍 **Posture reminders** – configurable interval and break duration
-- 🚀 **True Interrupt Mode (beta)** – Screen Time Shield-based break suggestions over selected apps/categories when Apple entitlement is approved. Until then, fallback local alerts.
+- 🚀 **True Interrupt Mode (beta)** – Screen Time Shield-based break suggestions over selected apps/categories when Apple entitlement is approved. Until then, backup local alerts keep reminders working.
 - 🧠 **Smart Pause** – automatically pauses reminders during Focus Mode, CarPlay navigation, or when driving
 - Full-screen break screen with countdown timer
 - Dropdown pickers for reminder interval and break length
 - Foreground screen-time tracking via a 1-second `Timer` — reminders fire based on actual eyes-on-screen time, not wall-clock intervals
-- 🎯 **App Selection** – choose which apps and categories trigger breaks (roadmap feature)
+- 🎯 **App Selection** – choose which apps and categories are shielded during breaks once Screen Time entitlement approval is complete
 - 🚀 **Onboarding flow** – 4-screen first-launch guide with calm pre-permission education
 - 📳 **Haptic feedback** – tactile notifications on reminder appear and dismiss (toggle in Settings)
 - 💤 **Snooze** – snooze active reminders with configurable limits

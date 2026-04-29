@@ -1091,7 +1091,7 @@ final class StringCatalogTests: XCTestCase {
                        "'onboarding.setup.changeInSettings' must not resolve to an empty string")
     }
 
-    // MARK: - Permission Copy Regression (P0 + M3.8 fallback copy)
+    // MARK: - Permission Copy Regression (P0 + M3.8 backup copy)
     //
     // M3.8: True Interrupt Mode is the primary break experience. Notification
     // permission copy must position alerts as a backup when Screen Time shielding
@@ -1186,15 +1186,36 @@ final class StringCatalogTests: XCTestCase {
         }
     }
 
-    func test_reminderNotificationContent_usesFallbackCopy() {
-        let values = [
+    func test_reminderNotificationContent_usesBackupReminderCopy() {
+        let backupReminderValues = [
             str("reminder.eyes.notificationBody"),
-            str("reminder.posture.notificationBody")
+            str("reminder.posture.notificationBody"),
+            str("onboarding.permission.notificationCard.body"),
+            str("onboarding.permission.notificationCard.label")
         ]
-        for value in values {
+        for value in backupReminderValues {
             XCTAssertTrue(
-                value.localizedCaseInsensitiveContains("Fallback"),
-                "Notification body must be positioned as fallback copy — got: \(value)"
+                value.localizedCaseInsensitiveContains("backup reminder"),
+                "Notification copy must use user-facing backup-reminder language — got: \(value)"
+            )
+        }
+
+        let notificationAndPreviewValues = [
+            str("reminder.eyes.notificationTitle"),
+            str("reminder.eyes.notificationBody"),
+            str("reminder.posture.notificationTitle"),
+            str("reminder.posture.notificationBody"),
+            str("onboarding.permission.notificationCard.title"),
+            str("onboarding.permission.notificationCard.body"),
+            str("onboarding.permission.notificationCard.label")
+        ]
+        for value in notificationAndPreviewValues {
+            XCTAssertNil(
+                value.range(
+                    of: #"\bfallback\b"#,
+                    options: [.regularExpression, .caseInsensitive]
+                ),
+                "Notification copy must not expose fallback implementation jargon — got: \(value)"
             )
         }
     }

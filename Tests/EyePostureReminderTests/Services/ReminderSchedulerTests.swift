@@ -229,7 +229,7 @@ final class ReminderSchedulerTests: XCTestCase {
 
         XCTAssertEqual(
             mockCenter.addedRequests.first?.content.body,
-            "Fallback alert: look 20 ft away for 20 seconds."
+            "Backup reminder: look 20 ft away for 20 seconds."
         )
     }
 
@@ -264,7 +264,7 @@ final class ReminderSchedulerTests: XCTestCase {
 
         XCTAssertEqual(
             mockCenter.addedRequests.first?.content.body,
-            "Fallback alert: sit up straight and roll your shoulders."
+            "Backup reminder: sit up straight and roll your shoulders."
         )
     }
 
