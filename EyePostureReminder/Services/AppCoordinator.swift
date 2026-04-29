@@ -893,10 +893,10 @@ extension AppCoordinator: ReminderScheduling {
     func cancelAllReminders() {
         scheduler.cancelAllReminders()
         screenTimeTracker.pauseAll()
+        overlayManager.clearQueue()
         if overlayManager.isOverlayVisible {
             overlayManager.dismissOverlay()
         }
-        overlayManager.clearQueue()
         pendingOverlay = nil
 
         cancelDeviceActivityMonitoring()

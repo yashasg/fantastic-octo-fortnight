@@ -463,6 +463,24 @@ final class AppCoordinatorExtendedTests: XCTestCase {
         coordinator.cancelAllReminders()
     }
 
+    /// Regression test for #267: `cancelAllReminders()` must clear the overlay
+    /// queue *before* dismissing the visible overlay, so that a synchronous
+    /// `dismissOverlay()` implementation cannot present the next queued item
+    /// between the dismiss and the clear calls.
+    func test_cancelAllReminders_clearsQueueBeforeDismissingVisibleOverlay() {
+        let mockOverlay = MockOverlayPresenting()
+        let (coordinator, _, _, _) = makeCoordinator(overlay: mockOverlay)
+        defer { coordinator.stopFallbackTimers() }
+
+        mockOverlay.isOverlayVisible = true
+        coordinator.cancelAllReminders()
+
+        XCTAssertEqual(
+            mockOverlay.lifecycleEvents,
+            [.clearQueue, .dismiss],
+            "cancelAllReminders() must clear queued overlays before dismissing the visible overlay (#267)")
+    }
+
     // MARK: - cancelReminder(for:) → disableTracking
 
     func test_cancelReminder_forEyes_callsDisableTrackingOnTracker() {
