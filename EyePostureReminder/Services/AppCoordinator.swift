@@ -229,7 +229,9 @@ final class AppCoordinator: ObservableObject {
                 let duration = self.settings.settings(for: type).breakDuration
                 let thresholdS = self.settings.settings(for: type).interval
                 self.showBreakOverlay(for: type, duration: duration)
-                AnalyticsLogger.log(.reminderTriggered(type: type, thresholdS: thresholdS))
+                AnalyticsLogger.log(.reminderTriggered(
+                    type: type, thresholdS: thresholdS, deliveryPath: .screenTimeThreshold
+                ))
                 Logger.scheduling.info("Reminder triggered by screen-time threshold: \(type.rawValue)")
                 // Reschedule the background notification from now so its interval restarts
                 // at the same moment the foreground overlay fires, preventing a near-
@@ -376,17 +378,20 @@ final class AppCoordinator: ObservableObject {
         // Schedule periodic background UNNotifications only as the fallback path
         // while Screen Time shielding is unavailable.
         if notificationAuthStatus == .authorized, shouldScheduleNotificationFallback {
-            // Capture detail before await — IPC state may change across the suspension point.
+            // Capture detail and analytics reason before await — IPC state may change across the suspension point.
             let fallbackDetail = notificationFallbackDetail
+            let analyticsReason = notificationFallbackAnalyticsReason
             await scheduler.scheduleReminders(using: settings)
             recordIPCEvent(
                 .notificationFallbackScheduled,
                 detail: fallbackDetail
             )
+            AnalyticsLogger.log(.schedulePathSelected(path: .notificationFallback, reason: analyticsReason))
         } else {
             scheduler.cancelAllReminders()
             if shouldUseShieldPath {
                 recordIPCEvent(.shieldPathSelected, detail: "device_activity_available")
+                AnalyticsLogger.log(.schedulePathSelected(path: .shield, reason: .deviceActivityAvailable))
             }
         }
 
@@ -443,6 +448,11 @@ final class AppCoordinator: ObservableObject {
         // A real reminder fired — reset consecutive snooze count.
         settings.snoozeCount = 0
         recordIPCEvent(.notificationFallbackDelivered, reasonRaw: type.shieldReason.rawValue)
+        AnalyticsLogger.log(.reminderTriggered(
+            type: type,
+            thresholdS: settings.settings(for: type).interval,
+            deliveryPath: .notificationFallback
+        ))
 
         let duration = settings.settings(for: type).breakDuration
 
@@ -703,12 +713,14 @@ extension AppCoordinator {
                         reasonRaw: session.reason.rawValue,
                         detail: "device_activity_monitor_scheduled"
                     )
+                    AnalyticsLogger.log(.shieldActivated(reason: session.reason.rawValue))
                     Logger.scheduling.info(
                         "DeviceActivity monitoring scheduled for \(session.reason.rawValue)"
                     )
                 case .cancel:
                     try await deviceActivityMonitor.cancelBreakMonitoring()
                     recordIPCEvent(.shieldEnded, detail: "device_activity_monitor_cancelled")
+                    AnalyticsLogger.log(.shieldDeactivated)
                     Logger.scheduling.info("DeviceActivity monitoring cancelled")
                 }
             } catch {
@@ -716,6 +728,7 @@ extension AppCoordinator {
                    notificationAuthStatus == .authorized,
                    settings.notificationFallbackEnabled,
                    let fallbackType = session.reason.reminderType {
+                    AnalyticsLogger.log(.shieldActivationFailed(reason: session.reason.rawValue))
                     if dismissedDeviceActivityPresentationIDs.remove(presentationID) != nil {
                         recordIPCEvent(
                             .notificationFallbackSuppressed,
@@ -820,6 +833,14 @@ extension AppCoordinator {
         return "unexpected_shield_routing_state"
     }
 
+    /// Maps the current fallback routing state to a structured analytics reason code.
+    /// Must be captured before any `await` for the same reason as `notificationFallbackDetail`.
+    private var notificationFallbackAnalyticsReason: AnalyticsEvent.SchedulePathReason {
+        guard deviceActivityMonitor.isAvailable else { return .shieldUnavailable }
+        guard isTrueInterruptEnabled else { return .trueInterruptDisabled }
+        return .trueInterruptEmptySelection
+    }
+
     private var isTrueInterruptEnabled: Bool {
         ipcStore.isTrueInterruptEnabled()
     }
@@ -853,6 +874,7 @@ extension AppCoordinator {
             try ipcStore.recordEvent(AppGroupIPCEvent(kind: kind, reasonRaw: reasonRaw, detail: detail))
         } catch {
             Logger.scheduling.error("App Group IPC event write failed: \(error.localizedDescription)")
+            AnalyticsLogger.log(.ipcOperationFailed(operation: .writeEvent, reason: .writeFailed))
         }
     }
 

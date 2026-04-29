@@ -21,12 +21,14 @@ final class AnalyticsLoggerTests: XCTestCase {
     }
 
     func test_reminderTriggered_eyes_canBeConstructed() {
-        let event = AnalyticsEvent.reminderTriggered(type: .eyes, thresholdS: 1200)
+        let event = AnalyticsEvent.reminderTriggered(type: .eyes, thresholdS: 1200, deliveryPath: .screenTimeThreshold)
         _ = event
     }
 
     func test_reminderTriggered_posture_canBeConstructed() {
-        let event = AnalyticsEvent.reminderTriggered(type: .posture, thresholdS: 900)
+        let event = AnalyticsEvent.reminderTriggered(
+            type: .posture, thresholdS: 900, deliveryPath: .notificationFallback
+        )
         _ = event
     }
 
@@ -107,11 +109,11 @@ final class AnalyticsLoggerTests: XCTestCase {
     }
 
     func test_log_reminderTriggered_eyes_doesNotCrash() {
-        AnalyticsLogger.log(.reminderTriggered(type: .eyes, thresholdS: 1200))
+        AnalyticsLogger.log(.reminderTriggered(type: .eyes, thresholdS: 1200, deliveryPath: .screenTimeThreshold))
     }
 
     func test_log_reminderTriggered_posture_doesNotCrash() {
-        AnalyticsLogger.log(.reminderTriggered(type: .posture, thresholdS: 900))
+        AnalyticsLogger.log(.reminderTriggered(type: .posture, thresholdS: 900, deliveryPath: .notificationFallback))
     }
 
     func test_log_overlayDismissed_allMethods_doNotCrash() {
@@ -192,6 +194,47 @@ final class AnalyticsLoggerTests: XCTestCase {
         let reasons: [AnalyticsEvent.IPCFailureReason] = [.unavailable, .corrupt, .writeFailed, .unknown]
         for reason in reasons {
             AnalyticsLogger.log(.ipcOperationFailed(operation: .readShieldSession, reason: reason))
+        }
+    }
+
+    // MARK: - Schedule Path Selection
+
+    func test_log_schedulePathSelected_shield_doesNotCrash() {
+        AnalyticsLogger.log(.schedulePathSelected(path: .shield, reason: .deviceActivityAvailable))
+    }
+
+    func test_log_schedulePathSelected_notificationFallback_allReasons_doNotCrash() {
+        let reasons: [AnalyticsEvent.SchedulePathReason] = [
+            .shieldUnavailable, .trueInterruptDisabled, .trueInterruptEmptySelection
+        ]
+        for reason in reasons {
+            AnalyticsLogger.log(.schedulePathSelected(path: .notificationFallback, reason: reason))
+        }
+    }
+
+    // MARK: - Shield Lifecycle
+
+    func test_log_shieldActivated_doesNotCrash() {
+        AnalyticsLogger.log(.shieldActivated(reason: "eye_care"))
+        AnalyticsLogger.log(.shieldActivated(reason: "posture"))
+    }
+
+    func test_log_shieldActivationFailed_doesNotCrash() {
+        AnalyticsLogger.log(.shieldActivationFailed(reason: "eye_care"))
+    }
+
+    func test_log_shieldDeactivated_doesNotCrash() {
+        AnalyticsLogger.log(.shieldDeactivated)
+    }
+
+    // MARK: - ReminderDeliveryPath
+
+    func test_log_reminderTriggered_allDeliveryPaths_doNotCrash() {
+        let paths: [AnalyticsEvent.ReminderDeliveryPath] = [
+            .screenTimeThreshold, .notificationFallback, .unknown
+        ]
+        for path in paths {
+            AnalyticsLogger.log(.reminderTriggered(type: .eyes, thresholdS: 1200, deliveryPath: path))
         }
     }
 
