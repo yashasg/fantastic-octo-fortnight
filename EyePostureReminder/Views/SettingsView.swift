@@ -168,8 +168,36 @@ struct SettingsView: View {
                 }
                 .listRowBackground(AppColor.surface)
                 .listRowSeparatorTint(AppColor.separatorSoft)
+
+                AccessibleToggle(
+                    isOn: Binding(
+                        get: { viewModel?.notificationFallbackEnabled ?? settings.notificationFallbackEnabled },
+                        set: { newValue in
+                            if let viewModel {
+                                viewModel.notificationFallbackEnabled = newValue
+                            } else {
+                                settings.notificationFallbackEnabled = newValue
+                            }
+                        }
+                    ),
+                    tint: AppColor.primaryRest,
+                    accessibilityIdentifier: "settings.notificationFallback",
+                    accessibilityHint: Text("settings.notificationFallback.hint", bundle: .module)
+                ) {
+                    HStack(spacing: AppSpacing.sm) {
+                        SettingsRowIcon(systemName: AppSymbol.bell, tint: AppColor.primaryRest)
+                        Text("settings.notificationFallback", bundle: .module)
+                            .foregroundStyle(AppColor.textPrimary)
+                    }
+                }
+                .listRowBackground(AppColor.surface)
+                .listRowSeparatorTint(AppColor.separatorSoft)
             } header: {
                 SettingsSectionHeader(titleKey: "settings.section.preferences")
+            } footer: {
+                Text("settings.notificationFallback.footer", bundle: .module)
+                    .font(AppFont.caption)
+                    .foregroundStyle(AppColor.textSecondary)
             }
 
             // MARK: Smart Pause
@@ -578,7 +606,8 @@ private struct SettingsNotificationWarningSection: View {
     @EnvironmentObject private var coordinator: AppCoordinator
 
     var body: some View {
-        if coordinator.notificationAuthStatus == .denied {
+        if coordinator.notificationAuthStatus == .denied,
+           coordinator.settings.notificationFallbackEnabled {
             Section {
                 HStack(spacing: AppSpacing.sm) {
                     IconContainer(icon: AppSymbol.warning, color: AppColor.accentWarm, size: 36)

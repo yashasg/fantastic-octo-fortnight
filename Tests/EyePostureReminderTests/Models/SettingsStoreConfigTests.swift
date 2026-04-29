@@ -285,6 +285,16 @@ final class SettingsStoreConfigTests: XCTestCase {
                        "resetToDefaults() must restore pauseMediaDuringBreaks to false")
     }
 
+    func test_resetToDefaults_notificationFallbackEnabled_isTrue() {
+        let store = SettingsStore(store: mockPersistence, config: testConfig)
+        store.notificationFallbackEnabled = false
+        store.resetToDefaults(config: testConfig)
+        XCTAssertTrue(
+            store.notificationFallbackEnabled,
+            "resetToDefaults() must restore notificationFallbackEnabled to true"
+        )
+    }
+
     func test_resetToDefaults_pauseDuringFocus_isTrue() {
         let store = SettingsStore(store: mockPersistence, config: testConfig)
         store.pauseDuringFocus = false

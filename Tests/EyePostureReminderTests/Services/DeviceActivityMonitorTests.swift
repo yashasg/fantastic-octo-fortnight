@@ -200,7 +200,8 @@ final class DeviceActivityMonitorTests: XCTestCase {
             scheduler: ReminderScheduler(notificationCenter: mockNotif),
             notificationCenter: mockNotif,
             screenTimeTracker: MockScreenTimeTracker(),
-            pauseConditionProvider: MockPauseConditionProvider()
+            pauseConditionProvider: MockPauseConditionProvider(),
+            ipcStore: MockAppGroupIPCRecorder()
         )
         // No crash — noop is wired without any side effects.
         coordinator.cancelAllReminders()
@@ -216,7 +217,8 @@ final class DeviceActivityMonitorTests: XCTestCase {
             notificationCenter: mockNotif,
             screenTimeTracker: MockScreenTimeTracker(),
             pauseConditionProvider: MockPauseConditionProvider(),
-            deviceActivityMonitor: mockMonitor
+            deviceActivityMonitor: mockMonitor,
+            ipcStore: MockAppGroupIPCRecorder()
         )
 
         coordinator.cancelAllReminders()
@@ -236,7 +238,8 @@ final class DeviceActivityMonitorTests: XCTestCase {
             notificationCenter: mockNotif,
             screenTimeTracker: MockScreenTimeTracker(),
             pauseConditionProvider: MockPauseConditionProvider(),
-            deviceActivityMonitor: mockMonitor
+            deviceActivityMonitor: mockMonitor,
+            ipcStore: MockAppGroupIPCRecorder()
         )
 
         coordinator.cancelAllReminders()
@@ -259,7 +262,8 @@ final class DeviceActivityMonitorTests: XCTestCase {
             overlayManager: mockOverlay,
             screenTimeTracker: mockTracker,
             pauseConditionProvider: MockPauseConditionProvider(),
-            deviceActivityMonitor: mockMonitor
+            deviceActivityMonitor: mockMonitor,
+            ipcStore: MockAppGroupIPCRecorder()
         )
         defer { coordinator.stopFallbackTimers() }
 
@@ -287,7 +291,8 @@ final class DeviceActivityMonitorTests: XCTestCase {
             overlayManager: mockOverlay,
             screenTimeTracker: mockTracker,
             pauseConditionProvider: MockPauseConditionProvider(),
-            deviceActivityMonitor: mockMonitor
+            deviceActivityMonitor: mockMonitor,
+            ipcStore: MockAppGroupIPCRecorder()
         )
         defer { coordinator.stopFallbackTimers() }
 

@@ -33,6 +33,9 @@ public struct AppGroupSelectionSnapshot: Codable, Equatable, Sendable {
 public enum AppGroupIPCEventKind: String, Codable, Sendable {
     case shieldStarted
     case shieldEnded
+    case shieldPathSelected
+    case notificationFallbackScheduled
+    case notificationFallbackDelivered
     case accessRequested
     case watchdogHeartbeat
 }

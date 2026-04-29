@@ -145,6 +145,23 @@ final class SettingsViewModel: ObservableObject {
         }
     }
 
+    var notificationFallbackEnabled: Bool {
+        get { settings.notificationFallbackEnabled }
+        set {
+            let old = settings.notificationFallbackEnabled
+            settings.notificationFallbackEnabled = newValue
+            AnalyticsLogger.log(.settingChanged(
+                setting: "notificationFallbackEnabled",
+                oldValue: String(old),
+                newValue: String(newValue)
+            ))
+            Task {
+                await scheduler.scheduleReminders(using: settings)
+                Logger.settings.info("Notification fallback → \(self.settings.notificationFallbackEnabled)")
+            }
+        }
+    }
+
     // MARK: - Init
 
     init(

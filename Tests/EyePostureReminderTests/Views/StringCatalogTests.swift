@@ -142,6 +142,8 @@ final class StringCatalogTests: XCTestCase {
             "settings.section.snooze", "settings.snooze.cancelButton",
             "settings.snooze.5min", "settings.snooze.1hour", "settings.snooze.restOfDay",
             "settings.section.preferences", "settings.hapticFeedback",
+            "settings.notificationFallback", "settings.notificationFallback.footer",
+            "settings.notificationFallback.hint",
             "settings.notifications.disabledTitle", "settings.notifications.disabledBody",
             "settings.notifications.openSettings",
             "overlay.dismissButton", "overlay.countdown.label", "overlay.settingsLabel",
@@ -248,6 +250,8 @@ final class StringCatalogTests: XCTestCase {
             "settings.snooze.restOfDay.hint",
             "settings.section.preferences", "settings.hapticFeedback",
             "settings.hapticFeedback.hint",
+            "settings.notificationFallback", "settings.notificationFallback.footer",
+            "settings.notificationFallback.hint",
             "settings.notifications.disabledTitle", "settings.notifications.disabledBody",
             "settings.notifications.disabledLabel", "settings.notifications.openSettings",
             "settings.notifications.openSettings.hint",
@@ -303,6 +307,8 @@ final class StringCatalogTests: XCTestCase {
             "settings.snooze.restOfDay.hint",
             "settings.section.preferences", "settings.hapticFeedback",
             "settings.hapticFeedback.hint",
+            "settings.notificationFallback", "settings.notificationFallback.footer",
+            "settings.notificationFallback.hint",
             "settings.notifications.disabledTitle", "settings.notifications.disabledBody",
             "settings.notifications.disabledLabel", "settings.notifications.openSettings",
             "settings.notifications.openSettings.hint",
@@ -777,6 +783,20 @@ final class StringCatalogTests: XCTestCase {
         XCTAssertTrue(isTranslated("settings.smartPause.pauseWhileDriving.hint"))
     }
 
+    // MARK: - settings.notificationFallback.* Keys: Individual Resolution
+
+    func test_settingsNotificationFallback_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("settings.notificationFallback"))
+    }
+
+    func test_settingsNotificationFallbackFooter_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("settings.notificationFallback.footer"))
+    }
+
+    func test_settingsNotificationFallbackHint_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("settings.notificationFallback.hint"))
+    }
+
     // MARK: - reminder.* Keys: Individual Resolution
 
     func test_reminderEyesTitle_resolvesToEnglish() {
@@ -1163,6 +1183,32 @@ final class StringCatalogTests: XCTestCase {
             XCTAssertFalse(
                 value.isEmpty,
                 "'\(key)' must not resolve to an empty string — blank notification content is invisible to users")
+        }
+    }
+
+    func test_reminderNotificationContent_usesFallbackCopy() {
+        let values = [
+            str("reminder.eyes.notificationBody"),
+            str("reminder.posture.notificationBody")
+        ]
+        for value in values {
+            XCTAssertTrue(
+                value.localizedCaseInsensitiveContains("Fallback"),
+                "Notification body must be positioned as fallback copy — got: \(value)"
+            )
+        }
+    }
+
+    func test_reminderNotificationTitles_doNotUseEmojiFirstCopy() {
+        let values = [
+            str("reminder.eyes.notificationTitle"),
+            str("reminder.posture.notificationTitle")
+        ]
+        for value in values {
+            XCTAssertFalse(
+                value.contains("👁") || value.contains("🧍"),
+                "Notification title must not use legacy emoji-first copy — got: \(value)"
+            )
         }
     }
 

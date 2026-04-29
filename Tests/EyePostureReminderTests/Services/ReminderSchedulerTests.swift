@@ -217,7 +217,7 @@ final class ReminderSchedulerTests: XCTestCase {
 
         await sut.scheduleReminders(using: settings)
 
-        XCTAssertEqual(mockCenter.addedRequests.first?.content.title, "👁 Eye Break")
+        XCTAssertEqual(mockCenter.addedRequests.first?.content.title, "Reminder: rest your eyes")
     }
 
     func test_eyesNotification_body_matchesSpec() async {
@@ -229,7 +229,7 @@ final class ReminderSchedulerTests: XCTestCase {
 
         XCTAssertEqual(
             mockCenter.addedRequests.first?.content.body,
-            "Look 20 ft away for 20 seconds."
+            "Fallback alert: look 20 ft away for 20 seconds."
         )
     }
 
@@ -252,7 +252,7 @@ final class ReminderSchedulerTests: XCTestCase {
 
         await sut.scheduleReminders(using: settings)
 
-        XCTAssertEqual(mockCenter.addedRequests.first?.content.title, "🧍 Posture Check")
+        XCTAssertEqual(mockCenter.addedRequests.first?.content.title, "Reminder: check posture")
     }
 
     func test_postureNotification_body_matchesSpec() async {
@@ -264,7 +264,7 @@ final class ReminderSchedulerTests: XCTestCase {
 
         XCTAssertEqual(
             mockCenter.addedRequests.first?.content.body,
-            "Sit up straight and roll your shoulders."
+            "Fallback alert: sit up straight and roll your shoulders."
         )
     }
 
