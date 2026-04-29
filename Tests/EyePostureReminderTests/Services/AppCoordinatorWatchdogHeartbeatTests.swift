@@ -189,6 +189,32 @@ final class AppCoordinatorWatchdogHeartbeatTests: XCTestCase {
         XCTAssertTrue(notificationCenter.addedRequests.isEmpty)
     }
 
+    func test_foregroundTransition_withOldSessionHeartbeatAndNewSessionMissingHeartbeat_recovers() async throws {
+        // Regression test for issue #288: a fresh heartbeat from a prior session must not
+        // suppress watchdog recovery for a newer session whose extension never heartbeat.
+        deviceActivityMonitor.stubbedIsAvailable = true
+        let sessionBStart = Date(timeIntervalSince1970: 105)
+        ipcStore.shieldSessionSnapshot = ShieldSessionSnapshot(
+            reasonRaw: ReminderType.eyes.shieldReason.rawValue,
+            durationSeconds: 20,
+            triggeredAt: sessionBStart
+        )
+        // Session A's heartbeat at T=100 — before session B start (T=105).
+        try ipcStore.recordEvent(
+            WatchdogHeartbeat.event(.deviceActivityIntervalEnded, timestamp: Date(timeIntervalSince1970: 100))
+        )
+
+        await coordinator.handleForegroundTransition()
+        try await Task.sleep(nanoseconds: 100_000_000)
+
+        // Recovery must be triggered via the .missing path (not suppressed by prior-session heartbeat).
+        let event = try XCTUnwrap(ipcStore.events.first { $0.kind == .watchdogRecoveryTriggered })
+        XCTAssertEqual(event.reasonRaw, ReminderType.eyes.shieldReason.rawValue)
+        XCTAssertEqual(event.detail, "watchdog_device_activity_heartbeat_missing")
+        XCTAssertEqual(ipcStore.clearShieldSessionCallCount, 1)
+        XCTAssertEqual(deviceActivityMonitor.cancelCallCount, 1)
+    }
+
     private var heartbeatDetails: [WatchdogHeartbeatDetail] {
         ipcStore.events
             .filter { $0.kind == .watchdogHeartbeat }

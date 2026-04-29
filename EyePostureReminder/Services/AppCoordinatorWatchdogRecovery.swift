@@ -39,7 +39,8 @@ extension AppCoordinator {
             from: events,
             now: now,
             staleAfter: staleAfter,
-            matching: WatchdogHeartbeatDetail.deviceActivityLifecycleDetails
+            matching: WatchdogHeartbeatDetail.deviceActivityLifecycleDetails,
+            after: triggeredAt
         )
         let recoveryDetail: String
         switch status {
@@ -53,7 +54,7 @@ extension AppCoordinator {
         }
 
         recordIPCEvent(.watchdogRecoveryTriggered, reasonRaw: session.reasonRaw, detail: recoveryDetail)
-        AnalyticsLogger.log(.watchdogRecoveryTriggered(reason: session.reasonRaw ?? "unknown", detail: recoveryDetail))
+        AnalyticsLogger.log(.watchdogRecoveryTriggered(reason: session.reason, detail: recoveryDetail))
         let sessionCleared = ipcStore.clearShieldSession(endedAt: now)
         if !sessionCleared {
             Logger.scheduling.error("Watchdog recovery failed to clear stale shield session")
