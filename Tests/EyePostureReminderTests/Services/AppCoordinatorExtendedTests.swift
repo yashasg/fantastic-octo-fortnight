@@ -234,6 +234,23 @@ final class AppCoordinatorExtendedTests: XCTestCase {
             "Pause condition activation must dismiss any currently-visible overlay")
     }
 
+    func test_pauseConditionActivated_clearsQueueBeforeDismissingVisibleOverlay() {
+        let mockOverlay = MockOverlayPresenting()
+        let mockPause = MockPauseConditionProvider()
+        let (coordinator, _, _, _) = makeCoordinator(
+            overlay: mockOverlay,
+            pauseConditionProvider: mockPause)
+        defer { coordinator.stopFallbackTimers() }
+
+        mockOverlay.isOverlayVisible = true
+        mockPause.simulatePauseStateChange(true)
+
+        XCTAssertEqual(
+            mockOverlay.lifecycleEvents,
+            [.clearQueue, .dismiss],
+            "Pause activation must clear queued overlays before dismissing the visible overlay")
+    }
+
     func test_pauseConditionActivated_whenOverlayNotVisible_doesNotDismiss() {
         let mockOverlay = MockOverlayPresenting()
         let mockPause = MockPauseConditionProvider()
