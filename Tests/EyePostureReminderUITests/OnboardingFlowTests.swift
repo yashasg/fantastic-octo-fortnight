@@ -180,9 +180,46 @@ final class OnboardingFlowTests: XCTestCase {
         )
     }
 
+    // MARK: - test_onboarding_interruptMode_setupPreviewOpensAppPicker
+
+    /// The True Interrupt onboarding screen must expose the app/category setup
+    /// surface before the first break, even while Screen Time entitlement approval is pending.
+    func test_onboarding_interruptMode_setupPreviewOpensAppPicker() throws {
+        let nextButton = app.buttons["onboarding.welcome.nextButton"]
+        XCTAssertTrue(nextButton.waitForExistence(timeout: 5))
+        nextButton.tap()
+
+        let skipButton = app.buttons["onboarding.permission.nextButton"]
+        XCTAssertTrue(skipButton.waitForExistence(timeout: 5))
+        skipButton.tap()
+
+        let getStartedButton = app.buttons["onboarding.setup.getStartedButton"]
+        XCTAssertTrue(getStartedButton.waitForExistence(timeout: 5))
+        getStartedButton.tap()
+
+        let setupPreviewButton = app.buttons["onboarding.interrupt.enableButton"]
+        XCTAssertTrue(
+            setupPreviewButton.waitForExistence(timeout: 5),
+            "True Interrupt screen must expose the setup preview button."
+        )
+        if !setupPreviewButton.isHittable {
+            app.swipeUp()
+        }
+        XCTAssertTrue(setupPreviewButton.isHittable, "Setup preview button must be tappable during onboarding.")
+        setupPreviewButton.tap()
+
+        let unavailableBanner = app.descendants(matching: .any)
+            .matching(identifier: "appCategoryPicker.unavailableBanner")
+            .firstMatch
+        XCTAssertTrue(
+            unavailableBanner.waitForExistence(timeout: 5),
+            "App/category setup preview must open and explain the current Screen Time availability state."
+        )
+    }
+
     // MARK: - test_onboarding_permissionScreen_allowReminderAlertsButtonExists
 
-    /// Verifies the "Allow Reminder Alerts" primary CTA button is visible on the Permission screen.
+    /// Verifies the backup-alert primary CTA button is visible on the Permission screen.
     func test_onboarding_permissionScreen_allowReminderAlertsButtonExists() throws {
         let nextButton = app.buttons["onboarding.welcome.nextButton"]
         XCTAssertTrue(nextButton.waitForExistence(timeout: 5))

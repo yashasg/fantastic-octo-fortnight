@@ -73,6 +73,8 @@ struct OnboardingInterruptModeView: View {
                 }
                 .padding(.horizontal, AppSpacing.sm)
 
+                InterruptPrivacySummaryCard()
+
                 // Pre-entitlement pending notice
                 if authorizationStatus == .unavailable {
                     PendingApprovalBadge()
@@ -89,11 +91,11 @@ struct OnboardingInterruptModeView: View {
                     }
                 )
                 .buttonStyle(.primary)
-                .disabled(authorizationStatus == .unavailable)
+                .disabled(isPrimaryButtonDisabled)
                 .padding(.horizontal, AppSpacing.xl)
                 .accessibilityLabel(Text(primaryButtonKey, bundle: .module))
                 .accessibilityHint(
-                    Text("onboarding.interrupt.enableButton.hint", bundle: .module)
+                    Text(primaryButtonHintKey, bundle: .module)
                 )
                 .accessibilityIdentifier("onboarding.interrupt.enableButton")
 
@@ -126,8 +128,53 @@ struct OnboardingInterruptModeView: View {
 
     private var primaryButtonKey: LocalizedStringKey {
         authorizationStatus == .unavailable
-            ? "onboarding.interrupt.pendingButton"
+            ? "onboarding.interrupt.previewButton"
             : "onboarding.interrupt.enableButton"
+    }
+
+    private var primaryButtonHintKey: LocalizedStringKey {
+        authorizationStatus == .unavailable
+            ? "onboarding.interrupt.previewButton.hint"
+            : "onboarding.interrupt.enableButton.hint"
+    }
+
+    private var isPrimaryButtonDisabled: Bool {
+        authorizationStatus == .unavailable && onSetUp == nil
+    }
+}
+
+// MARK: - Privacy Summary Card
+
+private struct InterruptPrivacySummaryCard: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.sm) {
+            Label {
+                Text("onboarding.interrupt.summary.selectApps", bundle: .module)
+            } icon: {
+                Image(systemName: AppSymbol.checkmark)
+                    .accessibilityHidden(true)
+            }
+            Label {
+                Text("onboarding.interrupt.summary.localOnly", bundle: .module)
+            } icon: {
+                Image(systemName: AppSymbol.lock)
+                    .accessibilityHidden(true)
+            }
+            Label {
+                Text("onboarding.interrupt.summary.fallback", bundle: .module)
+            } icon: {
+                Image(systemName: AppSymbol.bell)
+                    .accessibilityHidden(true)
+            }
+        }
+        .font(AppFont.caption)
+        .foregroundStyle(AppColor.textSecondary)
+        .padding(AppSpacing.md)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .wellnessCard(elevated: true)
+        .padding(.horizontal, AppSpacing.md)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("onboarding.interrupt.summaryCard")
     }
 }
 

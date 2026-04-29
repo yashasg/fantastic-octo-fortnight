@@ -72,6 +72,7 @@ targets:
     deploymentTarget: "16.0"
     dependencies:
       - target: EyePostureReminder
+      - sdk: AppIntents.framework
     sources:
       - path: ../Tests/EyePostureReminderUITests
         excludes:
@@ -94,6 +95,7 @@ targets:
         CODE_SIGNING_REQUIRED: "NO"
         CODE_SIGNING_ALLOWED: "NO"
         ENABLE_BITCODE: "NO"
+        GENERATE_INFOPLIST_FILE: "YES"
         ENABLE_APP_INTENTS_METADATA_EXTRACTION: "NO"
         ENABLE_APPINTENTS_METADATA_EXTRACTION: "NO"
 
