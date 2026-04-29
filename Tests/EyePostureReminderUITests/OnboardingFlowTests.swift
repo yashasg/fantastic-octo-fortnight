@@ -167,10 +167,10 @@ final class OnboardingFlowTests: XCTestCase {
         }
     }
 
-    // MARK: - test_onboarding_permissionScreen_enableNotificationsButtonExists
+    // MARK: - test_onboarding_permissionScreen_allowReminderAlertsButtonExists
 
-    /// Verifies the "Enable Notifications" primary CTA button is visible on the Permission screen.
-    func test_onboarding_permissionScreen_enableNotificationsButtonExists() throws {
+    /// Verifies the "Allow Reminder Alerts" primary CTA button is visible on the Permission screen.
+    func test_onboarding_permissionScreen_allowReminderAlertsButtonExists() throws {
         let nextButton = app.buttons["onboarding.welcome.nextButton"]
         XCTAssertTrue(nextButton.waitForExistence(timeout: 5))
         nextButton.tap()
@@ -178,10 +178,10 @@ final class OnboardingFlowTests: XCTestCase {
         let enableButton = app.buttons["onboarding.enableNotifications"]
         XCTAssertTrue(
             enableButton.waitForExistence(timeout: 5),
-            "Enable Notifications button must exist on the Permission screen. " +
+            "Allow Reminder Alerts button must exist on the Permission screen. " +
             "Add .accessibilityIdentifier(\"onboarding.enableNotifications\") in OnboardingPermissionView."
         )
-        XCTAssertTrue(enableButton.isHittable, "Enable Notifications button must be tappable.")
+        XCTAssertTrue(enableButton.isHittable, "Allow Reminder Alerts button must be tappable.")
     }
 
     // MARK: - test_onboarding_setupScreen_customizeButtonIdentifierExists
@@ -202,5 +202,56 @@ final class OnboardingFlowTests: XCTestCase {
             "Customize button must exist on the Setup screen with identifier 'onboarding.customize'."
         )
         XCTAssertTrue(customizeButton.isHittable, "Customize button must be tappable.")
+    }
+
+    // MARK: - test_onboarding_setupScreen_showsChangeInSettingsReassurance
+
+    /// Verifies the Setup screen contains copy that tells users they can change their
+    /// reminder schedule in Settings later.
+    func test_onboarding_setupScreen_showsChangeInSettingsReassurance() throws {
+        let nextButton = app.buttons["onboarding.welcome.nextButton"]
+        XCTAssertTrue(nextButton.waitForExistence(timeout: 5))
+        nextButton.tap()
+
+        let skipButton = app.buttons["onboarding.permission.nextButton"]
+        XCTAssertTrue(skipButton.waitForExistence(timeout: 5))
+        skipButton.tap()
+
+        let getStartedButton = app.buttons["onboarding.setup.getStartedButton"]
+        XCTAssertTrue(getStartedButton.waitForExistence(timeout: 5),
+                      "Must reach the setup screen first")
+
+        let reassuranceText = app.staticTexts["onboarding.setup.changeInSettings"]
+        XCTAssertTrue(
+            reassuranceText.waitForExistence(timeout: 3),
+            "Setup screen must show reassurance copy with identifier 'onboarding.setup.changeInSettings'. " +
+            "Expected Text(\"onboarding.setup.changeInSettings\") with .accessibilityIdentifier in OnboardingSetupView."
+        )
+    }
+
+    // MARK: - test_onboarding_setupScreen_pickerAccessibilityIdentifiers
+
+    /// Verifies interval and duration pickers on the Setup screen expose the expected
+    /// accessibility identifiers.
+    func test_onboarding_setupScreen_pickerAccessibilityIdentifiers() throws {
+        let nextButton = app.buttons["onboarding.welcome.nextButton"]
+        XCTAssertTrue(nextButton.waitForExistence(timeout: 5))
+        nextButton.tap()
+
+        let skipButton = app.buttons["onboarding.permission.nextButton"]
+        XCTAssertTrue(skipButton.waitForExistence(timeout: 5))
+        skipButton.tap()
+
+        XCTAssertTrue(
+            app.buttons["onboarding.setup.getStartedButton"].waitForExistence(timeout: 5),
+            "Must reach the setup screen first")
+
+        // Pickers may require scrolling; verify at least one is present.
+        let eyeIntervalPicker = app.descendants(matching: .any)
+            .matching(identifier: "onboarding.eyes.intervalPicker").firstMatch
+        XCTAssertTrue(
+            eyeIntervalPicker.waitForExistence(timeout: 3),
+            "Eye interval picker must be present with identifier 'onboarding.eyes.intervalPicker'."
+        )
     }
 }

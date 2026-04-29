@@ -19,6 +19,9 @@ This app reminds you to take eye breaks and check your posture at intervals you 
 
 Use this app at your own risk. Yashasg is not responsible for any health outcome, positive or negative, resulting from use of this app.
 
+**Note on Screen Time Features:**  
+kshana may use Apple's Screen Time and Device Activity APIs to deliver wellness reminders when you are using other apps. As of April 2026, this feature is pending Apple approval (case ID 102881605113) and is not yet available. Do not expect screen-time-triggered interruptions until this feature is explicitly released.
+
 ---
 
 ## Full Disclaimer (App Store Listing)
@@ -34,6 +37,8 @@ Use this app at your own risk. Yashasg is not responsible for any health outcome
 **USE AT YOUR OWN RISK:** Yashasg makes no representations or warranties about health outcomes from using this app. All wellness decisions made based on app reminders are solely the user's own responsibility. Yashasg is not liable for any injury, health outcome, or loss arising from use of this app.
 
 **AS IS:** This app is provided "as is" without warranty of any kind. Timer accuracy and notification delivery depend on iOS system conditions.
+
+**Screen Time Feature Status:** kshana may incorporate Apple's Screen Time and Device Activity APIs to deliver app-crossing wellness reminders in future versions. As of April 2026, this feature is under Apple review (case ID 102881605113) and is not yet available. When approved and released, the feature will allow kshana to trigger break reminders even when you are using other apps. The break reminders themselves remain wellness guidance only, not medical advice, and are subject to the same limitations stated above.
 
 ---
 

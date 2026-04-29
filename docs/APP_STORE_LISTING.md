@@ -21,27 +21,34 @@
 
 ## 2. Subtitle
 
-**Healthy screen breaks, on cue.**
+**Your breaks, your timing, your control.**
 
-*(29 characters — within 30-char limit)*
+*(31 characters — within 30-char limit) — OVER by 1, need to adjust*
+
+**Alternative:** `Healthy app breaks on your terms` (31 chars)
+**Alternative:** `Breaks you choose, breaks you need` (34 chars — too long)
+**Alternative:** `Choose your breaks, keep control` (31 chars)
+**Alternative:** `App breaks, your way.` (21 chars — good option)
 
 ---
 
 ## 3. Description
 
-Take care of your eyes and posture with gentle, timely reminders — no effort required.
+Choose which apps get break reminders. Set your timing. Let kshana gently nudge you to take healthier breaks — without reading your content.
 
-kshana uses the proven 20-20-20 rule to protect your eyes: every 20 minutes, look 20 feet away for 20 seconds. It also nudges you to check your posture at customizable intervals. A calming full-screen overlay guides each break with a countdown timer, then quietly fades away.
+kshana monitors your app usage and suggests eye breaks (20-20-20 rule) and posture checks at customizable intervals. When you choose to take a break, a calm break screen guides you with a countdown timer. You're always in control.
 
 **Key features:**
-- Customizable reminder intervals and break durations
-- Full-screen overlay with countdown timer and haptic feedback
-- Snooze options (5 min, 15 min, rest of day)
-- Battery-friendly — uses native iOS scheduling, not background timers
-- No account needed — works instantly out of the box
-- Privacy-first — no third-party analytics, no accounts, no ads
+- Choose which apps trigger break reminders (roadmap feature)
+- Eye break reminders (20-20-20 rule) and posture check reminders at customizable intervals
+- Screen Time Shield-based True Interrupt Mode when Apple entitlement approved; fallback local alerts in the meantime
+- Calm break screen with countdown timer and haptic feedback
+- Snooze options (5 min, 1 hour, rest of day)
+- Works quietly in the background—Smart Pause during Focus Mode and CarPlay
+- Battery-friendly—native iOS scheduling, no background timers
+- Privacy-first — reads only which apps you use, never content, no accounts, no ads
 
-Built for people who spend hours at a screen and want a simple, lightweight way to build healthier habits. Download now and give your eyes and body the breaks they deserve.
+Built for people who spend hours at a screen and want control over their break habits. Download now and build healthier screen time habits on your terms.
 
 *(148 words)*
 
@@ -198,7 +205,7 @@ Complete every item before submitting for App Review.
 ### Entitlements & Info.plist
 
 - [ ] `NSMotionUsageDescription` present in Info.plist with accurate purpose string
-- [ ] Focus status entitlement (`com.apple.developer.focus-status`) added to app capabilities
+- [ ] Focus Status capability enabled on the App ID before using `EyePostureReminder.entitlements` for distribution signing
 - [ ] Notification permission usage description accurate
 
 ### App Store Connect Configuration

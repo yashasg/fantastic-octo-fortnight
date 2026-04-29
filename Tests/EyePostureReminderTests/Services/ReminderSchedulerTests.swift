@@ -480,6 +480,123 @@ final class ReminderSchedulerTests: XCTestCase {
             2,
             "Scheduling all twice must not stack duplicate requests")
     }
+
+    // MARK: - Background Scheduling Regression (P0)
+    //
+    // P0: background reminders were disabled because the app moved to a ScreenTimeTracker-only
+    // (foreground-only) trigger model. These tests lock in the periodic UNNotification
+    // scheduling contract so it cannot silently be removed again.
+
+    /// 60-second interval is the minimum for UNTimeIntervalNotificationTrigger repeats=true.
+    /// Verify the boundary: exactly 60 s must produce a repeating trigger.
+    func test_eyesTrigger_at60Seconds_repeatsIsTrue() async {
+        settings.globalEnabled = true
+        settings.eyesEnabled = true
+        settings.postureEnabled = false
+        settings.eyesInterval = 60
+
+        await sut.scheduleReminders(using: settings)
+
+        let trigger = mockCenter.addedRequests.first?.trigger as? UNTimeIntervalNotificationTrigger
+        XCTAssertEqual(
+            trigger?.timeInterval,
+            60,
+            "Eyes trigger must use exactly the configured 60-second interval")
+        XCTAssertEqual(
+            trigger?.repeats,
+            true,
+            "60-second interval must produce repeats=true — the minimum allowed by UNTimeIntervalNotificationTrigger")
+    }
+
+    /// 60-second interval for posture — same boundary contract.
+    func test_postureTrigger_at60Seconds_repeatsIsTrue() async {
+        settings.globalEnabled = true
+        settings.eyesEnabled = false
+        settings.postureEnabled = true
+        settings.postureInterval = 60
+
+        await sut.scheduleReminders(using: settings)
+
+        let trigger = mockCenter.addedRequests.first?.trigger as? UNTimeIntervalNotificationTrigger
+        XCTAssertEqual(trigger?.timeInterval, 60)
+        XCTAssertEqual(
+            trigger?.repeats,
+            true,
+            "60-second posture interval must produce repeats=true")
+    }
+
+    /// Reminders use a `UNTimeIntervalNotificationTrigger` — not a calendar or location trigger.
+    /// Verifying the concrete type prevents an accidental switch to a non-repeating trigger subclass.
+    func test_scheduledRequest_usesTimeIntervalTrigger() async {
+        settings.globalEnabled = true
+        settings.eyesEnabled = true
+        settings.postureEnabled = false
+        settings.eyesInterval = 1200
+
+        await sut.scheduleReminders(using: settings)
+
+        XCTAssertNotNil(
+            mockCenter.addedRequests.first?.trigger as? UNTimeIntervalNotificationTrigger,
+            "Scheduled reminder must use UNTimeIntervalNotificationTrigger for background delivery")
+    }
+
+    /// Disabling an eye-break reminder after scheduling must remove it from the pending queue.
+    /// Regression guard: ensuring cancelReminder is wired through for the disabled path.
+    func test_disableEyes_afterSchedule_removesEyesFromPendingQueue() async {
+        settings.globalEnabled = true
+        settings.eyesEnabled = true
+        settings.postureEnabled = true
+        await sut.scheduleReminders(using: settings)
+        XCTAssertEqual(mockCenter.pendingRequests.count, 2)
+
+        settings.eyesEnabled = false
+        await sut.rescheduleReminder(for: .eyes, using: settings)
+
+        let eyesPending = mockCenter.pendingRequests.contains {
+            $0.content.categoryIdentifier == ReminderType.eyes.categoryIdentifier
+        }
+        XCTAssertFalse(
+            eyesPending,
+            "Disabling eyes reminders must remove the pending eye-break notification request")
+        XCTAssertEqual(
+            mockCenter.pendingRequests.count,
+            1,
+            "Only the posture request should remain after disabling eyes")
+    }
+
+    /// Disabling posture after scheduling must remove it from the pending queue.
+    func test_disablePosture_afterSchedule_removesPostureFromPendingQueue() async {
+        settings.globalEnabled = true
+        settings.eyesEnabled = true
+        settings.postureEnabled = true
+        await sut.scheduleReminders(using: settings)
+
+        settings.postureEnabled = false
+        await sut.rescheduleReminder(for: .posture, using: settings)
+
+        let posturePending = mockCenter.pendingRequests.contains {
+            $0.content.categoryIdentifier == ReminderType.posture.categoryIdentifier
+        }
+        XCTAssertFalse(
+            posturePending,
+            "Disabling posture reminders must remove the pending posture notification request")
+    }
+
+    /// Scheduled requests must have a non-empty identifier — an empty identifier would
+    /// make cancel-before-reschedule silently fail.
+    func test_scheduledRequest_hasNonEmptyIdentifier() async {
+        settings.globalEnabled = true
+        settings.eyesEnabled = true
+        settings.postureEnabled = true
+
+        await sut.scheduleReminders(using: settings)
+
+        for request in mockCenter.addedRequests {
+            XCTAssertFalse(
+                request.identifier.isEmpty,
+                "Every scheduled notification request must have a non-empty identifier")
+        }
+    }
 }
 
 // MARK: - Test Helper: FailOnceNotificationCenter

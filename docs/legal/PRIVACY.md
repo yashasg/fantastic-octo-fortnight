@@ -2,7 +2,7 @@
 
 **App:** kshana  
 **Last Updated:** April 26, 2026  
-**Publisher:** Yashasg
+**Publisher:** [PUBLISHER NAME]
 
 ---
 
@@ -11,6 +11,15 @@
 Your privacy matters. kshana is designed to be privacy-preserving: your app settings stay on your device, motion and Focus information are used only transiently for reminder pause logic, and the App does not use advertising, tracking, user accounts, or third-party analytics SDKs.
 
 The App does use Apple's built-in diagnostics and analytics tools, including MetricKit and App Store Connect analytics, to understand aggregate app performance, reliability, crashes, hangs, launch times, memory use, and similar technical metrics. These reports are processed through Apple's systems and are provided to the developer in aggregated or diagnostic form. They are not used to identify you, track you across apps or websites, build advertising profiles, or sell data.
+
+**Optional: Screen Time / Device Activity Monitoring (Conditional)**
+
+If you authorize kshana to monitor your device activity using Apple's FamilyControls framework, the following applies:
+- You grant kshana permission to read aggregate Screen Time data (total screen-on time and user-authorized selected apps/categories) for the sole purpose of detecting when you have reached your configured wellness break intervals
+- This data is used locally on your device to trigger wellness reminders and pause recommendations
+- Device activity data is **never stored persistently by kshana**, **never transmitted to any server**, and **never shared with third parties**
+- You may withdraw this authorization at any time through your device Settings
+- **Note:** As of April 2026, kshana's Screen Time integration capability is pending Apple approval (Apple case ID 102881605113) and may not be available in current versions. This Privacy Policy describes the intended behavior upon approval. Do not expect this feature to be active until explicitly released in app updates and confirmed in App Store release notes
 
 ---
 
@@ -27,6 +36,7 @@ The App also accesses the following device data **in memory only** — this data
 
 - **Motion activity data** — the App reads your device's motion activity state (via `CMMotionActivityManager`) to detect when you are driving, so that reminders are automatically paused. This data is read in memory for the sole purpose of pause logic and is discarded immediately; it is never written to disk, sent to any server, or associated with your identity.
 - **Focus mode status** — the App reads your device's Focus mode state (e.g., Do Not Disturb, Work, Personal) to pause reminders during active Focus sessions. This information is read in memory and is never stored or transmitted by the App.
+- **Device activity and screen time data (if authorized)** — If you authorize kshana to access Screen Time information via the FamilyControls framework, the App reads aggregate data about your total continuous screen-on time and any user-authorized app/category selections you have configured. This data is processed in memory to schedule and deliver wellness breaks at your configured intervals. This data is never stored persistently on disk by kshana, never transmitted to external servers, and never shared with third parties. **As of April 2026, Screen Time integration is pending Apple approval (case ID 102881605113) and is not yet available to users.**
 
 The App uses Apple's built-in diagnostics and analytics systems:
 
@@ -49,6 +59,7 @@ To be explicit about what does **not** happen:
 - **No custom analytics backend** — the App does not send custom analytics events to a developer-operated server or cloud service
 - **No sale of data** — we do not sell, rent, trade, or share your data with data brokers or advertising partners
 - **No tracking** — we do not track you across apps or websites, build advertising profiles, or use data for targeted advertising
+- **No app content monitoring** — If Screen Time integration is enabled in the future, kshana will not read message content, browser history, social media post content, or any sensitive app data. The App accesses only aggregate screen-time durations and your app/category selections
 
 ---
 
@@ -93,7 +104,7 @@ Apple may process App Store, diagnostics, crash, and performance information thr
 
 ## 7. Apple App Store
 
-The App is distributed through the Apple App Store. Apple may collect certain data as part of the download, installation, diagnostics, crash reporting, analytics, and App Store operation process, governed by [Apple's Privacy Policy](https://www.apple.com/legal/privacy/). Yashasg does not control Apple's data practices.
+The App is distributed through the Apple App Store. Apple may collect certain data as part of the download, installation, diagnostics, crash reporting, analytics, and App Store operation process, governed by [Apple's Privacy Policy](https://www.apple.com/legal/privacy/). [PUBLISHER NAME] does not control Apple's data practices.
 
 ---
 
@@ -101,7 +112,7 @@ The App is distributed through the Apple App Store. Apple may collect certain da
 
 kshana does not knowingly collect personal information from children under the age of 13 (or the applicable age of digital consent in your jurisdiction). The App does not require accounts, direct identifiers, advertising identifiers, or third-party tracking.
 
-If you are a parent or guardian and believe your child has somehow provided personal information through this App, please contact us at support@yashasg.dev. We will promptly address the concern.
+If you are a parent or guardian and believe your child has somehow provided personal information through this App, please contact us at [CONTACT EMAIL]. We will promptly address the concern.
 
 ---
 
@@ -117,7 +128,7 @@ The App does not transmit local preferences, motion activity data, or Focus stat
 
 We do not maintain user accounts or a user-level database about you. If you wish to delete App preferences stored on your device, deleting the App from your device will remove locally stored preferences.
 
-**GDPR (EU/EEA users):** Based on the App's minimal data practices, Yashasg does not maintain a user-level profile or account database for access, deletion, or portability requests. Apple-native diagnostics and App Store data are handled through Apple's systems and your Apple privacy settings.
+**GDPR (EU/EEA users):** Based on the App's minimal data practices, [PUBLISHER NAME] does not maintain a user-level profile or account database for access, deletion, or portability requests. Apple-native diagnostics and App Store data are handled through Apple's systems and your Apple privacy settings.
 
 **CCPA (California users):** We do not sell or share personal information for cross-context behavioral advertising. We do not use the App to track you across apps or websites.
 
@@ -125,7 +136,7 @@ We do not maintain user accounts or a user-level database about you. If you wish
 
 ## 11. Changes to This Privacy Policy
 
-Yashasg may update this Privacy Policy from time to time. When changes are made, the "Last Updated" date at the top will be revised. We encourage you to review this policy periodically. Continued use of the App after changes are posted constitutes your acceptance of the revised policy.
+[PUBLISHER NAME] may update this Privacy Policy from time to time. When changes are made, the "Last Updated" date at the top will be revised. We encourage you to review this policy periodically. Continued use of the App after changes are posted constitutes your acceptance of the revised policy.
 
 ---
 
@@ -133,8 +144,8 @@ Yashasg may update this Privacy Policy from time to time. When changes are made,
 
 If you have questions or concerns about this Privacy Policy, contact:
 
-**Yashasg**  
-**Email:** support@yashasg.dev
+**[PUBLISHER NAME]**  
+**Email:** [CONTACT EMAIL]
 
 ---
 

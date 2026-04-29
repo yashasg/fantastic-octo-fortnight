@@ -83,8 +83,12 @@ final class SettingsViewModel: ObservableObject {
 
     // MARK: - Preset Options
 
-    /// Available reminder interval options in seconds (10 / 20 / 30 / 45 / 60 minutes).
+    /// Available reminder interval options in seconds (1 / 10 / 20 / 30 / 45 / 60 minutes).
+    ///
+    /// The 1-minute option is intentionally placed first for testing purposes only —
+    /// it is not the default interval. Default interval is set in `SettingsStore`.
     static let intervalOptions: [TimeInterval] = [
+        1 * 60,
         10 * 60,
         20 * 60,
         30 * 60,

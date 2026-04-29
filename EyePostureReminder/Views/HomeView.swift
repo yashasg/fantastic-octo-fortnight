@@ -48,6 +48,7 @@ struct HomeView: View {
             Spacer()
         }
         .padding(.horizontal, AppSpacing.xl)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .navigationTitle(Text("home.navTitle", bundle: .module))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

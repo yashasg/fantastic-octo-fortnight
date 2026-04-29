@@ -115,7 +115,7 @@ final class SettingsViewModelExtendedTests: XCTestCase {
     // MARK: - Preset Options
 
     func test_intervalOptions_hasExpectedCount() {
-        XCTAssertEqual(SettingsViewModel.intervalOptions.count, 5)
+        XCTAssertEqual(SettingsViewModel.intervalOptions.count, 6)
     }
 
     func test_intervalOptions_allPositive() {
@@ -133,7 +133,7 @@ final class SettingsViewModelExtendedTests: XCTestCase {
     }
 
     func test_intervalOptions_containsExpectedValues() {
-        let expected: [TimeInterval] = [600, 1200, 1800, 2700, 3600]
+        let expected: [TimeInterval] = [60, 600, 1200, 1800, 2700, 3600]
         XCTAssertEqual(SettingsViewModel.intervalOptions, expected)
     }
 

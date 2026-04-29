@@ -899,6 +899,277 @@ struct ExampleView: View {
 
 ---
 
+## 5.5 True Interrupt Mode (Phase 3+) — FamilyControls & DeviceActivityMonitor Architecture
+
+**Status:** Future scope, pending FamilyControls entitlement approval (Apple case ID 102881605113).
+
+This section documents the intended architecture for system-level app interruption via Screen Time APIs. The design moves kshana from **foreground overlays** (Phase 1-2) to **system-enforced shields** (Phase 3+). Both modes can coexist during the transition.
+
+### 5.5.1 Overview: Two-Mode Interrupt Strategy
+
+| Interrupt Method | Trigger | Scope | Availability | Limitation |
+|---|---|---|---|---|
+| **Overlay (Phase 1-2)** | `ScreenTimeTracker` threshold in main app | Foreground app only | Always available | User can swipe/tap away immediately |
+| **Shield (Phase 3+)** | `DeviceActivityMonitor` extension threshold | System-wide, all apps | Requires FamilyControls entitlement + physical device | User cannot bypass UI (enforced by iOS) |
+
+**Phase 3 design:** Both modes active. Shield is the primary interrupt; overlay is the fallback for older OS versions or if Shield is snoozed/deferred.
+
+---
+
+### 5.5.2 Four-Target App Extension Architecture
+
+Phase 3 requires a new Xcode project (or XcodeGen `project.yml`) with **four targets**:
+
+| Target | Type | Bundle ID | Purpose |
+|---|---|---|---|
+| `EyePostureReminder` (main) | App | `com.yashasg.eyeposturereminder` | Core app: settings, onboarding, fallback overlay, local notification fallback |
+| `DeviceActivityMonitor` | App Extension (DeviceActivity) | `com.yashasg.eyeposturereminder.monitor` | Triggered by system when screen-time threshold reached; applies ManagedSettingsStore shields |
+| `ShieldConfiguration` | App Extension (ShieldConfiguration) | `com.yashasg.eyeposturereminder.shieldconfiguration` | Returns shield UI data (title, subtitle, icon, buttons) to system |
+| `ShieldAction` | App Extension (ShieldAction) | `com.yashasg.eyeposturereminder.shieldaction` | Handles button taps; can defer shield or route to main app via App Group state |
+
+All four targets must:
+- Be in the **same Xcode project**
+- Share **App Groups entitlement** (`com.apple.security.application-groups` with ID `group.com.yashasg.eyeposturereminder`)
+- Carry **FamilyControls entitlement** (`com.apple.developer.family-controls` with `individual` scope)
+
+---
+
+### 5.5.3 FamilyControls Authorization Flow
+
+**In the main app (`AppCoordinator.swift`):**
+
+```swift
+import FamilyControls
+import AuthenticationServices
+
+// On app launch or in onboarding:
+@MainActor
+func requestFamilyControlsAuthorization() async {
+    do {
+        // AuthorizationCenter.requestAuthorization() prompts user once
+        try await AuthorizationCenter.shared.requestAuthorization(for: .individual)
+        // If approved, user can now see/use shields
+        // Store a flag: epr.familyControlsAuthorized = true
+        self.settingsStore.familyControlsAuthorized = true
+    } catch {
+        // Denied or canceled — shield mode unavailable
+        // Fall back to Phase 2 overlay + notification mode
+        self.settingsStore.familyControlsAuthorized = false
+    }
+}
+```
+
+**One-time system prompt:** iOS shows a native prompt asking user to approve Screen Time management. If approved, `familyControlsAuthorized` persists; if denied, shield mode is disabled but Phase 2 overlays/notifications still work.
+
+---
+
+### 5.5.4 DeviceActivityMonitor Extension Flow
+
+**Extension entry point (`DeviceActivityMonitorExtension/DeviceActivityMonitor.swift`):**
+
+```swift
+class DeviceActivityMonitor: DeviceActivityScheduler {
+    override func intervalDidStart(for activity: DeviceActivityName) {
+        // Called by system when a scheduled interval begins (e.g., 20 min of Safari use)
+        
+        // Read App Group state to determine which apps to shield
+        let shared = UserDefaults(suiteName: "group.com.yashasg.eyeposturereminder")
+        let shieldedApps = shared?.array(forKey: "shieldedApps") as? [String] ?? []
+        
+        // Apply ManagedSettingsStore shields
+        let store = ManagedSettingsStore()
+        store.shield.applications = Set(shieldedApps)  // or .applicationCategories = .all()
+        
+        // Notify main app via App Group state
+        shared?.set(["shieldActive": true, "shieldStartTime": Date.now], forKey: "shieldState")
+    }
+    
+    override func intervalDidEnd(for activity: DeviceActivityName) {
+        // Called when interval ends; main app can resume
+        let shared = UserDefaults(suiteName: "group.com.yashasg.eyeposturereminder")
+        shared?.set(["shieldActive": false], forKey: "shieldState")
+    }
+}
+```
+
+**Key points:**
+- Extension runs in **separate process** (XPC sandbox) — no direct access to main app memory
+- Only communication channel: **App Groups shared container** (`UserDefaults(suiteName: "group.com.yashasg.eyeposturereminder")`)
+- Extension is **system-triggered** — not user-triggered, not controlled by main app
+
+---
+
+### 5.5.5 ShieldConfiguration Extension — Data-Only, No Animations
+
+**Critical limitation:** `ShieldConfiguration` is a **data structure**, not a SwiftUI canvas. It cannot host arbitrary views, animations, or custom layouts.
+
+**Supported customizations:**
+
+| Property | iOS Support | Type | Example |
+|---|---|---|---|
+| `title` | 16+ | `ShieldConfiguration.Label` | "kshana Break Time" |
+| `subtitle` | 16+ | `ShieldConfiguration.Label` | "Time for your eyes" |
+| `icon` | 16+ | `ShieldConfiguration.Icon` | Custom SF Symbol (iOS 17+) or system symbol |
+| `primaryButton` | 16+ | `ShieldConfiguration.ActionButton` | Text: "Continue", verdict: `.defer` or `.close` |
+| `secondaryButton` | 16+ | Optional | Text: "Skip", verdict: `.close` |
+| `backgroundColor` | 17+ only | `ShieldConfiguration.BackgroundStyle` | Solid color disables default blur |
+
+**Not supported:**
+- Animated views or transitions
+- Custom layouts / positioning
+- Font customization (system font only)
+- Button styling (Apple controls colors and shapes)
+- Custom SwiftUI views of any kind
+- Arbitrary images (SF Symbols only)
+
+**Consequence:** `YinYangEyeView` **cannot** appear in the shield. A static logo (custom SF Symbol on iOS 17+, system symbol fallback on iOS 16) is the only visual customization.
+
+**Implementation:**
+
+```swift
+class ShieldConfigurationDataSource: ShieldConfigurationDataSourceDelegate {
+    override func configuration(for activity: DeviceActivityName) -> ShieldConfiguration {
+        ShieldConfiguration(
+            title: ShieldConfiguration.Label(text: "kshana Break"),
+            subtitle: ShieldConfiguration.Label(text: "Time for your eye rest"),
+            icon: ShieldConfiguration.Icon(systemName: "eye.fill"),  // or custom symbol on iOS 17+
+            primaryButton: ShieldConfiguration.ActionButton(
+                label: ShieldConfiguration.Label(text: "Start Break"),
+                verdict: .defer  // keeps shield up; main app reads App Group flag
+            ),
+            secondaryButton: ShieldConfiguration.ActionButton(
+                label: ShieldConfiguration.Label(text: "Dismiss"),
+                verdict: .close  // removes shield immediately
+            )
+        )
+    }
+}
+```
+
+---
+
+### 5.5.6 ShieldAction Extension — Button Handling & App Group Communication
+
+**Extension entry point (`ShieldActionExtension/ShieldAction.swift`):**
+
+```swift
+class ShieldActionHandler: ShieldActionDelegate {
+    override func handle(
+        action: ShieldAction,
+        for activity: DeviceActivityName
+    ) -> ShieldActionResponse {
+        let verdict: ShieldActionResponse.Verdict
+        
+        if action.label == ShieldConfiguration.Label(text: "Start Break") {
+            // User tapped "Start Break" — defer (keep shield) + signal main app
+            let shared = UserDefaults(suiteName: "group.com.yashasg.eyeposturereminder")
+            shared?.set(Date.now, forKey: "breakStartedAt")
+            verdict = .defer
+        } else {
+            // User tapped "Dismiss" — close shield
+            verdict = .close
+        }
+        
+        return ShieldActionResponse(
+            action: action,
+            shouldDismiss: verdict == .close
+        )
+    }
+}
+```
+
+**Key constraints:**
+- ✅ Write to App Group shared container
+- ✅ Schedule local notifications (user taps notification → main app opens)
+- ❌ Cannot call `UIApplication.shared.open()` (sandboxed)
+- ❌ Cannot directly access main app code
+- ❌ Cannot read/write to main app UserDefaults (different sandbox)
+
+**Pattern for "open main app":**
+- Button tap → write to App Group + schedule local notification with deep link
+- Main app reads notification + App Group state, then navigates accordingly
+
+---
+
+### 5.5.7 Local Notification Fallback (Phase 2-3 Bridge)
+
+**Phase 2 behavior (current):** `ScreenTimeTracker` threshold → `AppCoordinator` → `UNUserNotificationCenter` → foreground notification banner + `OverlayManager` overlay.
+
+**Phase 3 behavior (with Shield):** Same, but only if:
+1. `familyControlsAuthorized == false` (user denied FamilyControls), OR
+2. Shield is snoozed/deferred, OR
+3. OS version < iOS 16
+
+**Both modes coexist:**
+- Shield appears first (iOS 16+, FamilyControls approved, device policy allows)
+- If user defers shield, main app detects this via App Group state
+- Main app then shows Phase 2 overlay + notification fallback
+- User can snooze via overlay or notification action
+
+This dual-mode design ensures:
+- Graceful degradation on older iOS
+- User choice (can disable shield in settings, fall back to overlay)
+- Device policy flexibility (MDM could disable shields; overlays still work)
+
+---
+
+### 5.5.8 OverlayManager Phase 2 → Phase 3 Transition
+
+**Phase 2 (current):** `OverlayManager` is the primary interrupt mechanism.
+
+**Phase 3+ (with Shield):**
+- Shield is the primary interrupt (system-enforced, user cannot swipe away)
+- Overlay becomes a **fallback for snooze/deferral**
+- `OverlayManager` still exists; same code, same behavior
+- `AppCoordinator` decides which path to use based on `familyControlsAuthorized` + Shield state
+
+**No code changes to OverlayManager itself** — the coordination logic moves to `AppCoordinator`.
+
+---
+
+### 5.5.9 FamilyControls Entitlement: Distribution Gating
+
+**Critical:** The `com.apple.developer.family-controls` entitlement is **restricted** and requires manual Apple approval.
+
+| Phase | Status | Distribution | Entitlement |
+|---|---|---|---|
+| **Phase 1-2** | Live | TestFlight/App Store | Not required |
+| **Phase 3** | Pending approval | Local dev only | Requires approval (case #102881605113 pending) |
+| **Phase 3+** | After approval | TestFlight/App Store | Granted, ready for distribution |
+
+**Timeline impact:**
+- Entitlement request filed: 2026-04-29
+- Typical SLA: 3–10 business days (no guarantee)
+- **Action:** Phase 3 code can be written and tested locally while approval is in progress. External distribution blocked until approved.
+
+**Provisioning profile requirement:**
+- All 4 targets need their own provisioning profiles (1 per bundle ID per signing mode)
+- `build_signed.sh` and CI/CD must include `provisioningProfiles` dictionary in `ExportOptions.plist`
+
+---
+
+### 5.5.10 App Group State Schema
+
+**Location:** `UserDefaults(suiteName: "group.com.yashasg.eyeposturereminder")`
+
+Used by main app ↔ extension communication:
+
+```
+shieldedApps: [String]              Apps to shield (e.g., ["com.apple.mobilesafari"])
+shieldedCategories: String?         Optional: "all" for all categories
+shieldActive: Bool                  Extension wrote this; main app reads to show fallback
+shieldStartTime: Double             Timestamp when shield was activated
+breakStartedAt: Double?             Button tap timestamp from ShieldAction
+preferredShieldInterrupt: String    "shield" or "overlay" (user preference)
+fallbackToNotification: Bool        Enable Phase 2 fallback (default true)
+```
+
+**Main app reads/writes:** Settings, reminder enable/disable, snoozed state
+**Extension only writes:** `shieldActive`, `shieldStartTime` (system-triggered)
+**Extension only reads:** `shieldedApps`, `shieldedCategories` (must be set by main app)
+
+---
+
 ## 8. Technical Milestones
 
 ### Phase 1: MVP (Week 1-2)
@@ -931,10 +1202,21 @@ struct ExampleView: View {
 
 ### Phase 3: Optional (Future)
 
+**True Interrupt Mode (System-Level Shields):**
+- FamilyControls authorization and AuthorizationCenter integration
+- DeviceActivityMonitor, ShieldConfiguration, ShieldAction extension targets
+- ManagedSettingsStore shield application/category blocking
+- App Groups shared state synchronization (main app ↔ extensions)
+- Local notification fallback for older OS / approval pending scenario
+- UI design for shield customization (limited to text/icon/buttons per §5.5.5)
+
+**Other Phase 3 features:**
 - iCloud sync via `NSUbiquitousKeyValueStore`
 - Home Screen widget showing "Next break in X min"
 - watchOS glance app
 - Analytics: breaks completed vs skipped
+
+**Phase 3 gate:** FamilyControls entitlement approval (Apple case ID 102881605113). See §5.5.9 for timeline and dependency.
 
 ---
 
@@ -1232,4 +1514,4 @@ Establish baselines on the CI runner (not local) to avoid machine-dependent drif
 | 2026-04-26 | Added Section 10: Testing Architecture | Rusty |
 | 2026-04-25 | Full codebase audit: updated module graph, all protocol definitions (ScreenTimeTracking, ReminderScheduling, PauseConditionProviding, MediaControlling, detector protocols), project structure (SPM, no Protocols/ folder, new services + views), §4.7 Screen-Time Trigger Model, §4.4 AppConfig.load() (removed DefaultsLoader), build commands (SPM), mock table, test file listing | Rusty |
 | 2026-04-25 | Fix docs drift (#93): added 3 undocumented services (AnalyticsLogger, MetricKitSubscriber, ServiceLifecycle) to module graph + project structure; corrected color token names in §4.4 to match Asset Catalog (ReminderBlue, ReminderGreen, WarningOrange, PermissionBanner, PermissionBannerText, WarningText) | Rusty |
-| 2026-04-27 | Added §4.8 YinYangEyeView architecture: custom Path drawing, two-phase animation state machine (spin→breathe), SVG-to-SwiftUI conversion, reduce-motion compliance. Updated module graph + project structure listing. Added custom Shape to Layer 4 design tokens. | Rusty |
+| 2026-04-28 | Added §5.5 True Interrupt Mode (Phase 3+) architecture: FamilyControls authorization flow, four-target app extension model (main + DeviceActivityMonitor + ShieldConfiguration + ShieldAction), ManagedSettingsStore shield blocking, App Group state schema, ShieldConfiguration data-only limitations (no animations/arbitrary views), local notification fallback pattern, distribution gating (Apple case ID 102881605113 pending). Updated Phase 3 milestones with explicit True Interrupt Mode scope. | Rusty |

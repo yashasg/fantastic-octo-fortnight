@@ -131,6 +131,7 @@ These data types are accessed transiently in memory and are never stored persist
 | App preferences / settings | `UserDefaults` | Stored locally in app sandbox. Never transmitted. |
 | Motion activity state | `CMMotionActivityManager` | Transient, in-memory only. Used to pause reminders while driving. Never stored or sent. |
 | Focus status | `INFocusStatusCenter` | Transient, in-memory only. Used to pause reminders during Focus modes. Never stored or sent. |
+| Screen Time / Device activity data (if authorized) | `FamilyControls` / `DeviceActivity` (pending approval) | Transient, aggregate only. User-authorized data read in memory for interval scheduling. Never stored persistently or transmitted. **Note: This feature is pending Apple approval (case ID 102881605113) and is not yet available to users.** |
 | Diagnostic logs | `os.Logger` | On-device only in release builds. Sensitive values redacted with `.private`. |
 
 ---
@@ -180,6 +181,30 @@ See Frank's full checklist in `.squad/decisions/inbox/frank-analytics-privacy-up
 
 ---
 
+## If Screen Time / Device Activity Features Are Added (Pending Approval)
+
+When kshana's Screen Time integration feature is approved and released (currently under Apple review, case ID 102881605113), the following privacy label updates will be required:
+
+### New Data Categories to Disclose
+
+| Category | Answer | Reasoning |
+|---|---|---|
+| **Device Status** (Screen Time / Device Activity) | Collected | Aggregate screen-on time and user-authorized app/category selections are read via `FamilyControls` framework to schedule breaks. See details below. |
+
+### Device Status — Detailed Disclosure
+
+| Field | Answer |
+|---|---|
+| **Collected?** | Yes |
+| **Data type** | Device Status |
+| **Linked to user?** | No — Not Linked to User |
+| **Used for tracking?** | No — Not Used for Tracking |
+| **Purpose** | App Functionality |
+
+**Rationale:** Screen Time integration reads aggregate screen-on time and user-authorized app/category data **in memory only** for the purpose of triggering wellness reminders at user-configured intervals. This data is never stored persistently by kshana, never transmitted to external servers, and never used for tracking or user identification. Purpose is App Functionality because the data is used to schedule reminder delivery.
+
+---
+
 ## Summary Table
 
 | Data Type | Collected? | Linked? | Tracking? | Purpose |
@@ -187,6 +212,9 @@ See Frank's full checklist in `.squad/decisions/inbox/frank-analytics-privacy-up
 | UserDefaults / settings | ❌ Not Collected | — | — | — |
 | Motion activity | ❌ Not Collected | — | — | — |
 | Focus status | ❌ Not Collected | — | — | — |
+| Screen Time (if approved*) | ❌ Not Collected | — | — | — |
 | os.Logger logs | ❌ Not Collected | — | — | — |
 | MetricKit crash data | ✅ Collected | Not Linked | Not Tracking | App Functionality |
 | MetricKit performance data | ✅ Collected | Not Linked | Not Tracking | Analytics |
+
+*Screen Time data (aggregate screen-on time and user-authorized app selections via FamilyControls) is accessed transiently in memory only for interval scheduling and is never stored persistently or transmitted. It qualifies as "Not Collected" under Apple's App Privacy guidelines. However, when the feature is approved and released, it will need to be disclosed in the "Device Status" category as "Collected" with "Not Linked to User" and "Not Used for Tracking." This document will be updated at that time.

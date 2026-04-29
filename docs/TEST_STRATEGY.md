@@ -248,6 +248,131 @@ final class MockUserDefaults: SettingsPersisting {
 
 ---
 
+### 3.5 Phase 3+ App Extension Mocks & App Group Testing
+
+**Context:** Phase 3 introduces three app extension targets (DeviceActivityMonitor, ShieldConfiguration, ShieldAction) that communicate via App Groups shared state. Extension tests are **unit tests only** — full integration with the system DeviceActivity framework requires a physical device.
+
+#### 3.5.1 `MockManagedSettingsStore` — mocking `ManagedSettingsStore`
+
+Phase 3 extensions interact with `ManagedSettingsStore` to apply shields. Tests cannot use the real implementation (not available in unit test host). Mock tracks shield application calls:
+
+```swift
+final class MockManagedSettingsStore {
+    private(set) var shieldedApplications: Set<String> = []
+    private(set) var shieldedCategories: Set<DeviceActivityCategory>? = nil
+    private(set) var applyShieldCallCount = 0
+    
+    func applyShield(applications: Set<String>) {
+        shieldedApplications = applications
+        applyShieldCallCount += 1
+    }
+    
+    func applyShield(categories: Set<DeviceActivityCategory>?) {
+        shieldedCategories = categories
+        applyShieldCallCount += 1
+    }
+    
+    func reset() {
+        shieldedApplications = []
+        shieldedCategories = nil
+        applyShieldCallCount = 0
+    }
+}
+```
+
+**Tests that use this mock:** Extension target tests (`DeviceActivityMonitorTests`)
+
+#### 3.5.2 `MockAppGroupUserDefaults` — mocking App Group Shared State
+
+Extensions communicate with the main app via `UserDefaults(suiteName: "group.com.yashasg.eyeposturereminder")`. This mock provides isolated, testable access:
+
+```swift
+final class MockAppGroupUserDefaults {
+    private var storage: [String: Any] = [:]
+    
+    func set(_ value: Any?, forKey key: String) {
+        storage[key] = value
+    }
+    
+    func value(forKey key: String) -> Any? {
+        storage[key]
+    }
+    
+    func array(forKey key: String) -> [Any]? {
+        storage[key] as? [Any]
+    }
+    
+    func dictionary(forKey key: String) -> [String: Any]? {
+        storage[key] as? [String: Any]
+    }
+    
+    func reset() {
+        storage = [:]
+    }
+    
+    func dumpState() -> [String: Any] {
+        storage
+    }
+}
+```
+
+**Key invariant:** One mock instance per test. No cross-test pollution.
+
+**Tests that use this mock:** All three extension targets' tests (tests verify main app ↔ extension communication via App Group state)
+
+#### 3.5.3 `MockAuthorizationCenter` — mocking FamilyControls Authorization
+
+Phase 3 main app requests `FamilyControls` authorization via `AuthorizationCenter.shared`. Tests mock this to avoid prompting during test runs:
+
+```swift
+final class MockAuthorizationCenter {
+    var authorizationStatus: AuthorizationStatus = .notDetermined
+    var requestAuthorizationError: Error? = nil
+    private(set) var requestAuthorizationCalled = false
+    
+    func requestAuthorization(for scope: AuthorizationScope) async throws {
+        requestAuthorizationCalled = true
+        if let error = requestAuthorizationError {
+            throw error
+        }
+        authorizationStatus = .approved
+    }
+    
+    func reset() {
+        authorizationStatus = .notDetermined
+        requestAuthorizationError = nil
+        requestAuthorizationCalled = false
+    }
+}
+```
+
+**Tests that use this mock:** `AppCoordinatorTests` (Phase 3 branch), main app authorization flow tests
+
+#### 3.5.4 Phase 3+ Extension Test Targets
+
+New unit test targets required for Phase 3+ (added after entitlement approval):
+
+```
+Tests/
+├── DeviceActivityMonitorTests/          (new, Phase 3+)
+│   ├── Mocks/
+│   │   ├── MockManagedSettingsStore.swift
+│   │   └── MockAppGroupUserDefaults.swift
+│   ├── DeviceActivityMonitorTests.swift
+│   └── Fixtures/
+│       └── testDeviceActivityConfig.json
+├── ShieldConfigurationTests/            (new, Phase 3+)
+│   ├── Mocks/
+│   │   └── MockAppGroupUserDefaults.swift
+│   └── ShieldConfigurationExtensionTests.swift
+└── ShieldActionTests/                   (new, Phase 3+)
+    ├── Mocks/
+    │   └── MockAppGroupUserDefaults.swift
+    └── ShieldActionExtensionTests.swift
+```
+
+---
+
 ## 4. Critical Test Scenarios — Phase 1
 
 ### 4.1 Settings Persistence (`SettingsStoreTests`)
@@ -350,6 +475,37 @@ final class MockUserDefaults: SettingsPersisting {
 | EC-06 | `testMinimumInterval_10min` | Unit | Set interval to minimum (10 min) | Trigger = 600s, no underflow |
 | EC-07 | `testMaximumInterval_60min` | Unit | Set interval to maximum (60 min) | Trigger = 3600s, no overflow |
 | EC-08 | `testBreakDuration_zero_autoDismissImmediate` | Unit | Break duration = 0s | Overlay calls dismiss immediately |
+
+---
+
+### 4.7 Phase 3+ Extension Testing (Device-Only, Manual)
+
+**Prerequisites:**
+- FamilyControls entitlement approved by Apple (case #102881605113)
+- Physical iOS 16+ device (simulator does not support Screen Time APIs)
+- All four extension targets compiled and signed
+- Provisioning profiles installed on device
+
+**Manual test matrix** (no automated test host support for these):
+
+| # | Test Name | Type | Scenario | Expected Result |
+|---|-----------|------|----------|-----------------|
+| EXT-01 | DeviceActivityMonitor triggered | Manual device | Set 1-min threshold, use Safari 1+ min | Shield appears over Safari (system-enforced) |
+| EXT-02 | ShieldConfiguration text rendering | Manual device | Shield appears with title/subtitle/icon | Text visible, icon renders (custom SF Symbol iOS 17+, system fallback iOS 16) |
+| EXT-03 | Shield primary button defers | Manual device | Tap "Start Break" button on shield | Shield stays visible; App Group flag written |
+| EXT-04 | Shield secondary button closes | Manual device | Tap "Dismiss" button on shield | Shield disappears immediately |
+| EXT-05 | App Group state sync | Unit* | DeviceActivityMonitor writes state | Main app can read via `UserDefaults(suiteName:)` in unit test with mock shared container |
+| EXT-06 | Fallback overlay after shield defer | Manual device | Shield deferred; time passes | Main app detects and shows Phase 2 overlay/notification after delay |
+| EXT-07 | Authorization denied — no shield | Manual device | Deny FamilyControls auth; trigger monitor | Shield does not appear; Phase 2 overlay activates instead |
+| EXT-08 | Lock screen notification fallback | Manual device | Shield deferred; app backgrounded | Local notification appears on lock screen |
+| EXT-09 | Multiple thresholds per day | Manual device | 1-min threshold, let expire, reset | Monitor fires again; shield appears again (cycle repeats) |
+| EXT-10 | Snooze from notification action | Manual device | Tap "Snooze 5min" action on notification | App Group state updated; next threshold delayed |
+
+**Regression on entitlement approval:**
+- After FamilyControls approval, re-run EXT-01 through EXT-04 on each new iOS version (16, 17, 18+)
+- On each App Store submission build, run full device matrix on lead developer's device
+
+**Coverage note:** Extension target unit tests (mocked App Group state, mocked ManagedSettingsStore) should aim for 80%+ coverage of non-system-API logic. System-level behavior (DeviceActivity scheduling precision, actual shield rendering) cannot be unit tested and must be manual.
 
 ---
 
@@ -529,6 +685,18 @@ Re-run the **full manual test checklist** whenever any of these files change:
 | `OverlayView.swift` | VoiceOver checklist §6.1, Reduce Motion §6.3 |
 | `AppDelegate.swift` | LC-03–LC-05, PF-05–PF-07 |
 
+**Phase 3+ (after FamilyControls approval):**
+
+| Changed File | Re-test Focus |
+|---|---|
+| `DeviceActivityMonitorExtension/` | EXT-01, EXT-02, EXT-05, manual device tests |
+| `ShieldConfigurationExtension/` | EXT-02, EXT-03, manual visual inspection |
+| `ShieldActionExtension/` | EXT-03, EXT-04, EXT-10, App Group state sync |
+| `AppCoordinator.swift` (Phase 3 branch) | EXT-06, EXT-07 (shield → fallback overlay flow) |
+| `SettingsStore.swift` (Phase 3 branch) | Phase 2 tests + EXT-05 (App Group state isolation) |
+
+**Critical:** Always test Phase 3 changes on a **physical device**. DeviceActivity, ManagedSettings, and FamilyControls APIs are not available in simulator.
+
 ---
 
 ## 9. Test File Map
@@ -552,6 +720,15 @@ EyePostureReminderUITests/
 ├── SettingsFlowTests.swift               (§4.1 save/load via UI)
 └── OverlayDismissalTests.swift           (§4.3 dismiss button, swipe)
 ```
+
+---
+
+## Changelog
+
+| Date | Change | Author |
+|------|--------|--------|
+| 2026-04-24 | Initial test strategy for Phase 1 | Livingston |
+| 2026-04-28 | Added §3.5 Phase 3+ Extension Mocks (MockManagedSettingsStore, MockAppGroupUserDefaults, MockAuthorizationCenter) with extension target test structure. Added §4.7 Phase 3+ Extension Testing (manual device-only tests EXT-01 through EXT-10, prerequisites, regression matrix). Updated §8 Regression Strategy with Phase 3+ file change triggers and device-only testing requirement. Emphasized FamilyControls entitlement dependency and simulator limitations. | Rusty |
 
 ---
 

@@ -1,25 +1,26 @@
 # kshana — iOS App Implementation Plan
 
-> **Scope:** Implementation plan only. No source code is included in this document.
+> **Scope:** Implementation plan covering Phase 1–2 (delivered) and Phase 3 (Screen Time APIs pivot).
+> **Important:** Phase 3 pivots core product from local notification reminders to **True Interrupt Mode via Apple Screen Time APIs** (FamilyControls + DeviceActivity + ManagedSettings). Local notifications become fallback only, not the primary product promise.
 
 ---
 
 ## 1. Overview
 
-A lightweight, battery-friendly iOS application that tracks foreground screen-on time via `ScreenTimeTracker` and presents full-screen overlay reminders to:
+**Phase 1–2 (Current):** A lightweight, battery-friendly iOS application that tracks foreground screen-on time via `ScreenTimeTracker` and presents full-screen overlay reminders to:
 
 - **Rest your eyes** (e.g., the 20-20-20 rule – every 20 min, look 20 ft away for 20 s).
 - **Fix your posture** (e.g., every 30 min, sit up straight for 10 s).
 
-Users can customise:
-- How often each reminder fires (the *reminder interval*).
-- How long the break overlay stays on screen (the *break duration*).
+Users can customise reminder intervals and break durations. The overlay is dismissible. The app uses native iOS notification APIs for snooze wake-ups.
 
-The overlay is dismissible at any time. The app minimises CPU, memory, and battery usage by tracking continuous screen-on time in the foreground and using native iOS notification APIs only for snooze wake-ups.
+**Phase 3 (New – Screen Time APIs Pivot):** The app will integrate Apple FamilyControls and DeviceActivity APIs to provide **true interruption**: when a break reminder fires, kshana shields configured distracting apps (via ManagedSettings), enforcing the break. Users cannot dismiss the shield immediately. Local notifications become a graceful fallback if Screen Time APIs are unavailable or the user hasn't authorized FamilyControls.
 
 ---
 
 ## 2. Target Platform & Frameworks
+
+### Phase 1–2 (Current)
 
 | Concern | Framework / API |
 |---|---|
@@ -28,14 +29,26 @@ The overlay is dismissible at any time. The app minimises CPU, memory, and batte
 | Overlay window | **UIKit** – secondary `UIWindow` at `.alert` window level |
 | Persistent settings | **UserDefaults** (lightweight key-value store) |
 | App lifecycle | **UIApplicationDelegate** / `SceneDelegate` |
-| Haptics (optional) | **CoreHaptics** / `UINotificationFeedbackGenerator` |
+| Haptics | **CoreHaptics** / `UINotificationFeedbackGenerator` |
 | Accessibility | **UIAccessibility** APIs |
+
+### Phase 3 (New – Screen Time APIs)
+
+| Concern | Framework / API |
+|---|---|
+| Family Controls | **ScreenTime** framework (`FamilyControls` authorization API) |
+| Device Activity Monitoring | **ScreenTime.DeviceActivity** |
+| App Shielding | **ScreenTime.ManagedSettings** |
+| Shield Configuration | **ScreenTime.ManagedSettingsUI** (`ShieldConfigurationProvider` protocol) |
+| Shield Actions | **ScreenTime.ManagedSettingsUI** (`ShieldActionProvider` protocol) |
+| Inter-Process Communication | **App Groups** (`UserDefaults` via `Suite.appGroupIdentifier`) |
+| Extension Targets | **Xcode extension targets** (ShieldConfiguration + ShieldAction) |
 
 No third-party dependencies are required.
 
 ---
 
-## 3. Architecture
+## 3. Architecture (Phase 1–2)
 
 The app follows a simple **MVVM** structure with a single shared service layer.
 
@@ -59,13 +72,44 @@ EyePostureApp
     └── OverlayView.swift           – full-screen dismissible break screen
 ```
 
+### Phase 3 (New – Architecture Evolution)
+
+Phase 3 adds extension targets and Screen Time services:
+
+```
+kshana (Main App)
+├── (existing Phase 1–2 structure above)
+├── Services (new)
+│   ├── ManagedSettingsCoordinator    – configures shields via ManagedSettings.store
+│   ├── DeviceActivityMonitor         – observes screen time via DeviceActivity
+│   └── AppGroupBridge                – inter-process communication (main ↔ extensions)
+├── Models (new)
+│   ├── ShieldedAppCategory.swift     – user-selected apps/categories to shield
+│   └── BreakSchedule.swift           – device activity schedule tied to reminder intervals
+└── Views (new)
+    └── AppCategoryPickerView.swift   – UI for selecting apps/categories to shield
+
+ShieldConfiguration Extension (NEW)
+├── ShieldConfigurationProvider.swift  – implements ShieldConfiguration protocol
+└── (Shield UI: logo, messaging, customization)
+
+ShieldAction Extension (NEW – optional Phase 3)
+├── ShieldActionProvider.swift         – implements ShieldAction protocol
+└── (Request Access button: "I need 5 min", with confirmation)
+
+Shared App Group (group.com.kshana.screentime)
+├── UserDefaults (Suite: appGroupIdentifier)
+│   ├── shieldedAppIds: [String]       – which apps to shield during breaks
+│   ├── lastShieldTime: Date           – audit trail
+│   └── breakSchedule: DeviceActivity  – shared config
+└── Logs (audit/compliance tracking)
+```
+
 ---
 
 ## 4. Core Feature Design
 
-### 4.1 Reminder Scheduling Strategy
-
-> **Current state (as of Phase 2 / Loop fixes):** The original wall-clock timer approach described below was shipped in Phase 1. In Phase 2 it was superseded by `ScreenTimeTracker`, which gates reminders on *actual screen-on time* rather than elapsed wall time. The scheduling infrastructure (`UNUserNotificationCenter`, `ReminderScheduler`) remains unchanged — only the trigger condition evolved.
+### 4.1 Reminder Scheduling Strategy (Phase 1–2)
 
 **Why `UserNotifications` instead of a background timer?**
 
@@ -111,7 +155,82 @@ immediately                     (user taps → app opens
                                     calls OverlayManager)
 ```
 
-### 4.2 Overlay Window
+### 4.2 Screen Time APIs & True Interruption (Phase 3 – New)
+
+**Why Screen Time APIs?**
+
+iOS disallows most app-initiated interruptions (notifications, overlays) that prevent user access. However, Apple allows *designated* interruptions via the ScreenTime framework:
+- **DeviceActivity:** Monitor when apps launch, measure screen time per category
+- **ManagedSettings:** Shield (block) apps/categories from user access
+- **ShieldConfiguration:** Customize shield UI (logo, messaging, explanations)
+- **ShieldAction:** Allow users to request temporary access via a button (user sees "I need 5 min" option)
+
+This is the **True Interrupt Mode** — the user cannot dismiss a shield without granting themselves access (which is logged and can be audited by parental controls).
+
+**Data Flow (Phase 3):**
+
+```
+Reminder trigger (ScreenTimeTracker threshold reached)
+        │
+        ▼
+ReminderScheduler.scheduleNext() 
+  (notification queued as fallback)
+        │
+        ▼
+AppCoordinator.handleBreakNeeded()
+        │
+        ▼
+ManagedSettingsCoordinator.shieldAppsForBreak()
+  – reads ShieldedAppCategory (user-selected apps from AppCategoryPickerView)
+  – configures DeviceActivity schedule
+        │
+        ▼
+ManagedSettings.store.shield(applications: [...])
+        │
+        ▼
+Extension Process (ShieldConfiguration target)
+  – System invokes ShieldConfigurationProvider
+  – Shield UI renders (custom branding: kshana logo, "Time for a break")
+  – User cannot bypass shield immediately (design enforces break)
+        │
+  ┌─────┴──────────────────────────────────┐
+  │ Break duration elapses                  │ User requests access
+  │                                          │ (ShieldAction button)
+  ▼                                          ▼
+ManagedSettingsCoordinator.clearShields()   ShieldActionProvider
+  – ManagedSettings.store.clear()           – Logs access request
+  – Notification cancelled (fallback)        – Requires confirmation
+                                              – Sets 5-min grace period
+                                              ↓
+                                            Device resumes app access
+```
+
+**Key Differences from Phase 1–2:**
+
+| Aspect | Phase 1–2 (Notifications) | Phase 3 (Screen Time APIs) |
+|---|---|---|
+| **Interruption Type** | Dismissible notification banner + overlay | Non-dismissible shield (user must grant self access via button) |
+| **Enforcement** | User can ignore/dismiss | User must take explicit action to resume (audit trail created) |
+| **Fallback** | N/A (notifications are primary) | Notifications used if shield fails or FamilyControls unavailable |
+| **Authorization** | UNNotificationCenter (standard notifications) | FamilyControls (requires user authorization once) |
+| **Extension** | None needed | ShieldConfiguration + ShieldAction extension targets |
+| **Data Model** | ReminderSettings (interval + duration) | + ShieldedAppCategory (user-selected apps/categories) |
+| **Configuration** | SettingsView (pickers) | + AppCategoryPickerView (app/category browser) |
+
+**Phase 3 Acceptance Criteria:**
+
+- User authorizes FamilyControls on first launch (or pre-permission screen)
+- User selects apps/categories to shield during breaks (AppCategoryPickerView)
+- When reminder fires, selected apps are shielded (non-dismissible)
+- Shield UI displays custom kshana branding and messaging
+- User can request access via ShieldAction button (logged)
+- Shield clears automatically after break duration or on user request completion
+- Notifications sent as fallback if shield unavailable
+- Privacy policy updated (explain FamilyControls data is local-only, not cloud-synced)
+
+```
+
+### 4.3 Overlay Window (Phase 1–2)
 
 - A second `UIWindow` is created at `UIWindow.Level.alert + 1`, placed above all other content including the keyboard and system chrome.
 - The root view controller hosts `OverlayView` (SwiftUI via `UIHostingController`).
@@ -119,7 +238,7 @@ immediately                     (user taps → app opens
 - The window is torn down after dismissal or after the configured *break duration* elapses (whichever comes first), using a simple `DispatchQueue.main.asyncAfter` for the auto-dismiss timer – this is intentionally short-lived and only runs while the app is active.
 - The overlay is **not** shown if the device is locked (the notification appears on the lock screen instead; the user will see the overlay once they unlock and open the app).
 
-### 4.3 Settings Persistence
+### 4.4 Settings Persistence (Phase 1–2)
 
 `SettingsStore` wraps `UserDefaults` with typed properties:
 

@@ -74,7 +74,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Notifications wake reminders back up when a snooze ends — so your next break arrives right on time."
+            "value": "Your reminders arrive as alerts — even while you're in another app."
           }
         }
       }
@@ -85,7 +85,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "No spam. Just the breaks you asked for, when you need them."
+            "value": "Tap any alert to open your full-screen break in kshana."
           }
         }
       }
@@ -96,7 +96,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Enable Notifications"
+            "value": "Allow Reminder Alerts"
           }
         }
       }
@@ -107,7 +107,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Opens system notification permission prompt"
+            "value": "Allows kshana to send reminder alerts while you use other apps"
           }
         }
       }
@@ -140,7 +140,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Example notification: Eye Break — Time to rest your eyes."
+            "value": "Example reminder: Eye Break — Time to rest your eyes."
           }
         }
       }
@@ -184,7 +184,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Skip for now, you can enable notifications later in Settings"
+            "value": "Skip for now, you can enable reminders later in Settings"
           }
         }
       }
@@ -206,7 +206,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "You'll get a gentle reminder to look away and sit up straight — no effort required from you."
+            "value": "You'll get gentle reminders to look away and sit up straight."
           }
         }
       }
@@ -222,46 +222,13 @@
         }
       }
     },
-    "onboarding.setup.customizeButton": {
+    "onboarding.setup.changeInSettings": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Customize Settings"
-          }
-        }
-      }
-    },
-    "onboarding.setup.customizeButton.hint": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Go to Settings to customize your reminder intervals"
-          }
-        }
-      }
-    },
-    "onboarding.setup.eyeBreaks.duration": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "20 seconds"
-          }
-        }
-      }
-    },
-    "onboarding.setup.eyeBreaks.interval": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "20 min"
+            "value": "You can always change these in Settings."
           }
         }
       }
@@ -299,28 +266,6 @@
         }
       }
     },
-    "onboarding.setup.postureChecks.duration": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "10 seconds"
-          }
-        }
-      }
-    },
-    "onboarding.setup.postureChecks.interval": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "30 min"
-          }
-        }
-      }
-    },
     "onboarding.setup.postureChecks.title": {
       "extractionState": "manual",
       "localizations": {
@@ -332,13 +277,35 @@
         }
       }
     },
+    "onboarding.setup.picker.breakFor": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Break for"
+          }
+        }
+      }
+    },
+    "onboarding.setup.picker.every": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remind me every"
+          }
+        }
+      }
+    },
     "onboarding.setup.subtitle": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Here's how we've set things up for you:"
+            "value": "Pick what works for you."
           }
         }
       }
@@ -349,7 +316,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "You're all set."
+            "value": "Set up your break reminders."
           }
         }
       }
@@ -360,7 +327,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Takes less than a minute to set up. Works quietly in the background — you'll barely know it's there."
+            "value": "Quick to set up. Runs quietly — you'll barely notice it."
           }
         }
       }
@@ -482,7 +449,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ends the break early and returns to the app"
+            "value": "Skips this break and goes back to the app"
           }
         }
       }
@@ -669,7 +636,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Reminders only appear while this app is open."
+            "value": "Reminders only work while the app is open."
           }
         }
       }
@@ -702,7 +669,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Enable notifications in Settings so reminders resume after snoozing, even when the app is in the background."
+            "value": "Turn on reminders in Settings so your breaks stay on schedule."
           }
         }
       }
@@ -713,7 +680,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Notifications disabled. Enable them in Settings so reminders resume after snoozing, even when the app is in the background."
+            "value": "Reminders are off. Turn them on in Settings so your breaks stay on schedule."
           }
         }
       }
@@ -724,7 +691,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Notifications Disabled"
+            "value": "Reminders Disabled"
           }
         }
       }
@@ -834,7 +801,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Timer resets when you lock your phone."
+            "value": "The timer resets when you lock your phone."
           }
         }
       }
@@ -1054,7 +1021,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Snooze limit reached. Wait for the next reminder before snoozing again."
+            "value": "Snooze limit reached. You can snooze again after your next reminder."
           }
         }
       }
@@ -1120,7 +1087,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Reminders resume automatically when conditions clear."
+            "value": "Reminders resume when conditions end."
           }
         }
       }
@@ -1461,7 +1428,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "This will restore all settings to their original values. Your snooze history will also be cleared."
+            "value": "This resets all settings to their defaults and clears your snooze history."
           }
         }
       }
@@ -1494,7 +1461,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Opens a confirmation before resetting all settings to factory defaults"
+            "value": "Confirms before resetting all settings to defaults"
           }
         }
       }
