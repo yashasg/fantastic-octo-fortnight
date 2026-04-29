@@ -39,7 +39,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
 
       - name: Select Xcode ${{ env.XCODE_VERSION }}
         run: sudo xcode-select -switch /Applications/Xcode_${{ env.XCODE_VERSION }}.app/Contents/Developer
@@ -83,12 +83,24 @@ jobs:
 
       # ── Dependency cache ─────────────────────────────────────────────────────
       - name: Cache DerivedData
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v4.3.0
         with:
           path: ${{ env.DERIVED_DATA_PATH }}
           key: derived-data-${{ runner.os }}-${{ hashFiles('Package.swift', 'Package.resolved') }}
           restore-keys: |
             derived-data-${{ runner.os }}-
+
+      # ── Homebrew package cache ───────────────────────────────────────────────
+      - name: Cache Homebrew packages
+        id: brew-cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v4.3.0
+        with:
+          path: |
+            /opt/homebrew/Cellar/xcodegen
+            /opt/homebrew/Cellar/swiftlint
+          key: ${{ runner.os }}-brew-xcodegen-swiftlint-v1
+          restore-keys: |
+            ${{ runner.os }}-brew-xcodegen-swiftlint-
 
       # ── Build ────────────────────────────────────────────────────────────────
       - name: Build (simulator, no signing)
@@ -98,7 +110,12 @@ jobs:
       # Compile-only validation. Runtime FamilyControls/DeviceActivity behavior
       # still requires #201 entitlement approval and physical-device testing.
       - name: Install XcodeGen
-        run: brew install xcodegen
+        run: |
+          if brew list xcodegen &>/dev/null 2>&1; then
+            brew link --overwrite xcodegen 2>/dev/null || true
+          else
+            brew install xcodegen
+          fi
 
       - name: Build Screen Time extensions (simulator, no signing)
         run: ./scripts/setup-screentime.sh --build
@@ -109,7 +126,12 @@ jobs:
 
       # ── Lint ─────────────────────────────────────────────────────────────────
       - name: Install SwiftLint
-        run: brew install swiftlint
+        run: |
+          if brew list swiftlint &>/dev/null 2>&1; then
+            brew link --overwrite swiftlint 2>/dev/null || true
+          else
+            brew install swiftlint
+          fi
 
       - name: Lint (SwiftLint)
         run: ./scripts/build.sh lint
@@ -138,7 +160,7 @@ jobs:
           find "${{ env.DERIVED_DATA_PATH }}" -name "*.dSYM" -exec cp -r {} . \; 2>/dev/null || true
 
       - name: Upload dSYMs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
         if: always()
         with:
           name: dSYMs-${{ env.MARKETING_VERSION }}-build${{ github.run_number }}
@@ -147,7 +169,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Upload test results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
         if: always()
         with:
           name: test-results-${{ env.MARKETING_VERSION }}-build${{ github.run_number }}
@@ -157,11 +179,12 @@ jobs:
   uitest:
     name: UI Tests
     runs-on: macos-15
+    needs: build-and-test
     timeout-minutes: 45
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
 
       - name: Select Xcode ${{ env.XCODE_VERSION }}
         run: sudo xcode-select -switch /Applications/Xcode_${{ env.XCODE_VERSION }}.app/Contents/Developer
@@ -175,8 +198,23 @@ jobs:
           echo "Available iOS simulators:"
           xcrun simctl list devices available | grep -i iphone | head -5
 
+      # ── Homebrew package cache ───────────────────────────────────────────────
+      - name: Cache Homebrew packages
+        id: brew-cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v4.3.0
+        with:
+          path: /opt/homebrew/Cellar/xcodegen
+          key: ${{ runner.os }}-brew-xcodegen-v1
+          restore-keys: |
+            ${{ runner.os }}-brew-xcodegen-
+
       - name: Install XcodeGen
-        run: brew install xcodegen
+        run: |
+          if brew list xcodegen &>/dev/null 2>&1; then
+            brew link --overwrite xcodegen 2>/dev/null || true
+          else
+            brew install xcodegen
+          fi
 
       - name: Generate UITest xcodeproj
         run: ./scripts/setup-uitests.sh
@@ -205,7 +243,7 @@ jobs:
         run: ./scripts/build.sh uitest
 
       - name: Upload UI test results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
         if: always()
         with:
           name: ui-test-results-build${{ github.run_number }}
