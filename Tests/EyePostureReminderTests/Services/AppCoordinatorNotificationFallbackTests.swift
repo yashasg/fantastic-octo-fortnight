@@ -142,6 +142,23 @@ final class AppCoordinatorNotificationFallbackTests: XCTestCase {
             [["com.yashasg.eyeposturereminder.eyes"]]
         )
     }
+
+    func test_deviceActivityScheduleFailure_whenOverlayVisible_suppressesDuplicateFallback() async throws {
+        struct ScheduleFailure: Error {}
+        deviceActivityMonitor.stubbedIsAvailable = true
+        deviceActivityMonitor.stubbedScheduleError = ScheduleFailure()
+        ipcStore.trueInterruptEnabled = true
+        await coordinator.refreshAuthStatus()
+
+        tracker.simulateThresholdReached(for: .eyes)
+        try await Task.sleep(nanoseconds: 100_000_000)
+
+        XCTAssertTrue(notificationCenter.addedRequests.isEmpty)
+        let event = try XCTUnwrap(ipcStore.events.first { $0.kind == .notificationFallbackSuppressed })
+        XCTAssertEqual(event.reasonRaw, ReminderType.eyes.shieldReason.rawValue)
+        XCTAssertEqual(event.detail, "device_activity_schedule_failed_overlay_visible")
+        XCTAssertFalse(ipcStore.recordedKinds.contains(.notificationFallbackScheduled))
+    }
 }
 
 private extension MockAppGroupIPCRecorder {
