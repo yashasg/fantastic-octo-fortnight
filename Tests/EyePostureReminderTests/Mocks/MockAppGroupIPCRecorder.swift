@@ -7,6 +7,7 @@ final class MockAppGroupIPCRecorder: AppGroupIPCProviding {
     var recordError: Error?
     var readEventsError: Error?
     var readShieldSessionError: Error?
+    var readSelectionError: Error?
     var trueInterruptEnabled = false
     var selectionSnapshot = AppGroupSelectionSnapshot.empty
     var shieldSessionSnapshot = ShieldSessionSnapshot.empty
@@ -28,7 +29,8 @@ final class MockAppGroupIPCRecorder: AppGroupIPCProviding {
     }
 
     func readSelection() throws -> AppGroupSelectionSnapshot {
-        selectionSnapshot
+        if let readSelectionError { throw readSelectionError }
+        return selectionSnapshot
     }
 
     func readShieldSession() throws -> ShieldSessionSnapshot {

@@ -123,6 +123,20 @@ final class AppCoordinatorNotificationFallbackTests: XCTestCase {
         XCTAssertFalse(ipcStore.recordedKinds.contains(.shieldPathSelected))
     }
 
+    func test_scheduleReminders_whenReadSelectionThrows_routesToNotificationFallback() async throws {
+        struct CorruptSelectionError: Error {}
+        deviceActivityMonitor.stubbedIsAvailable = true
+        ipcStore.trueInterruptEnabled = true
+        ipcStore.readSelectionError = CorruptSelectionError()
+
+        await coordinator.scheduleReminders()
+
+        XCTAssertEqual(notificationCenter.addedRequests.count, 2)
+        let event = try XCTUnwrap(ipcStore.events.first { $0.kind == .notificationFallbackScheduled })
+        XCTAssertEqual(event.detail, "true_interrupt_empty_selection")
+        XCTAssertFalse(ipcStore.recordedKinds.contains(.shieldPathSelected))
+    }
+
     func test_scheduleReminders_whenTrueInterruptEnabledButSelectionEmpty_schedulesFallback() async throws {
         deviceActivityMonitor.stubbedIsAvailable = true
         ipcStore.trueInterruptEnabled = true
@@ -191,6 +205,44 @@ final class AppCoordinatorNotificationFallbackTests: XCTestCase {
         XCTAssertEqual(notificationCenter.addedRequests.count, 2)
         let event = try XCTUnwrap(ipcStore.events.last { $0.kind == .notificationFallbackScheduled })
         XCTAssertEqual(event.detail, "true_interrupt_disabled")
+    }
+
+    func test_scheduleReminders_usesCapturedFallbackDetail_whenIPCMutatesDuringScheduling() async throws {
+        // Regression test for: notificationFallbackDetail evaluated after await,
+        // where IPC state could change across the suspension point causing assertionFailure.
+        let mockScheduler = MockReminderScheduler()
+        let localCoordinator = AppCoordinator(
+            settings: settings,
+            scheduler: mockScheduler,
+            notificationCenter: notificationCenter,
+            overlayManager: overlay,
+            screenTimeTracker: tracker,
+            pauseConditionProvider: MockPauseConditionProvider(),
+            deviceActivityMonitor: deviceActivityMonitor,
+            ipcStore: ipcStore
+        )
+        defer { localCoordinator.stopFallbackTimers() }
+
+        // Initial state: shield unavailable → notificationFallbackDetail = "shield_unavailable"
+        deviceActivityMonitor.stubbedIsAvailable = false
+        settings.notificationFallbackEnabled = true
+
+        // Simulate IPC mutation occurring during the scheduler await suspension:
+        // true interrupt becomes fully active, which would make notificationFallbackDetail
+        // reach the previously fatal assertionFailure branch if evaluated post-await.
+        mockScheduler.onScheduleReminders = { [weak self] in
+            guard let self else { return }
+            self.deviceActivityMonitor.stubbedIsAvailable = true
+            self.ipcStore.trueInterruptEnabled = true
+            self.ipcStore.selectApps()
+        }
+
+        await localCoordinator.scheduleReminders()
+
+        // The detail must reflect the pre-await state ("shield_unavailable"),
+        // not the post-mutation "unexpected_shield_routing_state".
+        let event = try XCTUnwrap(ipcStore.events.first { $0.kind == .notificationFallbackScheduled })
+        XCTAssertEqual(event.detail, "shield_unavailable")
     }
 
     func test_handleNotification_recordsDeliveredFallbackEvent() throws {
