@@ -14,6 +14,12 @@ final class MockReminderScheduler: ReminderScheduling {
     private(set) var cancelReminderCallCount = 0
     private(set) var cancelAllCallCount = 0
 
+    // MARK: - Hooks
+
+    /// Called synchronously inside `scheduleReminders(using:)`, simulating state mutations
+    /// that can occur while the real scheduler is awaiting (e.g. IPC store changes).
+    var onScheduleReminders: (() -> Void)?
+
     // MARK: - Call Arguments
 
     private(set) var lastScheduledSettings: SettingsStore?
@@ -30,6 +36,7 @@ final class MockReminderScheduler: ReminderScheduling {
         lastScheduledSettings = nil
         lastRescheduledType = nil
         cancelledTypes = []
+        onScheduleReminders = nil
     }
 
     // MARK: - ReminderScheduling
@@ -37,6 +44,7 @@ final class MockReminderScheduler: ReminderScheduling {
     func scheduleReminders(using settings: SettingsStore) async {
         scheduleRemindersCallCount += 1
         lastScheduledSettings = settings
+        onScheduleReminders?()
     }
 
     func rescheduleReminder(for type: ReminderType, using settings: SettingsStore) async {

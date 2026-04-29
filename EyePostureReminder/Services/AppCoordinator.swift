@@ -376,10 +376,12 @@ final class AppCoordinator: ObservableObject {
         // Schedule periodic background UNNotifications only as the fallback path
         // while Screen Time shielding is unavailable.
         if notificationAuthStatus == .authorized, shouldScheduleNotificationFallback {
+            // Capture detail before await — IPC state may change across the suspension point.
+            let fallbackDetail = notificationFallbackDetail
             await scheduler.scheduleReminders(using: settings)
             recordIPCEvent(
                 .notificationFallbackScheduled,
-                detail: notificationFallbackDetail
+                detail: fallbackDetail
             )
         } else {
             scheduler.cancelAllReminders()
@@ -814,7 +816,7 @@ extension AppCoordinator {
         guard deviceActivityMonitor.isAvailable else { return "shield_unavailable" }
         guard isTrueInterruptEnabled else { return "true_interrupt_disabled" }
         guard hasTrueInterruptSelection else { return "true_interrupt_empty_selection" }
-        assertionFailure("notificationFallbackDetail called while shield routing is available")
+        Logger.scheduling.error("notificationFallbackDetail: shield routing available — IPC state may have changed")
         return "unexpected_shield_routing_state"
     }
 
