@@ -59,6 +59,15 @@ final class ScreenTimeShieldTests: XCTestCase {
         XCTAssertNotEqual(ShieldTriggerReason.scheduledEyesBreak, ShieldTriggerReason.scheduledPostureBreak)
     }
 
+    func test_shieldSession_durationValidation() {
+        XCTAssertTrue(ShieldSession.isValidDurationSeconds(0.001))
+        XCTAssertTrue(ShieldSession.isValidDurationSeconds(60))
+        XCTAssertFalse(ShieldSession.isValidDurationSeconds(0))
+        XCTAssertFalse(ShieldSession.isValidDurationSeconds(-1))
+        XCTAssertFalse(ShieldSession.isValidDurationSeconds(.infinity))
+        XCTAssertFalse(ShieldSession.isValidDurationSeconds(.nan))
+    }
+
     // MARK: - ShieldSession
 
     func test_shieldSession_storesAllProperties() {

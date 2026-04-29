@@ -179,6 +179,21 @@ final class AppGroupIPCStoreTests: XCTestCase {
         )
     }
 
+    func test_writeShieldSession_invalidDuration_returnsFalseAndDoesNotWrite() {
+        let triggeredAt = Date(timeIntervalSince1970: 2_000)
+
+        XCTAssertFalse(
+            store.writeShieldSession(
+                reasonRaw: ShieldTriggerReason.scheduledEyesBreak.rawValue,
+                durationSeconds: 0,
+                triggeredAt: triggeredAt
+            )
+        )
+
+        XCTAssertNil(defaults.data(forKey: ShieldSessionKeys.sessionData))
+        XCTAssertEqual(defaults.double(forKey: AppGroupIPCKeys.lastShieldStartedAt), 0)
+    }
+
     func test_clearShieldSession_removesSessionAndStoresLastEndedTimestamp() {
         let endedAt = Date(timeIntervalSince1970: 2_100)
         store.writeShieldSession(

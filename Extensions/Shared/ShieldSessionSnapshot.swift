@@ -1,5 +1,9 @@
 import Foundation
 
+public enum ShieldSessionSnapshotEncodingError: Error, Equatable {
+    case invalidDurationSeconds(Double)
+}
+
 public struct ShieldSessionSnapshot: Equatable, Sendable {
     public let reasonRaw: String?
     public let durationSeconds: Double
@@ -17,13 +21,20 @@ public struct ShieldSessionSnapshot: Equatable, Sendable {
         reasonRaw.flatMap(ShieldTriggerReason.init(rawValue:))
     }
 
+    public static func isValidDurationSeconds(_ durationSeconds: Double) -> Bool {
+        durationSeconds.isFinite && durationSeconds > 0
+    }
+
     public static func encodedData(
         reasonRaw: String,
         durationSeconds: Double,
         triggeredAt: Date,
         encoder: JSONEncoder = JSONEncoder()
     ) throws -> Data {
-        try encoder.encode(
+        guard isValidDurationSeconds(durationSeconds) else {
+            throw ShieldSessionSnapshotEncodingError.invalidDurationSeconds(durationSeconds)
+        }
+        return try encoder.encode(
             ShieldSessionPayload(
                 reasonRaw: reasonRaw,
                 durationSeconds: durationSeconds,
@@ -33,7 +44,11 @@ public struct ShieldSessionSnapshot: Equatable, Sendable {
     }
 
     public static func decode(from data: Data, decoder: JSONDecoder = JSONDecoder()) throws -> ShieldSessionSnapshot {
-        try decoder.decode(ShieldSessionPayload.self, from: data).snapshot
+        let payload = try decoder.decode(ShieldSessionPayload.self, from: data)
+        guard isValidDurationSeconds(payload.durationSeconds), payload.triggeredAtSeconds.isFinite else {
+            throw ShieldSessionSnapshotEncodingError.invalidDurationSeconds(payload.durationSeconds)
+        }
+        return payload.snapshot
     }
 
     public static func read(from defaults: UserDefaults?) -> ShieldSessionSnapshot {
@@ -48,7 +63,9 @@ public struct ShieldSessionSnapshot: Equatable, Sendable {
         guard
             let reasonRaw = defaults.string(forKey: ShieldSessionKeys.breakReason),
             let durationSeconds = defaults.object(forKey: ShieldSessionKeys.durationSeconds) as? Double,
-            let timestamp = defaults.object(forKey: ShieldSessionKeys.triggeredAt) as? Double
+            let timestamp = defaults.object(forKey: ShieldSessionKeys.triggeredAt) as? Double,
+            isValidDurationSeconds(durationSeconds),
+            timestamp.isFinite
         else {
             return .empty
         }
@@ -60,7 +77,7 @@ public struct ShieldSessionSnapshot: Equatable, Sendable {
     }
 
     public func remainingSeconds(at now: Date = Date()) -> Int? {
-        guard durationSeconds > 0, let triggeredAt else { return nil }
+        guard Self.isValidDurationSeconds(durationSeconds), let triggeredAt else { return nil }
         let remaining = durationSeconds - now.timeIntervalSince(triggeredAt)
         return max(0, Int(ceil(remaining)))
     }
