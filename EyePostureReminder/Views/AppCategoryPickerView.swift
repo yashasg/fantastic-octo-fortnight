@@ -80,6 +80,7 @@ struct AppCategoryPickerView: View {
                     .disabled(authorizationStatus == .unavailable)
                     .padding(.horizontal, AppSpacing.xl)
                     .accessibilityIdentifier("appCategoryPicker.primaryButton")
+                    .accessibilityHint(Text(primaryButtonHintKey, bundle: .module))
 
                     // Secondary dismiss
                     Button(action: onDone) {
@@ -88,6 +89,7 @@ struct AppCategoryPickerView: View {
                     .buttonStyle(.secondary)
                     .padding(.horizontal, AppSpacing.xl)
                     .accessibilityIdentifier("appCategoryPicker.doneButton")
+                    .accessibilityHint(Text("appCategoryPicker.doneButton.hint", bundle: .module))
                 }
                 .padding()
                 .frame(maxWidth: AppLayout.onboardingMaxContentWidth)
@@ -125,6 +127,15 @@ struct AppCategoryPickerView: View {
         case .notDetermined: return "appCategoryPicker.button.enableAccess"
         case .denied:        return "appCategoryPicker.button.openSettings"
         case .approved:      return "appCategoryPicker.button.selectApps"
+        }
+    }
+
+    var primaryButtonHintKey: LocalizedStringKey {
+        switch authorizationStatus {
+        case .unavailable:   return "appCategoryPicker.button.pendingApproval.hint"
+        case .notDetermined: return "appCategoryPicker.button.enableAccess.hint"
+        case .denied:        return "appCategoryPicker.button.openSettings.hint"
+        case .approved:      return "appCategoryPicker.button.selectApps.hint"
         }
     }
 

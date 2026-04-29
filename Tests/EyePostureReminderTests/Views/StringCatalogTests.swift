@@ -222,7 +222,13 @@ final class StringCatalogTests: XCTestCase {
             "overlay.doneButton",
             // appCategoryPicker.approved.* count strings — localized plural summary
             "appCategoryPicker.approved.appCount",
-            "appCategoryPicker.approved.categoryCount"
+            "appCategoryPicker.approved.categoryCount",
+            // appCategoryPicker.button.*.hint and appCategoryPicker.doneButton.hint — VoiceOver hints
+            "appCategoryPicker.button.pendingApproval.hint",
+            "appCategoryPicker.button.enableAccess.hint",
+            "appCategoryPicker.button.openSettings.hint",
+            "appCategoryPicker.button.selectApps.hint",
+            "appCategoryPicker.doneButton.hint"
         ]
         for key in expectedKeys {
             XCTAssertFalse(str(key).isEmpty, "Key '\(key)' must resolve to a non-empty string")
@@ -509,6 +515,51 @@ final class StringCatalogTests: XCTestCase {
         XCTAssertEqual(String.localizedStringWithFormat(appCount, 2), "2 apps")
         XCTAssertEqual(String.localizedStringWithFormat(categoryCount, 1), "1 category")
         XCTAssertEqual(String.localizedStringWithFormat(categoryCount, 2), "2 categories")
+    }
+
+    // MARK: - AppCategoryPicker Button Hint Keys
+
+    func test_appCategoryPickerButtonPendingApprovalHint_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("appCategoryPicker.button.pendingApproval.hint"),
+            "'appCategoryPicker.button.pendingApproval.hint' must resolve from catalog")
+    }
+
+    func test_appCategoryPickerButtonEnableAccessHint_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("appCategoryPicker.button.enableAccess.hint"),
+            "'appCategoryPicker.button.enableAccess.hint' must resolve from catalog")
+    }
+
+    func test_appCategoryPickerButtonOpenSettingsHint_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("appCategoryPicker.button.openSettings.hint"),
+            "'appCategoryPicker.button.openSettings.hint' must resolve from catalog")
+    }
+
+    func test_appCategoryPickerButtonSelectAppsHint_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("appCategoryPicker.button.selectApps.hint"),
+            "'appCategoryPicker.button.selectApps.hint' must resolve from catalog")
+    }
+
+    func test_appCategoryPickerDoneButtonHint_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("appCategoryPicker.doneButton.hint"),
+            "'appCategoryPicker.doneButton.hint' must resolve from catalog")
+    }
+
+    func test_appCategoryPickerButtonHints_allNonEmpty() {
+        let hintKeys = [
+            "appCategoryPicker.button.pendingApproval.hint",
+            "appCategoryPicker.button.enableAccess.hint",
+            "appCategoryPicker.button.openSettings.hint",
+            "appCategoryPicker.button.selectApps.hint",
+            "appCategoryPicker.doneButton.hint"
+        ]
+        for key in hintKeys {
+            XCTAssertFalse(str(key).isEmpty, "Hint key '\(key)' must resolve to a non-empty string")
+        }
     }
 
     func test_setupCardLabel_containsPositionalSpecifiers() {

@@ -2314,6 +2314,61 @@
           }
         }
       }
+    },
+    "appCategoryPicker.button.pendingApproval.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Screen Time access is awaiting approval. This action is currently unavailable."
+          }
+        }
+      }
+    },
+    "appCategoryPicker.button.enableAccess.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Requests Screen Time access required to configure app breaks."
+          }
+        }
+      }
+    },
+    "appCategoryPicker.button.openSettings.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opens iOS Settings so you can re-enable Screen Time access."
+          }
+        }
+      }
+    },
+    "appCategoryPicker.button.selectApps.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opens the app and category picker for True Interrupt Mode."
+          }
+        }
+      }
+    },
+    "appCategoryPicker.doneButton.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Closes this screen and returns to the previous view."
+          }
+        }
+      }
     }
   }
 }
