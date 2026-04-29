@@ -10,6 +10,12 @@ struct HomeView: View {
     @AppStorage(AppStorageKey.trueInterruptSkippedBannerDismissed) private var trueInterruptBannerDismissed = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+    private let accessibilityNotificationPoster: AccessibilityNotificationPosting
+
+    init(accessibilityNotificationPoster: AccessibilityNotificationPosting = LiveAccessibilityNotificationPoster()) {
+        self.accessibilityNotificationPoster = accessibilityNotificationPoster
+    }
+
     private var statusLabel: String {
         if settings.globalEnabled {
             return String(localized: "home.status.active", bundle: .module)
@@ -62,6 +68,13 @@ struct HomeView: View {
                     }
                 )
             }
+
+            // Persistent low-noise rediscovery affordance (#280).
+            // Shown after the banner is dismissed while setup is still pending.
+            if coordinator.screenTimeAuthorization.authorizationStatus == .notDetermined,
+               trueInterruptBannerDismissed {
+                TrueInterruptSetupPill(onTap: { showSettings = true })
+            }
         }
         .padding(.horizontal, AppSpacing.xl)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -101,6 +114,46 @@ struct HomeView: View {
                 showSettings = true
             }
         }
+        // Announce master-toggle state changes to VoiceOver (#287).
+        // Guard prevents double-announcement while SettingsView sheet is open.
+        .onChange(of: settings.globalEnabled) { _ in
+            guard !showSettings else { return }
+            accessibilityNotificationPoster.postAnnouncement(message: statusLabel)
+        }
+    }
+}
+
+// MARK: - True Interrupt Setup Pill
+
+/// Persistent, low-noise rediscovery affordance shown on Home after the
+/// `TrueInterruptSkippedBanner` is dismissed while True Interrupt setup
+/// is still pending (#280). Tapping opens Settings.
+struct TrueInterruptSetupPill: View {
+    let onTap: () -> Void
+
+    var body: some View {
+        Button(action: onTap) {
+            HStack(spacing: AppSpacing.xs) {
+                Image(systemName: AppSymbol.trueInterrupt)
+                    .font(AppFont.caption)
+                    .foregroundStyle(AppColor.primaryRest)
+                    .accessibilityHidden(true)
+                Text("home.trueInterrupt.setupPill", bundle: .module)
+                    .font(AppFont.caption)
+                    .foregroundStyle(AppColor.primaryRest)
+                Image(systemName: "chevron.right")
+                    .font(AppFont.caption)
+                    .foregroundStyle(AppColor.primaryRest)
+                    .accessibilityHidden(true)
+            }
+            .padding(.horizontal, AppSpacing.sm)
+            .padding(.vertical, AppSpacing.xs)
+            .background(AppColor.surface, in: Capsule())
+            .overlay(Capsule().strokeBorder(AppColor.separatorSoft, lineWidth: 0.5))
+        }
+        .accessibilityLabel(Text("home.trueInterrupt.setupPill", bundle: .module))
+        .accessibilityHint(Text("home.trueInterrupt.setupPill.hint", bundle: .module))
+        .accessibilityIdentifier("home.trueInterrupt.setupPill")
     }
 }
 

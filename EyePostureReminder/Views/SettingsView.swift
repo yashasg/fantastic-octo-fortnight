@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+// swiftlint:disable file_length
 
 // MARK: - ViewModel Box
 
@@ -61,6 +62,16 @@ struct SettingsView: View {
     @State private var showTerms = false
     @State private var showPrivacy = false
     @State private var showResetConfirm = false
+
+    private let accessibilityNotificationPoster: AccessibilityNotificationPosting
+
+    init(
+        isPresented: Binding<Bool>,
+        accessibilityNotificationPoster: AccessibilityNotificationPosting = LiveAccessibilityNotificationPoster()
+    ) {
+        self._isPresented = isPresented
+        self.accessibilityNotificationPoster = accessibilityNotificationPoster
+    }
 
     var body: some View {
         Form {
@@ -335,6 +346,13 @@ struct SettingsView: View {
         }
         .task {
             await coordinator.refreshAuthStatus()
+        }
+        // Announce master-toggle state changes to VoiceOver (#287).
+        .onChange(of: settings.globalEnabled) { newValue in
+            let message = newValue
+                ? String(localized: "home.status.active", bundle: .module)
+                : String(localized: "home.status.paused", bundle: .module)
+            accessibilityNotificationPoster.postAnnouncement(message: message)
         }
     }
 }

@@ -450,4 +450,16 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertEqual(freshStore.postureInterval, ReminderSettings.defaultPosture.interval)
         XCTAssertEqual(freshStore.postureBreakDuration, ReminderSettings.defaultPosture.breakDuration)
     }
+
+    // MARK: - resetToDefaults clears True Interrupt banner dismissal (#280)
+
+    func test_resetToDefaults_writesFalseForTrueInterruptBannerDismissedKey() {
+        sut.resetToDefaults()
+        // After a reset the banner-dismissed key must be explicitly set to false
+        // so @AppStorage in HomeView picks up the change and re-shows the affordance.
+        XCTAssertEqual(
+            mockPersistence.bool(forKey: AppStorageKey.trueInterruptSkippedBannerDismissed, defaultValue: true),
+            false,
+            "resetToDefaults() must clear the True Interrupt banner dismissal flag")
+    }
 }

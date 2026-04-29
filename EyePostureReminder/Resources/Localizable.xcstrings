@@ -2501,6 +2501,28 @@
           }
         }
       }
+    },
+    "home.trueInterrupt.setupPill": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Set Up True Interrupt"
+          }
+        }
+      }
+    },
+    "home.trueInterrupt.setupPill.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opens Settings to configure True Interrupt Mode"
+          }
+        }
+      }
     }
   }
 }
