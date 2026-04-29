@@ -107,7 +107,7 @@ You may not copy, modify, distribute, sell, reverse-engineer, or create derivati
 
 ## 8. Third-Party Services
 
-kshana does not integrate with third-party analytics, advertising, or data platforms. The App operates entirely on your device and does not transmit data to external services.
+kshana does not integrate with third-party analytics, advertising, or data platforms, and it does not transmit data to a developer-operated backend. The App stores settings and operational coordination metadata locally on your device. Apple may process App Store downloads, TestFlight feedback, diagnostics, crash reports, and analytics through Apple's own systems.
 
 The App is distributed through the Apple App Store. Apple's own terms of service govern the download and installation process. [PUBLISHER NAME] is not responsible for Apple's policies or services.
 

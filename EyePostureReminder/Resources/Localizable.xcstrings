@@ -1340,7 +1340,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Reminder preferences and settings are stored locally on your device using UserDefaults. No data is sent to external servers. The app also reads motion activity state and Focus mode status in memory only (never stored) to pause reminders while driving or during Focus sessions."
+            "value": "Reminder preferences, settings, and local True Interrupt coordination metadata are stored on your device using UserDefaults. No data is sent to a developer server. The app also reads motion activity state and Focus mode status in memory only (never stored) to pause reminders while driving or during Focus sessions."
           }
         }
       }
@@ -1362,7 +1362,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "We do not collect personal information or any data that leaves your device. Motion activity data is accessed transiently in memory to pause reminders while driving and is never stored or transmitted. Diagnostic events are logged locally via Apple’s os.Logger: setting values (old and new) are marked private and redacted in exported logs; timing and duration measurements (session lengths, elapsed countdown time, threshold intervals) are non-identifying operational metrics and are not redacted."
+            "value": "We do not collect personal information, track you, or send app data to a developer server. Apple may process limited diagnostics, crash data, TestFlight feedback, and App Store analytics through Apple’s systems if your device or TestFlight settings allow it. Motion activity data is accessed transiently in memory to pause reminders while driving and is never stored or transmitted by kshana. Diagnostic events are logged locally via Apple’s os.Logger: setting values (old and new) are marked private and redacted in exported logs; timing and duration measurements are non-identifying operational metrics."
           }
         }
       }
@@ -1384,7 +1384,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Since we do not collect personal data, most data subject rights are satisfied by default. To delete all App data, simply delete the App from your device. Settings may be included in your device’s iCloud backup if iCloud backup is enabled.\n\nGDPR (EU/EEA users): We do not act as a data controller for personal data as defined under GDPR. No personal data is collected or processed.\n\nCCPA (California users): We do not sell personal information. We do not collect personal information as defined under the CCPA."
+            "value": "Since kshana does not maintain user accounts or a user-level database, most data subject rights are satisfied by default. To delete all App data, simply delete the App from your device. Local settings and coordination metadata may be included in your device’s iCloud backup if iCloud backup is enabled.\n\nGDPR (EU/EEA users): We do not maintain a user-level profile or account database for access, deletion, or portability requests. Apple-native diagnostics and App Store data are handled through Apple’s systems and your Apple privacy settings.\n\nCCPA (California users): We do not sell or share personal information for cross-context behavioral advertising. We do not track you across apps or websites."
           }
         }
       }
@@ -1593,7 +1593,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "kshana does not integrate with third-party analytics, advertising, or data platforms. The App operates entirely on your device and does not transmit data to external services. The App is distributed through the Apple App Store. Apple’s own terms govern the download and installation process."
+            "value": "kshana does not integrate with third-party analytics, advertising, or data platforms. The App does not transmit data to a developer-operated backend. The App is distributed through the Apple App Store, and Apple may process downloads, diagnostics, TestFlight feedback, and App Store analytics under Apple’s own terms."
           }
         }
       }
@@ -1681,7 +1681,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "All data stored by the App lives exclusively in Apple’s UserDefaults, within the App’s sandboxed storage on your device. This data may be included in your device’s iCloud backup if iCloud backup is enabled — this is controlled by your iOS settings, not by us. All locally stored data is deleted when you delete the App."
+            "value": "All data stored by the App lives in Apple’s UserDefaults, within the App’s sandboxed storage or local App Group storage on your device. This includes settings and capped True Interrupt coordination history used by the main app and Screen Time extensions. This data may be included in your device’s iCloud backup if iCloud backup is enabled — this is controlled by your iOS settings, not by us. All locally stored data is deleted when you delete the App."
           }
         }
       }
@@ -1703,7 +1703,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The App is distributed through the Apple App Store. Apple may collect certain data as part of the download and installation process, governed by Apple’s Privacy Policy. The developer has no control over or access to data collected by Apple."
+            "value": "The App is distributed through the Apple App Store. Apple may collect or process certain data as part of download, installation, diagnostics, crash reporting, TestFlight feedback, analytics, and App Store operation, governed by Apple’s Privacy Policy and your Apple settings."
           }
         }
       }
@@ -1934,7 +1934,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Your Screen Time choices stay on this device"
+            "value": "Your Screen Time setup metadata stays on this device"
           }
         }
       }
@@ -1945,7 +1945,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "You choose which apps are shielded during breaks"
+            "value": "Once approved, you choose which apps are shielded during breaks"
           }
         }
       }
@@ -2220,7 +2220,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "kshana shields the apps you choose when a break starts. You pick which apps — kshana only activates shielding during scheduled breaks."
+            "value": "When Screen Time access is available, kshana shields the apps you choose only during scheduled breaks. Until then, backup alerts keep reminders working."
           }
         }
       }

@@ -2,14 +2,14 @@
 
 ## Beta App Description
 
-kshana (क्षण, "a moment") is a lightweight iOS wellness app that helps you build healthier app-break habits. Choose which apps you'd like to monitor, set your break timing, and kshana gently reminds you when it's time to step away. It pauses automatically when you're driving, on CarPlay, or in Focus Mode, so it only nudges when it matters. Fallback local alerts work even if System Screen Time access is unavailable.
+kshana (क्षण, "a moment") is a lightweight iOS wellness app that helps you build healthier app-break habits. Set your eye and posture break timing, and kshana gently reminds you when it's time to step away. It pauses automatically when you're driving, on CarPlay, or in Focus Mode, so it only nudges when it matters. This beta uses local backup alerts while Screen Time shielding and selected-app interruption remain pending Apple's entitlement approval.
 
 ## What to Test
 
-1. **First-launch onboarding:** Walk through the 4-screen onboarding flow (Welcome → App Break Explanation → Screen Time Permission → Setup). Verify the calm pre-permission education screen appears, then the system permission prompt, and "Get Started" works.
-2. **Permission handling:** Test both "Grant App Break Access" (accepted) and "Not now" (skipped). Verify the app gracefully degrades to local alert fallback if permission is not granted.
-3. **App selection (roadmap):** Note that app/category selection UI is a future feature. Current version uses default scope.
-4. **Reminder triggers:** Leave the app in the foreground for 20+ minutes. Confirm the break screen appears after continuous screen-on time elapses (not wall-clock time). When Screen Time access is unavailable, verify local alerts work.
+1. **First-launch onboarding:** Walk through the 4-screen onboarding flow (Welcome → App Break Explanation → Screen Time Permission → Setup). Verify the calm pre-permission education screen appears, the pending/unavailable state is understandable, and "Get Started" works.
+2. **Permission handling:** Test both "Grant App Break Access" and "Not now" when available on your build/device. Verify the app gracefully degrades to local backup alerts if Screen Time access is not granted or not available.
+3. **App selection (entitlement-gated):** Confirm the app/category setup surface clearly explains that selected-app shielding is pending Apple approval when access is unavailable. Do not expect real selected-app shielding until the entitlement is approved and released.
+4. **Reminder triggers:** Leave the app in the foreground for 20+ minutes. Confirm the break screen appears after continuous screen-on time elapses (not wall-clock time). To verify local backup alerts while Screen Time shielding is unavailable, allow notifications, set the shortest practical eye/posture intervals, send the app to the background or switch to another app, and confirm iOS notification banners appear at the configured interval. Tap a banner and confirm it opens kshana to the break screen; if no notification appears, report it as a bug.
 5. **Break screen interaction:** When the break screen appears, test the countdown ring, swipe-up dismiss, × button dismiss, settings button (⚙️), and auto-dismiss at the end of the countdown.
 6. **Snooze:** Tap a snooze option (5 min / 1 hour / Rest of Day). Verify the reminder returns after the snooze period. Confirm max 2 consecutive snoozes are enforced.
 7. **Smart Pause:** Enable Focus Mode (e.g., Do Not Disturb) and verify reminders pause. Connect to CarPlay or simulate driving — reminders should pause automatically.
