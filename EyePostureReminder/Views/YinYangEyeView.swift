@@ -8,7 +8,12 @@ struct YinYangEyeView: View {
     @State private var hasStarted = false
     @State private var isVisible = false
 
+    private let reduceMotionOverride: Bool?
     private let diameter = AppLayout.overlayIconSize * 1.55
+
+    init(reduceMotionOverride: Bool? = nil) {
+        self.reduceMotionOverride = reduceMotionOverride
+    }
 
     var body: some View {
         let half = diameter / 2
@@ -67,7 +72,7 @@ struct YinYangEyeView: View {
                 breathing = false
             }
         }
-        .onChange(of: reduceMotion) { newValue in
+        .onChange(of: shouldReduceMotion) { newValue in
             if newValue {
                 withAnimation(.easeInOut(duration: 0.3)) {
                     breathing = false
@@ -78,8 +83,12 @@ struct YinYangEyeView: View {
         }
     }
 
+    private var shouldReduceMotion: Bool {
+        reduceMotionOverride ?? reduceMotion
+    }
+
     private func startAnimations() {
-        guard !reduceMotion else { return }
+        guard !shouldReduceMotion else { return }
 
         if hasStarted {
             // Returning to view — restart breathing only

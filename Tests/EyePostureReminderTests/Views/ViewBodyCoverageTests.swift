@@ -362,7 +362,8 @@ final class ViewBodyCoverageTests: XCTestCase {
             isEnabled: .constant(true),
             interval: .constant(1200),
             breakDuration: .constant(20),
-            onChanged: {})
+            onChanged: {},
+            reduceMotionOverride: false)
         let described = String(describing: view.body)
         XCTAssertFalse(described.isEmpty)
     }
@@ -373,7 +374,8 @@ final class ViewBodyCoverageTests: XCTestCase {
             isEnabled: .constant(false),
             interval: .constant(1200),
             breakDuration: .constant(20),
-            onChanged: {})
+            onChanged: {},
+            reduceMotionOverride: false)
         let described = String(describing: view.body)
         XCTAssertFalse(described.isEmpty)
     }
@@ -384,7 +386,8 @@ final class ViewBodyCoverageTests: XCTestCase {
             isEnabled: .constant(true),
             interval: .constant(1800),
             breakDuration: .constant(30),
-            onChanged: {})
+            onChanged: {},
+            reduceMotionOverride: false)
         let described = String(describing: view.body)
         XCTAssertFalse(described.isEmpty)
     }
@@ -395,19 +398,26 @@ final class ViewBodyCoverageTests: XCTestCase {
             isEnabled: .constant(false),
             interval: .constant(1800),
             breakDuration: .constant(30),
-            onChanged: {})
+            onChanged: {},
+            reduceMotionOverride: false)
         let described = String(describing: view.body)
         XCTAssertFalse(described.isEmpty)
     }
 
     func test_overlayView_eyes_bodyEvaluation() {
-        let view = OverlayView(type: .eyes, duration: 20, hapticsEnabled: true, onDismiss: {})
+        let view = OverlayView(
+            type: .eyes, duration: 20, hapticsEnabled: true, reduceMotionOverride: false,
+            onDismiss: {}
+        )
         let described = String(describing: view.body)
         XCTAssertFalse(described.isEmpty)
     }
 
     func test_overlayView_posture_bodyEvaluation() {
-        let view = OverlayView(type: .posture, duration: 10, hapticsEnabled: false, onDismiss: {})
+        let view = OverlayView(
+            type: .posture, duration: 10, hapticsEnabled: false, reduceMotionOverride: false,
+            onDismiss: {}
+        )
         let described = String(describing: view.body)
         XCTAssertFalse(described.isEmpty)
     }
@@ -415,6 +425,7 @@ final class ViewBodyCoverageTests: XCTestCase {
     func test_overlayView_allSubviews_bodyEvaluation() {
         let view = OverlayView(
             type: .eyes, duration: 20, hapticsEnabled: true,
+            reduceMotionOverride: false,
             onAnalyticsEvent: { _ in }, onSettingsTap: {}, onDismiss: {})
         // Force deep evaluation of body
         _ = view.body
@@ -423,7 +434,7 @@ final class ViewBodyCoverageTests: XCTestCase {
     }
 
     func test_yinYangEyeView_bodyEvaluation() {
-        let view = YinYangEyeView()
+        let view = YinYangEyeView(reduceMotionOverride: false)
         let described = String(describing: view.body)
         XCTAssertFalse(described.isEmpty)
     }

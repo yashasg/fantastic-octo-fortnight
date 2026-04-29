@@ -10,13 +10,16 @@ import UserNotifications
 struct OnboardingPermissionView: View {
     let onNext: () -> Void
     private let notificationCenter: NotificationScheduling
+    private let accessibilityEnabledOverride: Bool?
 
     @Environment(\.accessibilityEnabled) private var accessibilityEnabled
 
     init(onNext: @escaping () -> Void,
-         notificationCenter: NotificationScheduling = UNUserNotificationCenter.current()) {
+         notificationCenter: NotificationScheduling = UNUserNotificationCenter.current(),
+         accessibilityEnabledOverride: Bool? = nil) {
         self.onNext = onNext
         self.notificationCenter = notificationCenter
+        self.accessibilityEnabledOverride = accessibilityEnabledOverride
     }
 
     var body: some View {
@@ -76,12 +79,16 @@ struct OnboardingPermissionView: View {
                 // permission screen — but only when VoiceOver is off, so the
                 // three-finger page-navigation gesture still works.
                 .highPriorityGesture(
-                    DragGesture(minimumDistance: accessibilityEnabled ? .infinity : 10)
+                    DragGesture(minimumDistance: shouldUseAccessibilityGestures ? .infinity : 10)
                         .onChanged { _ in }
                 )
             }
             .background(AppColor.background.ignoresSafeArea())
             .calmingEntrance()
+    }
+
+    private var shouldUseAccessibilityGestures: Bool {
+        accessibilityEnabledOverride ?? accessibilityEnabled
     }
 
     private func requestNotificationPermission() {

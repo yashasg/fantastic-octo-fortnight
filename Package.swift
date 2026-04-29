@@ -16,6 +16,9 @@ let package = Package(
         ),
         .executableTarget(
             name: "EyePostureReminder",
+            dependencies: [
+                "ScreenTimeExtensionShared"
+            ],
             path: "EyePostureReminder",
             resources: [
                 // Includes bundled app defaults, color assets, localization, and Fonts/*.ttf.

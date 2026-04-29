@@ -86,14 +86,22 @@ final class OnboardingViewTests: XCTestCase {
     /// The permission view instantiates and produces a valid SwiftUI body without crashing.
     func test_permissionView_instantiatesWithoutCrash() {
         let mock = MockNotificationCenter()
-        let view = OnboardingPermissionView(onNext: {}, notificationCenter: mock)
+        let view = OnboardingPermissionView(
+            onNext: {},
+            notificationCenter: mock,
+            accessibilityEnabledOverride: false
+        )
         _ = view.body
     }
 
     /// The permission view body description must be non-empty.
     func test_permissionView_bodyDescription_isNonEmpty() {
         let mock = MockNotificationCenter()
-        let view = OnboardingPermissionView(onNext: {}, notificationCenter: mock)
+        let view = OnboardingPermissionView(
+            onNext: {},
+            notificationCenter: mock,
+            accessibilityEnabledOverride: false
+        )
         let described = String(describing: view.body)
         XCTAssertFalse(described.isEmpty,
                        "OnboardingPermissionView body must produce a non-empty description")
@@ -118,7 +126,11 @@ final class OnboardingViewTests: XCTestCase {
     /// The permission view accepts a custom NotificationScheduling implementation.
     func test_permissionView_acceptsMockNotificationCenter() {
         let mock = MockNotificationCenter()
-        let view = OnboardingPermissionView(onNext: {}, notificationCenter: mock)
+        let view = OnboardingPermissionView(
+            onNext: {},
+            notificationCenter: mock,
+            accessibilityEnabledOverride: false
+        )
         _ = view.body
         // If it compiles and runs, the DI seam works.
     }
@@ -126,7 +138,11 @@ final class OnboardingViewTests: XCTestCase {
     /// The skip button has a known accessibility identifier.
     func test_permissionView_skipButton_accessibilityIdentifier() {
         let mock = MockNotificationCenter()
-        let view = OnboardingPermissionView(onNext: {}, notificationCenter: mock)
+        let view = OnboardingPermissionView(
+            onNext: {},
+            notificationCenter: mock,
+            accessibilityEnabledOverride: false
+        )
         let described = String(describing: view.body)
         XCTAssertTrue(described.contains("onboarding.permission.nextButton") || !described.isEmpty,
                        "Permission view must have skip button accessibility identifier")
@@ -135,7 +151,11 @@ final class OnboardingViewTests: XCTestCase {
     /// The permission view uses high priority gesture to block tab swipe.
     func test_permissionView_highPriorityGesture_rendersWithoutCrash() {
         let mock = MockNotificationCenter()
-        let view = OnboardingPermissionView(onNext: {}, notificationCenter: mock)
+        let view = OnboardingPermissionView(
+            onNext: {},
+            notificationCenter: mock,
+            accessibilityEnabledOverride: false
+        )
         let described = String(describing: view.body)
         XCTAssertFalse(described.isEmpty,
                        "Permission view with highPriorityGesture must render without crash")

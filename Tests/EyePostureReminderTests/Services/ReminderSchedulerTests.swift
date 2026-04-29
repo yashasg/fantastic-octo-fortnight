@@ -434,22 +434,38 @@ final class ReminderSchedulerTests: XCTestCase {
             domain: "UNErrorDomain",
             code: 1,
             userInfo: [NSLocalizedDescriptionKey: "Notifications not authorized"])
+        var loggedFailures: [(ReminderType, String)] = []
+        let scheduler = ReminderScheduler(
+            notificationCenter: mockCenter,
+            logSchedulingFailure: { type, error in
+                loggedFailures.append((type, error.localizedDescription))
+            }
+        )
         settings.globalEnabled = true
         settings.eyesEnabled = true
 
         // Must not throw or crash
-        await sut.rescheduleReminder(for: .eyes, using: settings)
+        await scheduler.rescheduleReminder(for: .eyes, using: settings)
 
         XCTAssertTrue(
             mockCenter.addedRequests.isEmpty,
             "No request should be added when the notification center throws")
+        XCTAssertEqual(loggedFailures.count, 1)
+        XCTAssertEqual(loggedFailures.first?.0, .eyes)
+        XCTAssertEqual(loggedFailures.first?.1, "Notifications not authorized")
     }
 
     func test_addThrows_forOneType_doesNotPreventOtherType() async {
         // Fail on first add (eyes), succeed on second (posture).
         // Verifies the scheduler loops over all types regardless of individual failures.
         let failOnceCenter = FailOnceNotificationCenter()
-        let scheduler = ReminderScheduler(notificationCenter: failOnceCenter)
+        var loggedFailureTypes: [ReminderType] = []
+        let scheduler = ReminderScheduler(
+            notificationCenter: failOnceCenter,
+            logSchedulingFailure: { type, _ in
+                loggedFailureTypes.append(type)
+            }
+        )
 
         settings.globalEnabled = true
         settings.eyesEnabled = true
@@ -462,6 +478,7 @@ final class ReminderSchedulerTests: XCTestCase {
             failOnceCenter.addAttemptCount,
             2,
             "Scheduler must attempt to add all types even if the first add fails")
+        XCTAssertEqual(loggedFailureTypes, [.eyes])
     }
 
     // MARK: - Overlapping Reminders
