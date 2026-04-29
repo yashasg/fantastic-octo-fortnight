@@ -12,7 +12,7 @@
 #
 # Optional environment:
 #   APP_BUNDLE_ID                         default: com.yashasg.eyeposturereminder
-#   SIGNING_STYLE                         automatic (default) or manual
+#   SIGNING_STYLE                         manual (default) or automatic
 #   SIGNING_CERTIFICATE                   default: Apple Distribution
 #   PROVISIONING_PROFILE_SPECIFIER        manual signing only
 #   ALLOW_PROVISIONING_UPDATES            YES (default) or NO
@@ -55,7 +55,7 @@ EXPORT_OPTIONS_PLIST="${SIGNED_BUILD_PATH}/ExportOptions.plist"
 APP_BUNDLE_ID="${APP_BUNDLE_ID:-com.yashasg.eyeposturereminder}"
 APPLE_TEAM_ID="${APPLE_TEAM_ID:-${DEVELOPMENT_TEAM:-}}"
 CONFIGURATION="${CONFIGURATION:-Release}"
-SIGNING_STYLE="${SIGNING_STYLE:-automatic}"
+SIGNING_STYLE="${SIGNING_STYLE:-manual}"
 SIGNING_CERTIFICATE="${SIGNING_CERTIFICATE:-Apple Distribution}"
 PROVISIONING_PROFILE_SPECIFIER="${PROVISIONING_PROFILE_SPECIFIER:-}"
 ALLOW_PROVISIONING_UPDATES="${ALLOW_PROVISIONING_UPDATES:-YES}"
@@ -209,6 +209,133 @@ build_provisioning_flags() {
   fi
 }
 
+profile_dir_path() {
+  echo "${HOME}/Library/MobileDevice/Provisioning Profiles"
+}
+
+decode_profile_to_plist() {
+  local profile="$1"
+  local plist="$2"
+
+  security cms -D -i "$profile" > "$plist" 2>/dev/null
+}
+
+profile_bundle_matches() {
+  local plist="$1"
+  local app_identifier
+  app_identifier=$(/usr/libexec/PlistBuddy -c "Print :Entitlements:application-identifier" "$plist" 2>/dev/null || true)
+
+  if [[ -n "$APPLE_TEAM_ID" ]]; then
+    [[ "$app_identifier" == "${APPLE_TEAM_ID}.${APP_BUNDLE_ID}" ]]
+  else
+    [[ "$app_identifier" == *".${APP_BUNDLE_ID}" ]]
+  fi
+}
+
+profile_is_app_store_connect() {
+  local plist="$1"
+  local get_task_allow
+  local provisions_all_devices
+
+  profile_bundle_matches "$plist" || return 1
+
+  get_task_allow=$(/usr/libexec/PlistBuddy -c "Print :Entitlements:get-task-allow" "$plist" 2>/dev/null || true)
+  [[ "$get_task_allow" == "false" ]] || return 1
+
+  # Development and ad hoc profiles are device-bound. TestFlight/App Store
+  # profiles do not contain a ProvisionedDevices array.
+  if /usr/libexec/PlistBuddy -c "Print :ProvisionedDevices" "$plist" >/dev/null 2>&1; then
+    return 1
+  fi
+
+  provisions_all_devices=$(/usr/libexec/PlistBuddy -c "Print :ProvisionsAllDevices" "$plist" 2>/dev/null || true)
+  [[ "$provisions_all_devices" != "true" ]]
+}
+
+matching_profile_names() {
+  local profile_dir
+  local profile
+  local plist
+  local name
+
+  profile_dir="$(profile_dir_path)"
+  [[ -d "$profile_dir" ]] || return 0
+
+  for profile in "$profile_dir"/*.mobileprovision; do
+    [[ -e "$profile" ]] || continue
+
+    plist="$(mktemp)"
+    if decode_profile_to_plist "$profile" "$plist" && profile_bundle_matches "$plist"; then
+      name=$(/usr/libexec/PlistBuddy -c "Print :Name" "$plist" 2>/dev/null || true)
+      [[ -n "$name" ]] && printf '%s\n' "$name"
+    fi
+    rm -f "$plist"
+  done | sort -u
+}
+
+matching_app_store_profile_names() {
+  local profile_dir
+  local profile
+  local plist
+  local name
+
+  profile_dir="$(profile_dir_path)"
+  [[ -d "$profile_dir" ]] || return 0
+
+  for profile in "$profile_dir"/*.mobileprovision; do
+    [[ -e "$profile" ]] || continue
+
+    plist="$(mktemp)"
+    if decode_profile_to_plist "$profile" "$plist" && profile_is_app_store_connect "$plist"; then
+      name=$(/usr/libexec/PlistBuddy -c "Print :Name" "$plist" 2>/dev/null || true)
+      [[ -n "$name" ]] && printf '%s\n' "$name"
+    fi
+    rm -f "$plist"
+  done | sort -u
+}
+
+count_lines() {
+  local value="$1"
+
+  if [[ -z "$value" ]]; then
+    echo 0
+  else
+    printf '%s\n' "$value" | wc -l | tr -d ' '
+  fi
+}
+
+ensure_manual_distribution_profile() {
+  [[ "$SIGNING_STYLE" == "manual" ]] || return 0
+
+  if [[ -n "$PROVISIONING_PROFILE_SPECIFIER" ]]; then
+    return 0
+  fi
+
+  local profiles
+  local profile_count
+  profiles="$(matching_app_store_profile_names || true)"
+  profile_count="$(count_lines "$profiles")"
+
+  if [[ "$profile_count" -eq 1 ]]; then
+    PROVISIONING_PROFILE_SPECIFIER="$profiles"
+    pass "App Store Connect provisioning profile: auto-detected"
+    return 0
+  fi
+
+  if [[ "$profile_count" -gt 1 ]]; then
+    fail "Multiple App Store Connect provisioning profiles found for ${APP_BUNDLE_ID}."
+    fail "Set PROVISIONING_PROFILE_SPECIFIER to the intended profile name, then retry."
+    fail "Do not commit the profile name into this script."
+    exit 1
+  fi
+
+  fail "No App Store Connect provisioning profile found for ${APP_BUNDLE_ID}."
+  fail "TestFlight does not require registered devices; this needs a Distribution → App Store Connect profile."
+  fail "Create/download one at developer.apple.com → Certificates, Identifiers & Profiles → Profiles."
+  fail "Then double-click the .mobileprovision file or set PROVISIONING_PROFILE_SPECIFIER manually."
+  exit 1
+}
+
 build_signing_build_settings() {
   # Capitalise signing style for the Xcode build setting value ("Automatic"/"Manual").
   local style_value
@@ -229,7 +356,8 @@ build_signing_build_settings() {
 
   # With automatic signing Xcode selects the identity; injecting CODE_SIGN_IDENTITY
   # at the same time causes exit 65 ("conflicting provisioning settings").
-  # Only override CODE_SIGN_IDENTITY for manual signing.
+  # Manual signing is the default for TestFlight so the archive never tries to
+  # create a device-bound development profile.
   if [[ "$SIGNING_STYLE" == "manual" ]]; then
     SIGNING_BUILD_SETTINGS+=("CODE_SIGN_IDENTITY=${SIGNING_CERTIFICATE}")
     if [[ -n "$PROVISIONING_PROFILE_SPECIFIER" ]]; then
@@ -264,15 +392,48 @@ inject_build_number() {
 
 run_xcodebuild() {
   local start
+  local status
+  local -a statuses
   start=$(date +%s)
 
+  set +e
   if command -v xcpretty &>/dev/null; then
-    xcodebuild "$@" | xcpretty
+    xcodebuild "$@" 2>&1 | redact_stream | xcpretty
+    statuses=("${PIPESTATUS[@]}")
+    status="${statuses[0]}"
   else
-    xcodebuild "$@"
+    xcodebuild "$@" 2>&1 | redact_stream
+    statuses=("${PIPESTATUS[@]}")
+    status="${statuses[0]}"
   fi
+  set -e
 
   echo "  (took $(elapsed "$start"))"
+  return "$status"
+}
+
+redact_stream() {
+  REDACT_TEAM_ID="${APPLE_TEAM_ID:-}" \
+  REDACT_PROFILE_SPECIFIER="${PROVISIONING_PROFILE_SPECIFIER:-}" \
+  REDACT_AUTH_KEY_PATH="${ASC_AUTH_KEY_PATH:-}" \
+  REDACT_AUTH_KEY_ID="${ASC_AUTH_KEY_ID:-}" \
+  REDACT_AUTH_ISSUER_ID="${ASC_AUTH_ISSUER_ID:-}" \
+  perl -pe '
+    BEGIN {
+      @pairs = (
+        [$ENV{REDACT_TEAM_ID} // "", "<TEAM_ID_REDACTED>"],
+        [$ENV{REDACT_PROFILE_SPECIFIER} // "", "<PROFILE_REDACTED>"],
+        [$ENV{REDACT_AUTH_KEY_PATH} // "", "<ASC_KEY_PATH_REDACTED>"],
+        [$ENV{REDACT_AUTH_KEY_ID} // "", "<ASC_KEY_ID_REDACTED>"],
+        [$ENV{REDACT_AUTH_ISSUER_ID} // "", "<ASC_ISSUER_ID_REDACTED>"],
+      );
+    }
+    for my $pair (@pairs) {
+      my ($value, $replacement) = @$pair;
+      next unless length $value;
+      s/\Q$value\E/$replacement/g;
+    }
+  '
 }
 
 generate_project() {
@@ -405,6 +566,27 @@ cmd_doctor() {
     pass "Apple Distribution signing identity found in Keychain"
   else
     warn "No Apple Distribution signing identity found in Keychain"
+    warn "  → Install via: developer.apple.com → Certificates → create 'Apple Distribution'"
+  fi
+
+  local matching_profiles
+  local app_store_profiles
+  local matching_count
+  local app_store_count
+  matching_profiles="$(matching_profile_names || true)"
+  app_store_profiles="$(matching_app_store_profile_names || true)"
+  matching_count="$(count_lines "$matching_profiles")"
+  app_store_count="$(count_lines "$app_store_profiles")"
+
+  if [[ "$app_store_count" -gt 0 ]]; then
+    pass "App Store Connect provisioning profile(s) found locally for ${APP_BUNDLE_ID} (${app_store_count} file(s))"
+  else
+    warn "No App Store Connect provisioning profile found locally for ${APP_BUNDLE_ID}"
+    if [[ "$matching_count" -gt 0 ]]; then
+      warn "  Found profile(s) for this bundle ID, but they appear to be device-bound development/ad hoc profiles."
+    fi
+    warn "  TestFlight does not require registered devices."
+    warn "  Create Distribution → App Store Connect profile at developer.apple.com → Profiles, then download it."
   fi
 
   if [[ -n "$ASC_AUTH_KEY_PATH" ]]; then
@@ -426,10 +608,44 @@ cmd_doctor() {
   pass "Doctor complete"
 }
 
+# Print actionable guidance when xcodebuild archive fails due to account or
+# provisioning issues.  Does not print the Team ID or any secret values.
+print_archive_failure_hint() {
+  echo "" >&2
+  fail "xcodebuild archive failed.  Common causes and remedies:"
+  echo "" >&2
+  warn "Automatic signing (SIGNING_STYLE=automatic):"
+  echo "  'No Accounts' means Xcode cannot resolve or download provisioning profiles." >&2
+  echo "  Option A — add your Apple ID in Xcode → Settings → Accounts." >&2
+  echo "  Option B — supply App Store Connect API key flags (all three required):" >&2
+  echo "               ASC_AUTH_KEY_PATH=<path/to/AuthKey_XXXXX.p8> \\" >&2
+  echo "               ASC_AUTH_KEY_ID=<key-id> \\" >&2
+  echo "               ASC_AUTH_ISSUER_ID=<issuer-id> \\" >&2
+  echo "               ./scripts/build_signed.sh export" >&2
+  echo "" >&2
+  warn "Manual signing (default — SIGNING_STYLE=manual):"
+  echo "  'No profiles for canonical app bundle ID' means no matching" >&2
+  echo "  App Store Connect Distribution profile is installed locally." >&2
+  echo "  1. Create a Distribution → App Store Connect profile at:" >&2
+  echo "       developer.apple.com → Certificates, Identifiers & Profiles → Profiles" >&2
+  echo "  2. Download and double-click the .mobileprovision file (installs it), or:" >&2
+  echo "       PROVISIONING_PROFILE_SPECIFIER=<exact-profile-name> ./scripts/build_signed.sh export" >&2
+  echo "" >&2
+  warn "Export and upload require a successful archive:"
+  echo "  • 'export' signs and packages the archive into a local .ipa." >&2
+  echo "  • 'upload' / Transporter only accept an already-signed .ipa." >&2
+  echo "  • Fix the archive step above, then re-run 'export' (or 'upload')." >&2
+  echo "" >&2
+  info "Run './scripts/build_signed.sh doctor' to check all prerequisites."
+}
+
 cmd_archive() {
   header "SIGNED ARCHIVE"
   require_xcodebuild
   require_team_id
+
+  ensure_manual_distribution_profile
+
   generate_project
 
   rm -rf "$ARCHIVE_PATH"
@@ -443,7 +659,7 @@ cmd_archive() {
   info "Bundle ID:   $APP_BUNDLE_ID"
   info "Archive:     $ARCHIVE_PATH"
 
-  run_xcodebuild \
+  if ! run_xcodebuild \
     -project "$PROJECT_PATH" \
     -scheme "$SCHEME" \
     -configuration "$CONFIGURATION" \
@@ -453,7 +669,10 @@ cmd_archive() {
     "${PROVISIONING_FLAGS[@]+"${PROVISIONING_FLAGS[@]}"}" \
     "${AUTH_FLAGS[@]+"${AUTH_FLAGS[@]}"}" \
     archive \
-    "${SIGNING_BUILD_SETTINGS[@]+"${SIGNING_BUILD_SETTINGS[@]}"}"
+    "${SIGNING_BUILD_SETTINGS[@]+"${SIGNING_BUILD_SETTINGS[@]}"}"; then
+    print_archive_failure_hint
+    exit 1
+  fi
 
   inject_build_number
   pass "Archive created: $ARCHIVE_PATH"

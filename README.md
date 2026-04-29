@@ -62,11 +62,22 @@ APPLE_TEAM_ID=<team-id> ./scripts/build_signed.sh export
 APPLE_TEAM_ID=<team-id> ./scripts/build_signed.sh upload
 ```
 
-**Auto-detection:** If exactly one Apple Distribution certificate is present in your local macOS Keychain, `APPLE_TEAM_ID` is inferred automatically and you can omit it. If no matching cert is found, or if multiple Team IDs are present, you must set `APPLE_TEAM_ID` explicitly. Run `./scripts/build_signed.sh doctor` to check the detected state.
+**Auto-detection:** If exactly one Apple Distribution certificate is present in your local macOS Keychain, `APPLE_TEAM_ID` is inferred automatically and you can omit it. If exactly one local App Store Connect provisioning profile matches the bundle ID, the profile specifier is inferred automatically too. Run `./scripts/build_signed.sh doctor` to check the detected state.
 
-Provisioning profiles are handled by Xcode automatic signing (the default) or by setting `PROVISIONING_PROFILE_SPECIFIER` for manual signing — not via Keychain look-up.
+For TestFlight, use a **Distribution → App Store Connect** provisioning profile. Do not add devices just for TestFlight; device registration is only needed for development/ad hoc installs outside TestFlight. If multiple matching profiles exist, pass `PROVISIONING_PROFILE_SPECIFIER=<profile-name>` through the environment.
 
 Keep private signing values in environment variables only. Do not commit Team IDs, provisioning profile UUIDs, App Store Connect API key IDs, issuer IDs, `.p8` paths, certificates, or profiles.
+
+### Troubleshooting signed builds
+
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| *"No Accounts: Add a new account in Accounts settings"* | Automatic signing with no Xcode account or API key | Log in via Xcode → Settings → Accounts **or** supply `ASC_AUTH_KEY_PATH` / `ASC_AUTH_KEY_ID` / `ASC_AUTH_ISSUER_ID` |
+| *"No profiles for canonical app bundle ID"* | No App Store Connect Distribution profile installed locally | Create a Distribution → App Store Connect profile at [developer.apple.com → Profiles](https://developer.apple.com/account/resources/profiles/list), download and double-click it, or set `PROVISIONING_PROFILE_SPECIFIER` |
+| *`export` or `upload` reports no signed IPA* | `export` / `upload` requires a successful `archive` first | Re-run `export`; it will re-archive automatically. Transporter only accepts a fully signed `.ipa` |
+| *"conflicting provisioning settings" (exit 65)* | `CODE_SIGN_IDENTITY` injected alongside automatic signing | Use `SIGNING_STYLE=manual` (the default) to avoid the conflict |
+
+> **Sequence reminder:** `archive` → `export` → `upload`. Each step depends on the previous one completing successfully. Running `export` or `upload` re-runs `archive` automatically.
 
 ### Prerequisites
 
