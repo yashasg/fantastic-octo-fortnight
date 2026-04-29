@@ -81,6 +81,15 @@ final class ShieldConfigurationCopyTests: XCTestCase {
         XCTAssertTrue(copy.subtitle.contains("Look 20 feet away"))
     }
 
+    func test_localizedResources_resolveForEveryShieldCopyKey() {
+        for key in ShieldConfigurationCopyLocalizationKey.allCases {
+            XCTAssertTrue(
+                ShieldConfigurationCopyLocalization.hasLocalizedResource(for: key),
+                "Missing localized shield copy resource for \(key.rawValue)"
+            )
+        }
+    }
+
     func test_copy_posture_omitsCountdownAtFiveSecondsOrLess() {
         let snapshot = ShieldSessionSnapshot(
             reasonRaw: "posture",

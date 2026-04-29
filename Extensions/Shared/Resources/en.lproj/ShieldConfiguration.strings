@@ -1,0 +1,7 @@
+"shield.eyes.title" = "Time for an eye break";
+"shield.eyes.subtitle" = "Look 20 feet away and soften your focus.";
+"shield.posture.title" = "Time for a posture break";
+"shield.posture.subtitle" = "Stand up, roll your shoulders, and reset.";
+"shield.generic.title" = "Time for a break";
+"shield.generic.subtitle" = "Take a moment away from the screen.";
+"shield.countdown.subtitle" = "%d seconds remaining. %@";

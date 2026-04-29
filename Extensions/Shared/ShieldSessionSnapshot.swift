@@ -38,26 +38,43 @@ public struct ShieldConfigurationCopy: Equatable {
 
     public static func make(
         for snapshot: ShieldSessionSnapshot,
-        now: Date = Date()
+        now: Date = Date(),
+        bundle: Bundle? = nil
     ) -> ShieldConfigurationCopy {
-        let action = actionCopy(for: snapshot.reasonRaw)
+        let action = actionCopy(for: snapshot.reasonRaw, bundle: bundle)
         if let remaining = snapshot.remainingSeconds(at: now), remaining > 5 {
             return ShieldConfigurationCopy(
                 title: action.title,
-                subtitle: "\(remaining) seconds remaining. \(action.subtitle)"
+                subtitle: ShieldConfigurationCopyLocalization.countdownSubtitle(
+                    remainingSeconds: remaining,
+                    actionSubtitle: action.subtitle,
+                    bundle: bundle
+                )
             )
         }
         return ShieldConfigurationCopy(title: action.title, subtitle: action.subtitle)
     }
 
-    private static func actionCopy(for reasonRaw: String?) -> (title: String, subtitle: String) {
+    private static func actionCopy(
+        for reasonRaw: String?,
+        bundle: Bundle?
+    ) -> (title: String, subtitle: String) {
         switch reasonRaw {
         case "eyes":
-            return ("Time for an eye break", "Look 20 feet away and soften your focus.")
+            return (
+                ShieldConfigurationCopyLocalization.localizedString(for: .eyesTitle, bundle: bundle),
+                ShieldConfigurationCopyLocalization.localizedString(for: .eyesSubtitle, bundle: bundle)
+            )
         case "posture":
-            return ("Time for a posture break", "Stand up, roll your shoulders, and reset.")
+            return (
+                ShieldConfigurationCopyLocalization.localizedString(for: .postureTitle, bundle: bundle),
+                ShieldConfigurationCopyLocalization.localizedString(for: .postureSubtitle, bundle: bundle)
+            )
         default:
-            return ("Time for a break", "Take a moment away from the screen.")
+            return (
+                ShieldConfigurationCopyLocalization.localizedString(for: .genericTitle, bundle: bundle),
+                ShieldConfigurationCopyLocalization.localizedString(for: .genericSubtitle, bundle: bundle)
+            )
         }
     }
 }
