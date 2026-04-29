@@ -52,11 +52,11 @@ final class AppCoordinator: ObservableObject {
 
     // MARK: - Snooze Wake Constants
 
-    /// Category identifier for the one-time snooze-wake notification.
+    /// Shared identifier used as both the `UNNotificationRequest.identifier` and
+    /// the `content.categoryIdentifier` for the one-time snooze-wake notification.
     /// `AppDelegate` checks this to route snooze-wake notifications separately
     /// from real reminder notifications.
     static let snoozeWakeCategory = "com.yashasgujjar.kshana.snooze-wake"
-    private static let snoozeWakeIdentifier = "com.yashasgujjar.kshana.snooze-wake"
 
     // MARK: - Owned Dependencies
 
@@ -378,9 +378,8 @@ final class AppCoordinator: ObservableObject {
         // Schedule periodic background UNNotifications only as the fallback path
         // while Screen Time shielding is unavailable.
         if notificationAuthStatus == .authorized, shouldScheduleNotificationFallback {
-            // Capture detail and analytics reason before await — IPC state may change across the suspension point.
-            let fallbackDetail = notificationFallbackDetail
-            let analyticsReason = notificationFallbackAnalyticsReason
+            // Capture before await — IPC state may change across the suspension point.
+            let (fallbackDetail, analyticsReason) = fallbackRoutingContext()
             await scheduler.scheduleReminders(using: settings)
             recordIPCEvent(
                 .notificationFallbackScheduled,
@@ -609,7 +608,7 @@ extension AppCoordinator {
         snoozeWakeTask?.cancel()
         snoozeWakeTask = nil
         notificationCenter.removePendingNotificationRequests(
-            withIdentifiers: [Self.snoozeWakeIdentifier]
+            withIdentifiers: [Self.snoozeWakeCategory]
         )
     }
 
@@ -632,7 +631,7 @@ extension AppCoordinator {
 
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: interval, repeats: false)
         let request = UNNotificationRequest(
-            identifier: Self.snoozeWakeIdentifier,
+            identifier: Self.snoozeWakeCategory,
             content: content,
             trigger: trigger
         )
@@ -825,20 +824,24 @@ extension AppCoordinator {
             hasEnabledReminder
     }
 
-    private var notificationFallbackDetail: String {
-        guard deviceActivityMonitor.isAvailable else { return "shield_unavailable" }
-        guard isTrueInterruptEnabled else { return "true_interrupt_disabled" }
-        guard hasTrueInterruptSelection else { return "true_interrupt_empty_selection" }
-        Logger.scheduling.error("notificationFallbackDetail: shield routing available — IPC state may have changed")
-        return "unexpected_shield_routing_state"
-    }
-
-    /// Maps the current fallback routing state to a structured analytics reason code.
-    /// Must be captured before any `await` for the same reason as `notificationFallbackDetail`.
-    private var notificationFallbackAnalyticsReason: AnalyticsEvent.SchedulePathReason {
-        guard deviceActivityMonitor.isAvailable else { return .shieldUnavailable }
-        guard isTrueInterruptEnabled else { return .trueInterruptDisabled }
-        return .trueInterruptEmptySelection
+    /// Returns the IPC detail string and analytics reason for the current fallback routing state.
+    ///
+    /// Evaluate once and capture **before** any `await` — IPC state may change across a
+    /// suspension point. Combining both outputs avoids evaluating the same guard chain twice.
+    private func fallbackRoutingContext() -> (detail: String, analyticsReason: AnalyticsEvent.SchedulePathReason) {
+        guard deviceActivityMonitor.isAvailable else {
+            return ("shield_unavailable", .shieldUnavailable)
+        }
+        guard isTrueInterruptEnabled else {
+            return ("true_interrupt_disabled", .trueInterruptDisabled)
+        }
+        guard hasTrueInterruptSelection else {
+            return ("true_interrupt_empty_selection", .trueInterruptEmptySelection)
+        }
+        // Defensive path: shield routing became available between the
+        // `shouldScheduleNotificationFallback` check and this evaluation.
+        Logger.scheduling.error("fallbackRoutingContext: shield routing available — IPC state may have changed")
+        return ("unexpected_shield_routing_state", .trueInterruptEmptySelection)
     }
 
     private var isTrueInterruptEnabled: Bool {
