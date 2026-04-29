@@ -124,6 +124,41 @@ final class AppCoordinatorWatchdogHeartbeatTests: XCTestCase {
         XCTAssertEqual(deviceActivityMonitor.cancelCallCount, 0)
     }
 
+    func test_foregroundTransition_whenReadShieldSessionThrows_skipsRecovery() async {
+        deviceActivityMonitor.stubbedIsAvailable = true
+        ipcStore.shieldSessionSnapshot = ShieldSessionSnapshot(
+            reasonRaw: ReminderType.eyes.shieldReason.rawValue,
+            durationSeconds: 20,
+            triggeredAt: Date(timeIntervalSince1970: 1)
+        )
+        ipcStore.readShieldSessionError = AppGroupIPCStore.StoreError.corruptShieldSession
+
+        await coordinator.handleForegroundTransition()
+
+        XCTAssertFalse(ipcStore.events.contains { $0.kind == .watchdogRecoveryTriggered })
+        XCTAssertEqual(ipcStore.clearShieldSessionCallCount, 0)
+        XCTAssertEqual(deviceActivityMonitor.cancelCallCount, 0)
+        XCTAssertTrue(notificationCenter.addedRequests.isEmpty)
+    }
+
+    func test_foregroundTransition_whenReadEventsThrows_skipsRecovery() async {
+        struct ReadEventsFailure: Error {}
+        deviceActivityMonitor.stubbedIsAvailable = true
+        ipcStore.shieldSessionSnapshot = ShieldSessionSnapshot(
+            reasonRaw: ReminderType.posture.shieldReason.rawValue,
+            durationSeconds: 10,
+            triggeredAt: Date(timeIntervalSince1970: 1)
+        )
+        ipcStore.readEventsError = ReadEventsFailure()
+
+        await coordinator.handleForegroundTransition()
+
+        XCTAssertFalse(ipcStore.events.contains { $0.kind == .watchdogRecoveryTriggered })
+        XCTAssertEqual(ipcStore.clearShieldSessionCallCount, 0)
+        XCTAssertEqual(deviceActivityMonitor.cancelCallCount, 0)
+        XCTAssertTrue(notificationCenter.addedRequests.isEmpty)
+    }
+
     private var heartbeatDetails: [WatchdogHeartbeatDetail] {
         ipcStore.events
             .filter { $0.kind == .watchdogHeartbeat }
