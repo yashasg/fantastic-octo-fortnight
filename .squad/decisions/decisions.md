@@ -4631,3 +4631,130 @@ Screen Time Shield requires three extension targets in addition to the main app:
 3. Run full CI cycle on dev branch
 4. Merge to main + tag for TestFlight release
 
+
+---
+
+## Merged from decisions/inbox — 2026-04-29T06:15:00Z
+
+### Decision: User Directive — No-Warning Shop
+
+**Date:** 2026-04-29T01:30:05-07:00  
+**Source:** yashasg (via Copilot)  
+**Policy:** We are a no-warning shop; warnings must be fixed, not accepted.
+
+**Rationale:**
+- Build quality non-negotiable
+- Warnings are not acceptable technical debt; all warnings must be resolved pre-merge
+- CI gates enforce zero-warning policy across linting, compilation, and extension targets
+
+**Enforcement:**
+- Lint gate: `./scripts/build.sh lint` must return 0 warnings
+- Build gate: All targets must compile warning-clean
+- UI test gate: 0 new warnings in test suite
+- Pre-merge review: Saul approves only zero-warning changes
+
+**Impact on Future Waves:**
+- All new code must be warning-clean
+- Pre-existing warnings must be documented and addressed in cleanup tasks
+- Policy is non-negotiable for Phase 2+ completion
+
+---
+
+### Decision: M3 True Interrupt Mode — Validation Strategy
+
+**Date:** 2026-04-29  
+**Author:** Livingston (QA/Tester)  
+**Branch:** squad/m3-true-interrupt-mode  
+**Status:** Validated; gates passed
+
+**Baseline Results (Pre-implementation):**
+- Unit tests: 1415/1415 pass (0 failures)
+- Lint: 208 warnings, 0 errors (pre-existing; not M3-related)
+- UI tests: 53/55 pass (2 pre-existing failures in OnboardingFlowTests)
+- Coverage: 80.07% baseline
+
+**Testing Strategy for M3 APIs:**
+
+*Constraint:* FamilyControls, DeviceActivity, ManagedSettings do not run in simulator; require device + entitlement.
+
+*Protocol Boundary:* `ScreenTimeShieldProviding` is the sole injection seam. All tests use `MockScreenTimeShieldProviding`.
+
+**Unit-Testable Contracts (CI-verified):**
+- `beginShield(for:)` called on threshold → overlay
+- `endShield()` called on dismiss / snooze
+- `beginShield` skipped when `isAvailable == false`
+- Error handling: graceful fallback, no re-throw
+- Double-call protection: `endShield` called exactly once per break
+- Regression tests: `ShieldSession` keys and `ShieldTriggerReason` raw values unchanged
+
+**Manual Device Tests:**
+- FamilyControls permission dialog
+- Apps shield during break session
+- Shield displays branding (kshana)
+- Button verdicts: "Take Break" persists; "Skip" dismisses
+- App Group cross-process data
+- Cold-launch notification + shield race
+
+**Coverage Gate:**
+- Unit tests: pass with 0 failures, coverage ≥ 80%
+- UI tests: pass with 0 failures (after fixing 2 pre-existing failures)
+- Manual gate: Device scenarios on physical device with entitlement
+
+**Quality Gate Per M3 Issue:**
+- M3.3 (AppCoordinator wiring): 8 mock contracts in unit tests
+- M3.2 (FamilyControls auth): State machine transitions + device permission dialog
+- M3.4 (DeviceActivityCenter): Device-only validation
+- M3.5 (ShieldConfiguration extension): Device-only validation
+- M3.6 (ShieldAction extension): Device-only validation
+
+---
+
+### Decision: Screen Time Shield — Architecture Boundaries (Issue #202)
+
+**Author:** Rusty (iOS Architect)  
+**Date:** 2026-04-29  
+**Issue:** #202  
+**Branch:** squad/m3-true-interrupt-mode  
+**Status:** Accepted
+
+**Decision 1: Shield is opt-in supplementary layer**
+- Primary reminder path: `ScreenTimeTracker` + `UNUserNotificationCenter` (always enabled)
+- Screen Time shielding: opt-in "Hard Mode" feature gated by authorization + entitlement
+- Fallback: `ScreenTimeShieldNoop` when entitlement absent; no UX degradation
+- Rationale: Avoids coupling core health loop to entitlement-gated, device-only API
+
+**Decision 2: Protocol boundary defined now; real implementation deferred to M3.3**
+- Added in spike: `ScreenTimeShieldProviding` protocol, `ScreenTimeShieldNoop`, test scaffolding
+- Deferred to M3.3: `ScreenTimeShieldManager` (imports FamilyControls, etc.)
+- Reason: Cannot compile without entitlement; requires three app extensions (not SPM-expressible)
+- Consequence: AppCoordinator not yet wired; injection point reserved for M3.3
+
+**Decision 3: App Group identifier locked in**
+- Designated group: `group.com.yashasgujjar.kshana`
+- Keys: `shield.breakReason`, `shield.durationSeconds`, `shield.triggeredAt`
+- Pinned as `static let` constants on `ShieldSession`; regression tests track changes
+
+**Decision 4: No animated shield UI**
+- `ShieldConfigurationDataSource`: static text + system image only
+- No custom animations; no `YinYangEyeView`
+- Reason: Extension must return quickly from `configuration(shieldingApplication:context:completionHandler:)`
+- Fallback: System default shield if extension slow/crashes (acceptable behavior)
+
+**Decision 5: M3.3 must be next issue for Screen Time work**
+- Prerequisite: Xcode project migration (SPM → `.xcodeproj` with embedded extensions)
+- Non-trivial structural change; deserves own issue with acceptance criteria
+- Blocks: Further Screen Time progress until migration complete
+
+**Files Changed in Spike:**
+- `docs/SPIKE_SCREEN_TIME_APIS.md` (full findings)
+- `EyePostureReminder/Services/ScreenTimeShieldTypes.swift` (types)
+- `EyePostureReminder/Services/ScreenTimeShieldProtocols.swift` (protocols)
+- `EyePostureReminder/Services/ScreenTimeShieldNoop.swift` (no-op)
+- `Tests/EyePostureReminderTests/Services/ScreenTimeShieldTests.swift` (10 tests)
+- `Tests/EyePostureReminderTests/Mocks/MockScreenTimeShieldProviding.swift` (mock)
+
+**Open Questions (Punted to M3.3):**
+1. AuthorizationCenter.requestAuthorization timing: onboarding vs lazy?
+2. DeviceActivitySchedule: DateComponents-based window or duration from now?
+3. ShieldActionExtension required in M3 or omit "Ask for More Time" button?
+

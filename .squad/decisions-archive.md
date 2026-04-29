@@ -285,3 +285,102 @@
 **Archive Rationale:** Pre-Phase 1 roadmap and planning decisions preserved for historical context. Active decisions.md now focuses on Phase 1+ implementation to keep file manageable.
 
 **Retrieval:** If pre-Phase 1 context needed for future phases, consult this archive and ROADMAP.md.
+### 2026-04-27T16:32: User directive
+**By:** Yashas (via Copilot)
+**What:** Legal document PII fields — [PUBLISHER NAME], [CONTACT EMAIL], [JURISDICTION] in docs/legal/TERMS.md and docs/legal/PRIVACY.md — must ONLY be edited by Yashas. Squad agents must never fill in, guess, or modify these placeholders. They contain PII and business decisions that only the project owner can make.
+**Why:** User request — these fields were previously filled with incorrect information by agents. Captured to prevent recurrence.
+
+# Decision: Battery & Performance Audit Results — No Critical Issues
+
+**Author:** Rusty (iOS Architect)  
+**Date:** 2025-07-18  
+**Status:** Informational
+
+## Summary
+
+Full battery and performance audit completed across all 33 Swift source files. **No critical (🔴) issues found.** The app is battery-efficient by design.
+
+## Key Validations
+
+1. **Timer architecture is correct.** ScreenTimeTracker uses a 1s timer with 0.5s tolerance, pauses on `willResignActive`, resumes on `didBecomeActive`. Zero CPU usage when backgrounded.
+2. **No background modes.** The app declares no `UIBackgroundModes` — it performs zero work when suspended. This is the right choice for a foreground reminder app.
+3. **All detection is event-driven.** Focus (KVO), CarPlay (`routeChangeNotification`), driving (`CMMotionActivityManager`) — no polling anywhere.
+4. **No retain cycles.** Consistent `[weak self]` across all closures.
+5. **Animations are GPU-efficient.** All use transform-based operations (`.scaleEffect`, `.rotationEffect`), all respect `accessibilityReduceMotion`.
+
+## 3 Minor Warnings (P3/P4)
+
+| ID | Issue | Fix Effort |
+|----|-------|-----------|
+| PERF-001 | OverlayView countdown timer missing `tolerance` | 1 line |
+| PERF-002 | YinYang breathing animation lacks `onDisappear` lifecycle | Small |
+| PERF-003 | OnboardingView `UIPageControl.appearance()` in struct init | Small |
+
+None of these will cause measurable battery drain. They are best-practice improvements.
+
+## Recommendation
+
+No blocking action required. The three P3/P4 items can be addressed opportunistically when touching those files. The app is production-ready from a battery/performance perspective.
+
+## Artifacts
+
+- Full report: `docs/performance-audit.md`
+- Machine-readable issues: `rusty-issues.json`
+
+---
+
+# 2026-04-28: LLC Registration & Apple Entity Guidance
+
+## Decision: Puzzle Quest LLC Registration State Must Be Corrected Before Publisher Finalization
+
+**Author:** Frank (Legal Advisor)  
+**Date:** 2026-04-28  
+**Requested by:** yashasg  
+**Status:** Action required before App Store publisher finalization
+
+### 2026-04-25T03:14:07Z: User directive
+**By:** yashasg (via Copilot)
+**What:** When running tests, always delete the previous TestResults.xcresult before starting a new run
+**Why:** User request — xcodebuild fails with "Existing file at -resultBundlePath" if stale results exist
+
+# Decision: Legal UI Patterns
+
+**Author:** Linus (iOS Dev — UI)  
+**Date:** 2026-04-28  
+**Status:** Implemented
+
+## Context
+
+Legal disclaimer text (from Frank's `docs/legal/`) needed wiring into the app UI in two places:
+1. Onboarding (first launch)
+2. Settings screen (permanent access)
+
+## Decisions
+
+### 2026-04-25T02:09: User directive
+**By:** Yashasg (via Copilot)
+**What:** Fix EVERY issue that comes out of audits — do not drop issues because they are cosmetic or coding style. Report all findings, not just P0/P1/P2. Even P3+ and lower should be reported and fixed.
+**Why:** User request — captured for team memory
+
+
+### 2026-04-25T02:10: User directive
+**By:** Yashasg (via Copilot)
+**What:** Run the audit loop endlessly — audit → create issues → fix → audit again. Never stop until the user explicitly says stop. No convergence exit.
+**Why:** User request — captured for team memory
+
+### 2026-04-25T06:30:00Z: User directive
+**By:** Yashasg (via Copilot)
+**What:** After every code commit: (1) Livingston adds tests for the changed code, (2) run SwiftLint and fix any new violations, (3) run full test suite to catch regressions. This is a mandatory post-commit QA gate.
+**Why:** User request — ensures quality stays high as the team ships fast.
+
+# Product Audit — TestFlight Readiness
+
+> **Author:** Danny (Product Manager)  
+> **Date:** 2026-04-25  
+> **Scope:** Gaps blocking a viable TestFlight beta submission  
+> **Method:** Code inspection, doc review, cross-referencing ROADMAP vs actual state
+
+---
+
+## P0 — Must Fix Before TestFlight Submission
+

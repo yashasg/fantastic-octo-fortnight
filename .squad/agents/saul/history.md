@@ -111,3 +111,31 @@
 - **Build:** ✅ BUILD SUCCEEDED (xcodebuild, iPhone 17 Simulator, iOS 26.4)
 - **Tests:** ✅ 889 tests, 0 failures
 - **Key learning:** When removing design tokens from Swift code, also audit the asset catalog for orphaned `.colorset` entries and test comments that reference deleted tokens — these artifacts survive code-level cleanup and accumulate as noise
+
+### 2026-04-29: Code Review #204 — True Interrupt Authorization Setup
+
+**Scope:** Review of #204 (True Interrupt authorization setup) with focus on no-warning policy enforcement.
+
+**Review Verdict:** ✅ **APPROVED — No blocking regressions**
+
+**Key Findings:**
+- Authorization opt-in toggle is safe; graceful fallback to `ScreenTimeShieldNoop` (no-op provider)
+- Settings wiring correct; metadata persisted in `UserDefaults` with no side effects
+- Build configuration clean; no new warnings introduced
+- Test coverage sufficient; all new tests passing with zero failures
+- Protocol boundary (`ScreenTimeShieldProviding`) correctly in place; real wiring deferred to M3.3
+
+**Staging Recommendation:**
+- ✅ Stage code changes (EyePostureReminder/, Tests/, ScreenTimeExtensions/)
+- ✅ Stage config changes (project.yml, entitlements, signing)
+- ✅ Stage test fixtures
+- ❌ Exclude .squad/ (internal noise)
+- ❌ Exclude TestResults*.xcresult (build artifacts)
+
+**User Directive Captured:**
+- "We are a no-warning shop; warnings must be fixed, not accepted."
+- Enforcement: All pre-merge gates now require zero new warnings
+- Impact: Raises quality bar; all future waves must maintain zero-warning standard
+
+**Key Learning:** When reviewing authorization/permission UI additions, verify the fallback path is graceful (no degraded UX) and that the feature remains optional — this allows shipping UI while regulatory/entitlement approvals remain pending.
+
