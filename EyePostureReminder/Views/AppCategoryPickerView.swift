@@ -12,7 +12,7 @@
 // View boundary contract:
 //   - Accepts `SelectedAppsState` as `@ObservedObject` — no @EnvironmentObject.
 //   - Accepts `authorizationStatus` as a plain value — no live FamilyControls import.
-//   - Calls `onRequestAuthorization` / `onDone` closures — no navigation coupling.
+//   - Calls injected action closures — no navigation or UIApplication coupling.
 // This keeps the view testable via body-description inspection without a SwiftUI host.
 
 import SwiftUI
@@ -29,9 +29,10 @@ import SwiftUI
 struct AppCategoryPickerView: View {
     @ObservedObject var appsState: SelectedAppsState
     let authorizationStatus: ScreenTimeAuthorizationStatus
-    /// Called when the user taps the primary CTA. Implementations should call
-    /// `ScreenTimeAuthorizationProviding.requestAuthorization()` asynchronously.
+    /// Called when the user can still request Screen Time authorization.
     let onRequestAuthorization: () -> Void
+    /// Called when authorization is denied and iOS Settings is the recovery path.
+    var onOpenSettings: () -> Void = {}
     let onDone: () -> Void
 
     var body: some View {
@@ -71,7 +72,7 @@ struct AppCategoryPickerView: View {
                     Spacer(minLength: AppSpacing.lg)
 
                     // Primary CTA
-                    Button(action: onRequestAuthorization) {
+                    Button(action: performPrimaryAction) {
                         Text(primaryButtonKey, bundle: .module)
                             .frame(maxWidth: .infinity)
                     }
@@ -95,6 +96,15 @@ struct AppCategoryPickerView: View {
             .background(AppColor.background.ignoresSafeArea())
             .navigationTitle(Text("appCategoryPicker.navTitle", bundle: .module))
             .navigationBarTitleDisplayMode(.inline)
+        }
+    }
+
+    func performPrimaryAction() {
+        switch authorizationStatus {
+        case .denied:
+            onOpenSettings()
+        case .unavailable, .notDetermined, .approved:
+            onRequestAuthorization()
         }
     }
 

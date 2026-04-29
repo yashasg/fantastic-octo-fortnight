@@ -194,6 +194,74 @@ final class TrueInterruptViewCoverageTests: XCTestCase {
         XCTAssertTrue(doneCalled)
     }
 
+    func test_appCategoryPickerView_deniedPrimaryAction_opensSettingsOnly() {
+        var authorizationRequested = false
+        var settingsOpened = false
+        let view = AppCategoryPickerView(
+            appsState: makeSelectedAppsState(),
+            authorizationStatus: .denied,
+            onRequestAuthorization: { authorizationRequested = true },
+            onOpenSettings: { settingsOpened = true },
+            onDone: {}
+        )
+
+        view.performPrimaryAction()
+
+        XCTAssertFalse(authorizationRequested)
+        XCTAssertTrue(settingsOpened)
+    }
+
+    func test_appCategoryPickerView_notDeterminedPrimaryAction_requestsAuthorizationOnly() {
+        var authorizationRequested = false
+        var settingsOpened = false
+        let view = AppCategoryPickerView(
+            appsState: makeSelectedAppsState(),
+            authorizationStatus: .notDetermined,
+            onRequestAuthorization: { authorizationRequested = true },
+            onOpenSettings: { settingsOpened = true },
+            onDone: {}
+        )
+
+        view.performPrimaryAction()
+
+        XCTAssertTrue(authorizationRequested)
+        XCTAssertFalse(settingsOpened)
+    }
+
+    func test_appCategoryPickerView_approvedPrimaryAction_requestsAuthorizationOnly() {
+        var authorizationRequested = false
+        var settingsOpened = false
+        let view = AppCategoryPickerView(
+            appsState: makeSelectedAppsState(),
+            authorizationStatus: .approved,
+            onRequestAuthorization: { authorizationRequested = true },
+            onOpenSettings: { settingsOpened = true },
+            onDone: {}
+        )
+
+        view.performPrimaryAction()
+
+        XCTAssertTrue(authorizationRequested)
+        XCTAssertFalse(settingsOpened)
+    }
+
+    func test_appCategoryPickerView_unavailablePrimaryAction_requestsAuthorizationOnly() {
+        var authorizationRequested = false
+        var settingsOpened = false
+        let view = AppCategoryPickerView(
+            appsState: makeSelectedAppsState(),
+            authorizationStatus: .unavailable,
+            onRequestAuthorization: { authorizationRequested = true },
+            onOpenSettings: { settingsOpened = true },
+            onDone: {}
+        )
+
+        view.performPrimaryAction()
+
+        XCTAssertTrue(authorizationRequested)
+        XCTAssertFalse(settingsOpened)
+    }
+
     func test_appCategoryPickerView_allStatuses_render() {
         for status in ScreenTimeAuthorizationStatus.allCases {
             render(AppCategoryPickerView(

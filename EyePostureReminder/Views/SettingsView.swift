@@ -594,6 +594,7 @@ private struct SettingsTrueInterruptSection: View {
                 onRequestAuthorization: {
                     Task { _ = await coordinator.screenTimeAuthorization.requestAuthorization() }
                 },
+                onOpenSettings: openApplicationSettings,
                 onDone: { showPicker = false }
             )
         }
@@ -628,11 +629,7 @@ private struct SettingsNotificationWarningSection: View {
                 .listRowSeparatorTint(AppColor.accentWarm.opacity(AppOpacity.warningSeparator))
 
                 Button(
-                    action: {
-                        if let url = URL(string: UIApplication.openSettingsURLString) {
-                            UIApplication.shared.open(url)
-                        }
-                    },
+                    action: openApplicationSettings,
                     label: { Text("settings.notifications.openSettings", bundle: .module) }
                 )
                 .font(AppFont.body)
@@ -643,6 +640,12 @@ private struct SettingsNotificationWarningSection: View {
                 .listRowSeparatorTint(AppColor.accentWarm.opacity(AppOpacity.warningSeparator))
             }
         }
+    }
+}
+
+private func openApplicationSettings() {
+    if let url = URL(string: UIApplication.openSettingsURLString) {
+        UIApplication.shared.open(url)
     }
 }
 

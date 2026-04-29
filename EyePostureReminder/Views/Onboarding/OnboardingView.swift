@@ -55,6 +55,7 @@ struct OnboardingView: View {
                 onRequestAuthorization: {
                     Task { _ = await coordinator.screenTimeAuthorization.requestAuthorization() }
                 },
+                onOpenSettings: openApplicationSettings,
                 onDone: { showAppCategoryPicker = false }
             )
         }
@@ -62,6 +63,12 @@ struct OnboardingView: View {
 
     private func finishOnboarding() {
         UserDefaults.standard.set(true, forKey: AppStorageKey.hasSeenOnboarding)
+    }
+
+    private func openApplicationSettings() {
+        if let url = URL(string: UIApplication.openSettingsURLString) {
+            UIApplication.shared.open(url)
+        }
     }
 }
 
