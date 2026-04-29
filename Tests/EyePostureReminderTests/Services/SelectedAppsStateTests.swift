@@ -2,7 +2,7 @@
 @testable import ScreenTimeExtensionShared
 import XCTest
 
-/// Unit tests for `SelectedAppsState` and `SelectedAppsMetadata` added in #204.
+/// Unit tests for `SelectedAppsState` and shared App Group selection metadata.
 ///
 /// All tests use an isolated `UserDefaults` suite so they never touch the real
 /// App Group (`group.com.yashasgujjar.kshana`), which requires a provisioned
@@ -64,6 +64,13 @@ final class SelectedAppsStateTests: XCTestCase {
         let data = try JSONEncoder().encode(original)
         let decoded = try JSONDecoder().decode(SelectedAppsMetadata.self, from: data)
         XCTAssertEqual(original, decoded)
+    }
+
+    func test_metadata_usesSharedAppGroupSelectionSnapshotType() {
+        let metadata = SelectedAppsMetadata(categoryCount: 1, appCount: 2, lastUpdated: Date())
+        let snapshot: AppGroupSelectionSnapshot = metadata
+
+        XCTAssertEqual(snapshot, metadata)
     }
 
     // MARK: - Persistence constants
@@ -197,9 +204,7 @@ final class SelectedAppsStateTests: XCTestCase {
 
         XCTAssertEqual(sut.selectionMetadata, metadata)
 
-        // Verify round-trip via defaults
-        let data = try XCTUnwrap(testDefaults.data(forKey: SelectedAppsState.metadataKey))
-        let decoded = try JSONDecoder().decode(SelectedAppsMetadata.self, from: data)
+        let decoded = try AppGroupIPCStore(defaults: testDefaults).readSelection()
         XCTAssertEqual(decoded, metadata)
     }
 
