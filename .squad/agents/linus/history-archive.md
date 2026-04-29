@@ -245,3 +245,278 @@ Settings UI now clearly communicates "after X min of screen time" mental model. 
 - **Build verified:** `./scripts/build.sh build` → BUILD SUCCEEDED after all view changes.
 
 
+## Session 7: SPM Localization Bundle Resolution
+
+**Session:** 2026-04-24T21:48Z  
+**Status:** ✅ COMPLETE
+
+### Deliverable: SPM Localization Bundle Strategy
+
+**Root Cause Identified:** SPM `executableTarget` builds localized resources into a separate bundle (`EyePostureReminder_EyePostureReminder.bundle`), not `Bundle.main`. SwiftUI localization calls default to `Bundle.main`, causing raw keys to display at runtime.
+
+**Fix Applied:**
+1. **View layer:** Added `bundle: .module` parameter to all localization calls across 7 view files:
+   - HomeView.swift
+   - SettingsView.swift
+   - OverlayView.swift
+   - OnboardingWelcomeView.swift
+   - OnboardingPermissionView.swift
+   - OnboardingSetupView.swift
+
+2. **Build system:** Updated `scripts/run.sh` `assemble_app_bundle()` to embed `EyePostureReminder_EyePostureReminder.bundle` inside the `.app` bundle. Without this, `Bundle.module` cannot resolve at simulator runtime post-install.
+
+**Patterns Codified:**
+- `Text("key", bundle: .module)` for inline Text
+- `String(localized: "key", bundle: .module)` for programmatic strings
+- `.navigationTitle(Text("key", bundle: .module))` for nav titles
+- `.accessibilityLabel(Text("key", bundle: .module))` for a11y labels
+- Trailing-closure forms for Toggle, Button, Section, Label
+
+**Verification:**
+- ✅ Build clean: `./scripts/build.sh build` → BUILD SUCCEEDED
+- ✅ All 77 localization keys resolve correctly
+- ✅ No raw keys visible in simulator
+- ✅ Light and dark mode verified
+- ✅ Dynamic Type sizing verified
+
+**Decision Filed:** `.squad/decisions.md` → SPM Localization Bundle Strategy
+
+### 2026-04-27 — Sheet Dismiss Fix + Asset Color Bundle Fix
+
+- **`SettingsView` Done button:** Replaced `@Environment(\.dismiss)` with `@Binding var isPresented: Bool` passed from `HomeView`. `dismiss()` inside a root view of a `NavigationStack`-within-a-sheet can silently fail; the `@Binding` approach is more reliable. `HomeView` now passes `$showSettings` to `SettingsView(isPresented:)`.
+- **Named asset colors need `bundle: .module`:** `Color("ReminderBlue")` (and all other named colors in `AppColor`) was looking in `Bundle.main` at runtime, which has no asset catalog in an SPM package. Fixed by adding `bundle: .module` to every `Color("name")` call in `DesignSystem.swift`. This was the root cause of toggle tint colors appearing unchanged.
+- **`ContentView` root fixed:** `ContentView` was still using `SettingsView()` as the post-onboarding root (a stale reference pre-dating HomeView being promoted to root). Fixed to `HomeView()`, which is the correct NavigationStack root per project architecture.
+- **Build verified:** `./scripts/build.sh build` → BUILD SUCCEEDED
+
+### 2026-04-28 — Disclaimer Integration (Legal UI)
+
+- **Disclaimer shown on OnboardingWelcomeView.** Short disclaimer text added below the body copy, above the Next CTA button. Styled with `AppFont.caption` + `.tertiary` foreground color inside a `.quaternary.opacity(0.5)` rounded rectangle badge. Non-blocking — user just sees it; no acceptance gate required.
+- **Legal section added to SettingsView.** A "Legal" `Section` at the bottom of the Form contains two Button rows: "Terms & Conditions" and "Privacy Policy". Each row uses a `Label` with system image and primary foreground. Tapping either presents a sheet.
+- **`LegalDocumentView` created.** Reusable sheet view taking `LegalDocument` enum (`.terms` / `.privacy`). Contains a `NavigationStack` with large-title nav bar, `Done` dismiss button, and a `ScrollView` of `LegalSection` rows (heading + body). Fully localized via `bundle: .module`.
+- **`LegalSection` sub-view avoids `body` naming conflict.** Internal `Text` property renamed `content` (not `body`) to avoid conflict with the `View` protocol's `body` requirement. This is a subtle Swift gotcha with `View` conformance.
+- **31 new xcstrings keys added.** Namespaced under `onboarding.welcome.disclaimer`, `settings.section.legal`, `settings.legal.*`, `legal.terms.*`, `legal.privacy.*`. Total keys: ~108.
+- **Key naming pattern for legal content:** `legal.<document>.<section>.heading` / `legal.<document>.<section>.body` — parallel to `settings.section.*` convention but with `heading`/`body` pair for each section.
+- **Build verified:** `./scripts/build.sh build` → BUILD SUCCEEDED
+
+
+## 2026-04-25 — Wave 1 & Wave 2 Completion: UI + Legal + Settings Integration
+
+**Status:** ✅ Complete  
+**Scope:** Disclaimer + Legal section + Smart Pause toggles (Wave 2)
+
+### Orchestration Summary — Wave 1
+
+- **Disclaimer Modal:** Added to onboarding, TOS + Privacy Policy links
+- **Legal Section:** Implemented in SettingsView with placeholder text
+- **Build:** Green; UI layer stable
+- **GitHub Issues Closed:** #6, #7
+
+### Orchestration Summary — Wave 2
+
+- **Smart Pause Toggles:** Three toggles in SettingsView (Network, ScreenTime, GameMode)
+- **UserDefaults Integration:** Toggle state persisted with `pauseCondition_*` keys
+- **PauseManager Wiring:** Toggles connected to Basher's service layer
+- **Build:** Green; all integration tests passing
+- **GitHub Issues Closed:** #8
+
+### Status
+
+- **#2 (Legal Content):** Blocked — waiting on human legal team to fill placeholders (`[Your Company Name]`, `[Contact Email]`, `[Jurisdiction]`, `[Date]`)
+- **Orchestration Log:** Filed at `.squad/orchestration-log/2026-04-24T23-19-18Z-linus.md`
+
+### Next Phase
+
+UI layer ready for Phase 2 expansion. Legal content handoff to human team.
+
+
+## Archive
+
+### 2026-04-24 — UI Layer Phase 1 (M1.2, M1.5)
+
+Early phase 1 UI implementation decisions (OverlayView lifecycle, swipe gestures, animations, accessibility, SettingsViewModel patterns, string catalog) and legal/disclaimer/settings integration completed. All build verified and tests passing. Preserved for reference; current active work continues in Phase 2 Views expansion.
+
+### 2026-04-26 — Quality Sweep: UI Code Quality Audit
+
+**Quality sweep findings from 8-agent parallel audit:**
+
+**7 Warnings (should fix before Phase 2 UI work):**
+
+1. **W-1: SettingsView.body too long (~350 lines)** — Snooze section alone ~90 lines. Linter suppression (`type_body_length`) masks structural debt. **Action:** Extract `SnoozeSectionView`, `SmartPauseSectionView`, `NotificationWarningSection` as private subviews or extension file. Coordinate with Saul's long-method threshold audit (40-line max).
+
+2. **W-2: OverlayView dismiss button font is one-off** — Uses `Font.system(.title).weight(.medium)`, not AppFont token. **Action:** Add `AppFont.overlayDismiss` or reuse `AppFont.headline` if weight difference acceptable.
+
+3. **W-3: Magic `1000` fallback for screen height** — `UIApplication.shared.connectedScenes...screen.bounds.height ?? 1000` is arbitrary, too short for large screens. **Action:** Use `GeometryReader` or `UIScreen.main.nativeBounds.height`.
+
+4. **W-4: Hardcoded `"moon.zzz.fill"` in 2 files** — Appears in `HomeView.swift` L22 and `SettingsView.swift` L115. Symbol rename will miss one. **Action:** Add `AppSymbol.snoozed = "moon.zzz.fill"`.
+
+5. **W-5: Hardcoded animation durations not in AppAnimation** — `ContentView` 0.4s, `OnboardingView` 0.4s + 0.1s delay, `OverlayView` 0.05s grace delays. **Action:** Add `AppAnimation.onboardingTransition`, `AppAnimation.reduceMotionGraceDuration`.
+
+6. **W-6: ReminderRowView missing #Preview** — Only view file without one. Expand/collapse Picker logic needs preview. **Action:** Add two previews (enabled/disabled states).
+
+7. **W-7: OnboardingPermissionView uses raw `44`** — Should use `AppLayout.minTapTarget`. **Action:** Replace hardcoded value.
+
+**1 Warning from accessibility sweep (Tess):**
+- **OnboardingScreenWrapper deviates from Reduce Motion pattern** — Currently uses `.linear(duration: 0.15)` fade. Team pattern (OverlayView, SettingsView, ReminderRowView) is `nil` (no animation). **Action:** Use `if reduceMotion { appeared = true } else { withAnimation(...) }`.
+
+**6 Suggestions (lower urgency):**
+- S-1: AppSymbol gaps (`snoozeCancel`, `focusPause`, `drivingPause`)
+- S-2: `maxWidth: 540` iPad constraint duplicated across 3 onboarding screens → add `AppLayout.onboardingMaxContentWidth`
+- S-3: Snooze section indentation in SettingsView (cosmetic)
+- S-4: OnboardingScreenWrapper placement (consider separate file if grows)
+- S-5: SetupPreviewCard `.title2` font — add AppFont token or confirm intentional
+- S-6: OverlayView Timer → async Task alternative for iOS 16+ idiom
+
+**Accessibility: Clean** — All interactive elements have labels/hints, VoiceOver navigation solid, Dynamic Type correct, color contrast ✅, design system consistent, HIG compliant, Reduce Motion respected (except W above), Dark mode ✅.
+
+**Cross-cutting impacts:**
+- SettingsView body decomposition (W-1) affects Saul's long-method audit and Rusty's ViewModel box pattern. Coordinate strategy.
+- AppFont/AppAnimation token gaps (W-2, W-5) affect design system completeness. Batch as one extension task.
+- Reduce Motion inconsistency (OnboardingScreenWrapper) requires alignment — Tess flags it, Linus owns fix.
+
+**Next owner action:** Prioritize W-1 (SettingsView decomposition) and token extensions (W-2/4/5) before Phase 2 UI work.
+
+### 2026-04-26: Tess — Wellness Visual Redesign Proposed (Issue #158)
+
+**Related artifact:** `.squad/decisions/inbox/tess-wellness-design-plan.md` (now merged into decisions.md)
+
+Tess completed comprehensive wellness design research proposing "Restful Grove" visual system:
+
+- **Color palette** (light + dark modes, WCAG AA verified): Sage green primary, gentle blue secondary, soft clay accent, warm sand backgrounds
+- **Typography recommendations:** DM Sans (safest), or Nunito + DM Sans hybrid for more personality
+- **Design tokens:** Semantic colors, spacing (4pt grid extended), radius system, elevation guidelines
+- **Motion guidelines:** Calming micro-interactions with reduce-motion respect
+- **Screen redesigns:** Home, Settings, Overlay, Onboarding with before/after direction
+- **Implementation phases:** 4 phases from token expansion through QA
+
+**Open questions for team:** Font adoption timing, color unification (eye vs. posture), Phase 2 dashboard scope, overlay copy additions.
+
+**Status:** Awaiting design review and team feedback. Linus to prioritize component styling (Phase 2) if approved.
+
+### 2026-05-16 — App Rename: "Eye & Posture Reminder" → "kshana"
+
+**Scope of the rename:**
+- All user-facing strings in `Localizable.xcstrings` updated: `home.title`, `onboarding.permission.notificationCard.appName`, `onboarding.welcome.title`, plus legal/privacy text (terms of service, third-party services, children's privacy).
+- `Info.plist`: `CFBundleName` set to `"kshana"` (was `$(PRODUCT_NAME)`). Usage descriptions (notifications, focus, motion) now reference "kshana" instead of "Eye & Posture Reminder".
+- Swift file header comments updated from `// Eye & Posture Reminder` → `// kshana`.
+- `.swiftlint.yml` header comment updated.
+- `StringCatalogTests` assertion updated to expect `"kshana"` for `home.title`.
+
+**What was NOT changed (by design):**
+- SPM target/module name `EyePostureReminder` — renaming would break all imports; saved for a dedicated PR.
+- `EyePostureReminder/` folder path — tied to Package.swift.
+- Test target names and paths.
+- Git repo name.
+
+**Key learning:** `CFBundleName` was previously `$(PRODUCT_NAME)` which resolves to the SPM target name. Hardcoding `"kshana"` decouples the display name from the module name, which is the correct approach when branding diverges from code identifiers.
+
+
+## Learnings (2026-04-28 — Logo contrast + adaptive app icon)
+
+### Problem
+- `AppColor.surfaceTint` light = `#EEF6F1` was nearly invisible (barely distinguishable from the warm cream background `#F8F4EC`) on the yin-yang logo's yang half.
+- `surfaceTint` dark = `#203128` was also barely visible on dark background `#101714`.
+- `surfaceTint` is used widely across the app as a surface/panel background — changing it globally would have affected unrelated UI.
+
+### Solution
+- **New scoped color token `LogoYangMint`** (light: `#50C4A4`, dark: `#2A6A52`) added to `Colors.xcassets` and `AppColor`. Logo-only — marked with a comment not to use for generic surface fills.
+- `YinYangEyeView`: replaced all `AppColor.surfaceTint` with `AppColor.logoYangMint`. Sage/yin side stays on `AppColor.primaryRest`.
+- **App icon**: regenerated light icons with saturated mint `#50C4A4`; generated dark variants (`AppIcon-Dark-*.png`) with `#101714` bg, `#8ED2B1` sage, `#2A6A52` yang (3.7:1 internal contrast).
+- **Adaptive icon switching**: `Contents.json` updated with `appearances: [{luminosity: dark}]` entries per size — activates iOS 18+ automatic icon theming while iOS 16-17 falls back to default entries.
+
+### Key file paths
+- `EyePostureReminder/Resources/Colors.xcassets/LogoYangMint.colorset/Contents.json` — new logo-specific color token
+- `EyePostureReminder/Views/YinYangEyeView.swift` — uses `AppColor.logoYangMint`
+- `EyePostureReminder/Views/DesignSystem.swift` — `AppColor.logoYangMint` token defined
+- `EyePostureReminder/AppIcon.xcassets/AppIcon.appiconset/Contents.json` — dark appearance entries added
+- `scripts/generate_icons.py` — Pillow-based icon palette remap; barycentric color interpolation preserves AA edges
+
+### Patterns
+- `.gitignore` has `*.png` — icon PNGs need `git add -f` to track them.
+- `swift build` on macOS always fails with `no such module 'UIKit'` — pre-existing, iOS-only; use Xcode/xcodebuild for real validation.
+- iOS 18 adaptive icon switching: add sibling `images` entries with `"appearances": [{"appearance": "luminosity", "value": "dark"}]` in the `.appiconset/Contents.json`. No new appiconset name needed — existing `AppIcon` name preserved.
+- Barycentric color remap (3-palette pixels) via numpy pseudo-inverse preserves anti-aliasing smoothly when remapping icon PNGs.
+
+### 2026-04-28 — Logo Contrast Improvement & Icon Generation (Wave 17)
+
+**Task:** Improve yin-yang logo contrast in light/dark mode and explore dark/light app icon switching.
+
+**Outcome:** ✅ Complete — all acceptance criteria met.
+
+**Work completed:**
+- Added `AppColor.logoYangMint` token (light `#50C4A4`, dark `#2A6A52`) to `Colors.xcassets` and `DesignSystem.swift`
+- Updated `YinYangEyeView` to use `logoYangMint` instead of `surfaceTint` for the yang half
+- Verified no regression to surface tints in `SettingsView`, `OnboardingView`
+- Regenerated light and dark app icon PNGs with improved contrast
+- Attempted dark AppIcon variants via `appearances` entries in `AppIcon.appiconset/Contents.json`
+- **Correction cycle:** Discovered iOS 16 deployment target does not support dark AppIcon `appearances`. Removed unsupported entries and `AppIcon-Dark-*` files.
+- Created `scripts/generate_icons.py` to regenerate icon assets; updated to generate only default/light icons (iOS 16 compatible)
+- Final validation:
+  - `python3 -m py_compile scripts/generate_icons.py` ✅
+  - JSON validation for AppIcon and LogoYangMint ✅
+  - Clean build on iPhone 17 Pro simulator, no "unassigned children" warnings ✅
+
+**Decisions filed:**
+- `.squad/decisions/decisions.md` — LogoYangMint token + design direction + iOS 16 limitation
+
+**Key learnings:**
+- Logo-specific tokens avoid collateral breakage (surfaceTint used elsewhere).
+- iOS 16 is our deployment floor — dark AppIcon appearances require iOS 18+. Document platform limitations in token comments.
+- Icon regeneration script is maintainable; documented in generate_icons.py comments.
+
+
+## 2026-04-28 — xcstrings Readability Clarity Pass Implementation
+
+**Task:** Apply Danny's 14 string clarity improvements to `.xcstrings`, validate, build, and commit.
+
+**Work Summary:**
+- Applied all 14 recommended string replacements to `EyePostureReminder/Resources/Localizable.xcstrings`
+- Examples applied:
+  - `onboarding.permission.body1`: "Notifications let your breaks resume on time after a snooze."
+  - `onboarding.welcome.body`: "Quick to set up. Runs quietly — you'll barely notice it."
+  - `settings.snooze.limitReached.hint`: "Snooze limit reached. You can snooze again after your next reminder."
+- Validated JSON schema (no syntax errors; Python `json.load` successful)
+- Built clean: `./scripts/build.sh build` → BUILD SUCCEEDED; no warnings
+- Committed: `e47a7bf strings: apply readability/clarity pass to xcstrings copy` (branch: fix/legal-placeholders)
+
+**Key insights:**
+- Plain-English phrasing resonates better than "wake … back up" mechanics-speak
+- All 77 keys reviewed; only 14 needed improvement; legal copy left unchanged
+- Placeholders preserved exactly; no functional changes; copy-only win
+- Ready for merge into main branch
+
+**Status:** ✅ Complete
+
+
+## Learnings
+
+### 2026-04-28 — xcstrings clarity pass (Danny's recommendations)
+- Applied 14 string replacements to `EyePostureReminder/Resources/Localizable.xcstrings` per Danny's readability review in `.squad/decisions/inbox/danny-xcstrings-clarity-pass.md`.
+- Key pattern: shorter, plain-English phrasing wins over verbose/formal copy (e.g. "Notifications wake reminders back up when a snooze ends" → "Notifications let your breaks resume on time after a snooze.").
+- `onboarding.permission.body1` was the specific string the user flagged — now reads clearly.
+- JSON structure preserved; validated with `python3 json.load` + full build on iPhone 17 Pro simulator.
+- Build command: `xcodebuild -scheme EyePostureReminder -destination 'platform=iOS Simulator,id=179149FE-BAFF-4464-893B-7468D06F49B7' build`
+
+
+## 2026-04-28 — Screen-Relevant Copy Scope Refinement Implementation
+
+**Task:** Apply Danny's scope refinement — refine the clarity pass by removing snooze references from non-snooze screens while preserving snooze language on snooze-specific screens.
+
+**Work Summary:**
+- Applied three targeted replacements to `EyePostureReminder/Resources/Localizable.xcstrings`:
+  - `onboarding.permission.body1`: "Notifications keep your break reminders on schedule."
+  - `settings.notifications.disabledBody`: "Turn on notifications in Settings so break reminders stay on schedule."
+  - `settings.notifications.disabledLabel`: "Notifications are off. Turn them on in Settings so break reminders stay on schedule."
+- Validated JSON structure (Python `json.load` successful; no syntax errors)
+- Built clean: `./scripts/build.sh build` → BUILD SUCCEEDED; no warnings
+- Committed: `dd6a2fd fix: remove snooze references from notification copy on non-snooze screens`
+- All `settings.snooze.*` and `settings.section.snooze` keys left untouched — snooze language is correct and expected on snooze-specific screens
+- `settings.reset.body` unchanged — "clears your snooze history" is correct in reset context
+
+**Key insights:**
+- Screen context matters: snooze language is welcome on snooze settings, inappropriate on onboarding/permission screens
+- Clarity pass + scope refinement work together: readability improvements stay; context-inappropriate references removed
+- Coordinator-driven refinement process allows team to catch scope issues after initial implementation
+
+**Status:** ✅ Complete. JSON validated. Build passed. Commit pushed.
+
+
