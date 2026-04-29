@@ -1135,6 +1135,24 @@ final class StringCatalogTests: XCTestCase {
             "'onboarding.permission.body2' must not reference 'overlay' — got: \(value)")
     }
 
+    /// Master toggle footer must distinguish in-app overlays from OS-delivered alerts.
+    func test_primaryToggleFooter_describesBackgroundAlertDeliveryAccurately() {
+        let value = str("settings.masterToggle.footer")
+
+        XCTAssertTrue(
+            value.localizedCaseInsensitiveContains("overlays"),
+            "'settings.masterToggle.footer' must scope app-open language to overlays — got: \(value)")
+        XCTAssertTrue(
+            value.localizedCaseInsensitiveContains("delivered by iOS"),
+            "'settings.masterToggle.footer' must explain alerts are OS-delivered — got: \(value)")
+        XCTAssertTrue(
+            value.localizedCaseInsensitiveContains("app is closed"),
+            "'settings.masterToggle.footer' must not imply closed-app delivery is unavailable — got: \(value)")
+        XCTAssertFalse(
+            value.localizedCaseInsensitiveContains("Reminders only work while the app is open"),
+            "'settings.masterToggle.footer' must not claim all reminders require the app open — got: \(value)")
+    }
+
     /// The permission screen title must be non-empty and resolve from the catalog.
     func test_onboardingPermission_title_resolvesFromCatalog() {
         XCTAssertTrue(

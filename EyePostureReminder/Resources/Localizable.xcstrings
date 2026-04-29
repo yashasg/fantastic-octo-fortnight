@@ -669,7 +669,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Reminders only work while the app is open."
+            "value": "In-app overlays appear while kshana is open. Backup alerts are delivered by iOS even when the app is closed."
           }
         }
       }
