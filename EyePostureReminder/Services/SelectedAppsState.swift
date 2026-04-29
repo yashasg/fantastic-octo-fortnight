@@ -66,20 +66,22 @@ final class SelectedAppsState: ObservableObject {
 
     // MARK: Dependency
 
-    private let defaults: UserDefaults
+    private let defaults: UserDefaults?
 
     // MARK: Init
 
     /// Create a state object backed by `defaults`.
     ///
-    /// - Parameter defaults: Defaults suite to read/write.  Defaults to the
-    ///   shared App Group suite; pass an isolated suite in tests.
+    /// - Parameter defaults: Defaults suite to read/write. Defaults to the
+    ///   shared App Group suite; pass an isolated suite in tests. Passing `nil`
+    ///   leaves extension-critical persistence unavailable instead of falling
+    ///   back to standard defaults.
     init(
-        defaults: UserDefaults = UserDefaults(suiteName: AppGroupIPCKeys.appGroupID) ?? .standard
+        defaults: UserDefaults? = AppGroupDefaults.resolve(consumer: "SelectedAppsState")
     ) {
         self.defaults = defaults
-        isTrueInterruptEnabled = defaults.bool(forKey: SelectedAppsState.enabledKey)
-        if let data = defaults.data(forKey: SelectedAppsState.metadataKey),
+        isTrueInterruptEnabled = defaults?.bool(forKey: SelectedAppsState.enabledKey) ?? false
+        if let data = defaults?.data(forKey: SelectedAppsState.metadataKey),
            let decoded = try? JSONDecoder().decode(SelectedAppsMetadata.self, from: data) {
             selectionMetadata = decoded
         } else {
@@ -90,22 +92,38 @@ final class SelectedAppsState: ObservableObject {
     // MARK: Mutations
 
     /// Toggle the user's intent to use True Interrupt Mode.
-    func setEnabled(_ enabled: Bool) {
+    @discardableResult
+    func setEnabled(_ enabled: Bool) -> Bool {
+        guard let defaults else {
+            isTrueInterruptEnabled = false
+            return false
+        }
         isTrueInterruptEnabled = enabled
         defaults.set(enabled, forKey: SelectedAppsState.enabledKey)
+        return true
     }
 
     /// Persist updated selection metadata (called after a real `FamilyActivityPicker` session).
-    func updateMetadata(_ metadata: SelectedAppsMetadata) {
-        selectionMetadata = metadata
-        if let data = try? JSONEncoder().encode(metadata) {
-            defaults.set(data, forKey: SelectedAppsState.metadataKey)
+    @discardableResult
+    func updateMetadata(_ metadata: SelectedAppsMetadata) -> Bool {
+        guard let defaults else {
+            selectionMetadata = .empty
+            return false
         }
+        guard let data = try? JSONEncoder().encode(metadata) else {
+            selectionMetadata = .empty
+            return false
+        }
+        selectionMetadata = metadata
+        defaults.set(data, forKey: SelectedAppsState.metadataKey)
+        return true
     }
 
     /// Clear the selection and disable True Interrupt Mode.
-    func clearSelection() {
-        updateMetadata(.empty)
-        setEnabled(false)
+    @discardableResult
+    func clearSelection() -> Bool {
+        let didClearMetadata = updateMetadata(.empty)
+        let didDisableTrueInterrupt = setEnabled(false)
+        return didClearMetadata && didDisableTrueInterrupt
     }
 }

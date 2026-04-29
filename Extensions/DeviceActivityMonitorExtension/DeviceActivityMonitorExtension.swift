@@ -43,7 +43,7 @@ final class DeviceActivityMonitorExtensionImpl: DeviceActivityMonitor {
     /// - Parameter defaults: The App Group `UserDefaults` suite. Defaults to the
     ///   shared `group.com.yashasgujjar.kshana` suite.
     static func readSession(
-        from defaults: UserDefaults? = UserDefaults(suiteName: ShieldSessionKeys.appGroupID)
+        from defaults: UserDefaults? = AppGroupDefaults.resolve(consumer: "DeviceActivityMonitorExtension")
     ) -> (reason: String?, durationSeconds: Double, triggeredAt: Date?) {
         let snapshot = ShieldSessionSnapshot.read(from: defaults)
         return (

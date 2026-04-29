@@ -64,45 +64,55 @@ public struct AppGroupIPCEvent: Codable, Equatable, Sendable {
 }
 
 public final class AppGroupIPCStore {
-    public enum StoreError: Error {
+    public enum StoreError: Error, Equatable {
+        case appGroupSuiteUnavailable
         case corruptEventLog
         case corruptSelectionMetadata
     }
 
-    private let defaults: UserDefaults
+    private let defaults: UserDefaults?
     private let maxEventCount: Int
     private let lock = NSLock()
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
 
     public init(
-        defaults: UserDefaults = UserDefaults(suiteName: AppGroupIPCKeys.appGroupID) ?? .standard,
+        defaults: UserDefaults? = AppGroupDefaults.resolve(consumer: "AppGroupIPCStore"),
         maxEventCount: Int = 100
     ) {
         self.defaults = defaults
         self.maxEventCount = max(1, maxEventCount)
     }
 
-    public func setTrueInterruptEnabled(_ enabled: Bool) {
+    public var isAvailable: Bool {
+        defaults != nil
+    }
+
+    @discardableResult
+    public func setTrueInterruptEnabled(_ enabled: Bool) -> Bool {
         withLock {
+            guard let defaults else { return false }
             defaults.set(enabled, forKey: AppGroupIPCKeys.trueInterruptEnabled)
+            return true
         }
     }
 
     public func isTrueInterruptEnabled() -> Bool {
         withLock {
-            defaults.bool(forKey: AppGroupIPCKeys.trueInterruptEnabled)
+            defaults?.bool(forKey: AppGroupIPCKeys.trueInterruptEnabled) ?? false
         }
     }
 
     public func writeSelection(_ snapshot: AppGroupSelectionSnapshot) throws {
         try withLock {
+            guard let defaults else { throw StoreError.appGroupSuiteUnavailable }
             defaults.set(try encoder.encode(snapshot), forKey: AppGroupIPCKeys.selectionMetadata)
         }
     }
 
     public func readSelection() throws -> AppGroupSelectionSnapshot {
         try withLock {
+            guard let defaults else { throw StoreError.appGroupSuiteUnavailable }
             guard let data = defaults.data(forKey: AppGroupIPCKeys.selectionMetadata) else {
                 return .empty
             }
@@ -114,36 +124,44 @@ public final class AppGroupIPCStore {
         }
     }
 
+    @discardableResult
     public func writeShieldSession(
         reasonRaw: String,
         durationSeconds: Double,
         triggeredAt: Date
-    ) {
+    ) -> Bool {
         withLock {
+            guard let defaults else { return false }
             defaults.set(reasonRaw, forKey: ShieldSessionKeys.breakReason)
             defaults.set(durationSeconds, forKey: ShieldSessionKeys.durationSeconds)
             defaults.set(triggeredAt.timeIntervalSince1970, forKey: ShieldSessionKeys.triggeredAt)
             defaults.set(triggeredAt.timeIntervalSince1970, forKey: AppGroupIPCKeys.lastShieldStartedAt)
+            return true
         }
     }
 
-    public func readShieldSession() -> ShieldSessionSnapshot {
-        withLock {
-            ShieldSessionSnapshot.read(from: defaults)
+    public func readShieldSession() throws -> ShieldSessionSnapshot {
+        try withLock {
+            guard let defaults else { throw StoreError.appGroupSuiteUnavailable }
+            return ShieldSessionSnapshot.read(from: defaults)
         }
     }
 
-    public func clearShieldSession(endedAt: Date = Date()) {
+    @discardableResult
+    public func clearShieldSession(endedAt: Date = Date()) -> Bool {
         withLock {
+            guard let defaults else { return false }
             defaults.removeObject(forKey: ShieldSessionKeys.breakReason)
             defaults.removeObject(forKey: ShieldSessionKeys.durationSeconds)
             defaults.removeObject(forKey: ShieldSessionKeys.triggeredAt)
             defaults.set(endedAt.timeIntervalSince1970, forKey: AppGroupIPCKeys.lastShieldEndedAt)
+            return true
         }
     }
 
     public func recordEvent(_ event: AppGroupIPCEvent) throws {
         try withLock {
+            guard let defaults else { throw StoreError.appGroupSuiteUnavailable }
             var events = try readEventsLocked()
             events.append(event)
             if events.count > maxEventCount {
@@ -158,17 +176,22 @@ public final class AppGroupIPCStore {
 
     public func readEvents() throws -> [AppGroupIPCEvent] {
         try withLock {
-            try readEventsLocked()
+            guard defaults != nil else { throw StoreError.appGroupSuiteUnavailable }
+            return try readEventsLocked()
         }
     }
 
-    public func clearEvents() {
+    @discardableResult
+    public func clearEvents() -> Bool {
         withLock {
+            guard let defaults else { return false }
             defaults.removeObject(forKey: AppGroupIPCKeys.eventLog)
+            return true
         }
     }
 
     private func readEventsLocked() throws -> [AppGroupIPCEvent] {
+        guard let defaults else { throw StoreError.appGroupSuiteUnavailable }
         guard let data = defaults.data(forKey: AppGroupIPCKeys.eventLog) else { return [] }
         do {
             return try decoder.decode([AppGroupIPCEvent].self, from: data)

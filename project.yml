@@ -111,6 +111,7 @@ targets:
     dependencies:
       - sdk: ManagedSettingsUI.framework
       - sdk: ManagedSettings.framework
+      - sdk: AppIntents.framework
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.yashasg.eyeposturereminder.shieldconfiguration
@@ -144,6 +145,7 @@ targets:
     dependencies:
       - sdk: DeviceActivity.framework
       - sdk: ManagedSettings.framework
+      - sdk: AppIntents.framework
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.yashasg.eyeposturereminder.deviceactivitymonitor

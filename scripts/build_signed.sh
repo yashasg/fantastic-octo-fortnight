@@ -567,6 +567,7 @@ generate_project() {
     dependencies:
       - sdk: ManagedSettingsUI.framework
       - sdk: ManagedSettings.framework
+      - sdk: AppIntents.framework
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: $(yaml_quote "$SHIELD_CONFIG_BUNDLE_ID")
@@ -596,6 +597,7 @@ ${sc_profile_line}
     dependencies:
       - sdk: DeviceActivity.framework
       - sdk: ManagedSettings.framework
+      - sdk: AppIntents.framework
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: $(yaml_quote "$DEVICE_ACTIVITY_BUNDLE_ID")
