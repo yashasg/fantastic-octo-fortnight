@@ -21,7 +21,7 @@ struct YinYangEyeView: View {
 
             // Right half — yang color (mint), clipped to right semicircle
             Circle()
-                .fill(AppColor.surfaceTint)
+                .fill(AppColor.logoYangMint)
                 .clipShape(RightHalf())
 
             // Top small circle — sage (yin bulges into yang territory)
@@ -32,13 +32,13 @@ struct YinYangEyeView: View {
 
             // Bottom small circle — mint (yang bulges into yin territory)
             Circle()
-                .fill(AppColor.surfaceTint)
+                .fill(AppColor.logoYangMint)
                 .frame(width: half, height: half)
                 .offset(y: half / 2)
 
             // Yin dot (mint inside yin, upper area)
             Circle()
-                .fill(AppColor.surfaceTint)
+                .fill(AppColor.logoYangMint)
                 .frame(width: dotSize, height: dotSize)
                 .offset(y: -half / 2)
 

@@ -68,6 +68,13 @@ enum AppColor {
     /// Card shadow tint — deep forest tint used by `SoftElevation` in light mode.
     /// Applied at 10% opacity; dark mode uses a border overlay instead.
     static let shadowCard = Color("RGShadowCard", bundle: .module)
+
+    // MARK: - Logo-specific tokens
+
+    /// Yang (mint) half of the yin-yang logo — logo-scoped, do NOT use for generic surface fills.
+    /// Light: #50C4A4 (visible saturated mint against sage and cream bg).
+    /// Dark:  #2A6A52 (mid-green, 3.7:1 contrast against the light sage half #8ED2B1).
+    static let logoYangMint = Color("LogoYangMint", bundle: .module)
 }
 
 // MARK: - Typography
