@@ -480,4 +480,271 @@ final class AppCoordinatorTests: XCTestCase {
             content.sound,
             "Snooze-wake notification must have no sound (silent)")
     }
+
+    // MARK: - Background Scheduling Regression (P0)
+    //
+    // P0: background reminders were disabled — the app only reminded users while foregrounded
+    // because `AppCoordinator.scheduleReminders()` called `scheduler.cancelAllReminders()`
+    // instead of scheduling periodic UNNotification requests.
+    //
+    // These tests verify that `scheduleReminders()` with notification auth = .authorized
+    // produces periodic UNNotificationRequest objects in the notification center for each
+    // enabled reminder type. They fail until the scheduling path is restored in
+    // `AppCoordinator.scheduleReminders()`.
+    //
+    // Non-reminder requests (snooze-wake, categoryIdentifier == snoozeWakeCategory) are
+    // filtered out so these tests stay focused on the periodic-reminder contract.
+
+    private func reminderRequests(from notifCenter: MockNotificationCenter) -> [UNNotificationRequest] {
+        notifCenter.addedRequests.filter {
+            $0.content.categoryIdentifier != AppCoordinator.snoozeWakeCategory
+        }
+    }
+
+    func test_scheduleReminders_authorized_bothEnabled_addsEyesAndPostureRequests() async {
+        let mockNotif = MockNotificationCenter()
+        mockNotif.authorizationGranted = true
+        settings.globalEnabled = true
+        settings.eyesEnabled = true
+        settings.postureEnabled = true
+        let (coordinator, _, _) = makeCoordinator(
+            overlay: MockOverlayPresenting(),
+            notifCenter: mockNotif)
+        defer { coordinator.stopFallbackTimers() }
+
+        await coordinator.scheduleReminders()
+
+        let periodic = reminderRequests(from: mockNotif)
+        XCTAssertEqual(
+            periodic.count,
+            2,
+            "scheduleReminders() with auth=authorized and both types enabled must add 2 periodic reminder requests")
+    }
+
+    func test_scheduleReminders_authorized_eyesOnly_addsExactlyOneEyesRequest() async {
+        let mockNotif = MockNotificationCenter()
+        mockNotif.authorizationGranted = true
+        settings.globalEnabled = true
+        settings.eyesEnabled = true
+        settings.postureEnabled = false
+        let (coordinator, _, _) = makeCoordinator(
+            overlay: MockOverlayPresenting(),
+            notifCenter: mockNotif)
+        defer { coordinator.stopFallbackTimers() }
+
+        await coordinator.scheduleReminders()
+
+        let periodic = reminderRequests(from: mockNotif)
+        XCTAssertEqual(periodic.count, 1)
+        XCTAssertEqual(
+            periodic.first?.content.categoryIdentifier,
+            ReminderType.eyes.categoryIdentifier,
+            "With only eyes enabled, the single periodic request must be for eye-break reminders")
+    }
+
+    func test_scheduleReminders_authorized_postureOnly_addsExactlyOnePostureRequest() async {
+        let mockNotif = MockNotificationCenter()
+        mockNotif.authorizationGranted = true
+        settings.globalEnabled = true
+        settings.eyesEnabled = false
+        settings.postureEnabled = true
+        let (coordinator, _, _) = makeCoordinator(
+            overlay: MockOverlayPresenting(),
+            notifCenter: mockNotif)
+        defer { coordinator.stopFallbackTimers() }
+
+        await coordinator.scheduleReminders()
+
+        let periodic = reminderRequests(from: mockNotif)
+        XCTAssertEqual(periodic.count, 1)
+        XCTAssertEqual(
+            periodic.first?.content.categoryIdentifier,
+            ReminderType.posture.categoryIdentifier,
+            "With only posture enabled, the single periodic request must be for posture-check reminders")
+    }
+
+    func test_scheduleReminders_authorized_noEnabledTypes_addsNoReminderRequests() async {
+        let mockNotif = MockNotificationCenter()
+        mockNotif.authorizationGranted = true
+        settings.globalEnabled = true
+        settings.eyesEnabled = false
+        settings.postureEnabled = false
+        let (coordinator, _, _) = makeCoordinator(
+            overlay: MockOverlayPresenting(),
+            notifCenter: mockNotif)
+        defer { coordinator.stopFallbackTimers() }
+
+        await coordinator.scheduleReminders()
+
+        let periodic = reminderRequests(from: mockNotif)
+        XCTAssertTrue(
+            periodic.isEmpty,
+            "scheduleReminders() with no reminder types enabled must not add any periodic requests")
+    }
+
+    func test_scheduleReminders_authorized_globalDisabled_addsNoReminderRequests() async {
+        let mockNotif = MockNotificationCenter()
+        mockNotif.authorizationGranted = true
+        settings.globalEnabled = false
+        settings.eyesEnabled = true
+        settings.postureEnabled = true
+        let (coordinator, _, _) = makeCoordinator(
+            overlay: MockOverlayPresenting(),
+            notifCenter: mockNotif)
+        defer { coordinator.stopFallbackTimers() }
+
+        await coordinator.scheduleReminders()
+
+        let periodic = reminderRequests(from: mockNotif)
+        XCTAssertTrue(
+            periodic.isEmpty,
+            "scheduleReminders() with master toggle off must not schedule any reminder requests")
+    }
+
+    func test_scheduleReminders_periodicRequests_useTimeIntervalTrigger() async {
+        let mockNotif = MockNotificationCenter()
+        mockNotif.authorizationGranted = true
+        settings.globalEnabled = true
+        settings.eyesEnabled = true
+        settings.postureEnabled = true
+        let (coordinator, _, _) = makeCoordinator(
+            overlay: MockOverlayPresenting(),
+            notifCenter: mockNotif)
+        defer { coordinator.stopFallbackTimers() }
+
+        await coordinator.scheduleReminders()
+
+        for request in reminderRequests(from: mockNotif) {
+            XCTAssertNotNil(
+                request.trigger as? UNTimeIntervalNotificationTrigger,
+                "Periodic reminder '\(request.identifier)' must use UNTimeIntervalNotificationTrigger for background delivery")
+        }
+    }
+
+    func test_scheduleReminders_periodicRequests_repeatsIsTrue() async {
+        let mockNotif = MockNotificationCenter()
+        mockNotif.authorizationGranted = true
+        settings.globalEnabled = true
+        settings.eyesEnabled = true
+        settings.postureEnabled = true
+        settings.eyesInterval = 1200
+        settings.postureInterval = 1800
+        let (coordinator, _, _) = makeCoordinator(
+            overlay: MockOverlayPresenting(),
+            notifCenter: mockNotif)
+        defer { coordinator.stopFallbackTimers() }
+
+        await coordinator.scheduleReminders()
+
+        for request in reminderRequests(from: mockNotif) {
+            let trigger = request.trigger as? UNTimeIntervalNotificationTrigger
+            XCTAssertEqual(
+                trigger?.repeats,
+                true,
+                "Periodic reminder '\(request.identifier)' must have repeats=true so it fires in the background")
+        }
+    }
+
+    func test_scheduleReminders_denied_addsNoReminderRequests() async {
+        let mockNotif = MockNotificationCenter()
+        mockNotif.authorizationGranted = false
+        settings.globalEnabled = true
+        settings.eyesEnabled = true
+        settings.postureEnabled = true
+        let (coordinator, _, _) = makeCoordinator(
+            overlay: MockOverlayPresenting(),
+            notifCenter: mockNotif)
+        defer { coordinator.stopFallbackTimers() }
+
+        await coordinator.scheduleReminders()
+
+        let periodic = reminderRequests(from: mockNotif)
+        XCTAssertTrue(
+            periodic.isEmpty,
+            "scheduleReminders() with auth=denied must not schedule any reminder notifications")
+    }
+
+    // MARK: - handleNotification: ScreenTimeTracker reset
+
+    func test_handleNotification_eyes_resetsEyesCounter() {
+        let mockNotif = MockNotificationCenter()
+        let mockTracker = MockScreenTimeTracker()
+        let (coordinator, _, _) = makeCoordinator(
+            overlay: MockOverlayPresenting(),
+            notifCenter: mockNotif,
+            screenTimeTracker: mockTracker)
+        defer { coordinator.stopFallbackTimers() }
+
+        coordinator.handleNotification(for: .eyes)
+
+        XCTAssertTrue(
+            mockTracker.resetCalls.contains(.eyes),
+            "handleNotification must reset the ScreenTimeTracker counter for the delivered type")
+    }
+
+    func test_handleNotification_posture_resetsPostureCounter() {
+        let mockNotif = MockNotificationCenter()
+        let mockTracker = MockScreenTimeTracker()
+        let (coordinator, _, _) = makeCoordinator(
+            overlay: MockOverlayPresenting(),
+            notifCenter: mockNotif,
+            screenTimeTracker: mockTracker)
+        defer { coordinator.stopFallbackTimers() }
+
+        coordinator.handleNotification(for: .posture)
+
+        XCTAssertTrue(
+            mockTracker.resetCalls.contains(.posture),
+            "handleNotification must reset the ScreenTimeTracker counter for the delivered type")
+    }
+
+    func test_handleNotification_eyes_doesNotResetPostureCounter() {
+        let mockNotif = MockNotificationCenter()
+        let mockTracker = MockScreenTimeTracker()
+        let (coordinator, _, _) = makeCoordinator(
+            overlay: MockOverlayPresenting(),
+            notifCenter: mockNotif,
+            screenTimeTracker: mockTracker)
+        defer { coordinator.stopFallbackTimers() }
+
+        coordinator.handleNotification(for: .eyes)
+
+        XCTAssertFalse(
+            mockTracker.resetCalls.contains(.posture),
+            "handleNotification for eyes must not reset the posture counter")
+    }
+
+    // MARK: - Foreground threshold: reschedules background notification
+
+    func test_thresholdReached_whenAuthorized_reschedulesNotificationForType() async {
+        let mockNotif = MockNotificationCenter()
+        mockNotif.authorizationGranted = true
+        settings.globalEnabled = true
+        settings.eyesEnabled = true
+        settings.postureEnabled = false
+        settings.eyesInterval = 1200
+        let mockTracker = MockScreenTimeTracker()
+        let (coordinator, _, _) = makeCoordinator(
+            overlay: MockOverlayPresenting(),
+            notifCenter: mockNotif,
+            screenTimeTracker: mockTracker)
+        defer { coordinator.stopFallbackTimers() }
+
+        await coordinator.scheduleReminders()
+        let countAfterSchedule = reminderRequests(from: mockNotif).count
+
+        // Fire the foreground threshold callback.
+        mockTracker.simulateThresholdReached(for: .eyes)
+
+        // Allow the internally-spawned Task to complete.
+        try? await Task.sleep(nanoseconds: 50_000_000)
+
+        let eyesCount = reminderRequests(from: mockNotif).filter {
+            $0.content.categoryIdentifier == ReminderType.eyes.categoryIdentifier
+        }.count
+        XCTAssertGreaterThan(
+            eyesCount,
+            countAfterSchedule,
+            "Foreground threshold fire must reschedule the background notification to reset its interval from now")
+    }
 }

@@ -1070,4 +1070,103 @@ final class StringCatalogTests: XCTestCase {
         XCTAssertFalse(value.isEmpty,
                        "'onboarding.setup.changeInSettings' must not resolve to an empty string")
     }
+
+    // MARK: - Permission Copy Regression (P0 + Linus copy pass)
+    //
+    // P0: background reminders were disabled. As part of the fix Linus updated the
+    // permission screen copy to use "reminders" language instead of "notifications"
+    // to avoid promising system-level overlay delivery that might not be available.
+    //
+    // These tests lock in that copy contract so future edits cannot silently revert
+    // to misleading "notification" / "overlay" promises.
+
+    /// Enable-button must say "Enable Reminders" — not "Enable Notifications".
+    /// Linus renamed this to align with reminder-alert language after P0 was filed.
+    func test_onboardingPermission_enableButton_readsEnableReminders() {
+        let value = str("onboarding.permission.enableButton")
+        XCTAssertTrue(
+            value.localizedCaseInsensitiveContains("Reminder"),
+            "'onboarding.permission.enableButton' must use 'Reminder' language — got: \(value)")
+        XCTAssertFalse(
+            value.localizedCaseInsensitiveContains("Notification"),
+            "'onboarding.permission.enableButton' must not use 'Notification' — got: \(value)")
+    }
+
+    /// Body line 1 must reference "Reminders" so users understand what they're enabling.
+    func test_onboardingPermission_body1_usesReminderLanguage() {
+        let value = str("onboarding.permission.body1")
+        XCTAssertTrue(
+            value.localizedCaseInsensitiveContains("Reminder"),
+            "'onboarding.permission.body1' must contain 'Reminder' — got: \(value)")
+    }
+
+    /// Body line 2 must be non-empty and not promise a system-level notification popup.
+    func test_onboardingPermission_body2_isNonEmptyAndNotSystemOverlayPromise() {
+        let value = str("onboarding.permission.body2")
+        XCTAssertFalse(value.isEmpty, "'onboarding.permission.body2' must not be empty")
+        // "overlay" would promise UI that only works while the app is foregrounded.
+        XCTAssertFalse(
+            value.localizedCaseInsensitiveContains("overlay"),
+            "'onboarding.permission.body2' must not reference 'overlay' — got: \(value)")
+    }
+
+    /// The permission screen title must be non-empty and resolve from the catalog.
+    func test_onboardingPermission_title_resolvesFromCatalog() {
+        XCTAssertTrue(
+            isTranslated("onboarding.permission.title"),
+            "'onboarding.permission.title' must resolve to a real string, not the key fallback")
+        XCTAssertFalse(str("onboarding.permission.title").isEmpty)
+    }
+
+    /// Reminder notification content keys must resolve so notification banners display
+    /// real copy rather than the raw key string.
+    func test_reminderNotificationContent_eyesTitle_resolvesFromCatalog() {
+        XCTAssertTrue(
+            isTranslated("reminder.eyes.notificationTitle"),
+            "'reminder.eyes.notificationTitle' must resolve from catalog")
+    }
+
+    func test_reminderNotificationContent_eyesBody_resolvesFromCatalog() {
+        XCTAssertTrue(
+            isTranslated("reminder.eyes.notificationBody"),
+            "'reminder.eyes.notificationBody' must resolve from catalog")
+    }
+
+    func test_reminderNotificationContent_postureTitle_resolvesFromCatalog() {
+        XCTAssertTrue(
+            isTranslated("reminder.posture.notificationTitle"),
+            "'reminder.posture.notificationTitle' must resolve from catalog")
+    }
+
+    func test_reminderNotificationContent_postureBody_resolvesFromCatalog() {
+        XCTAssertTrue(
+            isTranslated("reminder.posture.notificationBody"),
+            "'reminder.posture.notificationBody' must resolve from catalog")
+    }
+
+    /// Notification content keys must be non-empty — a blank notification banner
+    /// is worse than no notification.
+    func test_reminderNotificationContent_allKeys_areNonEmpty() {
+        let notificationKeys = [
+            "reminder.eyes.notificationTitle",
+            "reminder.eyes.notificationBody",
+            "reminder.posture.notificationTitle",
+            "reminder.posture.notificationBody",
+        ]
+        for key in notificationKeys {
+            let value = str(key)
+            XCTAssertFalse(
+                value.isEmpty,
+                "'\(key)' must not resolve to an empty string — blank notification content is invisible to users")
+        }
+    }
+
+    /// Settings banner copy for disabled reminders must use "Reminders" language,
+    /// consistent with the permission-screen and notification-content rename.
+    func test_settingsNotificationsDisabledTitle_usesReminderLanguage() {
+        let value = str("settings.notifications.disabledTitle")
+        XCTAssertTrue(
+            value.localizedCaseInsensitiveContains("Reminder"),
+            "'settings.notifications.disabledTitle' must use 'Reminder' language — got: \(value)")
+    }
 }
