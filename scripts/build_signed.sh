@@ -22,6 +22,8 @@
 #   TESTFLIGHT_INTERNAL_ONLY              YES or NO (default)
 #   BUILD_NUMBER                          default: YYYYMMDDHHmm timestamp; set for unique TestFlight builds
 #   SIGNED_ENTITLEMENTS_PATH              default: App Store-safe distribution entitlements
+#   SHIELD_CONFIG_ENTITLEMENTS_PATH       default: ShieldConfiguration distribution entitlements
+#   DEVICE_ACTIVITY_ENTITLEMENTS_PATH     default: DeviceActivity distribution entitlements
 
 set -euo pipefail
 
@@ -76,6 +78,8 @@ DEVICE_ACTIVITY_BUNDLE_ID="${DEVICE_ACTIVITY_BUNDLE_ID:-${APP_BUNDLE_ID}.devicea
 # Leave empty only when SIGNING_STYLE=automatic.
 SHIELD_CONFIG_PROFILE="${SHIELD_CONFIG_PROFILE:-}"
 DEVICE_ACTIVITY_PROFILE="${DEVICE_ACTIVITY_PROFILE:-}"
+SHIELD_CONFIG_ENTITLEMENTS_PATH="${SHIELD_CONFIG_ENTITLEMENTS_PATH:-${PACKAGE_PATH}/Extensions/ShieldConfigurationExtension/ShieldConfigurationExtension.Distribution.entitlements}"
+DEVICE_ACTIVITY_ENTITLEMENTS_PATH="${DEVICE_ACTIVITY_ENTITLEMENTS_PATH:-${PACKAGE_PATH}/Extensions/DeviceActivityMonitorExtension/DeviceActivityMonitorExtension.Distribution.entitlements}"
 
 ASC_AUTH_KEY_PATH="${ASC_AUTH_KEY_PATH:-${APP_STORE_CONNECT_API_KEY_PATH:-}}"
 ASC_AUTH_KEY_ID="${ASC_AUTH_KEY_ID:-${APP_STORE_CONNECT_API_KEY_ID:-}}"
@@ -141,6 +145,8 @@ usage() {
   echo "  DEVICE_ACTIVITY_BUNDLE_ID=<id>     Default: APP_BUNDLE_ID.deviceactivitymonitor"
   echo "  SHIELD_CONFIG_PROFILE=<name>       Profile specifier for ShieldConfigurationExtension"
   echo "  DEVICE_ACTIVITY_PROFILE=<name>     Profile specifier for DeviceActivityMonitorExtension"
+  echo "  SHIELD_CONFIG_ENTITLEMENTS_PATH=<path>"
+  echo "  DEVICE_ACTIVITY_ENTITLEMENTS_PATH=<path>"
 }
 
 elapsed() {
@@ -403,6 +409,20 @@ ensure_manual_extension_profiles() {
   fi
 }
 
+ensure_extension_entitlements() {
+  [[ "$EXTENSION_PROFILES_AVAILABLE" == "YES" ]] || return 0
+
+  if [[ ! -f "$SHIELD_CONFIG_ENTITLEMENTS_PATH" ]]; then
+    fail "ShieldConfiguration entitlements file not found: $SHIELD_CONFIG_ENTITLEMENTS_PATH"
+    exit 1
+  fi
+
+  if [[ ! -f "$DEVICE_ACTIVITY_ENTITLEMENTS_PATH" ]]; then
+    fail "DeviceActivityMonitor entitlements file not found: $DEVICE_ACTIVITY_ENTITLEMENTS_PATH"
+    exit 1
+  fi
+}
+
 # Inject CFBundleVersion into the already-built archive's Info.plist.
 # Does NOT touch source Info.plist — safe to call on any commit without
 # leaving a dirty working tree.  Uses BUILD_NUMBER env var when set (CI),
@@ -552,7 +572,7 @@ generate_project() {
         PRODUCT_BUNDLE_IDENTIFIER: $(yaml_quote "$SHIELD_CONFIG_BUNDLE_ID")
         TARGETED_DEVICE_FAMILY: \"1\"
         INFOPLIST_FILE: $(yaml_quote "${PACKAGE_PATH}/Extensions/ShieldConfigurationExtension/Info.plist")
-        CODE_SIGN_ENTITLEMENTS: $(yaml_quote "${PACKAGE_PATH}/Extensions/ShieldConfigurationExtension/ShieldConfigurationExtension.entitlements")
+        CODE_SIGN_ENTITLEMENTS: $(yaml_quote "$SHIELD_CONFIG_ENTITLEMENTS_PATH")
         DEVELOPMENT_TEAM: $(yaml_quote "$APPLE_TEAM_ID")
         CODE_SIGN_STYLE: $(yaml_quote "$style_value")
         CODE_SIGNING_ALLOWED: \"YES\"
@@ -581,7 +601,7 @@ ${sc_profile_line}
         PRODUCT_BUNDLE_IDENTIFIER: $(yaml_quote "$DEVICE_ACTIVITY_BUNDLE_ID")
         TARGETED_DEVICE_FAMILY: \"1\"
         INFOPLIST_FILE: $(yaml_quote "${PACKAGE_PATH}/Extensions/DeviceActivityMonitorExtension/Info.plist")
-        CODE_SIGN_ENTITLEMENTS: $(yaml_quote "${PACKAGE_PATH}/Extensions/DeviceActivityMonitorExtension/DeviceActivityMonitorExtension.entitlements")
+        CODE_SIGN_ENTITLEMENTS: $(yaml_quote "$DEVICE_ACTIVITY_ENTITLEMENTS_PATH")
         DEVELOPMENT_TEAM: $(yaml_quote "$APPLE_TEAM_ID")
         CODE_SIGN_STYLE: $(yaml_quote "$style_value")
         CODE_SIGNING_ALLOWED: \"YES\"
@@ -607,7 +627,7 @@ name: ${APP_TARGET}Signed
 options:
   deploymentTarget:
     iOS: "16.0"
-  xcodeVersion: "16.2"
+  xcodeVersion: "26.4"
   minimumXcodeGenVersion: "2.40.0"
   generateEmptyDirectories: false
 
@@ -841,6 +861,7 @@ cmd_archive() {
 
   ensure_manual_distribution_profile
   ensure_manual_extension_profiles
+  ensure_extension_entitlements
 
   generate_project
 

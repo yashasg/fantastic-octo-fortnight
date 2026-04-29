@@ -31,7 +31,7 @@ options:
   bundleIdPrefix: com.yashasg.eyeposturereminder
   deploymentTarget:
     iOS: "16.0"
-  xcodeVersion: "16.2"
+  xcodeVersion: "26.4"
   minimumXcodeGenVersion: "2.40.0"
   generateEmptyDirectories: false
 
