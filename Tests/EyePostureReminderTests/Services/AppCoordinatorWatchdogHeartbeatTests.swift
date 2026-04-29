@@ -141,6 +141,36 @@ final class AppCoordinatorWatchdogHeartbeatTests: XCTestCase {
         XCTAssertTrue(notificationCenter.addedRequests.isEmpty)
     }
 
+    func test_watchdogRecovery_whenStaleAfterIsZero_doesNotRecover() async {
+        let zeroGraceCoordinator = AppCoordinator(
+            settings: settings,
+            scheduler: ReminderScheduler(notificationCenter: notificationCenter),
+            notificationCenter: notificationCenter,
+            overlayManager: MockOverlayPresenting(),
+            screenTimeTracker: tracker,
+            pauseConditionProvider: MockPauseConditionProvider(),
+            deviceActivityMonitor: deviceActivityMonitor,
+            ipcStore: ipcStore,
+            watchdogHeartbeatGraceInterval: 0
+        )
+        defer { zeroGraceCoordinator.stopFallbackTimers() }
+
+        deviceActivityMonitor.stubbedIsAvailable = true
+        ipcStore.shieldSessionSnapshot = ShieldSessionSnapshot(
+            reasonRaw: ReminderType.eyes.shieldReason.rawValue,
+            durationSeconds: 0,
+            triggeredAt: Date(timeIntervalSince1970: 1)
+        )
+
+        await zeroGraceCoordinator.handleForegroundTransition()
+        try? await Task.sleep(nanoseconds: 100_000_000)
+
+        XCTAssertFalse(ipcStore.events.contains { $0.kind == .watchdogRecoveryTriggered })
+        XCTAssertEqual(ipcStore.clearShieldSessionCallCount, 0)
+        XCTAssertEqual(deviceActivityMonitor.cancelCallCount, 0)
+        XCTAssertTrue(notificationCenter.addedRequests.isEmpty)
+    }
+
     func test_foregroundTransition_whenReadEventsThrows_skipsRecovery() async {
         struct ReadEventsFailure: Error {}
         deviceActivityMonitor.stubbedIsAvailable = true
