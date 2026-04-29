@@ -31,18 +31,17 @@
 
 Set your timing. Let kshana gently nudge you to take healthier eye and posture breaks — without accounts, ads, or a custom backend.
 
-kshana uses local screen-time tracking and backup reminder alerts to suggest eye breaks (20-20-20 rule) and posture checks at customizable intervals. When you choose to take a break, a calm break screen guides you with a countdown timer. True Interrupt Mode, which will shield selected apps during breaks, is prepared but remains gated by Apple's Screen Time entitlement approval.
+kshana uses local screen-time tracking and reminder alerts to suggest eye breaks (20-20-20 rule) and posture checks at customizable intervals. When you choose to take a break, a calm break screen guides you with a countdown timer. Smart Pause automatically silences reminders during Focus Mode, CarPlay navigation, and when driving. Screen Time Shield-based app-level interruption is in development and will arrive when Apple's entitlement approval (#201) is complete.
 
 **Key features:**
 - Custom eye break and posture check timing
 - Eye break reminders (20-20-20 rule) and posture check reminders at customizable intervals
-- Backup local alerts while Screen Time shielding is unavailable
-- Screen Time Shield-based True Interrupt Mode once Apple entitlement approval is complete
-- Calm break screen with countdown timer and haptic feedback
+- Smart Pause during Focus Mode, CarPlay, and driving detection
+- Full-screen break screen with countdown timer and haptic feedback
 - Snooze options (5 min, 1 hour, rest of day)
-- Works quietly in the background—Smart Pause during Focus Mode and CarPlay
-- Battery-friendly—native iOS scheduling, no background timers
+- Battery-friendly—native iOS scheduling, minimal background activity
 - Privacy-first — no accounts, no ads, no tracking, and no custom analytics backend
+- Screen Time integration (app-level interruption coming in Phase 3 when Apple entitlement is approved)
 
 Built for people who spend hours at a screen and want control over their break habits. Download now and build healthier screen time habits on your terms.
 
@@ -104,7 +103,7 @@ The app uses Apple's built-in diagnostics and analytics tools, including **Metri
 - All your settings (reminder intervals, break durations, preferences) are stored locally on your device using iOS UserDefaults.
 - True Interrupt setup state is stored locally in the App Group container so the main app and Screen Time extensions can coordinate. This includes the enabled/disabled intent, aggregate app/category selection counts, active shield-session timestamps, and a capped operational event log for shield/fallback diagnostics.
 - Motion activity and Focus status are accessed transiently in memory to pause reminders — they are never stored or transmitted.
-- Current builds use backup local alerts while Screen Time shielding remains entitlement-gated. Screen Time Shielding and app/category selection are not promised as active App Store functionality until Apple approval is complete and the feature is released.
+- Current builds use local reminder alerts as the primary reminder mechanism. Screen Time Shield-based app-level interruption is not available in v0.2.0 and will arrive in a future phase when Apple's entitlement approval is complete.
 - The app uses Apple's `os.Logger` framework for on-device diagnostic logging. These logs remain on your device. In release builds, values that could be sensitive are marked private/redacted. If you choose to share diagnostics with Apple or a TestFlight developer, some diagnostic logs may be included according to Apple's diagnostic-sharing settings.
 - No third-party SDKs or frameworks are used — the app is built exclusively with Apple's native iOS libraries (SwiftUI, UIKit, UserNotifications, MetricKit).
 

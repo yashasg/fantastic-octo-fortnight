@@ -215,8 +215,8 @@ Explain how kshana works before asking for permissions. Build confidence and tra
 | Element | Copy |
 |---|---|
 | **Headline** | `How does kshana work?` |
-| **Explanation** | `kshana monitors which apps you use (like Safari, social media, or email) and gently suggests breaks at intervals you set. You're always in control.` |
-| **Reassurance** | `Think of it as a friendly reminder—not a blocker. You can disable kshana or change settings anytime.` |
+| **Explanation** | `kshana monitors which apps you use (like Safari, social media, or email) and gently suggests breaks at intervals you set. You're always in control. In the future, kshana will pause distracting apps during breaks — that's where app-level access comes in. For now, you'll get friendly reminder notifications.` |
+| **Reassurance** | `Think of it as a friendly reminder—not a blocker, and not parental control software. You can disable kshana or change settings anytime.` |
 | **Trust heading** | `What kshana does NOT do:` |
 | **Trust bullets** | `• Read messages or content` `• Report your activity anywhere` `• Require an account` |
 | **Primary CTA** | `Next` |
@@ -306,17 +306,17 @@ Request Screen Time access with calm language. Many users find the system prompt
 | Element | Copy |
 |---|---|
 | **Headline** | `Permission to suggest breaks` |
-| **Explanation** | `kshana needs access to see which apps you're using so it can suggest breaks at the right time.` |
-| **Privacy reassurance** | `Your privacy matters. This does not give kshana access to your messages, photos, or any other content.` |
-| **Primary CTA** | `Grant App Break Access` |
+| **Explanation** | `kshana requests "App Break Access" to see which apps you're using so it can suggest breaks at the right time. In Phase 3, this permission will enable app-level pausing during breaks. For now, kshana uses friendly reminder notifications.` |
+| **Privacy reassurance** | `Your privacy matters. This does not give kshana access to your messages, photos, or any other content. You can revoke this permission anytime in Settings.` |
+| **Primary CTA** | `Enable App Break Access` |
 | **Secondary option** | `Not now` |
 
 ### Permission Request Behaviour
 
-Tapping **Grant App Break Access** triggers the system Screen Time / Family Controls permission prompt:
+Tapping **Enable App Break Access** triggers the system Screen Time / Family Controls permission prompt:
 
 ```swift
-Button("Grant App Break Access") {
+Button("Enable App Break Access") {
     // Request Screen Time / Family Controls access
     // This triggers the system permission prompt
     // The exact API depends on the targeted iOS version:
@@ -332,7 +332,7 @@ Button("Grant App Break Access") {
 .padding(.horizontal, 32)
 ```
 
-The onboarding advances to Screen 4 regardless of the user's choice on the system prompt. Permission denial is handled gracefully in the main app with backup local alerts (see `UX_FLOWS.md` §2.4).
+The onboarding advances to Screen 4 regardless of the user's choice on the system prompt. Permission denial is handled gracefully in the main app with local reminder alerts (see `UX_FLOWS.md` §2.4).
 
 ### "Not now" Behaviour
 
@@ -371,7 +371,7 @@ Users **can** still navigate back (swipe right from next screen or tap back). Bu
 |---|---|---|
 | Headline | Reads naturally | — |
 | Main text | Reads as flowing paragraphs | — |
-| Grant button | `"Grant App Break Access"` | `"Opens system permission dialog"` |
+| Grant button | `"Enable App Break Access"` | `"Opens system permission dialog for future app-pausing feature"` |
 | Not now | `"Not now"` | `"Skip for now, you can enable later in Settings"` |
 | Page indicator | `"Page 3 of 4"` | — |
 
