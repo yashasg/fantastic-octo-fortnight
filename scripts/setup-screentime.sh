@@ -80,7 +80,8 @@ if [[ "${1:-}" == "--build" ]]; then
     exit 1
   fi
 
-  BUILD_LOG="$(mktemp "${TMPDIR:-/tmp}/kshana-screentime-build.XXXXXX.log")"
+  mkdir -p "${REPO_ROOT}/.build/tmp"
+  BUILD_LOG="$(mktemp "${REPO_ROOT}/.build/tmp/screentime-build.XXXXXX.log")"
   trap 'rm -f "$BUILD_LOG"' EXIT
 
   # Detect first available iPhone simulator
