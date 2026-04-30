@@ -295,3 +295,29 @@ OverlayView lives in UIWindow with no EnvironmentObjects; self-contained via UIH
 - In a ZStack overlay where dismiss button is top-trailing (high y-priority geometrically), `.accessibilitySortPriority(1)` on content headline is the minimal fix that doesn't require reordering ZStack children
 - `postScreenChanged` in dismiss must be conditional on queue state to avoid double-firing when overlay chaining is active
 - SwiftLint `type_body_length` (400 non-comment lines) is enforced — extract new test classes rather than appending to overloaded files
+
+---
+
+## 2026-04-30 — A11y + Onboarding CTA Pass (#311 #313 #314)
+
+**Branch:** `fix/overlay-a11y-308-310`
+**Commit:** `01ea123`
+
+### #311 — OnboardingInterruptModeView hero illustration
+Changed hero `Image` from `.accessibilityLabel(Text("onboarding.interrupt.illustrationLabel", bundle: .module))` to `.accessibilityHidden(true)`. Screen title already conveys purpose. Matches `AppCategoryPickerView` and `OnboardingPermissionView` pattern for same decorative icon. Added body-inspection test: `test_onboardingInterruptModeView_heroIllustration_isAccessibilityHidden`.
+
+**Pattern reinforced:** Hero illustrations on onboarding screens must be `.accessibilityHidden(true)` when the screen title conveys the same semantic meaning. Only use `.accessibilityLabel` if the illustration adds unique context the title doesn't.
+
+### #313 — OverlayView .accessibilityAddTraits(.isModal)
+**SDK Discovery:** SwiftUI `accessibilityViewIsModal(_:)` does NOT exist in iOS 26 SDK (Xcode 26.4). Verified with `xcrun swift`. Phase 1 team decision was correct in intent but the modifier was never available on this SDK.
+
+**Fix:** Removed `.accessibilityAddTraits(.isModal)` entirely and added a comment documenting that UIKit layer (`OverlayManager.hostingController.view.accessibilityViewIsModal = true`) is the authoritative modal suppression. The `.isModal` trait only adds a semantic trait — it does NOT suppress VoiceOver traversal of other windows.
+
+**Pattern:** For overlays shown in dedicated UIWindows, set `accessibilityViewIsModal = true` on the hosting controller's view (UIKit). Do not use SwiftUI `.accessibilityAddTraits(.isModal)` as a substitute.
+
+### #314 — Customize Settings CTA on final onboarding screen
+Added `onCustomize: (() -> Void)?` parameter to `OnboardingInterruptModeView`. Renders a tertiary text-link "Customize Settings" below the "Skip for Now" secondary button when non-nil. `OnboardingView` passes `finishOnboardingAndCustomize()` which sets `openSettingsOnLaunch = true` before `finishOnboarding()`. `HomeView` already consumed this flag — no HomeView changes needed.
+
+Updated `ONBOARDING_SPEC.md` and `UX_FLOWS.md` to reflect 5-screen flow with the Customize Settings CTA on Screen 5 (OnboardingInterruptModeView). Added 4 new unit tests.
+
+**Total tests:** 478 passed, 0 failures. BUILD SUCCEEDED.
