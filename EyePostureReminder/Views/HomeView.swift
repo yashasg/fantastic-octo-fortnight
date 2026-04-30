@@ -88,9 +88,10 @@ struct HomeView: View {
                     Image(systemName: AppSymbol.settings)
                         .symbolRenderingMode(.hierarchical)
                         .foregroundStyle(AppColor.primaryRest)
-                        .accessibilityLabel(Text("home.settingsButton", bundle: .module))
-                        .accessibilityHint(Text("home.settingsButton.hint", bundle: .module))
+                        .accessibilityHidden(true)
                 }
+                .accessibilityLabel(Text("home.settingsButton", bundle: .module))
+                .accessibilityHint(Text("home.settingsButton.hint", bundle: .module))
                 .accessibilityIdentifier("home.settingsButton")
             }
         }
