@@ -230,3 +230,68 @@ OverlayView lives in UIWindow with no EnvironmentObjects; self-contained via UIH
 - 39 new `Localizable.xcstrings` keys: `onboarding.interrupt.*`, `settings.trueInterrupt.*`, `appCategoryPicker.*` (158 → 197 total).
 
 ### Build verified: `./scripts/build.sh test` → ✓ Tests passed
+
+## 2026-04-30 — Read-Only UI Implementation Audit (Post True Interrupt UI)
+
+**Task:** Full read-only audit of SwiftUI correctness, design token compliance, touch targets, Dynamic Type, accessibility identifiers, UIKit overlay bridge issues, and regressions from recent True Interrupt UI changes.
+
+**Files audited:**
+- `EyePostureReminder/Views/OverlayView.swift`
+- `EyePostureReminder/Views/SettingsView.swift`
+- `EyePostureReminder/Views/HomeView.swift`
+- `EyePostureReminder/Views/ReminderRowView.swift`
+- `EyePostureReminder/Views/Components.swift`
+- `EyePostureReminder/Views/DesignSystem.swift`
+- `EyePostureReminder/Views/AccessibleToggle.swift`
+- `EyePostureReminder/Views/AppCategoryPickerView.swift`
+- `EyePostureReminder/Views/Onboarding/OnboardingInterruptModeView.swift`
+- `EyePostureReminder/Views/Onboarding/OnboardingWelcomeView.swift`, OnboardingPermissionView.swift, OnboardingSetupView.swift, OnboardingView.swift
+- `EyePostureReminder/Services/OverlayManager.swift`
+
+**Issues filed:**
+- **#311** — `OnboardingInterruptModeView` hero illustration exposed to VoiceOver with redundant label; should be `.accessibilityHidden(true)` to match `AppCategoryPickerView` and `OnboardingPermissionView` patterns for the same decorative icon. Regression in True Interrupt UI changes.
+- **#313** — `OverlayView` uses deprecated `.accessibilityAddTraits(.isModal)` instead of `.accessibilityViewIsModal(true)` per Phase 1 team decision. UIKit bridge compensates, but SwiftUI layer is wrong API and misleads future maintainers.
+
+**Clean areas (no issues):**
+- Design tokens: all AppFont, AppColor, AppSpacing, AppLayout, AppAnimation tokens used correctly across all views
+- Dynamic Type: AppFont.countdown fixed-size correctly exempted as decorative; all other typography uses scalable text styles
+- Touch targets: all interactive elements meet 44pt minimum via `AppLayout.minTapTarget` or ButtonStyle (PrimaryButtonStyle, SecondaryButtonStyle both enforce minHeight)
+- Overlay UIKit bridge: OverlayManager window lifecycle, FIFO queue, audio pause/resume, scene activation observer all look correct
+- OverlayView animations: reduce-motion guard present at all three animation sites (appear, manual dismiss, auto-dismiss); `withMotionSafe` helper used consistently
+- Countdown accessibility: `.accessibilityElement(children: .ignore)` + static label + dynamic value + `.updatesFrequently` — correct VoiceOver pattern
+- Snooze section accessibility: all snooze buttons have identifier, hint, and state-conditional aria-like hints
+- String catalog: views use `Text("key", bundle: .module)` and `String(localized: "key", bundle: .module)` patterns correctly
+- Onboarding pickers: `typeID`-based stable accessibility identifiers for UI automation
+
+**Minor notes (not filed — style/cosmetic):**
+- `SettingsTrueInterruptSection` VStack uses hardcoded `spacing: 2` (should be a sub-token or `AppSpacing.xs/2`); not filed as no accessibility impact
+- `AppCategoryPickerView.performPrimaryAction()` and `primaryButtonHintKey` are non-private; not filed as style-only
+- `SettingsTrueInterruptSection` indentation on hero icon is off by one level in AppCategoryPickerView (cosmetic)
+
+**Patterns confirmed:**
+- Hero illustrations on onboarding screens: use `.accessibilityHidden(true)` if decorative (title conveys purpose); only use label if illustration adds unique semantic meaning
+- Modal overlay accessibility: UIKit layer (`accessibilityViewIsModal = true` on hosting controller view) is the authoritative implementation; SwiftUI modifier `.accessibilityViewIsModal(true)` should match (not `.accessibilityAddTraits(.isModal)`)
+
+---
+
+## Session: 2026-04-30 — Overlay Accessibility Pass (#308 #309 #310)
+
+**Branch:** `fix/overlay-a11y-308-310`  
+**Commit:** `ebe4bf1`
+
+**Work performed:**
+
+1. **#308/#309 (duplicate — fixed once):** Added `postScreenChanged(focusElement: nil)` in `OverlayManager.dismissOverlay()` after hiding the overlay window. Post is guarded behind `overlayQueue.isEmpty` to avoid double-posting when a queued overlay immediately follows (that `showOverlay` call posts its own notification).
+
+2. **#310:** Added `.accessibilitySortPriority(1)` to the break-title `Text` in `OverlayView.headlineSection`. Overrides ZStack geometric traversal so VoiceOver lands on the headline first, not the × dismiss button.
+
+**Files changed:**
+- `EyePostureReminder/Services/OverlayManager.swift`
+- `EyePostureReminder/Views/OverlayView.swift`
+- `Tests/EyePostureReminderTests/Services/OverlayManagerExtendedTests.swift` (2 new tests)
+- `Tests/EyePostureReminderTests/Views/OverlayAccessibilityTests.swift` (new file, 2 tests)
+
+**Patterns learned:**
+- In a ZStack overlay where dismiss button is top-trailing (high y-priority geometrically), `.accessibilitySortPriority(1)` on content headline is the minimal fix that doesn't require reordering ZStack children
+- `postScreenChanged` in dismiss must be conditional on queue state to avoid double-firing when overlay chaining is active
+- SwiftLint `type_body_length` (400 non-comment lines) is enforced — extract new test classes rather than appending to overloaded files
