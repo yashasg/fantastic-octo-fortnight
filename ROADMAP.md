@@ -652,9 +652,9 @@ Device resumes normal activity
 - ✅ v1.1.0 released successfully
 
 ### Phase 4 Risks & Open Questions
-- **Risk:** watchOS development expertise gap on team → **Mitigation:** Linus to complete watchOS tutorial early in M3.4
-- **Risk:** Widget timeline updates impact battery more than expected → **Mitigation:** Early measurement in M3.3, adjust update frequency as needed
-- **Question:** Should we add Siri Shortcuts? → **Decision:** Evaluate post-Phase 3 based on user feedback
+- **Risk:** watchOS development expertise gap on team → **Mitigation:** Linus to complete watchOS tutorial early in M4.1
+- **Risk:** Widget timeline updates impact battery more than expected → **Mitigation:** Early measurement in M4.1, adjust update frequency as needed
+- **Question:** Should we add Siri Shortcuts? → **Decision:** Evaluate post-Phase 4 based on user feedback
 - **Question:** Multi-user support (Family Sharing)? → **Decision:** Defer to Phase 4 (v1.2+)
 
 ---
@@ -695,7 +695,7 @@ Device resumes normal activity
    **Owner:** Danny  
    **Decision:** Pending — Phase 2 complete, ready to submit
 
-2. **Q:** Should Phase 3 (iCloud, widgets, watchOS) be in v1.0 or v1.1?  
+2. **Q:** Should Phase 4 (iCloud, widgets, watchOS) be in v1.0 or v1.1?  
    **Owner:** Danny  
    **Recommendation:** Defer to v1.1 post-launch (Phase 2 scope sufficient for v1.0)
 
@@ -703,14 +703,14 @@ Device resumes normal activity
    **Owner:** Danny + Yashasg  
    **Deadline:** Before submission
 
-### Post-Launch (Phase 3+)
+### Post-Launch (Phase 4+)
 4. **Q:** Enable analytics (Mixpanel, Firebase)?  
    **Owner:** Turk (Data Analyst)  
    **Deadline:** v1.2 or later (maintain zero-data-collection stance in v1.0/v1.1)
 
 5. **Q:** Siri Shortcuts support?  
    **Owner:** Danny  
-   **Recommendation:** Evaluate user feedback post-Phase 3
+   **Recommendation:** Evaluate user feedback post-Phase 4
 
 6. **Q:** Multi-user / Family Sharing?  
    **Owner:** Danny + Rusty  
@@ -724,9 +724,9 @@ Device resumes normal activity
 |---|---|---|---|---|
 | Dependency injection refactoring breaks tests | Medium | Medium | 🔄 Active | Livingston testing M3.1; existing tests guard against regressions |
 | App Store submission delay | Low | High | 🔄 Active | Phase 2 complete; awaiting decision to proceed |
-| watchOS development expertise gap | Medium | Low | 🔄 Active | Defer to M3.4; Linus to upskill early |
-| Widget battery impact exceeds targets | Low | Low | 🔄 Active | Measure early in M3.3; adjust update frequency |
-| iCloud sync conflicts (edge cases) | Low | Medium | 🔄 Active | Last-write-wins strategy + logging in M3.2 |
+| watchOS development expertise gap | Medium | Low | 🔄 Active | Defer to Phase 4; Linus to upskill early in M4.1 |
+| Widget battery impact exceeds targets | Low | Low | 🔄 Active | Measure early in Phase 4; adjust update frequency |
+| iCloud sync conflicts (edge cases) | Low | Medium | 🔄 Active | Last-write-wins strategy + logging in Phase 4 |
 | Phase 3 timeline slips | Medium | Low | 🔄 Active | Phase 1+2 complete; Phase 3 is optional post-launch |
 
 ---

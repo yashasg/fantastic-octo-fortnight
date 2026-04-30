@@ -54,9 +54,8 @@ ContentView checks @AppStorage("hasSeenOnboarding")
     │  │  Headline: "Welcome to kshana"               │
     │  │  Subheadline: "Healthy app breaks,          │
     │  │               on your terms"                 │
-    │  │  Body: "Gentle nudges to rest your eyes      │
-    │  │  and check your posture. Choose which        │
-    │  │  apps get break screens. You're in control." │
+    │  │  Body: "Set your eye and posture break        │
+    │  │  timing. kshana handles the rest."           │
     │  │                                              │
     │  │  [ Next → ]  (borderedProminent, blue)       │
     │  │  Page dots: ● ○ ○ ○                          │

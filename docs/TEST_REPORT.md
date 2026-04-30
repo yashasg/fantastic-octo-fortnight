@@ -4,7 +4,7 @@
 **Date:** 2026-04-28  
 **Status:** ✅ All unit tests compile cleanly — build verified
 
-> **Count source note:** The v0.2.0 CHANGELOG baseline is 1,382 tests (the authoritative shipped baseline). The current count of **1,798** (from `grep -rc 'func test' Tests/EyePostureReminderTests`) reflects ~416 tests added post-v0.2.0 across new modules (Analytics, PauseCondition, ScreenTime, TrueInterrupt, coverage-boost suites, and regression). The M2.6 intermediate count of 270 (pre-v0.2.0) is retained in the summary table for historical context only; it is not the most recent baseline. CHANGELOG counts remain accurate for their respective milestones; this report uses the live grep count as the authoritative current total.
+> **Count source note:** The v0.2.0 CHANGELOG baseline is 1,382 tests (the authoritative shipped baseline). The current count of **1,825** (from `grep -rc 'func test' Tests/EyePostureReminderTests --include='*.swift'`) reflects ~443 tests added post-v0.2.0 across new modules (Analytics, PauseCondition, ScreenTime, TrueInterrupt, coverage-boost suites, and regression). The M2.6 intermediate count of 270 (pre-v0.2.0) is retained in the summary table for historical context only; it is not the most recent baseline. CHANGELOG counts remain accurate for their respective milestones; this report uses the live grep count as the authoritative current total.
 
 ---
 
@@ -12,20 +12,21 @@
 
 | Metric | Value |
 |---|---|
-| **Total tests** | **1,798** (grep `func test` across 70 .swift files) |
+| **Total tests** | **1,825** (grep `func test` across 79 .swift files) |
 | Build status | ✅ `BUILD SUCCEEDED` (Mac Catalyst / Xcode) |
 | Test-build status | ✅ `TEST BUILD SUCCEEDED` |
 | API mismatches found | 0 |
 | API mismatches fixed | 1 (pre-existing `is` cast warning in AudioInterruptionManagerTests) |
 | Tests at v0.2.0 baseline | 1,382 (per CHANGELOG; authoritative shipped baseline) |
 | Tests at M2.6 (intermediate) | 270 (per CHANGELOG; pre-v0.2.0; not the most recent baseline) |
-| Tests added since v0.2.0 | ~416 (Analytics, ScreenTime, TrueInterrupt, coverage-boost, regression suites) |
+| Tests added since v0.2.0 | ~443 (Analytics, ScreenTime, TrueInterrupt, coverage-boost, regression suites) |
+| **UI tests** | **59** (XCUITest; `grep -rc 'func test' Tests/EyePostureReminderUITests --include='*.swift'`) |
 
 ---
 
 ## Coverage by Module
 
-### Models — 251 tests
+### Models — 253 tests
 
 | File | Tests | Coverage Focus |
 |---|---|---|
@@ -35,9 +36,9 @@
 | `SettingsStoreConfigTests` | 31 | Config validation and preset logic |
 | `SettingsStorePhase2Tests` | 10 | hapticsEnabled toggle + persistence, snoozeCount persistence |
 | `ReminderSettingsTests` | 19 | ReminderSettings struct coverage |
-| `PauseConditionSourceTests` | 12 | PauseConditionSource enum cases |
+| `PauseConditionSourceTests` | 13 | PauseConditionSource enum cases |
 | `OnboardingTests` | 12 | `hasSeenOnboarding` flag: first-launch default, persistence, reset, key correctness |
-| `AppConfigTests` | 39 | AppConfig defaults, update logic, equality |
+| `AppConfigTests` | 40 | AppConfig defaults, update logic, equality |
 
 **Estimated coverage:** ~93%
 
@@ -81,11 +82,11 @@
 
 ---
 
-### ViewModels — 117 tests
+### ViewModels — 121 tests
 
 | File | Tests | Coverage Focus |
 |---|---|---|
-| `SettingsViewModelTests` | 32 | masterToggle, reminderSettingChanged, snooze(for:), cancelSnooze |
+| `SettingsViewModelTests` | 36 | masterToggle, reminderSettingChanged, snooze(for:), cancelSnooze |
 | `SettingsViewModelPhase2Tests` | 35 | snooze(option:) for all 3 cases, canSnooze limit, isSnoozeActive, snoozeCount persistence, integration survivability |
 | `SettingsViewModelExtendedTests` | 41 | Extended VM paths, edge cases |
 | `SettingsViewModelFormatterTests` | 9 | Interval/duration label formatting |
@@ -94,7 +95,7 @@
 
 ---
 
-### Views — 577 tests
+### Views — 597 tests
 
 | File | Tests | Coverage Focus |
 |---|---|---|
@@ -104,13 +105,13 @@
 | `ComponentsTests` | 20 | Shared UI component correctness |
 | `ComponentsExtendedTests` | 14 | Extended component edge cases |
 | `CoverageBoostTests` | 34 | Coverage-boost suite for misc View paths |
-| `ViewBodyCoverageTests` | 64 | View body compile + expression coverage |
+| `ViewBodyCoverageTests` | 66 | View body compile + expression coverage |
 | `OnboardingViewTests` | 35 | OnboardingWelcomeView, OnboardingPermissionView, OnboardingSetupView, OnboardingInterruptModeView |
-| `TrueInterruptViewCoverageTests` | 42 | TrueInterrupt onboarding and settings view paths |
+| `TrueInterruptViewCoverageTests` | 45 | TrueInterrupt onboarding and settings view paths |
 | `DarkModeTests` | 17 | Dark Mode rendering correctness for key views |
 | `OverlayAccessibilityTests` | 3 | Overlay accessibility modal flag and VoiceOver |
 | `PreviewTests` | 8 | SwiftUI preview providers compile without crash |
-| `StringCatalogTests` | 186 | All String Catalog keys resolve; no missing/empty values |
+| `StringCatalogTests` | 201 | All String Catalog keys resolve; no missing/empty values |
 | `YinYangEyeViewTests` | 9 | Yin-yang logo Path drawing tests |
 | `YinYangEyeViewExtendedTests` | 16 | Extended logo animation and accessibility |
 
@@ -225,5 +226,5 @@ No breaking API mismatches found between test files and the Phase 2 implementati
 |---|---|
 | Phase 1 (Models + Scheduler + ViewModel core) | ~196 (M2.6 intermediate) |
 | Phase 2 (Haptics, Snooze, Onboarding, DesignSystem, AppCoordinator overlay) | ~74 (M2.6 intermediate; v0.2.0 shipped total: 1,382) |
-| Post-v0.2.0 additions (Analytics, ScreenTime, TrueInterrupt, PauseCondition, coverage-boost, regression suites) | ~416 |
-| **Total (current, from grep)** | **1,798** |
+| Post-v0.2.0 additions (Analytics, ScreenTime, TrueInterrupt, PauseCondition, coverage-boost, regression suites) | ~443 |
+| **Total (current, from grep)** | **1,825** |
