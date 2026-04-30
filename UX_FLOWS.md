@@ -65,95 +65,52 @@ ContentView checks @AppStorage("hasSeenOnboarding")
     │      ▼  User taps "Next" (or swipes left)
     │
     │  ┌──────────────────────────────────────────────────┐
-    │  │  SCREEN 2 — App Break Access (Pre-Permission)    │
+    │  │  SCREEN 2 — Notification Permission              │
+    │  │  (OnboardingPermissionView)                       │
     │  │                                                   │
-    │  │  Headline: "How does kshana work?"                │
-    │  │  Body: "kshana monitors which apps you use        │
-    │  │  (like Safari or social media) and gently         │
-    │  │  suggests breaks. Think of it as a friendly       │
-    │  │  reminder card—not a blocker.                     │
+    │  │  Headline: "Stay on track"                        │
+    │  │  Body: Explains why reminder alerts are needed.   │
+    │  │  Shows a notification preview card.               │
     │  │                                                   │
-    │  │  You choose which apps to monitor, when breaks    │
-    │  │  happen, and can disable anytime.                 │
-    │  │                                                   │
-    │  │  kshana does not:                                 │
-    │  │  • Read messages or see content                   │
-    │  │  • Report your activity anywhere                  │
-    │  │  • Require an account"                            │
-    │  │                                                   │
-    │  │  [ Next → ]  (borderedProminent, blue)            │
-    │  │  "Maybe Later" skip link                          │
+    │  │  [ Allow Reminder Alerts ] ← triggers            │
+    │  │    UNUserNotificationCenter auth prompt           │
+    │  │  "Not now" skip link  ← advances without          │
+    │  │                          requesting permission    │
     │  │  Page dots: ○ ● ○ ○                               │
     │  └──────────────────────────────────────────────────┘
     │      │
-    │      ├─ User taps "Next"
-    │      │      │
-    │      │      ▼  (advances to Screen 3)
-    │      │
-    │      └─ User taps "Maybe Later"
-    │             │
-    │             ▼  (skips to Screen 4 Setup Preview)
-    │
-    │  ┌──────────────────────────────────────────────────┐
-    │  │  SCREEN 3 — App Break Access Permission          │
-    │  │  (OnboardingScreenTimePermissionView)             │
-    │  │                                                   │
-    │  │  Headline: "Permission to suggest breaks"        │
-    │  │  Body: "kshana needs access to see which apps     │
-    │  │  you're using so it can suggest breaks at the     │
-    │  │  right time.                                      │
-    │  │                                                   │
-    │  │  Your privacy matters. This does not give kshana  │
-    │  │  access to your messages, photos, or any other    │
-    │  │  content."                                        │
-    │  │                                                   │
-    │  │  [ Grant App Break Access ]  ← triggers          │
-    │  │    system Screen Time/Family Controls prompt      │
-    │  │  "Not now" skip link  ← advances without          │
-    │  │                          requesting permission    │
-    │  │  Page dots: ○ ○ ● ○                               │
-    │  │                                                   │
-    │  │  ⚠ Horizontal swipe is blocked on this screen     │
-    │  │    (highPriorityGesture prevents accidental skip)  │
-    │  └──────────────────────────────────────────────────┘
-    │      │
-    │      ├─ User taps "Grant App Break Access"
+    │      ├─ User taps "Allow Reminder Alerts"
     │      │      │
     │      │      ▼
-    │      │  System permission prompt appears:
-    │      │  "kshana" requests access to Screen Time
-    │      │  [Allow] [Don't Allow]
+    │      │  System prompt: allow notifications?
     │      │      │
     │      │      ├─ User taps "Allow" → permission granted ✓
     │      │      └─ User taps "Don't Allow" → permission denied
     │      │      │
-    │      │      ▼  (either way, advances to Screen 4)
+    │      │      ▼  (either way, advances to Screen 3)
     │      │
     │      └─ User taps "Not now"
     │             │
-    │             ▼  (advances to Screen 4 without prompting)
+    │             ▼  (advances to Screen 3 without prompting)
     │
     │  ┌──────────────────────────────────────────────────┐
-    │  │  SCREEN 4 — Setup Preview (OnboardingSetupView)  │
+    │  │  SCREEN 3 — Reminder Schedule Setup              │
+    │  │  (OnboardingSetupView)                            │
     │  │                                                   │
-    │  │  Headline: "You're all set"                       │
-    │  │  Body: "kshana will help you build better         │
-    │  │  habits. Your breaks, your timing, your control." │
+    │  │  Headline: "Set your break schedule"             │
+    │  │  Interactive reminder picker cards:              │
+    │  │    • Eye Breaks: interval + duration pickers     │
+    │  │    • Posture Checks: interval + duration pickers │
+    │  │  Values bind directly to SettingsStore.          │
     │  │                                                   │
-    │  │  Default config preview:                           │
-    │  │    • Eye Breaks: every 20 min                     │
-    │  │    • Posture Checks: every 30 min                 │
-    │  │    • Backup local alerts when Screen Time         │
-    │  │      access is unavailable                        │
-    │  │                                                   │
-    │  │  [ Get Started ]    ← advances to Screen 5        │
-    │  │  Page dots: ○ ○ ○ ●                               │
+    │  │  [ Get Started ]    ← advances to Screen 4        │
+    │  │  Page dots: ○ ○ ● ○                               │
     │  └──────────────────────────────────────────────────┘
     │      │
-    │      ▼  (advances to Screen 5 — True Interrupt Mode)
+    │      ▼  (advances to Screen 4 — True Interrupt Mode)
     │
     │  ┌──────────────────────────────────────────────────┐
-    │  │  SCREEN 5 — True Interrupt Mode                  │
+    │  │  SCREEN 4 — True Interrupt Mode                  │
     │  │  (OnboardingInterruptModeView)                    │
     │  │                                                   │
     │  │  Headline: "True Interrupt Mode"                  │
@@ -162,19 +119,20 @@ ContentView checks @AppStorage("hasSeenOnboarding")
     │  │  while entitlement is pending.                    │
     │  │                                                   │
     │  │  [ Coming Soon ]    ← disabled (pre-entitlement) │
-    │  │  [ Skip for Now ]   ← sets hasSeenOnboarding,    │
+    │  │  [ Get Started without True Interrupt ]           │
+    │  │                     ← sets hasSeenOnboarding,    │
     │  │                       transitions to HomeView     │
     │  │  "Customize Settings" ← sets hasSeenOnboarding   │
     │  │                         + openSettingsOnLaunch,   │
     │  │                         opens Settings on arrival │
-    │  │  Page dots: ○ ○ ○ ○ ●                            │
+    │  │  Page dots: ○ ○ ○ ●                               │
     │  └──────────────────────────────────────────────────┘
     │      │
     │      ▼
     │  hasSeenOnboarding = true (written to UserDefaults)
+    │  onboardingCompleted(cta: .getStarted or .customize) telemetry logged
     │  ContentView transitions to HomeView (opacity crossfade, 0.4s)
-    │  If permission granted, app begins monitoring selected apps
-    │  If permission denied, fallback to local alerts when app runs
+    │  If permission granted, reminders scheduled; if denied, fallback to local alerts
     │
     └─ true (returning user)
            │
@@ -183,13 +141,13 @@ ContentView checks @AppStorage("hasSeenOnboarding")
 ```
 
 **Key UX decisions:**
-- **4-screen onboarding educates before asking.** Screen 1 explains value. Screen 2 educates on how kshana works (privacy-first). Screen 3 requests the Screen Time access permission. This order builds confidence.
-- **Pre-permission education screen (Screen 2).** Many users find the system Screen Time/Family Controls prompt scary. A calm pre-screen explains what kshana does (and doesn't do) in plain language, reducing anxiety.
-- **Permission screen blocks accidental swipe-past.** A `highPriorityGesture` prevents horizontal swiping on Screen 3, ensuring the user makes a deliberate choice.
-- **"Maybe Later" / "Not now" paths are always available.** The user can skip permissions and still proceed. A banner on the Home/Settings screen later offers recovery (see Section 2.4). The app works in degraded mode with local alerts as fallback.
-- **Defaults are pre-configured.** Screen 4 previews the defaults so the user knows what to expect. No mandatory customization.
-- **"Customize Settings" path.** Users who want to adjust deeper settings (haptics, snooze, notifications) can tap "Customize Settings" on the final True Interrupt Mode screen (Screen 5). This sets `openSettingsOnLaunch = true` so HomeView auto-opens the Settings sheet on arrival.
-- **Onboarding is shown exactly once.** The `hasSeenOnboarding` flag is only set on explicit completion ("Skip for Now" or "Customize Settings" on Screen 5). Force-quitting mid-onboarding means it shows again next launch.
+- **4-screen onboarding educates before asking.** Screen 1 explains value. Screen 2 requests notification permission with a preview card. Screen 3 lets users configure their reminder schedule with interactive pickers. Screen 4 introduces True Interrupt Mode. This order builds confidence before commitment.
+- **"Not now" path always available.** The user can skip the notification permission on Screen 2 and still complete onboarding. A banner on the Home/Settings screen later offers recovery (see Section 2.4). The app works in degraded mode with local alerts as fallback.
+- **Defaults are pre-configured.** Pickers on Screen 3 start at sensible defaults (eye breaks every 20 min, posture every 30 min) so the user can tap "Get Started" immediately.
+- **Swipe lock on final screen.** `OnboardingInterruptModeView` (Screen 4) uses a `highPriorityGesture` to prevent accidental backward swipe past the completion CTAs.
+- **"Customize Settings" path.** Users who want to adjust deeper settings (haptics, snooze, notifications) can tap "Customize Settings" on Screen 4. This sets `openSettingsOnLaunch = true` so HomeView auto-opens the Settings sheet on arrival.
+- **Onboarding is shown exactly once.** The `hasSeenOnboarding` flag is only set on explicit completion ("Get Started without True Interrupt" or "Customize Settings" on Screen 4). Force-quitting mid-onboarding means it shows again next launch.
+- **Telemetry.** `AnalyticsLogger.log(.onboardingCompleted(cta:))` fires with `.getStarted` or `.customize` on completion.
 - **Graceful degradation.** If permission is denied, the app works in foreground-only mode with local alerts. A persistent banner on the Home/Settings screen provides a path to fix (see Section 2.4).
 
 ---
@@ -760,10 +718,10 @@ OverlayManager checks: is an overlay currently visible?
 **Core belief:** Even a simple app benefits from a brief, warm introduction — especially when a system permission is required.
 
 **Approach:**
-- **5-screen onboarding flow** (Welcome → Notification Permission → Setup Preview → True Interrupt Mode) shown exactly once on first launch.
-- **Educate before asking.** The permission request comes on Screen 2, after the user understands the app's value. This produces higher grant rates than a cold prompt.
-- **Preview defaults.** Screen 4 shows the default configuration so users feel confident before starting.
-- **Two completion paths on Screen 5:** "Skip for Now" (use defaults) or "Customize Settings" (jump to Settings directly).
+- **4-screen onboarding flow** (Welcome → Notification Permission → Reminder Setup → True Interrupt Mode) shown exactly once on first launch.
+- **Educate before asking.** The notification permission request comes on Screen 2, after the user understands the app's value. This produces higher grant rates than a cold prompt.
+- **Interactive setup.** Screen 3 lets users configure eye break and posture check intervals with live pickers that write directly to `SettingsStore`.
+- **Two completion paths on Screen 4:** "Get Started without True Interrupt" (use defaults) or "Customize Settings" (jump to Settings directly).
 - **Swipe navigation** between screens via `TabView` with `PageTabViewStyle`. Page dots indicate progress.
 
 ### 5.2 First Launch Experience
@@ -773,9 +731,9 @@ OverlayManager checks: is an overlay currently visible?
 **Flow:**
 1. App icon tap → launch screen (< 1s)
 2. Welcome screen establishes context and tone
-3. Permission screen explains why notifications matter, then offers "Enable Notifications" or "Not now"
-4. Setup screen lets user pick eye/posture intervals; "Get Started" advances to Screen 5
-5. True Interrupt Mode screen explains Screen Time-based blocking; user taps "Skip for Now" or "Customize Settings"
+3. Notification Permission screen explains why alerts matter, then offers "Allow Reminder Alerts" or "Not now"
+4. Reminder Setup screen lets user pick eye/posture intervals with interactive pickers; "Get Started" advances to Screen 4
+5. True Interrupt Mode screen explains Screen Time-based blocking; user taps "Get Started without True Interrupt" or "Customize Settings"
 6. `hasSeenOnboarding` flag set → ContentView crossfades to HomeView
 7. If "Customize Settings" was tapped, `openSettingsOnLaunch = true` → HomeView opens Settings sheet immediately
 8. Reminders are scheduled. Done.
@@ -783,15 +741,16 @@ OverlayManager checks: is an overlay currently visible?
 **Implementation details:**
 - `ContentView` checks `@AppStorage(hasSeenOnboarding)` to gate the flow
 - `OnboardingView` uses a `TabView` with `PageTabViewStyle` for horizontal swipe between screens
-- `OnboardingPermissionView` blocks accidental swipe-past with a `highPriorityGesture`
-- `OnboardingSetupView` offers two CTAs: "Get Started" (defaults) and "Customize Settings" (opens Settings)
+- `OnboardingInterruptModeView` (Screen 4) blocks accidental swipe-past with a `highPriorityGesture`
+- `OnboardingSetupView` (Screen 3) has one CTA: "Get Started" (advances to Screen 4); interval pickers bind directly to `SettingsStore`
+- `OnboardingInterruptModeView` (Screen 4) has two exit CTAs: "Get Started without True Interrupt" and "Customize Settings"
 - Force-quitting mid-onboarding re-shows onboarding (flag only set on explicit completion)
 
 ### 5.3 What We're NOT Doing
 
 ❌ **No account creation or sign-in** (no backend, all local)
 ❌ **No upsell or "Pro" feature gates** (not in scope)
-❌ **No feature tour or coach marks** (the 3 screens cover value, permission, and setup — nothing more)
+❌ **No feature tour or coach marks** (the 4 screens cover value, permission, setup, and True Interrupt Mode — nothing more)
 
 ### 5.4 Yin-Yang Logo Animation (Restful Grove Redesign)
 

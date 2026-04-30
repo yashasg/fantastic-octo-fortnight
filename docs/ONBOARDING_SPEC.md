@@ -11,7 +11,7 @@
 
 ## Overview
 
-The onboarding flow is a 4-screen sequence shown to new users on first launch. It introduces kshana's value, explains how app break monitoring works, requests Screen Time access (with calm pre-permission education), and previews the default configuration before the user starts.
+The onboarding flow is a 4-screen sequence shown to new users on first launch. It introduces kshana's value, requests notification permission, lets the user configure their reminder schedule with interactive pickers, and introduces True Interrupt Mode before the user starts.
 
 **Design north star:** *Invisible setup. Maximum confidence. Zero friction.*
 
@@ -53,14 +53,19 @@ Use SwiftUI `TabView` with `PageTabViewStyle` for horizontal swipe between scree
 
 ```swift
 TabView(selection: $currentPage) {
-    WelcomeScreen()
+    OnboardingWelcomeView(onNext: { currentPage = 1 })
         .tag(0)
-    AppBreakExplanationScreen()
+    OnboardingPermissionView(onNext: { currentPage = 2 }, notificationCenter: coordinator.notificationCenter)
         .tag(1)
-    ScreenTimePermissionScreen()
+    OnboardingSetupView(onGetStarted: { currentPage = 3 })
+        .environmentObject(settings)
         .tag(2)
-    QuickSetupScreen()
-        .tag(3)
+    OnboardingInterruptModeView(
+        onGetStarted: finishOnboarding,
+        onCustomize: finishOnboardingAndCustomize,
+        authorizationStatus: coordinator.screenTimeAuthorization.authorizationStatus
+    )
+    .tag(3)
 }
 .tabViewStyle(PageTabViewStyle(indexDisplayMode: .always))
 .indexViewStyle(PageIndexViewStyle(backgroundDisplayMode: .always))
@@ -70,7 +75,7 @@ TabView(selection: $currentPage) {
 - **Swipe:** Left/right swipe navigates between pages freely (no lock on forward-only).
 - **"Next" buttons:** Advance to the next page programmatically (`currentPage += 1`).
 - **Back swipe:** Fully supported — users can go back and re-read.
-- **Screen 3 swipe lock:** A `highPriorityGesture` prevents accidental horizontal swiping on the ScreenTime permission screen, ensuring deliberate choice.
+- **Screen 4 swipe lock:** A `highPriorityGesture` prevents accidental horizontal swiping on `OnboardingInterruptModeView`, ensuring deliberate completion.
 
 ---
 
@@ -171,42 +176,28 @@ Image(systemName: "eye.fill")
 
 ---
 
-## Screen 2 — App Break Explanation
+## Screen 2 — Notification Permission (`OnboardingPermissionView`)
 
 ### Purpose
-Explain how kshana works before asking for permissions. Build confidence and transparency. Clarify what kshana does and doesn't do to reduce anxiety about the upcoming system prompt.
-
-**Key principle:** Pre-education significantly improves permission grant rates and user trust. Many users find the Screen Time / Family Controls prompt intimidating; a calm explanation beforehand makes all the difference.
+Request `UNUserNotificationCenter` authorization for reminder alerts. Explain why alerts are needed before the OS prompt appears, so users feel informed rather than blindsided.
 
 ### Layout
 
 ```
 ┌────────────────────────────────────┐
 │                                    │
-│    How does kshana work?            │  ← Headline
+│    Stay on track                   │  ← Headline
 │                                    │
-│    [Explanation card with bullet   │
-│     points]                         │  ← Educational content
+│    [Notification preview card]     │  ← Shows what a reminder looks like
 │                                    │
-│    You set your break timing.       │
-│    kshana tracks local screen-time  │
-│    intervals and suggests breaks    │
-│    when it is time to step away.    │
+│    kshana sends gentle alerts      │
+│    when it's time to rest your     │
+│    eyes or check your posture.     │  ← Body copy
 │                                    │
-│    Think of it like a helpful       │
-│    reminder card—not a blocker.     │
+│    [ Allow Reminder Alerts ]       │  ← Primary CTA (triggers OS prompt)
+│    Not now                          │  ← Skip option
 │                                    │
-│    ──────────────────────────────  │
-│                                    │
-│    What kshana does NOT do:         │  ← Trust-building
-│    • Read messages or see content   │
-│    • Report your activity          │
-│    • Require an account            │
-│                                    │
-│         [  Next  →  ]              │  ← CTA button
-│    Maybe Later                      │  ← Skip option
-│                                    │
-│            ○ ○ • ○                 │  ← Page dots
+│            ○ ● ○ ○                 │  ← Page dots
 └────────────────────────────────────┘
 ```
 
@@ -214,204 +205,60 @@ Explain how kshana works before asking for permissions. Build confidence and tra
 
 | Element | Copy |
 |---|---|
-| **Headline** | `How does kshana work?` |
-| **Explanation** | `kshana monitors which apps you use (like Safari, social media, or email) and gently suggests breaks at intervals you set. You're always in control. In the future, kshana will pause distracting apps during breaks — that's where app-level access comes in. For now, you'll get friendly reminder notifications.` |
-| **Reassurance** | `Think of it as a friendly reminder—not a blocker, and not parental control software. You can disable kshana or change settings anytime.` |
-| **Trust heading** | `What kshana does NOT do:` |
-| **Trust bullets** | `• Read messages or content` `• Report your activity anywhere` `• Require an account` |
-| **Primary CTA** | `Next` |
-| **Secondary option** | `Maybe Later` |
-
-### Content Structure
-
-```swift
-VStack(spacing: 16) {
-    Text("How does kshana work?")
-        .font(.title2)
-        .fontWeight(.bold)
-    
-    VStack(alignment: .leading, spacing: 12) {
-        Text("kshana monitors which apps you use (like Safari, social media, or email) and gently suggests breaks at intervals you set. You're always in control.")
-            .font(.body)
-        
-        Text("Think of it as a friendly reminder—not a blocker. You can disable kshana or change settings anytime.")
-            .font(.body)
-            .foregroundStyle(.secondary)
-    }
-    .padding(16)
-    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
-    
-    VStack(alignment: .leading, spacing: 8) {
-        Text("What kshana does NOT do:")
-            .font(.subheadline)
-            .fontWeight(.semibold)
-        
-        VStack(alignment: .leading, spacing: 6) {
-            Label("Read messages or content", systemImage: "checkmark.circle.fill")
-            Label("Report your activity anywhere", systemImage: "checkmark.circle.fill")
-            Label("Require an account", systemImage: "checkmark.circle.fill")
-        }
-        .font(.subheadline)
-        .foregroundStyle(.secondary)
-    }
-}
-```
-
-### Accessibility
-
-| Element | VoiceOver Label |
-|---|---|
-| Headline | Reads naturally |
-| Main content | Reads as flowing text |
-| Bullet points | Read as list items |
-| Next button | `"Next"` with hint `"Go to permission screen"` |
-| Maybe Later link | `"Maybe Later"` |
-| Page indicator | `"Page 2 of 4"` |
-
----
-
-## Screen 3 — Screen Time Permission
-
-### Purpose
-Request Screen Time access with calm language. Many users find the system prompt intimidating; this screen explains why kshana needs it and what it does (and doesn't) do.
-
-**Key principle:** Separate the "scary system prompt" from the app's friendly introduction by building understanding first on Screen 2, then requesting permission here with only brief, calm context.
-
-### Layout
-
-```
-┌────────────────────────────────────┐
-│                                    │
-│    Permission to suggest breaks    │  ← Headline
-│                                    │
-│    kshana needs access to see      │
-│    which apps you're using so it   │
-│    can suggest breaks at the       │
-│    right time.                     │  ← Explanation
-│                                    │
-│    Your privacy matters. This      │
-│    does not give kshana access to  │
-│    your messages, photos, or any   │
-│    other content.                  │  ← Privacy reassurance
-│                                    │
-│    [  Grant App Break Access  ]   │  ← Primary CTA
-│    Not now                         │  ← Skip option
-│                                    │
-│            ○ ○ ○ •                 │  ← Page dots
-└────────────────────────────────────┘
-```
-
-### Copy
-
-| Element | Copy |
-|---|---|
-| **Headline** | `Permission to suggest breaks` |
-| **Explanation** | `kshana requests "App Break Access" to see which apps you're using so it can suggest breaks at the right time. In Phase 3, this permission will enable app-level pausing during breaks. For now, kshana uses friendly reminder notifications.` |
-| **Privacy reassurance** | `Your privacy matters. This does not give kshana access to your messages, photos, or any other content. You can revoke this permission anytime in Settings.` |
-| **Primary CTA** | `Enable App Break Access` |
+| **Headline** | `Stay on track` |
+| **Primary CTA** | `Allow Reminder Alerts` |
 | **Secondary option** | `Not now` |
 
 ### Permission Request Behaviour
 
-Tapping **Enable App Break Access** triggers the system Screen Time / Family Controls permission prompt:
-
-```swift
-Button("Enable App Break Access") {
-    // Request Screen Time / Family Controls access
-    // This triggers the system permission prompt
-    // The exact API depends on the targeted iOS version:
-    // - iOS 15+: Use DeviceActivityCenter or similar if available
-    // - Fallback: Use requestRecordingLevelAuthorization() or equivalent
-    
-    currentPage = 3  // advance regardless of outcome
-}
-.buttonStyle(.borderedProminent)
-.controlSize(.large)
-.tint(.indigo)
-.frame(maxWidth: .infinity)
-.padding(.horizontal, 32)
-```
-
-The onboarding advances to Screen 4 regardless of the user's choice on the system prompt. Permission denial is handled gracefully in the main app with local reminder alerts (see `UX_FLOWS.md` §2.4).
+Tapping **Allow Reminder Alerts** calls `UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound])`. The onboarding advances to Screen 3 regardless of the user's choice on the system prompt. Permission denial is handled gracefully with a recovery banner in the main app (see `UX_FLOWS.md` §2.4).
 
 ### "Not now" Behaviour
 
-```swift
-Button("Not now") {
-    currentPage = 3  // advance without requesting permission
-}
-.foregroundStyle(.secondary)
-.font(.subheadline)
-```
-
-- Plain text link, no button chrome
-- Secondary color (`.secondary`) — present but not dominant
-- **No guilt trip.** The label is neutral.
-- Advances to Screen 4 without showing the system prompt
-- The app will work with local alert fallback
-
-### Horizontal Swipe Lock
-
-To prevent accidental skip-through of this important permission screen:
-
-```swift
-.highPriorityGesture(
-    DragGesture()
-        .onChanged { _ in
-            // Suppress default PageTabViewStyle swipe
-        }
-)
-```
-
-Users **can** still navigate back (swipe right from next screen or tap back). But forward swipe is blocked on this screen only.
+- Advances to Screen 3 without requesting permission
+- No swipe lock on this screen
 
 ### Accessibility
 
 | Element | VoiceOver Label | VoiceOver Hint |
 |---|---|---|
-| Headline | Reads naturally | — |
-| Main text | Reads as flowing paragraphs | — |
-| Grant button | `"Enable App Break Access"` | `"Opens system permission dialog for future app-pausing feature"` |
+| Allow button | `"Allow Reminder Alerts"` | `"Opens system notification permission dialog"` |
 | Not now | `"Not now"` | `"Skip for now, you can enable later in Settings"` |
-| Page indicator | `"Page 3 of 4"` | — |
+| Page indicator | `"Page 2 of 4"` | — |
 
 ---
 
-## Screen 4 — Quick Setup Preview
+## Screen 3 — Reminder Schedule Setup (`OnboardingSetupView`)
 
 ### Purpose
-Show the user what's already configured. Build confidence. Let them "get started" immediately or tweak settings if they want to. The app is ready — they just need to confirm.
+Let the user configure their eye break and posture check intervals before entering the app. Values bind directly to `SettingsStore`, so the same settings appear in the main Settings screen later.
 
 ### Layout
 
 ```
 ┌────────────────────────────────────┐
 │                                    │
-│    You're all set.                 │  ← Headline
-│                                    │
-│    Here's how we've set things     │
-│    up for you:                     │  ← Subheadline
+│    Set your break schedule         │  ← Headline
+│    (localised via onboarding.setup.title)
 │                                    │
 │    ┌─────────────────────────────┐ │
-│    │ 👁  Eye Breaks              │ │
-│    │     Every 20 min            │ │
-│    │     20 second break         │ │
+│    │ 👁  Eye Breaks              │ │  ← OnboardingReminderPickerCard
+│    │   Remind me every  [20 min] │ │  ← interval picker
+│    │   Break for        [20 s]   │ │  ← duration picker
 │    └─────────────────────────────┘ │
 │                                    │
 │    ┌─────────────────────────────┐ │
 │    │ 🧍 Posture Checks           │ │
-│    │     Every 30 min            │ │
-│    │     10 second check         │ │
+│    │   Remind me every  [30 min] │ │
+│    │   Break for        [10 s]   │ │
 │    └─────────────────────────────┘ │
 │                                    │
-│    You'll get a gentle reminder    │
-│    to look away and sit up —       │
-│    no effort required from you.    │  ← Reassurance copy
+│    You can change these anytime    │  ← Reassurance copy
+│    in Settings.                    │
 │                                    │
-│    [    Get Started    ]           │  ← Primary CTA
-│    Customize settings              │  ← Secondary option
+│    [    Get Started    ]           │  ← Single primary CTA
 │                                    │
-│            ○ ○ •                   │  ← Page dots
+│            ○ ○ ● ○                 │  ← Page dots
 └────────────────────────────────────┘
 ```
 
@@ -419,118 +266,27 @@ Show the user what's already configured. Build confidence. Let them "get started
 
 | Element | Copy |
 |---|---|
-| **Headline** | `You're all set.` |
-| **Subheadline** | `kshana will help you build healthier habits.` |
-| **Body note** | `Default config: Eye breaks every 20 min, posture checks every 30 min. Backup local alerts work while Screen Time access is unavailable. You can customize anytime.` |
-| **Reassurance** | `Your breaks, your timing, your control.` |
 | **Primary CTA** | `Get Started` |
-| **Secondary option** | `Customize Settings` |
 
-### Default Settings Cards
+Pickers use `SettingsViewModel.intervalOptions` and `SettingsViewModel.breakDurationOptions` for their values.
 
-Display the two reminder types as summary cards showing default values. These are **read-only display** — not interactive pickers. The message is: "it's already configured."
+### "Get Started" Behaviour
 
-```swift
-struct SetupPreviewCard: View {
-    let icon: String
-    let color: Color
-    let title: String
-    let interval: String
-    let duration: String
-
-    var body: some View {
-        HStack(spacing: 16) {
-            Image(systemName: icon)
-                .font(.title2)
-                .foregroundStyle(color)
-                .frame(width: 40)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                HStack(spacing: 8) {
-                    Label(interval, systemImage: "clock")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Label(duration, systemImage: "timer")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            Spacer()
-        }
-        .padding(16)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(title): every \(interval), \(duration) break")
-    }
-}
-
-// Usage:
-SetupPreviewCard(
-    icon: "eye.fill",
-    color: .indigo,
-    title: "Eye Breaks",
-    interval: "20 min",
-    duration: "20 seconds"
-)
-SetupPreviewCard(
-    icon: "figure.stand",
-    color: .green,
-    title: "Posture Checks",
-    interval: "30 min",
-    duration: "10 seconds"
-)
-```
-
-### "Get Started" Button Behaviour
-
-```swift
-Button("Get Started") {
-    UserDefaults.standard.set(true, forKey: "hasSeenOnboarding")
-    // Dismiss onboarding → app navigates to SettingsView
-    // Reminders are already scheduled with defaults
-}
-.buttonStyle(.borderedProminent)
-.controlSize(.large)
-.tint(.indigo)
-.frame(maxWidth: .infinity)
-.padding(.horizontal, 32)
-```
-
-- Dismisses the `OnboardingView`
-- App transitions to `SettingsView` (main content)
-- Default reminders are already scheduled (set up during `SettingsStore` initialization)
-- No additional confirmation needed
-
-### "Customize settings" Behaviour
-
-```swift
-Button("Customize settings") {
-    UserDefaults.standard.set(true, forKey: "hasSeenOnboarding")
-    // Dismiss onboarding → navigate to SettingsView
-    // Same outcome as "Get Started" — SettingsView is already the main screen
-}
-.foregroundStyle(.indigo)
-.font(.subheadline)
-```
-
-- Same navigation outcome as "Get Started" — goes to `SettingsView`
-- The distinction is communicative: "Customize" signals to curious users that they *can* change settings
-- `SettingsView` is the app's home screen — landing there from either path is correct
+Calls `onGetStarted()` on `OnboardingSetupView`, which advances `currentPage` to 3 (Screen 4 — True Interrupt Mode). Does **not** complete onboarding — the user must also pass Screen 4.
 
 ### Accessibility
 
 | Element | VoiceOver Label | VoiceOver Hint |
 |---|---|---|
-| Eye Breaks card | `"Eye Breaks: every 20 minutes, 20 second break"` | (none) |
-| Posture Checks card | `"Posture Checks: every 30 minutes, 10 second break"` | (none) |
+| Eye Breaks card | `"Eye Breaks"` (container label) | — |
+| Interval picker | Reads picker selection | Hint from `settings.reminder.intervalPicker.hint` |
+| Duration picker | Reads picker selection | Hint from `settings.reminder.durationPicker.hint` |
 | Get Started button | `"Get Started"` | `"Advance to the True Interrupt Mode introduction"` |
-| Page indicator | `"Page 4 of 5"` | — |
+| Page indicator | `"Page 3 of 4"` | — |
 
 ---
 
-## Screen 5 — True Interrupt Mode (`OnboardingInterruptModeView`)
+## Screen 4 — True Interrupt Mode (`OnboardingInterruptModeView`)
 
 ### Purpose
 Introduce True Interrupt Mode before the user enters the app. Sets honest expectations while the FamilyControls entitlement (#201) is pending, and offers a path to immediately open Settings for deeper customization.
@@ -540,14 +296,19 @@ Introduce True Interrupt Mode before the user enters the app. Sets honest expect
 | Button | Action |
 |---|---|
 | `Coming Soon` (primary, disabled) | Disabled while entitlement is unavailable |
-| `Skip for Now` (secondary) | Calls `finishOnboarding()` — sets `hasSeenOnboarding = true` only |
-| `Customize Settings` (tertiary text link) | Calls `finishOnboardingAndCustomize()` — sets `openSettingsOnLaunch = true` then `hasSeenOnboarding = true`; HomeView opens Settings sheet on appear |
+| `Get Started without True Interrupt` (secondary) | Calls `finishOnboarding()` — logs `onboardingCompleted(cta: .getStarted)`, sets `hasSeenOnboarding = true` |
+| `Customize Settings` (tertiary text link) | Calls `finishOnboardingAndCustomize()` — logs `onboardingCompleted(cta: .customize)`, sets `openSettingsOnLaunch = true` then `hasSeenOnboarding = true`; HomeView opens Settings sheet on appear |
+
+### Swipe Lock
+
+`OnboardingInterruptModeView` uses a `highPriorityGesture` on the drag gesture to prevent accidental backward navigation away from the completion screen.
 
 ### `Customize Settings` Behaviour
 
 ```swift
 // OnboardingView.swift
 private func finishOnboardingAndCustomize() {
+    AnalyticsLogger.log(.onboardingCompleted(cta: .customize))
     UserDefaults.standard.set(true, forKey: AppStorageKey.openSettingsOnLaunch)
     finishOnboarding()
 }
@@ -569,11 +330,13 @@ HomeView observes `openSettingsOnLaunch` via `@AppStorage` and opens the Setting
 | Element | VoiceOver Label | VoiceOver Hint |
 |---|---|---|
 | Hero illustration | Hidden (`.accessibilityHidden(true)`) | — |
-| Skip for Now button | `"Skip for Now"` | `"Continue without True Interrupt Mode. You can enable it later in Settings."` |
+| Get Started without True Interrupt button | `"Get Started without True Interrupt"` | `"Continue without True Interrupt Mode. You can enable it later in Settings."` |
 | Customize Settings link | `"Customize Settings"` | `"Start using the app and open Settings immediately to adjust reminders."` |
-| Page indicator | `"Page 5 of 5"` | — |
+| Page indicator | `"Page 4 of 4"` | — |
 
 ---
+
+
 
 ## Entrance Animations
 
@@ -656,37 +419,42 @@ ScrollView {
 
 ## Full `OnboardingView` Skeleton
 
+See `EyePostureReminder/Views/Onboarding/OnboardingView.swift` for the current implementation. The skeleton below reflects the actual 4-screen structure:
+
 ```swift
 struct OnboardingView: View {
+    @EnvironmentObject private var coordinator: AppCoordinator
+    @EnvironmentObject private var settings: SettingsStore
     @State private var currentPage = 0
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         TabView(selection: $currentPage) {
-            WelcomeScreen(onNext: { currentPage = 1 })
+            OnboardingWelcomeView(onNext: { currentPage = 1 })
                 .tag(0)
-            NotificationPermissionScreen(onNext: { currentPage = 2 })
+            OnboardingPermissionView(onNext: { currentPage = 2 }, notificationCenter: coordinator.notificationCenter)
                 .tag(1)
-            QuickSetupScreen(onGetStarted: { currentPage = 3 })
+            OnboardingSetupView(onGetStarted: { currentPage = 3 })
+                .environmentObject(settings)
                 .tag(2)
-            TrueInterruptModeScreen(
+            OnboardingInterruptModeView(
                 onGetStarted: finishOnboarding,
-                onCustomize: finishOnboardingAndCustomize
+                onCustomize: finishOnboardingAndCustomize,
+                authorizationStatus: coordinator.screenTimeAuthorization.authorizationStatus
             )
             .tag(3)
         }
         .tabViewStyle(PageTabViewStyle(indexDisplayMode: .always))
         .indexViewStyle(PageIndexViewStyle(backgroundDisplayMode: .always))
-        .ignoresSafeArea(edges: .top)
+        .background(AppColor.background.ignoresSafeArea())
     }
 
     private func finishOnboarding() {
+        AnalyticsLogger.log(.onboardingCompleted(cta: .getStarted))
         UserDefaults.standard.set(true, forKey: AppStorageKey.hasSeenOnboarding)
-        // Parent view observes this flag and transitions to HomeView
     }
 
-    /// Completes onboarding and signals HomeView to open the Settings sheet immediately.
     private func finishOnboardingAndCustomize() {
+        AnalyticsLogger.log(.onboardingCompleted(cta: .customize))
         UserDefaults.standard.set(true, forKey: AppStorageKey.openSettingsOnLaunch)
         finishOnboarding()
     }
@@ -700,7 +468,7 @@ struct OnboardingView: View {
 
 var body: some View {
     if hasSeenOnboarding {
-        SettingsView()
+        NavigationStack { HomeView() }
     } else {
         OnboardingView()
     }
@@ -715,30 +483,30 @@ Using `@AppStorage` ensures SwiftUI automatically re-renders when the flag chang
 
 | Scenario | Handling |
 |---|---|
-| User swipes to Screen 3 without tapping "Enable Notifications" | Fine — they skipped Screen 2 CTA. Permission not requested. Same as "Maybe Later". |
-| User taps "Enable Notifications" and system prompt is denied | Advance to Screen 3 normally. Permission denial banner shown in SettingsView after onboarding. |
+| User swipes past Screen 2 without tapping "Allow Reminder Alerts" | Fine — they skipped the CTA. Permission not requested. Same outcome as "Not now". |
+| User taps "Allow Reminder Alerts" and system prompt is denied | Advance to Screen 3 normally. Permission denial banner shown in HomeView/Settings after onboarding. |
 | User force-quits mid-onboarding | `hasSeenOnboarding` is false. They see onboarding again on next launch. Not a bug. |
 | User has previously granted notifications (re-install scenario) | System prompt on Screen 2 will not appear (iOS skips prompt if already granted). `requestAuthorization` callback returns `granted: true` immediately. Advance to Screen 3 as normal. |
 | VoiceOver user | TabView page swiping works with VoiceOver swipes. Page indicator announces current page. Each screen announces headline on appear. |
-| iPad | Layout scales naturally. Constrain max content width to 540pt on iPad for comfortable reading. |
+| iPad | Layout scales naturally. `AppLayout.onboardingMaxContentWidth` constrains content width on iPad for comfortable reading. |
 
 ---
 
 ## File Structure
 
-New files to create:
+Implemented files:
 
 ```
 Views/
 ├── Onboarding/
-│   ├── OnboardingView.swift          – TabView container + page state
-│   ├── WelcomeScreen.swift           – Screen 1
-│   ├── NotificationPermissionScreen.swift  – Screen 2
-│   ├── QuickSetupScreen.swift        – Screen 3
-│   └── SetupPreviewCard.swift        – Reusable card component
+│   ├── OnboardingView.swift                – 4-screen TabView container + page state
+│   ├── OnboardingWelcomeView.swift         – Screen 1
+│   ├── OnboardingPermissionView.swift      – Screen 2
+│   ├── OnboardingSetupView.swift           – Screen 3 (interactive pickers)
+│   └── OnboardingInterruptModeView.swift   – Screen 4 (True Interrupt Mode)
 ```
 
-`hasSeenOnboarding` key added to `SettingsStore.swift` constants (or declared as `static let` in a `UserDefaultsKeys` enum if one exists).
+`hasSeenOnboarding` and `openSettingsOnLaunch` keys are defined in `AppStorageKey` constants.
 
 ---
 
@@ -749,13 +517,13 @@ Views/
 | Navigation | `TabView` with `PageTabViewStyle` |
 | Page indicator | `indexDisplayMode: .always` |
 | First-launch flag | `UserDefaults` key `"hasSeenOnboarding"` — use `@AppStorage` in parent |
-| Notification request | Screen 2 primary CTA; advances to Screen 3 regardless of outcome |
-| "Get Started" and "Customize" | Screen 4 "Get Started" advances to Screen 5. Screen 5 "Skip for Now" = `finishOnboarding()`. Screen 5 "Customize Settings" = `finishOnboardingAndCustomize()` (also sets `openSettingsOnLaunch = true`) |
-| Animations | Fade + slide (20pt) on appear; respect `accessibilityReduceMotion` |
-| Button style | `.borderedProminent`, `.controlSize(.large)`, `.tint(.indigo)` |
-| Secondary actions | Plain text links, `.foregroundStyle(.secondary)` or `.foregroundStyle(.indigo)` |
-| Cards | `.regularMaterial` background, `RoundedRectangle(cornerRadius: 16)` |
-| Illustration | SF Symbols `eye.fill` + `figure.stand` at 72pt, `.regularMaterial` backing card |
-| Dynamic Type | All SwiftUI font styles; wrap content in `ScrollView` |
+| Notification request | Screen 2 primary CTA (`Allow Reminder Alerts`); advances to Screen 3 regardless of outcome |
+| "Get Started" and "Customize" | Screen 3 "Get Started" advances to Screen 4. Screen 4 "Get Started without True Interrupt" = `finishOnboarding()`. Screen 4 "Customize Settings" = `finishOnboardingAndCustomize()` (also sets `openSettingsOnLaunch = true`) |
+| Telemetry | `AnalyticsLogger.log(.onboardingCompleted(cta: .getStarted or .customize))` on completion |
+| Animations | Fade + slide (20pt) on appear via `.calmingEntrance()`; respects `accessibilityReduceMotion` |
+| Button style | `.primary` / `.secondary` (custom ButtonStyles in Components.swift) |
+| Secondary actions | Plain text links, `.foregroundStyle(.secondary)` |
+| Cards | `.wellnessCard(elevated:)` modifier |
+| Dynamic Type | All SwiftUI font styles via `AppFont`; content wrapped in `ScrollView` |
 | VoiceOver | All interactive elements labeled; illustration icons `.accessibilityHidden(true)` |
-| Reduce Motion | `@Environment(\.accessibilityReduceMotion)` — no offset when enabled |
+| Reduce Motion | `.calmingEntrance()` checks `accessibilityReduceMotion` — no offset when enabled |

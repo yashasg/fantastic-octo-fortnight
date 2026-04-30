@@ -1,7 +1,7 @@
 // OnboardingView.swift
 // kshana
 //
-// Main onboarding container — 3-screen TabView with page indicator.
+// Main onboarding container — 4-screen TabView with page indicator.
 
 import SwiftUI
 import UIKit

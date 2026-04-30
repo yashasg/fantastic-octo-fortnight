@@ -287,10 +287,11 @@ EyePostureReminder/                  (SPM executable target)
 │   ├── DesignSystem.swift            AppColor, AppFont, AppSpacing, AppAnimation tokens
 │   ├── LegalDocumentView.swift       Terms of Service / Privacy Policy inline viewer
 │   └── Onboarding/
-│       ├── OnboardingView.swift      4-screen PageTabView container; writes hasSeenOnboarding
-│       ├── OnboardingWelcomeView.swift   Screen 0 — app intro + value proposition
+│       ├── OnboardingView.swift           4-screen PageTabView container; writes hasSeenOnboarding
+│       ├── OnboardingWelcomeView.swift    Screen 0 — app intro + value proposition
 │       ├── OnboardingPermissionView.swift Screen 1 — notification permission request
-│       └── OnboardingSetupView.swift Screen 2 — reminder type setup / get-started CTA
+│       ├── OnboardingSetupView.swift      Screen 2 — interactive reminder schedule setup
+│       └── OnboardingInterruptModeView.swift Screen 3 — True Interrupt Mode intro; two exit CTAs
 │
 ├── Utilities/
 │   ├── Logger+App.swift              OSLog subsystem categories: .lifecycle, .scheduling, .overlay, .settings
@@ -1261,7 +1262,7 @@ trueInterrupt.ipc.eventLog       Data   Legacy: JSON-encoded [AppGroupIPCEvent] 
 
 **Gate:** `@AppStorage("hasSeenOnboarding")` in `ContentView`. On first launch `ContentView` renders `OnboardingView`; once `finishOnboarding()` writes `true` the root switches to `NavigationStack { HomeView() }` permanently.
 
-**Three-screen flow:**
+**Four-screen flow:**
 
 ```
 OnboardingView (PageTabView, .page style)
@@ -1270,15 +1271,26 @@ OnboardingView (PageTabView, .page style)
     │       Value proposition + app intro
     │
     ├─ [1] OnboardingPermissionView ──► requests UNUserNotificationCenter auth
-    │       Explains why notifications are needed before the OS prompt
+    │       "Allow Reminder Alerts" triggers system prompt; "Not now" skips
     │       "Next" → page 2 (whether or not permission was granted)
     │
-    └─ [2] OnboardingSetupView ──► "Get Started" / "Customize" → finishOnboarding()
-            Reminder type overview + CTA
+    ├─ [2] OnboardingSetupView ──► "Get Started" → page 3
+    │       Interactive reminder pickers (eye break + posture intervals)
+    │       Values bind directly to SettingsStore
+    │
+    └─ [3] OnboardingInterruptModeView ──► two exit CTAs → finishOnboarding()
+            True Interrupt Mode intro; Coming Soon badge (pre-entitlement)
+            "Get Started without True Interrupt" → finishOnboarding()
+            "Customize Settings" → finishOnboardingAndCustomize()
 
 finishOnboarding()
-    └─ UserDefaults.standard.set(true, forKey: "hasSeenOnboarding")
+    └─ AnalyticsLogger.log(.onboardingCompleted(cta: .getStarted or .customize))
+       UserDefaults.standard.set(true, forKey: "hasSeenOnboarding")
        (ContentView re-renders to HomeView)
+
+finishOnboardingAndCustomize()
+    └─ UserDefaults.standard.set(true, forKey: "openSettingsOnLaunch")
+       finishOnboarding() — HomeView auto-opens Settings sheet on appear
 ```
 
 **`OnboardingScreenWrapper`:** Shared fade + slide-up entrance animation. Respects `accessibilityReduceMotion` — linear fade only when reduced motion is preferred.
