@@ -319,6 +319,57 @@ final class AppGroupIPCStoreTests: XCTestCase {
         XCTAssertEqual(try store.readEvents(), [])
     }
 
+    // MARK: - Cross-process safety
+
+    /// Simulates two independent processes (two store instances sharing the same defaults)
+    /// each recording an event. With per-slot keys, neither write can overwrite the other.
+    func test_recordEvent_twoStoreInstances_bothEventsArePersisted() throws {
+        let store1 = AppGroupIPCStore(defaults: defaults, maxEventCount: 10)
+        let store2 = AppGroupIPCStore(defaults: defaults, maxEventCount: 10)
+
+        let event1 = AppGroupIPCEvent(
+            kind: .watchdogHeartbeat,
+            timestamp: Date(timeIntervalSince1970: 100),
+            detail: WatchdogHeartbeatDetail.appForeground.rawValue
+        )
+        let event2 = AppGroupIPCEvent(
+            kind: .watchdogHeartbeat,
+            timestamp: Date(timeIntervalSince1970: 101),
+            detail: WatchdogHeartbeatDetail.deviceActivityIntervalStarted.rawValue
+        )
+
+        // Write from each "process" independently — no coordination needed.
+        try store1.recordEvent(event1)
+        try store2.recordEvent(event2)
+
+        // Both events must survive regardless of write order.
+        let events = try store.readEvents()
+        XCTAssertTrue(events.contains(event1), "event1 (from store1) must not be overwritten by store2")
+        XCTAssertTrue(events.contains(event2), "event2 (from store2) must not be overwritten by store1")
+    }
+
+    /// Legacy event array written before migration is still readable after upgrade.
+    func test_readEvents_legacyArrayKey_isIncludedInResults() throws {
+        let legacyEvent = AppGroupIPCEvent(
+            kind: .shieldStarted,
+            timestamp: Date(timeIntervalSince1970: 50),
+            detail: nil
+        )
+        let legacyData = try JSONEncoder().encode([legacyEvent])
+        defaults.set(legacyData, forKey: AppGroupIPCKeys.eventLog)
+
+        let newEvent = AppGroupIPCEvent(
+            kind: .watchdogHeartbeat,
+            timestamp: Date(timeIntervalSince1970: 60),
+            detail: nil
+        )
+        try store.recordEvent(newEvent)
+
+        let events = try store.readEvents()
+        XCTAssertTrue(events.contains(legacyEvent), "Legacy event from old eventLog key must be readable")
+        XCTAssertTrue(events.contains(newEvent), "New slot-key event must be readable alongside legacy events")
+    }
+
     private func preservingStandardDefaults(for keys: [String], _ action: () throws -> Void) rethrows {
         let oldValues = Dictionary(uniqueKeysWithValues: keys.map { ($0, UserDefaults.standard.object(forKey: $0)) })
         keys.forEach { UserDefaults.standard.removeObject(forKey: $0) }
