@@ -93,6 +93,15 @@ if [[ "${1:-}" == "--build" ]]; then
   fi
   info "Destination: $DEST"
 
+  # NOTE: SWIFT_TREAT_WARNINGS_AS_ERRORS and GCC_TREAT_WARNINGS_AS_ERRORS are
+  # intentionally NOT passed as xcodebuild command-line overrides here.
+  # Command-line overrides apply to every target in every project — including
+  # Swift package dependency targets (e.g. ScreenTimeExtensionShared) that Xcode
+  # automatically compiles with -suppress-warnings. Combining both flags causes:
+  #   error: conflicting options '-warnings-as-errors' and '-suppress-warnings'
+  # The no-warning contract for our own app/extension targets is enforced by
+  # SWIFT_TREAT_WARNINGS_AS_ERRORS = YES in each target's build settings
+  # (project.yml → generated .xcodeproj), and by the warning grep below.
   set +e
   xcodebuild build \
     -project "$XCODEPROJ" \
@@ -105,8 +114,6 @@ if [[ "${1:-}" == "--build" ]]; then
     ENABLE_BITCODE=NO \
     ENABLE_APP_INTENTS_METADATA_EXTRACTION=NO \
     ENABLE_APPINTENTS_METADATA_EXTRACTION=NO \
-    SWIFT_TREAT_WARNINGS_AS_ERRORS=YES \
-    GCC_TREAT_WARNINGS_AS_ERRORS=YES \
     2>&1 | tee "$BUILD_LOG"
   build_status="${PIPESTATUS[0]}"
   set -e
