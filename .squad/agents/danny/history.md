@@ -245,3 +245,15 @@
 - `wellness` confirmed absent from keyword field
 
 **Issues closed:** #303, #307
+
+## 2026-04-30 — TestFlight Test Case #1 Screen Name Fix (#312)
+
+**Task:** Fix stale screen names in TESTFLIGHT_METADATA.md test case #1 to match actual onboarding implementation.
+
+**Work Summary:**
+- Verified 4-screen onboarding flow in code: Welcome → Notification Permission → Schedule Setup → True Interrupt Mode
+- Updated test case #1 screen sequence and per-screen tester instructions
+- Confirmed no other test cases reference "App Break Explanation" or "Screen Time Permission"
+- Noted test case #2 still references "Grant App Break Access" which doesn't match actual button text ("Allow Reminder Alerts") — separate scope
+
+**Issues closed:** #312
