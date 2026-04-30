@@ -600,10 +600,6 @@ private struct SettingsTrueInterruptSection: View {
                 showPicker = true
             } label: {
                 HStack(spacing: AppSpacing.sm) {
-                    Image(systemName: "chevron.right")
-                        .font(AppFont.caption)
-                        .foregroundStyle(AppColor.textSecondary)
-                        .accessibilityHidden(true)
                     Text("settings.trueInterrupt.configure", bundle: .module)
                         .font(AppFont.body)
                         .foregroundStyle(
@@ -611,6 +607,11 @@ private struct SettingsTrueInterruptSection: View {
                                 ? AppColor.textSecondary
                                 : AppColor.primaryRest
                         )
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(AppFont.caption)
+                        .foregroundStyle(AppColor.textSecondary)
+                        .accessibilityHidden(true)
                 }
             }
             .disabled(authStatus == .unavailable)
