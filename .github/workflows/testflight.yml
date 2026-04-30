@@ -136,8 +136,22 @@ jobs:
           echo "EXTENSION_PROFILES_AVAILABLE=$EXTENSION_PROFILES_AVAILABLE" >> "$GITHUB_ENV"
 
       # ── xcodegen ─────────────────────────────────────────────────────────
+      - name: Cache Homebrew packages
+        id: brew-cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v4.3.0
+        with:
+          path: /opt/homebrew/Cellar/xcodegen
+          key: ${{ runner.os }}-brew-xcodegen-v1
+          restore-keys: |
+            ${{ runner.os }}-brew-xcodegen-
+
       - name: Install xcodegen
-        run: brew install xcodegen
+        run: |
+          if brew list xcodegen &>/dev/null 2>&1; then
+            brew link --overwrite xcodegen 2>/dev/null || true
+          else
+            brew install xcodegen
+          fi
 
       # ── Archive + Upload ──────────────────────────────────────────────────
       # build_signed.sh generates the required .xcodeproj (SPM executables

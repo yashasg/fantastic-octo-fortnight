@@ -163,6 +163,8 @@ enum AppFont {
 // MARK: - Spacing (4pt grid)
 
 enum AppSpacing {
+    /// 2pt — tight caption gap (status label / caption pair in settings rows)
+    static let xxs: CGFloat = 2
     /// 4pt — hair gap, icon badges
     static let xs: CGFloat = 4
     /// 8pt — tight internal padding, icon-label gap
@@ -284,6 +286,14 @@ enum AppLayout {
     /// Setup preview card icon column width (decorative icon frame)
     static let settingsRowIconWidth: CGFloat = 40
 
+    // MARK: Border Widths
+    /// 0.5pt — hair-thin border ring (dark-mode elevation, pill outlines)
+    static let borderHair: CGFloat = 0.5
+    /// 1.0pt — standard separator border (cards, wellness card outline)
+    static let borderSoft: CGFloat = 1.0
+    /// 1.5pt — bold accent border (logo ring, emphasis stroke)
+    static let borderBold: CGFloat = 1.5
+
     // MARK: Corner Radii
     /// 12pt — small interactive controls (chips, tags, compact buttons)
     static let radiusSmall: CGFloat = 12
@@ -345,7 +355,7 @@ struct SoftElevation: ViewModifier {
             content
                 .overlay(
                     RoundedRectangle(cornerRadius: AppLayout.radiusCard)
-                        .strokeBorder(AppColor.separatorSoft.opacity(AppOpacity.subtleBorder), lineWidth: 0.5)
+                        .strokeBorder(AppColor.separatorSoft.opacity(AppOpacity.subtleBorder), lineWidth: AppLayout.borderHair)
                 )
         } else {
             content

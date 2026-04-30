@@ -55,7 +55,7 @@ struct YinYangEyeView: View {
 
             // Border ring
             Circle()
-                .strokeBorder(AppColor.separatorSoft.opacity(AppOpacity.subtleBorder), lineWidth: 1.5)
+                .strokeBorder(AppColor.separatorSoft.opacity(AppOpacity.subtleBorder), lineWidth: AppLayout.borderBold)
         }
         .frame(width: diameter, height: diameter)
         .rotationEffect(.degrees(spinComplete ? 360 : 0))

@@ -557,7 +557,7 @@ private struct SettingsTrueInterruptSection: View {
             // Status row
             HStack(spacing: AppSpacing.sm) {
                 SettingsRowIcon(systemName: AppSymbol.trueInterrupt, tint: AppColor.primaryRest)
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: AppSpacing.xxs) {
                     Text("settings.trueInterrupt.statusLabel", bundle: .module)
                         .font(AppFont.body)
                         .foregroundStyle(AppColor.textPrimary)

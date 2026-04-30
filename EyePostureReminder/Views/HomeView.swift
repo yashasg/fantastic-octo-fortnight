@@ -149,7 +149,7 @@ struct TrueInterruptSetupPill: View {
             .padding(.horizontal, AppSpacing.sm)
             .padding(.vertical, AppSpacing.xs)
             .background(AppColor.surface, in: Capsule())
-            .overlay(Capsule().strokeBorder(AppColor.separatorSoft, lineWidth: 0.5))
+            .overlay(Capsule().strokeBorder(AppColor.separatorSoft, lineWidth: AppLayout.borderHair))
         }
         .frame(minHeight: AppLayout.minTapTarget)
         .contentShape(Rectangle())
@@ -215,7 +215,7 @@ struct TrueInterruptSkippedBanner: View {
         .background(AppColor.surface, in: RoundedRectangle(cornerRadius: AppLayout.radiusSmall))
         .overlay(
             RoundedRectangle(cornerRadius: AppLayout.radiusSmall)
-                .strokeBorder(AppColor.separatorSoft, lineWidth: 0.5)
+                .strokeBorder(AppColor.separatorSoft, lineWidth: AppLayout.borderHair)
         )
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text("home.trueInterrupt.skippedBanner.label", bundle: .module))

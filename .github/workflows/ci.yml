@@ -206,6 +206,15 @@ jobs:
           echo "Available iOS simulators:"
           xcrun simctl list devices available | grep -i iphone | head -5
 
+      # ── Dependency cache ─────────────────────────────────────────────────────
+      - name: Cache DerivedData
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v4.3.0
+        with:
+          path: ${{ env.DERIVED_DATA_PATH }}
+          key: derived-data-${{ runner.os }}-${{ hashFiles('Package.swift', 'Package.resolved') }}
+          restore-keys: |
+            derived-data-${{ runner.os }}-
+
       # ── Homebrew package cache ───────────────────────────────────────────────
       - name: Cache Homebrew packages
         id: brew-cache

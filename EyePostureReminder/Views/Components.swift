@@ -19,7 +19,7 @@ struct WellnessCard: ViewModifier {
             .clipShape(RoundedRectangle(cornerRadius: AppLayout.radiusCard, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: AppLayout.radiusCard, style: .continuous)
-                    .strokeBorder(AppColor.separatorSoft, lineWidth: 1)
+                    .strokeBorder(AppColor.separatorSoft, lineWidth: AppLayout.borderSoft)
             )
             .applyIf(elevated) { $0.softElevation() }
     }
