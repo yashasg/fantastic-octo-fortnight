@@ -141,7 +141,7 @@ struct TrueInterruptSetupPill: View {
                 Text("home.trueInterrupt.setupPill", bundle: .module)
                     .font(AppFont.caption)
                     .foregroundStyle(AppColor.primaryRest)
-                Image(systemName: "chevron.right")
+                Image(systemName: AppSymbol.chevronTrailing)
                     .font(AppFont.caption)
                     .foregroundStyle(AppColor.primaryRest)
                     .accessibilityHidden(true)

@@ -85,7 +85,7 @@ struct SettingsView: View {
                     onChange: { newValue in viewModel?.globalEnabled = newValue; viewModel?.globalToggleChanged() },
                     label: {
                         HStack(spacing: AppSpacing.sm) {
-                            SettingsRowIcon(systemName: "power", tint: AppColor.primaryRest)
+                            SettingsRowIcon(systemName: AppSymbol.masterToggle, tint: AppColor.primaryRest)
                             Text("settings.masterToggle", bundle: .module)
                                 .foregroundStyle(AppColor.textPrimary)
                         }
@@ -172,7 +172,7 @@ struct SettingsView: View {
                     accessibilityHint: Text("settings.hapticFeedback.hint", bundle: .module)
                 ) {
                     HStack(spacing: AppSpacing.sm) {
-                        SettingsRowIcon(systemName: "hand.tap.fill", tint: AppColor.primaryRest)
+                        SettingsRowIcon(systemName: AppSymbol.haptics, tint: AppColor.primaryRest)
                         Text("settings.hapticFeedback", bundle: .module)
                             .foregroundStyle(AppColor.textPrimary)
                     }
@@ -618,7 +618,7 @@ private struct SettingsTrueInterruptSection: View {
                                 : AppColor.primaryRest
                         )
                     Spacer()
-                    Image(systemName: "chevron.right")
+                    Image(systemName: AppSymbol.chevronTrailing)
                         .font(AppFont.caption)
                         .foregroundStyle(AppColor.textSecondary)
                         .accessibilityHidden(true)

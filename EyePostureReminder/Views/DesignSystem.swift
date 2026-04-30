@@ -254,6 +254,12 @@ enum AppSymbol {
     static let timer             = "timer"
     /// True Interrupt Mode / app break access icon
     static let trueInterrupt     = "lock.shield.fill"
+    /// Master on/off toggle icon (settings row)
+    static let masterToggle      = "power"
+    /// Haptic feedback setting icon (settings row)
+    static let haptics           = "hand.tap.fill"
+    /// Trailing navigation chevron (settings disclosure / setup pill)
+    static let chevronTrailing   = "chevron.right"
 }
 
 // MARK: - Layout Constants
