@@ -82,6 +82,7 @@ public final class AppGroupIPCStore {
         case corruptShieldSession
     }
 
+    @available(iOS 14.0, macOS 11.0, *)
     private static let log = Logger(
         subsystem: "com.yashasgujjar.kshana",
         category: "AppGroupIPC"
@@ -258,7 +259,7 @@ public final class AppGroupIPCStore {
             do {
                 events.append(contentsOf: try decoder.decode([AppGroupIPCEvent].self, from: data))
             } catch {
-                Self.log.warning("Corrupt legacy eventLog key — skipping legacy events and continuing with per-slot reads")
+                if #available(iOS 14.0, macOS 11.0, *) { Self.log.warning("Corrupt legacy eventLog key — skipping legacy events and continuing with per-slot reads") }
             }
         }
 

@@ -1,4 +1,5 @@
 @testable import EyePostureReminder
+import ScreenTimeExtensionShared
 import XCTest
 
 /// Unit tests for the DeviceActivity monitoring service layer added in #205.
@@ -370,6 +371,38 @@ final class DeviceActivityMonitorTests: XCTestCase {
             ["schedule", "cancel"],
             "Dismiss must cancel an already-active shield even if True Interrupt was disabled after scheduling"
         )
+    }
+
+    // MARK: - ShieldSessionSnapshot.activityMatchesOrAbsent (#347)
+
+    func test_activityMatchesOrAbsent_emptySnapshot_returnsTrue() {
+        let snapshot = ShieldSessionSnapshot.empty
+        XCTAssertTrue(snapshot.activityMatchesOrAbsent(activityName: "eyes"))
+        XCTAssertTrue(snapshot.activityMatchesOrAbsent(activityName: "posture"))
+        XCTAssertTrue(snapshot.activityMatchesOrAbsent(activityName: ""))
+    }
+
+    func test_activityMatchesOrAbsent_matchingActivity_returnsTrue() {
+        let snapshot = ShieldSessionSnapshot(reasonRaw: "eyes", durationSeconds: 20, triggeredAt: Date())
+        XCTAssertTrue(snapshot.activityMatchesOrAbsent(activityName: "eyes"))
+    }
+
+    func test_activityMatchesOrAbsent_mismatchedActivity_returnsFalse() {
+        let snapshot = ShieldSessionSnapshot(reasonRaw: "eyes", durationSeconds: 20, triggeredAt: Date())
+        XCTAssertFalse(
+            snapshot.activityMatchesOrAbsent(activityName: "posture"),
+            "stale intervalDidEnd for a different activity must not clear settings"
+        )
+    }
+
+    func test_activityMatchesOrAbsent_allReasons_matchThemselves() {
+        for reason in ShieldTriggerReason.allCases {
+            let snapshot = ShieldSessionSnapshot(reasonRaw: reason.rawValue, durationSeconds: 20, triggeredAt: Date())
+            XCTAssertTrue(snapshot.activityMatchesOrAbsent(activityName: reason.rawValue))
+            for other in ShieldTriggerReason.allCases where other != reason {
+                XCTAssertFalse(snapshot.activityMatchesOrAbsent(activityName: other.rawValue))
+            }
+        }
     }
 
     // MARK: - Helpers

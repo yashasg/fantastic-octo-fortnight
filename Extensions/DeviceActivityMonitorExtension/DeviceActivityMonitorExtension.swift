@@ -79,6 +79,22 @@ final class DeviceActivityMonitorExtensionImpl: DeviceActivityMonitor {
     }
 
     override func intervalDidEnd(for activity: DeviceActivityName) {
+        // Guard against stale OS callbacks: only clear settings when the ending
+        // activity matches the active session, or when no session exists.
+        let session = ShieldSessionSnapshot.read(
+            from: AppGroupDefaults.resolve(consumer: "DeviceActivityMonitorExtension")
+        )
+        guard session.activityMatchesOrAbsent(activityName: activity.rawValue) else {
+            os_log(
+                "intervalDidEnd skipped: activity '%{public}@' does not match session reason '%{public}@'",
+                log: Self.ipcLog,
+                type: .info,
+                activity.rawValue,
+                session.reasonRaw ?? "nil"
+            )
+            recordWatchdogHeartbeat(.deviceActivityIntervalEnded)
+            return
+        }
         // Remove all shield restrictions when the break ends.
         // clearAllSettings() is safe to call even without FamilyControls at
         // compile time; it is a no-op until the entitlement is active.

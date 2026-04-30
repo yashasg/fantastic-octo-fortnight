@@ -147,7 +147,16 @@ private struct OnboardingReminderPickerCard: View {
         .padding(AppSpacing.lg)
         .wellnessCard(elevated: true)
         .accessibilityElement(children: .contain)
-        .accessibilityLabel(title)
+        .accessibilityLabel(cardAccessibilityLabel)
+    }
+
+    private var cardAccessibilityLabel: String {
+        String(
+            format: String(localized: "onboarding.setup.card.label", bundle: .module),
+            title,
+            SettingsViewModel.labelForInterval(interval),
+            SettingsViewModel.labelForBreakDuration(breakDuration)
+        )
     }
 }
 

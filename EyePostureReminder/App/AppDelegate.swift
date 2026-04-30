@@ -17,7 +17,9 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         UNUserNotificationCenter.current().delegate = self
         installUncaughtExceptionHandler()
         MetricKitSubscriber.shared.register()
+        #if DEBUG
         applyUITestLaunchArguments()
+        #endif
         Logger.lifecycle.info("App did finish launching")
         return true
     }
@@ -41,8 +43,10 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
 
     // MARK: - UI Test Support
 
+    #if DEBUG
     /// Handles launch arguments injected by XCUITest targets to control app state.
-    private func applyUITestLaunchArguments() {
+    /// Compiled and called only in DEBUG builds — not present in release binaries.
+    func applyUITestLaunchArguments() {
         let args = CommandLine.arguments
         if args.contains("--skip-onboarding") {
             UserDefaults.standard.set(true, forKey: AppStorageKey.hasSeenOnboarding)
@@ -64,6 +68,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
             UserDefaults.standard.set(ReminderType.posture.rawValue, forKey: AppStorageKey.uiTestOverlayType)
         }
     }
+    #endif
 
     func applicationDidBecomeActive(_ application: UIApplication) {
         // Safety net: if the snooze-wake notification was swiped away on a killed

@@ -81,6 +81,18 @@ public struct ShieldSessionSnapshot: Equatable, Sendable {
         let remaining = durationSeconds - now.timeIntervalSince(triggeredAt)
         return max(0, Int(ceil(remaining)))
     }
+
+    /// Returns `true` when `activityName` matches this session's trigger reason,
+    /// or when no active session is present (`reasonRaw` is `nil`).
+    ///
+    /// The DeviceActivity naming convention encodes the session reason as the
+    /// activity's `rawValue` (e.g. `"eyes"` or `"posture"`).  This guards
+    /// `intervalDidEnd` against stale OS callbacks for already-cancelled or
+    /// mismatched activity windows.
+    public func activityMatchesOrAbsent(activityName: String) -> Bool {
+        guard let reasonRaw else { return true }
+        return activityName == reasonRaw
+    }
 }
 
 private struct ShieldSessionPayload: Codable {

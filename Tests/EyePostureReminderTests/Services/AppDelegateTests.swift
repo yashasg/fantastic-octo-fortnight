@@ -173,6 +173,18 @@ final class AppDelegateTests: XCTestCase {
         }
     }
 
+    // MARK: - applyUITestLaunchArguments (DEBUG-only, #350)
+
+    /// Verifies `applyUITestLaunchArguments` is compiled and callable in DEBUG builds.
+    #if DEBUG
+    func test_applyUITestLaunchArguments_compiledInDebug_doesNotSetFlagWithoutArg() {
+        UserDefaults.standard.removeObject(forKey: AppStorageKey.hasSeenOnboarding)
+        delegate.applyUITestLaunchArguments()
+        XCTAssertNil(UserDefaults.standard.object(forKey: AppStorageKey.hasSeenOnboarding),
+            "applyUITestLaunchArguments must not set hasSeenOnboarding when arg is absent")
+    }
+    #endif
+
     // MARK: - handleNotification routing (coordinator path exercised by delegate)
 
     /// `handleNotification(for:)` must reset `snoozeCount` to 0.
