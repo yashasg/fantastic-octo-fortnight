@@ -15,9 +15,9 @@ enum TestLaunchArguments {
     static let skipOnboarding = "--skip-onboarding"
     /// Clears `hasSeenOnboarding` → app starts fresh with the onboarding flow.
     static let resetOnboarding = "--reset-onboarding"
-    /// Triggers the eye break overlay immediately on launch (reserved for future test-mode support).
+    /// Triggers the eye break overlay immediately on launch; used by OverlayTests and DarkModeUITests to display the overlay without waiting for the timer.
     static let showOverlayEyes = "--show-overlay-eyes"
-    /// Triggers the posture check overlay immediately on launch (reserved for future test-mode support).
+    /// Triggers the posture check overlay immediately on launch; used by OverlayTests and DarkModeUITests to display the overlay without waiting for the timer.
     static let showOverlayPosture = "--show-overlay-posture"
 }
 
