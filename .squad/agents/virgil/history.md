@@ -160,3 +160,22 @@ Orchestration log recorded at 2026-04-30T09:27:10Z. Enhanced CI diagnostics docu
 - For release-readiness tasks, mirror every in-repo config change with an explicit App Store Connect checklist line so operations cannot drift from source-controlled intent.
 - App Group identifiers should match the bundle namespace prefix when possible; mismatched prefixes create avoidable provisioning and registration mistakes during first submission.
 - `./scripts/build.sh all` mutates `TestResults.xcresult/Info.plist`; keep that artifact out of commits during docs/config triage by explicitly reverting it before commit.
+
+## 2026-04-30 — #210 CI/CD extension-signing hardening follow-up
+
+- Extended CI trigger coverage so tests run on push to any branch (`.github/workflows/ci.yml` now uses `push.branches: ["**"]`).
+- Hardened signed archive validation in `scripts/build_signed.sh`:
+  - Added `verify_archived_extensions()` to fail archive when `EXTENSION_PROFILES_AVAILABLE=YES` but extension `.appex` binaries are missing from `PlugIns/`.
+  - Keeps current blocked path intact (`EXTENSION_PROFILES_AVAILABLE=NO`) while enforcing correctness once #201 profiles are configured.
+- Fixed App Group identifier typo in signed-build doctor output:
+  - `group.com.yashasgujjar.kshana` → `group.com.yashasg.kshana`.
+
+### Validation
+- Baseline before changes: `./scripts/build.sh all && ./scripts/setup-screentime.sh --build` ✅
+- Post-change: `./scripts/build.sh all && ./scripts/setup-screentime.sh --build` ✅
+- Script checks: `bash -n scripts/build_signed.sh scripts/setup-screentime.sh scripts/build.sh` ✅
+- Signing diagnostics: `./scripts/build_signed.sh doctor` ✅
+
+### Learnings
+- Archive success is not enough for extension distribution; CI/signing scripts should assert expected `.appex` payload presence explicitly when extension signing is enabled.
+- Keeping `EXTENSION_PROFILES_AVAILABLE` as the switch preserves pre-approval flow while giving a strict post-approval gate with zero workflow changes.
