@@ -337,4 +337,26 @@ final class OnboardingViewTests: XCTestCase {
         let view = OnboardingView(accessibilityNotificationPoster: mock)
         _ = view
     }
+
+    // MARK: - Onboarding completion screen-changed notification (#402)
+
+    /// `finishOnboarding()` must post a `.screenChanged` notification so VoiceOver
+    /// announces the transition from OnboardingView to HomeView.
+    func test_finishOnboarding_postsScreenChangedNotification() {
+        let mock = MockAccessibilityNotificationPoster()
+        let view = OnboardingView(accessibilityNotificationPoster: mock)
+        view.finishOnboarding()
+        XCTAssertEqual(mock.postScreenChangedCallCount, 1,
+                       "finishOnboarding() must call postScreenChanged() exactly once (#402)")
+    }
+
+    /// `finishOnboardingAndCustomize()` must post a `.screenChanged` notification so
+    /// VoiceOver announces the transition even on the customize path.
+    func test_finishOnboardingAndCustomize_postsScreenChangedNotification() {
+        let mock = MockAccessibilityNotificationPoster()
+        let view = OnboardingView(accessibilityNotificationPoster: mock)
+        view.finishOnboardingAndCustomize()
+        XCTAssertEqual(mock.postScreenChangedCallCount, 1,
+                       "finishOnboardingAndCustomize() must call postScreenChanged() exactly once (#402)")
+    }
 }

@@ -73,6 +73,7 @@ struct OnboardingView: View {
 
     func finishOnboarding() {
         AnalyticsLogger.log(.onboardingCompleted(cta: .getStarted))
+        accessibilityNotificationPoster.postScreenChanged()
         markOnboardingComplete()
     }
 
@@ -81,6 +82,7 @@ struct OnboardingView: View {
     func finishOnboardingAndCustomize() {
         AnalyticsLogger.log(.onboardingCompleted(cta: .customize))
         UserDefaults.standard.set(true, forKey: AppStorageKey.openSettingsOnLaunch)
+        accessibilityNotificationPoster.postScreenChanged()
         markOnboardingComplete()
     }
 
