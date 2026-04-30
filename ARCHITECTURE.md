@@ -1188,6 +1188,23 @@ fallbackToNotification: Bool        Enable Phase 2 fallback (default true)
 **Extension only writes:** `shieldActive`, `shieldStartTime` (system-triggered)
 **Extension only reads:** `shieldedApps`, `shieldedCategories` (must be set by main app)
 
+#### IPC Event Log — Cross-Process Write Strategy
+
+The event log uses **per-event slot keys** to avoid the lost-update race that NSLock cannot protect across process boundaries:
+
+```
+trueInterrupt.ipc.event.<UUID>   Data   JSON-encoded AppGroupIPCEvent (one key per event)
+trueInterrupt.ipc.eventLog       Data   Legacy: JSON-encoded [AppGroupIPCEvent] (read-only; written by pre-fix builds)
+```
+
+**Write path (`recordEvent`):** Each call writes exactly one UserDefaults key keyed by the event's UUID. No read of the existing log is required — eliminating the read-modify-write race.
+
+**Read path (`readEvents`):** Aggregates all keys with prefix `trueInterrupt.ipc.event.`, merges with the legacy `trueInterrupt.ipc.eventLog` array if present, sorts by timestamp, and caps to `maxEventCount` (default 100).
+
+**Pruning:** After each write, `pruneEventSlots` scans all slot keys and deletes the oldest ones when the count exceeds the cap. This is a best-effort in-process operation; the correctness guarantee (no lost writes) comes from the per-slot key design, not from pruning atomicity.
+
+**Cross-process safety guarantee:** Two processes writing simultaneously write to different UUID keys. There is no collision possible. The watchdog recovery path in `recoverStaleDeviceActivityWatchdogIfNeeded` reads via `readEvents()`, which always sees every committed slot from every writer.
+
 ---
 
 ## 8. Technical Milestones

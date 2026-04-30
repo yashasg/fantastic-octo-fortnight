@@ -4,7 +4,11 @@ public enum AppGroupIPCKeys {
     public static let appGroupID = ShieldSessionKeys.appGroupID
     public static let selectionMetadata = "trueInterrupt.selectionMetadata"
     public static let trueInterruptEnabled = "trueInterrupt.enabled"
+    /// Legacy key — read for backward compat; new events are written to per-event slot keys.
     public static let eventLog = "trueInterrupt.ipc.eventLog"
+    /// Prefix for per-event slot keys: `trueInterrupt.ipc.event.<UUID>`.
+    /// Each recordEvent call writes exactly one key, making writes cross-process safe.
+    public static let eventSlotPrefix = "trueInterrupt.ipc.event."
     public static let lastShieldStartedAt = "shield.lastStartedAt"
     public static let lastShieldEndedAt = "shield.lastEndedAt"
     public static let lastAccessRequestAt = "shield.lastAccessRequestAt"
@@ -200,25 +204,28 @@ public final class AppGroupIPCStore {
         }
     }
 
+    /// Records an event by writing it to a unique per-event slot key.
+    ///
+    /// Each call writes exactly one UserDefaults key (`trueInterrupt.ipc.event.<UUID>`),
+    /// eliminating the read-modify-write cycle that was not safe across process boundaries.
+    /// NSLock still provides in-process thread safety for the encoder and side-effect keys.
     public func recordEvent(_ event: AppGroupIPCEvent) throws {
         try withLock {
             guard let defaults else { throw StoreError.appGroupSuiteUnavailable }
-            var events = try readEventsLocked()
-            events.append(event)
-            if events.count > maxEventCount {
-                events.removeFirst(events.count - maxEventCount)
-            }
+            let slotKey = AppGroupIPCKeys.eventSlotPrefix + event.id.uuidString
+            defaults.set(try encoder.encode(event), forKey: slotKey)
             if event.kind == .accessRequested {
                 defaults.set(event.timestamp.timeIntervalSince1970, forKey: AppGroupIPCKeys.lastAccessRequestAt)
             }
-            defaults.set(try encoder.encode(events), forKey: AppGroupIPCKeys.eventLog)
+            pruneEventSlots(defaults: defaults)
         }
     }
 
+    /// Reads all events by aggregating per-event slot keys and the legacy array key.
     public func readEvents() throws -> [AppGroupIPCEvent] {
         try withLock {
-            guard defaults != nil else { throw StoreError.appGroupSuiteUnavailable }
-            return try readEventsLocked()
+            guard let defaults else { throw StoreError.appGroupSuiteUnavailable }
+            return try readEventsCombined(from: defaults)
         }
     }
 
@@ -227,17 +234,58 @@ public final class AppGroupIPCStore {
         withLock {
             guard let defaults else { return false }
             defaults.removeObject(forKey: AppGroupIPCKeys.eventLog)
+            for key in defaults.dictionaryRepresentation().keys
+                where key.hasPrefix(AppGroupIPCKeys.eventSlotPrefix) {
+                defaults.removeObject(forKey: key)
+            }
             return true
         }
     }
 
-    private func readEventsLocked() throws -> [AppGroupIPCEvent] {
-        guard let defaults else { throw StoreError.appGroupSuiteUnavailable }
-        guard let data = defaults.data(forKey: AppGroupIPCKeys.eventLog) else { return [] }
-        do {
-            return try decoder.decode([AppGroupIPCEvent].self, from: data)
-        } catch {
-            throw StoreError.corruptEventLog
+    /// Aggregates events from per-event slot keys and the legacy array key,
+    /// sorted by timestamp, capped to `maxEventCount`.
+    private func readEventsCombined(from defaults: UserDefaults) throws -> [AppGroupIPCEvent] {
+        var events: [AppGroupIPCEvent] = []
+
+        // Backward compat: read legacy event array if present.
+        if let data = defaults.data(forKey: AppGroupIPCKeys.eventLog) {
+            do {
+                events.append(contentsOf: try decoder.decode([AppGroupIPCEvent].self, from: data))
+            } catch {
+                throw StoreError.corruptEventLog
+            }
+        }
+
+        // Aggregate per-event slot keys (cross-process safe writes land here).
+        for (key, value) in defaults.dictionaryRepresentation() {
+            guard key.hasPrefix(AppGroupIPCKeys.eventSlotPrefix), let data = value as? Data else { continue }
+            if let event = try? decoder.decode(AppGroupIPCEvent.self, from: data) {
+                events.append(event)
+            }
+            // Corrupt individual slots are skipped to avoid failing the full read.
+        }
+
+        events.sort { $0.timestamp < $1.timestamp }
+        if events.count > maxEventCount {
+            events = Array(events.suffix(maxEventCount))
+        }
+        return events
+    }
+
+    /// Best-effort pruning: deletes the oldest slot keys when total exceeds `maxEventCount`.
+    /// This is in-process only; the correctness guarantee comes from per-slot atomic writes.
+    private func pruneEventSlots(defaults: UserDefaults) {
+        var slots: [(key: String, timestamp: Date)] = []
+        for (key, value) in defaults.dictionaryRepresentation() {
+            guard key.hasPrefix(AppGroupIPCKeys.eventSlotPrefix), let data = value as? Data,
+                  let event = try? decoder.decode(AppGroupIPCEvent.self, from: data)
+            else { continue }
+            slots.append((key, event.timestamp))
+        }
+        guard slots.count > maxEventCount else { return }
+        let toDelete = slots.sorted { $0.timestamp < $1.timestamp }.prefix(slots.count - maxEventCount)
+        for item in toDelete {
+            defaults.removeObject(forKey: item.key)
         }
     }
 
