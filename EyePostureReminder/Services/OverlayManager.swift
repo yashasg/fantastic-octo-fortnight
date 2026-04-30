@@ -97,6 +97,7 @@ final class OverlayManager: OverlayPresenting {
     // MARK: - Dependencies
 
     private let audioManager: MediaControlling
+    private let accessibilityNotificationPoster: AccessibilityNotificationPosting
 
     // MARK: - State
 
@@ -122,8 +123,12 @@ final class OverlayManager: OverlayPresenting {
 
     // MARK: - Init
 
-    init(audioManager: MediaControlling = AudioInterruptionManager()) {
+    init(
+        audioManager: MediaControlling = AudioInterruptionManager(),
+        accessibilityNotificationPoster: AccessibilityNotificationPosting = LiveAccessibilityNotificationPoster()
+    ) {
         self.audioManager = audioManager
+        self.accessibilityNotificationPoster = accessibilityNotificationPoster
         sceneActivationObserver = NotificationCenter.default.addObserver(
             forName: UIScene.didActivateNotification,
             object: nil,
@@ -210,6 +215,7 @@ final class OverlayManager: OverlayPresenting {
         window.makeKeyAndVisible()
 
         overlayWindow = window
+        accessibilityNotificationPoster.postScreenChanged(focusElement: nil)
         Logger.overlay.info("Overlay shown for type=\(type.rawValue), duration=\(duration)s")
         callbacks.onPresent()
     }

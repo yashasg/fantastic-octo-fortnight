@@ -175,4 +175,24 @@ final class OverlayManagerExtendedTests: XCTestCase {
         XCTAssertEqual(mock.showCallCount, 3,
             "No additional showOverlay calls must occur after dismiss")
     }
+
+    // MARK: - AccessibilityNotificationPosting injection
+
+    /// Without a scene, `showOverlay` queues the request — poster must NOT be called.
+    func test_showOverlay_withoutScene_doesNotPostScreenChangedNotification() {
+        let poster = MockAccessibilityNotificationPoster()
+        let manager = OverlayManager(accessibilityNotificationPoster: poster)
+        manager.showOverlay(for: .eyes, duration: 20, hapticsEnabled: true, pauseMediaEnabled: false) {}
+        XCTAssertEqual(poster.postScreenChangedCallCount, 0,
+            "No screen-changed notification when overlay is queued (no scene)")
+    }
+
+    /// Calling dismissOverlay when nothing is visible must not trigger any poster calls.
+    func test_dismissOverlay_whenNoOverlay_doesNotPostAnyNotification() {
+        let poster = MockAccessibilityNotificationPoster()
+        let manager = OverlayManager(accessibilityNotificationPoster: poster)
+        manager.dismissOverlay()
+        XCTAssertEqual(poster.postScreenChangedCallCount, 0)
+        XCTAssertEqual(poster.postAnnouncementCallCount, 0)
+    }
 }
