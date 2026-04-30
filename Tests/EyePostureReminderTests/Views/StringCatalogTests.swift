@@ -295,7 +295,7 @@ final class StringCatalogTests: XCTestCase {
         let keys = [
             "overlay.dismissButton", "overlay.countdown.label", "overlay.countdown.value",
             "overlay.settingsLabel", "overlay.settingsButton", "overlay.settingsButton.hint",
-            "overlay.doneButton"
+            "overlay.doneButton", "overlay.doneButton.hint"
         ]
         XCTAssertEqual(Set(keys).count, keys.count, "Overlay screen keys must be unique")
     }
@@ -324,7 +324,7 @@ final class StringCatalogTests: XCTestCase {
             "settings.notifications.openSettings.hint",
             "overlay.dismissButton", "overlay.countdown.label", "overlay.countdown.value",
             "overlay.settingsLabel", "overlay.settingsButton", "overlay.settingsButton.hint",
-            "overlay.doneButton",
+            "overlay.doneButton", "overlay.doneButton.hint",
             "onboarding.welcome.illustrationLabel", "onboarding.welcome.title",
             "onboarding.welcome.subtitle", "onboarding.welcome.body",
             "onboarding.welcome.nextButton", "onboarding.welcome.nextButton.hint",
@@ -1074,6 +1074,10 @@ final class StringCatalogTests: XCTestCase {
 
     func test_overlayDismissButtonHint_resolvesToEnglish() {
         XCTAssertTrue(isTranslated("overlay.dismissButton.hint"))
+    }
+
+    func test_overlayDoneButtonHint_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("overlay.doneButton.hint"))
     }
 
     func test_homeSettingsButtonHint_resolvesToEnglish() {

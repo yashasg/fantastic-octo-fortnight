@@ -1829,6 +1829,17 @@
         }
       }
     },
+    "overlay.doneButton.hint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ends this break and returns to the app"
+          }
+        }
+      }
+    },
     "reminder.eyes.overlaySupportiveText": {
       "extractionState": "manual",
       "localizations": {

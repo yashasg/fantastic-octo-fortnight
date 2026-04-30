@@ -200,6 +200,7 @@ struct OverlayView: View {
             )
             .buttonStyle(.primary)
             .frame(minHeight: AppLayout.minTapTarget)
+            .accessibilityHint(Text("overlay.doneButton.hint", bundle: .module))
             .accessibilityIdentifier("overlay.doneButton")
 
             Button(
