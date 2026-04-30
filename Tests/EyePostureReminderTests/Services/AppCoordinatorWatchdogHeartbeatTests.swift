@@ -331,6 +331,41 @@ final class AppCoordinatorWatchdogHeartbeatTests: XCTestCase {
             "watchdogRecovery must call rescheduleReminder when snooze has expired")
     }
 
+    func test_watchdogRecovery_usesInjectedNowForSnoozeGuard() async throws {
+        let mockScheduler = MockReminderScheduler()
+        let snoozeCoordinator = AppCoordinator(
+            settings: settings,
+            scheduler: mockScheduler,
+            notificationCenter: notificationCenter,
+            overlayManager: MockOverlayPresenting(),
+            screenTimeTracker: tracker,
+            pauseConditionProvider: MockPauseConditionProvider(),
+            deviceActivityMonitor: deviceActivityMonitor,
+            ipcStore: ipcStore
+        )
+        defer { snoozeCoordinator.stopFallbackTimers() }
+
+        deviceActivityMonitor.stubbedIsAvailable = true
+        notificationCenter.authorizationGranted = true
+        settings.notificationFallbackEnabled = true
+
+        let injectedNow = Date(timeIntervalSinceNow: -600)
+        settings.snoozedUntil = Date(timeIntervalSinceNow: -300)
+        ipcStore.shieldSessionSnapshot = ShieldSessionSnapshot(
+            reasonRaw: ReminderType.eyes.shieldReason.rawValue,
+            durationSeconds: 20,
+            triggeredAt: Date(timeIntervalSince1970: 1)
+        )
+
+        await snoozeCoordinator.refreshAuthStatus()
+        let recovered = await snoozeCoordinator.recoverStaleDeviceActivityWatchdogIfNeeded(now: injectedNow)
+        try await Task.sleep(nanoseconds: 150_000_000)
+
+        XCTAssertTrue(recovered)
+        XCTAssertEqual(mockScheduler.rescheduleCallCount, 0,
+            "watchdogRecovery must gate fallback scheduling using injected now, not wall clock Date()")
+    }
+
     private var heartbeatDetails: [WatchdogHeartbeatDetail] {
         ipcStore.events
             .filter { $0.kind == .watchdogHeartbeat }
