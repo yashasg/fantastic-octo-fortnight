@@ -379,3 +379,41 @@ Result: **10/10 passed**
 - Shield as opt-in "Hard Mode" overlay on existing reminder system is the right product framing. Avoids coupling the health intervention core loop to an entitlement-gated API.
 - `ShieldTriggerReason.rawValue` stability matters: values are written to App Group UserDefaults and read by extension processes in a separate sandbox. The tests pin these as a regression gate.
 - FamilyControls does NOT work in Simulator at all. All real shield validation is device-only, post-#201.
+
+### 2026-04-30: Post-#299 Architecture Audit — Clean
+
+**Scope:** Full read-only audit after IPC fix (a520be3) and True Interrupt issue marathon.
+
+**Areas audited:**
+1. Swift concurrency (actor reentrancy, Task cancellation, Sendable, @MainActor isolation)
+2. App-extension IPC (App Group, UserDefaults cross-process safety, entitlement guards)
+3. Lifecycle management (timers, notification observers, scene phase, deinit cleanup)
+4. Battery efficiency (timer tolerance, audio session deactivation, overlay window release)
+5. Persistence (SettingsStore didSet patterns, key namespacing, atomic writes)
+
+**Findings — no material issues:**
+- All timers properly invalidated in deinit/disappear paths.
+- Audio session correctly deactivated with `.notifyOthersOnDeactivation` in all dismiss paths.
+- OverlayManager UIWindow lifecycle is exemplary — created on demand, nil'd after dismissal.
+- Notification observers all use stored tokens or are removed in deinit.
+- IPC per-slot event keys (#299) eliminated cross-process read-modify-write races.
+- AppGroupIPCStore guards nil defaults internally (`guard let defaults`), making extension IPC fail-safe.
+- WatchdogHeartbeat.precondition is protected by caller's guard in AppCoordinatorWatchdogRecovery (line 24).
+- SettingsStore break-duration didSet self-assignment is Swift-safe (no recursive didSet in same call frame).
+- Device activity monitor error handler reads current (not stale) @MainActor state, which is correct for fallback decisions.
+- FamilyControls entitlement gap is tracked by #201; no new developer-actionable subtask needed.
+
+**Minor observations (not issue-worthy):**
+- SettingsStore didSet writes synchronously to UserDefaults on main thread — acceptable for scalar values.
+- NSLock in AppGroupIPCStore is in-process only; cross-process safety relies on per-slot key design, not the lock.
+- `try?` on Task.sleep for cancellation is idiomatic but non-obvious; consistent pattern across codebase.
+
+## Issue #306 — Corrupt legacy eventLog breaks watchdog recovery (2026-04-30)
+
+**Problem:** `readEventsCombined` threw `corruptEventLog` on corrupt legacy `trueInterrupt.ipc.eventLog` key, permanently disabling watchdog recovery since `recoverStaleDeviceActivityWatchdogIfNeeded` returns `false` on any `readEvents()` throw. Per-slot corrupt entries were already silently skipped — inconsistent behavior.
+
+**Fix:** Changed `readEventsCombined` to log a warning via `os.Logger` and continue reading per-slot events when the legacy key is corrupt. Added `Logger` instance to `AppGroupIPCStore` using same subsystem/category as `AppGroupDefaults`.
+
+**Tests:** Replaced `test_readEvents_corruptLog_throws` with two tests (warning-and-continue, corrupt legacy + valid slots → returns slots). Added watchdog recovery test proving corrupt legacy key doesn't block recovery.
+
+**Commit:** db4fac0

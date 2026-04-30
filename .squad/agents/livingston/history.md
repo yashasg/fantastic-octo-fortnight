@@ -776,3 +776,26 @@ Only the double-resign path is tested. A single resign followed by return-to-act
 
 **Key Learning:** When enforcing a zero-warning policy retrospectively, include it in the commit message and orchestration log so reviewers understand the constraint — this sets expectation for all future waves and prevents accidental regressions.
 
+
+---
+
+## 2026-04-30 — Post-Issue-Marathon Coverage Audit
+
+**Task:** Read-only audit covering #299 IPC, watchdog/snooze/cancellation, overlay accessibility, analytics stability, CI coverage.
+
+**Findings:**
+
+| Area | Status | Notes |
+|---|---|---|
+| #299 IPC cross-process safety | ✅ Fixed + tested | Per-slot key design in place; `test_recordEvent_twoStoreInstances_bothEventsArePersisted` covers the race; legacy key backward-compat tested |
+| IPC pruning across processes | ✅ Acceptable | `pruneEventSlots` is best-effort; `readEvents()` cap is correctness guarantee; single-store prune tested in `test_recordEvent_appendsAndCapsLog` |
+| Watchdog/snooze/cancellation | ✅ Well covered | 12 watchdog heartbeat tests, snooze+watchdog interaction (#286 regression), expired snooze reschedule, cancelReminder + DeviceActivity (4 tests #291) |
+| Analytics stability | ✅ Well covered | Raw value stability tests for all event kinds; snoozeActivated stable label fix; schedulePathReason raw values |
+| CI coverage gate | ✅ Fixed | Runs `if: always()`, missing xcresult fails loudly |
+| **Overlay dismiss accessibility** | ❌ **Gap filed** | `dismissOverlay()` does not call `postScreenChanged` — VoiceOver focus stranded in hidden window. No test covers this. **Issue #308 filed.** |
+
+**Issue filed:** #308 — A11y: dismissOverlay() does not post screenChanged
+
+**Key insight:** #298 fixed the overlay APPEAR path (`showOverlay` now calls `postScreenChanged`), but the symmetric DISMISS path was not addressed. `dismissOverlay()` has no corresponding notification, leaving VoiceOver focus in the hidden overlay window after a break ends. The `MockAccessibilityNotificationPoster` is in place; only the implementation call and one unit-test assertion are missing.
+
+**Key insight:** The only assertions on `postScreenChanged` in overlay tests are for the negative path (guard/no-overlay cases). There is no positive assertion that a shown-then-dismissed overlay posts `screenChanged`. This is a structural gap in the test suite that will prevent future regressions from being caught.

@@ -77,3 +77,21 @@
 - **Privacy: clean** — No PII, no user IDs, no ATT, no network calls. "Data Not Collected" label safe.
 - **Fix is straightforward** — All missing events need only `AnalyticsLogger.log()` calls at existing trigger points. No schema changes required. ~1 hour estimated.
 - **Report filed:** `.squad/decisions/inbox/turk-analytics-pass-v2.md`
+
+### 2026-04-28 — Read-Only Telemetry/Privacy Audit (Post-#299)
+
+**Scope:** Full audit of AnalyticsLogger event schemas, stable raw values, privacy annotations, TELEMETRY.md/PRIVACY.md alignment, and #299 IPC event slot behavior.
+
+**Result: Clean — no new issues filed.**
+
+**Verified clean:**
+- **18 AnalyticsEvent cases** — all emit via `AnalyticsLogger.log()` at correct trigger points in AppCoordinator, SettingsViewModel, PauseConditionManager, OverlayView (via callback), and AppCoordinatorWatchdogRecovery.
+- **Stable raw values** — all enum raw values (`ShieldTriggerReason`, `DismissMethod`, `ReminderDeliveryPath`, `SchedulePath`, `SchedulePathReason`, `IPCOperation`, `IPCFailureReason`, `PauseConditionSource`, `SnoozeOption.analyticsCode`) are hardcoded snake_case strings, not localized. #278 fix confirmed (snooze uses `analyticsCode` not label).
+- **Privacy annotations** — `.public` on all enum codes and numeric durations; `.private` on `settingChanged` old/new values (intentional, documented). No PII, no device IDs, no user IDs, no free-form user-authored strings.
+- **TELEMETRY.md** — matches code for all 18 event schemas, stable raw value tables, privacy checklist, dashboard tier definitions. IPC Health section documents all `IPCOperation`/`IPCFailureReason` codes.
+- **PRIVACY.md** — accurately describes local-only data, Apple diagnostics only, no third-party SDKs, no custom analytics backend. Screen Time/App Group IPC data correctly scoped.
+- **#299 IPC event slot behavior** — per-event slot keys (`trueInterrupt.ipc.event.<UUID>`) eliminate cross-process read-modify-write race. `ipc_operation_failed` analytics event covers `writeEvent` failures. Pruning is best-effort, bounded to `maxEventCount=100`.
+- **`watchdogRecoveryTriggered` detail field** — constructed from deterministic constants (`watchdog_device_activity_heartbeat_missing` or `watchdog_device_activity_heartbeat_stale:<WatchdogHeartbeatDetail.rawValue>`), not PII. Documented as "non-PII operational code" in TELEMETRY.md.
+- **No localized or free-form values in any analytics path** — legacy `snooze(for:)` uses `"\(minutes)m"` format but is deprecated with no production callers.
+
+**No material telemetry, privacy, or documentation gaps found.**

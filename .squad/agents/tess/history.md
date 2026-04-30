@@ -333,3 +333,35 @@
 **Coordination:**
 - Design direction reviewed by Linus (engineer) for feasibility
 - Linus selected Option A (clean token) and implemented with successful outcome
+
+---
+
+### 2026-04-30: Read-only A11y/HIG Audit — Onboarding, Home, Settings, AppCategoryPicker, Overlay, True Interrupt, Warning Dialogs
+
+**Task:** Full accessibility and HIG audit across all named surfaces (post-#299 board state). Read-only — no source edits.
+
+**Surfaces reviewed:** OnboardingWelcomeView, OnboardingPermissionView, OnboardingSetupView, OnboardingInterruptModeView, OnboardingView container, HomeView (YinYangEyeView, TrueInterruptSkippedBanner, TrueInterruptSetupPill), SettingsView (all sections incl. SmartPause, TrueInterrupt, NotificationWarning, Snooze), AppCategoryPickerView (all 4 auth states), OverlayView, OverlayManager, AccessibilityNotificationPosting.
+
+**Areas confirmed clean:**
+- All tap targets ≥ 44pt (AppLayout.minTapTarget)
+- All colors via AppColor tokens — no raw hardcoded colors
+- All fonts via AppFont/AppTypography tokens
+- Dynamic Type: all text scales correctly; AppFont.countdown fixed monospaced is intentional
+- Reduce motion: all animation paths use canonical if/else pattern
+- Onboarding VoiceOver screen-change notifications: ✅ (postScreenChanged on page change)
+- Overlay appear VoiceOver notification: ✅ (postScreenChanged added in #298)
+- Overlay .accessibilityViewIsModal: ✅ (UIKit level in OverlayManager + SwiftUI .accessibilityAddTraits(.isModal))
+- Overlay .escape accessibilityAction: ✅ mapped to performDismiss
+- Overlay countdown: proper .accessibilityLabel + .accessibilityValue + .updatesFrequently
+- TrueInterruptSkippedBanner: accessibilityElement(children: .ignore) with named custom actions ✅
+- All snooze buttons: conditional hints for canSnooze/limitReached ✅
+- AppCategoryPicker warning banners: accessibilityElement(children: .combine) ✅
+- VoiceOver gesture blocking in onboarding: accessibilityEnabled guard on highPriorityGesture ✅
+- Permission copy ("scary"): copy is calm, non-threatening ✅
+- String catalog: all keys present and sensible; no missing localized strings found
+
+**New issues filed:**
+- #309 — A11y: `dismissOverlay()` missing `screenChanged` notification; VoiceOver focus undefined after break ends. Owner: `squad:linus`.
+- #310 — A11y: OverlayView ZStack — VoiceOver initial focus lands on × dismiss button (top-trailing) instead of break headline on overlay appear. Owner: `squad:linus`.
+
+**Key insight:** The #298 fix correctly added `postScreenChanged` on overlay *appear* but the symmetrical *dismiss* call was overlooked. The dismiss case is especially important for auto-dismiss (countdown expiry) where there is no user-initiated physical cue that the overlay has gone. Issue #310 is a geometric ZStack traversal trap — SwiftUI VoiceOver traverses ZStack children by screen position, not declaration order, so the visually top-trailing × button wins focus over the center-screen headline.
