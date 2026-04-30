@@ -92,11 +92,41 @@ final class AppConfigTests: XCTestCase {
             "Fallback globalEnabledDefault must be true (app on by default)")
     }
 
-    func test_fallback_maxSnoozeCount_is3() {
+    func test_fallback_maxSnoozeCount_is2() {
         XCTAssertEqual(
             AppConfig.fallback.features.maxSnoozeCount,
-            3,
-            "Fallback maxSnoozeCount must be 3")
+            2,
+            "Fallback maxSnoozeCount must be 2 (Decision 2.2: max 2 consecutive snoozes)")
+    }
+
+    // MARK: - Regression: Issue #362 — production default must be 2
+
+    func test_regression_362_productionDefaultMaxSnoozeCount_is2() {
+        // Regression guard for issue #362: defaults.json and AppConfig.fallback must both
+        // specify maxSnoozeCount = 2 (Decision 2.2 / Phase 2 spec).
+        let productionJSON = """
+        {
+          "defaults": {
+            "eyeInterval": 1200,
+            "eyeBreakDuration": 20,
+            "postureInterval": 1800,
+            "postureBreakDuration": 10
+          },
+          "features": {
+            "globalEnabledDefault": true,
+            "maxSnoozeCount": 2
+          }
+        }
+        """
+        let config = decode(productionJSON)
+        XCTAssertEqual(
+            config?.features.maxSnoozeCount,
+            2,
+            "Production defaults.json must decode maxSnoozeCount as 2 (issue #362)")
+        XCTAssertEqual(
+            AppConfig.fallback.features.maxSnoozeCount,
+            2,
+            "AppConfig.fallback must have maxSnoozeCount = 2 (issue #362)")
     }
 
     // MARK: - Fallback: Range Validation

@@ -37,7 +37,7 @@ extension AppConfig {
         ),
         features: Features(
             globalEnabledDefault: true,
-            maxSnoozeCount: 3
+            maxSnoozeCount: 2
         )
     )
 }

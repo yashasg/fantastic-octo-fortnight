@@ -26,7 +26,7 @@ final class SettingsViewModelExtendedTests: XCTestCase {
         try await super.tearDown()
     }
 
-    private func makeSUT(maxSnoozeCount: Int = 3) -> SettingsViewModel {
+    private func makeSUT(maxSnoozeCount: Int = 2) -> SettingsViewModel {
         SettingsViewModel(settings: settings, scheduler: mockScheduler, maxSnoozeCount: maxSnoozeCount)
     }
 
