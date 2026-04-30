@@ -139,3 +139,16 @@
 
 **Key Learning:** When reviewing authorization/permission UI additions, verify the fallback path is graceful (no degraded UX) and that the feature remains optional — this allows shipping UI while regulatory/entitlement approvals remain pending.
 
+
+### 2026-04-30: Post-#299 Code Audit (True Interrupt / IPC / ScreenTime / Analytics / CI / Accessibility)
+- **Reviewed:** 31 changed files across HEAD~15 on squad/m3-true-interrupt-mode (1862 insertions)
+- **Scope:** AppGroupIPCStore, WatchdogHeartbeat, ScreenTimeTracker, OverlayManager, PauseConditionManager, AnalyticsLogger, AppCoordinator + WatchdogRecovery, SettingsViewModel, HomeView, OverlayView, SettingsView, AccessibilityNotificationPosting, ci.yml, TELEMETRY.md
+- **Verdict:** No material actionable defects found. Code is well-structured with proper @MainActor isolation, [weak self] in async closures, generational tick guards, and correct observer cleanup.
+- **Minor observations (not filed):**
+  - SettingsViewModel uses strong self capture in 4 fire-and-forget Tasks (lines 261, 285, 297, 353) — acceptable because Tasks are short-lived scheduler calls
+  - AccessibilityNotificationPosting protocol lacks @MainActor annotation — all current callers are @MainActor so no runtime risk today, but a future non-MainActor caller would hit UIKit thread violations
+  - AppGroupIPCStore recordEvent comment says "writes exactly one key" but accessRequested events write two; the second key (lastAccessRequestAt) is not read in production code
+- **CI:** Actions pinned to full commit SHAs ✓; no script injection vectors ✓
+- **TELEMETRY.md:** Matches analytics code schema accurately ✓
+
+**Key Learning:** The True Interrupt IPC architecture uses generational guards and withLock wrappers consistently. The serialized Task queue pattern in enqueueDeviceActivityMonitorOperation is sound because @MainActor Tasks run sequentially on the main thread, making the previousTask chain safe without additional locking.
