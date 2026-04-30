@@ -26,7 +26,6 @@ enum AnalyticsEvent: Sendable {
     enum ReminderDeliveryPath: String {
         case screenTimeThreshold  = "screen_time_threshold"
         case notificationFallback = "notification_fallback"
-        case unknown              = "unknown"
     }
 
     // MARK: Schedule Path Selection
