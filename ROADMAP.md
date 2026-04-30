@@ -231,9 +231,9 @@
 - **Owner:** Reuben (Product Designer) + Linus (iOS UI Dev)
 - **Status:** ✅ Complete
 - **Delivered:**
-  - 4-screen onboarding: Welcome → App Break Access (Pre-Permission) → Screen Time Permission → Quick Setup
-  - "Get Started" triggers permission request
-  - "Skip" option available
+  - 4-screen onboarding: Welcome → Notification Permission → Reminder Schedule Setup → True Interrupt Mode
+  - "Get Started" advances Screen 3 (Reminder Schedule Setup) to Screen 4 (True Interrupt Mode)
+  - "Skip for Now" completes onboarding on Screen 4 (True Interrupt Mode)
   - First-launch flag in UserDefaults
   - SwiftUI TabView with horizontal swipe navigation
   - Accessibility: VoiceOver-friendly labels
@@ -681,7 +681,8 @@ Device resumes normal activity
 | #209 | 🔄 In Progress | Linus | HIGH – ShieldConfiguration extension UI |
 | #210 | 🔄 In Progress | Linus | HIGH – ShieldAction extension button handling |
 | #185 | 🔄 In Progress | Rusty | MEDIUM – App Group shared state schema + IPC event log |
-| #2 | 🔄 Blocked | Rusty | MEDIUM – Fill in legal document placeholders (Frank to complete) |
+| #354 | 🔄 Open | Rusty | HIGH – Focus Status entitlement absent from Distribution entitlements — Focus pause broken in TestFlight/App Store |
+| #358 | 🔄 Open | Frank | MEDIUM – DISCLAIMER.md uses hardcoded 'Yashasg' instead of [PUBLISHER NAME] placeholder |
 
 **Phase 2 Complete (Closed):** #11 (test fixes), #10 (integration tests), #9 (UI tests), #8 (test architecture), #7 (PauseConditionManager), #6 (pause tests), #5 (disclaimer UI), #4 (docs update), #3 (pause settings UI)
 

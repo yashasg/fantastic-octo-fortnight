@@ -4,7 +4,7 @@
 **Date:** 2026-04-28  
 **Status:** ✅ All unit tests compile cleanly — build verified
 
-> **Count source note:** The CHANGELOG reported 270 tests at M2.6. The current count of **1,798** (from `grep -rc 'func test' Tests/EyePostureReminderTests`) reflects all tests added post-M2.6 across new modules (Analytics, PauseCondition, ScreenTime, TrueInterrupt, coverage-boost suites, and regression). CHANGELOG counts remain accurate for their respective milestones; this report uses the live grep count as the authoritative current total.
+> **Count source note:** The v0.2.0 CHANGELOG baseline is 1,382 tests (the authoritative shipped baseline). The current count of **1,798** (from `grep -rc 'func test' Tests/EyePostureReminderTests`) reflects ~416 tests added post-v0.2.0 across new modules (Analytics, PauseCondition, ScreenTime, TrueInterrupt, coverage-boost suites, and regression). The M2.6 intermediate count of 270 (pre-v0.2.0) is retained in the summary table for historical context only; it is not the most recent baseline. CHANGELOG counts remain accurate for their respective milestones; this report uses the live grep count as the authoritative current total.
 
 ---
 
@@ -17,8 +17,9 @@
 | Test-build status | ✅ `TEST BUILD SUCCEEDED` |
 | API mismatches found | 0 |
 | API mismatches fixed | 1 (pre-existing `is` cast warning in AudioInterruptionManagerTests) |
-| Tests at M2.6 baseline | 270 (per CHANGELOG; see note above) |
-| Tests added since M2.6 | ~1,528 (Analytics, ScreenTime, TrueInterrupt, coverage-boost, regression suites) |
+| Tests at v0.2.0 baseline | 1,382 (per CHANGELOG; authoritative shipped baseline) |
+| Tests at M2.6 (intermediate) | 270 (per CHANGELOG; pre-v0.2.0; not the most recent baseline) |
+| Tests added since v0.2.0 | ~416 (Analytics, ScreenTime, TrueInterrupt, coverage-boost, regression suites) |
 
 ---
 
@@ -222,7 +223,7 @@ No breaking API mismatches found between test files and the Phase 2 implementati
 
 | Phase | Tests |
 |---|---|
-| Phase 1 (Models + Scheduler + ViewModel core) | ~196 (M2.6 baseline) |
-| Phase 2 (Haptics, Snooze, Onboarding, DesignSystem, AppCoordinator overlay) | ~74 (M2.6 baseline) |
-| Post-M2.6 additions (Analytics, ScreenTime, TrueInterrupt, PauseCondition, coverage-boost, regression suites) | ~1,528 |
+| Phase 1 (Models + Scheduler + ViewModel core) | ~196 (M2.6 intermediate) |
+| Phase 2 (Haptics, Snooze, Onboarding, DesignSystem, AppCoordinator overlay) | ~74 (M2.6 intermediate; v0.2.0 shipped total: 1,382) |
+| Post-v0.2.0 additions (Analytics, ScreenTime, TrueInterrupt, PauseCondition, coverage-boost, regression suites) | ~416 |
 | **Total (current, from grep)** | **1,798** |
