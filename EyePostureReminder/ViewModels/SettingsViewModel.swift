@@ -30,6 +30,16 @@ final class SettingsViewModel: ObservableObject {
             }
         }
 
+        /// Stable, non-localized analytics code for this snooze duration.
+        /// Used in `snoozeActivated` events — never changes between app versions or locales.
+        var analyticsCode: String {
+            switch self {
+            case .fiveMinutes: return "5m"
+            case .oneHour:     return "1h"
+            case .restOfDay:   return "rest_of_day"
+            }
+        }
+
         /// The absolute `Date` at which this snooze should expire.
         var endDate: Date {
             switch self {
@@ -119,13 +129,106 @@ final class SettingsViewModel: ObservableObject {
         settings.snoozeCount < maxConsecutiveSnoozes
     }
 
+    // MARK: - Settings Pass-Through with Analytics
+
+    var globalEnabled: Bool {
+        get { settings.globalEnabled }
+        set {
+            let old = settings.globalEnabled
+            settings.globalEnabled = newValue
+            AnalyticsLogger.log(.settingChanged(
+                setting: .globalEnabled,
+                oldValue: String(old),
+                newValue: String(newValue)
+            ))
+        }
+    }
+
+    var eyesEnabled: Bool {
+        get { settings.eyesEnabled }
+        set {
+            let old = settings.eyesEnabled
+            settings.eyesEnabled = newValue
+            AnalyticsLogger.log(.settingChanged(
+                setting: .eyesEnabled,
+                oldValue: String(old),
+                newValue: String(newValue)
+            ))
+        }
+    }
+
+    var eyesInterval: TimeInterval {
+        get { settings.eyesInterval }
+        set {
+            let old = settings.eyesInterval
+            settings.eyesInterval = newValue
+            AnalyticsLogger.log(.settingChanged(
+                setting: .eyesInterval,
+                oldValue: String(old),
+                newValue: String(newValue)
+            ))
+        }
+    }
+
+    var eyesBreakDuration: TimeInterval {
+        get { settings.eyesBreakDuration }
+        set {
+            let old = settings.eyesBreakDuration
+            settings.eyesBreakDuration = newValue
+            AnalyticsLogger.log(.settingChanged(
+                setting: .eyesBreakDuration,
+                oldValue: String(old),
+                newValue: String(newValue)
+            ))
+        }
+    }
+
+    var postureEnabled: Bool {
+        get { settings.postureEnabled }
+        set {
+            let old = settings.postureEnabled
+            settings.postureEnabled = newValue
+            AnalyticsLogger.log(.settingChanged(
+                setting: .postureEnabled,
+                oldValue: String(old),
+                newValue: String(newValue)
+            ))
+        }
+    }
+
+    var postureInterval: TimeInterval {
+        get { settings.postureInterval }
+        set {
+            let old = settings.postureInterval
+            settings.postureInterval = newValue
+            AnalyticsLogger.log(.settingChanged(
+                setting: .postureInterval,
+                oldValue: String(old),
+                newValue: String(newValue)
+            ))
+        }
+    }
+
+    var postureBreakDuration: TimeInterval {
+        get { settings.postureBreakDuration }
+        set {
+            let old = settings.postureBreakDuration
+            settings.postureBreakDuration = newValue
+            AnalyticsLogger.log(.settingChanged(
+                setting: .postureBreakDuration,
+                oldValue: String(old),
+                newValue: String(newValue)
+            ))
+        }
+    }
+
     var pauseDuringFocus: Bool {
         get { settings.pauseDuringFocus }
         set {
             let old = settings.pauseDuringFocus
             settings.pauseDuringFocus = newValue
             AnalyticsLogger.log(.settingChanged(
-                setting: "pauseDuringFocus",
+                setting: .pauseDuringFocus,
                 oldValue: String(old),
                 newValue: String(newValue)
             ))
@@ -138,11 +241,49 @@ final class SettingsViewModel: ObservableObject {
             let old = settings.pauseWhileDriving
             settings.pauseWhileDriving = newValue
             AnalyticsLogger.log(.settingChanged(
-                setting: "pauseWhileDriving",
+                setting: .pauseWhileDriving,
                 oldValue: String(old),
                 newValue: String(newValue)
             ))
         }
+    }
+
+    var hapticsEnabled: Bool {
+        get { settings.hapticsEnabled }
+        set {
+            let old = settings.hapticsEnabled
+            settings.hapticsEnabled = newValue
+            AnalyticsLogger.log(.settingChanged(
+                setting: .hapticsEnabled,
+                oldValue: String(old),
+                newValue: String(newValue)
+            ))
+        }
+    }
+
+    var notificationFallbackEnabled: Bool {
+        get { settings.notificationFallbackEnabled }
+        set {
+            let old = settings.notificationFallbackEnabled
+            settings.notificationFallbackEnabled = newValue
+            AnalyticsLogger.log(.settingChanged(
+                setting: .notificationFallbackEnabled,
+                oldValue: String(old),
+                newValue: String(newValue)
+            ))
+            Task {
+                await scheduler.scheduleReminders(using: settings)
+                Logger.settings.info("Notification fallback → \(self.settings.notificationFallbackEnabled)")
+            }
+        }
+    }
+
+    /// Emit a `setting_changed` analytics event with explicit old and new value strings.
+    /// Use this from SwiftUI `onChange` closures where the store is already mutated.
+    /// Skips emission when `old == new` (deduplication guard).
+    func notifySettingChanged(_ key: AnalyticsEvent.SettingKey, old: String, new: String) {
+        guard old != new else { return }
+        AnalyticsLogger.log(.settingChanged(setting: key, oldValue: old, newValue: new))
     }
 
     // MARK: - Init
@@ -203,8 +344,11 @@ final class SettingsViewModel: ObservableObject {
         settings.snoozedUntil = endDate
         settings.snoozeCount += 1
         scheduler.cancelAllReminders()
-        AnalyticsLogger.log(.snoozeActivated(durationOption: option.label))
-        Logger.settings.info("Snoozed until \(endDate) via option: \(option.label) (count: \(self.settings.snoozeCount))")
+        AnalyticsLogger.log(.snoozeActivated(durationOption: option.analyticsCode))
+        Logger.settings.info(
+            // swiftlint:disable:next line_length
+            "Snoozed via option=\(option.analyticsCode, privacy: .public) count=\(self.settings.snoozeCount, privacy: .public)"
+        )
     }
 
     /// Apply a snooze for an arbitrary number of minutes.

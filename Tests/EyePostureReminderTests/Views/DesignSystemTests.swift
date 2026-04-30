@@ -69,6 +69,10 @@ final class DesignSystemTests: XCTestCase {
 
     // MARK: - AppSpacing: 4pt Grid Compliance
 
+    func test_appSpacing_xxs_is2pt() {
+        XCTAssertEqual(AppSpacing.xxs, 2, "xxs must be 2pt (tight caption gap)")
+    }
+
     func test_appSpacing_xs_is4pt() {
         XCTAssertEqual(AppSpacing.xs, 4, "xs must be 4pt (smallest grid unit)")
     }
@@ -90,7 +94,9 @@ final class DesignSystemTests: XCTestCase {
     }
 
     func test_appSpacing_valuesAreAscending() {
-        let spacings: [CGFloat] = [AppSpacing.xs, AppSpacing.sm, AppSpacing.md, AppSpacing.lg, AppSpacing.xl]
+        let spacings: [CGFloat] = [
+            AppSpacing.xxs, AppSpacing.xs, AppSpacing.sm, AppSpacing.md, AppSpacing.lg, AppSpacing.xl
+        ]
         for index in 1..<spacings.count {
             XCTAssertGreaterThan(
                 spacings[index],
@@ -203,7 +209,7 @@ final class DesignSystemTests: XCTestCase {
 
     func test_appSpacing_allValuesAscending_includesXxl() {
         let spacings: [CGFloat] = [
-            AppSpacing.xs, AppSpacing.sm, AppSpacing.md,
+            AppSpacing.xxs, AppSpacing.xs, AppSpacing.sm, AppSpacing.md,
             AppSpacing.lg, AppSpacing.xl, AppSpacing.xxl
         ]
         for index in 1..<spacings.count {
@@ -316,6 +322,52 @@ final class DesignSystemTests: XCTestCase {
         _ = curve
     }
 
+    // MARK: - AppLayout: Border Width Tokens
+
+    func test_appLayout_borderHair_is0point5pt() {
+        XCTAssertEqual(AppLayout.borderHair, 0.5, accuracy: 0.001,
+                       "borderHair must be 0.5pt (hair-thin border ring)")
+    }
+
+    func test_appLayout_borderSoft_is1pt() {
+        XCTAssertEqual(AppLayout.borderSoft, 1.0, accuracy: 0.001,
+                       "borderSoft must be 1.0pt (standard separator border)")
+    }
+
+    func test_appLayout_borderBold_is1point5pt() {
+        XCTAssertEqual(AppLayout.borderBold, 1.5, accuracy: 0.001,
+                       "borderBold must be 1.5pt (bold accent border)")
+    }
+
+    func test_appLayout_borderWidths_areAscending() {
+        XCTAssertLessThan(AppLayout.borderHair, AppLayout.borderSoft,
+                          "borderHair must be thinner than borderSoft")
+        XCTAssertLessThan(AppLayout.borderSoft, AppLayout.borderBold,
+                          "borderSoft must be thinner than borderBold")
+    }
+
+    // MARK: - AppLayout: Entrance / Decorative Tokens (added #387/#398)
+
+    func test_appLayout_overlayEntranceOffset_is300pt() {
+        XCTAssertEqual(AppLayout.overlayEntranceOffset, 300,
+                       "overlayEntranceOffset must be 300pt (positions overlay below screen before entrance)")
+    }
+
+    func test_appLayout_decorativeIconFrame_is44pt() {
+        XCTAssertEqual(AppLayout.decorativeIconFrame, 44,
+                       "decorativeIconFrame must be 44pt (visual weight match for interactive controls)")
+    }
+
+    // MARK: - AppAnimation: Yin-Yang Breathing Token (added #390)
+
+    func test_appAnimation_yinYangBreathingDuration_is4s() {
+        XCTAssertEqual(
+            AppAnimation.yinYangBreathingDuration,
+            4.0,
+            accuracy: 0.001,
+            "yinYangBreathingDuration must be 4.0s (breathing pulse, ease-in-out, repeating)")
+    }
+
     // MARK: - AppColor: Token Accessibility
 
     /// Verifies all original `AppColor` tokens compile and are accessible without crashing.
@@ -412,7 +464,13 @@ final class DesignSystemTests: XCTestCase {
             AppSymbol.pauseDuringFocus,
             AppSymbol.pauseWhileDriving,
             AppSymbol.clock,
-            AppSymbol.timer
+            AppSymbol.timer,
+            AppSymbol.masterToggle,
+            AppSymbol.haptics,
+            AppSymbol.trueInterrupt,
+            AppSymbol.chevronTrailing,
+            AppSymbol.checkmark,
+            AppSymbol.lock
         ]
         for symbol in symbols {
             XCTAssertFalse(symbol.isEmpty, "AppSymbol name must not be empty: \(symbol)")
@@ -423,9 +481,12 @@ final class DesignSystemTests: XCTestCase {
         let symbols = [
             AppSymbol.eyeBreak, AppSymbol.postureCheck, AppSymbol.dismiss,
             AppSymbol.settings, AppSymbol.chevronDown, AppSymbol.chevronUp,
-            AppSymbol.warning, AppSymbol.snoozed, AppSymbol.bell,
+            AppSymbol.warning, AppSymbol.checkmark, AppSymbol.lock,
+            AppSymbol.snoozed, AppSymbol.bell,
             AppSymbol.pauseDuringFocus, AppSymbol.pauseWhileDriving,
-            AppSymbol.clock, AppSymbol.timer
+            AppSymbol.clock, AppSymbol.timer,
+            AppSymbol.trueInterrupt, AppSymbol.masterToggle,
+            AppSymbol.haptics, AppSymbol.chevronTrailing
         ]
         XCTAssertEqual(
             Set(symbols).count,

@@ -2,7 +2,7 @@
 
 > **Author:** Danny (Product Manager)  
 > **Date:** 2026-04-24  
-> **Version:** v0.1.0-beta (TestFlight)  
+> **Version:** v0.2.0 — Restful Grove  
 > **Milestone:** M2.7 — App Store Preparation
 
 ---
@@ -11,7 +11,7 @@
 
 **kshana**
 
-*Subtitle:* Eye & Posture Wellness
+*App Store subtitle:* Eye & Posture Wellness
 
 *Origin:* Sanskrit (क्षण) — "a moment, an instant"
 
@@ -21,71 +21,75 @@
 
 ## 2. Subtitle
 
-**Your breaks, your timing, your control.**
+**Eye & Posture Wellness**
 
-*(31 characters — within 30-char limit) — OVER by 1, need to adjust*
+*(22 characters — within Apple's 30-character App Store subtitle limit)*
 
-**Alternative:** `Healthy app breaks on your terms` (31 chars)
-**Alternative:** `Breaks you choose, breaks you need` (34 chars — too long)
-**Alternative:** `Choose your breaks, keep control` (31 chars)
-**Alternative:** `App breaks, your way.` (21 chars — good option)
+**Subtitle rationale:** The owner-selected subtitle "Eye & Posture Wellness" is intentionally retained for broader wellness positioning over the alternative "Eye & Posture Breaks". "Wellness" frames the app as a holistic health companion rather than a simple timer, appealing to a wider health-conscious audience. Per keyword strategy (Section 4), "wellness" and "posture" are excluded from the keyword field because Apple indexes subtitle words separately — avoiding duplication maximises keyword slot value.
 
 ---
 
 ## 3. Description
 
-Choose which apps get break reminders. Set your timing. Let kshana gently nudge you to take healthier breaks — without reading your content.
+Set your timing. Let kshana gently nudge you to take healthier eye and posture breaks — without accounts, ads, or a custom backend.
 
-kshana monitors your app usage and suggests eye breaks (20-20-20 rule) and posture checks at customizable intervals. When you choose to take a break, a calm break screen guides you with a countdown timer. You're always in control.
+kshana uses timer-based screen tracking and reminder alerts to suggest eye breaks (20-20-20 rule) and posture checks at customizable intervals. When you choose to take a break, a calm break screen guides you with a countdown timer. Smart Pause automatically silences reminders during Focus Mode, CarPlay navigation, and when driving. True Interrupt Mode (app-level shielding) is in development and will arrive in a future update pending Apple's entitlement approval.
 
 **Key features:**
-- Choose which apps trigger break reminders (roadmap feature)
+- Custom eye break and posture check timing
 - Eye break reminders (20-20-20 rule) and posture check reminders at customizable intervals
-- Screen Time Shield-based True Interrupt Mode when Apple entitlement approved; fallback local alerts in the meantime
-- Calm break screen with countdown timer and haptic feedback
+- Smart Pause during Focus Mode, CarPlay, and driving detection
+- Full-screen break screen with countdown timer and haptic feedback
 - Snooze options (5 min, 1 hour, rest of day)
-- Works quietly in the background—Smart Pause during Focus Mode and CarPlay
-- Battery-friendly—native iOS scheduling, no background timers
-- Privacy-first — reads only which apps you use, never content, no accounts, no ads
+- Battery-friendly—native iOS scheduling, minimal background activity
+- Privacy-first — no accounts, no ads, no tracking, and no custom analytics backend
+- True Interrupt Mode (app-level shielding) coming in a future update when Apple entitlement is approved
 
-Built for people who spend hours at a screen and want control over their break habits. Download now and build healthier screen time habits on your terms.
+**Not medical advice.** kshana is a wellness reminder tool — not a medical device and not a substitute for professional healthcare. The 20-20-20 rule and posture reminders are general wellness suggestions, not medical advice, and are not intended to diagnose, treat, or prevent any condition. If you have health concerns, consult a qualified healthcare professional. True Interrupt Mode uses Apple's FamilyControls API with your authorization, for your own personal wellness use on your device; this feature is pending Apple entitlement approval and is not yet available.
 
-*(148 words)*
+Built for people who spend hours at a screen and want control over their break habits.
+
+*(~185 words)*
 
 ---
 
 ## 4. Keywords
 
 ```
-eye health,posture,20-20-20,screen break,reminder,timer,wellness,eye strain,ergonomic,rest
+eye health,20-20-20,screen break,reminder,posture check,eye strain,ergonomic,screen time,neck pain
 ```
 
-*(96 characters — within 100-char limit)*
+*(98 characters — within 100-char limit)*
 
 **Keyword strategy notes:**
 - Prioritized high-intent terms: "eye health", "screen break", "reminder"
 - Included the well-known "20-20-20" rule for discoverability
+- "posture check" added as a compound term directly representing the app's posture-check feature; Apple treats compound keywords as a single indexable phrase, giving better precision than a bare word
 - "eye strain" captures pain-point searchers
-- "ergonomic" and "wellness" broaden reach into health-conscious audiences
-- Excluded words already in app name/subtitle (Apple indexes those separately)
+- "ergonomic" broadens reach into health-conscious audiences
+- "screen time" captures high-intent users searching for screen-time management tools
+- "neck pain" targets users seeking relief from screen-related neck discomfort
+- Removed low-intent single word "rest" (Issue #376); removed "timer" to stay within the 100-char budget after adding "posture check"
+- Excluded words already in app name/subtitle (Apple indexes those separately); standalone "wellness" and standalone "posture" excluded since both appear in the subtitle ("Eye & Posture Wellness") — "posture check" as a compound is intentionally retained per Issue #376
 
 ---
 
-## 5. What's New (v0.1.0-beta)
+## 5. What's New (v0.2.0 — Restful Grove)
 
 ```
-Welcome to the first TestFlight beta of kshana!
+kshana v0.2.0 — Restful Grove
 
-• Eye break reminders using the 20-20-20 rule
-• Posture check reminders at customizable intervals
-• Full-screen overlay with countdown timer
-• Customizable intervals (10–60 min) and break durations (10–60 s)
-• Haptic feedback on overlay appearance and dismissal
-• Snooze support (5 min, 15 min, or rest of day)
-• Battery-efficient background scheduling
-• VoiceOver and Dynamic Type accessibility support
+• New visual identity: Sage & Mint color palette with Restful Grove design tokens
+• Yin-yang logo animation with Reduce Motion support
+• Smart Pause: auto-silence reminders during Focus Mode, CarPlay, and driving
+• Screen-time-aware reminders: breaks fire after continuous screen-on time
+• Snooze options: 5 min, 1 hour, or rest of day
+• 4-screen onboarding flow with app break explanation
+• In-app legal documents (Terms, Privacy, Disclaimer)
+• Accessibility: WCAG AA contrast, VoiceOver live regions, 44pt tap targets
+• Improved stability and reliability
 
-We'd love your feedback! Please report any issues via TestFlight.
+Download kshana on the App Store and start building healthier break habits today.
 ```
 
 ---
@@ -99,7 +103,7 @@ We'd love your feedback! Please report any issues via TestFlight.
 
 #### What we collect
 
-kshana is built with privacy as a core value. The app uses **no third-party analytics SDKs**, no advertising frameworks, no user accounts, and no custom backend.
+kshana is built with privacy as a core value. The app uses **no third-party analytics SDKs**, no advertising frameworks, no user accounts, no tracking, and no custom backend.
 
 The app uses Apple's built-in diagnostics and analytics tools, including **MetricKit** and **App Store Connect analytics**, to understand aggregate app performance, reliability, crashes, hangs, launch times, memory use, and similar technical metrics. These reports are processed through Apple's systems and are provided to the developer in aggregated or diagnostic form. They are **not used to identify you**, track you across apps or websites, build advertising profiles, or sell data.
 
@@ -107,6 +111,7 @@ The app uses Apple's built-in diagnostics and analytics tools, including **Metri
 
 - All your settings (reminder intervals, break durations, preferences) are stored locally on your device using iOS UserDefaults.
 - Motion activity and Focus status are accessed transiently in memory to pause reminders — they are never stored or transmitted.
+- Current builds use local reminder alerts as the primary reminder mechanism. True Interrupt Mode (app-level shielding) is not available in v0.2.0 and will arrive in a future update when Apple's entitlement approval is complete.
 - The app uses Apple's `os.Logger` framework for on-device diagnostic logging. These logs remain on your device. In release builds, values that could be sensitive are marked private/redacted. If you choose to share diagnostics with Apple or a TestFlight developer, some diagnostic logs may be included according to Apple's diagnostic-sharing settings.
 - No third-party SDKs or frameworks are used — the app is built exclusively with Apple's native iOS libraries (SwiftUI, UIKit, UserNotifications, MetricKit).
 
@@ -116,7 +121,7 @@ The app requests **notification permission** to deliver reminder alerts when in 
 
 #### Data sharing
 
-We do not share any data with third parties. Apple may receive aggregated diagnostics and performance metrics through MetricKit as described above.
+We do not share data with third-party advertisers, analytics vendors, or data brokers. Apple may process App Store downloads, TestFlight feedback, crash logs, diagnostic logs, and performance metrics through Apple's systems as described above and in Apple's privacy policy.
 
 #### Children's privacy
 
@@ -140,9 +145,9 @@ Five screenshots required for App Store listing. Capture on iPhone 15 Pro (6.1")
 |---|--------|-------------|-----------------|
 | 1 | **Settings View** | Main settings screen with eye and posture reminder rows, interval/duration pickers visible, toggle ON | "Customize your reminders in seconds" |
 | 2 | **Eye Break Overlay** | Full-screen eye break overlay with countdown ring, blurred background, eye icon | "Gentle eye breaks with the 20-20-20 rule" |
-| 3 | **Posture Check Overlay** | Full-screen posture overlay with countdown, posture icon, dismiss button visible | "Posture nudges that actually help" |
+| 3 | **Posture Check Overlay** | Full-screen posture overlay with countdown, posture icon, dismiss button visible | "Posture check reminders" |
 | 4 | **Onboarding Welcome** | First onboarding screen with app icon, welcome message, get-started flow | "Set up in seconds — no account needed" |
-| 5 | **Snooze Options** | Overlay or settings showing snooze choices (5 min / 15 min / rest of day) | "Snooze when you need to — no guilt" |
+| 5 | **Snooze Options** | Overlay or settings showing snooze choices (5 min / 1 hour / rest of day) | "Snooze when you need to — no guilt" |
 
 **Design notes:**
 - Use device frames (Xcode Screenshot tool or third-party frame generator)
@@ -168,7 +173,7 @@ Five screenshots required for App Store listing. Capture on iPhone 15 Pro (6.1")
 | | |
 |---|---|
 | **Rating** | 4+ |
-| **Rationale** | No objectionable content, no user-generated content, no web browsing, no data collection, no in-app purchases, no ads |
+| **Rationale** | No objectionable content, no user-generated content, no web browsing, no in-app purchases, no ads, no tracking |
 
 All App Store age rating questionnaire answers are "No" / "None".
 
@@ -183,8 +188,8 @@ All App Store age rating questionnaire answers are "No" / "None".
 | **Copyright** | © 2026 Yashasg |
 | **Support URL** | https://github.com/yashasg/fantastic-octo-fortnight |
 | **Marketing URL** | https://github.com/yashasg/fantastic-octo-fortnight |
-| **Version** | 0.1.0 |
-| **Build** | 1 |
+| **Version** | 0.2.0 |
+| **Build** | (CI-assigned via `github.run_number`) |
 | **Availability** | All territories |
 | **Price** | Free |
 | **In-App Purchases** | None |

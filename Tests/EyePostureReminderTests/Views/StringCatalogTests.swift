@@ -142,6 +142,8 @@ final class StringCatalogTests: XCTestCase {
             "settings.section.snooze", "settings.snooze.cancelButton",
             "settings.snooze.5min", "settings.snooze.1hour", "settings.snooze.restOfDay",
             "settings.section.preferences", "settings.hapticFeedback",
+            "settings.notificationFallback", "settings.notificationFallback.footer",
+            "settings.notificationFallback.hint",
             "settings.notifications.disabledTitle", "settings.notifications.disabledBody",
             "settings.notifications.openSettings",
             "overlay.dismissButton", "overlay.countdown.label", "overlay.settingsLabel",
@@ -151,7 +153,7 @@ final class StringCatalogTests: XCTestCase {
             "onboarding.permission.title", "onboarding.permission.enableButton",
             "onboarding.permission.skipButton",
             "onboarding.setup.title", "onboarding.setup.getStartedButton",
-            "legal.dismissButton",
+            "legal.dismissButton", "legal.dismissButton.hint",
             "legal.terms.navTitle", "legal.terms.notMedical.heading", "legal.terms.notMedical.body",
             "legal.terms.professional.heading", "legal.terms.professional.body",
             "legal.terms.userResponsibilities.heading", "legal.terms.userResponsibilities.body",
@@ -184,10 +186,13 @@ final class StringCatalogTests: XCTestCase {
             // settings.legal.* — legal section buttons and hints
             "settings.legal.privacy", "settings.legal.privacy.hint",
             "settings.legal.terms", "settings.legal.terms.hint",
+            "settings.legal.disclaimer", "settings.legal.disclaimer.hint",
             // settings section headers — about, advanced, legal
             "settings.section.about", "settings.section.advanced", "settings.section.legal",
             // settings.snooze.limitReached.hint — shown when snooze limit is reached
             "settings.snooze.limitReached.hint",
+            // settings.snooze.activated/cancelled.announcement — VoiceOver announcements (#406)
+            "settings.snooze.activated.announcement", "settings.snooze.cancelled.announcement",
             // settings.masterToggle.footer — footer below master toggle
             "settings.masterToggle.footer",
             // settings.about.* — version string in About section
@@ -217,14 +222,24 @@ final class StringCatalogTests: XCTestCase {
             "reminder.posture.notificationTitle", "reminder.posture.notificationBody",
             "reminder.posture.overlaySupportiveText",
             // overlay.doneButton — primary CTA on redesigned overlay
-            "overlay.doneButton"
+            "overlay.doneButton",
+            // appCategoryPicker.approved.* count strings — localized plural summary
+            "appCategoryPicker.approved.appCount",
+            "appCategoryPicker.approved.categoryCount",
+            // appCategoryPicker.button.*.hint and appCategoryPicker.doneButton.hint — VoiceOver hints
+            "appCategoryPicker.button.pendingApproval.hint",
+            "appCategoryPicker.button.enableAccess.hint",
+            "appCategoryPicker.button.openSettings.hint",
+            "appCategoryPicker.button.selectApps.hint",
+            "appCategoryPicker.doneButton.hint",
+            // home.trueInterrupt.setupPill.* — rediscovery affordance keys (#280)
+            "home.trueInterrupt.setupPill",
+            "home.trueInterrupt.setupPill.hint"
         ]
         for key in expectedKeys {
             XCTAssertFalse(str(key).isEmpty, "Key '\(key)' must resolve to a non-empty string")
         }
     }
-
-    // MARK: - No Duplicate Keys
 
     func test_noDuplicateKeys_homeScreen() {
         let keys = [
@@ -248,6 +263,8 @@ final class StringCatalogTests: XCTestCase {
             "settings.snooze.restOfDay.hint",
             "settings.section.preferences", "settings.hapticFeedback",
             "settings.hapticFeedback.hint",
+            "settings.notificationFallback", "settings.notificationFallback.footer",
+            "settings.notificationFallback.hint",
             "settings.notifications.disabledTitle", "settings.notifications.disabledBody",
             "settings.notifications.disabledLabel", "settings.notifications.openSettings",
             "settings.notifications.openSettings.hint",
@@ -266,6 +283,7 @@ final class StringCatalogTests: XCTestCase {
             // settings.legal.* — legal section buttons
             "settings.legal.privacy", "settings.legal.privacy.hint",
             "settings.legal.terms", "settings.legal.terms.hint",
+            "settings.legal.disclaimer", "settings.legal.disclaimer.hint",
             // settings section headers and footers
             "settings.section.about", "settings.section.advanced", "settings.section.legal",
             "settings.snooze.limitReached.hint", "settings.masterToggle.footer",
@@ -281,7 +299,7 @@ final class StringCatalogTests: XCTestCase {
         let keys = [
             "overlay.dismissButton", "overlay.countdown.label", "overlay.countdown.value",
             "overlay.settingsLabel", "overlay.settingsButton", "overlay.settingsButton.hint",
-            "overlay.doneButton"
+            "overlay.doneButton", "overlay.doneButton.hint"
         ]
         XCTAssertEqual(Set(keys).count, keys.count, "Overlay screen keys must be unique")
     }
@@ -303,12 +321,14 @@ final class StringCatalogTests: XCTestCase {
             "settings.snooze.restOfDay.hint",
             "settings.section.preferences", "settings.hapticFeedback",
             "settings.hapticFeedback.hint",
+            "settings.notificationFallback", "settings.notificationFallback.footer",
+            "settings.notificationFallback.hint",
             "settings.notifications.disabledTitle", "settings.notifications.disabledBody",
             "settings.notifications.disabledLabel", "settings.notifications.openSettings",
             "settings.notifications.openSettings.hint",
             "overlay.dismissButton", "overlay.countdown.label", "overlay.countdown.value",
             "overlay.settingsLabel", "overlay.settingsButton", "overlay.settingsButton.hint",
-            "overlay.doneButton",
+            "overlay.doneButton", "overlay.doneButton.hint",
             "onboarding.welcome.illustrationLabel", "onboarding.welcome.title",
             "onboarding.welcome.subtitle", "onboarding.welcome.body",
             "onboarding.welcome.nextButton", "onboarding.welcome.nextButton.hint",
@@ -326,7 +346,7 @@ final class StringCatalogTests: XCTestCase {
             "onboarding.setup.picker.every", "onboarding.setup.picker.breakFor",
             "onboarding.setup.changeInSettings", "onboarding.setup.getStartedButton",
             "onboarding.setup.getStartedButton.hint", "onboarding.setup.card.label",
-            "legal.dismissButton",
+            "legal.dismissButton", "legal.dismissButton.hint",
             "legal.terms.navTitle", "legal.terms.notMedical.heading", "legal.terms.notMedical.body",
             "legal.terms.professional.heading", "legal.terms.professional.body",
             "legal.terms.userResponsibilities.heading", "legal.terms.userResponsibilities.body",
@@ -347,7 +367,12 @@ final class StringCatalogTests: XCTestCase {
             "legal.privacy.rights.body", "legal.privacy.changesToPolicy.heading",
             "legal.privacy.changesToPolicy.body", "legal.privacy.contact.heading",
             "legal.privacy.contact.body",
-            // settings.smartPause.* keys (6) — added by Linus for Smart Pause feature
+            // legal.disclaimer.* content keys
+            "legal.disclaimer.navTitle",
+            "legal.disclaimer.notMedical.heading", "legal.disclaimer.notMedical.body",
+            "legal.disclaimer.professional.heading", "legal.disclaimer.professional.body",
+            "legal.disclaimer.ownRisk.heading", "legal.disclaimer.ownRisk.body",
+            "legal.disclaimer.screenTime.heading", "legal.disclaimer.screenTime.body",
             "settings.section.smartPause", "settings.smartPause.footer",
             "settings.smartPause.pauseDuringFocus", "settings.smartPause.pauseDuringFocus.hint",
             "settings.smartPause.pauseWhileDriving", "settings.smartPause.pauseWhileDriving.hint",
@@ -363,6 +388,7 @@ final class StringCatalogTests: XCTestCase {
             // settings.legal.*
             "settings.legal.privacy", "settings.legal.privacy.hint",
             "settings.legal.terms", "settings.legal.terms.hint",
+            "settings.legal.disclaimer", "settings.legal.disclaimer.hint",
             // settings section headers, footers, feedback, about
             "settings.section.about", "settings.section.advanced", "settings.section.legal",
             "settings.snooze.limitReached.hint", "settings.masterToggle.footer",
@@ -379,7 +405,10 @@ final class StringCatalogTests: XCTestCase {
             "reminder.eyes.overlaySupportiveText",
             "reminder.posture.title", "reminder.posture.overlayTitle",
             "reminder.posture.notificationTitle", "reminder.posture.notificationBody",
-            "reminder.posture.overlaySupportiveText"
+            "reminder.posture.overlaySupportiveText",
+            // home.trueInterrupt.setupPill.* — rediscovery affordance (#280)
+            "home.trueInterrupt.setupPill",
+            "home.trueInterrupt.setupPill.hint"
         ]
         XCTAssertEqual(
             Set(allKeys).count,
@@ -484,6 +513,69 @@ final class StringCatalogTests: XCTestCase {
             "'overlay.countdown.value' must resolve to a string containing the count")
     }
 
+    func test_appCategoryPickerApprovedCounts_resolvePluralForms() {
+        let appCount = NSLocalizedString(
+            "appCategoryPicker.approved.appCount",
+            bundle: TestBundle.module,
+            comment: ""
+        )
+        let categoryCount = NSLocalizedString(
+            "appCategoryPicker.approved.categoryCount",
+            bundle: TestBundle.module,
+            comment: ""
+        )
+
+        XCTAssertEqual(String.localizedStringWithFormat(appCount, 1), "1 app")
+        XCTAssertEqual(String.localizedStringWithFormat(appCount, 2), "2 apps")
+        XCTAssertEqual(String.localizedStringWithFormat(categoryCount, 1), "1 category")
+        XCTAssertEqual(String.localizedStringWithFormat(categoryCount, 2), "2 categories")
+    }
+
+    // MARK: - AppCategoryPicker Button Hint Keys
+
+    func test_appCategoryPickerButtonPendingApprovalHint_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("appCategoryPicker.button.pendingApproval.hint"),
+            "'appCategoryPicker.button.pendingApproval.hint' must resolve from catalog")
+    }
+
+    func test_appCategoryPickerButtonEnableAccessHint_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("appCategoryPicker.button.enableAccess.hint"),
+            "'appCategoryPicker.button.enableAccess.hint' must resolve from catalog")
+    }
+
+    func test_appCategoryPickerButtonOpenSettingsHint_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("appCategoryPicker.button.openSettings.hint"),
+            "'appCategoryPicker.button.openSettings.hint' must resolve from catalog")
+    }
+
+    func test_appCategoryPickerButtonSelectAppsHint_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("appCategoryPicker.button.selectApps.hint"),
+            "'appCategoryPicker.button.selectApps.hint' must resolve from catalog")
+    }
+
+    func test_appCategoryPickerDoneButtonHint_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("appCategoryPicker.doneButton.hint"),
+            "'appCategoryPicker.doneButton.hint' must resolve from catalog")
+    }
+
+    func test_appCategoryPickerButtonHints_allNonEmpty() {
+        let hintKeys = [
+            "appCategoryPicker.button.pendingApproval.hint",
+            "appCategoryPicker.button.enableAccess.hint",
+            "appCategoryPicker.button.openSettings.hint",
+            "appCategoryPicker.button.selectApps.hint",
+            "appCategoryPicker.doneButton.hint"
+        ]
+        for key in hintKeys {
+            XCTAssertFalse(str(key).isEmpty, "Hint key '\(key)' must resolve to a non-empty string")
+        }
+    }
+
     func test_setupCardLabel_containsPositionalSpecifiers() {
         // "onboarding.setup.card.label" = "%1$@: every %2$@, %3$@ break"
         let value = str("onboarding.setup.card.label")
@@ -555,7 +647,7 @@ final class StringCatalogTests: XCTestCase {
 
     func test_noDuplicateKeys_legalScreen() {
         let keys = [
-            "legal.dismissButton",
+            "legal.dismissButton", "legal.dismissButton.hint",
             "legal.terms.navTitle",
             "legal.terms.notMedical.heading", "legal.terms.notMedical.body",
             "legal.terms.professional.heading", "legal.terms.professional.body",
@@ -587,6 +679,24 @@ final class StringCatalogTests: XCTestCase {
         XCTAssertTrue(
             isTranslated("legal.dismissButton"),
             "'legal.dismissButton' must resolve from catalog, not fall back to key string")
+    }
+
+    func test_legalDismissButtonHint_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("legal.dismissButton.hint"),
+            "'legal.dismissButton.hint' must resolve from catalog (#404)")
+    }
+
+    func test_snoozeActivatedAnnouncement_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("settings.snooze.activated.announcement"),
+            "'settings.snooze.activated.announcement' must resolve from catalog (#406)")
+    }
+
+    func test_snoozeCancelledAnnouncement_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("settings.snooze.cancelled.announcement"),
+            "'settings.snooze.cancelled.announcement' must resolve from catalog (#406)")
     }
 
     func test_legalTermsNavTitle_resolvesToEnglish() {
@@ -775,6 +885,34 @@ final class StringCatalogTests: XCTestCase {
 
     func test_settingsSmartPausePauseWhileDrivingHint_resolvesToEnglish() {
         XCTAssertTrue(isTranslated("settings.smartPause.pauseWhileDriving.hint"))
+    }
+
+    // MARK: - settings.notificationFallback.* Keys: Individual Resolution
+
+    func test_settingsNotificationFallback_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("settings.notificationFallback"))
+    }
+
+    func test_settingsNotificationFallbackFooter_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("settings.notificationFallback.footer"))
+    }
+
+    func test_settingsNotificationFallbackHint_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("settings.notificationFallback.hint"))
+    }
+
+    func test_settingsNotificationFallbackFooter_mentionsTrueInterrupt() {
+        let footer = str("settings.notificationFallback.footer")
+        XCTAssertTrue(
+            footer.contains("True Interrupt"),
+            "Fallback footer must reference True Interrupt so users understand when notifications fire")
+    }
+
+    func test_settingsNotificationFallbackFooter_mentionsUnavailableOrDisabled() {
+        let footer = str("settings.notificationFallback.footer")
+        XCTAssertTrue(
+            footer.contains("unavailable") || footer.contains("disabled"),
+            "Fallback footer must clarify when shielding is unavailable or disabled")
     }
 
     // MARK: - reminder.* Keys: Individual Resolution
@@ -966,6 +1104,10 @@ final class StringCatalogTests: XCTestCase {
         XCTAssertTrue(isTranslated("overlay.dismissButton.hint"))
     }
 
+    func test_overlayDoneButtonHint_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("overlay.doneButton.hint"))
+    }
+
     func test_homeSettingsButtonHint_resolvesToEnglish() {
         XCTAssertTrue(isTranslated("home.settingsButton.hint"))
     }
@@ -1071,33 +1213,46 @@ final class StringCatalogTests: XCTestCase {
                        "'onboarding.setup.changeInSettings' must not resolve to an empty string")
     }
 
-    // MARK: - Permission Copy Regression (P0 + Linus copy pass)
+    // MARK: - Permission Copy Regression (P0 + M3.8 reminder-alert copy)
     //
-    // P0: background reminders were disabled. As part of the fix Linus updated the
-    // permission screen copy to use "reminders" language instead of "notifications"
-    // to avoid promising system-level overlay delivery that might not be available.
+    // The notification permission screen must motivate reminder-alert permission
+    // on its own, without demoting alerts to a backup for True Interrupt Mode.
     //
     // These tests lock in that copy contract so future edits cannot silently revert
-    // to misleading "notification" / "overlay" promises.
+    // to backup-only framing or overlay promises.
 
-    /// Enable-button must say "Enable Reminders" — not "Enable Notifications".
-    /// Linus renamed this to align with reminder-alert language after P0 was filed.
-    func test_onboardingPermission_enableButton_readsEnableReminders() {
+    /// Enable-button must say "Reminder Alerts" — not backup-only implementation copy.
+    func test_onboardingPermission_enableButton_readsReminderAlerts() {
         let value = str("onboarding.permission.enableButton")
         XCTAssertTrue(
-            value.localizedCaseInsensitiveContains("Reminder"),
-            "'onboarding.permission.enableButton' must use 'Reminder' language — got: \(value)")
+            value.localizedCaseInsensitiveContains("Reminder Alerts"),
+            "'onboarding.permission.enableButton' must use reminder-alert language — got: \(value)")
         XCTAssertFalse(
-            value.localizedCaseInsensitiveContains("Notification"),
-            "'onboarding.permission.enableButton' must not use 'Notification' — got: \(value)")
+            value.localizedCaseInsensitiveContains("Backup"),
+            "'onboarding.permission.enableButton' must not demote alerts to backup-only — got: \(value)")
     }
 
-    /// Body line 1 must reference "Reminders" so users understand what they're enabling.
-    func test_onboardingPermission_body1_usesReminderLanguage() {
+    /// Body line 1 must frame alerts as valuable for all users, not as True Interrupt backup.
+    func test_onboardingPermission_body1_valuesReminderAlertsDirectly() {
         let value = str("onboarding.permission.body1")
         XCTAssertTrue(
-            value.localizedCaseInsensitiveContains("Reminder"),
-            "'onboarding.permission.body1' must contain 'Reminder' — got: \(value)")
+            value.localizedCaseInsensitiveContains("gentle alerts"),
+            "'onboarding.permission.body1' must positively frame reminder alerts — got: \(value)")
+        XCTAssertTrue(
+            value.localizedCaseInsensitiveContains("rest your eyes"),
+            "'onboarding.permission.body1' must explain the eye-break value — got: \(value)")
+        XCTAssertTrue(
+            value.localizedCaseInsensitiveContains("check your posture"),
+            "'onboarding.permission.body1' must explain the posture-check value — got: \(value)")
+        XCTAssertFalse(
+            value.localizedCaseInsensitiveContains("backup"),
+            "'onboarding.permission.body1' must not frame alerts as backup-only — got: \(value)")
+        XCTAssertFalse(
+            value.localizedCaseInsensitiveContains("True Interrupt"),
+            "'onboarding.permission.body1' must not redirect to True Interrupt setup — got: \(value)")
+        XCTAssertFalse(
+            value.localizedCaseInsensitiveContains("Screen Time"),
+            "'onboarding.permission.body1' must not depend on Screen Time availability — got: \(value)")
     }
 
     /// Body line 2 must be non-empty and not promise a system-level notification popup.
@@ -1108,6 +1263,59 @@ final class StringCatalogTests: XCTestCase {
         XCTAssertFalse(
             value.localizedCaseInsensitiveContains("overlay"),
             "'onboarding.permission.body2' must not reference 'overlay' — got: \(value)")
+    }
+
+    /// Master toggle footer must distinguish in-app overlays from OS-delivered alerts.
+    func test_primaryToggleFooter_describesBackgroundAlertDeliveryAccurately() {
+        let value = str("settings.masterToggle.footer")
+
+        XCTAssertTrue(
+            value.localizedCaseInsensitiveContains("overlays"),
+            "'settings.masterToggle.footer' must scope app-open language to overlays — got: \(value)")
+        XCTAssertTrue(
+            value.localizedCaseInsensitiveContains("delivered by iOS"),
+            "'settings.masterToggle.footer' must explain alerts are OS-delivered — got: \(value)")
+        XCTAssertTrue(
+            value.localizedCaseInsensitiveContains("app is closed"),
+            "'settings.masterToggle.footer' must not imply closed-app delivery is unavailable — got: \(value)")
+        XCTAssertFalse(
+            value.localizedCaseInsensitiveContains("Reminders only work while the app is open"),
+            "'settings.masterToggle.footer' must not claim all reminders require the app open — got: \(value)")
+    }
+
+    /// Approved picker copy must not ask users to wait for access they already granted.
+    func test_appCategoryPickerApprovedPlaceholder_acknowledgesAccessIsReady() {
+        let value = str("appCategoryPicker.approved.pickerPlaceholder")
+
+        XCTAssertTrue(
+            value.localizedCaseInsensitiveContains("access is ready"),
+            "'appCategoryPicker.approved.pickerPlaceholder' must acknowledge access is ready — got: \(value)")
+        XCTAssertFalse(
+            value.localizedCaseInsensitiveContains("once Screen Time access is approved"),
+            "'appCategoryPicker.approved.pickerPlaceholder' must not ask approved users to wait — got: \(value)")
+        XCTAssertFalse(
+            value.localizedCaseInsensitiveContains("awaiting"),
+            "'appCategoryPicker.approved.pickerPlaceholder' must not imply pending approval — got: \(value)")
+    }
+
+    /// Unavailable True Interrupt copy must not expose internal App Store review details.
+    func test_trueInterruptUnavailableCopy_hidesReviewProcessDetails() {
+        let valuesByKey = [
+            "onboarding.interrupt.pendingNote": str("onboarding.interrupt.pendingNote"),
+            "appCategoryPicker.unavailable.body": str("appCategoryPicker.unavailable.body")
+        ]
+
+        for (key, value) in valuesByKey {
+            XCTAssertTrue(
+                value.localizedCaseInsensitiveContains("update"),
+                "'\(key)' must use user-facing future-update language — got: \(value)")
+            XCTAssertFalse(
+                value.localizedCaseInsensitiveContains("App Store approval"),
+                "'\(key)' must not expose App Store approval details — got: \(value)")
+            XCTAssertFalse(
+                value.localizedCaseInsensitiveContains("Apple review"),
+                "'\(key)' must not expose Apple review details — got: \(value)")
+        }
     }
 
     /// The permission screen title must be non-empty and resolve from the catalog.
@@ -1151,13 +1359,73 @@ final class StringCatalogTests: XCTestCase {
             "reminder.eyes.notificationTitle",
             "reminder.eyes.notificationBody",
             "reminder.posture.notificationTitle",
-            "reminder.posture.notificationBody",
+            "reminder.posture.notificationBody"
         ]
         for key in notificationKeys {
             let value = str(key)
             XCTAssertFalse(
                 value.isEmpty,
                 "'\(key)' must not resolve to an empty string — blank notification content is invisible to users")
+        }
+    }
+
+    func test_reminderNotificationContent_usesBackupReminderCopy() {
+        let backupReminderValues = [
+            str("reminder.eyes.notificationBody"),
+            str("reminder.posture.notificationBody")
+        ]
+        for value in backupReminderValues {
+            XCTAssertTrue(
+                value.localizedCaseInsensitiveContains("backup reminder"),
+                "Notification copy must use user-facing backup-reminder language — got: \(value)"
+            )
+        }
+
+        let notificationAndPreviewValues = [
+            str("reminder.eyes.notificationTitle"),
+            str("reminder.eyes.notificationBody"),
+            str("reminder.posture.notificationTitle"),
+            str("reminder.posture.notificationBody"),
+            str("onboarding.permission.notificationCard.title"),
+            str("onboarding.permission.notificationCard.body"),
+            str("onboarding.permission.notificationCard.label")
+        ]
+        for value in notificationAndPreviewValues {
+            XCTAssertNil(
+                value.range(
+                    of: #"\bfallback\b"#,
+                    options: [.regularExpression, .caseInsensitive]
+                ),
+                "Notification copy must not expose fallback implementation jargon — got: \(value)"
+            )
+        }
+
+        let permissionScreenValues = [
+            str("onboarding.permission.title"),
+            str("onboarding.permission.body1"),
+            str("onboarding.permission.enableButton"),
+            str("onboarding.permission.enableButton.hint"),
+            str("onboarding.permission.notificationCard.body"),
+            str("onboarding.permission.notificationCard.label")
+        ]
+        for value in permissionScreenValues {
+            XCTAssertFalse(
+                value.localizedCaseInsensitiveContains("backup"),
+                "Permission-screen copy must not demote notification alerts to backup-only — got: \(value)"
+            )
+        }
+    }
+
+    func test_reminderNotificationTitles_doNotUseEmojiFirstCopy() {
+        let values = [
+            str("reminder.eyes.notificationTitle"),
+            str("reminder.posture.notificationTitle")
+        ]
+        for value in values {
+            XCTAssertFalse(
+                value.contains("👁") || value.contains("🧍"),
+                "Notification title must not use legacy emoji-first copy — got: \(value)"
+            )
         }
     }
 
@@ -1168,5 +1436,242 @@ final class StringCatalogTests: XCTestCase {
         XCTAssertTrue(
             value.localizedCaseInsensitiveContains("Reminder"),
             "'settings.notifications.disabledTitle' must use 'Reminder' language — got: \(value)")
+    }
+
+    // MARK: - True Interrupt recovery keys (#250, #252, #258)
+
+    func test_settingsTrueInterruptFooterUnavailable_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("settings.trueInterrupt.footer.unavailable"),
+            "'settings.trueInterrupt.footer.unavailable' must resolve from catalog")
+    }
+
+    func test_settingsTrueInterruptFooterUnavailable_mentionsFutureUpdate() {
+        let value = str("settings.trueInterrupt.footer.unavailable")
+        XCTAssertTrue(
+            value.localizedCaseInsensitiveContains("update") || value.localizedCaseInsensitiveContains("coming"),
+            "'settings.trueInterrupt.footer.unavailable' must hint at future availability — got: \(value)")
+        XCTAssertTrue(
+            value.localizedCaseInsensitiveContains("local alerts") || value.localizedCaseInsensitiveContains("alerts"),
+            "'settings.trueInterrupt.footer.unavailable' must reassure that local alerts work — got: \(value)")
+    }
+
+    func test_settingsTrueInterruptDeniedTitle_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("settings.trueInterrupt.denied.title"),
+            "'settings.trueInterrupt.denied.title' must resolve from catalog")
+    }
+
+    func test_settingsTrueInterruptDeniedBody_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("settings.trueInterrupt.denied.body"),
+            "'settings.trueInterrupt.denied.body' must resolve from catalog")
+    }
+
+    func test_settingsTrueInterruptDeniedLabel_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("settings.trueInterrupt.denied.label"),
+            "'settings.trueInterrupt.denied.label' must resolve from catalog")
+    }
+
+    func test_settingsTrueInterruptOpenSettings_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("settings.trueInterrupt.openSettings"),
+            "'settings.trueInterrupt.openSettings' must resolve from catalog")
+    }
+
+    func test_settingsTrueInterruptOpenSettingsHint_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("settings.trueInterrupt.openSettings.hint"),
+            "'settings.trueInterrupt.openSettings.hint' must resolve from catalog")
+    }
+
+    func test_homeTrueInterruptSkippedBannerBody_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("home.trueInterrupt.skippedBanner.body"),
+            "'home.trueInterrupt.skippedBanner.body' must resolve from catalog")
+    }
+
+    func test_homeTrueInterruptSkippedBannerBody_mentionsLocalAlerts() {
+        let value = str("home.trueInterrupt.skippedBanner.body")
+        XCTAssertTrue(
+            value.localizedCaseInsensitiveContains("local alerts") || value.localizedCaseInsensitiveContains("alerts"),
+            "'home.trueInterrupt.skippedBanner.body' must reassure about local alerts — got: \(value)")
+    }
+
+    func test_homeTrueInterruptSkippedBannerSetUp_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("home.trueInterrupt.skippedBanner.setUp"),
+            "'home.trueInterrupt.skippedBanner.setUp' must resolve from catalog")
+    }
+
+    func test_homeTrueInterruptSkippedBannerSetUpHint_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("home.trueInterrupt.skippedBanner.setUp.hint"),
+            "'home.trueInterrupt.skippedBanner.setUp.hint' must resolve from catalog")
+    }
+
+    func test_homeTrueInterruptSkippedBannerDismiss_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("home.trueInterrupt.skippedBanner.dismiss"),
+            "'home.trueInterrupt.skippedBanner.dismiss' must resolve from catalog")
+    }
+
+    func test_homeTrueInterruptSkippedBannerDismissHint_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("home.trueInterrupt.skippedBanner.dismiss.hint"),
+            "'home.trueInterrupt.skippedBanner.dismiss.hint' must resolve from catalog")
+    }
+
+    func test_homeTrueInterruptSkippedBannerLabel_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("home.trueInterrupt.skippedBanner.label"),
+            "'home.trueInterrupt.skippedBanner.label' must resolve from catalog")
+    }
+
+    // MARK: - home.trueInterrupt.setupPill.* Keys (#280)
+
+    func test_homeTrueInterruptSetupPill_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("home.trueInterrupt.setupPill"),
+            "'home.trueInterrupt.setupPill' must resolve from catalog")
+    }
+
+    func test_homeTrueInterruptSetupPillHint_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("home.trueInterrupt.setupPill.hint"),
+            "'home.trueInterrupt.setupPill.hint' must resolve from catalog")
+    }
+
+    func test_homeTrueInterruptSetupPillKeys_areUnique() {
+        let keys = [
+            "home.trueInterrupt.setupPill",
+            "home.trueInterrupt.setupPill.hint"
+        ]
+        XCTAssertEqual(Set(keys).count, keys.count, "Setup pill keys must be unique")
+    }
+
+    // MARK: - #351: Disabled preview button hint key
+
+    /// The disabled hint for the Preview App Selection CTA must resolve to a real string.
+    func test_onboardingInterruptPreviewButtonDisabledHint_resolvesFromCatalog() {
+        XCTAssertTrue(
+            isTranslated("onboarding.interrupt.previewButton.disabled.hint"),
+            "'onboarding.interrupt.previewButton.disabled.hint' must resolve from catalog")
+        XCTAssertFalse(
+            str("onboarding.interrupt.previewButton.disabled.hint").isEmpty,
+            "'onboarding.interrupt.previewButton.disabled.hint' must not be empty")
+    }
+
+    /// #355: onboarding.setup.card.label must be consumable via String(format:) with three args.
+    func test_onboardingSetupCardLabel_formatsWithIntervalAndBreakValues() {
+        let format = str("onboarding.setup.card.label")
+        let result = String(format: format, "Eye Breaks", "20 min", "20 sec")
+        XCTAssertTrue(
+            result.contains("Eye Breaks"),
+            "Formatted result must contain the type title")
+        XCTAssertFalse(
+            result.contains("%1$@") || result.contains("%2$@") || result.contains("%3$@"),
+            "Must not contain un-substituted specifiers after formatting")
+    }
+
+    // MARK: - #357: Dead key removed
+
+    /// onboarding.setup.body was unreferenced and should have been removed from the catalog.
+    func test_onboardingSetupBody_isRemovedFromCatalog() {
+        let value = str("onboarding.setup.body")
+        XCTAssertEqual(
+            value, "onboarding.setup.body",
+            "Dead key 'onboarding.setup.body' must no longer exist in catalog (should echo the key)")
+    }
+
+    // MARK: - #359: Configure unavailable hint
+
+    func test_settingsTrueInterruptConfigureUnavailableHint_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("settings.trueInterrupt.configure.unavailable.hint"),
+            "'settings.trueInterrupt.configure.unavailable.hint' must resolve from catalog")
+    }
+
+    func test_settingsTrueInterruptConfigureUnavailableHint_mentionsUnavailability() {
+        let value = str("settings.trueInterrupt.configure.unavailable.hint")
+        XCTAssertTrue(
+            value.localizedCaseInsensitiveContains("awaiting") ||
+            value.localizedCaseInsensitiveContains("not yet") ||
+            value.localizedCaseInsensitiveContains("unavailable"),
+            "'settings.trueInterrupt.configure.unavailable.hint' must convey unavailability — got: \(value)")
+    }
+
+    // MARK: - #356: Disclaimer localization keys
+
+    func test_settingsLegalDisclaimer_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("settings.legal.disclaimer"),
+            "'settings.legal.disclaimer' must resolve from catalog")
+    }
+
+    func test_settingsLegalDisclaimerHint_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("settings.legal.disclaimer.hint"),
+            "'settings.legal.disclaimer.hint' must resolve from catalog")
+    }
+
+    func test_legalDisclaimerNavTitle_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("legal.disclaimer.navTitle"),
+            "'legal.disclaimer.navTitle' must resolve from catalog")
+    }
+
+    func test_legalDisclaimerNotMedicalHeading_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("legal.disclaimer.notMedical.heading"),
+            "'legal.disclaimer.notMedical.heading' must resolve from catalog")
+    }
+
+    func test_legalDisclaimerNotMedicalBody_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("legal.disclaimer.notMedical.body"),
+            "'legal.disclaimer.notMedical.body' must resolve from catalog")
+    }
+
+    func test_legalDisclaimerProfessionalHeading_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("legal.disclaimer.professional.heading"),
+            "'legal.disclaimer.professional.heading' must resolve from catalog")
+    }
+
+    func test_legalDisclaimerOwnRiskHeading_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("legal.disclaimer.ownRisk.heading"),
+            "'legal.disclaimer.ownRisk.heading' must resolve from catalog")
+    }
+
+    func test_legalDisclaimerScreenTimeHeading_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("legal.disclaimer.screenTime.heading"),
+            "'legal.disclaimer.screenTime.heading' must resolve from catalog")
+    }
+
+    func test_legalDisclaimerScreenTimeBody_mentionsScreenTime() {
+        let value = str("legal.disclaimer.screenTime.body")
+        XCTAssertTrue(
+            value.localizedCaseInsensitiveContains("screen time") ||
+            value.localizedCaseInsensitiveContains("screen-time"),
+            "'legal.disclaimer.screenTime.body' must mention Screen Time — got: \(value)")
+    }
+
+    func test_legalDisclaimerKeys_doNotContainOwnerName() {
+        let contentKeys = [
+            "legal.disclaimer.notMedical.body",
+            "legal.disclaimer.professional.body",
+            "legal.disclaimer.ownRisk.body",
+            "legal.disclaimer.screenTime.body"
+        ]
+        for key in contentKeys {
+            let value = str(key)
+            XCTAssertFalse(
+                value.localizedCaseInsensitiveContains("yashasg"),
+                "'\(key)' must not hardcode owner name — got: \(value)")
+        }
     }
 }

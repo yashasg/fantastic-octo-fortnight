@@ -36,6 +36,8 @@ struct OnboardingSetupView: View {
                         color: AppColor.primaryRest,
                         title: String(localized: "onboarding.setup.eyeBreaks.title", bundle: .module),
                         typeID: "eyes",
+                        intervalKey: .eyesInterval,
+                        durationKey: .eyesBreakDuration,
                         interval: $settings.eyesInterval,
                         breakDuration: $settings.eyesBreakDuration
                     )
@@ -44,6 +46,8 @@ struct OnboardingSetupView: View {
                         color: AppColor.secondaryCalm,
                         title: String(localized: "onboarding.setup.postureChecks.title", bundle: .module),
                         typeID: "posture",
+                        intervalKey: .postureInterval,
+                        durationKey: .postureBreakDuration,
                         interval: $settings.postureInterval,
                         breakDuration: $settings.postureBreakDuration
                     )
@@ -71,7 +75,7 @@ struct OnboardingSetupView: View {
                 .accessibilityHint(Text("onboarding.setup.getStartedButton.hint", bundle: .module))
                 .accessibilityIdentifier("onboarding.setup.getStartedButton")
             }
-            .padding()
+            .padding(AppSpacing.md)
             .frame(maxWidth: AppLayout.onboardingMaxContentWidth)
             .frame(maxWidth: .infinity)
         }
@@ -90,8 +94,12 @@ private struct OnboardingReminderPickerCard: View {
     let title: String
     /// Stable, localisation-safe identifier used for accessibility identifiers (e.g. "eyes", "posture").
     let typeID: String
+    let intervalKey: AnalyticsEvent.SettingKey
+    let durationKey: AnalyticsEvent.SettingKey
     @Binding var interval: TimeInterval
     @Binding var breakDuration: TimeInterval
+    @State private var prevInterval: TimeInterval = .zero
+    @State private var prevBreakDuration: TimeInterval = .zero
 
     var body: some View {
         VStack(alignment: .leading, spacing: AppSpacing.sm) {
@@ -102,7 +110,7 @@ private struct OnboardingReminderPickerCard: View {
                     .symbolRenderingMode(.hierarchical)
                     .font(AppFont.reminderCardIcon)
                     .foregroundStyle(color)
-                    .frame(width: AppLayout.minTapTarget, height: AppLayout.minTapTarget)
+                    .frame(width: AppLayout.decorativeIconFrame, height: AppLayout.decorativeIconFrame)
                     .background(
                         RoundedRectangle(cornerRadius: AppLayout.radiusSmall, style: .continuous)
                             .fill(AppColor.surfaceTint)
@@ -129,6 +137,14 @@ private struct OnboardingReminderPickerCard: View {
                     title
                 )
             )
+            .onChange(of: interval) { newValue in
+                AnalyticsLogger.log(.settingChanged(
+                    setting: intervalKey,
+                    oldValue: String(prevInterval),
+                    newValue: String(newValue)
+                ))
+                prevInterval = newValue
+            }
 
             // Break duration picker — how long each break lasts
             Picker(String(localized: "onboarding.setup.picker.breakFor", bundle: .module), selection: $breakDuration) {
@@ -143,11 +159,32 @@ private struct OnboardingReminderPickerCard: View {
                     title
                 )
             )
+            .onChange(of: breakDuration) { newValue in
+                AnalyticsLogger.log(.settingChanged(
+                    setting: durationKey,
+                    oldValue: String(prevBreakDuration),
+                    newValue: String(newValue)
+                ))
+                prevBreakDuration = newValue
+            }
+        }
+        .onAppear {
+            prevInterval = interval
+            prevBreakDuration = breakDuration
         }
         .padding(AppSpacing.lg)
         .wellnessCard(elevated: true)
         .accessibilityElement(children: .contain)
-        .accessibilityLabel(title)
+        .accessibilityLabel(cardAccessibilityLabel)
+    }
+
+    private var cardAccessibilityLabel: String {
+        String(
+            format: String(localized: "onboarding.setup.card.label", bundle: .module),
+            title,
+            SettingsViewModel.labelForInterval(interval),
+            SettingsViewModel.labelForBreakDuration(breakDuration)
+        )
     }
 }
 

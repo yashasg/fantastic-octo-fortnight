@@ -437,6 +437,128 @@ final class ScreenTimeTrackerTests: XCTestCase {
 
 }
 
+// MARK: - Stale-Task Race Tests (Issue #301)
+
+extension ScreenTimeTrackerTests {
+
+    /// Simulates the stale-task race:
+    ///   1. The tick timer fires and enqueues a Task (captures `generation = G`).
+    ///   2. `stopTicking()` runs before the Task body executes (increments generation to G+1).
+    ///   3. The Task body runs — `tickGuarded(generation: G)` must no-op because G ≠ G+1.
+    ///
+    /// This test drives the scenario deterministically via `tickGuarded` without needing
+    /// real timers or thread-ordering tricks.
+    func test_staleTask_afterStopTicking_doesNotAdvanceElapsedOrFireCallback() {
+        var callbackFired = false
+        sut.setThreshold(1.0, for: .eyes)
+        sut.onThresholdReached = { _ in callbackFired = true }
+
+        // Capture the generation that a live timer closure would have captured.
+        let staleGeneration = sut.tickingGeneration
+
+        // stopTicking (via stop()) increments tickingGeneration — simulates the race window.
+        sut.stop()
+
+        // The stale Task body runs with the old generation. Must be a no-op.
+        sut.tickGuarded(generation: staleGeneration, now: 1000.0)
+        sut.tickGuarded(generation: staleGeneration, now: 1001.0) // second stale tick
+
+        XCTAssertFalse(callbackFired, "stale task must not fire threshold callback after stopTicking")
+    }
+
+    /// Verifies that a fresh `tickGuarded` call (matching generation) does advance elapsed
+    /// and fire the threshold — confirming the guard only blocks stale generations.
+    func test_freshTickGuarded_matchingGeneration_advancesElapsedAndFiresCallback() {
+        var callbackFired = false
+        sut.setThreshold(1.0, for: .eyes)
+        sut.onThresholdReached = { _ in callbackFired = true }
+
+        // The current generation is live — tickGuarded must behave like tick().
+        let liveGeneration = sut.tickingGeneration
+        sut.tickGuarded(generation: liveGeneration, now: 1000.0)
+
+        XCTAssertTrue(callbackFired, "tickGuarded with matching generation must fire threshold callback")
+    }
+
+    /// After stopTicking + startTicking (via didBecomeActive), the new generation
+    /// must reject the old captured generation.
+    func test_staleTask_afterRestartTicking_doesNotFire() {
+        var callbackFired = false
+        sut.setThreshold(1.0, for: .eyes)
+        sut.onThresholdReached = { _ in callbackFired = true }
+
+        let staleGeneration = sut.tickingGeneration
+
+        // Stop then restart: simulates resign-active followed by became-active.
+        sut.stop()
+        NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
+
+        // Stale task runs with old generation — must not fire.
+        sut.tickGuarded(generation: staleGeneration, now: 1000.0)
+
+        XCTAssertFalse(callbackFired, "stale task must not fire callback after tracker restarts with new generation")
+        sut.stop()
+    }
+
+}
+
+extension ScreenTimeTrackerTests {
+
+    /// Verifies the `min(now - lastTickTime, 2.0)` cap in `tick(now:)`.
+    ///
+    /// Strategy:
+    ///   - threshold = 4.0 (needs 4 s of accumulated delta)
+    ///   - tick 1 at T       → lastTickTime == 0, so delta = 1.0 (first-tick default), elapsed = 1.0
+    ///   - tick 2 at T+10    → gap = 10 s; WITHOUT cap delta = 10.0 → elapsed = 11.0 ≥ 4.0 (fires)
+    ///                         WITH cap delta = 2.0 → elapsed = 3.0 < 4.0 (must NOT fire yet)
+    ///   - tick 3 at T+11    → gap = 1 s, delta = 1.0, elapsed = 4.0 ≥ 4.0 → fires
+    ///
+    /// The middle assertion (callCount == 0 after tick 2) would fail if the cap were removed.
+    func test_tick_deltaIsCappedAtTwoSeconds() {
+        var callCount = 0
+        sut.setThreshold(4.0, for: .eyes)
+        sut.onThresholdReached = { type in
+            guard type == .eyes else { return }
+            callCount += 1
+        }
+
+        // Tick 1: first tick uses default delta of 1.0 regardless of gap.
+        sut.tick(now: 1000.0)
+        XCTAssertEqual(callCount, 0, "threshold not reached after tick 1 (elapsed = 1.0 < 4.0)")
+
+        // Tick 2: 10 s wall-clock gap — capped to 2.0. elapsed = 3.0 < 4.0.
+        // Without the cap the uncapped delta would be 10.0 → elapsed = 11.0 ≥ 4.0, firing here.
+        sut.tick(now: 1010.0)
+        XCTAssertEqual(
+            callCount,
+            0,
+            "with 2 s delta cap, elapsed = 3.0 must not reach threshold = 4.0 (without cap it would be 11.0)")
+
+        // Tick 3: 1 s gap — delta = 1.0, elapsed = 4.0 ≥ 4.0 → threshold fires.
+        sut.tick(now: 1011.0)
+        XCTAssertEqual(
+            callCount,
+            1,
+            "threshold = 4.0 must be reached after three ticks (1.0 + 2.0 + 1.0 = 4.0)")
+    }
+
+    /// Verifies that the first tick always contributes delta = 1.0 even when
+    /// `tick(now:)` is called with an arbitrary `now` value (lastTickTime == 0 guard).
+    func test_tick_firstTickAlwaysUsesFallbackDeltaOfOneSecond() {
+        var callCount = 0
+        sut.setThreshold(0.5, for: .eyes)
+        sut.onThresholdReached = { type in
+            guard type == .eyes else { return }
+            callCount += 1
+        }
+
+        // Regardless of `now`, the first tick must use delta = 1.0.
+        sut.tick(now: 99_999.0)
+        XCTAssertEqual(callCount, 1, "first tick delta = 1.0 must fire threshold = 0.5")
+    }
+
+}
+
 // MARK: - Stop & Reset Tests
 
 extension ScreenTimeTrackerTests {
@@ -504,5 +626,106 @@ extension ScreenTimeTrackerTests {
         )
         XCTAssertEqual(callCount, 1, "Exactly one callback must fire after reset")
         sut.stop()
+    }
+}
+
+// MARK: - Grace-Period Behavioural Tests
+
+/// Tests that use `ScreenTimeTracker(resetGracePeriod: 0.1)` to exercise the
+/// grace-period logic without multi-second sleeps.
+///
+/// Each test creates its own tracker so the injected `resetGracePeriod`
+/// does not affect the other test cases (which use the 5 s default).
+extension ScreenTimeTrackerTests {
+
+    // MARK: - willResignActive → didBecomeActive within grace: counters preserved
+
+    /// When the app returns to active **within** the grace period the pending reset
+    /// task must be cancelled and accumulated elapsed time must be preserved, so the
+    /// threshold callback fires sooner than it would from a cold start.
+    ///
+    /// Strategy:
+    ///   1. Create a tracker with a 0.1 s grace period and a 2 s threshold.
+    ///   2. Start ticking and accumulate ~1.2 s of elapsed time.
+    ///   3. Resign active (arms the 0.1 s grace timer).
+    ///   4. Return within 50 ms — well inside the grace window.
+    ///   5. The callback must fire within ~1 s of resume (not ~2 s from scratch),
+    ///      proving the accumulated time was not erased.
+    func test_gracePeriod_withinGrace_preservesElapsedTime() async throws {
+        let tracker = ScreenTimeTracker(resetGracePeriod: 0.1)
+        defer { tracker.stop() }
+
+        let exp = expectation(description: "callback fires with preserved elapsed")
+        tracker.setThreshold(2, for: .eyes)
+        tracker.onThresholdReached = { type in
+            if type == .eyes { exp.fulfill() }
+        }
+
+        // Arm the tick timer.
+        NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
+
+        // Accumulate ~1.2 s of elapsed time (60 % of the 2 s threshold).
+        try await Task.sleep(nanoseconds: 1_200_000_000)
+
+        // Pause the timer; arms the 0.1 s grace window.
+        NotificationCenter.default.post(name: UIApplication.willResignActiveNotification, object: nil)
+
+        // Return after 50 ms — inside the 100 ms grace period.
+        try await Task.sleep(nanoseconds: 50_000_000)
+        NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
+
+        // With ~1.2 s already accumulated the callback should fire within ~1.5 s
+        // of resume (threshold = 2 s, ~0.8 s remaining).  Give a generous 4 s timeout.
+        await fulfillment(of: [exp], timeout: 4.0)
+    }
+
+    // MARK: - willResignActive with grace expired: counters reset
+
+    /// When the grace period **expires** before the app returns to active all counters
+    /// must be zeroed, so the threshold callback cannot fire immediately on resume —
+    /// a full threshold period of ticking is required.
+    ///
+    /// Strategy:
+    ///   1. Create a tracker with a 0.1 s grace period and a 2 s threshold.
+    ///   2. Start ticking and accumulate ~1.2 s of elapsed time.
+    ///   3. Resign active (arms the 0.1 s grace timer).
+    ///   4. Wait 300 ms — the grace period expires and counters reset to 0.
+    ///   5. Return to active and measure time until callback fires.
+    ///      It must be ≥ 1.5 s, proving counters were genuinely zeroed.
+    func test_gracePeriod_expired_resetsCounters() async throws {
+        let tracker = ScreenTimeTracker(resetGracePeriod: 0.1)
+        defer { tracker.stop() }
+
+        let exp = expectation(description: "callback fires after full threshold wait")
+        tracker.setThreshold(2, for: .eyes)
+        tracker.onThresholdReached = { type in
+            if type == .eyes { exp.fulfill() }
+        }
+
+        // Arm the tick timer.
+        NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
+
+        // Accumulate ~1.2 s of elapsed time (60 % of the 2 s threshold).
+        try await Task.sleep(nanoseconds: 1_200_000_000)
+
+        // Pause; arms the 0.1 s grace window.
+        NotificationCenter.default.post(name: UIApplication.willResignActiveNotification, object: nil)
+
+        // Wait 300 ms — well past the 100 ms grace — so counters are reset to 0.
+        try await Task.sleep(nanoseconds: 300_000_000)
+
+        // Return to active.  Elapsed is now 0 so the full 2 s threshold is needed.
+        let resumeTime = Date()
+        NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
+
+        await fulfillment(of: [exp], timeout: 6.0)
+        let elapsed = Date().timeIntervalSince(resumeTime)
+
+        XCTAssertGreaterThanOrEqual(
+            elapsed,
+            1.5,
+            // swiftlint:disable:next line_length
+            "After grace expiry, counters reset to 0 — callback must not fire sooner than ~threshold; elapsed was \(elapsed) s"
+        )
     }
 }

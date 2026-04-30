@@ -1,0 +1,175 @@
+# XcodeGen spec — EyePostureReminder + Screen Time Extension Targets
+#
+# Generates a .xcodeproj containing the main app wrapper plus:
+#   • ShieldConfigurationExtension  (ManagedSettingsUI / ShieldConfigurationDataSource)
+#   • DeviceActivityMonitorExtension (DeviceActivity / DeviceActivityMonitor)
+#
+# ShieldAction extension is deferred to a future phase (#410 Phase 2):
+#   Compiling ShieldActionExtension is unblocked, but real shield-action
+#   callbacks (intercepting primary/secondary button taps) provide no value
+#   until FamilyControls authorisation (#201) is active on device.
+#
+# Generate the xcodeproj with:
+#   ./scripts/setup-screentime.sh
+#
+# Validate (simulator, no signing):
+#   xcodebuild build -project ScreenTimeExtensions/EyePostureReminderExtensions.xcodeproj \
+#     -scheme EyePostureReminderExtensions \
+#     -destination "platform=iOS Simulator,name=iPhone 16" \
+#     CODE_SIGNING_ALLOWED=NO
+#
+# Runtime Screen Time shield rendering requires:
+#   1. FamilyControls entitlement provisioned (issue #201 — external Apple approval)
+#   2. User grants Family Controls authorization on a real device
+#
+# NOTE: The xcodeproj is generated into ScreenTimeExtensions/ (gitignored).
+#       The committed source of truth is this project.yml and the Extensions/ directory.
+
+name: EyePostureReminderExtensions
+
+options:
+  bundleIdPrefix: com.yashasg.eyeposturereminder
+  deploymentTarget:
+    iOS: "16.0"
+  xcodeVersion: "26.4"
+  minimumXcodeGenVersion: "2.40.0"
+  generateEmptyDirectories: false
+
+# Reference the local Swift package so xcodebuild can build the app target.
+packages:
+  EyePostureReminder:
+    path: ..
+
+targets:
+
+  # ── Main app wrapper ──────────────────────────────────────────────────────
+  EyePostureReminder:
+    type: application
+    platform: iOS
+    deploymentTarget: "16.0"
+    dependencies:
+      - package: EyePostureReminder
+      - target: ShieldConfigurationExtension
+        embed: true
+        link: false
+      - target: DeviceActivityMonitorExtension
+        embed: true
+        link: false
+    sources:
+      - path: EyePostureReminder/AppIcon.xcassets
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.yashasg.eyeposturereminder
+        TARGETED_DEVICE_FAMILY: "1"
+        CODE_SIGN_IDENTITY: ""
+        CODE_SIGNING_REQUIRED: "NO"
+        CODE_SIGNING_ALLOWED: "NO"
+        INFOPLIST_FILE: ../EyePostureReminder/Info.plist
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        CODE_SIGN_ENTITLEMENTS: ../EyePostureReminder/EyePostureReminder.entitlements
+        ENABLE_BITCODE: "NO"
+        ENABLE_APP_INTENTS_METADATA_EXTRACTION: "NO"
+        ENABLE_APPINTENTS_METADATA_EXTRACTION: "NO"
+        MARKETING_VERSION: "0.2.0"
+        CURRENT_PROJECT_VERSION: "1"
+        SWIFT_TREAT_WARNINGS_AS_ERRORS: "YES"
+    postBuildScripts:
+      - name: "Assemble App Bundle"
+        basedOnDependencyAnalysis: false
+        script: |
+          set -e
+          BIN_SRC="${BUILT_PRODUCTS_DIR}/${EXECUTABLE_NAME}"
+          BIN_DST="${BUILT_PRODUCTS_DIR}/${EXECUTABLE_FOLDER_PATH}/${EXECUTABLE_NAME}"
+          if [ -f "$BIN_SRC" ] && [ "$BIN_SRC" != "$BIN_DST" ]; then
+            cp "$BIN_SRC" "$BIN_DST"
+            chmod +x "$BIN_DST"
+          fi
+          BUNDLE_NAME="${PRODUCT_MODULE_NAME}_${PRODUCT_MODULE_NAME}.bundle"
+          BUNDLE_SRC="${BUILT_PRODUCTS_DIR}/${BUNDLE_NAME}"
+          BUNDLE_DST="${BUILT_PRODUCTS_DIR}/${EXECUTABLE_FOLDER_PATH}/${BUNDLE_NAME}"
+          if [ -d "$BUNDLE_SRC" ]; then
+            rm -rf "$BUNDLE_DST"
+            cp -r "$BUNDLE_SRC" "$BUNDLE_DST"
+          fi
+
+  # ── ShieldConfigurationExtension ─────────────────────────────────────────
+  #
+  # Provides static ShieldConfiguration (title, subtitle, blur) shown in the
+  # system shield overlay during a kshana break.
+  #
+  # Reads break reason from App Group UserDefaults so it can customise the
+  # shield copy without importing the main app module.
+  ShieldConfigurationExtension:
+    type: app-extension
+    platform: iOS
+    deploymentTarget: "16.0"
+    sources:
+      - path: Extensions/ShieldConfigurationExtension
+        excludes:
+          - "*.entitlements"
+          - Info.plist
+      - path: Extensions/Shared
+    dependencies:
+      - sdk: ManagedSettingsUI.framework
+      - sdk: ManagedSettings.framework
+      - sdk: AppIntents.framework
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.yashasg.eyeposturereminder.shieldconfiguration
+        TARGETED_DEVICE_FAMILY: "1"
+        CODE_SIGN_IDENTITY: ""
+        CODE_SIGNING_REQUIRED: "NO"
+        CODE_SIGNING_ALLOWED: "NO"
+        INFOPLIST_FILE: ../Extensions/ShieldConfigurationExtension/Info.plist
+        CODE_SIGN_ENTITLEMENTS: ../Extensions/ShieldConfigurationExtension/ShieldConfigurationExtension.entitlements
+        ENABLE_BITCODE: "NO"
+        ENABLE_APP_INTENTS_METADATA_EXTRACTION: "NO"
+        ENABLE_APPINTENTS_METADATA_EXTRACTION: "NO"
+        MARKETING_VERSION: "0.2.0"
+        CURRENT_PROJECT_VERSION: "1"
+        SWIFT_TREAT_WARNINGS_AS_ERRORS: "YES"
+
+  # ── DeviceActivityMonitorExtension ────────────────────────────────────────
+  #
+  # Receives callbacks from DeviceActivityCenter when a monitored interval
+  # starts or ends. Will apply/remove ManagedSettingsStore shield restrictions
+  # once FamilyControls entitlement (#201) is active.
+  DeviceActivityMonitorExtension:
+    type: app-extension
+    platform: iOS
+    deploymentTarget: "16.0"
+    sources:
+      - path: Extensions/DeviceActivityMonitorExtension
+        excludes:
+          - "*.entitlements"
+          - Info.plist
+      - path: Extensions/Shared
+    dependencies:
+      - sdk: DeviceActivity.framework
+      - sdk: ManagedSettings.framework
+      - sdk: AppIntents.framework
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.yashasg.eyeposturereminder.deviceactivitymonitor
+        TARGETED_DEVICE_FAMILY: "1"
+        CODE_SIGN_IDENTITY: ""
+        CODE_SIGNING_REQUIRED: "NO"
+        CODE_SIGNING_ALLOWED: "NO"
+        INFOPLIST_FILE: ../Extensions/DeviceActivityMonitorExtension/Info.plist
+        CODE_SIGN_ENTITLEMENTS: ../Extensions/DeviceActivityMonitorExtension/DeviceActivityMonitorExtension.entitlements
+        ENABLE_BITCODE: "NO"
+        ENABLE_APP_INTENTS_METADATA_EXTRACTION: "NO"
+        ENABLE_APPINTENTS_METADATA_EXTRACTION: "NO"
+        MARKETING_VERSION: "0.2.0"
+        CURRENT_PROJECT_VERSION: "1"
+        SWIFT_TREAT_WARNINGS_AS_ERRORS: "YES"
+
+schemes:
+  EyePostureReminderExtensions:
+    build:
+      targets:
+        EyePostureReminder: [run, test]
+        ShieldConfigurationExtension: [run]
+        DeviceActivityMonitorExtension: [run]
+    run:
+      config: Debug

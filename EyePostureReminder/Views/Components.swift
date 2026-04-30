@@ -19,9 +19,9 @@ struct WellnessCard: ViewModifier {
             .clipShape(RoundedRectangle(cornerRadius: AppLayout.radiusCard, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: AppLayout.radiusCard, style: .continuous)
-                    .strokeBorder(AppColor.separatorSoft, lineWidth: 1)
+                    .strokeBorder(AppColor.separatorSoft, lineWidth: AppLayout.borderSoft)
             )
-            .applyIf(elevated) { $0.softElevation() }
+            .applyIf(elevated) { $0.softElevation(cornerRadius: AppLayout.radiusCard) }
     }
 }
 
@@ -51,7 +51,7 @@ struct PrimaryButtonStyle: ButtonStyle {
                 .font(AppTypography.bodyEmphasized)
                 .foregroundStyle(AppColor.background)
                 .padding(.horizontal, AppSpacing.lg)
-                .padding(.vertical, AppSpacing.sm + 4)
+                .frame(minHeight: AppLayout.minTapTarget)
                 .background(AppColor.primaryRest)
                 .clipShape(RoundedRectangle(cornerRadius: AppLayout.radiusPill, style: .continuous))
                 .scaleEffect((!reduceMotion && configuration.isPressed) ? 0.98 : 1.0)
@@ -76,7 +76,7 @@ struct IconContainer: View {
     var body: some View {
         Image(systemName: icon)
             .symbolRenderingMode(.hierarchical)
-            .font(.system(size: size * 0.44, weight: .semibold))
+            .font(AppFont.iconContainer(size: size))
             .foregroundStyle(color)
             .frame(width: size, height: size)
             .background(AppColor.surfaceTint)

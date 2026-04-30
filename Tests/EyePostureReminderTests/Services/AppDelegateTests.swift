@@ -38,7 +38,8 @@ final class AppDelegateTests: XCTestCase {
             notificationCenter: mockNotif,
             overlayManager: mockOverlay,
             screenTimeTracker: MockScreenTimeTracker(),
-            pauseConditionProvider: MockPauseConditionProvider()
+            pauseConditionProvider: MockPauseConditionProvider(),
+            ipcStore: MockAppGroupIPCRecorder()
         )
         delegate = AppDelegate()
         delegate.coordinator = coordinator

@@ -8,7 +8,12 @@ struct YinYangEyeView: View {
     @State private var hasStarted = false
     @State private var isVisible = false
 
+    private let reduceMotionOverride: Bool?
     private let diameter = AppLayout.overlayIconSize * 1.55
+
+    init(reduceMotionOverride: Bool? = nil) {
+        self.reduceMotionOverride = reduceMotionOverride
+    }
 
     var body: some View {
         let half = diameter / 2
@@ -50,12 +55,11 @@ struct YinYangEyeView: View {
 
             // Border ring
             Circle()
-                .strokeBorder(AppColor.separatorSoft.opacity(AppOpacity.subtleBorder), lineWidth: 1.5)
+                .strokeBorder(AppColor.separatorSoft.opacity(AppOpacity.subtleBorder), lineWidth: AppLayout.borderBold)
         }
         .frame(width: diameter, height: diameter)
         .rotationEffect(.degrees(spinComplete ? 360 : 0))
         .scaleEffect(breathing ? 1.06 : 1.0)
-        .accessibilityIdentifier("home.statusIcon")
         .accessibilityHidden(true)
         .onAppear {
             isVisible = true
@@ -67,7 +71,7 @@ struct YinYangEyeView: View {
                 breathing = false
             }
         }
-        .onChange(of: reduceMotion) { newValue in
+        .onChange(of: shouldReduceMotion) { newValue in
             if newValue {
                 withAnimation(.easeInOut(duration: 0.3)) {
                     breathing = false
@@ -78,14 +82,21 @@ struct YinYangEyeView: View {
         }
     }
 
+    private var shouldReduceMotion: Bool {
+        reduceMotionOverride ?? reduceMotion
+    }
+
     private func startAnimations() {
-        guard !reduceMotion else { return }
+        guard !shouldReduceMotion else { return }
 
         if hasStarted {
             // Returning to view — restart breathing only
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 guard isVisible else { return }
-                withAnimation(.easeInOut(duration: 4).repeatForever(autoreverses: true)) {
+                withAnimation(
+                    .easeInOut(duration: AppAnimation.yinYangBreathingDuration)
+                    .repeatForever(autoreverses: true)
+                ) {
                     breathing = true
                 }
             }
@@ -101,7 +112,7 @@ struct YinYangEyeView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
             guard isVisible else { return }
             withAnimation(
-                .easeInOut(duration: 4)
+                .easeInOut(duration: AppAnimation.yinYangBreathingDuration)
                 .repeatForever(autoreverses: true)
             ) {
                 breathing = true

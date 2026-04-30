@@ -5,6 +5,19 @@ import UIKit
 
 // MARK: - OverlayPresenting Protocol
 
+struct OverlayLifecycleCallbacks {
+    let onPresent: () -> Void
+    let onDismiss: () -> Void
+
+    init(
+        onPresent: @escaping () -> Void = {},
+        onDismiss: @escaping () -> Void = {}
+    ) {
+        self.onPresent = onPresent
+        self.onDismiss = onDismiss
+    }
+}
+
 /// Abstracts UIWindow overlay lifecycle for testability.
 ///
 /// The concrete implementation creates a secondary `UIWindow` at
@@ -24,13 +37,13 @@ protocol OverlayPresenting: AnyObject {
     ///               for a countdown UI).
     ///   - hapticsEnabled: Whether haptic feedback should fire on this overlay.
     ///   - pauseMediaEnabled: Whether to interrupt external audio during this overlay.
-    ///   - onDismiss: Called on the main thread after the overlay is dismissed.
+    ///   - callbacks: Lifecycle hooks called after presentation and dismissal.
     func showOverlay(
         for type: ReminderType,
         duration: TimeInterval,
         hapticsEnabled: Bool,
         pauseMediaEnabled: Bool,
-        onDismiss: @escaping () -> Void
+        callbacks: OverlayLifecycleCallbacks
     )
 
     /// Programmatically dismiss the overlay (e.g. user tapped "Done" or timer expired).
@@ -45,6 +58,24 @@ protocol OverlayPresenting: AnyObject {
     /// Drop all queued overlays for a specific reminder type (e.g. when a single
     /// reminder type is cancelled without affecting other queued types).
     func clearQueue(for type: ReminderType)
+}
+
+extension OverlayPresenting {
+    func showOverlay(
+        for type: ReminderType,
+        duration: TimeInterval,
+        hapticsEnabled: Bool,
+        pauseMediaEnabled: Bool,
+        onDismiss: @escaping () -> Void
+    ) {
+        showOverlay(
+            for: type,
+            duration: duration,
+            hapticsEnabled: hapticsEnabled,
+            pauseMediaEnabled: pauseMediaEnabled,
+            callbacks: OverlayLifecycleCallbacks(onDismiss: onDismiss)
+        )
+    }
 }
 
 // MARK: - OverlayManager
@@ -66,6 +97,7 @@ final class OverlayManager: OverlayPresenting {
     // MARK: - Dependencies
 
     private let audioManager: MediaControlling
+    private let accessibilityNotificationPoster: AccessibilityNotificationPosting
 
     // MARK: - State
 
@@ -79,7 +111,7 @@ final class OverlayManager: OverlayPresenting {
         let duration: TimeInterval
         let hapticsEnabled: Bool
         let pauseMediaEnabled: Bool
-        let onDismiss: () -> Void
+        let callbacks: OverlayLifecycleCallbacks
     }
 
     /// Pending show requests queued while an overlay is already on screen.
@@ -91,8 +123,12 @@ final class OverlayManager: OverlayPresenting {
 
     // MARK: - Init
 
-    init(audioManager: MediaControlling = AudioInterruptionManager()) {
+    init(
+        audioManager: MediaControlling = AudioInterruptionManager(),
+        accessibilityNotificationPoster: AccessibilityNotificationPosting = LiveAccessibilityNotificationPoster()
+    ) {
         self.audioManager = audioManager
+        self.accessibilityNotificationPoster = accessibilityNotificationPoster
         sceneActivationObserver = NotificationCenter.default.addObserver(
             forName: UIScene.didActivateNotification,
             object: nil,
@@ -117,7 +153,7 @@ final class OverlayManager: OverlayPresenting {
         duration: TimeInterval,
         hapticsEnabled: Bool,
         pauseMediaEnabled: Bool,
-        onDismiss: @escaping () -> Void
+        callbacks: OverlayLifecycleCallbacks
     ) {
         guard !isOverlayVisible else {
             // Queue instead of stacking windows — dequeued after current overlay dismisses.
@@ -126,7 +162,7 @@ final class OverlayManager: OverlayPresenting {
                 duration: duration,
                 hapticsEnabled: hapticsEnabled,
                 pauseMediaEnabled: pauseMediaEnabled,
-                onDismiss: onDismiss))
+                callbacks: callbacks))
             Logger.overlay.info("Overlay for \(type.rawValue) queued (overlay already visible). Queue depth: \(self.overlayQueue.count)")
             return
         }
@@ -141,7 +177,7 @@ final class OverlayManager: OverlayPresenting {
                 duration: duration,
                 hapticsEnabled: hapticsEnabled,
                 pauseMediaEnabled: pauseMediaEnabled,
-                onDismiss: onDismiss))
+                callbacks: callbacks))
             Logger.overlay.warning(
                 "No active UIWindowScene — overlay for \(type.rawValue) queued (depth: \(self.overlayQueue.count))"
             )
@@ -151,7 +187,7 @@ final class OverlayManager: OverlayPresenting {
         if pauseMediaEnabled {
             audioManager.pauseExternalAudio()
         }
-        dismissCallback = onDismiss
+        dismissCallback = callbacks.onDismiss
 
         // Do NOT set window.overrideUserInterfaceStyle — the window must inherit the
         // scene's appearance so the overlay renders correctly in both light and dark mode.
@@ -160,11 +196,18 @@ final class OverlayManager: OverlayPresenting {
         window.backgroundColor = .clear
 
         let hostingController = UIHostingController(
-            rootView: OverlayView(type: type, duration: duration, hapticsEnabled: hapticsEnabled, onAnalyticsEvent: AnalyticsLogger.log, onSettingsTap: {
-                UserDefaults.standard.set(true, forKey: AppStorageKey.openSettingsOnLaunch)
-            }) { [weak self] in
-                Task { @MainActor in self?.dismissOverlay() }
-            }
+            rootView: OverlayView(
+                type: type,
+                duration: duration,
+                hapticsEnabled: hapticsEnabled,
+                onAnalyticsEvent: AnalyticsLogger.log,
+                onSettingsTap: {
+                    UserDefaults.standard.set(true, forKey: AppStorageKey.openSettingsOnLaunch)
+                },
+                onDismiss: { [weak self] in
+                    Task { @MainActor in self?.dismissOverlay() }
+                }
+            )
         )
         hostingController.view.backgroundColor = .clear
         hostingController.view.accessibilityViewIsModal = true
@@ -172,7 +215,9 @@ final class OverlayManager: OverlayPresenting {
         window.makeKeyAndVisible()
 
         overlayWindow = window
+        accessibilityNotificationPoster.postScreenChanged(focusElement: nil)
         Logger.overlay.info("Overlay shown for type=\(type.rawValue), duration=\(duration)s")
+        callbacks.onPresent()
     }
 
     func dismissOverlay() {
@@ -193,6 +238,13 @@ final class OverlayManager: OverlayPresenting {
         // Debug assertion to catch accidental window retention.
         assert(overlayWindow == nil, "OverlayManager: overlayWindow must be nil after dismissal")
 
+        // Post screenChanged so VoiceOver focus returns to the underlying app.
+        // Skip when a queued overlay is about to appear immediately — its own
+        // showOverlay() call will post the notification, avoiding a double-post.
+        if overlayQueue.isEmpty {
+            accessibilityNotificationPoster.postScreenChanged(focusElement: nil)
+        }
+
         // Present the next queued overlay, if any.
         presentNextQueuedOverlay()
     }
@@ -212,7 +264,7 @@ final class OverlayManager: OverlayPresenting {
         let removed = before - overlayQueue.count
         if removed > 0 {
             Logger.overlay.info(
-                "Overlay queue: removed \(removed) queued item(s) for \(type.rawValue). Remaining: \(self.overlayQueue.count)"
+                "Overlay queue removed \(removed) item(s) for \(type.rawValue); remaining \(self.overlayQueue.count)"
             )
         }
     }
@@ -220,6 +272,11 @@ final class OverlayManager: OverlayPresenting {
     // MARK: - Private
 
     private func presentNextQueuedOverlay() {
+        // Guard: do not dequeue while an overlay is already visible.
+        // Without this, a UIScene.didActivateNotification arriving mid-display
+        // would remove the queue head, call showOverlay (which re-appends it at
+        // the tail because isOverlayVisible is true), corrupting FIFO order. (#289)
+        guard !isOverlayVisible else { return }
         guard !overlayQueue.isEmpty else { return }
         guard UIApplication.shared.connectedScenes
             .compactMap({ $0 as? UIWindowScene })
@@ -237,6 +294,6 @@ final class OverlayManager: OverlayPresenting {
             duration: next.duration,
             hapticsEnabled: next.hapticsEnabled,
             pauseMediaEnabled: next.pauseMediaEnabled,
-            onDismiss: next.onDismiss)
+            callbacks: next.callbacks)
     }
 }

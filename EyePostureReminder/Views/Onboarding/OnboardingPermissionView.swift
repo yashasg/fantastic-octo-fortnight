@@ -10,13 +10,16 @@ import UserNotifications
 struct OnboardingPermissionView: View {
     let onNext: () -> Void
     private let notificationCenter: NotificationScheduling
+    private let accessibilityEnabledOverride: Bool?
 
     @Environment(\.accessibilityEnabled) private var accessibilityEnabled
 
     init(onNext: @escaping () -> Void,
-         notificationCenter: NotificationScheduling = UNUserNotificationCenter.current()) {
+         notificationCenter: NotificationScheduling = UNUserNotificationCenter.current(),
+         accessibilityEnabledOverride: Bool? = nil) {
         self.onNext = onNext
         self.notificationCenter = notificationCenter
+        self.accessibilityEnabledOverride = accessibilityEnabledOverride
     }
 
     var body: some View {
@@ -69,19 +72,23 @@ struct OnboardingPermissionView: View {
                         .accessibilityHint(Text("onboarding.permission.skipButton.hint", bundle: .module))
                         .accessibilityIdentifier("onboarding.permission.nextButton")
                 }
-                .padding()
+                .padding(AppSpacing.md)
                 .frame(maxWidth: AppLayout.onboardingMaxContentWidth)
                 .frame(maxWidth: .infinity)
                 // Block horizontal drags to prevent accidental swipe past the
                 // permission screen — but only when VoiceOver is off, so the
                 // three-finger page-navigation gesture still works.
                 .highPriorityGesture(
-                    DragGesture(minimumDistance: accessibilityEnabled ? .infinity : 10)
+                    DragGesture(minimumDistance: shouldUseAccessibilityGestures ? .infinity : 10)
                         .onChanged { _ in }
                 )
             }
             .background(AppColor.background.ignoresSafeArea())
             .calmingEntrance()
+    }
+
+    private var shouldUseAccessibilityGestures: Bool {
+        accessibilityEnabledOverride ?? accessibilityEnabled
     }
 
     private func requestNotificationPermission() {
@@ -103,7 +110,7 @@ private struct NotificationPreviewCard: View {
                     .symbolRenderingMode(.hierarchical)
                     .font(AppFont.caption)
                     .foregroundStyle(AppColor.primaryRest)
-                    .frame(width: AppLayout.minTapTarget, height: AppLayout.minTapTarget)
+                    .frame(width: AppLayout.decorativeIconFrame, height: AppLayout.decorativeIconFrame)
                     .background(
                         RoundedRectangle(cornerRadius: AppLayout.radiusSmall, style: .continuous)
                             .fill(AppColor.surfaceTint)

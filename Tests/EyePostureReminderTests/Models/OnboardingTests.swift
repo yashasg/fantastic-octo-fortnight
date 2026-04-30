@@ -107,4 +107,66 @@ final class OnboardingTests: XCTestCase {
             testDefaults.bool(forKey: Self.hasSeenOnboardingKey),
             "Removing persistent domain must clear the onboarding flag")
     }
+
+    // MARK: - Analytics: single-event regression tests (#324)
+    //
+    // `finishOnboarding()` and `finishOnboardingAndCustomize()` are internal
+    // (not private) so @testable import can reach them.  Neither method accesses
+    // @EnvironmentObject properties, so OnboardingView() is safely instantiable
+    // in a plain unit-test process.
+
+    func test_finishOnboarding_emitsExactlyOneOnboardingCompletedEvent_withGetStartedCTA() {
+        var logged: [AnalyticsEvent] = []
+        AnalyticsLogger.testEventHandler = { logged.append($0) }
+        defer {
+            AnalyticsLogger.testEventHandler = nil
+            UserDefaults.standard.removeObject(forKey: AppStorageKey.hasSeenOnboarding)
+        }
+
+        OnboardingView().finishOnboarding()
+
+        let completed = logged.filter { if case .onboardingCompleted = $0 { return true }; return false }
+        XCTAssertEqual(completed.count, 1, "finishOnboarding must emit exactly one onboardingCompleted event")
+        guard case .onboardingCompleted(let cta) = completed.first else { return XCTFail("No event") }
+        XCTAssertEqual(cta, .getStarted, "finishOnboarding must use the .getStarted CTA")
+    }
+
+    /// Regression test for #324: pre-fix code called finishOnboarding() from
+    /// finishOnboardingAndCustomize(), emitting both .customize and .getStarted.
+    /// This test fails against the pre-fix code (count == 2) and passes after the fix.
+    func test_finishOnboardingAndCustomize_emitsExactlyOneOnboardingCompletedEvent_withCustomizeCTA() {
+        var logged: [AnalyticsEvent] = []
+        AnalyticsLogger.testEventHandler = { logged.append($0) }
+        defer {
+            AnalyticsLogger.testEventHandler = nil
+            UserDefaults.standard.removeObject(forKey: AppStorageKey.hasSeenOnboarding)
+            UserDefaults.standard.removeObject(forKey: AppStorageKey.openSettingsOnLaunch)
+        }
+
+        OnboardingView().finishOnboardingAndCustomize()
+
+        let completed = logged.filter { if case .onboardingCompleted = $0 { return true }; return false }
+        XCTAssertEqual(
+            completed.count, 1,
+            "Customize path must emit exactly one onboardingCompleted event (pre-fix emitted two)")
+        guard case .onboardingCompleted(let cta) = completed.first else { return XCTFail("No event") }
+        XCTAssertEqual(cta, .customize, "Customize path must use the .customize CTA, not .getStarted")
+    }
+
+    func test_finishOnboardingAndCustomize_setsOpenSettingsOnLaunch() {
+        defer { UserDefaults.standard.removeObject(forKey: AppStorageKey.openSettingsOnLaunch)
+                UserDefaults.standard.removeObject(forKey: AppStorageKey.hasSeenOnboarding) }
+        OnboardingView().finishOnboardingAndCustomize()
+        XCTAssertTrue(
+            UserDefaults.standard.bool(forKey: AppStorageKey.openSettingsOnLaunch),
+            "finishOnboardingAndCustomize must set openSettingsOnLaunch")
+    }
+
+    func test_finishOnboarding_setsHasSeenOnboarding() {
+        defer { UserDefaults.standard.removeObject(forKey: AppStorageKey.hasSeenOnboarding) }
+        OnboardingView().finishOnboarding()
+        XCTAssertTrue(
+            UserDefaults.standard.bool(forKey: AppStorageKey.hasSeenOnboarding),
+            "finishOnboarding must set hasSeenOnboarding")
+    }
 }

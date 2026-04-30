@@ -2,7 +2,7 @@
 
 > **Owner:** Rusty (iOS Architect)  
 > **Last Updated:** 2026-04-27  
-> **Status:** Phase 2
+> **Status:** Phase 2 complete / Phase 3 active
 
 ---
 
@@ -238,7 +238,13 @@ final class AudioInterruptionManager: MediaControlling { ... }
 
 ## 3. Project Structure
 
-This project uses **Swift Package Manager** (`Package.swift`) — there is no `.xcodeproj`. Build and test via `xcodebuild` with `-scheme EyePostureReminder`.
+This project uses **Swift Package Manager** (`Package.swift`) for the main app and unit tests. Generated Xcode projects are used only where Apple requires target types that SPM cannot express:
+
+- `UITests/project.yml` → `scripts/setup-uitests.sh` → UI test app wrapper.
+- `project.yml` → `scripts/setup-screentime.sh` → Screen Time app-extension scaffold.
+- `scripts/build_signed.sh` generates a temporary signed archive project under `DerivedData/SignedBuild/Project`.
+
+Do not commit generated `.xcodeproj` output; the XcodeGen specs and scripts are the source of truth.
 
 **Note:** Protocols are co-located with their primary implementation (no separate `Protocols/` folder).
 
@@ -281,10 +287,11 @@ EyePostureReminder/                  (SPM executable target)
 │   ├── DesignSystem.swift            AppColor, AppFont, AppSpacing, AppAnimation tokens
 │   ├── LegalDocumentView.swift       Terms of Service / Privacy Policy inline viewer
 │   └── Onboarding/
-│       ├── OnboardingView.swift      3-screen PageTabView container; writes hasSeenOnboarding
-│       ├── OnboardingWelcomeView.swift   Screen 0 — app intro + value proposition
+│       ├── OnboardingView.swift           4-screen PageTabView container; writes hasSeenOnboarding
+│       ├── OnboardingWelcomeView.swift    Screen 0 — app intro + value proposition
 │       ├── OnboardingPermissionView.swift Screen 1 — notification permission request
-│       └── OnboardingSetupView.swift Screen 2 — reminder type setup / get-started CTA
+│       ├── OnboardingSetupView.swift      Screen 2 — interactive reminder schedule setup
+│       └── OnboardingInterruptModeView.swift Screen 3 — True Interrupt Mode intro; two exit CTAs
 │
 ├── Utilities/
 │   ├── Logger+App.swift              OSLog subsystem categories: .lifecycle, .scheduling, .overlay, .settings
@@ -299,6 +306,18 @@ EyePostureReminder/                  (SPM executable target)
     ├── Localizable.xcstrings         ~35 user-facing strings; Xcode 15 String Catalog
     ├── defaults.json                 First-launch seed values for intervals + feature flags
     └── PrivacyInfo.xcprivacy         Apple privacy manifest for App Store Connect compliance
+
+Extensions/                           (XcodeGen app-extension targets)
+├── Shared/
+│   └── ShieldSessionKeys.swift       App Group UserDefaults keys mirrored from ShieldSession
+├── ShieldConfigurationExtension/
+│   ├── Info.plist                    com.apple.ManagedSettingsUI.shield-configuration-service
+│   ├── ShieldConfigurationDataSource.swift
+│   └── ShieldConfigurationExtension.entitlements
+└── DeviceActivityMonitorExtension/
+    ├── Info.plist                    com.apple.deviceactivity.monitor-extension
+    ├── DeviceActivityMonitorExtension.swift
+    └── DeviceActivityMonitorExtension.entitlements
 
 Tests/
 ├── EyePostureReminderTests/          (SPM test target, depends on EyePostureReminder)
@@ -355,6 +374,8 @@ Tests/
   - Push Notifications (for `UNUserNotificationCenter`)
   - Motion usage (`NSMotionUsageDescription` — driving detection)
   - Focus status usage (`NSFocusStatusUsageDescription` — Focus Mode detection)
+  - App Groups (`group.com.yashasgujjar.kshana`) for main app ↔ Screen Time extension state
+  - FamilyControls entitlement (`com.apple.developer.family-controls`) for runtime Screen Time shielding, blocked on Apple approval in #201
   - No `UIBackgroundModes: audio` (audio session is foreground-only)
 
 ---
@@ -431,8 +452,18 @@ The Asset Catalog defines the following semantic color tokens (each with light/d
 | `PermissionBanner` | `.permissionBanner` | Permission banner background |
 | `PermissionBannerText` | `.permissionBannerText` | Permission banner text |
 | `WarningText` | `.warningText` | Warning label text |
+| `RGPrimaryRest` | `.rgPrimaryRest` | Restful Grove primary (Sage) |
+| `RGSecondaryCalm` | `.rgSecondaryCalm` | Restful Grove secondary (calm tone) |
+| `RGAccentWarm` | `.rgAccentWarm` | Restful Grove accent (warm highlight) |
+| `RGSurface` | `.rgSurface` | Card/surface background |
+| `RGSurfaceTint` | `.rgSurfaceTint` | Surface tint (Mint) |
+| `RGBackground` | `.rgBackground` | Screen background |
+| `RGTextPrimary` | `.rgTextPrimary` | Primary text |
+| `RGTextSecondary` | `.rgTextSecondary` | Secondary/caption text |
+| `RGSeparatorSoft` | `.rgSeparatorSoft` | Dividers and borders |
+| `RGShadowCard` | `.rgShadowCard` | Card drop shadow |
 
-Additionally, `AppColor.overlayBackground` is computed in code as `Color(.systemBackground).opacity(0.6)` — not an Asset Catalog entry.
+> **Note (v0.2.0):** `AppColor.overlayBackground` was removed in v0.2.0 (Restful Grove). The overlay now uses `.ultraThinMaterial` (iOS 15+) directly — no custom computed color needed.
 
 ```swift
 // SwiftUI (automatic dark/light adaptation)
@@ -574,8 +605,6 @@ When `isPaused` changes:
 **Info.plist Permissions Required:**
 
 ```xml
-<key>NSLocationWhenInUseUsageDescription</key>
-<string>We use your location to avoid interrupting while driving.</string>
 <key>NSMotionUsageDescription</key>
 <string>We detect driving activity to pause reminders while you're behind the wheel.</string>
 ```
@@ -699,8 +728,8 @@ Phase 2: BREATHE
 **Risk:** `UNUserNotificationCenter` has a limit of 64 pending notifications per app.
 
 **Mitigation:**
-1. **Current design uses 2 notifications:** One for eyes, one for posture, both set to `repeats: true`. No limit risk.
-2. **If we add snooze:** Each snooze creates a one-time notification. Cap snooze count at 5 per day to stay well under 64.
+1. **Current design uses 2 notifications:** One for eyes, one for posture, both set to `repeats: false`. `ScreenTimeTracker` re-arms after each break. No limit risk.
+2. **Snooze wake notifications** are already implemented (Phase 2) as one-time `repeats: false` notifications — one per snooze activation. Cap snooze count at 5 per day to stay well under 64.
 
 **Severity:** Very Low. Design naturally avoids the limit.
 
@@ -827,8 +856,8 @@ jobs:
 
 **Group related files** in Xcode:
 - `Models/` folder contains all model types
-- `Protocols/` folder contains all protocol definitions
 - `Services/` folder contains all service implementations
+- Protocols are **co-located with their primary implementations** (no separate `Protocols/` folder — see §2 and §3)
 
 ---
 
@@ -929,7 +958,7 @@ Phase 3 requires a new Xcode project (or XcodeGen `project.yml`) with **four tar
 
 All four targets must:
 - Be in the **same Xcode project**
-- Share **App Groups entitlement** (`com.apple.security.application-groups` with ID `group.com.yashasg.eyeposturereminder`)
+- Share **App Groups entitlement** (`com.apple.security.application-groups` with ID `group.com.yashasgujjar.kshana`)
 - Carry **FamilyControls entitlement** (`com.apple.developer.family-controls` with `individual` scope)
 
 ---
@@ -973,7 +1002,7 @@ class DeviceActivityMonitor: DeviceActivityScheduler {
         // Called by system when a scheduled interval begins (e.g., 20 min of Safari use)
         
         // Read App Group state to determine which apps to shield
-        let shared = UserDefaults(suiteName: "group.com.yashasg.eyeposturereminder")
+        let shared = UserDefaults(suiteName: "group.com.yashasgujjar.kshana")
         let shieldedApps = shared?.array(forKey: "shieldedApps") as? [String] ?? []
         
         // Apply ManagedSettingsStore shields
@@ -986,7 +1015,7 @@ class DeviceActivityMonitor: DeviceActivityScheduler {
     
     override func intervalDidEnd(for activity: DeviceActivityName) {
         // Called when interval ends; main app can resume
-        let shared = UserDefaults(suiteName: "group.com.yashasg.eyeposturereminder")
+        let shared = UserDefaults(suiteName: "group.com.yashasgujjar.kshana")
         shared?.set(["shieldActive": false], forKey: "shieldState")
     }
 }
@@ -994,7 +1023,7 @@ class DeviceActivityMonitor: DeviceActivityScheduler {
 
 **Key points:**
 - Extension runs in **separate process** (XPC sandbox) — no direct access to main app memory
-- Only communication channel: **App Groups shared container** (`UserDefaults(suiteName: "group.com.yashasg.eyeposturereminder")`)
+- Only communication channel: **App Groups shared container** (`UserDefaults(suiteName: "group.com.yashasgujjar.kshana")`)
 - Extension is **system-triggered** — not user-triggered, not controlled by main app
 
 ---
@@ -1062,7 +1091,7 @@ class ShieldActionHandler: ShieldActionDelegate {
         
         if action.label == ShieldConfiguration.Label(text: "Start Break") {
             // User tapped "Start Break" — defer (keep shield) + signal main app
-            let shared = UserDefaults(suiteName: "group.com.yashasg.eyeposturereminder")
+            let shared = UserDefaults(suiteName: "group.com.yashasgujjar.kshana")
             shared?.set(Date.now, forKey: "breakStartedAt")
             verdict = .defer
         } else {
@@ -1150,7 +1179,7 @@ This dual-mode design ensures:
 
 ### 5.5.10 App Group State Schema
 
-**Location:** `UserDefaults(suiteName: "group.com.yashasg.eyeposturereminder")`
+**Location:** `UserDefaults(suiteName: "group.com.yashasgujjar.kshana")`
 
 Used by main app ↔ extension communication:
 
@@ -1167,6 +1196,23 @@ fallbackToNotification: Bool        Enable Phase 2 fallback (default true)
 **Main app reads/writes:** Settings, reminder enable/disable, snoozed state
 **Extension only writes:** `shieldActive`, `shieldStartTime` (system-triggered)
 **Extension only reads:** `shieldedApps`, `shieldedCategories` (must be set by main app)
+
+#### IPC Event Log — Cross-Process Write Strategy
+
+The event log uses **per-event slot keys** to avoid the lost-update race that NSLock cannot protect across process boundaries:
+
+```
+trueInterrupt.ipc.event.<UUID>   Data   JSON-encoded AppGroupIPCEvent (one key per event)
+trueInterrupt.ipc.eventLog       Data   Legacy: JSON-encoded [AppGroupIPCEvent] (read-only; written by pre-fix builds)
+```
+
+**Write path (`recordEvent`):** Each call writes exactly one UserDefaults key keyed by the event's UUID. No read of the existing log is required — eliminating the read-modify-write race.
+
+**Read path (`readEvents`):** Aggregates all keys with prefix `trueInterrupt.ipc.event.`, merges with the legacy `trueInterrupt.ipc.eventLog` array if present, sorts by timestamp, and caps to `maxEventCount` (default 100).
+
+**Pruning:** After each write, `pruneEventSlots` scans all slot keys and deletes the oldest ones when the count exceeds the cap. This is a best-effort in-process operation; the correctness guarantee (no lost writes) comes from the per-slot key design, not from pruning atomicity.
+
+**Cross-process safety guarantee:** Two processes writing simultaneously write to different UUID keys. There is no collision possible. The watchdog recovery path in `recoverStaleDeviceActivityWatchdogIfNeeded` reads via `readEvents()`, which always sees every committed slot from every writer.
 
 ---
 
@@ -1224,7 +1270,7 @@ fallbackToNotification: Bool        Enable Phase 2 fallback (default true)
 
 **Gate:** `@AppStorage("hasSeenOnboarding")` in `ContentView`. On first launch `ContentView` renders `OnboardingView`; once `finishOnboarding()` writes `true` the root switches to `NavigationStack { HomeView() }` permanently.
 
-**Three-screen flow:**
+**Four-screen flow:**
 
 ```
 OnboardingView (PageTabView, .page style)
@@ -1233,15 +1279,26 @@ OnboardingView (PageTabView, .page style)
     │       Value proposition + app intro
     │
     ├─ [1] OnboardingPermissionView ──► requests UNUserNotificationCenter auth
-    │       Explains why notifications are needed before the OS prompt
+    │       "Allow Reminder Alerts" triggers system prompt; "Not now" skips
     │       "Next" → page 2 (whether or not permission was granted)
     │
-    └─ [2] OnboardingSetupView ──► "Get Started" / "Customize" → finishOnboarding()
-            Reminder type overview + CTA
+    ├─ [2] OnboardingSetupView ──► "Get Started" → page 3
+    │       Interactive reminder pickers (eye break + posture intervals)
+    │       Values bind directly to SettingsStore
+    │
+    └─ [3] OnboardingInterruptModeView ──► two exit CTAs → finishOnboarding()
+            True Interrupt Mode intro; Coming Soon badge (pre-entitlement)
+            "Get Started without True Interrupt" → finishOnboarding()
+            "Customize Settings" → finishOnboardingAndCustomize()
 
 finishOnboarding()
-    └─ UserDefaults.standard.set(true, forKey: "hasSeenOnboarding")
+    └─ AnalyticsLogger.log(.onboardingCompleted(cta: .getStarted or .customize))
+       UserDefaults.standard.set(true, forKey: "hasSeenOnboarding")
        (ContentView re-renders to HomeView)
+
+finishOnboardingAndCustomize()
+    └─ UserDefaults.standard.set(true, forKey: "openSettingsOnLaunch")
+       finishOnboarding() — HomeView auto-opens Settings sheet on appear
 ```
 
 **`OnboardingScreenWrapper`:** Shared fade + slide-up entrance animation. Respects `accessibilityReduceMotion` — linear fade only when reduced motion is preferred.

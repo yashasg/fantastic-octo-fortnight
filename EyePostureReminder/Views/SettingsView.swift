@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+// swiftlint:disable file_length
 
 // MARK: - ViewModel Box
 
@@ -28,7 +29,7 @@ private struct SettingsRowIcon: View {
 /// Section header with optional tinted icon and styled caption text.
 private struct SettingsSectionHeader: View {
     let titleKey: String.LocalizationValue
-    var iconName: String? = nil
+    var iconName: String?
     var iconTint: Color = AppColor.primaryRest
 
     var body: some View {
@@ -60,7 +61,25 @@ struct SettingsView: View {
 
     @State private var showTerms = false
     @State private var showPrivacy = false
+    @State private var showDisclaimer = false
+    // Previous TimeInterval values for oldValue capture in analytics.
+    // SwiftUI mutates $settings.xxx bindings before onChange fires, so we cannot
+    // read the pre-mutation value inside the ViewModel setter (#386).
+    @State private var prevEyesInterval: TimeInterval = .zero
+    @State private var prevEyesBreakDuration: TimeInterval = .zero
+    @State private var prevPostureInterval: TimeInterval = .zero
+    @State private var prevPostureBreakDuration: TimeInterval = .zero
     @State private var showResetConfirm = false
+
+    private let accessibilityNotificationPoster: AccessibilityNotificationPosting
+
+    init(
+        isPresented: Binding<Bool>,
+        accessibilityNotificationPoster: AccessibilityNotificationPosting = LiveAccessibilityNotificationPoster()
+    ) {
+        self._isPresented = isPresented
+        self.accessibilityNotificationPoster = accessibilityNotificationPoster
+    }
 
     var body: some View {
         Form {
@@ -69,16 +88,20 @@ struct SettingsView: View {
                 AccessibleToggle(
                     isOn: $settings.globalEnabled,
                     tint: AppColor.primaryRest,
-                    accessibilityIdentifier: "home.masterToggle",
+                    accessibilityIdentifier: "settings.masterToggle",
                     accessibilityHint: Text("settings.masterToggle.hint", bundle: .module),
-                    onChange: { _ in viewModel?.globalToggleChanged() }
-                ) {
-                    HStack(spacing: AppSpacing.sm) {
-                        SettingsRowIcon(systemName: "power", tint: AppColor.primaryRest)
-                        Text("settings.masterToggle", bundle: .module)
-                            .foregroundStyle(AppColor.textPrimary)
+                    onChange: { newValue in
+                        viewModel?.notifySettingChanged(.globalEnabled, old: String(!newValue), new: String(newValue))
+                        viewModel?.globalToggleChanged()
+                    },
+                    label: {
+                        HStack(spacing: AppSpacing.sm) {
+                            SettingsRowIcon(systemName: AppSymbol.masterToggle, tint: AppColor.primaryRest)
+                            Text("settings.masterToggle", bundle: .module)
+                                .foregroundStyle(AppColor.textPrimary)
+                        }
                     }
-                }
+                )
                 .listRowBackground(AppColor.surface)
                 .listRowSeparatorTint(AppColor.separatorSoft)
             } footer: {
@@ -154,14 +177,47 @@ struct SettingsView: View {
             // MARK: Preferences
             Section {
                 AccessibleToggle(
-                    isOn: $settings.hapticsEnabled,
+                    isOn: Binding(
+                        get: { viewModel?.hapticsEnabled ?? settings.hapticsEnabled },
+                        set: { newValue in
+                            if let viewModel {
+                                viewModel.hapticsEnabled = newValue
+                            } else {
+                                settings.hapticsEnabled = newValue
+                            }
+                        }
+                    ),
                     tint: AppColor.primaryRest,
                     accessibilityIdentifier: "settings.hapticFeedback",
                     accessibilityHint: Text("settings.hapticFeedback.hint", bundle: .module)
                 ) {
                     HStack(spacing: AppSpacing.sm) {
-                        SettingsRowIcon(systemName: "hand.tap.fill", tint: AppColor.primaryRest)
+                        SettingsRowIcon(systemName: AppSymbol.haptics, tint: AppColor.primaryRest)
                         Text("settings.hapticFeedback", bundle: .module)
+                            .foregroundStyle(AppColor.textPrimary)
+                    }
+                }
+                .listRowBackground(AppColor.surface)
+                .listRowSeparatorTint(AppColor.separatorSoft)
+
+                AccessibleToggle(
+                    isOn: Binding(
+                        get: { viewModel?.notificationFallbackEnabled ?? settings.notificationFallbackEnabled },
+                        set: { newValue in
+                            if let viewModel {
+                                viewModel.notificationFallbackEnabled = newValue
+                            } else {
+                                settings.notificationFallbackEnabled = newValue
+                            }
+                        }
+                    ),
+                    tint: AppColor.primaryRest,
+                    accessibilityIdentifier: "settings.notificationFallback",
+                    accessibilityHint: Text("settings.notificationFallback.hint", bundle: .module)
+                ) {
+                    HStack(spacing: AppSpacing.sm) {
+                        SettingsRowIcon(systemName: AppSymbol.bell, tint: AppColor.primaryRest)
+                        Text("settings.notificationFallback", bundle: .module)
                             .foregroundStyle(AppColor.textPrimary)
                     }
                 }
@@ -169,10 +225,17 @@ struct SettingsView: View {
                 .listRowSeparatorTint(AppColor.separatorSoft)
             } header: {
                 SettingsSectionHeader(titleKey: "settings.section.preferences")
+            } footer: {
+                Text("settings.notificationFallback.footer", bundle: .module)
+                    .font(AppFont.caption)
+                    .foregroundStyle(AppColor.textSecondary)
             }
 
             // MARK: Smart Pause
             SettingsSmartPauseSection(viewModel: viewModel)
+
+            // MARK: True Interrupt Mode
+            SettingsTrueInterruptSection()
 
             // MARK: Notification permission warning
             SettingsNotificationWarningSection()
@@ -194,6 +257,15 @@ struct SettingsView: View {
                 .foregroundStyle(AppColor.primaryRest)
                 .accessibilityHint(Text("settings.legal.privacy.hint", bundle: .module))
                 .accessibilityIdentifier("settings.legal.privacy")
+                .listRowBackground(AppColor.surface)
+                .listRowSeparatorTint(AppColor.separatorSoft)
+
+                Button(action: { showDisclaimer = true },
+                       label: { Text("settings.legal.disclaimer", bundle: .module) })
+                .font(AppFont.body)
+                .foregroundStyle(AppColor.primaryRest)
+                .accessibilityHint(Text("settings.legal.disclaimer.hint", bundle: .module))
+                .accessibilityIdentifier("settings.legal.disclaimer")
                 .listRowBackground(AppColor.surface)
                 .listRowSeparatorTint(AppColor.separatorSoft)
             } header: {
@@ -273,7 +345,7 @@ struct SettingsView: View {
             }
         }
         .scrollContentBackground(.hidden)
-        .background(AppColor.background)
+        .background(AppColor.background.ignoresSafeArea())
         .navigationTitle(Text("settings.navTitle", bundle: .module))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -293,6 +365,9 @@ struct SettingsView: View {
         .sheet(isPresented: $showPrivacy) {
             LegalDocumentView(document: .privacy)
         }
+        .sheet(isPresented: $showDisclaimer) {
+            LegalDocumentView(document: .disclaimer)
+        }
         .onAppear {
             if vmBox.inner == nil {
                 vmBox.inner = SettingsViewModel(
@@ -300,9 +375,76 @@ struct SettingsView: View {
                     scheduler: coordinator
                 )
             }
+            prevEyesInterval = settings.eyesInterval
+            prevEyesBreakDuration = settings.eyesBreakDuration
+            prevPostureInterval = settings.postureInterval
+            prevPostureBreakDuration = settings.postureBreakDuration
         }
         .task {
             await coordinator.refreshAuthStatus()
+        }
+        // Announce master-toggle state changes to VoiceOver (#287).
+        .onChange(of: settings.globalEnabled) { newValue in
+            let message = newValue
+                ? String(localized: "home.status.active", bundle: .module)
+                : String(localized: "home.status.paused", bundle: .module)
+            accessibilityNotificationPoster.postAnnouncement(message: message)
+        }
+        // Announce snooze activate/cancel to VoiceOver (#406).
+        .onChange(of: settings.snoozedUntil) { (newValue: Date?) in
+            let message: String = newValue != nil
+                ? String(localized: "settings.snooze.activated.announcement", bundle: .module)
+                : String(localized: "settings.snooze.cancelled.announcement", bundle: .module)
+            accessibilityNotificationPoster.postAnnouncement(message: message)
+        }
+        // Analytics instrumentation for per-reminder settings (#297, #386).
+        // SwiftUI mutates the store before onChange fires, so old values are captured here.
+        // Note: old/new values are logged with `privacy: .private` (redacted in Console).
+        .onChange(of: settings.eyesEnabled) { newValue in
+            viewModel?.notifySettingChanged(
+                .eyesEnabled,
+                old: String(!newValue),
+                new: String(newValue)
+            )
+        }
+        .onChange(of: settings.eyesInterval) { newValue in
+            viewModel?.notifySettingChanged(
+                .eyesInterval,
+                old: String(prevEyesInterval),
+                new: String(newValue)
+            )
+            prevEyesInterval = newValue
+        }
+        .onChange(of: settings.eyesBreakDuration) { newValue in
+            viewModel?.notifySettingChanged(
+                .eyesBreakDuration,
+                old: String(prevEyesBreakDuration),
+                new: String(newValue)
+            )
+            prevEyesBreakDuration = newValue
+        }
+        .onChange(of: settings.postureEnabled) { newValue in
+            viewModel?.notifySettingChanged(
+                .postureEnabled,
+                old: String(!newValue),
+                new: String(newValue)
+            )
+        }
+        .onChange(of: settings.postureInterval) { newValue in
+            viewModel?.notifySettingChanged(
+                .postureInterval,
+                old: String(prevPostureInterval),
+                new: String(newValue)
+            )
+            prevPostureInterval = newValue
+        }
+        .onChange(of: settings.postureBreakDuration) { newValue in
+            viewModel?.notifySettingChanged(
+                .postureBreakDuration,
+                old: String(prevPostureBreakDuration),
+                new: String(newValue)
+            )
+            prevPostureBreakDuration = newValue
         }
     }
 }
@@ -434,32 +576,46 @@ private struct SettingsSmartPauseSection: View {
             AccessibleToggle(
                 isOn: $settings.pauseDuringFocus,
                 tint: AppColor.primaryRest,
-                accessibilityIdentifier: "settings.smartPause.pauseDuringFocus",
-                accessibilityHint: Text("settings.smartPause.pauseDuringFocus.hint", bundle: .module),
-                onChange: { newValue in viewModel?.pauseDuringFocus = newValue }
-            ) {
-                Label(
-                    String(localized: "settings.smartPause.pauseDuringFocus", bundle: .module),
-                    systemImage: AppSymbol.pauseDuringFocus
+                    accessibilityIdentifier: "settings.smartPause.pauseDuringFocus",
+                    accessibilityHint: Text("settings.smartPause.pauseDuringFocus.hint", bundle: .module),
+                    onChange: { newValue in
+                        viewModel?.notifySettingChanged(
+                            .pauseDuringFocus,
+                            old: String(!newValue),
+                            new: String(newValue)
+                        )
+                    },
+                    label: {
+                        Label(
+                            String(localized: "settings.smartPause.pauseDuringFocus", bundle: .module),
+                            systemImage: AppSymbol.pauseDuringFocus
+                        )
+                        .foregroundStyle(AppColor.textPrimary)
+                    }
                 )
-                .foregroundStyle(AppColor.textPrimary)
-            }
             .listRowBackground(AppColor.surface)
             .listRowSeparatorTint(AppColor.separatorSoft)
 
             AccessibleToggle(
                 isOn: $settings.pauseWhileDriving,
                 tint: AppColor.primaryRest,
-                accessibilityIdentifier: "settings.smartPause.pauseWhileDriving",
-                accessibilityHint: Text("settings.smartPause.pauseWhileDriving.hint", bundle: .module),
-                onChange: { newValue in viewModel?.pauseWhileDriving = newValue }
-            ) {
-                Label(
-                    String(localized: "settings.smartPause.pauseWhileDriving", bundle: .module),
-                    systemImage: AppSymbol.pauseWhileDriving
+                    accessibilityIdentifier: "settings.smartPause.pauseWhileDriving",
+                    accessibilityHint: Text("settings.smartPause.pauseWhileDriving.hint", bundle: .module),
+                    onChange: { newValue in
+                        viewModel?.notifySettingChanged(
+                            .pauseWhileDriving,
+                            old: String(!newValue),
+                            new: String(newValue)
+                        )
+                    },
+                    label: {
+                        Label(
+                            String(localized: "settings.smartPause.pauseWhileDriving", bundle: .module),
+                            systemImage: AppSymbol.pauseWhileDriving
+                        )
+                        .foregroundStyle(AppColor.textPrimary)
+                    }
                 )
-                .foregroundStyle(AppColor.textPrimary)
-            }
             .listRowBackground(AppColor.surface)
             .listRowSeparatorTint(AppColor.separatorSoft)
         } header: {
@@ -476,13 +632,135 @@ private struct SettingsSmartPauseSection: View {
     }
 }
 
+// MARK: - True Interrupt Mode Section
+
+/// Settings section presenting True Interrupt Mode authorization status and
+/// a "Configure App Break Access" button that launches `AppCategoryPickerView`.
+/// Shows an inline denied-recovery warning (#252) and a status-aware footer (#250).
+private struct SettingsTrueInterruptSection: View {
+    @EnvironmentObject private var coordinator: AppCoordinator
+    @StateObject private var selectedAppsState = SelectedAppsState()
+    @State private var showPicker = false
+
+    private var authStatus: ScreenTimeAuthorizationStatus {
+        coordinator.screenTimeAuthorization.authorizationStatus
+    }
+
+    var body: some View {
+        Section {
+            // Status row
+            HStack(spacing: AppSpacing.sm) {
+                SettingsRowIcon(systemName: AppSymbol.trueInterrupt, tint: AppColor.primaryRest)
+                VStack(alignment: .leading, spacing: AppSpacing.xxs) {
+                    Text("settings.trueInterrupt.statusLabel", bundle: .module)
+                        .font(AppFont.body)
+                        .foregroundStyle(AppColor.textPrimary)
+                    Text(LocalizedStringKey(authStatus.localizedStatusKey), bundle: .module)
+                        .font(AppFont.caption)
+                        .foregroundStyle(
+                            authStatus == .approved ? AppColor.primaryRest : AppColor.textSecondary
+                        )
+                }
+                Spacer()
+            }
+            .listRowBackground(AppColor.surface)
+            .listRowSeparatorTint(AppColor.separatorSoft)
+            .accessibilityElement(children: .combine)
+            .accessibilityIdentifier("settings.trueInterrupt.statusRow")
+
+            // Denied recovery: warning card + direct Settings link (#252)
+            if authStatus == .denied {
+                HStack(spacing: AppSpacing.sm) {
+                    IconContainer(icon: AppSymbol.warning, color: AppColor.accentWarm, size: 36)
+                        .accessibilityHidden(true)
+                    VStack(alignment: .leading, spacing: AppSpacing.xs) {
+                        Text("settings.trueInterrupt.denied.title", bundle: .module)
+                            .font(AppFont.bodyEmphasized)
+                            .foregroundStyle(AppColor.textPrimary)
+                        Text("settings.trueInterrupt.denied.body", bundle: .module)
+                            .font(AppFont.caption)
+                            .foregroundStyle(AppColor.textSecondary)
+                    }
+                }
+                .padding(.vertical, AppSpacing.xs)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(Text("settings.trueInterrupt.denied.label", bundle: .module))
+                .listRowBackground(AppColor.accentWarm.opacity(AppOpacity.warningBackground))
+                .listRowSeparatorTint(AppColor.accentWarm.opacity(AppOpacity.warningSeparator))
+                Button(
+                    action: openApplicationSettings,
+                    label: { Text("settings.trueInterrupt.openSettings", bundle: .module) }
+                )
+                .font(AppFont.body)
+                .foregroundStyle(AppColor.accentWarm)
+                .accessibilityHint(Text("settings.trueInterrupt.openSettings.hint", bundle: .module))
+                .accessibilityIdentifier("settings.trueInterrupt.openSettings")
+                .listRowBackground(AppColor.accentWarm.opacity(AppOpacity.warningBackground))
+                .listRowSeparatorTint(AppColor.accentWarm.opacity(AppOpacity.warningSeparator))
+            }
+
+            // Configure button (disabled when entitlement is unavailable — #250)
+            Button {
+                showPicker = true
+            } label: {
+                HStack(spacing: AppSpacing.sm) {
+                    Text("settings.trueInterrupt.configure", bundle: .module)
+                        .font(AppFont.body)
+                        .foregroundStyle(
+                            authStatus == .unavailable
+                                ? AppColor.textSecondary
+                                : AppColor.primaryRest
+                        )
+                    Spacer()
+                    Image(systemName: AppSymbol.chevronTrailing)
+                        .font(AppFont.caption)
+                        .foregroundStyle(AppColor.textSecondary)
+                        .accessibilityHidden(true)
+                }
+            }
+            .disabled(authStatus == .unavailable)
+            .listRowBackground(AppColor.surface)
+            .listRowSeparatorTint(AppColor.separatorSoft)
+            .accessibilityHint(authStatus == .unavailable
+                ? Text("settings.trueInterrupt.configure.unavailable.hint", bundle: .module)
+                : Text("settings.trueInterrupt.configure.hint", bundle: .module))
+            .accessibilityIdentifier("settings.trueInterrupt.configureButton")
+        } header: {
+            SettingsSectionHeader(
+                titleKey: "settings.section.trueInterrupt",
+                iconName: AppSymbol.trueInterrupt,
+                iconTint: AppColor.primaryRest
+            )
+        } footer: {
+            // Pending-approval explanation when unavailable (#250); standard copy otherwise.
+            Text(LocalizedStringKey(authStatus == .unavailable
+                ? "settings.trueInterrupt.footer.unavailable"
+                : "settings.trueInterrupt.footer"), bundle: .module)
+            .font(AppFont.caption)
+            .foregroundStyle(AppColor.textSecondary)
+        }
+        .sheet(isPresented: $showPicker) {
+            AppCategoryPickerView(
+                appsState: selectedAppsState,
+                authorizationStatus: authStatus,
+                onRequestAuthorization: {
+                    Task { _ = await coordinator.screenTimeAuthorization.requestAuthorization() }
+                },
+                onOpenSettings: openApplicationSettings,
+                onDone: { showPicker = false }
+            )
+        }
+    }
+}
+
 // MARK: - Notification Warning Section
 
 private struct SettingsNotificationWarningSection: View {
     @EnvironmentObject private var coordinator: AppCoordinator
 
     var body: some View {
-        if coordinator.notificationAuthStatus == .denied {
+        if coordinator.notificationAuthStatus == .denied,
+           coordinator.settings.notificationFallbackEnabled {
             Section {
                 HStack(spacing: AppSpacing.sm) {
                     IconContainer(icon: AppSymbol.warning, color: AppColor.accentWarm, size: 36)
@@ -503,11 +781,7 @@ private struct SettingsNotificationWarningSection: View {
                 .listRowSeparatorTint(AppColor.accentWarm.opacity(AppOpacity.warningSeparator))
 
                 Button(
-                    action: {
-                        if let url = URL(string: UIApplication.openSettingsURLString) {
-                            UIApplication.shared.open(url)
-                        }
-                    },
+                    action: openApplicationSettings,
                     label: { Text("settings.notifications.openSettings", bundle: .module) }
                 )
                 .font(AppFont.body)
@@ -518,6 +792,12 @@ private struct SettingsNotificationWarningSection: View {
                 .listRowSeparatorTint(AppColor.accentWarm.opacity(AppOpacity.warningSeparator))
             }
         }
+    }
+}
+
+private func openApplicationSettings() {
+    if let url = URL(string: UIApplication.openSettingsURLString) {
+        UIApplication.shared.open(url)
     }
 }
 

@@ -26,7 +26,7 @@ final class SettingsViewModelExtendedTests: XCTestCase {
         try await super.tearDown()
     }
 
-    private func makeSUT(maxSnoozeCount: Int = 3) -> SettingsViewModel {
+    private func makeSUT(maxSnoozeCount: Int = 2) -> SettingsViewModel {
         SettingsViewModel(settings: settings, scheduler: mockScheduler, maxSnoozeCount: maxSnoozeCount)
     }
 
@@ -126,8 +126,8 @@ final class SettingsViewModelExtendedTests: XCTestCase {
 
     func test_intervalOptions_areSortedAscending() {
         let options = SettingsViewModel.intervalOptions
-        for i in 1..<options.count {
-            XCTAssertGreaterThan(options[i], options[i - 1],
+        for index in 1..<options.count {
+            XCTAssertGreaterThan(options[index], options[index - 1],
                 "Interval options must be sorted ascending")
         }
     }
@@ -149,8 +149,8 @@ final class SettingsViewModelExtendedTests: XCTestCase {
 
     func test_breakDurationOptions_areSortedAscending() {
         let options = SettingsViewModel.breakDurationOptions
-        for i in 1..<options.count {
-            XCTAssertGreaterThan(options[i], options[i - 1],
+        for index in 1..<options.count {
+            XCTAssertGreaterThan(options[index], options[index - 1],
                 "Break duration options must be sorted ascending")
         }
     }

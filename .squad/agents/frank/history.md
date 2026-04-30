@@ -195,3 +195,10 @@
 - Update App Store Connect Privacy Labels when feature is approved
 - Update App Store listing description when feature ships
 - Strike Screen Time sections if Apple approval is denied
+
+### 2026-04-30 — Read-Only Legal/Privacy/App Store Audit After True Interrupt Updates
+
+- Reviewed `docs/legal/TERMS.md`, `docs/legal/PRIVACY.md`, `docs/legal/DISCLAIMER.md`, `docs/PRIVACY_NUTRITION_LABELS.md`, `docs/APP_STORE_LISTING.md`, `docs/TESTFLIGHT_METADATA.md`, `docs/TELEMETRY.md`, `README.md`, and `ROADMAP.md` without editing legal documents.
+- Confirmed owner-only placeholders `[PUBLISHER NAME]`, `[CONTACT EMAIL]`, and `[JURISDICTION]` remain untouched and are already covered by owner-blocked release readiness.
+- Confirmed open blockers #185, #196, #201, #209, and #210 cover hosted privacy URL, custom EULA upload, FamilyControls entitlement, Screen Time legal docs/sign-off, and extension signing/CI.
+- Found one new material App Store metadata gap: the App Store description draft lacks explicit "not medical advice" / professional-care disclaimer language despite Health & Fitness positioning and 20-20-20/posture claims. Filed #302 for Danny to update listing copy with Frank review.

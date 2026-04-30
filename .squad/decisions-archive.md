@@ -285,3 +285,306 @@
 **Archive Rationale:** Pre-Phase 1 roadmap and planning decisions preserved for historical context. Active decisions.md now focuses on Phase 1+ implementation to keep file manageable.
 
 **Retrieval:** If pre-Phase 1 context needed for future phases, consult this archive and ROADMAP.md.
+### 2026-04-27T16:32: User directive
+**By:** Yashas (via Copilot)
+**What:** Legal document PII fields — [PUBLISHER NAME], [CONTACT EMAIL], [JURISDICTION] in docs/legal/TERMS.md and docs/legal/PRIVACY.md — must ONLY be edited by Yashas. Squad agents must never fill in, guess, or modify these placeholders. They contain PII and business decisions that only the project owner can make.
+**Why:** User request — these fields were previously filled with incorrect information by agents. Captured to prevent recurrence.
+
+# Decision: Battery & Performance Audit Results — No Critical Issues
+
+**Author:** Rusty (iOS Architect)  
+**Date:** 2025-07-18  
+**Status:** Informational
+
+## Summary
+
+Full battery and performance audit completed across all 33 Swift source files. **No critical (🔴) issues found.** The app is battery-efficient by design.
+
+## Key Validations
+
+1. **Timer architecture is correct.** ScreenTimeTracker uses a 1s timer with 0.5s tolerance, pauses on `willResignActive`, resumes on `didBecomeActive`. Zero CPU usage when backgrounded.
+2. **No background modes.** The app declares no `UIBackgroundModes` — it performs zero work when suspended. This is the right choice for a foreground reminder app.
+3. **All detection is event-driven.** Focus (KVO), CarPlay (`routeChangeNotification`), driving (`CMMotionActivityManager`) — no polling anywhere.
+4. **No retain cycles.** Consistent `[weak self]` across all closures.
+5. **Animations are GPU-efficient.** All use transform-based operations (`.scaleEffect`, `.rotationEffect`), all respect `accessibilityReduceMotion`.
+
+## 3 Minor Warnings (P3/P4)
+
+| ID | Issue | Fix Effort |
+|----|-------|-----------|
+| PERF-001 | OverlayView countdown timer missing `tolerance` | 1 line |
+| PERF-002 | YinYang breathing animation lacks `onDisappear` lifecycle | Small |
+| PERF-003 | OnboardingView `UIPageControl.appearance()` in struct init | Small |
+
+None of these will cause measurable battery drain. They are best-practice improvements.
+
+## Recommendation
+
+No blocking action required. The three P3/P4 items can be addressed opportunistically when touching those files. The app is production-ready from a battery/performance perspective.
+
+## Artifacts
+
+- Full report: `docs/performance-audit.md`
+- Machine-readable issues: `rusty-issues.json`
+
+---
+
+# 2026-04-28: LLC Registration & Apple Entity Guidance
+
+## Decision: Puzzle Quest LLC Registration State Must Be Corrected Before Publisher Finalization
+
+**Author:** Frank (Legal Advisor)  
+**Date:** 2026-04-28  
+**Requested by:** yashasg  
+**Status:** Action required before App Store publisher finalization
+
+### 2026-04-25T03:14:07Z: User directive
+**By:** yashasg (via Copilot)
+**What:** When running tests, always delete the previous TestResults.xcresult before starting a new run
+**Why:** User request — xcodebuild fails with "Existing file at -resultBundlePath" if stale results exist
+
+# Decision: Legal UI Patterns
+
+**Author:** Linus (iOS Dev — UI)  
+**Date:** 2026-04-28  
+**Status:** Implemented
+
+## Context
+
+Legal disclaimer text (from Frank's `docs/legal/`) needed wiring into the app UI in two places:
+1. Onboarding (first launch)
+2. Settings screen (permanent access)
+
+## Decisions
+
+### 2026-04-25T02:09: User directive
+**By:** Yashasg (via Copilot)
+**What:** Fix EVERY issue that comes out of audits — do not drop issues because they are cosmetic or coding style. Report all findings, not just P0/P1/P2. Even P3+ and lower should be reported and fixed.
+**Why:** User request — captured for team memory
+
+
+### 2026-04-25T02:10: User directive
+**By:** Yashasg (via Copilot)
+**What:** Run the audit loop endlessly — audit → create issues → fix → audit again. Never stop until the user explicitly says stop. No convergence exit.
+**Why:** User request — captured for team memory
+
+### 2026-04-25T06:30:00Z: User directive
+**By:** Yashasg (via Copilot)
+**What:** After every code commit: (1) Livingston adds tests for the changed code, (2) run SwiftLint and fix any new violations, (3) run full test suite to catch regressions. This is a mandatory post-commit QA gate.
+**Why:** User request — ensures quality stays high as the team ships fast.
+
+# Product Audit — TestFlight Readiness
+
+> **Author:** Danny (Product Manager)  
+> **Date:** 2026-04-25  
+> **Scope:** Gaps blocking a viable TestFlight beta submission  
+> **Method:** Code inspection, doc review, cross-referencing ROADMAP vs actual state
+
+---
+
+## P0 — Must Fix Before TestFlight Submission
+
+### 2026-04-30T00:02:23.699-07:00: User directive
+**By:** yashasg (via Copilot)
+**What:** At some point, create a PR and validate on the PR gate.
+**Why:** User request — captured for team memory
+
+# Decision: App Store description includes health/wellness disclaimer
+
+**Author:** Danny (PM)
+**Date:** 2026-04-30
+**Status:** Implemented
+
+## Decision
+The App Store description (Section 3 of `docs/APP_STORE_LISTING.md`) must include an explicit "not medical advice" disclaimer paragraph. Any future description edits must preserve this disclaimer or its equivalent.
+
+## Rationale
+App Review and users see the description as the public claim surface. Without the disclaimer, health/wellness language (20-20-20 rule, posture checks) could be interpreted as medical claims — a rejection risk and potential liability issue.
+
+## Implications
+- All future description rewrites must retain disclaimer language.
+- Screen Time feature references must include pending/unavailable status until Apple approval is confirmed.
+- Avoid CTAs that imply guaranteed health outcomes (e.g., "build healthier habits").
+
+# Decision: Release docs and keyword maintenance protocol
+
+**Author:** Danny (PM)
+**Date:** 2026-04-30
+**Status:** Implemented
+
+## Decision
+
+After every version milestone (e.g., v0.1.0 → v0.2.0):
+1. **APP_STORE_LISTING.md** must be updated: version header, What's New section, version/build fields.
+2. **Keywords** must be audited: remove words already in app name/subtitle (Apple indexes those); verify character count ≤ 100.
+3. **CHANGELOG.md** entries written at feature-design time must be re-verified against final code (e.g., snooze options changed from 4→3 after Phase 1).
+4. **Cross-file references** (onboarding screen count, snooze options) must be grepped across CHANGELOG, ARCHITECTURE, UX_FLOWS, APP_STORE_LISTING to catch drift.
+
+## Rationale
+
+Issues #303 and #307 both resulted from docs written at design time that were never updated when implementation diverged. A post-milestone grep pass prevents this class of bug.
+
+# Linus — Onboarding A11y & Modal Accessibility Decisions
+
+**Author:** Linus (iOS Dev — UI)
+**Date:** 2026-04-30
+**Status:** Implemented (commit `01ea123`, fixes #311 #313 #314)
+
+---
+
+## Decision 1: Decorative hero illustrations must be `.accessibilityHidden(true)`
+
+**Rule:** Onboarding hero illustrations (SF Symbol at large size on a circle background) must use `.accessibilityHidden(true)`, NOT `.accessibilityLabel(...)`, when the adjacent screen title conveys the same semantic meaning.
+
+**Rationale:** VoiceOver announces the icon *and* the title, creating a redundant double-announcement. The title is always sufficient — the illustration is decorative.
+
+**Applied pattern:**
+- `AppCategoryPickerView` — ✓ `.accessibilityHidden(true)`
+- `OnboardingPermissionView` — ✓ `.accessibilityHidden(true)`
+- `OnboardingInterruptModeView` — fixed in #311 to `.accessibilityHidden(true)`
+
+**Exception:** Only use `.accessibilityLabel` on a hero illustration if it adds semantic context the title does not provide (e.g., `OnboardingWelcomeView` YinYangEyeView which has distinct visual narrative).
+
+---
+
+## Decision 2: SwiftUI `accessibilityViewIsModal(_:)` is not available in iOS 26 SDK
+
+**Finding:** Running `xcrun swift -e 'import SwiftUI; let _ = Text("").accessibilityViewIsModal(true)'` on Xcode 26.4 produces: *error: value of type 'Text' has no member 'accessibilityViewIsModal'*
+
+**Correct modal suppression pattern for UIKit-hosted overlays:**
+- Set `hostingController.view.accessibilityViewIsModal = true` in `OverlayManager` (UIKit layer)
+- Do NOT use `.accessibilityAddTraits(.isModal)` — this adds a semantic trait but does NOT suppress VoiceOver traversal of other windows
+- Document in SwiftUI view with a comment explaining UIKit ownership
+
+**Impact:** Phase 1 UI Decision 2 must be updated to reflect that `.accessibilityViewIsModal(true)` is unavailable; UIKit path is the only correct implementation.
+
+---
+
+## Decision 3: `finishOnboardingAndCustomize()` pattern for Settings deep-link from onboarding
+
+**Pattern:** When a "Customize Settings" CTA is needed at the end of onboarding, use a separate completion function that:
+1. Sets `AppStorageKey.openSettingsOnLaunch = true` (UserDefaults)
+2. Calls `finishOnboarding()` (sets `hasSeenOnboarding = true`)
+
+`HomeView` observes `openSettingsOnLaunch` via `@AppStorage` and opens Settings sheet in `.onAppear`. No additional coordination needed.
+
+**Why not pass @EnvironmentObject to onboarding view:** Keeps `OnboardingInterruptModeView` free of `@EnvironmentObject` dependencies, which would cause test-host crashes in SPM unit tests. Plain callbacks are testable without infrastructure.
+
+**Location:** `OnboardingView.finishOnboardingAndCustomize()` → passed as `onCustomize:` to final screen.
+
+# Decision: Overlay Accessibility — VoiceOver focus order and dismiss notification
+
+**Author:** Linus (iOS Dev — UI)  
+**Date:** 2026-04-30  
+**Status:** Implemented (commit ebe4bf1, branch fix/overlay-a11y-308-310)
+
+## Decision 1: `accessibilitySortPriority` for ZStack overlay focus
+
+When a ZStack overlay has a dismiss control positioned top-trailing (geometrically high, therefore first in VoiceOver's geometric traversal), use `.accessibilitySortPriority(1)` on the semantic headline/content element to promote it above the dismiss button.
+
+**Rule:** Do NOT reorder ZStack children solely to fix VoiceOver traversal order — sort priority is the correct, localised fix and does not affect visual layout.
+
+**Applied:** `OverlayView.headlineSection` — break title Text now carries `.accessibilitySortPriority(1)`.
+
+## Decision 2: Conditional `postScreenChanged` in `dismissOverlay()`
+
+`dismissOverlay()` must call `accessibilityNotificationPoster.postScreenChanged(focusElement: nil)` after hiding the overlay window — but **only** when `overlayQueue.isEmpty`. When a queued overlay is about to present immediately, the subsequent `showOverlay()` call posts its own `screenChanged`; posting in `dismissOverlay()` too would produce a double-notification that confuses VoiceOver.
+
+**Pattern:** Every dismiss path (user tap, swipe, auto-countdown) routes through the same `dismissOverlay()` — single call site, no duplication needed in `performDismiss()` or `performAutoDismiss()`.
+
+# Decision: Overlay dismiss must post screenChanged notification
+
+**Filed by:** Livingston  
+**Date:** 2026-04-30  
+**Related issue:** #308
+
+## Decision
+
+`OverlayManager.dismissOverlay()` must call `accessibilityNotificationPoster.postScreenChanged(focusElement: nil)` after hiding the overlay window (and only when the overlay was actually visible).
+
+## Rationale
+
+`showOverlay()` was fixed in #298 to post `.screenChanged` so VoiceOver moves focus to the overlay when it appears. Without a matching call on dismiss, VoiceOver focus is stranded in the now-hidden overlay window after every break ends. The fix is symmetric and additive; no API design change is needed.
+
+## Test contract
+
+Any implementation must include a unit test asserting `postScreenChangedCallCount == 1` after `dismissOverlay()` on a manager where an overlay was showing. The existing `doesNotPost` guard-path tests must continue to pass unchanged.
+
+# Decision: IPC legacy key corruption is warn-and-skip, not throw
+
+**Author:** Rusty  
+**Date:** 2026-04-30  
+**Context:** Issue #306
+
+## Decision
+
+When `AppGroupIPCStore.readEventsCombined` encounters a corrupt legacy `trueInterrupt.ipc.eventLog` key, it logs a warning via `os.Logger` and continues reading per-slot event keys. It does **not** throw `StoreError.corruptEventLog`.
+
+This is consistent with the existing per-slot corruption handling (line 262) which uses `try?` to skip corrupt individual slots.
+
+## Rationale
+
+- The legacy key is backward-compat only — new events are written to per-slot keys.
+- A throw from `readEvents()` cascades to `recoverStaleDeviceActivityWatchdogIfNeeded`, which returns `false` on any error, permanently disabling watchdog recovery.
+- No production code calls `clearEvents()`, so there is no self-healing path for a corrupt legacy key.
+- Warn-and-skip is the least-surprise behavior: partial data is better than total failure for a diagnostic event log.
+
+## Scope
+
+This decision applies to the legacy `eventLog` array key only. Per-slot keys already follow the same pattern. If a new aggregate key is added in the future, it should follow warn-and-skip as well.
+
+# Decision: Onboarding Completion CTA Analytics
+
+**Author:** Turk (Data Analyst)
+**Date:** 2026-04-30
+**Issue:** #316
+**Status:** Implemented
+
+## Context
+
+#314 added a second onboarding exit CTA ("Customize Settings") alongside the existing "Get Started". Without analytics, Reuben cannot validate whether the Customize affordance drives engagement, and Tess cannot measure retention differences between the two paths.
+
+## Decision
+
+Add `AnalyticsEvent.onboardingCompleted(cta: OnboardingCTA)` with a typed `OnboardingCTA` enum:
+
+| Case | Raw Value |
+|------|-----------|
+| `.getStarted` | `get_started` |
+| `.customize` | `customize` |
+
+Emit at the top of each exit function, before `UserDefaults` writes, so the event fires even if defaults persistence fails.
+
+## Rationale
+
+- **Typed enum, not string literal** — prevents typo-driven silent data loss and enables exhaustive switch coverage.
+- **Stable snake_case raw values** — consistent with all other analytics enums (`DismissMethod`, `IPCOperation`, etc.).
+- **`privacy: .public`** — single enum code, zero PII, no impact on "Data Not Collected" nutrition label.
+- **Emit before state mutation** — ensures the analytics event is logged even if `UserDefaults.set` throws or the app is killed mid-transition.
+
+## Alternatives Considered
+
+- **String parameter** (`cta: String`) — rejected; violates typed telemetry convention and risks free-form drift.
+- **Separate events** (`onboardingCompletedGetStarted` / `onboardingCompletedCustomize`) — rejected; single event with parameter is more extensible if future CTAs are added.
+
+# Decision: Privacy Manifest — Diagnostics (MetricKit) Must Be Declared
+
+**Agent:** Virgil  
+**Date:** 2026-04-30  
+**Issue:** #315  
+**Branch:** fix/overlay-a11y-308-310  
+
+---
+
+## Context
+
+kshana uses `MXMetricManager.shared.add(self)` in `MetricKitSubscriber` to receive `MXMetricPayload` (performance metrics: launch time, CPU, memory, hang histograms) and `MXDiagnosticPayload` (crash diagnostics: signal, exception type). Apple aggregates these and surfaces them to the developer in App Store Connect Organizer crash reports and analytics dashboards.
+
+`docs/PRIVACY_NUTRITION_LABELS.md` and `docs/legal/PRIVACY.md` both conservatively disclosed these as **Collected** (Diagnostics → Crash Data, Diagnostics → Performance Data, Not Linked, Not Tracking). However, `EyePostureReminder/PrivacyInfo.xcprivacy` had an **empty** `NSPrivacyCollectedDataTypes` array — a direct contradiction.
+
+---
+
+## Decision
+
+**Update `PrivacyInfo.xcprivacy` to declare both Crash Data and Performance Data.** The privacy manifest, App Store Connect nutrition labels, and privacy policy must all tell a consistent story before submission.
+

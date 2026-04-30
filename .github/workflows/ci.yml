@@ -24,7 +24,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  XCODE_VERSION: "26.3"
+  XCODE_VERSION: "26.4"
   SCHEME: "EyePostureReminder"
   # No .xcodeproj — project uses Swift Package Manager.
   # xcodebuild resolves the package directly from Package.swift.
@@ -39,10 +39,16 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
 
       - name: Select Xcode ${{ env.XCODE_VERSION }}
-        run: sudo xcode-select -switch /Applications/Xcode_${{ env.XCODE_VERSION }}.app/Contents/Developer
+        run: |
+          XCODE_PATH="/Applications/Xcode_${{ env.XCODE_VERSION }}.app/Contents/Developer"
+          if [[ -d "$XCODE_PATH" ]]; then
+            sudo xcode-select -switch "$XCODE_PATH"
+          else
+            echo "Xcode_${{ env.XCODE_VERSION }}.app not found; using current selection: $(xcode-select -p)"
+          fi
 
       - name: Ensure iOS Simulator runtime
         run: |
@@ -83,42 +89,84 @@ jobs:
 
       # ── Dependency cache ─────────────────────────────────────────────────────
       - name: Cache DerivedData
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v4.3.0
         with:
           path: ${{ env.DERIVED_DATA_PATH }}
           key: derived-data-${{ runner.os }}-${{ hashFiles('Package.swift', 'Package.resolved') }}
           restore-keys: |
             derived-data-${{ runner.os }}-
 
+      # ── Homebrew package cache ───────────────────────────────────────────────
+      - name: Cache Homebrew packages
+        id: brew-cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v4.3.0
+        with:
+          path: |
+            /opt/homebrew/Cellar/xcodegen
+            /opt/homebrew/Cellar/swiftlint
+          key: ${{ runner.os }}-brew-xcodegen-swiftlint-v1
+          restore-keys: |
+            ${{ runner.os }}-brew-xcodegen-swiftlint-
+
       # ── Build ────────────────────────────────────────────────────────────────
       - name: Build (simulator, no signing)
         run: ./scripts/build.sh build
+
+      # ── Screen Time extension scaffold ──────────────────────────────────────
+      # Compile-only validation. Runtime FamilyControls/DeviceActivity behavior
+      # still requires #201 entitlement approval and physical-device testing.
+      - name: Install XcodeGen
+        run: |
+          if brew list xcodegen &>/dev/null 2>&1; then
+            brew link --overwrite xcodegen 2>/dev/null || true
+          else
+            brew install xcodegen
+          fi
+
+      - name: Build Screen Time extensions (simulator, no signing)
+        run: ./scripts/setup-screentime.sh --build
 
       # ── Test ─────────────────────────────────────────────────────────────────
       - name: Test (simulator)
         run: ./scripts/build.sh test
 
       # ── Lint ─────────────────────────────────────────────────────────────────
+      # if: always() ensures SwiftLint runs and reports even when earlier steps
+      # (e.g. tests) fail — prevents silent lint gaps in a no-warning shop (#388).
       - name: Install SwiftLint
-        run: brew install swiftlint
+        if: always()
+        run: |
+          if brew list swiftlint &>/dev/null 2>&1; then
+            brew link --overwrite swiftlint 2>/dev/null || true
+          else
+            brew install swiftlint
+          fi
 
       - name: Lint (SwiftLint)
+        if: always()
         run: ./scripts/build.sh lint
 
       # ── Coverage ─────────────────────────────────────────────────────────────
       - name: Report coverage
         if: always()
         run: |
-          xcrun xccov view --report TestResults.xcresult 2>/dev/null || true
+          xcrun xccov view --report TestResults.xcresult
 
       - name: Enforce coverage threshold
-        if: success()
+        # Run on all outcomes so coverage is always enforced — even when earlier
+        # steps fail — preventing asymmetric validation where a failing test run
+        # silently bypasses the 80 % gate.
+        if: always()
         run: |
+          if [[ ! -d TestResults.xcresult ]]; then
+            echo "::error::TestResults.xcresult not found — tests may have crashed before producing results"
+            exit 1
+          fi
           COVERAGE=$(xcrun xccov view --report --json TestResults.xcresult \
-            | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['lineCoverage']*100)" 2>/dev/null || echo "0")
+            | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['lineCoverage']*100)")
           echo "Line coverage: ${COVERAGE}%"
           if (( $(echo "$COVERAGE < 80" | bc -l) )); then
-            echo "Coverage ${COVERAGE}% is below the minimum threshold (80%)"
+            echo "::error::Coverage ${COVERAGE}% is below the minimum threshold (80%)"
             exit 1
           fi
 
@@ -129,33 +177,57 @@ jobs:
           find "${{ env.DERIVED_DATA_PATH }}" -name "*.dSYM" -exec cp -r {} . \; 2>/dev/null || true
 
       - name: Upload dSYMs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
         if: always()
         with:
           name: dSYMs-${{ env.MARKETING_VERSION }}-build${{ github.run_number }}
           path: "*.dSYM"
           retention-days: 90
-          if-no-files-found: ignore
+          if-no-files-found: warn
 
       - name: Upload test results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
         if: always()
         with:
           name: test-results-${{ env.MARKETING_VERSION }}-build${{ github.run_number }}
           path: TestResults.xcresult
           retention-days: 30
+          if-no-files-found: error
 
-  uitest:
-    name: UI Tests
+  uitest-shard:
+    name: UI Tests / ${{ matrix.shard.name }}
     runs-on: macos-15
+    needs: build-and-test
     timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        shard:
+          - id: onboarding
+            name: Onboarding
+            only_testing_csv: EyePostureReminderUITests/OnboardingFlowTests
+          - id: home
+            name: Home
+            only_testing_csv: EyePostureReminderUITests/HomeScreenTests
+          - id: settings
+            name: Settings
+            only_testing_csv: EyePostureReminderUITests/SettingsFlowTests
+          - id: overlays-darkmode
+            name: Overlays + Dark Mode
+            only_testing_csv: EyePostureReminderUITests/OverlayTests,EyePostureReminderUITests/OverlayPresentationTests,EyePostureReminderUITests/OverlayPostureTests,EyePostureReminderUITests/DarkModeUITests
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
 
       - name: Select Xcode ${{ env.XCODE_VERSION }}
-        run: sudo xcode-select -switch /Applications/Xcode_${{ env.XCODE_VERSION }}.app/Contents/Developer
+        run: |
+          XCODE_PATH="/Applications/Xcode_${{ env.XCODE_VERSION }}.app/Contents/Developer"
+          if [[ -d "$XCODE_PATH" ]]; then
+            sudo xcode-select -switch "$XCODE_PATH"
+          else
+            echo "Xcode_${{ env.XCODE_VERSION }}.app not found; using current selection: $(xcode-select -p)"
+          fi
 
       - name: Ensure iOS Simulator runtime
         run: |
@@ -166,8 +238,32 @@ jobs:
           echo "Available iOS simulators:"
           xcrun simctl list devices available | grep -i iphone | head -5
 
+      # ── Dependency cache ─────────────────────────────────────────────────────
+      - name: Cache DerivedData
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v4.3.0
+        with:
+          path: ${{ env.DERIVED_DATA_PATH }}
+          key: derived-data-${{ runner.os }}-${{ hashFiles('Package.swift', 'Package.resolved') }}
+          restore-keys: |
+            derived-data-${{ runner.os }}-
+
+      # ── Homebrew package cache ───────────────────────────────────────────────
+      - name: Cache Homebrew packages
+        id: brew-cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v4.3.0
+        with:
+          path: /opt/homebrew/Cellar/xcodegen
+          key: ${{ runner.os }}-brew-xcodegen-v1
+          restore-keys: |
+            ${{ runner.os }}-brew-xcodegen-
+
       - name: Install XcodeGen
-        run: brew install xcodegen
+        run: |
+          if brew list xcodegen &>/dev/null 2>&1; then
+            brew link --overwrite xcodegen 2>/dev/null || true
+          else
+            brew install xcodegen
+          fi
 
       - name: Generate UITest xcodeproj
         run: ./scripts/setup-uitests.sh
@@ -192,13 +288,30 @@ jobs:
           # Extra settle time for system services
           sleep 5
 
-      - name: Run UI Tests
-        run: ./scripts/build.sh uitest
+      - name: Run UI Tests (shard ${{ matrix.shard.id }})
+        run: |
+          IFS=',' read -r -a ONLY_TESTING_FILTERS <<< "${{ matrix.shard.only_testing_csv }}"
+          CMD=(./scripts/build.sh uitest --result-bundle-path "UITestResults-${{ matrix.shard.id }}.xcresult")
+          for FILTER in "${ONLY_TESTING_FILTERS[@]}"; do
+            FILTER="$(echo "$FILTER" | xargs)"
+            [[ -n "$FILTER" ]] && CMD+=(--only-testing "$FILTER")
+          done
+          "${CMD[@]}"
 
       - name: Upload UI test results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
         if: always()
         with:
-          name: ui-test-results-build${{ github.run_number }}
-          path: UITestResults.xcresult
+          name: ui-test-results-${{ matrix.shard.id }}-build${{ github.run_number }}
+          path: UITestResults-${{ matrix.shard.id }}.xcresult
           retention-days: 30
+          if-no-files-found: error
+
+  uitest:
+    name: UI Tests
+    runs-on: macos-15
+    needs: uitest-shard
+    timeout-minutes: 10
+    steps:
+      - name: UI test shards passed
+        run: echo "All UI test shards passed."

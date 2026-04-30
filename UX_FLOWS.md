@@ -54,9 +54,8 @@ ContentView checks @AppStorage("hasSeenOnboarding")
     │  │  Headline: "Welcome to kshana"               │
     │  │  Subheadline: "Healthy app breaks,          │
     │  │               on your terms"                 │
-    │  │  Body: "Gentle nudges to rest your eyes      │
-    │  │  and check your posture. Choose which        │
-    │  │  apps get break screens. You're in control." │
+    │  │  Body: "Set your eye and posture break        │
+    │  │  timing. kshana handles the rest."           │
     │  │                                              │
     │  │  [ Next → ]  (borderedProminent, blue)       │
     │  │  Page dots: ● ○ ○ ○                          │
@@ -65,100 +64,74 @@ ContentView checks @AppStorage("hasSeenOnboarding")
     │      ▼  User taps "Next" (or swipes left)
     │
     │  ┌──────────────────────────────────────────────────┐
-    │  │  SCREEN 2 — App Break Access (Pre-Permission)    │
+    │  │  SCREEN 2 — Notification Permission              │
+    │  │  (OnboardingPermissionView)                       │
     │  │                                                   │
-    │  │  Headline: "How does kshana work?"                │
-    │  │  Body: "kshana monitors which apps you use        │
-    │  │  (like Safari or social media) and gently         │
-    │  │  suggests breaks. Think of it as a friendly       │
-    │  │  reminder card—not a blocker.                     │
+    │  │  Headline: "Stay on track"                        │
+    │  │  Body: Explains why reminder alerts are needed.   │
+    │  │  Shows a notification preview card.               │
     │  │                                                   │
-    │  │  You choose which apps to monitor, when breaks    │
-    │  │  happen, and can disable anytime.                 │
-    │  │                                                   │
-    │  │  kshana does not:                                 │
-    │  │  • Read messages or see content                   │
-    │  │  • Report your activity anywhere                  │
-    │  │  • Require an account"                            │
-    │  │                                                   │
-    │  │  [ Next → ]  (borderedProminent, blue)            │
-    │  │  "Maybe Later" skip link                          │
+    │  │  [ Allow Reminder Alerts ] ← triggers            │
+    │  │    UNUserNotificationCenter auth prompt           │
+    │  │  "Not now" skip link  ← advances without          │
+    │  │                          requesting permission    │
     │  │  Page dots: ○ ● ○ ○                               │
     │  └──────────────────────────────────────────────────┘
     │      │
-    │      ├─ User taps "Next"
-    │      │      │
-    │      │      ▼  (advances to Screen 3)
-    │      │
-    │      └─ User taps "Maybe Later"
-    │             │
-    │             ▼  (skips to Screen 4 Setup Preview)
-    │
-    │  ┌──────────────────────────────────────────────────┐
-    │  │  SCREEN 3 — App Break Access Permission          │
-    │  │  (OnboardingScreenTimePermissionView)             │
-    │  │                                                   │
-    │  │  Headline: "Permission to suggest breaks"        │
-    │  │  Body: "kshana needs access to see which apps     │
-    │  │  you're using so it can suggest breaks at the     │
-    │  │  right time.                                      │
-    │  │                                                   │
-    │  │  Your privacy matters. This does not give kshana  │
-    │  │  access to your messages, photos, or any other    │
-    │  │  content."                                        │
-    │  │                                                   │
-    │  │  [ Grant App Break Access ]  ← triggers          │
-    │  │    system Screen Time/Family Controls prompt      │
-    │  │  "Not now" skip link  ← advances without          │
-    │  │                          requesting permission    │
-    │  │  Page dots: ○ ○ ● ○                               │
-    │  │                                                   │
-    │  │  ⚠ Horizontal swipe is blocked on this screen     │
-    │  │    (highPriorityGesture prevents accidental skip)  │
-    │  └──────────────────────────────────────────────────┘
-    │      │
-    │      ├─ User taps "Grant App Break Access"
+    │      ├─ User taps "Allow Reminder Alerts"
     │      │      │
     │      │      ▼
-    │      │  System permission prompt appears:
-    │      │  "kshana" requests access to Screen Time
-    │      │  [Allow] [Don't Allow]
+    │      │  System prompt: allow notifications?
     │      │      │
     │      │      ├─ User taps "Allow" → permission granted ✓
     │      │      └─ User taps "Don't Allow" → permission denied
     │      │      │
-    │      │      ▼  (either way, advances to Screen 4)
+    │      │      ▼  (either way, advances to Screen 3)
     │      │
     │      └─ User taps "Not now"
     │             │
-    │             ▼  (advances to Screen 4 without prompting)
+    │             ▼  (advances to Screen 3 without prompting)
     │
     │  ┌──────────────────────────────────────────────────┐
-    │  │  SCREEN 4 — Setup Preview (OnboardingSetupView)  │
+    │  │  SCREEN 3 — Reminder Schedule Setup              │
+    │  │  (OnboardingSetupView)                            │
     │  │                                                   │
-    │  │  Headline: "You're all set"                       │
-    │  │  Body: "kshana will help you build better         │
-    │  │  habits. Your breaks, your timing, your control." │
+    │  │  Headline: "Set your break schedule"             │
+    │  │  Interactive reminder picker cards:              │
+    │  │    • Eye Breaks: interval + duration pickers     │
+    │  │    • Posture Checks: interval + duration pickers │
+    │  │  Values bind directly to SettingsStore.          │
     │  │                                                   │
-    │  │  Default config preview:                           │
-    │  │    • Eye Breaks: every 20 min                     │
-    │  │    • Posture Checks: every 30 min                 │
-    │  │    • Fallback local alerts when Screen Time       │
-    │  │      access is unavailable                        │
+    │  │  [ Get Started ]    ← advances to Screen 4        │
+    │  │  Page dots: ○ ○ ● ○                               │
+    │  └──────────────────────────────────────────────────┘
+    │      │
+    │      ▼  (advances to Screen 4 — True Interrupt Mode)
+    │
+    │  ┌──────────────────────────────────────────────────┐
+    │  │  SCREEN 4 — True Interrupt Mode                  │
+    │  │  (OnboardingInterruptModeView)                    │
     │  │                                                   │
-    │  │  [ Get Started ]    ← sets hasSeenOnboarding,     │
+    │  │  Headline: "True Interrupt Mode"                  │
+    │  │  Body: Explains Screen Time-based blocking and    │
+    │  │  privacy guarantees. Shows Coming Soon badge      │
+    │  │  while entitlement is pending.                    │
+    │  │                                                   │
+    │  │  [ Coming Soon ]    ← disabled (pre-entitlement) │
+    │  │  [ Skip for Now ]                                  │
+    │  │                     ← sets hasSeenOnboarding,    │
     │  │                       transitions to HomeView     │
-    │  │  "Customize Settings" ← sets hasSeenOnboarding    │
-    │  │                         + openSettingsOnLaunch,    │
-    │  │                         opens Settings on arrival  │
+    │  │  "Customize Settings" ← sets hasSeenOnboarding   │
+    │  │                         + openSettingsOnLaunch,   │
+    │  │                         opens Settings on arrival │
     │  │  Page dots: ○ ○ ○ ●                               │
     │  └──────────────────────────────────────────────────┘
     │      │
     │      ▼
     │  hasSeenOnboarding = true (written to UserDefaults)
+    │  onboardingCompleted(cta: .getStarted or .customize) telemetry logged
     │  ContentView transitions to HomeView (opacity crossfade, 0.4s)
-    │  If permission granted, app begins monitoring selected apps
-    │  If permission denied, fallback to local alerts when app runs
+    │  If permission granted, reminders scheduled; if denied, fallback to local alerts
     │
     └─ true (returning user)
            │
@@ -167,13 +140,13 @@ ContentView checks @AppStorage("hasSeenOnboarding")
 ```
 
 **Key UX decisions:**
-- **4-screen onboarding educates before asking.** Screen 1 explains value. Screen 2 educates on how kshana works (privacy-first). Screen 3 requests the Screen Time access permission. This order builds confidence.
-- **Pre-permission education screen (Screen 2).** Many users find the system Screen Time/Family Controls prompt scary. A calm pre-screen explains what kshana does (and doesn't do) in plain language, reducing anxiety.
-- **Permission screen blocks accidental swipe-past.** A `highPriorityGesture` prevents horizontal swiping on Screen 3, ensuring the user makes a deliberate choice.
-- **"Maybe Later" / "Not now" paths are always available.** The user can skip permissions and still proceed. A banner on the Home/Settings screen later offers recovery (see Section 2.4). The app works in degraded mode with local alerts as fallback.
-- **Defaults are pre-configured.** Screen 4 previews the defaults so the user knows what to expect. No mandatory customization.
-- **"Customize Settings" path.** Users who want to adjust before starting can tap the secondary CTA, which opens Settings immediately after onboarding.
-- **Onboarding is shown exactly once.** The `hasSeenOnboarding` flag is only set on explicit completion ("Get Started" or "Customize"). Force-quitting mid-onboarding means it shows again next launch.
+- **4-screen onboarding educates before asking.** Screen 1 explains value. Screen 2 requests notification permission with a preview card. Screen 3 lets users configure their reminder schedule with interactive pickers. Screen 4 introduces True Interrupt Mode. This order builds confidence before commitment.
+- **"Not now" path always available.** The user can skip the notification permission on Screen 2 and still complete onboarding. A banner on the Home/Settings screen later offers recovery (see Section 2.4). The app works in degraded mode with local alerts as fallback.
+- **Defaults are pre-configured.** Pickers on Screen 3 start at sensible defaults (eye breaks every 20 min, posture every 30 min) so the user can tap "Get Started" immediately.
+- **Swipe lock on final screen.** `OnboardingInterruptModeView` (Screen 4) uses a `highPriorityGesture` to prevent accidental backward swipe past the completion CTAs.
+- **"Customize Settings" path.** Users who want to adjust deeper settings (haptics, snooze, notifications) can tap "Customize Settings" on Screen 4. This sets `openSettingsOnLaunch = true` so HomeView auto-opens the Settings sheet on arrival.
+- **Onboarding is shown exactly once.** The `hasSeenOnboarding` flag is only set on explicit completion ("Skip for Now" or "Customize Settings" on Screen 4). Force-quitting mid-onboarding means it shows again next launch.
+- **Telemetry.** `AnalyticsLogger.log(.onboardingCompleted(cta:))` fires with `.getStarted` or `.customize` on completion.
 - **Graceful degradation.** If permission is denied, the app works in foreground-only mode with local alerts. A persistent banner on the Home/Settings screen provides a path to fix (see Section 2.4).
 
 ---
@@ -211,9 +184,11 @@ iOS fires Eye Reminder notification
     │      │      ▼
     │      │  Overlay slides up and off-screen (0.2s ease-in)
     │      │  Overlay window removed from hierarchy
+    │      │  Snooze action sheet appears (Phase 2):
+    │      │    [Snooze 5 min]  [Snooze 1 hour]  [Rest of Day]  [No Snooze]
+    │      │  User selects option → snooze activated or dismissed
     │      │  User returns to what they were doing
     │      │  Next reminder already scheduled (repeat: false; ScreenTimeTracker re-arms after each break)
-    │      │  [No snooze sheet — snooze controls live in Settings only]
     │      │
     │      ├─ User taps ⚙️
     │      │      │
@@ -257,6 +232,86 @@ iOS fires Eye Reminder notification
 - **Lock screen notifications are standard.** This is expected iOS behaviour — users understand this pattern.
 - **Auto-dismiss is gentle.** No jarring sounds or haptics on dismiss. The overlay simply fades away.
 - **Next reminder is already scheduled.** User never has to think about whether the app is "still running."
+
+---
+
+### 2.6 True Interrupt Mode: Shield Path vs. Notification Fallback
+
+> **Fixes:** #255 — Notification and True Interrupt fallback expectations unclear
+
+#### Precedence rule (single source of truth)
+
+When True Interrupt mode is **enabled and a Screen Time shield is configured for at least one app or category**, the shield path is **primary**. The notification fallback is **suppressed for that reminder event**.
+
+```
+Reminder fires
+    │
+    ▼
+AppCoordinator evaluates shouldUseShieldPath
+    │
+    ├─ YES (shield available, configured, entitlement granted)
+    │      │
+    │      ▼
+    │  ManagedSettingsCoordinator applies shield to selected apps
+    │  Notification scheduling SKIPPED for this event
+    │  (no concurrent banner, no lock-screen notification)
+    │
+    └─ NO  (any of the conditions below is true)
+           │
+           ▼
+       Notification fallback path runs normally (Section 2.2)
+```
+
+**Notification fallback fires ONLY when the shield path is unavailable, i.e.:**
+- True Interrupt mode is disabled in Settings
+- No apps or categories are selected for shielding
+- FamilyControls entitlement not yet approved (#201 BLOCKER)
+- `ManagedSettingsCoordinator` throws an error applying the shield
+- Device does not support Screen Time (e.g., Simulator, MDM restrictions)
+
+**The two paths are mutually exclusive per reminder event.** There is no scenario where both a shield and a notification fire for the same break event.
+
+---
+
+#### Minimized / background app behavior
+
+When the shield path is active:
+
+- The **Screen Time shield is the interruption UI**. It is presented by iOS at the system level when the user attempts to open or interact with a shielded app.
+- The **overlay (`OverlayManager.show()`) must NOT fire** when the shield path is the active path. The `AppCoordinator` shield path skips the `handleNotification()` → `OverlayManager` chain entirely.
+- If the user taps a notification banner from a **previous** (fallback-path) event while a shield is active, `AppDelegate.didReceive` routes to `handleNotification()` which would normally show an overlay. Implementation must guard against this by checking `shouldUseShieldPath` before presenting the overlay — if the shield path is currently active, the overlay is suppressed.
+
+> **Risk (identified in #255):** `AppDelegate.didReceive` currently routes all notification taps to `handleNotification()`, which calls `OverlayManager.show()`. This creates a double-presentation risk (shield + overlay) if a stale notification is tapped while a shield is active. The guard check must be added before `OverlayManager.show()` is called.
+
+---
+
+#### ShieldActionProvider / "I need 5 minutes" request flow
+
+> **Status: NOT YET IMPLEMENTED — pending #201 (FamilyControls entitlement approval)**
+
+The `ShieldActionProvider` extension point allows a shielded app to surface a custom action button (e.g., "I need 5 minutes"). The intended flow when implemented:
+
+```
+User sees Screen Time shield on shielded app
+    │
+    ▼
+User taps "I need 5 minutes" (custom ShieldActionProvider button)
+    │
+    ▼
+ShieldActionProvider receives action
+    │
+    ▼
+Delegates to AppCoordinator: requestTemporaryAccess(duration: 5 min)
+    │
+    ▼
+ManagedSettingsCoordinator temporarily removes shield (5-min window)
+User can use app normally for 5 minutes
+    │
+    ▼
+Timer expires → shield reapplied
+```
+
+**This flow does NOT exist in the current codebase.** `ShieldActionProvider` is not implemented. Documentation of this flow is aspirational — it describes intended post-#201 behaviour only. No UI or confirmation screen should be built until the entitlement is approved and `ShieldActionProvider` is scaffolded.
 
 ---
 
@@ -428,7 +483,7 @@ All reminders continue normally
     - "Remind me every" [10 min, 20 min, 30 min, 45 min, 60 min]
     - "Break duration" [10 s, 20 s, 30 s, 60 s]
 - **Per-type enable toggles** (Phase 1): Each reminder row includes an inline ON/OFF toggle, independent of the master toggle
-- **Snooze controls section** (Phase 1):
+- **Snooze controls section** (Phase 2):
   - Label: "Pause Reminders"
   - Three full-width buttons:
     - [5 minutes]
@@ -479,7 +534,7 @@ All reminders continue normally
   - SF Symbol `gearshape.fill`
   - 44pt tap target
   - Label: "Open Settings" (for VoiceOver)
-  - On tap: dismisses overlay and opens Settings screen (snooze controls accessible there)
+  - On tap: dismisses overlay and opens Settings screen (deeper configuration)
 - **Swipe-UP gesture:**
   - Pan gesture recognizer on full overlay surface
   - Overlay follows finger upward; on release, slides up and off-screen (0.2s ease-in)
@@ -532,9 +587,11 @@ All reminders continue normally
   - Title: "🧍 Posture Check"
   - Body: "Sit up straight and roll your shoulders."
 
-**Actions (Phase 2):**
-- [Done] — dismisses notification
-- [Snooze 5 min] — reschedules for 5 minutes later
+**Actions (Deferred — not in v0.2.0):**
+- [Done] — dismisses notification *(deferred)*
+- [Snooze 5 min] — reschedules for 5 minutes later *(deferred)*
+
+> These lock-screen notification action buttons were deferred from Phase 2 and are not implemented in v0.2.0. No `UNNotificationCategory` or `UNNotificationAction` is registered.
 
 ---
 
@@ -561,12 +618,12 @@ All reminders continue normally
 - User returns to previous app state
 
 **Decision rationale:**
-- **Three dismissal methods** cover different user preferences and contexts:
-  - Tap ×: Precise, intentional dismiss
-  - Tap ⚙️: Opens Settings for snooze (deliberate path to snooze controls)
-  - Swipe UP: Natural "flick away" gesture
+- **Four dismissal methods** cover different user preferences and contexts:
+  - Tap ×: Shows snooze action sheet (5 min / 1 hour / Rest of Day / No Snooze) — Phase 2
+  - Swipe UP: Shows snooze action sheet — Phase 2
+  - Tap ⚙️: Opens Settings (deeper configuration)
   - Auto-dismiss: Zero interaction required (users who follow the break)
-- **Snooze is not on the overlay.** Users who want to snooze tap ⚙️ → Settings. This prevents accidental snooze and keeps the break screen calm.
+- **Snooze is on the overlay** as an action sheet after dismissal (Phase 2). Settings also exposes snooze controls ("Pause Reminders" section) as an additional path.
 
 ### 4.2 Animations
 
@@ -664,10 +721,10 @@ OverlayManager checks: is an overlay currently visible?
 **Core belief:** Even a simple app benefits from a brief, warm introduction — especially when a system permission is required.
 
 **Approach:**
-- **3-screen onboarding flow** (Welcome → Permissions → Setup) shown exactly once on first launch.
-- **Educate before asking.** The permission request comes on Screen 2, after the user understands the app's value. This produces higher grant rates than a cold prompt.
-- **Preview defaults.** Screen 3 shows the default configuration so users feel confident before starting.
-- **Two completion paths:** "Get Started" (use defaults) or "Customize Settings" (jump to Settings).
+- **4-screen onboarding flow** (Welcome → Notification Permission → Reminder Setup → True Interrupt Mode) shown exactly once on first launch.
+- **Educate before asking.** The notification permission request comes on Screen 2, after the user understands the app's value. This produces higher grant rates than a cold prompt.
+- **Interactive setup.** Screen 3 lets users configure eye break and posture check intervals with live pickers that write directly to `SettingsStore`.
+- **Two completion paths on Screen 4:** "Skip for Now" (use defaults) or "Customize Settings" (jump to Settings directly).
 - **Swipe navigation** between screens via `TabView` with `PageTabViewStyle`. Page dots indicate progress.
 
 ### 5.2 First Launch Experience
@@ -677,24 +734,26 @@ OverlayManager checks: is an overlay currently visible?
 **Flow:**
 1. App icon tap → launch screen (< 1s)
 2. Welcome screen establishes context and tone
-3. Permission screen explains why notifications matter, then offers "Enable Notifications" or "Not now"
-4. Setup screen previews default config (eye breaks every 20 min, posture checks every 30 min)
-5. User taps "Get Started" or "Customize Settings"
+3. Notification Permission screen explains why alerts matter, then offers "Allow Reminder Alerts" or "Not now"
+4. Reminder Setup screen lets user pick eye/posture intervals with interactive pickers; "Get Started" advances to Screen 4
+5. True Interrupt Mode screen explains Screen Time-based blocking; user taps "Skip for Now" or "Customize Settings"
 6. `hasSeenOnboarding` flag set → ContentView crossfades to HomeView
-7. Reminders are scheduled. Done.
+7. If "Customize Settings" was tapped, `openSettingsOnLaunch = true` → HomeView opens Settings sheet immediately
+8. Reminders are scheduled. Done.
 
 **Implementation details:**
 - `ContentView` checks `@AppStorage(hasSeenOnboarding)` to gate the flow
 - `OnboardingView` uses a `TabView` with `PageTabViewStyle` for horizontal swipe between screens
-- `OnboardingPermissionView` blocks accidental swipe-past with a `highPriorityGesture`
-- `OnboardingSetupView` offers two CTAs: "Get Started" (defaults) and "Customize Settings" (opens Settings)
+- `OnboardingInterruptModeView` (Screen 4) blocks accidental swipe-past with a `highPriorityGesture`
+- `OnboardingSetupView` (Screen 3) has one CTA: "Get Started" (advances to Screen 4); interval pickers bind directly to `SettingsStore`
+- `OnboardingInterruptModeView` (Screen 4) has two exit CTAs: "Skip for Now" and "Customize Settings"
 - Force-quitting mid-onboarding re-shows onboarding (flag only set on explicit completion)
 
 ### 5.3 What We're NOT Doing
 
 ❌ **No account creation or sign-in** (no backend, all local)
 ❌ **No upsell or "Pro" feature gates** (not in scope)
-❌ **No feature tour or coach marks** (the 3 screens cover value, permission, and setup — nothing more)
+❌ **No feature tour or coach marks** (the 4 screens cover value, permission, setup, and True Interrupt Mode — nothing more)
 
 ### 5.4 Yin-Yang Logo Animation (Restful Grove Redesign)
 
@@ -862,6 +921,97 @@ Phase 2 — Breathing Pulse (infinite loop)
 
 ---
 
+### 6.7 Snooze Activated While True Interrupt Shield is Active
+
+> **Fixes:** #259 — Snooze behavior while True Interrupt enabled unclear
+
+**Scenario:** The user activates snooze (via Settings → Pause Reminders) while a Screen Time shield is currently active on one or more apps, or while overlay reminders are queued.
+
+#### Expected behavior when snooze is triggered
+
+```
+User taps snooze button in Settings (5 min / 1 hr / Rest of day)
+    │
+    ▼
+AppCoordinator.cancelAllReminders() is called
+    │
+    ▼
+Step 1: overlayManager.clearQueue()    ← MUST run first (see #267)
+    │
+    ▼
+Step 2: if overlayManager.isOverlayVisible → overlayManager.dismissOverlay()
+         (queue is empty; presentNextQueuedOverlay() sees nothing to show)
+    │
+    ▼
+Step 3: ManagedSettingsCoordinator.clearAllShields()
+         (active shield removed from all shielded apps immediately)
+    │
+    ▼
+Step 4: scheduler.cancelAllReminders()
+         (all scheduled UNUserNotificationCenter notifications cancelled)
+    │
+    ▼
+Step 5: screenTimeTracker.pauseAll()
+Step 6: Snooze wake notification scheduled for (now + snooze duration)
+    │
+    ▼
+Snooze active: no new overlays, no new shields, no new notifications
+until snooze expires or user taps "Cancel snooze"
+```
+
+> ⚠️ **Ordering matters (#267):** `clearQueue()` must execute before `dismissOverlay()`. If `dismissOverlay()` is called first, it internally calls `presentNextQueuedOverlay()`, which dequeues and shows the next queued overlay before `clearQueue()` can remove it. That orphan overlay has no dismissal path because `screenTimeTracker` is already paused. See **#267** for the code-level fix (`cancelAllReminders()` ordering bug).
+
+#### Shield state when snooze is active
+
+- All Screen Time shields are **removed immediately** on snooze activation.
+- Users can open previously-shielded apps freely during the snooze window.
+- `ManagedSettingsCoordinator` re-applies shields when snooze expires (on snooze-wake).
+
+> **Status:** `ManagedSettingsCoordinator` shield-clearing on snooze is **not yet integrated** (pending #201 entitlement). The `cancelAllReminders()` ordering fix (#267) must land first, then shield-clearing can be wired in.
+
+#### Snooze expiry (snooze-wake) while app is shielded
+
+If the snooze wake fires while the user has re-opened a previously-shielded app:
+
+1. `AppCoordinator` receives the snooze-wake notification.
+2. `screenTimeTracker.resumeAll()` re-enables monitoring.
+3. If `shouldUseShieldPath` → `ManagedSettingsCoordinator` re-applies shields.
+4. Screen Time shield reappears on shielded apps (system-level, iOS-managed).
+5. Snooze-wake overlay / notification fires via normal path (Section 2.2 / 2.6).
+
+There is **no race** between shield re-application and the wake notification because shield application is synchronous via `ManagedSettingsCoordinator` and the wake notification is fired after `resumeAll()` completes.
+
+#### User navigates to Settings mid-shield
+
+```
+User is on shielded app → Screen Time shield displayed
+    │
+    ▼
+User taps shield button (ShieldActionProvider — NOT YET IMPLEMENTED, #201)
+OR: User opens kshana directly via Home Screen icon
+    │
+    ▼
+kshana Settings screen loads
+User sees "Pause Reminders" snooze controls
+    │
+    ▼
+User taps snooze
+    │
+    ▼
+Active shield is cleared (Step 3 above)
+User can return to previously-shielded app freely
+```
+
+#### "Cancel snooze" path
+
+Tapping "Cancel snooze" in Settings calls `AppCoordinator.resumeFromSnooze()`:
+1. Snooze-wake notification cancelled.
+2. `screenTimeTracker.resumeAll()` re-enabled.
+3. Shields re-applied if `shouldUseShieldPath`.
+4. Reminders rescheduled from now.
+
+---
+
 ## 7. Experience Metrics
 
 **How do we measure UX success?**
@@ -929,7 +1079,19 @@ Snooze controls are in the **Settings screen**, not on the overlay. This separat
 
 **Snooze access path:** Overlay → tap ⚙️ → Settings screen → snooze button. Two deliberate taps prevents accidental suppression.
 
-**Lock screen notification action (Phase 2):** A "Snooze 5 min" notification action on the lock screen remains a Phase 2 enhancement.
+**Snooze activation sequence (canonical):**
+1. `overlayManager.clearQueue()` — clears queued overlays first (see #267)
+2. `overlayManager.dismissOverlay()` — dismisses visible overlay (queue already empty; no orphan shown)
+3. `ManagedSettingsCoordinator.clearAllShields()` — removes active True Interrupt shields (pending #201)
+4. `scheduler.cancelAllReminders()` — cancels all scheduled notifications
+5. `screenTimeTracker.pauseAll()` — pauses tracking
+6. Snooze-wake notification scheduled
+
+**While snooze is active:** No new overlays, shields, or notifications are delivered. The snooze-wake notification is the only scheduled event.
+
+**On snooze expiry or "Cancel snooze":** Shields re-applied (if True Interrupt configured), reminders rescheduled from now. See Section 6.7 for the full True Interrupt + snooze interaction.
+
+**Lock screen notification action (Deferred):** A "Snooze 5 min" notification action on the lock screen was deferred from Phase 2; not in v0.2.0.
 
 ---
 
@@ -997,7 +1159,7 @@ This document defines the complete user experience for kshana. Key takeaways:
 1. **Design is guided by 5 core principles** (helpful interruptions, low friction, user autonomy, battery efficiency, accessibility).
 2. **User flows are detailed and cover all states** — from first launch to edge cases like force-quit recovery.
 3. **The overlay interaction model balances flexibility and simplicity** — three dismissal methods, smooth animations, no stacking.
-4. **Onboarding is a warm 3-screen handshake** — Welcome → Permissions → Setup. Educates before asking, previews defaults, then gets out of the way.
+4. **Onboarding is a warm 4-screen handshake** — Welcome → Notification Permission → Schedule Setup → True Interrupt Mode. Educates before asking, previews defaults, then gets out of the way.
 5. **Edge cases are handled gracefully** — locked device, Low Power Mode, overlapping reminders, permission denial.
 6. **Success is measured by invisibility** — the best UX is when users forget the app exists until it helpfully reminds them.
 
@@ -1008,8 +1170,8 @@ This document defines the complete user experience for kshana. Key takeaways:
 
 ---
 
-**Document version:** 1.2  
-**Last updated:** 2026-04-25 (onboarding flow correction — Fixes #112)  
+**Document version:** 1.3  
+**Last updated:** 2026-04-30 (True Interrupt fallback + snooze clarifications — Fixes #255, #259)  
 **Owner:** Reuben (Product Designer)
 
 ---

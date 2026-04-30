@@ -74,16 +74,16 @@ The **Restful Grove** release transforms kshana's visual identity and hardens ev
 - **Notifications:** `UNUserNotificationCenter` scheduling with per-type debounce (300 ms)
 - **Overlay:** Full-screen UIKit window overlay with countdown ring, swipe-up dismiss, auto-dismiss
 - **Integration:** `AppCoordinator` wires services; background/foreground lifecycle management
-- **Snooze:** 5 min / 15 min / 30 min / rest-of-day options with dual wake mechanism (in-process Task + silent notification); max 2 consecutive snoozes
+- **Snooze:** 5 min / 1 hour / rest-of-day options with dual wake mechanism (in-process Task + silent notification); max 2 consecutive snoozes
 - **Haptics:** `UIImpactFeedbackGenerator` on overlay appear/dismiss; `UINotificationFeedbackGenerator` on auto-complete
 - **Accessibility:** Dynamic Type, Reduce Motion, VoiceOver countdown live region, `accessibilityViewIsModal`
 - **Tests:** 65+ unit tests; 80 %+ coverage across Models, Services, ViewModels
 
 ### Phase 2: Polish
-- **Onboarding:** 3-screen first-launch flow (welcome, notification permission, setup) with `hasSeenOnboarding` persistence
+- **Onboarding:** 4-screen first-launch flow (Welcome → Notification Permission → Schedule Setup → True Interrupt Mode) with `hasSeenOnboarding` persistence
 - **Smart Pause:** Automatic reminder pause via Focus Mode detection, CarPlay detection, and CMMotionActivityManager driving detection; `PauseConditionManager` aggregates all conditions
 - **Screen-Time Triggers:** `ScreenTimeTracker` replaces wall-clock timers — reminders fire after continuous screen-on time only (M2.7)
-- **Snooze UI:** `SnoozeOption` enum with 4 duration options (5m / 15m / 30m / rest-of-day), max 2 consecutive snoozes, formatted labels in OverlayView action sheet
+- **Snooze UI:** `SnoozeOption` enum with 3 duration options (5m / 1h / rest-of-day), max 2 consecutive snoozes, formatted labels in OverlayView action sheet
 - **Data-Driven Configuration:** Asset Catalog color tokens (ReminderBlue, ReminderGreen, WarningOrange, PermissionBanner, PermissionBannerText, WarningText), String Catalog (~35 strings), `defaults.json` seed values (M2.8)
 - **Disclaimer UI & Legal Docs:** In-app `LegalDocumentView` rendering bundled TERMS.md, PRIVACY.md, DISCLAIMER.md (M2.4)
 - **App Icon & Launch Screen:** Production app icon and branded launch screen (M2.5)

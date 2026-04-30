@@ -8,20 +8,22 @@ import os
 /// `SettingsPersisting` dependency so unit tests can inject an in-memory store
 /// without touching the file system.
 ///
-/// Key layout (all prefixed `epr.`):
+/// Key layout (all prefixed `kshana.`):
 /// ```
-/// epr.globalEnabled          Bool   – global on/off toggle
-/// epr.eyes.enabled           Bool
-/// epr.eyes.interval          Double – seconds
-/// epr.eyes.breakDuration     Double – seconds
-/// epr.posture.enabled        Bool
-/// epr.posture.interval       Double – seconds
-/// epr.posture.breakDuration  Double – seconds
-/// epr.snoozedUntil           Double – Date.timeIntervalSince1970, 0 = not snoozed
-/// epr.snoozeCount            Int    – consecutive snoozes since last reminder fired
-/// epr.pauseMediaDuringBreaks Bool   – Phase 2, default false
-/// epr.pauseDuringFocus       Bool   – pause reminders while a Focus mode is active, default true
-/// epr.pauseWhileDriving      Bool   – pause reminders while driving or CarPlay is active, default true
+/// kshana.globalEnabled                  Bool   – global on/off toggle
+/// kshana.eyes.enabled                   Bool
+/// kshana.eyes.interval                  Double – seconds
+/// kshana.eyes.breakDuration             Double – seconds
+/// kshana.posture.enabled                Bool
+/// kshana.posture.interval               Double – seconds
+/// kshana.posture.breakDuration          Double – seconds
+/// kshana.snoozedUntil                   Double – Date.timeIntervalSince1970, 0 = not snoozed
+/// kshana.snoozeCount                    Int    – consecutive snoozes since last reminder fired
+/// kshana.pauseMediaDuringBreaks         Bool   – default false
+/// kshana.hapticsEnabled                 Bool   – default true
+/// kshana.pauseDuringFocus               Bool   – default true
+/// kshana.pauseWhileDriving              Bool   – default true
+/// kshana.notificationFallbackEnabled    Bool   – default true
 /// ```
 @MainActor
 final class SettingsStore: ObservableObject {
@@ -54,12 +56,35 @@ final class SettingsStore: ObservableObject {
 
     // MARK: - Per-Type Break Durations (seconds)
 
-    @Published var eyesBreakDuration: TimeInterval {
-        didSet { store.set(eyesBreakDuration, forKey: Keys.eyesBreakDuration) }
+    @Published private var eyesBreakDurationStorage: TimeInterval
+    @Published private var postureBreakDurationStorage: TimeInterval
+
+    var eyesBreakDuration: TimeInterval {
+        get { eyesBreakDurationStorage }
+        set {
+            let validated = Self.validBreakDurationForAssignment(
+                newValue,
+                previousValue: eyesBreakDurationStorage,
+                fallbackValue: AppConfig.fallback.defaults.eyeBreakDuration,
+                key: Keys.eyesBreakDuration
+            )
+            eyesBreakDurationStorage = validated
+            store.set(validated, forKey: Keys.eyesBreakDuration)
+        }
     }
 
-    @Published var postureBreakDuration: TimeInterval {
-        didSet { store.set(postureBreakDuration, forKey: Keys.postureBreakDuration) }
+    var postureBreakDuration: TimeInterval {
+        get { postureBreakDurationStorage }
+        set {
+            let validated = Self.validBreakDurationForAssignment(
+                newValue,
+                previousValue: postureBreakDurationStorage,
+                fallbackValue: AppConfig.fallback.defaults.postureBreakDuration,
+                key: Keys.postureBreakDuration
+            )
+            postureBreakDurationStorage = validated
+            store.set(validated, forKey: Keys.postureBreakDuration)
+        }
     }
 
     // MARK: - Snooze
@@ -91,6 +116,12 @@ final class SettingsStore: ObservableObject {
     /// Default is `true`. Requires `NSMotionUsageDescription` in Info.plist.
     @Published var pauseWhileDriving: Bool {
         didSet { store.set(pauseWhileDriving, forKey: Keys.pauseWhileDriving) }
+    }
+
+    /// When `true`, schedules local notifications only as a backup path while
+    /// Screen Time shielding is unavailable. Default is `true`.
+    @Published var notificationFallbackEnabled: Bool {
+        didSet { store.set(notificationFallbackEnabled, forKey: Keys.notificationFallbackEnabled) }
     }
 
     // MARK: - Phase 2
@@ -135,17 +166,33 @@ final class SettingsStore: ObservableObject {
 
     init(store: SettingsPersisting = UserDefaults.standard, config: AppConfig = AppConfig.load()) {
         self.store = store
+        let defaultEyesBreakDuration = Self.sanitizedBreakDuration(
+            config.defaults.eyeBreakDuration,
+            defaultValue: AppConfig.fallback.defaults.eyeBreakDuration,
+            key: Keys.eyesBreakDuration
+        )
+        let defaultPostureBreakDuration = Self.sanitizedBreakDuration(
+            config.defaults.postureBreakDuration,
+            defaultValue: AppConfig.fallback.defaults.postureBreakDuration,
+            key: Keys.postureBreakDuration
+        )
 
-        globalEnabled       = store.bool(forKey: Keys.globalEnabled, defaultValue: config.features.globalEnabledDefault)
-        eyesEnabled         = store.bool(forKey: Keys.eyesEnabled, defaultValue: true)
-        postureEnabled      = store.bool(forKey: Keys.postureEnabled, defaultValue: true)
+        globalEnabled = store.bool(forKey: Keys.globalEnabled, defaultValue: config.features.globalEnabledDefault)
+        eyesEnabled = store.bool(forKey: Keys.eyesEnabled, defaultValue: true)
+        postureEnabled = store.bool(forKey: Keys.postureEnabled, defaultValue: true)
 
-        eyesInterval        = store.double(forKey: Keys.eyesInterval, defaultValue: config.defaults.eyeInterval)
-        eyesBreakDuration   = store.double(
-            forKey: Keys.eyesBreakDuration, defaultValue: config.defaults.eyeBreakDuration)
-        postureInterval     = store.double(forKey: Keys.postureInterval, defaultValue: config.defaults.postureInterval)
-        postureBreakDuration = store.double(
-            forKey: Keys.postureBreakDuration, defaultValue: config.defaults.postureBreakDuration)
+        eyesInterval = store.double(forKey: Keys.eyesInterval, defaultValue: config.defaults.eyeInterval)
+        eyesBreakDurationStorage = Self.sanitizedBreakDuration(
+            store.double(forKey: Keys.eyesBreakDuration, defaultValue: defaultEyesBreakDuration),
+            defaultValue: defaultEyesBreakDuration,
+            key: Keys.eyesBreakDuration
+        )
+        postureInterval = store.double(forKey: Keys.postureInterval, defaultValue: config.defaults.postureInterval)
+        postureBreakDurationStorage = Self.sanitizedBreakDuration(
+            store.double(forKey: Keys.postureBreakDuration, defaultValue: defaultPostureBreakDuration),
+            defaultValue: defaultPostureBreakDuration,
+            key: Keys.postureBreakDuration
+        )
 
         let rawSnooze = store.double(forKey: Keys.snoozedUntil, defaultValue: 0)
         snoozedUntil = rawSnooze > 0 ? Date(timeIntervalSince1970: rawSnooze) : nil
@@ -153,9 +200,13 @@ final class SettingsStore: ObservableObject {
         snoozeCount = store.integer(forKey: Keys.snoozeCount, defaultValue: 0)
 
         pauseMediaDuringBreaks = store.bool(forKey: Keys.pauseMediaDuringBreaks, defaultValue: false)
-        hapticsEnabled         = store.bool(forKey: Keys.hapticsEnabled, defaultValue: true)
-        pauseDuringFocus       = store.bool(forKey: Keys.pauseDuringFocus, defaultValue: true)
-        pauseWhileDriving      = store.bool(forKey: Keys.pauseWhileDriving, defaultValue: true)
+        hapticsEnabled = store.bool(forKey: Keys.hapticsEnabled, defaultValue: true)
+        pauseDuringFocus = store.bool(forKey: Keys.pauseDuringFocus, defaultValue: true)
+        pauseWhileDriving = store.bool(forKey: Keys.pauseWhileDriving, defaultValue: true)
+        notificationFallbackEnabled = store.bool(
+            forKey: Keys.notificationFallbackEnabled,
+            defaultValue: true
+        )
 
         Logger.settings.debug("SettingsStore initialised")
     }
@@ -164,20 +215,78 @@ final class SettingsStore: ObservableObject {
 
     /// Restores all user-configurable settings to the values specified in `defaults.json`.
     func resetToDefaults(config: AppConfig = AppConfig.load()) {
-        globalEnabled        = config.features.globalEnabledDefault
-        eyesEnabled          = true
-        postureEnabled       = true
-        eyesInterval         = config.defaults.eyeInterval
-        eyesBreakDuration    = config.defaults.eyeBreakDuration
-        postureInterval      = config.defaults.postureInterval
-        postureBreakDuration = config.defaults.postureBreakDuration
-        hapticsEnabled       = true
+        globalEnabled = config.features.globalEnabledDefault
+        eyesEnabled = true
+        postureEnabled = true
+        eyesInterval = config.defaults.eyeInterval
+        eyesBreakDuration = Self.sanitizedBreakDuration(
+            config.defaults.eyeBreakDuration,
+            defaultValue: AppConfig.fallback.defaults.eyeBreakDuration,
+            key: Keys.eyesBreakDuration
+        )
+        postureInterval = config.defaults.postureInterval
+        postureBreakDuration = Self.sanitizedBreakDuration(
+            config.defaults.postureBreakDuration,
+            defaultValue: AppConfig.fallback.defaults.postureBreakDuration,
+            key: Keys.postureBreakDuration
+        )
+        hapticsEnabled = true
         pauseMediaDuringBreaks = false
-        pauseDuringFocus     = true
-        pauseWhileDriving    = true
-        snoozedUntil         = nil
-        snoozeCount          = 0
+        pauseDuringFocus = true
+        pauseWhileDriving = true
+        notificationFallbackEnabled = true
+        snoozedUntil = nil
+        snoozeCount = 0
+        // Clear the True Interrupt banner dismissal so the rediscovery affordance reappears.
+        store.set(false, forKey: AppStorageKey.trueInterruptSkippedBannerDismissed)
         Logger.settings.debug("SettingsStore reset to defaults")
+    }
+
+    private static func sanitizedBreakDuration(
+        _ duration: TimeInterval,
+        defaultValue: TimeInterval,
+        key: String
+    ) -> TimeInterval {
+        guard ShieldSession.isValidDurationSeconds(duration) else {
+            Logger.settings.error("Invalid break duration for \(key, privacy: .public); using default")
+            guard ShieldSession.isValidDurationSeconds(defaultValue) else {
+                Logger.settings.error("Invalid break duration default for \(key, privacy: .public); using fallback")
+                return hardcodedBreakDurationFallback(for: key)
+            }
+            return defaultValue
+        }
+        return duration
+    }
+
+    private static func validBreakDurationForAssignment(
+        _ duration: TimeInterval,
+        previousValue: TimeInterval,
+        fallbackValue: TimeInterval,
+        key: String
+    ) -> TimeInterval {
+        guard ShieldSession.isValidDurationSeconds(duration) else {
+            Logger.settings.error("Rejected invalid break duration assignment for \(key, privacy: .public)")
+            return sanitizedBreakDuration(previousValue, defaultValue: fallbackValue, key: key)
+        }
+        return duration
+    }
+
+    private static func hardcodedBreakDurationFallback(for key: String) -> TimeInterval {
+        let fallback: TimeInterval
+        switch key {
+        case Keys.eyesBreakDuration:
+            fallback = 20
+        case Keys.postureBreakDuration:
+            fallback = 10
+        default:
+            preconditionFailure("Unknown break duration key: \(key)")
+        }
+
+        precondition(
+            ShieldSession.isValidDurationSeconds(fallback),
+            "Hardcoded break duration fallback must be positive and finite"
+        )
+        return fallback
     }
 }
 
@@ -198,6 +307,7 @@ private extension SettingsStore {
         static let hapticsEnabled         = "kshana.hapticsEnabled"
         static let pauseDuringFocus       = "kshana.pauseDuringFocus"
         static let pauseWhileDriving      = "kshana.pauseWhileDriving"
+        static let notificationFallbackEnabled = "kshana.notificationFallbackEnabled"
     }
 }
 

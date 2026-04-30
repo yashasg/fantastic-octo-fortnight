@@ -15,7 +15,7 @@ options:
   bundleIdPrefix: com.yashasg
   deploymentTarget:
     iOS: "16.0"
-  xcodeVersion: "16.2"
+  xcodeVersion: "26.4"
   minimumXcodeGenVersion: "2.40.0"
   generateEmptyDirectories: false
 
@@ -42,11 +42,15 @@ targets:
         CODE_SIGNING_REQUIRED: "NO"
         CODE_SIGNING_ALLOWED: "NO"
         INFOPLIST_FILE: ../EyePostureReminder/Info.plist
+        ENABLE_APP_INTENTS_METADATA_EXTRACTION: "NO"
+        ENABLE_APPINTENTS_METADATA_EXTRACTION: "NO"
+        SWIFT_TREAT_WARNINGS_AS_ERRORS: "YES"
     # The SPM executable binary and resource bundle are built to BUILT_PRODUCTS_DIR
     # but Xcode's app-wrapper build phase doesn't auto-copy them into the .app bundle.
     # This script copies them in so the app bundle is valid for UI test installation.
     postBuildScripts:
       - name: "Assemble App Bundle"
+        basedOnDependencyAnalysis: false
         script: |
           set -e
           BIN_SRC="${BUILT_PRODUCTS_DIR}/${EXECUTABLE_NAME}"
@@ -69,6 +73,7 @@ targets:
     deploymentTarget: "16.0"
     dependencies:
       - target: EyePostureReminder
+      - sdk: AppIntents.framework
     sources:
       - path: ../Tests/EyePostureReminderUITests
         excludes:
@@ -91,6 +96,10 @@ targets:
         CODE_SIGNING_REQUIRED: "NO"
         CODE_SIGNING_ALLOWED: "NO"
         ENABLE_BITCODE: "NO"
+        GENERATE_INFOPLIST_FILE: "YES"
+        ENABLE_APP_INTENTS_METADATA_EXTRACTION: "NO"
+        ENABLE_APPINTENTS_METADATA_EXTRACTION: "NO"
+        SWIFT_TREAT_WARNINGS_AS_ERRORS: "YES"
 
 schemes:
   EyePostureReminderUITests:

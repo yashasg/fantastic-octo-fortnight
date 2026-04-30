@@ -1,13 +1,14 @@
 // LegalDocumentView.swift
 // kshana
 //
-// Reusable sheet for displaying legal documents (Terms & Conditions / Privacy Policy).
+// Reusable sheet for displaying legal documents (Terms & Conditions / Privacy Policy / Disclaimer).
 
 import SwiftUI
 
 enum LegalDocument {
     case terms
     case privacy
+    case disclaimer
 }
 
 struct LegalDocumentView: View {
@@ -23,6 +24,8 @@ struct LegalDocumentView: View {
                         termsContent
                     case .privacy:
                         privacyContent
+                    case .disclaimer:
+                        disclaimerContent
                     }
                 }
                 .padding(AppSpacing.lg)
@@ -38,6 +41,7 @@ struct LegalDocumentView: View {
                     }
                     .font(AppFont.bodyEmphasized)
                     .foregroundStyle(AppColor.primaryRest)
+                    .accessibilityHint(Text("legal.dismissButton.hint", bundle: .module))
                     .accessibilityIdentifier("legal.dismissButton")
                 }
             }
@@ -47,8 +51,9 @@ struct LegalDocumentView: View {
 
     private var navTitle: Text {
         switch document {
-        case .terms:  Text("legal.terms.navTitle", bundle: .module)
-        case .privacy: Text("legal.privacy.navTitle", bundle: .module)
+        case .terms:      Text("legal.terms.navTitle", bundle: .module)
+        case .privacy:    Text("legal.privacy.navTitle", bundle: .module)
+        case .disclaimer: Text("legal.disclaimer.navTitle", bundle: .module)
         }
     }
 
@@ -141,6 +146,29 @@ struct LegalDocumentView: View {
             )
         }
     }
+
+    // MARK: - Disclaimer Content
+
+    private var disclaimerContent: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.xl) {
+            LegalSection(
+                heading: Text("legal.disclaimer.notMedical.heading", bundle: .module),
+                content: Text("legal.disclaimer.notMedical.body", bundle: .module)
+            )
+            LegalSection(
+                heading: Text("legal.disclaimer.professional.heading", bundle: .module),
+                content: Text("legal.disclaimer.professional.body", bundle: .module)
+            )
+            LegalSection(
+                heading: Text("legal.disclaimer.ownRisk.heading", bundle: .module),
+                content: Text("legal.disclaimer.ownRisk.body", bundle: .module)
+            )
+            LegalSection(
+                heading: Text("legal.disclaimer.screenTime.heading", bundle: .module),
+                content: Text("legal.disclaimer.screenTime.body", bundle: .module)
+            )
+        }
+    }
 }
 
 // MARK: - LegalSection
@@ -168,4 +196,8 @@ private struct LegalSection: View {
 
 #Preview("Privacy") {
     LegalDocumentView(document: .privacy)
+}
+
+#Preview("Disclaimer") {
+    LegalDocumentView(document: .disclaimer)
 }

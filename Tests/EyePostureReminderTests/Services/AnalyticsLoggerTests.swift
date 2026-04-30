@@ -1,4 +1,5 @@
 @testable import EyePostureReminder
+import ScreenTimeExtensionShared
 import XCTest
 
 /// Tests for `AnalyticsLogger` and `AnalyticsEvent`.
@@ -21,12 +22,14 @@ final class AnalyticsLoggerTests: XCTestCase {
     }
 
     func test_reminderTriggered_eyes_canBeConstructed() {
-        let event = AnalyticsEvent.reminderTriggered(type: .eyes, thresholdS: 1200)
+        let event = AnalyticsEvent.reminderTriggered(type: .eyes, thresholdS: 1200, deliveryPath: .screenTimeThreshold)
         _ = event
     }
 
     func test_reminderTriggered_posture_canBeConstructed() {
-        let event = AnalyticsEvent.reminderTriggered(type: .posture, thresholdS: 900)
+        let event = AnalyticsEvent.reminderTriggered(
+            type: .posture, thresholdS: 900, deliveryPath: .notificationFallback
+        )
         _ = event
     }
 
@@ -61,7 +64,7 @@ final class AnalyticsLoggerTests: XCTestCase {
     }
 
     func test_settingChanged_canBeConstructed() {
-        let event = AnalyticsEvent.settingChanged(setting: "eyeInterval", oldValue: "20", newValue: "30")
+        let event = AnalyticsEvent.settingChanged(setting: .eyesInterval, oldValue: "20", newValue: "30")
         _ = event
     }
 
@@ -107,11 +110,11 @@ final class AnalyticsLoggerTests: XCTestCase {
     }
 
     func test_log_reminderTriggered_eyes_doesNotCrash() {
-        AnalyticsLogger.log(.reminderTriggered(type: .eyes, thresholdS: 1200))
+        AnalyticsLogger.log(.reminderTriggered(type: .eyes, thresholdS: 1200, deliveryPath: .screenTimeThreshold))
     }
 
     func test_log_reminderTriggered_posture_doesNotCrash() {
-        AnalyticsLogger.log(.reminderTriggered(type: .posture, thresholdS: 900))
+        AnalyticsLogger.log(.reminderTriggered(type: .posture, thresholdS: 900, deliveryPath: .notificationFallback))
     }
 
     func test_log_overlayDismissed_allMethods_doNotCrash() {
@@ -136,8 +139,8 @@ final class AnalyticsLoggerTests: XCTestCase {
     }
 
     func test_log_settingChanged_doesNotCrash() {
-        AnalyticsLogger.log(.settingChanged(setting: "eyeInterval", oldValue: "20", newValue: "30"))
-        AnalyticsLogger.log(.settingChanged(setting: "postureEnabled", oldValue: "true", newValue: "false"))
+        AnalyticsLogger.log(.settingChanged(setting: .eyesInterval, oldValue: "20", newValue: "30"))
+        AnalyticsLogger.log(.settingChanged(setting: .postureEnabled, oldValue: "true", newValue: "false"))
     }
 
     func test_log_pauseActivated_doesNotCrash() {
@@ -147,6 +150,93 @@ final class AnalyticsLoggerTests: XCTestCase {
 
     func test_log_pauseDeactivated_doesNotCrash() {
         AnalyticsLogger.log(.pauseDeactivated(conditionType: "all_cleared"))
+    }
+
+    func test_log_watchdogRecoveryTriggered_doesNotCrash() {
+        AnalyticsLogger.log(.watchdogRecoveryTriggered(
+            reason: .scheduledEyesBreak,
+            detail: "watchdog_device_activity_heartbeat_stale:device_activity_interval_started"
+        ))
+    }
+
+    func test_log_watchdogRecoveryCompleted_cleared_doesNotCrash() {
+        AnalyticsLogger.log(.watchdogRecoveryCompleted(sessionCleared: true, fallbackScheduled: true))
+    }
+
+    func test_log_watchdogRecoveryCompleted_failed_doesNotCrash() {
+        AnalyticsLogger.log(.watchdogRecoveryCompleted(sessionCleared: false, fallbackScheduled: false))
+    }
+
+    // MARK: - IPC Health
+
+    func test_log_ipcOperationFailed_unavailable_doesNotCrash() {
+        AnalyticsLogger.log(.ipcOperationFailed(operation: .readShieldSession, reason: .unavailable))
+    }
+
+    func test_log_ipcOperationFailed_corrupt_doesNotCrash() {
+        AnalyticsLogger.log(.ipcOperationFailed(operation: .readEvents, reason: .corrupt))
+    }
+
+    func test_log_ipcOperationFailed_writeFailed_doesNotCrash() {
+        AnalyticsLogger.log(.ipcOperationFailed(operation: .clearShieldSession, reason: .writeFailed))
+    }
+
+    func test_log_ipcOperationFailed_allOperations_doNotCrash() {
+        let operations: [AnalyticsEvent.IPCOperation] = [
+            .readShieldSession, .readEvents, .clearShieldSession,
+            .writeEvent, .writeShieldSession, .readSelection
+        ]
+        for op in operations {
+            AnalyticsLogger.log(.ipcOperationFailed(operation: op, reason: .unavailable))
+        }
+    }
+
+    func test_log_ipcOperationFailed_allReasons_doNotCrash() {
+        let reasons: [AnalyticsEvent.IPCFailureReason] = [.unavailable, .corrupt, .writeFailed, .unknown]
+        for reason in reasons {
+            AnalyticsLogger.log(.ipcOperationFailed(operation: .readShieldSession, reason: reason))
+        }
+    }
+
+    // MARK: - Schedule Path Selection
+
+    func test_log_schedulePathSelected_shield_doesNotCrash() {
+        AnalyticsLogger.log(.schedulePathSelected(path: .shield, reason: .deviceActivityAvailable))
+    }
+
+    func test_log_schedulePathSelected_notificationFallback_allReasons_doNotCrash() {
+        let reasons: [AnalyticsEvent.SchedulePathReason] = [
+            .shieldUnavailable, .trueInterruptDisabled, .trueInterruptEmptySelection
+        ]
+        for reason in reasons {
+            AnalyticsLogger.log(.schedulePathSelected(path: .notificationFallback, reason: reason))
+        }
+    }
+
+    // MARK: - Shield Lifecycle
+
+    func test_log_shieldActivated_doesNotCrash() {
+        AnalyticsLogger.log(.shieldActivated(reason: .scheduledEyesBreak))
+        AnalyticsLogger.log(.shieldActivated(reason: .scheduledPostureBreak))
+    }
+
+    func test_log_shieldActivationFailed_doesNotCrash() {
+        AnalyticsLogger.log(.shieldActivationFailed(reason: .scheduledEyesBreak))
+    }
+
+    func test_log_shieldDeactivated_doesNotCrash() {
+        AnalyticsLogger.log(.shieldDeactivated)
+    }
+
+    // MARK: - ReminderDeliveryPath
+
+    func test_log_reminderTriggered_allDeliveryPaths_doNotCrash() {
+        let paths: [AnalyticsEvent.ReminderDeliveryPath] = [
+            .screenTimeThreshold, .notificationFallback, .unknown
+        ]
+        for path in paths {
+            AnalyticsLogger.log(.reminderTriggered(type: .eyes, thresholdS: 1200, deliveryPath: path))
+        }
     }
 
     // MARK: - Repeated logging

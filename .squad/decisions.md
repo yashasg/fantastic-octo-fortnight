@@ -1314,25 +1314,6 @@ If this becomes a user-reported issue, the fix would be to observe `settings.$pa
 - `Tests/EyePostureReminderTests/Services/DrivingDetectionExtendedTests.swift` — 29 tests
 
 
-### 2026-04-25T03:14:07Z: User directive
-**By:** yashasg (via Copilot)
-**What:** When running tests, always delete the previous TestResults.xcresult before starting a new run
-**Why:** User request — xcodebuild fails with "Existing file at -resultBundlePath" if stale results exist
-
-# Decision: Legal UI Patterns
-
-**Author:** Linus (iOS Dev — UI)  
-**Date:** 2026-04-28  
-**Status:** Implemented
-
-## Context
-
-Legal disclaimer text (from Frank's `docs/legal/`) needed wiring into the app UI in two places:
-1. Onboarding (first launch)
-2. Settings screen (permanent access)
-
-## Decisions
-
 ### 1. Disclaimer placement in Onboarding
 - Added to `OnboardingWelcomeView` below the body copy, above the Next CTA
 - No formal acceptance gate — just visible, non-blocking
@@ -3143,33 +3124,6 @@ Every `AnalyticsEvent` case has at least one `AnalyticsLogger.log()` call in pro
 ✅ **All 3 CONVERGED — no regressions detected in Loop 6.**
 
 No action items generated. Rusty, Turk, and Saul remain converged.
-
-### 2026-04-25T02:09: User directive
-**By:** Yashasg (via Copilot)
-**What:** Fix EVERY issue that comes out of audits — do not drop issues because they are cosmetic or coding style. Report all findings, not just P0/P1/P2. Even P3+ and lower should be reported and fixed.
-**Why:** User request — captured for team memory
-
-
-### 2026-04-25T02:10: User directive
-**By:** Yashasg (via Copilot)
-**What:** Run the audit loop endlessly — audit → create issues → fix → audit again. Never stop until the user explicitly says stop. No convergence exit.
-**Why:** User request — captured for team memory
-
-### 2026-04-25T06:30:00Z: User directive
-**By:** Yashasg (via Copilot)
-**What:** After every code commit: (1) Livingston adds tests for the changed code, (2) run SwiftLint and fix any new violations, (3) run full test suite to catch regressions. This is a mandatory post-commit QA gate.
-**Why:** User request — ensures quality stays high as the team ships fast.
-
-# Product Audit — TestFlight Readiness
-
-> **Author:** Danny (Product Manager)  
-> **Date:** 2026-04-25  
-> **Scope:** Gaps blocking a viable TestFlight beta submission  
-> **Method:** Code inspection, doc review, cross-referencing ROADMAP vs actual state
-
----
-
-## P0 — Must Fix Before TestFlight Submission
 
 ### P0-1: App Icon Missing from Codebase
 
@@ -22536,59 +22490,6 @@ Nunito is the best fit for the Restful Grove direction from parent plan #158: ro
 
 All text tokens except the existing countdown token use Dynamic Type-relative SwiftUI custom fonts. The countdown remains a documented fixed-size decorative exception with VoiceOver labels.
 
-### 2026-04-27T16:32: User directive
-**By:** Yashas (via Copilot)
-**What:** Legal document PII fields — [PUBLISHER NAME], [CONTACT EMAIL], [JURISDICTION] in docs/legal/TERMS.md and docs/legal/PRIVACY.md — must ONLY be edited by Yashas. Squad agents must never fill in, guess, or modify these placeholders. They contain PII and business decisions that only the project owner can make.
-**Why:** User request — these fields were previously filled with incorrect information by agents. Captured to prevent recurrence.
-
-# Decision: Battery & Performance Audit Results — No Critical Issues
-
-**Author:** Rusty (iOS Architect)  
-**Date:** 2025-07-18  
-**Status:** Informational
-
-## Summary
-
-Full battery and performance audit completed across all 33 Swift source files. **No critical (🔴) issues found.** The app is battery-efficient by design.
-
-## Key Validations
-
-1. **Timer architecture is correct.** ScreenTimeTracker uses a 1s timer with 0.5s tolerance, pauses on `willResignActive`, resumes on `didBecomeActive`. Zero CPU usage when backgrounded.
-2. **No background modes.** The app declares no `UIBackgroundModes` — it performs zero work when suspended. This is the right choice for a foreground reminder app.
-3. **All detection is event-driven.** Focus (KVO), CarPlay (`routeChangeNotification`), driving (`CMMotionActivityManager`) — no polling anywhere.
-4. **No retain cycles.** Consistent `[weak self]` across all closures.
-5. **Animations are GPU-efficient.** All use transform-based operations (`.scaleEffect`, `.rotationEffect`), all respect `accessibilityReduceMotion`.
-
-## 3 Minor Warnings (P3/P4)
-
-| ID | Issue | Fix Effort |
-|----|-------|-----------|
-| PERF-001 | OverlayView countdown timer missing `tolerance` | 1 line |
-| PERF-002 | YinYang breathing animation lacks `onDisappear` lifecycle | Small |
-| PERF-003 | OnboardingView `UIPageControl.appearance()` in struct init | Small |
-
-None of these will cause measurable battery drain. They are best-practice improvements.
-
-## Recommendation
-
-No blocking action required. The three P3/P4 items can be addressed opportunistically when touching those files. The app is production-ready from a battery/performance perspective.
-
-## Artifacts
-
-- Full report: `docs/performance-audit.md`
-- Machine-readable issues: `rusty-issues.json`
-
----
-
-# 2026-04-28: LLC Registration & Apple Entity Guidance
-
-## Decision: Puzzle Quest LLC Registration State Must Be Corrected Before Publisher Finalization
-
-**Author:** Frank (Legal Advisor)  
-**Date:** 2026-04-28  
-**Requested by:** yashasg  
-**Status:** Action required before App Store publisher finalization
-
 ### Context
 
 The user stated that the company name is **Puzzle Quest LLC**. It is currently registered in **Washington**, but the user says that is a mistake and it should be registered in **New Mexico**. The user's home office is in **Washington**.
@@ -23124,3 +23025,312 @@ Do not begin Shield UI work until:
 Once approved, the spike above can run within 1 day.
 
 ---
+
+
+# Decision: #205 DeviceActivity Monitoring Service — Compile-Safe Slice
+
+**Author:** Basher (iOS Dev — Services)  
+**Date:** 2026-04-29  
+**Status:** Proposed — awaiting coordinator review
+
+---
+
+## Context
+
+Issue #205 ("M3.5 DeviceActivity Monitoring Service") requires building the DeviceActivity
+scheduling layer for True Interrupt Mode. FamilyControls entitlement (#201) is not yet
+approved, so no code that requires a signed entitlement may block tests or compilation.
+
+Commit 5cc61ab (issue #204) added `ScreenTimeAuthorizationProviding`, `ScreenTimeAuthorizationNoop`,
+and `SelectedAppsState` as the compile-safe auth + picker-metadata slice.
+
+---
+
+## Decision: Separate `DeviceActivityMonitorProviding` from `ScreenTimeShieldProviding`
+
+`ScreenTimeShieldProviding` (defined in #202, `beginShield`/`endShield`) covers the
+conceptual "apply/remove shield" domain. `DeviceActivityMonitorProviding` (new in #205)
+covers the concrete `DeviceActivityCenter.startMonitoring(...)` scheduling concern.
+
+**Rationale:** Keeping them separate allows:
+1. A future `DeviceActivityMonitorScheduler` (real impl) to be injected and tested
+   independently of the ManagedSettings shield logic.
+2. `AppCoordinator` to clearly route: threshold fired → schedule monitoring window;
+   overlay dismissed / snooze → cancel monitoring window.
+3. The extension side (`DeviceActivityMonitorExtension`) and main-app side
+   (`DeviceActivityMonitorProviding`) to be evolved independently.
+
+**Alternative rejected:** Fold everything into `ScreenTimeShieldProviding.beginShield()`.
+This would merge scheduling + shield application into one opaque call, making it harder
+to test scheduling logic in isolation and harder to add per-app/per-category scoping
+(a #207 concern).
+
+---
+
+## Decision: `DeviceActivityMonitorNoop` is a true no-op (does not write App Group)
+
+The noop implementation does NOT write to the shared App Group `UserDefaults`.
+Writing to the App Group from a noop would create false state that the extension
+could accidentally read if it were somehow activated.
+
+The real implementation will write the session before scheduling.
+
+---
+
+## Decision: `isAvailable` guard at call sites, not inside methods
+
+`AppCoordinator` checks `deviceActivityMonitor.isAvailable` before calling
+`scheduleBreakMonitoring(for:)`. This is intentional: the protocol documents that
+callers SHOULD guard on `isAvailable`, making the availability check explicit and
+visible in the coordinator's flow. The noop's `scheduleBreakMonitoring` is still a
+safe no-op even if called without the guard, providing defense-in-depth.
+
+---
+
+## Remaining work (blocked on #201)
+
+- `DeviceActivityMonitorScheduler` — real implementation importing `DeviceActivity`.
+- `DeviceActivityName` constants for break activities.
+- `DeviceActivitySchedule` factory from `ShieldSession`.
+- `DeviceActivityMonitorExtension.intervalDidStart` — replace `_ = session` placeholder
+  with `ManagedSettingsStore.shield` scoped to user-selected apps from `SelectedAppsState`.
+- Wire `ScreenTimeShieldProviding` into `AppCoordinator` (defined in #202, not yet wired).
+  This is a separate issue from `DeviceActivityMonitorProviding` and should be tracked
+  as part of #206 or #207.
+
+### Rationale
+
+1. Apple's definition of "collect": *transmitting data off the device in a way that allows you and/or your third-party partners to access it.* MetricKit routes diagnostic payloads through Apple's infrastructure and surfaces them in App Store Connect — the developer does access this data.
+2. Apple has not published an exception for first-party apps using MetricKit from declaring diagnostics in their privacy manifest.
+3. The conservative posture already adopted in `PRIVACY_NUTRITION_LABELS.md` and `PRIVACY.md` is the correct one. The manifest was simply missing the corresponding declaration.
+4. Sources: [Apple App Privacy Details](https://developer.apple.com/app-store/app-privacy-details/), [Apple Privacy Manifest Files](https://developer.apple.com/documentation/bundleresources/privacy_manifest_files).
+
+### Manifest Entries Added
+
+```xml
+<dict>
+    <key>NSPrivacyCollectedDataType</key>
+    <string>NSPrivacyCrashData</string>
+    <key>NSPrivacyCollectedDataTypeLinked</key>
+    <false/>
+    <key>NSPrivacyCollectedDataTypeTracking</key>
+    <false/>
+    <key>NSPrivacyCollectedDataTypePurposes</key>
+    <array>
+        <string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+    </array>
+</dict>
+<dict>
+    <key>NSPrivacyCollectedDataType</key>
+    <string>NSPrivacyPerformanceData</string>
+    <key>NSPrivacyCollectedDataTypeLinked</key>
+    <false/>
+    <key>NSPrivacyCollectedDataTypeTracking</key>
+    <false/>
+    <key>NSPrivacyCollectedDataTypePurposes</key>
+    <array>
+        <string>NSPrivacyCollectedDataTypePurposeAnalytics</string>
+    </array>
+</dict>
+```
+
+---
+
+## Consistency Verification (pre-submission checklist)
+
+| Artifact | Status |
+|---|---|
+| `PrivacyInfo.xcprivacy` — Crash Data declared | ✅ |
+| `PrivacyInfo.xcprivacy` — Performance Data declared | ✅ |
+| `PRIVACY_NUTRITION_LABELS.md` — Crash Data = Collected, Not Linked, Not Tracking, App Functionality | ✅ |
+| `PRIVACY_NUTRITION_LABELS.md` — Performance Data = Collected, Not Linked, Not Tracking, Analytics | ✅ |
+| `docs/legal/PRIVACY.md` — MetricKit / App Store Connect analytics disclosed | ✅ |
+| `PrivacyInfo.xcprivacy` — `NSPrivacyTracking = false` | ✅ |
+| `PrivacyInfo.xcprivacy` — `NSPrivacyTrackingDomains` empty | ✅ |
+| No owner placeholders altered | ✅ |
+
+---
+
+## Future Maintenance Rule
+
+If MetricKit is removed from the app, remove both entries from `NSPrivacyCollectedDataTypes` in `PrivacyInfo.xcprivacy` and update `PRIVACY_NUTRITION_LABELS.md` before the next App Store submission.
+
+If a third-party crash or analytics SDK (e.g., Sentry, Firebase Crashlytics) is added, a new review of all four privacy artifacts is required per `PRIVACY_NUTRITION_LABELS.md` Section "If Third-Party Analytics Are Added Later".
+
+# Decision: All squad template workflow action refs must be SHA-pinned
+
+**Date:** 2026-04-30
+**Author:** Virgil
+**Issue:** #317
+
+## Decision
+
+All `uses:` action references in `.squad/templates/workflows/` must be pinned to full commit SHAs with an inline version comment, matching the style used in deployed `.github/workflows/`.
+
+**Format:** `uses: actions/<name>@<full-40-char-sha> # vX.Y.Z`
+
+## Rationale
+
+Template files deployed via `squad upgrade` directly become active workflows. Several squad templates carry `contents: write` or `issues: write` permissions. Floating major-version tags (`@v4`, `@v7`) are mutable and can be moved by maintainers or compromised in a supply-chain attack, silently changing what code runs with write permissions.
+
+## Resolved SHAs (as of 2026-04-30)
+
+| Action | SHA | Version |
+|---|---|---|
+| `actions/checkout` | `34e114876b0b11c390a56381ad16ebd13914f8d5` | v4.3.1 |
+| `actions/setup-node` | `49933ea5288caeca8642d1e84afbd3f7d6820020` | v4.4.0 |
+| `actions/github-script` | `f28e40c7f34bde8b3046d885e986cb6290c5673b` | v7.1.0 |
+| `actions/upload-pages-artifact` | `56afc609e74202658d3ffba0e8f6dda462b719fa` | v3.0.1 |
+| `actions/deploy-pages` | `d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e` | v4.0.5 |
+
+## How to resolve a SHA
+
+```bash
+gh api repos/actions/<action-name>/git/refs/tags/<tag> --jq '.object.sha'
+```
+
+## Enforcement
+
+When adding new actions to any template: resolve SHA before committing. Floating `@vN` refs must not appear in any file under `.squad/templates/workflows/` or `.github/workflows/`.
+
+# Decision: Warning-as-error parity + action SHA pinning policy
+
+**Date:** 2026-04-30  
+**Author:** Virgil (CI/CD Dev)  
+**Issues:** #304, #305  
+**Commit:** `5e2ab9786c50617b648ebf9650db092a2f180f24`
+
+## Warning-as-error must be present in every xcodebuild invocation
+
+`SWIFT_TREAT_WARNINGS_AS_ERRORS=YES` and `GCC_TREAT_WARNINGS_AS_ERRORS=YES` must be passed to **every** `xcodebuild` call in any project script — including archive, export, and validation builds. It is not sufficient to:
+- rely on grep-based post-build log scanning, or
+- assume the build scheme has these set by default.
+
+Reference implementation: `scripts/build.sh` XCODE_FLAGS array. Any new script that calls `xcodebuild` must include these flags.
+
+## GitHub Actions refs must be pinned to commit SHAs
+
+All `uses:` references to third-party GitHub Actions must use a full 40-character commit SHA with a comment noting the version. Floating major-version tags (`@v4`, `@v7`) are not acceptable in any workflow that has write permissions on issues, contents, or packages.
+
+Format:
+```yaml
+uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+```
+
+Current pinned versions (verified 2026-04-30):
+- `actions/checkout`: `34e114876b0b11c390a56381ad16ebd13914f8d5` (v4.3.1)
+- `actions/github-script`: `60a0d83039c74a4aee543508d2ffcb1c3799cdea` (v7.0.1)
+
+## Template parity
+
+When patching active workflows in `.github/workflows/`, the matching files in `.squad/templates/workflows/` must be updated in the same commit. Otherwise `squad upgrade` will revert the fix.
+
+## CRLF note for future maintainers
+
+The squad workflow YAML files use Windows line endings (CRLF). Use `perl -i -pe` with `\r?$` anchoring rather than `sed` when doing line-end-anchored substitutions on these files.
+
+
+---
+
+# Decision: PR #411 xcresult failure — SettingsStore recursion root cause
+
+**Date:** 2026-04-30  
+**Author:** Virgil (CI/CD) with findings from Livingston (Test) and Linus (Services)  
+**PR:** #411  
+**Status:** Handoff to Basher for implementation
+
+## Root Cause
+
+`SettingsStore` break-duration setters recursively self-assign in `didSet`, causing stack overflow:
+- `eyesBreakDuration` didSet assigns `eyesBreakDuration = ...`
+- `postureBreakDuration` didSet assigns `postureBreakDuration = ...`
+
+This re-enters `didSet` recursively and eventually segfaults when tests set durations or call `resetToDefaults()`.
+
+## Introducing Change
+
+Commit `744a709` (`fix: reject invalid shield durations`) introduced the recursive self-assignment pattern.
+
+## Evidence
+
+- All 4 targeted SettingsStore break-duration tests fail with `SEGV`
+- AppCoordinator duration tests fail downstream (they set break duration first)
+- Isolated single test (`test_setEyesBreakDuration_30_persistsAndLoads`) reproduces crash
+- Non-duration AppCoordinator tests pass (e.g., `test_thresholdCallback_eyes_triggersShowOverlay`)
+
+## Fix Direction (for Basher)
+
+Keep validation in setters but avoid recursion:
+1. Compute sanitized value first
+2. Only mutate storage once (or guard on equality)
+3. Persist sanitized value
+
+## Task Assignments
+
+- **Basher (Services):** Implement SettingsStore recursion fix
+- **Livingston (Tester):** Rerun targeted AppCoordinator duration tests post-fix
+- **Virgil (CI/CD):** Validate fix with full simulator test suite
+
+---
+
+# Directive: Build locally first, test incrementally
+
+**Date:** 2026-04-30  
+**Author:** yashasg (via Copilot)  
+**Rationale:** Instead of testing every fix on CLI, build locally first and inspect what is failing
+
+This is a team practice preference for iterative debugging.
+
+---
+
+# Decision: Avoid self-assignment in @Published observers for SettingsStore durations
+
+**Date:** 2026-04-30  
+**Owner:** Basher (iOS Dev - Services)  
+**Context:** PR #411 CI `Test (simulator)` surfaced a large failure cluster. Local reproduction showed `SettingsStoreTests` crashing with `signal segv`, especially around break-duration mutation tests.
+
+**Decision:** Do not normalize `@Published` properties by reassigning the same property inside `didSet`. Use private published backing storage plus validated computed setters instead.
+
+**Why:** This preserves behavior (validation + persistence + UI updates) while eliminating observer self-mutation that produced simulator test-process instability.
+
+**Scope:** `SettingsStore.eyesBreakDuration` and `SettingsStore.postureBreakDuration`.
+
+---
+
+# Decision: SettingsStore break-duration patch — APPROVED
+
+**Date:** 2026-04-30  
+**Owner:** Saul (Code Reviewer)  
+**Artifact:** Basher's commit `04f73cd` on branch `fix/legal-disclaimer-356-357-359`
+
+**Verdict:** APPROVE
+
+**Rationale:**
+- Recursive `@Published` `didSet` self-assignment was the root cause of CI segfaults. The backing-storage + computed-setter pattern is the correct Swift/Combine fix.
+- SwiftUI reactivity is preserved: `@Published` on private storage fires `objectWillChange`. No code uses `$eyesBreakDuration` or `$postureBreakDuration` publishers directly.
+- UserDefaults persistence semantics are identical. API surface is unchanged.
+- All 35+ test callsites reference the same property names with the same read/write semantics.
+
+**Team rule:** Never reassign a `@Published` property inside its own `didSet`. Use private published backing storage with a validated computed setter.
+
+---
+
+# Decision: Xcode result-bundle failure summary behavior
+
+**Date:** 2026-04-30  
+**Owner:** Virgil (CI/CD)
+
+## Decision
+Treat `xcodebuild` exit code and `.xcresult` issue summaries as source of truth for CI pass/fail; do not trust XCTest stream summary lines alone.
+
+## Why
+On PR #411 run `25155651913`, console output included `Executed 508 tests, with 0 failures`, but the action still failed with 32 `testFailureSummaries` in the result bundle due to deterministic segv crashes (`SettingsStore` recursion). This is expected Xcode behavior when failures are captured during/after result aggregation (especially with parallel/crash paths).
+
+## Action Taken
+- Updated `scripts/build.sh` test path to print a concise xcresult failure summary whenever `xcodebuild test` fails.
+- This makes crash-class failures explicit in CI logs even when the live test stream looks successful.
+
+## Team Impact
+- Basher can target the real failing tests quickly from CI logs.
+- Livingston can validate crash regression scope with narrow `-only-testing` runs.
+- Future CI triage should always inspect `.xcresult` summaries for final truth.

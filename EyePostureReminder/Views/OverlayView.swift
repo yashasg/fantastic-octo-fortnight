@@ -16,11 +16,12 @@ struct OverlayView: View {
     let onDismiss: () -> Void
     let onSettingsTap: () -> Void
     let onAnalyticsEvent: (AnalyticsEvent) -> Void
+    private let reduceMotionOverride: Bool?
 
     @State private var secondsRemaining: Int
     @State private var timer: Timer?
     @State private var contentOpacity: Double = 0
-    @State private var slideOffset: CGFloat = 300
+    @State private var slideOffset: CGFloat = AppLayout.overlayEntranceOffset
     @State private var isDismissing = false
 
     // Generators created in onAppear and pre-prepared for low-latency haptics.
@@ -33,6 +34,7 @@ struct OverlayView: View {
         type: ReminderType,
         duration: TimeInterval,
         hapticsEnabled: Bool = true,
+        reduceMotionOverride: Bool? = nil,
         onAnalyticsEvent: @escaping (AnalyticsEvent) -> Void = { _ in },
         onSettingsTap: @escaping () -> Void = {},
         onDismiss: @escaping () -> Void
@@ -43,6 +45,7 @@ struct OverlayView: View {
         self.onAnalyticsEvent  = onAnalyticsEvent
         self.onSettingsTap     = onSettingsTap
         self.onDismiss         = onDismiss
+        self.reduceMotionOverride = reduceMotionOverride
         _secondsRemaining      = State(initialValue: Int(duration))
     }
 
@@ -53,7 +56,12 @@ struct OverlayView: View {
             centerContent
         }
         .accessibilityElement(children: .contain)
-        .accessibilityAddTraits(.isModal)
+        // Modal suppression is handled at the UIKit layer: OverlayManager sets
+        // hostingController.view.accessibilityViewIsModal = true on the hosting
+        // controller's view, which correctly prevents VoiceOver from escaping
+        // the overlay window. SwiftUI's accessibilityViewIsModal(_:) is not
+        // available in the current SDK; .accessibilityAddTraits(.isModal) only
+        // adds a trait without suppressing traversal, so it is omitted here.
         .accessibilityAction(AccessibilityActionKind.escape) {
             performDismiss(method: .button)
         }
@@ -135,6 +143,7 @@ struct OverlayView: View {
                 .foregroundStyle(AppColor.textPrimary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, AppSpacing.xl)
+                .accessibilitySortPriority(1)
 
             Text(type.overlaySupportiveText)
                 .font(AppFont.body)
@@ -160,7 +169,7 @@ struct OverlayView: View {
                 )
                 .rotationEffect(.degrees(-90))
                 .animation(
-                    reduceMotion ? .none : AppAnimation.countdownRingCurve,
+                    shouldReduceMotion ? .none : AppAnimation.countdownRingCurve,
                     value: secondsRemaining
                 )
                 .accessibilityHidden(true)
@@ -170,7 +179,7 @@ struct OverlayView: View {
                 .foregroundStyle(AppColor.textPrimary)
                 .monospacedDigit()
                 .contentTransition(
-                    reduceMotion ? .identity : .numericText(countsDown: true)
+                    shouldReduceMotion ? .identity : .numericText(countsDown: true)
                 )
         }
         .frame(
@@ -197,6 +206,7 @@ struct OverlayView: View {
             )
             .buttonStyle(.primary)
             .frame(minHeight: AppLayout.minTapTarget)
+            .accessibilityHint(Text("overlay.doneButton.hint", bundle: .module))
             .accessibilityIdentifier("overlay.doneButton")
 
             Button(
@@ -236,7 +246,7 @@ struct OverlayView: View {
 
         if hapticsEnabled { notification.notificationOccurred(.warning) }
 
-        withMotionSafe(reduceMotion, animation: AppAnimation.calmingEntranceCurve) {
+        withMotionSafe(shouldReduceMotion, animation: AppAnimation.calmingEntranceCurve) {
             contentOpacity = 1
             slideOffset = 0
         }
@@ -259,11 +269,11 @@ struct OverlayView: View {
         let screenHeight = UIApplication.shared.connectedScenes
             .compactMap { $0 as? UIWindowScene }
             .first?.screen.bounds.height ?? 1000
-        withMotionSafe(reduceMotion, animation: AppAnimation.overlayDismissCurve) {
+        withMotionSafe(shouldReduceMotion, animation: AppAnimation.overlayDismissCurve) {
             contentOpacity = 0
             slideOffset = -screenHeight
         }
-        let delay = reduceMotion ? 0.05 : AppAnimation.overlayDismiss
+        let delay = shouldReduceMotion ? 0.05 : AppAnimation.overlayDismiss
         DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
             onDismiss()
         }
@@ -277,16 +287,20 @@ struct OverlayView: View {
         isDismissing = true
         onAnalyticsEvent(.overlayAutoDismissed(type: type, durationS: duration))
         triggerCompletionHaptic()
-        withMotionSafe(reduceMotion, animation: AppAnimation.overlayFadeCurve) {
+        withMotionSafe(shouldReduceMotion, animation: AppAnimation.overlayFadeCurve) {
             contentOpacity = 0
         }
-        let delay = reduceMotion ? 0.05 : AppAnimation.overlayAutoDismiss
+        let delay = shouldReduceMotion ? 0.05 : AppAnimation.overlayAutoDismiss
         DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
             onDismiss()
         }
     }
 
     // MARK: - Timer
+
+    private var shouldReduceMotion: Bool {
+        reduceMotionOverride ?? reduceMotion
+    }
 
     /// Starts a one-second repeating timer that decrements `secondsRemaining` and triggers auto-dismiss at zero.
     private func startTimer() {

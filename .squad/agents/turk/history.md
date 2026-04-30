@@ -77,3 +77,57 @@
 - **Privacy: clean** — No PII, no user IDs, no ATT, no network calls. "Data Not Collected" label safe.
 - **Fix is straightforward** — All missing events need only `AnalyticsLogger.log()` calls at existing trigger points. No schema changes required. ~1 hour estimated.
 - **Report filed:** `.squad/decisions/inbox/turk-analytics-pass-v2.md`
+
+### 2026-04-28 — Read-Only Telemetry/Privacy Audit (Post-#299)
+
+**Scope:** Full audit of AnalyticsLogger event schemas, stable raw values, privacy annotations, TELEMETRY.md/PRIVACY.md alignment, and #299 IPC event slot behavior.
+
+**Result: Clean — no new issues filed.**
+
+**Verified clean:**
+- **18 AnalyticsEvent cases** — all emit via `AnalyticsLogger.log()` at correct trigger points in AppCoordinator, SettingsViewModel, PauseConditionManager, OverlayView (via callback), and AppCoordinatorWatchdogRecovery.
+- **Stable raw values** — all enum raw values (`ShieldTriggerReason`, `DismissMethod`, `ReminderDeliveryPath`, `SchedulePath`, `SchedulePathReason`, `IPCOperation`, `IPCFailureReason`, `PauseConditionSource`, `SnoozeOption.analyticsCode`) are hardcoded snake_case strings, not localized. #278 fix confirmed (snooze uses `analyticsCode` not label).
+- **Privacy annotations** — `.public` on all enum codes and numeric durations; `.private` on `settingChanged` old/new values (intentional, documented). No PII, no device IDs, no user IDs, no free-form user-authored strings.
+- **TELEMETRY.md** — matches code for all 18 event schemas, stable raw value tables, privacy checklist, dashboard tier definitions. IPC Health section documents all `IPCOperation`/`IPCFailureReason` codes.
+- **PRIVACY.md** — accurately describes local-only data, Apple diagnostics only, no third-party SDKs, no custom analytics backend. Screen Time/App Group IPC data correctly scoped.
+- **#299 IPC event slot behavior** — per-event slot keys (`trueInterrupt.ipc.event.<UUID>`) eliminate cross-process read-modify-write race. `ipc_operation_failed` analytics event covers `writeEvent` failures. Pruning is best-effort, bounded to `maxEventCount=100`.
+- **`watchdogRecoveryTriggered` detail field** — constructed from deterministic constants (`watchdog_device_activity_heartbeat_missing` or `watchdog_device_activity_heartbeat_stale:<WatchdogHeartbeatDetail.rawValue>`), not PII. Documented as "non-PII operational code" in TELEMETRY.md.
+- **No localized or free-form values in any analytics path** — legacy `snooze(for:)` uses `"\(minutes)m"` format but is deprecated with no production callers.
+
+**No material telemetry, privacy, or documentation gaps found.**
+
+### 2026-04-30 — Read-Only Telemetry/Privacy Audit (Post-#302–#314)
+
+**Scope:** Full audit after #302–#314 changes (onboarding a11y, overlay modal trait, Customize Settings CTA, IPC corrupt-log fix, CI hardening, docs fixes).
+
+**Result: 1 new issue filed (#316).**
+
+**Verified clean (no regressions):**
+- **18 AnalyticsEvent cases** — unchanged, all still wired at correct trigger points. No analytics call sites added, modified, or removed by #302–#314.
+- **Stable raw values** — all enum raw values remain hardcoded snake_case strings. No localized or free-form values introduced.
+- **Privacy annotations** — unchanged. `.public` on all enum codes and numeric durations; `.private` on `settingChanged` old/new values. No PII in any analytics path.
+- **TELEMETRY.md** — matches code for all 18 events, stable raw value tables, privacy checklist, dashboard tiers. No docs drift from #302–#314 changes.
+- **PRIVACY.md** — accurate. Legal placeholders (`[PUBLISHER NAME]`, `[CONTACT EMAIL]`) untouched per charter.
+- **#306 IPC fix** — `AppGroupIPCStore` now logs a warning on corrupt legacy `eventLog` instead of throwing. This is an `os.Logger` warning (not an analytics event), correctly scoped. No analytics impact.
+- **#308–#310 a11y changes** — `OverlayManager.dismissOverlay()` now posts `screenChanged` notification. No analytics impact; overlay dismiss analytics still fire before this a11y notification.
+- **#311/#313/#314 onboarding changes** — `OnboardingInterruptModeView` gained a tertiary "Customize Settings" CTA button. `OnboardingView.finishOnboardingAndCustomize()` sets `openSettingsOnLaunch` flag and calls `finishOnboarding()`. Neither path emits any analytics event.
+
+**Material gap found:**
+- **#316 filed:** `onboardingCompleted` event missing. Two distinct onboarding exit CTAs ("Get Started" vs "Customize Settings") are uninstrumented. Cannot measure onboarding completion rate or CTA choice distribution. Original #31 schema proposed this event but it was never implemented. Now more impactful because #314 added a second CTA with different product intent.
+
+**No other gaps:** All other #302–#314 changes are docs, CI, a11y, or squad history — no telemetry surface area affected.
+
+### 2026-04-30 — Onboarding Completion CTA Analytics (#316)
+
+**Scope:** Implement `onboardingCompleted(cta:)` analytics event per #316 acceptance criteria.
+
+**Changes made:**
+- Added `AnalyticsEvent.OnboardingCTA` enum with stable raw values: `get_started`, `customize`.
+- Added `AnalyticsEvent.onboardingCompleted(cta:)` case.
+- Added `AnalyticsLogger.log()` handler with `cta` parameter at `privacy: .public`.
+- Wired `AnalyticsLogger.log(.onboardingCompleted(cta: .getStarted))` in `OnboardingView.finishOnboarding()`.
+- Wired `AnalyticsLogger.log(.onboardingCompleted(cta: .customize))` in `OnboardingView.finishOnboardingAndCustomize()`.
+- Updated `docs/TELEMETRY.md` with event schema, stable raw value table, emission points, and privacy annotation.
+- Added 5 unit tests: raw value stability, round-trip init, unknown rejection, and crash-safety logging for both CTAs.
+
+**Validation:** 42/42 `AnalyticsEventTests` passed. Zero PII, zero localized strings, zero free-form values. Privacy posture unchanged ("Data Not Collected").

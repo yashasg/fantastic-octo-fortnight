@@ -68,13 +68,79 @@
         }
       }
     },
+    "home.trueInterrupt.skippedBanner.body": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "True Interrupt is optional — your local alerts are already working."
+          }
+        }
+      }
+    },
+    "home.trueInterrupt.skippedBanner.dismiss": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dismiss"
+          }
+        }
+      }
+    },
+    "home.trueInterrupt.skippedBanner.dismiss.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hides this True Interrupt setup suggestion"
+          }
+        }
+      }
+    },
+    "home.trueInterrupt.skippedBanner.label": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "True Interrupt is optional. Local alerts are working. Activate to set up app-level shielding."
+          }
+        }
+      }
+    },
+    "home.trueInterrupt.skippedBanner.setUp": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Set Up True Interrupt"
+          }
+        }
+      }
+    },
+    "home.trueInterrupt.skippedBanner.setUp.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opens Settings to set up True Interrupt Mode"
+          }
+        }
+      }
+    },
     "onboarding.permission.body1": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Your reminders arrive as alerts — even while you're in another app."
+            "value": "kshana sends gentle alerts when it’s time to rest your eyes or check your posture — right when you need them."
           }
         }
       }
@@ -85,7 +151,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tap any alert to open your full-screen break in kshana."
+            "value": "You control these alerts, and you can turn them off later in Settings."
           }
         }
       }
@@ -107,7 +173,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Allows kshana to send reminder alerts while you use other apps"
+            "value": "Allows kshana to send reminder alerts when it is time for an eye or posture break"
           }
         }
       }
@@ -140,7 +206,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Example reminder: Eye Break — Time to rest your eyes."
+            "value": "Example reminder alert from kshana: rest your eyes."
           }
         }
       }
@@ -162,7 +228,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Eye Break"
+            "value": "Reminder: rest your eyes"
           }
         }
       }
@@ -195,18 +261,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Stay on track,\neffortlessly."
-          }
-        }
-      }
-    },
-    "onboarding.setup.body": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "You'll get gentle reminders to look away and sit up straight."
+            "value": "Stay on track with gentle alerts."
           }
         }
       }
@@ -493,7 +548,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Look 20 ft away for 20 seconds."
+            "value": "Backup reminder: look 20 ft away for 20 seconds."
           }
         }
       }
@@ -504,7 +559,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "👁 Eye Break"
+            "value": "Reminder: rest your eyes"
           }
         }
       }
@@ -537,7 +592,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sit up straight and roll your shoulders."
+            "value": "Backup reminder: sit up straight and roll your shoulders."
           }
         }
       }
@@ -548,7 +603,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "🧍 Posture Check"
+            "value": "Reminder: check posture"
           }
         }
       }
@@ -619,6 +674,39 @@
         }
       }
     },
+    "settings.notificationFallback": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remind me if shielding is unavailable"
+          }
+        }
+      }
+    },
+    "settings.notificationFallback.footer": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use notifications only when True Interrupt shielding is unavailable, disabled, or not configured."
+          }
+        }
+      }
+    },
+    "settings.notificationFallback.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toggles backup notifications when True Interrupt shielding is unavailable, disabled, or not configured"
+          }
+        }
+      }
+    },
     "settings.masterToggle": {
       "extractionState": "manual",
       "localizations": {
@@ -636,7 +724,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Reminders only work while the app is open."
+            "value": "In-app overlays appear while kshana is open. Backup alerts are delivered by iOS even when the app is closed."
           }
         }
       }
@@ -1026,6 +1114,28 @@
         }
       }
     },
+    "settings.snooze.activated.announcement": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reminders snoozed"
+          }
+        }
+      }
+    },
+    "settings.snooze.cancelled.announcement": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snooze cancelled. Reminders resumed."
+          }
+        }
+      }
+    },
     "settings.section.smartPause": {
       "extractionState": "manual",
       "localizations": {
@@ -1154,6 +1264,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Done"
+          }
+        }
+      }
+    },
+    "legal.dismissButton.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dismisses this document and returns to Settings"
           }
         }
       }
@@ -1307,7 +1428,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Reminder preferences and settings are stored locally on your device using UserDefaults. No data is sent to external servers. The app also reads motion activity state and Focus mode status in memory only (never stored) to pause reminders while driving or during Focus sessions."
+            "value": "Reminder preferences, settings, and local True Interrupt coordination metadata are stored on your device using UserDefaults. No data is sent to a developer server. The app also reads motion activity state and Focus mode status in memory only (never stored) to pause reminders while driving or during Focus sessions."
           }
         }
       }
@@ -1329,7 +1450,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "We do not collect personal information or any data that leaves your device. Motion activity data is accessed transiently in memory to pause reminders while driving and is never stored or transmitted. Diagnostic events are logged locally via Apple’s os.Logger: setting values (old and new) are marked private and redacted in exported logs; timing and duration measurements (session lengths, elapsed countdown time, threshold intervals) are non-identifying operational metrics and are not redacted."
+            "value": "We do not collect personal information, track you, or send app data to a developer server. Apple may process limited diagnostics, crash data, TestFlight feedback, and App Store analytics through Apple’s systems if your device or TestFlight settings allow it. Motion activity data is accessed transiently in memory to pause reminders while driving and is never stored or transmitted by kshana. Diagnostic events are logged locally via Apple’s os.Logger: setting values (old and new) are marked private and redacted in exported logs; timing and duration measurements are non-identifying operational metrics."
           }
         }
       }
@@ -1351,7 +1472,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Since we do not collect personal data, most data subject rights are satisfied by default. To delete all App data, simply delete the App from your device. Settings may be included in your device’s iCloud backup if iCloud backup is enabled.\n\nGDPR (EU/EEA users): We do not act as a data controller for personal data as defined under GDPR. No personal data is collected or processed.\n\nCCPA (California users): We do not sell personal information. We do not collect personal information as defined under the CCPA."
+            "value": "Since kshana does not maintain user accounts or a user-level database, most data subject rights are satisfied by default. To delete all App data, simply delete the App from your device. Local settings and coordination metadata may be included in your device’s iCloud backup if iCloud backup is enabled.\n\nGDPR (EU/EEA users): We do not maintain a user-level profile or account database for access, deletion, or portability requests. Apple-native diagnostics and App Store data are handled through Apple’s systems and your Apple privacy settings.\n\nCCPA (California users): We do not sell or share personal information for cross-context behavioral advertising. We do not track you across apps or websites."
           }
         }
       }
@@ -1560,7 +1681,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "kshana does not integrate with third-party analytics, advertising, or data platforms. The App operates entirely on your device and does not transmit data to external services. The App is distributed through the Apple App Store. Apple’s own terms govern the download and installation process."
+            "value": "kshana does not integrate with third-party analytics, advertising, or data platforms. The App does not transmit data to a developer-operated backend. The App is distributed through the Apple App Store, and Apple may process downloads, diagnostics, TestFlight feedback, and App Store analytics under Apple’s own terms."
           }
         }
       }
@@ -1648,7 +1769,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "All data stored by the App lives exclusively in Apple’s UserDefaults, within the App’s sandboxed storage on your device. This data may be included in your device’s iCloud backup if iCloud backup is enabled — this is controlled by your iOS settings, not by us. All locally stored data is deleted when you delete the App."
+            "value": "All data stored by the App lives in Apple’s UserDefaults, within the App’s sandboxed storage or local App Group storage on your device. This includes settings and capped True Interrupt coordination history used by the main app and Screen Time extensions. This data may be included in your device’s iCloud backup if iCloud backup is enabled — this is controlled by your iOS settings, not by us. All locally stored data is deleted when you delete the App."
           }
         }
       }
@@ -1670,7 +1791,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The App is distributed through the Apple App Store. Apple may collect certain data as part of the download and installation process, governed by Apple’s Privacy Policy. The developer has no control over or access to data collected by Apple."
+            "value": "The App is distributed through the Apple App Store. Apple may collect or process certain data as part of download, installation, diagnostics, crash reporting, TestFlight feedback, analytics, and App Store operation, governed by Apple’s Privacy Policy and your Apple settings."
           }
         }
       }
@@ -1730,6 +1851,17 @@
         }
       }
     },
+    "overlay.doneButton.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ends this break and returns to the app"
+          }
+        }
+      }
+    },
     "reminder.eyes.overlaySupportiveText": {
       "extractionState": "manual",
       "localizations": {
@@ -1748,6 +1880,811 @@
           "stringUnit": {
             "state": "translated",
             "value": "Roll your shoulders and reset."
+          }
+        }
+      }
+    },
+    "onboarding.interrupt.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "True Interrupt Mode"
+          }
+        }
+      }
+    },
+    "onboarding.interrupt.body1": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Screen Time access lets kshana shield your screen during breaks — helping you actually step away from apps."
+          }
+        }
+      }
+    },
+    "onboarding.interrupt.body2": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your selections stay private. kshana only reads what you choose to block, and only during breaks."
+          }
+        }
+      }
+    },
+    "onboarding.interrupt.enableButton": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Set Up Screen Time Access"
+          }
+        }
+      }
+    },
+    "onboarding.interrupt.enableButton.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opens the Screen Time authorization request"
+          }
+        }
+      }
+    },
+    "onboarding.interrupt.previewButton": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preview App Selection"
+          }
+        }
+      }
+    },
+    "onboarding.interrupt.previewButton.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opens the app and category setup preview for True Interrupt Mode"
+          }
+        }
+      }
+    },
+    "onboarding.interrupt.previewButton.disabled.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Feature coming soon — awaiting entitlement approval"
+          }
+        }
+      }
+    },
+    "onboarding.interrupt.customizeButton": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Customize Settings"
+          }
+        }
+      }
+    },
+    "onboarding.interrupt.customizeButton.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start using the app and open Settings immediately to adjust reminders."
+          }
+        }
+      }
+    },
+    "onboarding.interrupt.skipButton": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skip for Now"
+          }
+        }
+      }
+    },
+    "onboarding.interrupt.skipButton.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Continue without True Interrupt Mode. You can enable it later in Settings."
+          }
+        }
+      }
+    },
+    "onboarding.interrupt.summary.fallback": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Backup alerts can still remind you if shielding is unavailable"
+          }
+        }
+      }
+    },
+    "onboarding.interrupt.summary.localOnly": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your Screen Time setup metadata stays on this device"
+          }
+        }
+      }
+    },
+    "onboarding.interrupt.summary.selectApps": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Once approved, you choose which apps are shielded during breaks"
+          }
+        }
+      }
+    },
+    "onboarding.interrupt.pendingNote": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "True Interrupt Mode is coming soon. You can set it up once it is available in a future update."
+          }
+        }
+      }
+    },
+    "settings.section.trueInterrupt": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "True Interrupt Mode"
+          }
+        }
+      }
+    },
+    "settings.trueInterrupt.statusLabel": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "App Break Access"
+          }
+        }
+      }
+    },
+    "settings.trueInterrupt.footer": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Requires Screen Time access. Shields selected apps during breaks so you fully step away."
+          }
+        }
+      }
+    },
+    "settings.trueInterrupt.statusRow.unavailable": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Awaiting approval"
+          }
+        }
+      }
+    },
+    "settings.trueInterrupt.statusRow.notDetermined": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not configured"
+          }
+        }
+      }
+    },
+    "settings.trueInterrupt.statusRow.approved": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Active"
+          }
+        }
+      }
+    },
+    "settings.trueInterrupt.statusRow.denied": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Access denied — tap Configure"
+          }
+        }
+      }
+    },
+    "settings.trueInterrupt.configure": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Configure App Break Access"
+          }
+        }
+      }
+    },
+    "settings.trueInterrupt.configure.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opens the app and category selection for True Interrupt Mode"
+          }
+        }
+      }
+    },
+    "settings.trueInterrupt.denied.body": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Settings to re-enable Screen Time access and unlock True Interrupt Mode."
+          }
+        }
+      }
+    },
+    "settings.trueInterrupt.denied.label": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Screen Time access denied. Open Settings to re-enable access for True Interrupt Mode."
+          }
+        }
+      }
+    },
+    "settings.trueInterrupt.denied.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Screen Time Access Denied"
+          }
+        }
+      }
+    },
+    "settings.trueInterrupt.footer.unavailable": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "True Interrupt isn't available yet. A future kshana update will bring app-level shielding. Your local alerts are working now."
+          }
+        }
+      }
+    },
+    "settings.trueInterrupt.openSettings": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open System Settings"
+          }
+        }
+      }
+    },
+    "settings.trueInterrupt.openSettings.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opens iOS Settings to restore Screen Time access for True Interrupt Mode"
+          }
+        }
+      }
+    },
+    "appCategoryPicker.navTitle": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "App Break Access"
+          }
+        }
+      }
+    },
+    "appCategoryPicker.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose Apps for Breaks"
+          }
+        }
+      }
+    },
+    "appCategoryPicker.subtitle.unavailable": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Screen Time access is pending approval"
+          }
+        }
+      }
+    },
+    "appCategoryPicker.subtitle.notDetermined": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select which apps to shield during breaks"
+          }
+        }
+      }
+    },
+    "appCategoryPicker.subtitle.denied": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allow Screen Time access in Settings to configure"
+          }
+        }
+      }
+    },
+    "appCategoryPicker.subtitle.approved": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select which apps to shield during breaks"
+          }
+        }
+      }
+    },
+    "appCategoryPicker.button.pendingApproval": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Approval Pending"
+          }
+        }
+      }
+    },
+    "appCategoryPicker.button.enableAccess": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enable Screen Time Access"
+          }
+        }
+      }
+    },
+    "appCategoryPicker.button.openSettings": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Settings"
+          }
+        }
+      }
+    },
+    "appCategoryPicker.button.selectApps": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select Apps"
+          }
+        }
+      }
+    },
+    "appCategoryPicker.doneButton": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Done"
+          }
+        }
+      }
+    },
+    "appCategoryPicker.unavailable.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Screen Time Access Pending"
+          }
+        }
+      }
+    },
+    "appCategoryPicker.unavailable.body": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "True Interrupt Mode setup will be available in an upcoming update."
+          }
+        }
+      }
+    },
+    "appCategoryPicker.prePermission.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "How It Works"
+          }
+        }
+      }
+    },
+    "appCategoryPicker.prePermission.body": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When Screen Time access is available, kshana shields the apps you choose only during scheduled breaks. Until then, backup alerts keep reminders working."
+          }
+        }
+      }
+    },
+    "appCategoryPicker.denied.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Screen Time Access Denied"
+          }
+        }
+      }
+    },
+    "appCategoryPicker.denied.body": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To enable True Interrupt Mode, allow Screen Time access via Settings → Privacy & Security → Screen Time."
+          }
+        }
+      }
+    },
+    "appCategoryPicker.approved.appCount": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "1 app"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld apps"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "appCategoryPicker.approved.categoryCount": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "1 category"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld categories"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "appCategoryPicker.approved.noSelection": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No apps selected yet. Tap 'Select Apps' to choose which apps to shield during breaks."
+          }
+        }
+      }
+    },
+    "appCategoryPicker.approved.pickerPlaceholder": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "App selection is coming soon. Your Screen Time access is ready."
+          }
+        }
+      }
+    },
+    "appCategoryPicker.button.pendingApproval.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Screen Time access is awaiting approval. This action is currently unavailable."
+          }
+        }
+      }
+    },
+    "appCategoryPicker.button.enableAccess.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Requests Screen Time access required to configure app breaks."
+          }
+        }
+      }
+    },
+    "appCategoryPicker.button.openSettings.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opens iOS Settings so you can re-enable Screen Time access."
+          }
+        }
+      }
+    },
+    "appCategoryPicker.button.selectApps.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opens the app and category picker for True Interrupt Mode."
+          }
+        }
+      }
+    },
+    "appCategoryPicker.doneButton.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Closes this screen and returns to the previous view."
+          }
+        }
+      }
+    },
+    "home.trueInterrupt.setupPill": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Set Up True Interrupt"
+          }
+        }
+      }
+    },
+    "home.trueInterrupt.setupPill.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opens Settings to configure True Interrupt Mode"
+          }
+        }
+      }
+    },
+    "settings.trueInterrupt.configure.unavailable.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Awaiting entitlement approval — not yet available"
+          }
+        }
+      }
+    },
+    "settings.legal.disclaimer": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Disclaimer"
+          }
+        }
+      }
+    },
+    "settings.legal.disclaimer.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opens Disclaimer document"
+          }
+        }
+      }
+    },
+    "legal.disclaimer.navTitle": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Disclaimer"
+          }
+        }
+      }
+    },
+    "legal.disclaimer.notMedical.heading": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not a Medical App"
+          }
+        }
+      }
+    },
+    "legal.disclaimer.notMedical.body": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This app reminds you to take eye breaks and check your posture at intervals you set. It does not diagnose, treat, or prevent any medical condition. The 20-20-20 rule and posture reminders are general wellness guidelines — not medical advice."
+          }
+        }
+      }
+    },
+    "legal.disclaimer.professional.heading": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Consult a Healthcare Professional"
+          }
+        }
+      }
+    },
+    "legal.disclaimer.professional.body": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "If you have eye problems, chronic pain, spinal conditions, or any health concern, consult a qualified healthcare professional before following any reminder-based routine."
+          }
+        }
+      }
+    },
+    "legal.disclaimer.ownRisk.heading": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use at Your Own Risk"
+          }
+        }
+      }
+    },
+    "legal.disclaimer.ownRisk.body": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use this app at your own risk. The developer is not responsible for any health outcome, positive or negative, resulting from use of this app."
+          }
+        }
+      }
+    },
+    "legal.disclaimer.screenTime.heading": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Screen Time Features"
+          }
+        }
+      }
+    },
+    "legal.disclaimer.screenTime.body": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This app may use Apple's Screen Time and Device Activity APIs to deliver wellness reminders when you are using other apps. As of April 2026, this feature is pending Apple approval and is not yet available. Screen-time-triggered interruptions will not occur until this feature is explicitly released."
           }
         }
       }

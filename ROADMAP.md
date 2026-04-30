@@ -1,7 +1,7 @@
 # kshana — iOS App Roadmap
 
 > **Status:** v0.2.0 (Restful Grove) shipped — Phase 1+2 complete; **PIVOT to True Interrupt Mode (Screen Time APIs)** — Phase 3 (Interrupt Mode MVP)  
-> **Core Value Proposition:** True Interrupt Mode via Apple Screen Time APIs (FamilyControls + DeviceActivity + ManagedSettings) to pause distracting apps during break reminders. Local notifications are fallback/noise, not core.  
+> **Core Value Proposition:** True Interrupt Mode via Apple Screen Time APIs (FamilyControls + DeviceActivity + ManagedSettings) to pause distracting apps during break reminders. Local notifications are backup-only, not core.  
 > **Target Platform:** iOS 16+ (17+ for full Screen Time API support)  
 > **Architecture:** MVVM + Screen Time APIs (DeviceActivity, ManagedSettings, ShieldConfiguration), app groups, extension communication  
 > **Team:** 13 members across PM, Design, Architecture, Dev, QA, Review, Legal, DevOps, Analytics
@@ -10,7 +10,7 @@
 
 ## Executive Summary
 
-**kshana pivots to True Interrupt Mode.** Shipped **v0.2.0 (Restful Grove)** — Phase 1+2 complete with overlay reminders, smart pause, accessibility, yin-yang branding, 1,382 unit tests, 81%+ coverage. **Now pivoting to Phase 3 (Interrupt Mode MVP):** Core product value is Apple Screen Time APIs (FamilyControls authorization + DeviceActivity monitoring + ManagedSettings to shield distracting apps during breaks). Local notification reminders become fallback/noise, not the primary product promise. Phase 3 unblocks on entitlement approval (Case ID 102881605113). New phase includes: extension targets (ShieldConfiguration), device activity monitoring, app/category picker, managed settings + shield actions, app group shared state, pre-permission UX refinement, and legal/privacy updates for data controller terminology.
+**kshana pivots to True Interrupt Mode.** Shipped **v0.2.0 (Restful Grove)** — Phase 1+2 complete with overlay reminders, smart pause, accessibility, yin-yang branding, 1,382 unit tests, 81%+ coverage. **Now pivoting to Phase 3 (Interrupt Mode MVP):** Core product value is Apple Screen Time APIs (FamilyControls authorization + DeviceActivity monitoring + ManagedSettings to shield distracting apps during breaks). Local notification reminders become backup-only, not the primary product promise. Phase 3 unblocks on entitlement approval (Case ID 102881605113). New phase includes: extension targets (ShieldConfiguration), device activity monitoring, app/category picker, managed settings + shield actions, app group shared state, pre-permission UX refinement, and legal/privacy updates for data controller terminology.
 
 - **Phase 0: Foundation** ✅ – Project scaffolding, CI/CD, architecture, design system
 - **Phase 1: MVP** ✅ – Reminders, overlay, settings (shipped)
@@ -219,11 +219,11 @@
 
 ---
 
-## Phase 2: Polish 🔄 IN PROGRESS (~95% Complete)
+## Phase 2: Polish ✅ COMPLETE
 
 **Goal:** Elevate UX with onboarding, haptics, smart pause, accessibility, data-driven config, and App Store readiness.
 
-**Status:** Most milestones delivered. Screen-time triggers implemented (ScreenTimeTracker replacing wall-clock intervals). Smart pause complete (Focus Mode, CarPlay, driving detection). Onboarding, snooze, haptics, accessibility refined. Data-driven config via Asset Catalog (colors), String Catalog (copy), defaults.json (settings). App Store listing documented. Awaiting final submission.
+**Status:** Shipped. Screen-time triggers implemented (ScreenTimeTracker replacing wall-clock intervals). Smart pause complete (Focus Mode, CarPlay, driving detection). Onboarding, snooze, haptics, accessibility refined. Data-driven config via Asset Catalog (colors), String Catalog (copy), defaults.json (settings). App Store listing documented. v0.2.0 (Restful Grove) tagged and shipped.
 
 ### Milestones
 
@@ -231,9 +231,9 @@
 - **Owner:** Reuben (Product Designer) + Linus (iOS UI Dev)
 - **Status:** ✅ Complete
 - **Delivered:**
-  - 3-screen onboarding: Welcome → Permissions → Setup
-  - "Get Started" triggers permission request
-  - "Skip" option available
+  - 4-screen onboarding: Welcome → Notification Permission → Reminder Schedule Setup → True Interrupt Mode
+  - "Get Started" advances Screen 3 (Reminder Schedule Setup) to Screen 4 (True Interrupt Mode)
+  - "Skip for Now" completes onboarding on Screen 4 (True Interrupt Mode)
   - First-launch flag in UserDefaults
   - SwiftUI TabView with horizontal swipe navigation
   - Accessibility: VoiceOver-friendly labels
@@ -253,7 +253,7 @@
 - **Owner:** Basher (Services Dev)
 - **Status:** ✅ Complete
 - **Delivered:**
-  - 5 min / 15 min / 30 min / rest-of-day snooze options
+  - 5 min / 1 hour / rest-of-day snooze options
   - Max 2 consecutive snoozes per reminder instance
   - Dual wake mechanism: in-process `Task` + silent notification
   - Unit tests for snooze limits and rescheduling
@@ -357,14 +357,20 @@
 - **Status:** 🔄 IN PROGRESS
 - **Delivered so far:**
   - App Store listing documented: description, keywords, privacy policy
-  - Screenshots planned (5 key screens)
   - Privacy Policy filed: MetricKit diagnostics and App Store Connect analytics disclosed; no third-party SDKs
   - Disclaimer & legal docs completed (Frank)
   - Version scheme: v0.1.0-beta (TestFlight), v1.0+ (App Store)
-  - **Outstanding:** Final code review, TestFlight submission (awaiting decision)
+  - Messaging aligned: v0.2.0 is Phase 1+2 (local alerts + Smart Pause); True Interrupt Mode is Phase 3 (blocked by entitlement #201)
+- **Outstanding (metadata assets):**
+  - Screenshots for all required device sizes (iPhone 6.1", 6.7" planned; completion pending)
+  - App Preview video(s) if required for App Store category
+  - Content ratings questionnaire and age rating finalization
+  - Localization status and supported languages confirmation
+  - Bundle ID and Team ID confirmation with App Store Connect
+  - Final code review and TestFlight submission (awaiting product decision)
 
 ### Phase 2 Success Criteria
-- ✅ Onboarding guides new users smoothly
+- ✅ Onboarding guides new users smoothly with clear pre-permission education
 - ✅ Haptic feedback enhances tactile experience (optional toggle)
 - ✅ Snooze action functional with limits (max 2 consecutive)
 - ✅ Smart Pause pauses reminders during Focus Mode, CarPlay, or driving
@@ -374,7 +380,9 @@
 - ✅ Accessibility meets WCAG AA (all screens tested)
 - ✅ Data-driven config: colors via Asset Catalog, copy via String Catalog, settings seeded from defaults.json
 - ✅ All devices tested (iPhone SE, iPhone 14 Pro, iPad Pro, accessibility modes)
-- 🔄 App Store listing ready (awaiting submission decision)
+- ✅ Messaging aligned: local alerts are primary in v0.2.0; True Interrupt Mode is Phase 3/future
+- 🔄 App Store metadata assets pending (screenshots, App Preview, localization, age ratings, etc.)
+- 🔄 TestFlight/App Store submission awaiting product decision
 
 ---
 
@@ -396,7 +404,7 @@ Local notification fallback ensures we gracefully degrade if Screen Time APIs un
 ### Architecture Changes (Phase 3)
 
 #### New Targets & Frameworks
-- **App Group:** `group.com.kshana.screentime` (shared between main app and extensions)
+- **App Group:** `group.com.yashasgujjar.kshana` (shared between main app and extensions)
 - **Main App Entitlements:** `com.apple.developer.family-controls` (FamilyControls)
 - **ShieldConfiguration Extension:** Implements `ShieldConfigurationProvider` protocol (ManagedSettingsUI)
 - **ShieldAction Extension:** Implements `ShieldActionProvider` protocol for app/website unblocker buttons
@@ -529,7 +537,7 @@ Device resumes normal activity
 - **Owner:** Basher (Services Dev)
 - **Status:** 🔄 PLANNED
 - **Scope:**
-  - App Group (group.com.kshana.screentime) UserDefaults syncing config + state
+  - App Group (`group.com.yashasgujjar.kshana`) UserDefaults syncing config + state
   - Main app writes: authorized apps, shield schedule, last shield time
   - Extensions read: config for shield rendering
   - Optional watchdog: separate app extension that monitors break compliance (logs to shared container)
@@ -616,9 +624,8 @@ Device resumes normal activity
 - ✅ Graceful fallback to notifications if Screen Time APIs unavailable
 - ✅ Legal review complete; privacy policy updated
 - ✅ TestFlight build includes extensions; ready for beta distribution
-  - Haptics fire reliably on watch
 
-#### M3.5: Advanced Testing & v1.1 Release
+#### M4.1: Advanced Testing & v1.1 Release
 - **Owner:** Livingston (Tester) + Saul (Code Reviewer)
 - **Status:** 🔄 PLANNED
 - **Deliverables:**
@@ -635,7 +642,7 @@ Device resumes normal activity
   - Performance benchmarks met (battery < 2% additional per day)
   - v1.1.0 submitted to App Store
 
-### Phase 3 Success Criteria
+### Phase 4 Success Criteria
 - ✅ Dependency injection protocols in place (all services injectable)
 - ✅ Settings sync via iCloud across devices
 - ✅ Home Screen widget displays next reminder times accurately
@@ -644,10 +651,10 @@ Device resumes normal activity
 - ✅ XCUITest suite comprehensive (80%+ coverage of user flows)
 - ✅ v1.1.0 released successfully
 
-### Phase 3 Risks & Open Questions
-- **Risk:** watchOS development expertise gap on team → **Mitigation:** Linus to complete watchOS tutorial early in M3.4
-- **Risk:** Widget timeline updates impact battery more than expected → **Mitigation:** Early measurement in M3.3, adjust update frequency as needed
-- **Question:** Should we add Siri Shortcuts? → **Decision:** Evaluate post-Phase 3 based on user feedback
+### Phase 4 Risks & Open Questions
+- **Risk:** watchOS development expertise gap on team → **Mitigation:** Linus to complete watchOS tutorial early in M4.1
+- **Risk:** Widget timeline updates impact battery more than expected → **Mitigation:** Early measurement in M4.1, adjust update frequency as needed
+- **Question:** Should we add Siri Shortcuts? → **Decision:** Evaluate post-Phase 4 based on user feedback
 - **Question:** Multi-user support (Family Sharing)? → **Decision:** Defer to Phase 4 (v1.2+)
 
 ---
@@ -658,10 +665,10 @@ Device resumes normal activity
 |---|---|---|---|
 | **Phase 0** | ✅ Complete | M0.1–M0.6 | 2 weeks; all foundation work shipped |
 | **Phase 1** | ✅ Complete | M1.1–M1.8 | 3 weeks; MVP with 65+ unit tests, notifications, overlay |
-| **Phase 2** | 🔄 ~95% | M2.1–M2.10 | 4 weeks; screen-time triggers, smart pause, onboarding, haptics, data-driven config, yin-yang logo animation, 7 quality passes, Restful Grove identity; App Store prep in final stages |
-| **Phase 3** | 🔄 Started | M3.1–M3.5 | Planned 3+ weeks; DI refactoring in progress (issues #13-14); iCloud sync, widgets, watchOS deferred |
+| **Phase 2** | ✅ Complete | M2.1–M2.10 | 4 weeks; screen-time triggers, smart pause, onboarding, haptics, data-driven config, yin-yang logo animation, 7 quality passes, Restful Grove identity; v0.2.0 shipped |
+| **Phase 3** | 🔄 In Progress | M3.1–M3.11 | Planned 3+ weeks; blocked on Screen Time API entitlement approval #201; iCloud sync, widgets, watchOS deferred |
 
-**Current Project Status:** v0.2.0 (Restful Grove) tagged and shipped. Awaiting decision on TestFlight/App Store submission (Phase 2 ~95%, Phase 3 optional).
+**Current Project Status:** v0.2.0 (Restful Grove) tagged and shipped. Phase 2 complete. Phase 3 (Interrupt Mode MVP) in progress — unblocked on Screen Time API entitlement approval (Apple Case ID 102881605113, issue #201).
 
 ---
 
@@ -669,10 +676,13 @@ Device resumes normal activity
 
 | Issue | Status | Owner | Priority |
 |---|---|---|---|
-| #14 | 🔄 In Progress | Livingston | HIGH – Add ScreenTimeTracking protocol for DI |
-| #13 | 🔄 In Progress | Livingston | HIGH – Inject PauseConditionManager via protocol |
-| #12 | 🔄 In Progress | Livingston | HIGH – Add common Lifecycle protocol for services |
-| #2 | 🔄 Blocked | Rusty | MEDIUM – Fill in legal document placeholders (Frank to complete) |
+| #201 | 🔄 Blocked | Rusty | CRITICAL – Screen Time API entitlement approval (Apple Case ID 102881605113) — Phase 3 gated |
+| #196 | 🔄 In Progress | Basher | HIGH – DeviceActivity monitor extension implementation |
+| #209 | 🔄 In Progress | Linus | HIGH – ShieldConfiguration extension UI |
+| #210 | 🔄 In Progress | Linus | HIGH – ShieldAction extension button handling |
+| #185 | 🔄 In Progress | Rusty | MEDIUM – App Group shared state schema + IPC event log |
+| #354 | 🔄 Open | Rusty | HIGH – Focus Status entitlement absent from Distribution entitlements — Focus pause broken in TestFlight/App Store |
+| #358 | 🔄 Open | Frank | MEDIUM – DISCLAIMER.md uses hardcoded 'Yashasg' instead of [PUBLISHER NAME] placeholder |
 
 **Phase 2 Complete (Closed):** #11 (test fixes), #10 (integration tests), #9 (UI tests), #8 (test architecture), #7 (PauseConditionManager), #6 (pause tests), #5 (disclaimer UI), #4 (docs update), #3 (pause settings UI)
 
@@ -685,7 +695,7 @@ Device resumes normal activity
    **Owner:** Danny  
    **Decision:** Pending — Phase 2 complete, ready to submit
 
-2. **Q:** Should Phase 3 (iCloud, widgets, watchOS) be in v1.0 or v1.1?  
+2. **Q:** Should Phase 4 (iCloud, widgets, watchOS) be in v1.0 or v1.1?  
    **Owner:** Danny  
    **Recommendation:** Defer to v1.1 post-launch (Phase 2 scope sufficient for v1.0)
 
@@ -693,14 +703,14 @@ Device resumes normal activity
    **Owner:** Danny + Yashasg  
    **Deadline:** Before submission
 
-### Post-Launch (Phase 3+)
+### Post-Launch (Phase 4+)
 4. **Q:** Enable analytics (Mixpanel, Firebase)?  
    **Owner:** Turk (Data Analyst)  
    **Deadline:** v1.2 or later (maintain zero-data-collection stance in v1.0/v1.1)
 
 5. **Q:** Siri Shortcuts support?  
    **Owner:** Danny  
-   **Recommendation:** Evaluate user feedback post-Phase 3
+   **Recommendation:** Evaluate user feedback post-Phase 4
 
 6. **Q:** Multi-user / Family Sharing?  
    **Owner:** Danny + Rusty  
@@ -714,9 +724,9 @@ Device resumes normal activity
 |---|---|---|---|---|
 | Dependency injection refactoring breaks tests | Medium | Medium | 🔄 Active | Livingston testing M3.1; existing tests guard against regressions |
 | App Store submission delay | Low | High | 🔄 Active | Phase 2 complete; awaiting decision to proceed |
-| watchOS development expertise gap | Medium | Low | 🔄 Active | Defer to M3.4; Linus to upskill early |
-| Widget battery impact exceeds targets | Low | Low | 🔄 Active | Measure early in M3.3; adjust update frequency |
-| iCloud sync conflicts (edge cases) | Low | Medium | 🔄 Active | Last-write-wins strategy + logging in M3.2 |
+| watchOS development expertise gap | Medium | Low | 🔄 Active | Defer to Phase 4; Linus to upskill early in M4.1 |
+| Widget battery impact exceeds targets | Low | Low | 🔄 Active | Measure early in Phase 4; adjust update frequency |
+| iCloud sync conflicts (edge cases) | Low | Medium | 🔄 Active | Last-write-wins strategy + logging in Phase 4 |
 | Phase 3 timeline slips | Medium | Low | 🔄 Active | Phase 1+2 complete; Phase 3 is optional post-launch |
 
 ---
@@ -791,12 +801,13 @@ Phase 2: Polish 🔄 ~95%
   M0.4 + M2.5 → M2.10 (Yin-Yang Logo Animation) ✅
   M2.6 → M2.9 (App Store Prep) 🔄
 
-Phase 3: Advanced 🔄 Partially Started
-  Phase 2 → M3.1 (Dependency Injection Refactoring) 🔄 (issues #13-14)
-  M1.1 → M3.2 (iCloud Sync) 🔄 Planned
-  M1.1 + M3.2 → M3.3 (Widget) 🔄 Planned
-  M3.2 → M3.4 (watchOS) 🔄 Planned
-  M3.1 + M3.2 + M3.3 + M3.4 → M3.5 (Advanced Testing & Release) 🔄 Planned
+Phase 3: Interrupt Mode MVP 🔄 In Progress
+  Phase 2 → M3.1 (Screen Time Extension Architecture) 🔄 (blocked on entitlement #201)
+  Phase 2 → M3.6 (App Shielding) 🔄 Planned
+  Phase 2 → M3.7 (App Group Shared State) 🔄 Planned
+  M3.6 → M3.8 (App Category Picker) 🔄 Planned
+  M3.1 + M3.6 → M3.9 (Pre-Permission UX) 🔄 Planned
+  M3.6 + M3.9 → M3.11 (Notification Fallback Positioning) 🔄 Planned
 ```
 
 ---
@@ -805,7 +816,7 @@ Phase 3: Advanced 🔄 Partially Started
 
 **What's Been Built:**
 - ✅ Full MVP (Phase 1): Settings, notifications, overlay with countdown, haptics, snooze
-- ✅ Polish (Phase 2): Onboarding (3 screens), smart pause (Focus/CarPlay/driving), accessibility (WCAG AA), data-driven config (Asset Catalog + String Catalog + defaults.json), screen-time triggers (continuous screen-on time with grace period), yin-yang logo animation (Restful Grove redesign — custom SwiftUI Path, spin→breathe, reduce-motion support)
+- ✅ Polish (Phase 2): Onboarding (4 screens), smart pause (Focus/CarPlay/driving), accessibility (WCAG AA), data-driven config (Asset Catalog + String Catalog + defaults.json), screen-time triggers (continuous screen-on time with grace period), yin-yang logo animation (Restful Grove redesign — custom SwiftUI Path, spin→breathe, reduce-motion support)
 - ✅ Test Coverage: 71+ unit tests, XCUITest scaffold (HomeScreen, Settings, Onboarding flows)
 - ✅ Architecture: MVVM established, ScreenTimeTracker service, PauseConditionManager with three detectors, protocols for testability
 - ✅ Team: 13 members (PM, Design, Architect, 2 iOS Devs, Tester, Code Reviewer, Legal, CI/CD, Data Analyst, Formatter, Scribe)
@@ -813,6 +824,6 @@ Phase 3: Advanced 🔄 Partially Started
 **Ready for:**
 - 🔄 App Store submission (Phase 2 complete, docs ready, privacy policy published)
 - 🔄 TestFlight beta distribution
-- 🔄 Phase 3 (dependency injection refactoring + iCloud/widgets/watchOS post-launch)
+- 🔄 Phase 3 (Screen Time APIs + app shielding; entitlement approval #201 pending)
 
 **Next Decision:** Approve App Store submission or defer Phase 3 items to v1.0 release? (Recommend: v1.0 with Phase 1+2, Phase 3 as v1.1 post-launch)

@@ -1,4 +1,5 @@
 @testable import EyePostureReminder
+@testable import ScreenTimeExtensionShared
 import XCTest
 
 /// Unit tests for `AppCoordinator`.
@@ -34,7 +35,8 @@ final class AppCoordinatorTests: XCTestCase {
             scheduler: ReminderScheduler(notificationCenter: mockNotif),
             notificationCenter: mockNotif,
             screenTimeTracker: MockScreenTimeTracker(),
-            pauseConditionProvider: MockPauseConditionProvider()
+            pauseConditionProvider: MockPauseConditionProvider(),
+            ipcStore: MockAppGroupIPCRecorder()
         )
     }
 
@@ -53,17 +55,20 @@ final class AppCoordinatorTests: XCTestCase {
         overlay: MockOverlayPresenting,
         notifCenter: MockNotificationCenter,
         screenTimeTracker screenTimeTrackerArg: MockScreenTimeTracker? = nil,
-        pauseConditionProvider pauseProviderArg: MockPauseConditionProvider? = nil
+        pauseConditionProvider pauseProviderArg: MockPauseConditionProvider? = nil,
+        ipcStore ipcStoreArg: MockAppGroupIPCRecorder? = nil
     ) -> (AppCoordinator, MockOverlayPresenting, MockNotificationCenter) {
         let tracker = screenTimeTrackerArg ?? MockScreenTimeTracker()
         let pause = pauseProviderArg ?? MockPauseConditionProvider()
+        let ipcStore = ipcStoreArg ?? MockAppGroupIPCRecorder()
         let coordinator = AppCoordinator(
             settings: settings,
             scheduler: ReminderScheduler(notificationCenter: notifCenter),
             notificationCenter: notifCenter,
             overlayManager: overlay,
             screenTimeTracker: tracker,
-            pauseConditionProvider: pause
+            pauseConditionProvider: pause,
+            ipcStore: ipcStore
         )
         return (coordinator, overlay, notifCenter)
     }
@@ -93,7 +98,8 @@ final class AppCoordinatorTests: XCTestCase {
             scheduler: ReminderScheduler(notificationCenter: mockNotif),
             notificationCenter: mockNotif,
             screenTimeTracker: MockScreenTimeTracker(),
-            pauseConditionProvider: MockPauseConditionProvider()
+            pauseConditionProvider: MockPauseConditionProvider(),
+            ipcStore: MockAppGroupIPCRecorder()
         )
         XCTAssertNotNil(coordinator)
         coordinator.stopFallbackTimers()
@@ -364,7 +370,8 @@ final class AppCoordinatorTests: XCTestCase {
             scheduler: ReminderScheduler(notificationCenter: mockNotif),
             notificationCenter: mockNotif,
             screenTimeTracker: MockScreenTimeTracker(),
-            pauseConditionProvider: mockPause
+            pauseConditionProvider: mockPause,
+            ipcStore: MockAppGroupIPCRecorder()
         )
         defer { coordinator.stopFallbackTimers() }
         XCTAssertEqual(
@@ -383,7 +390,8 @@ final class AppCoordinatorTests: XCTestCase {
             scheduler: ReminderScheduler(notificationCenter: mockNotif),
             notificationCenter: mockNotif,
             screenTimeTracker: mockTracker,
-            pauseConditionProvider: MockPauseConditionProvider()
+            pauseConditionProvider: MockPauseConditionProvider(),
+            ipcStore: MockAppGroupIPCRecorder()
         )
         coordinator.stopFallbackTimers()
         XCTAssertEqual(
@@ -617,7 +625,7 @@ final class AppCoordinatorTests: XCTestCase {
         for request in reminderRequests(from: mockNotif) {
             XCTAssertNotNil(
                 request.trigger as? UNTimeIntervalNotificationTrigger,
-                "Periodic reminder '\(request.identifier)' must use UNTimeIntervalNotificationTrigger for background delivery")
+                "Periodic reminder '\(request.identifier)' must use a time interval trigger.")
         }
     }
 

@@ -85,3 +85,12 @@
 - **Verdict:** 🔴 **NO-GO** — "Kshanam: Event Invites & RSVP" by Amicus Labs already exists on BOTH iOS App Store and Google Play. The 2016 Telugu thriller movie "Kshanam" dominates all search results. kshanam.com is taken. Harder to pronounce than Kshana with no compensating benefit.
 - **Key finding:** Grammatical variants of Sanskrit words (e.g., accusative "-am" form) can land on entirely different name collisions than the root form. Always check inflected forms separately.
 - **Recommendation:** Kshana is the strictly superior variant — shorter, cleaner namespace, no app store conflicts, easier to pronounce. Kshanam should be dropped from consideration.
+
+### 2026-07-18: Positioning Audit — kshana App Store & Messaging
+
+- **Context:** Read-only market/App Store positioning audit against current board state (#299 closed; owner/blockers #185/#196/#201/#209/#210 remain).
+- **Files audited:** README.md, ROADMAP.md, docs/APP_STORE_LISTING.md, docs/TESTFLIGHT_METADATA.md, docs/app-naming-final-check.md, UX_FLOWS.md, all open GitHub issues.
+- **Overall verdict:** Positioning is sound. True Interrupt / Screen Time Shield messaging is correctly hedged ("in development, arriving when Apple entitlement #201 is approved"). Friendly Reminder / local alert copy accurately describes current build. No overpromising on core feature set.
+- **One material ASO gap found:** "wellness" in keyword field (8 chars) is already indexed by Apple from subtitle "Eye & Posture Wellness" — wasted budget. Additionally the listed character count (96) is inaccurate; actual string is 90 chars. Freeing those chars by removing "wellness" and adding "screen time" (high-intent, unrepresented search term) reaches 93/100 chars. Created issue #307.
+- **Confirmed clean (no new issues needed):** True Interrupt entitlement hedging ✓, Friendly Reminder / local alerts description ✓, category (Health & Fitness primary / Productivity secondary) ✓, competitive differentiation (eye + posture combined, no accounts/ads) ✓, pricing (Free) ✓. Prior issues #272/#250/#218/#292 addressed overpromise/messaging drift risks.
+- **Not duplicated:** Naming no-go research (Kshanam, Drishti), owner blockers (#185/#196/#201/#209/#210), medical disclaimer gap (#302).

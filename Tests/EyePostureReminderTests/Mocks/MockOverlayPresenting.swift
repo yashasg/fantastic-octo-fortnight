@@ -9,6 +9,13 @@ import Foundation
 @MainActor
 final class MockOverlayPresenting: OverlayPresenting {
 
+    enum LifecycleEvent: Equatable {
+        case show(ReminderType)
+        case dismiss
+        case clearQueue
+        case clearQueueForType(ReminderType)
+    }
+
     // MARK: - Call Counts
 
     private(set) var showCallCount = 0
@@ -32,13 +39,19 @@ final class MockOverlayPresenting: OverlayPresenting {
     /// `pauseMediaEnabled` arguments passed to `showOverlay`, parallel to `showCallOrder`.
     private(set) var showCallPauseMediaEnabled: [Bool] = []
 
+    /// `onPresent` closures passed to `showOverlay`, in call order.
+    /// Stored so tests can verify work that must wait for real overlay presentation.
+    private(set) var onPresentCalls: [() -> Void] = []
+
     /// `onDismiss` closures passed to `showOverlay`, in call order.
-    /// Previously discarded; now stored so tests can verify the post-dismiss callback chain.
+    /// Stored so tests can verify the post-dismiss callback chain.
     private(set) var onDismissCalls: [() -> Void] = []
+    private(set) var lifecycleEvents: [LifecycleEvent] = []
 
     // MARK: - State
 
     var isOverlayVisible = false
+    var autoInvokeOnPresent = true
 
     // MARK: - Reset
 
@@ -52,8 +65,11 @@ final class MockOverlayPresenting: OverlayPresenting {
         showCallDurations = []
         showCallHapticsEnabled = []
         showCallPauseMediaEnabled = []
+        onPresentCalls = []
         onDismissCalls = []
+        lifecycleEvents = []
         isOverlayVisible = false
+        autoInvokeOnPresent = true
     }
 
     // MARK: - Simulation Helpers
@@ -67,6 +83,15 @@ final class MockOverlayPresenting: OverlayPresenting {
         onDismissCalls[index]()
     }
 
+    /// Simulates the moment an overlay becomes visible by invoking the stored
+    /// `onPresent` closure. Disable `autoInvokeOnPresent` before `showOverlay`
+    /// when a test needs explicit control over this lifecycle edge.
+    func simulatePresent(index: Int = 0) {
+        guard index < onPresentCalls.count else { return }
+        isOverlayVisible = true
+        onPresentCalls[index]()
+    }
+
     // MARK: - OverlayPresenting
 
     func showOverlay(
@@ -74,28 +99,36 @@ final class MockOverlayPresenting: OverlayPresenting {
         duration: TimeInterval,
         hapticsEnabled: Bool,
         pauseMediaEnabled: Bool,
-        onDismiss: @escaping () -> Void
+        callbacks: OverlayLifecycleCallbacks
     ) {
         showCallCount += 1
+        lifecycleEvents.append(.show(type))
         showCallOrder.append(type)
         showCallDurations.append(duration)
         showCallHapticsEnabled.append(hapticsEnabled)
         showCallPauseMediaEnabled.append(pauseMediaEnabled)
-        onDismissCalls.append(onDismiss)
+        onPresentCalls.append(callbacks.onPresent)
+        onDismissCalls.append(callbacks.onDismiss)
         isOverlayVisible = true
+        if autoInvokeOnPresent {
+            callbacks.onPresent()
+        }
     }
 
     func dismissOverlay() {
         dismissCallCount += 1
+        lifecycleEvents.append(.dismiss)
         isOverlayVisible = false
     }
 
     func clearQueue() {
         clearQueueCallCount += 1
+        lifecycleEvents.append(.clearQueue)
     }
 
     func clearQueue(for type: ReminderType) {
         clearQueueForTypeCallCount += 1
         clearQueueForTypeArgs.append(type)
+        lifecycleEvents.append(.clearQueueForType(type))
     }
 }

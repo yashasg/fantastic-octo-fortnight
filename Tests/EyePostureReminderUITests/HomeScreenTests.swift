@@ -30,13 +30,8 @@ final class HomeScreenTests: XCTestCase {
             "Home screen navigation bar should be visible on launch."
         )
 
-        // YinYangEyeView is a shape-based view, not an Image — query otherElements.
-        let statusIcon = app.otherElements["home.statusIcon"]
-        XCTAssertTrue(
-            statusIcon.waitForExistence(timeout: 5),
-            "Home screen status icon (YinYangEyeView) must be visible. " +
-            "Add .accessibilityIdentifier(\"home.statusIcon\") to the YinYangEyeView."
-        )
+        // YinYangEyeView is purely decorative — it has .accessibilityHidden(true)
+        // and is intentionally excluded from the accessibility tree to avoid VoiceOver noise.
 
         let titleText = app.staticTexts["home.title"]
         XCTAssertTrue(
@@ -117,7 +112,7 @@ final class HomeScreenTests: XCTestCase {
         XCTAssertTrue(settingsButton.waitForExistence(timeout: 5))
         settingsButton.tap()
 
-        let globalToggle = app.switches.firstMatch
+        let globalToggle = app.switches["settings.masterToggle"]
         XCTAssertTrue(globalToggle.waitForExistence(timeout: 5))
         globalToggle.tap()
 
@@ -179,5 +174,66 @@ final class HomeScreenTests: XCTestCase {
 
         XCTAssertTrue(doneButton.waitForExistence(timeout: 5))
         doneButton.tap()
+    }
+
+    // MARK: - test_homeScreen_trueInterruptBanner_exists
+
+    /// Verifies the TrueInterruptSkippedBanner renders when Screen Time authorization is
+    /// `.notDetermined` and the banner has not been dismissed. Both CTAs must be hittable.
+    ///
+    /// Requires `--simulate-screen-time-not-determined` launch argument so the
+    /// `ScreenTimeAuthorizationStub(.notDetermined)` is injected into `AppCoordinator`
+    /// (the real simulator FamilyControls status is `.unavailable`).
+    func test_homeScreen_trueInterruptBanner_exists() throws {
+        app.terminate()
+        app = XCUIApplication()
+        app.launchWithTrueInterruptPending()
+
+        let banner = app.otherElements["home.trueInterrupt.skippedBanner"]
+        XCTAssertTrue(
+            banner.waitForExistence(timeout: 5),
+            "TrueInterruptSkippedBanner must be visible when Screen Time authorization " +
+            "is .notDetermined and the banner has not been dismissed."
+        )
+
+        let setUpButton = app.buttons["home.trueInterrupt.skippedBanner.setUp"]
+        XCTAssertTrue(
+            setUpButton.waitForExistence(timeout: 3),
+            "Set Up CTA must be present in TrueInterruptSkippedBanner."
+        )
+        XCTAssertTrue(setUpButton.isHittable, "Set Up CTA must be hittable.")
+
+        let dismissButton = app.buttons["home.trueInterrupt.skippedBanner.dismiss"]
+        XCTAssertTrue(
+            dismissButton.waitForExistence(timeout: 3),
+            "Dismiss CTA must be present in TrueInterruptSkippedBanner."
+        )
+        XCTAssertTrue(dismissButton.isHittable, "Dismiss CTA must be hittable.")
+    }
+
+    // MARK: - test_homeScreen_trueInterruptSetupPill_exists
+
+    /// Verifies that tapping the Dismiss CTA on TrueInterruptSkippedBanner removes the
+    /// banner and reveals TrueInterruptSetupPill in its place.
+    ///
+    /// Flow: launch with `.notDetermined` state → dismiss banner → pill visible.
+    func test_homeScreen_trueInterruptSetupPill_exists() throws {
+        app.terminate()
+        app = XCUIApplication()
+        app.launchWithTrueInterruptPending()
+
+        let dismissButton = app.buttons["home.trueInterrupt.skippedBanner.dismiss"]
+        XCTAssertTrue(
+            dismissButton.waitForExistence(timeout: 5),
+            "Dismiss button must be present before tapping to reveal the setup pill."
+        )
+        dismissButton.tap()
+
+        let pill = app.buttons["home.trueInterrupt.setupPill"]
+        XCTAssertTrue(
+            pill.waitForExistence(timeout: 5),
+            "TrueInterruptSetupPill must appear after the banner is dismissed."
+        )
+        XCTAssertTrue(pill.isHittable, "TrueInterruptSetupPill must be hittable.")
     }
 }

@@ -61,7 +61,6 @@ final class ColorTokenTests: XCTestCase {
             "WarningOrange must exist in the Colors asset catalog")
     }
 
-
     func test_warningText_resolvesFromCatalog() {
         XCTAssertNotNil(
             TestBundle.testColor(named: "WarningText"),
@@ -241,7 +240,7 @@ final class ColorTokenTests: XCTestCase {
             XCTAssertNil(
                 UIColor(named: name, in: Bundle.main, compatibleWith: nil),
                 "\(name) must NOT be in Bundle.main — it belongs to the module asset catalog. "
-                + "Regression: using bundle: .main instead of bundle: .module causes all colors to resolve as nil/clear.")
+                + "Regression: using bundle: .main makes colors resolve as nil/clear.")
         }
     }
 
@@ -322,10 +321,10 @@ final class ColorTokenTests: XCTestCase {
             }
             resolved.append((name, color))
         }
-        for i in 0..<resolved.count {
-            for j in (i + 1)..<resolved.count {
-                let (nameA, colorA) = resolved[i]
-                let (nameB, colorB) = resolved[j]
+        for firstIndex in 0..<resolved.count {
+            for secondIndex in (firstIndex + 1)..<resolved.count {
+                let (nameA, colorA) = resolved[firstIndex]
+                let (nameB, colorB) = resolved[secondIndex]
                 XCTAssertFalse(
                     colorsAreEqual(colorA, colorB),
                     "'\(nameA)' and '\(nameB)' must not resolve to the same color. "

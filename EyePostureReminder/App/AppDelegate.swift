@@ -17,7 +17,9 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         UNUserNotificationCenter.current().delegate = self
         installUncaughtExceptionHandler()
         MetricKitSubscriber.shared.register()
+#if DEBUG
         applyUITestLaunchArguments()
+#endif
         Logger.lifecycle.info("App did finish launching")
         return true
     }
@@ -32,16 +34,22 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
             let reason = exception.reason ?? "nil"
             let info = String(describing: exception.userInfo)
             let stack = exception.callStackSymbols.joined(separator: "\n")
-            Logger.lifecycle.fault(
-                "Uncaught ObjC exception: name=\(name) reason=\(reason) userInfo=\(info)"
-            )
-            Logger.lifecycle.fault("Stack trace:\n\(stack)")
+            Logger.lifecycle.fault("""
+                Uncaught ObjC exception: \
+                name=\(name, privacy: .public) \
+                reason=\(reason, privacy: .public) \
+                userInfo=\(info, privacy: .private)
+                """)
+            Logger.lifecycle.fault("Stack trace:\n\(stack, privacy: .private)")
         }
     }
 
     // MARK: - UI Test Support
 
     /// Handles launch arguments injected by XCUITest targets to control app state.
+    /// `#if DEBUG` ensures these backdoors are compiled out of Release/TestFlight
+    /// builds, closing the production-settings-reset vulnerability (re: #350/#405).
+#if DEBUG
     private func applyUITestLaunchArguments() {
         let args = CommandLine.arguments
         if args.contains("--skip-onboarding") {
@@ -63,7 +71,16 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
             SettingsStore().resetToDefaults()
             UserDefaults.standard.set(ReminderType.posture.rawValue, forKey: AppStorageKey.uiTestOverlayType)
         }
+        if args.contains("--simulate-screen-time-not-determined") {
+            UserDefaults.standard.set(true, forKey: AppStorageKey.hasSeenOnboarding)
+            SettingsStore().resetToDefaults()
+            UserDefaults.standard.set(
+                ScreenTimeAuthorizationStatus.notDetermined.rawValue,
+                forKey: AppStorageKey.uiTestScreenTimeStatus
+            )
+        }
     }
+#endif
 
     func applicationDidBecomeActive(_ application: UIApplication) {
         // Safety net: if the snooze-wake notification was swiped away on a killed

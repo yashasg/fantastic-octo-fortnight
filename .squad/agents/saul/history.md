@@ -111,3 +111,58 @@
 - **Build:** ✅ BUILD SUCCEEDED (xcodebuild, iPhone 17 Simulator, iOS 26.4)
 - **Tests:** ✅ 889 tests, 0 failures
 - **Key learning:** When removing design tokens from Swift code, also audit the asset catalog for orphaned `.colorset` entries and test comments that reference deleted tokens — these artifacts survive code-level cleanup and accumulate as noise
+
+### 2026-04-29: Code Review #204 — True Interrupt Authorization Setup
+
+**Scope:** Review of #204 (True Interrupt authorization setup) with focus on no-warning policy enforcement.
+
+**Review Verdict:** ✅ **APPROVED — No blocking regressions**
+
+**Key Findings:**
+- Authorization opt-in toggle is safe; graceful fallback to `ScreenTimeShieldNoop` (no-op provider)
+- Settings wiring correct; metadata persisted in `UserDefaults` with no side effects
+- Build configuration clean; no new warnings introduced
+- Test coverage sufficient; all new tests passing with zero failures
+- Protocol boundary (`ScreenTimeShieldProviding`) correctly in place; real wiring deferred to M3.3
+
+**Staging Recommendation:**
+- ✅ Stage code changes (EyePostureReminder/, Tests/, ScreenTimeExtensions/)
+- ✅ Stage config changes (project.yml, entitlements, signing)
+- ✅ Stage test fixtures
+- ❌ Exclude .squad/ (internal noise)
+- ❌ Exclude TestResults*.xcresult (build artifacts)
+
+**User Directive Captured:**
+- "We are a no-warning shop; warnings must be fixed, not accepted."
+- Enforcement: All pre-merge gates now require zero new warnings
+- Impact: Raises quality bar; all future waves must maintain zero-warning standard
+
+**Key Learning:** When reviewing authorization/permission UI additions, verify the fallback path is graceful (no degraded UX) and that the feature remains optional — this allows shipping UI while regulatory/entitlement approvals remain pending.
+
+
+### 2026-04-30: Post-#299 Code Audit (True Interrupt / IPC / ScreenTime / Analytics / CI / Accessibility)
+- **Reviewed:** 31 changed files across HEAD~15 on squad/m3-true-interrupt-mode (1862 insertions)
+- **Scope:** AppGroupIPCStore, WatchdogHeartbeat, ScreenTimeTracker, OverlayManager, PauseConditionManager, AnalyticsLogger, AppCoordinator + WatchdogRecovery, SettingsViewModel, HomeView, OverlayView, SettingsView, AccessibilityNotificationPosting, ci.yml, TELEMETRY.md
+- **Verdict:** No material actionable defects found. Code is well-structured with proper @MainActor isolation, [weak self] in async closures, generational tick guards, and correct observer cleanup.
+- **Minor observations (not filed):**
+  - SettingsViewModel uses strong self capture in 4 fire-and-forget Tasks (lines 261, 285, 297, 353) — acceptable because Tasks are short-lived scheduler calls
+  - AccessibilityNotificationPosting protocol lacks @MainActor annotation — all current callers are @MainActor so no runtime risk today, but a future non-MainActor caller would hit UIKit thread violations
+  - AppGroupIPCStore recordEvent comment says "writes exactly one key" but accessRequested events write two; the second key (lastAccessRequestAt) is not read in production code
+- **CI:** Actions pinned to full commit SHAs ✓; no script injection vectors ✓
+- **TELEMETRY.md:** Matches analytics code schema accurately ✓
+
+**Key Learning:** The True Interrupt IPC architecture uses generational guards and withLock wrappers consistently. The serialized Task queue pattern in enqueueDeviceActivityMonitorOperation is sound because @MainActor Tasks run sequentially on the main thread, making the previousTask chain safe without additional locking.
+
+### 2026-04-30: SettingsStore Break-Duration Fix (PR #411)
+- **Reviewed:** Basher's commit `04f73cd` replacing recursive `@Published` `didSet` self-assignment with private published backing storage + validated computed setters for `eyesBreakDuration` and `postureBreakDuration`.
+- **Verdict:** APPROVED. Fix correctly eliminates observer self-mutation that caused simulator test-process segfaults. SwiftUI reactivity preserved via `@Published` on backing storage. UserDefaults persistence semantics unchanged. No API surface change—external callers see the same get/set interface. Minor redundant double-sanitization in `resetToDefaults` is harmless.
+- **Key Learning:** Never reassign a `@Published` property inside its own `didSet`—it triggers recursive observer calls. Use private published backing storage with a computed setter instead.
+
+## 2026-04-30 — SettingsStore recursion fix review (Scribe update)
+
+Orchestration log recorded at 2026-04-30T09:27:10Z. Code review approved; decision documented in decisions.md:
+- Reviewed Basher's commit `04f73cd` (backing-storage + computed-setter pattern)
+- Verdict: APPROVE
+- Verified SwiftUI reactivity (objectWillChange fires on private storage)
+- Confirmed API surface unchanged; all 35+ test callsites unaffected
+- Established team rule: Never reassign @Published inside didSet; use private published backing + computed setter

@@ -1,6 +1,17 @@
 import os
+import ScreenTimeExtensionShared
 import UIKit
 import UserNotifications
+
+protocol AppGroupIPCProviding: AppGroupIPCEventRecording {
+    func isTrueInterruptEnabled() -> Bool
+    func readSelection() throws -> AppGroupSelectionSnapshot
+    func readShieldSession() throws -> ShieldSessionSnapshot
+    func clearShieldSession(endedAt: Date) -> Bool
+    func readEvents() throws -> [AppGroupIPCEvent]
+}
+
+extension AppGroupIPCStore: AppGroupIPCProviding {}
 
 /// Central dependency owner and app-lifecycle coordinator.
 ///
@@ -41,11 +52,11 @@ final class AppCoordinator: ObservableObject {
 
     // MARK: - Snooze Wake Constants
 
-    /// Category identifier for the one-time snooze-wake notification.
+    /// Shared identifier used as both the `UNNotificationRequest.identifier` and
+    /// the `content.categoryIdentifier` for the one-time snooze-wake notification.
     /// `AppDelegate` checks this to route snooze-wake notifications separately
     /// from real reminder notifications.
     static let snoozeWakeCategory = "com.yashasgujjar.kshana.snooze-wake"
-    private static let snoozeWakeIdentifier = "com.yashasgujjar.kshana.snooze-wake"
 
     // MARK: - Owned Dependencies
 
@@ -63,6 +74,26 @@ final class AppCoordinator: ObservableObject {
     /// Injected overlay manager — used to show overlays and clear the queue.
     /// Defaults to a fresh `OverlayManager()` in production.
     private let overlayManager: OverlayPresenting
+
+    // MARK: - Screen-Time Authorization
+
+    /// Manages FamilyControls authorization for True Interrupt Mode.
+    /// Defaults to `ScreenTimeAuthorizationNoop` until the entitlement from #201
+    /// is provisioned. Exposed so the Settings and onboarding UI can observe status.
+    let screenTimeAuthorization: ScreenTimeAuthorizationProviding
+
+    // MARK: - DeviceActivity Monitor
+
+    /// Schedules and cancels OS-level DeviceActivity monitoring windows for break sessions.
+    /// Defaults to `DeviceActivityMonitorNoop` until the FamilyControls entitlement (#201)
+    /// is provisioned and the user has granted authorization.
+    let deviceActivityMonitor: DeviceActivityMonitorProviding
+
+    /// Records shield/notification routing events into the App Group container so
+    /// app extensions and watchdog diagnostics can observe the selected path.
+    let ipcStore: AppGroupIPCProviding
+    private var trueInterruptEnabledObserver: NSObjectProtocol?
+    let watchdogHeartbeatGraceInterval: TimeInterval
 
     // MARK: - Screen-Time Tracker
 
@@ -92,6 +123,20 @@ final class AppCoordinator: ObservableObject {
         let duration: TimeInterval
     }
 
+    private enum DeviceActivityMonitorOperation: Sendable {
+        case schedule(ShieldSession, presentationID: UUID)
+        case cancel(presentationID: UUID?)
+
+        var logDescription: String {
+            switch self {
+            case .schedule(let session, _):
+                "schedule \(session.reason.rawValue)"
+            case .cancel:
+                "cancel"
+            }
+        }
+    }
+
     /// When a notification-tap launches the app, `didReceive` fires before any
     /// `UIWindowScene` reaches `.foregroundActive`. We stash the overlay here
     /// and present it once `scenePhase` transitions to `.active`.
@@ -109,21 +154,16 @@ final class AppCoordinator: ObservableObject {
     /// when the snooze period expires while the app is in the foreground.
     private var snoozeWakeTask: Task<Void, Never>?
 
+    /// Serializes DeviceActivity start/cancel operations so a fast dismiss cannot
+    /// race an in-flight schedule call and leave OS-level monitoring active.
+    private var deviceActivityMonitorTask: Task<Void, Never>?
+    private var dismissedDeviceActivityPresentationIDs: Set<UUID> = []
+
     // MARK: - Session Timing
 
     /// Records the time when a reminder session starts (scheduleReminders completes successfully).
     /// Used to compute session duration for the appSessionEnd analytics event.
     private var sessionStartTime: Date?
-
-    // MARK: - UI Test Mode
-
-    /// `true` when the app is launched by XCUITest with onboarding-control arguments.
-    /// Used to suppress background services (timers, permission requests) that prevent
-    /// the accessibility tree from settling between test interactions.
-    static let isUITestMode: Bool = CommandLine.arguments.contains("--skip-onboarding") ||
-                                    CommandLine.arguments.contains("--reset-onboarding") ||
-                                    CommandLine.arguments.contains("--show-overlay-eyes") ||
-                                    CommandLine.arguments.contains("--show-overlay-posture")
 
     // MARK: - Init
 
@@ -133,12 +173,33 @@ final class AppCoordinator: ObservableObject {
         notificationCenter: NotificationScheduling = UNUserNotificationCenter.current(),
         overlayManager: OverlayPresenting? = nil,
         screenTimeTracker: ScreenTimeTracking? = nil,
-        pauseConditionProvider: PauseConditionProviding? = nil
+        pauseConditionProvider: PauseConditionProviding? = nil,
+        screenTimeAuthorization: ScreenTimeAuthorizationProviding? = nil,
+        deviceActivityMonitor: DeviceActivityMonitorProviding? = nil,
+        ipcStore: AppGroupIPCProviding = AppGroupIPCStore(),
+        watchdogHeartbeatGraceInterval: TimeInterval = 10
     ) {
+        precondition(
+            watchdogHeartbeatGraceInterval.isFinite && watchdogHeartbeatGraceInterval >= 0,
+            "Watchdog heartbeat grace interval must be finite and non-negative"
+        )
         self.settings = settings ?? SettingsStore()
         self.scheduler = scheduler ?? ReminderScheduler()
         self.notificationCenter = notificationCenter
         self.overlayManager = overlayManager ?? OverlayManager()
+        self.screenTimeAuthorization = screenTimeAuthorization ?? {
+            #if DEBUG
+            if let raw = UserDefaults.standard.string(forKey: AppStorageKey.uiTestScreenTimeStatus),
+               let status = ScreenTimeAuthorizationStatus(rawValue: raw) {
+                UserDefaults.standard.removeObject(forKey: AppStorageKey.uiTestScreenTimeStatus)
+                return ScreenTimeAuthorizationStub(status: status)
+            }
+            #endif
+            return ScreenTimeAuthorizationNoop()
+        }()
+        self.deviceActivityMonitor = deviceActivityMonitor ?? DeviceActivityMonitorNoop()
+        self.ipcStore = ipcStore
+        self.watchdogHeartbeatGraceInterval = watchdogHeartbeatGraceInterval
         // In UI test mode, use no-op stubs for services that register UIKit lifecycle
         // observers and start 1-second timers — they prevent XCUITest from settling
         // the accessibility tree between interactions, causing stale element reads.
@@ -154,28 +215,33 @@ final class AppCoordinator: ObservableObject {
                 drivingDetector: LiveDrivingActivityDetector()
             ))
         Logger.lifecycle.info("AppCoordinator initialised")
+        recordWatchdogHeartbeat(.coordinatorInitialized)
 
         // Wire ScreenTimeTracker callback — fires on main thread when a type's
         // continuous screen-on threshold is reached.
         self.screenTimeTracker.onThresholdReached = { [weak self] type in
             MainActor.assumeIsolated {
                 guard let self else { return }
+                // #407: Guard against the 300 ms per-type disable debounce window.
+                // If the user just toggled this type off, `disableTracking(for:)` is
+                // still in-flight; the tracker can still fire the callback before it
+                // is cancelled. Skip entirely so no overlay appears and snoozeCount
+                // is not reset for a reminder type the user disabled.
+                guard self.settings.isEnabled(for: type) else { return }
                 // New reminder cycle — reset consecutive snooze count so the user
                 // gets a fresh snooze budget on every threshold fire.
                 self.settings.snoozeCount = 0
                 let duration = self.settings.settings(for: type).breakDuration
                 let thresholdS = self.settings.settings(for: type).interval
-                self.overlayManager.showOverlay(
-                    for: type,
-                    duration: duration,
-                    hapticsEnabled: self.settings.hapticsEnabled,
-                    pauseMediaEnabled: self.settings.pauseMediaDuringBreaks) {}
-                AnalyticsLogger.log(.reminderTriggered(type: type, thresholdS: thresholdS))
+                self.showBreakOverlay(for: type, duration: duration)
+                AnalyticsLogger.log(.reminderTriggered(
+                    type: type, thresholdS: thresholdS, deliveryPath: .screenTimeThreshold
+                ))
                 Logger.scheduling.info("Reminder triggered by screen-time threshold: \(type.rawValue)")
                 // Reschedule the background notification from now so its interval restarts
                 // at the same moment the foreground overlay fires, preventing a near-
                 // simultaneous double-trigger when the user returns to another app.
-                if self.notificationAuthStatus == .authorized {
+                if self.notificationAuthStatus == .authorized, self.shouldScheduleNotificationFallback {
                     Task { [weak self] in
                         guard let self else { return }
                         await self.scheduler.rescheduleReminder(for: type, using: self.settings)
@@ -194,10 +260,10 @@ final class AppCoordinator: ObservableObject {
                     self.screenTimeTracker.pauseAll()
                     // Dismiss any overlay that is currently on screen and drop queued ones.
                     // CarPlay/driving contexts should never show a break overlay.
+                    self.overlayManager.clearQueue()
                     if self.overlayManager.isOverlayVisible {
                         self.overlayManager.dismissOverlay()
                     }
-                    self.overlayManager.clearQueue()
                     self.pendingOverlay = nil
                     Logger.scheduling.info("PauseConditionManager: pausing reminders (active condition)")
                 } else {
@@ -212,11 +278,24 @@ final class AppCoordinator: ObservableObject {
             }
         }
         self.pauseConditionManager.startMonitoring()
+        self.trueInterruptEnabledObserver = NotificationCenter.default.addObserver(
+            forName: AppGroupIPCStore.trueInterruptEnabledDidChangeNotification,
+            object: nil,
+            queue: nil
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                await self?.scheduleReminders()
+            }
+        }
     }
 
     deinit {
         rescheduleDebounce.values.forEach { $0.cancel() }
         snoozeWakeTask?.cancel()
+        deviceActivityMonitorTask?.cancel()
+        if let trueInterruptEnabledObserver {
+            NotificationCenter.default.removeObserver(trueInterruptEnabledObserver)
+        }
     }
 
     // MARK: - Notification Permission
@@ -232,7 +311,8 @@ final class AppCoordinator: ObservableObject {
                 .requestAuthorization(options: [.alert, .sound, .badge])
             Logger.lifecycle.info("Notification authorisation \(granted ? "granted" : "denied")")
         } catch {
-            Logger.lifecycle.error("Notification authorisation request failed: \(error.localizedDescription)")
+            // swiftlint:disable:next line_length
+            Logger.lifecycle.error("Notification authorisation request failed: \(error.localizedDescription, privacy: .public)")
         }
         await refreshAuthStatus()
     }
@@ -267,6 +347,7 @@ final class AppCoordinator: ObservableObject {
     /// Call on launch (`.task`) and whenever settings change.
     func scheduleReminders() async {
         await refreshAuthStatus()
+        recordWatchdogHeartbeat(.scheduleReminders)
 
         // P1-1: Snooze guard — check before doing anything else.
         if let snoozeEnd = settings.snoozedUntil {
@@ -278,7 +359,8 @@ final class AppCoordinator: ObservableObject {
                 if notificationAuthStatus == .authorized {
                     await scheduleSnoozeWakeNotification(at: snoozeEnd)
                 }
-                Logger.scheduling.info("Snooze active until \(snoozeEnd) — screen-time tracker paused")
+                // swiftlint:disable:next line_length
+                Logger.scheduling.info("Snooze active — screen-time tracker paused; expires in \(snoozeEnd.timeIntervalSinceNow, format: .fixed(precision: 0), privacy: .public)s")
                 return
             } else {
                 // Snooze has expired — clear state and fall through to normal scheduling.
@@ -300,13 +382,23 @@ final class AppCoordinator: ObservableObject {
             await requestNotificationPermission()
         }
 
-        // Schedule (or cancel) periodic background UNNotifications.
-        // These fire while the user is in other apps; ScreenTimeTracker
-        // is the foreground precision supplement.
-        if notificationAuthStatus == .authorized {
+        // Schedule periodic background UNNotifications only as the fallback path
+        // while Screen Time shielding is unavailable.
+        if notificationAuthStatus == .authorized, shouldScheduleNotificationFallback {
+            // Capture before await — IPC state may change across the suspension point.
+            let (fallbackDetail, analyticsReason) = fallbackRoutingContext()
             await scheduler.scheduleReminders(using: settings)
+            recordIPCEvent(
+                .notificationFallbackScheduled,
+                detail: fallbackDetail
+            )
+            AnalyticsLogger.log(.schedulePathSelected(path: .notificationFallback, reason: analyticsReason))
         } else {
             scheduler.cancelAllReminders()
+            if shouldUseShieldPath {
+                recordIPCEvent(.shieldPathSelected, detail: "device_activity_available")
+                AnalyticsLogger.log(.schedulePathSelected(path: .shield, reason: .deviceActivityAvailable))
+            }
         }
 
         // Skip the 1-second tick timer in UI test mode — continuous main-thread
@@ -361,6 +453,12 @@ final class AppCoordinator: ObservableObject {
     func handleNotification(for type: ReminderType) {
         // A real reminder fired — reset consecutive snooze count.
         settings.snoozeCount = 0
+        recordIPCEvent(.notificationFallbackDelivered, reasonRaw: type.shieldReason.rawValue)
+        AnalyticsLogger.log(.reminderTriggered(
+            type: type,
+            thresholdS: settings.settings(for: type).interval,
+            deliveryPath: .notificationFallback
+        ))
 
         let duration = settings.settings(for: type).breakDuration
 
@@ -369,11 +467,7 @@ final class AppCoordinator: ObservableObject {
             .contains { $0.activationState == .foregroundActive }
 
         if hasActiveScene {
-            overlayManager.showOverlay(
-                for: type,
-                duration: duration,
-                hapticsEnabled: settings.hapticsEnabled,
-                pauseMediaEnabled: settings.pauseMediaDuringBreaks) {}
+            showBreakOverlay(for: type, duration: duration)
         } else {
             pendingOverlay = PendingOverlay(type: type, duration: duration)
             Logger.lifecycle.info("Queued pending overlay for \(type.rawValue) (no active scene)")
@@ -390,11 +484,7 @@ final class AppCoordinator: ObservableObject {
         guard let pending = pendingOverlay else { return }
         pendingOverlay = nil
         Logger.lifecycle.info("Presenting queued overlay for \(pending.type.rawValue)")
-        overlayManager.showOverlay(
-            for: pending.type,
-            duration: pending.duration,
-            hapticsEnabled: settings.hapticsEnabled,
-            pauseMediaEnabled: settings.pauseMediaDuringBreaks) {}
+        showBreakOverlay(for: pending.type, duration: pending.duration)
     }
 
     // MARK: - App Lifecycle Hooks
@@ -420,6 +510,8 @@ final class AppCoordinator: ObservableObject {
     /// restart is required here.
     func handleForegroundTransition() async {
         await refreshAuthStatus()
+        await recoverStaleDeviceActivityWatchdogIfNeeded()
+        recordWatchdogHeartbeat(.appForeground)
 
         // P1-1: Handle snooze state on foreground.
         if let snoozeEnd = settings.snoozedUntil {
@@ -437,7 +529,8 @@ final class AppCoordinator: ObservableObject {
                 if notificationAuthStatus == .authorized {
                     await scheduleSnoozeWakeNotification(at: snoozeEnd)
                 }
-                Logger.scheduling.info("Foreground transition: snooze still active until \(snoozeEnd)")
+                // swiftlint:disable:next line_length
+                Logger.scheduling.info("Foreground transition: snooze still active; expires in \(snoozeEnd.timeIntervalSinceNow, format: .fixed(precision: 0), privacy: .public)s")
             }
             return
         }
@@ -467,10 +560,15 @@ final class AppCoordinator: ObservableObject {
         let sessionDuration = sessionStartTime.map { Date().timeIntervalSince($0) } ?? 0
         AnalyticsLogger.log(.appSessionEnd(sessionDurationS: sessionDuration))
         sessionStartTime = nil
+        recordWatchdogHeartbeat(.appBackground)
         Logger.lifecycle.debug("App resigned active — ScreenTimeTracker will auto-reset elapsed counters")
     }
 
-    // MARK: - Fallback Timer Shims (backward compatibility)
+}
+
+// MARK: - Fallback Timer Shims and Private Helpers
+
+extension AppCoordinator {
 
     /// Configure the `ScreenTimeTracker` with current settings and start counting.
     ///
@@ -500,7 +598,8 @@ final class AppCoordinator: ObservableObject {
             guard !Task.isCancelled else { return }
             await self?.handleSnoozeWake()
         }
-        Logger.scheduling.debug("Snooze wake task armed for \(date)")
+        // swiftlint:disable:next line_length
+        Logger.scheduling.debug("Snooze wake task armed; fires in \(date.timeIntervalSinceNow, format: .fixed(precision: 0), privacy: .public)s")
     }
 
     /// Cancel the in-process snooze wake task without removing the pending
@@ -518,7 +617,7 @@ final class AppCoordinator: ObservableObject {
         snoozeWakeTask?.cancel()
         snoozeWakeTask = nil
         notificationCenter.removePendingNotificationRequests(
-            withIdentifiers: [Self.snoozeWakeIdentifier]
+            withIdentifiers: [Self.snoozeWakeCategory]
         )
     }
 
@@ -541,7 +640,7 @@ final class AppCoordinator: ObservableObject {
 
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: interval, repeats: false)
         let request = UNNotificationRequest(
-            identifier: Self.snoozeWakeIdentifier,
+            identifier: Self.snoozeWakeCategory,
             content: content,
             trigger: trigger
         )
@@ -550,7 +649,8 @@ final class AppCoordinator: ObservableObject {
             try await notificationCenter.add(request)
             Logger.scheduling.debug("Snooze wake notification scheduled in \(interval)s")
         } catch {
-            Logger.scheduling.error("Failed to schedule snooze wake notification: \(error.localizedDescription)")
+            // swiftlint:disable:next line_length
+            Logger.scheduling.error("Failed to schedule snooze wake notification: \(error.localizedDescription, privacy: .public)")
         }
     }
 
@@ -565,6 +665,110 @@ final class AppCoordinator: ObservableObject {
     }
 
     // MARK: - Private
+
+    private func showBreakOverlay(for type: ReminderType, duration: TimeInterval) {
+        let presentationID = UUID()
+        overlayManager.showOverlay(
+            for: type,
+            duration: duration,
+            hapticsEnabled: settings.hapticsEnabled,
+            pauseMediaEnabled: settings.pauseMediaDuringBreaks,
+            callbacks: OverlayLifecycleCallbacks(
+                onPresent: { [weak self] in
+                    self?.scheduleDeviceActivityMonitoring(
+                        for: type,
+                        duration: duration,
+                        presentationID: presentationID
+                    )
+                },
+                onDismiss: { [weak self] in
+                    self?.cancelDeviceActivityMonitoring(presentationID: presentationID)
+                }
+            )
+        )
+    }
+
+    private func scheduleDeviceActivityMonitoring(
+        for type: ReminderType,
+        duration: TimeInterval,
+        presentationID: UUID
+    ) {
+        guard shouldUseShieldPath else { return }
+        enqueueDeviceActivityMonitorOperation(
+            .schedule(ShieldSession(type: type, durationSeconds: duration), presentationID: presentationID)
+        )
+    }
+
+    func cancelDeviceActivityMonitoring(presentationID: UUID? = nil) {
+        guard deviceActivityMonitor.isAvailable else { return }
+        if let presentationID {
+            dismissedDeviceActivityPresentationIDs.insert(presentationID)
+        }
+        enqueueDeviceActivityMonitorOperation(.cancel(presentationID: presentationID))
+    }
+
+    private func enqueueDeviceActivityMonitorOperation(_ operation: DeviceActivityMonitorOperation) {
+        let previousTask = deviceActivityMonitorTask
+        deviceActivityMonitorTask = Task { @MainActor [weak self, previousTask, operation] in
+            _ = await previousTask?.result
+            guard let self, !Task.isCancelled else { return }
+
+            do {
+                switch operation {
+                case .schedule(let session, _):
+                    try await deviceActivityMonitor.scheduleBreakMonitoring(for: session)
+                    recordIPCEvent(
+                        .shieldStarted,
+                        reasonRaw: session.reason.rawValue,
+                        detail: "device_activity_monitor_scheduled"
+                    )
+                    AnalyticsLogger.log(.shieldActivated(reason: session.reason))
+                    Logger.scheduling.info(
+                        "DeviceActivity monitoring scheduled for \(session.reason.rawValue)"
+                    )
+                case .cancel:
+                    try await deviceActivityMonitor.cancelBreakMonitoring()
+                    recordIPCEvent(.shieldEnded, detail: "device_activity_monitor_cancelled")
+                    AnalyticsLogger.log(.shieldDeactivated)
+                    Logger.scheduling.info("DeviceActivity monitoring cancelled")
+                }
+            } catch {
+                if case .schedule(let session, let presentationID) = operation,
+                   notificationAuthStatus == .authorized,
+                   settings.notificationFallbackEnabled,
+                   let fallbackType = session.reason.reminderType {
+                    AnalyticsLogger.log(.shieldActivationFailed(reason: session.reason))
+                    if dismissedDeviceActivityPresentationIDs.remove(presentationID) != nil {
+                        recordIPCEvent(
+                            .notificationFallbackSuppressed,
+                            reasonRaw: session.reason.rawValue,
+                            detail: "device_activity_schedule_failed_overlay_dismissed"
+                        )
+                    } else if overlayManager.isOverlayVisible {
+                        recordIPCEvent(
+                            .notificationFallbackSuppressed,
+                            reasonRaw: session.reason.rawValue,
+                            detail: "device_activity_schedule_failed_overlay_visible"
+                        )
+                    } else {
+                        await scheduler.rescheduleReminder(for: fallbackType, using: settings)
+                        recordIPCEvent(
+                            .notificationFallbackScheduled,
+                            reasonRaw: session.reason.rawValue,
+                            detail: "device_activity_schedule_failed"
+                        )
+                    }
+                }
+                Logger.scheduling.error(
+                    // swiftlint:disable:next line_length
+                    "DeviceActivity monitor \(operation.logDescription, privacy: .public) failed: \(error.localizedDescription, privacy: .public)"
+                )
+            }
+            if case .cancel(let presentationID?) = operation {
+                dismissedDeviceActivityPresentationIDs.remove(presentationID)
+            }
+        }
+    }
 
     /// Update the ScreenTimeTracker threshold and background notification for a
     /// single type after the debounce window has elapsed.
@@ -581,8 +785,10 @@ final class AppCoordinator: ObservableObject {
             let interval = settings.settings(for: type).interval
             screenTimeTracker.setThreshold(interval, for: type)
             screenTimeTracker.startMonitoring()
-            if notificationAuthStatus == .authorized {
+            if notificationAuthStatus == .authorized, shouldScheduleNotificationFallback {
                 await scheduler.rescheduleReminder(for: type, using: settings)
+            } else {
+                scheduler.cancelReminder(for: type)
             }
             Logger.scheduling.info("Rescheduled \(type.rawValue): screen-time threshold → \(interval)s")
         } else {
@@ -615,6 +821,85 @@ final class AppCoordinator: ObservableObject {
         screenTimeTracker.resumeAll()
         screenTimeTracker.startMonitoring()
     }
+
+    private var shouldScheduleNotificationFallback: Bool {
+        settings.notificationFallbackEnabled &&
+            hasEnabledReminder &&
+            (!deviceActivityMonitor.isAvailable || !isTrueInterruptEnabled || !hasTrueInterruptSelection)
+    }
+
+    private var shouldUseShieldPath: Bool {
+        deviceActivityMonitor.isAvailable &&
+            isTrueInterruptEnabled &&
+            hasTrueInterruptSelection &&
+            hasEnabledReminder
+    }
+
+    /// Returns the IPC detail string and analytics reason for the current fallback routing state.
+    ///
+    /// Evaluate once and capture **before** any `await` — IPC state may change across a
+    /// suspension point. Combining both outputs avoids evaluating the same guard chain twice.
+    private func fallbackRoutingContext() -> (detail: String, analyticsReason: AnalyticsEvent.SchedulePathReason) {
+        guard deviceActivityMonitor.isAvailable else {
+            return ("shield_unavailable", .shieldUnavailable)
+        }
+        guard isTrueInterruptEnabled else {
+            return ("true_interrupt_disabled", .trueInterruptDisabled)
+        }
+        guard hasTrueInterruptSelection else {
+            return ("true_interrupt_empty_selection", .trueInterruptEmptySelection)
+        }
+        // Defensive path: shield routing became available between the
+        // `shouldScheduleNotificationFallback` check and this evaluation.
+        Logger.scheduling.error("fallbackRoutingContext: shield routing available — IPC state may have changed")
+        return ("unexpected_shield_routing_state", .unexpectedShieldRoutingState)
+    }
+
+    private var isTrueInterruptEnabled: Bool {
+        ipcStore.isTrueInterruptEnabled()
+    }
+
+    private var hasTrueInterruptSelection: Bool {
+        do {
+            let selection = try ipcStore.readSelection()
+            if selection.isEmpty {
+                Logger.scheduling.debug("True Interrupt disabled because no apps or categories are selected")
+                return false
+            }
+            return true
+        } catch {
+            Logger.scheduling.error(
+                "True Interrupt selection unavailable: \(String(describing: error), privacy: .public)"
+            )
+            return false
+        }
+    }
+
+    private var hasEnabledReminder: Bool {
+        ReminderType.allCases.contains { settings.isEnabled(for: $0) }
+    }
+
+    func recordIPCEvent(
+        _ kind: AppGroupIPCEventKind,
+        reasonRaw: String? = nil,
+        detail: String? = nil
+    ) {
+        do {
+            try ipcStore.recordEvent(AppGroupIPCEvent(kind: kind, reasonRaw: reasonRaw, detail: detail))
+        } catch {
+            Logger.scheduling.error("App Group IPC event write failed: \(error.localizedDescription, privacy: .public)")
+            AnalyticsLogger.log(.ipcOperationFailed(operation: .writeEvent, reason: .writeFailed))
+        }
+    }
+
+    private func recordWatchdogHeartbeat(_ detail: WatchdogHeartbeatDetail) {
+        do {
+            try WatchdogHeartbeat.record(detail, using: ipcStore)
+        } catch {
+            // swiftlint:disable:next line_length
+            Logger.scheduling.error("App Group watchdog heartbeat write failed: \(error.localizedDescription, privacy: .public)")
+        }
+    }
 }
 
 // MARK: - ReminderScheduling Conformance
@@ -640,16 +925,25 @@ extension AppCoordinator: ReminderScheduling {
         screenTimeTracker.disableTracking(for: type)
         overlayManager.clearQueue(for: type)
         if pendingOverlay?.type == type { pendingOverlay = nil }
+        // Cancel DeviceActivity monitoring when an active shield session for this type is live,
+        // so a stuck-shield cannot outlast a cancelled reminder. Avoid cancelling unrelated sessions.
+        if deviceActivityMonitor.isAvailable,
+           let session = try? ipcStore.readShieldSession(),
+           session.reason?.reminderType == type {
+            cancelDeviceActivityMonitoring()
+        }
     }
 
     func cancelAllReminders() {
         scheduler.cancelAllReminders()
         screenTimeTracker.pauseAll()
+        overlayManager.clearQueue()
         if overlayManager.isOverlayVisible {
             overlayManager.dismissOverlay()
         }
-        overlayManager.clearQueue()
         pendingOverlay = nil
+
+        cancelDeviceActivityMonitoring()
 
         // If snooze was just applied (snoozedUntil set before this call),
         // arm the in-process wake task immediately so the app resumes on time

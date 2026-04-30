@@ -174,10 +174,11 @@ final class SettingsFlowTests: XCTestCase {
     func test_settings_globalToggle_isVisible() throws {
         openSettings()
 
-        let globalToggle = app.switches.firstMatch
+        let globalToggle = app.switches["settings.masterToggle"]
         XCTAssertTrue(
             globalToggle.waitForExistence(timeout: 5),
-            "The global toggle must be visible at the top of the Settings form."
+            "The global toggle must be visible at the top of the Settings form. " +
+            "AccessibleToggle must use .accessibilityIdentifier(\"settings.masterToggle\") in SettingsView."
         )
     }
 
@@ -187,7 +188,7 @@ final class SettingsFlowTests: XCTestCase {
     func test_settings_globalToggle_changesStateOnTap() throws {
         openSettings()
 
-        let globalToggle = app.switches.firstMatch
+        let globalToggle = app.switches["settings.masterToggle"]
         XCTAssertTrue(globalToggle.waitForExistence(timeout: 5))
 
         let initialValue = globalToggle.value as? String
@@ -207,6 +208,21 @@ final class SettingsFlowTests: XCTestCase {
 
         let allSwitches = app.switches.allElementsBoundByIndex
         XCTAssertGreaterThan(allSwitches.count, 0, "At least one toggle must be visible in Settings.")
+    }
+
+    // MARK: - test_settings_notificationFallbackToggle_exists
+
+    /// Verifies the backup-alert toggle for notification fallback is present in Settings.
+    func test_settings_notificationFallbackToggle_exists() throws {
+        openSettings()
+
+        app.swipeUp()
+
+        let fallbackToggle = app.switches["settings.notificationFallback"]
+        XCTAssertTrue(
+            fallbackToggle.waitForExistence(timeout: 5),
+            "Notification fallback toggle must exist in the Preferences section."
+        )
     }
 
     // MARK: - test_settings_termsSheet_dismissReturnsToSettings

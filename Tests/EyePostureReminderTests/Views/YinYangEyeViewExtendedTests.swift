@@ -102,7 +102,7 @@ final class YinYangEyeViewExtendedTests: XCTestCase {
     /// YinYangEyeView initial state — spinComplete, breathing, hasStarted are all false
     /// (verified indirectly: view renders normally before animations fire).
     func test_yinYangEyeView_initialState_rendersWithoutAnimation() {
-        let view = YinYangEyeView()
+        let view = YinYangEyeView(reduceMotionOverride: false)
         let described = String(describing: view.body)
         XCTAssertFalse(described.isEmpty,
                        "YinYangEyeView must render in its initial pre-animation state")
@@ -110,8 +110,8 @@ final class YinYangEyeViewExtendedTests: XCTestCase {
 
     /// Multiple instantiations should each start fresh (no shared static state).
     func test_yinYangEyeView_multipleInstances_areIndependent() {
-        let view1 = YinYangEyeView()
-        let view2 = YinYangEyeView()
+        let view1 = YinYangEyeView(reduceMotionOverride: false)
+        let view2 = YinYangEyeView(reduceMotionOverride: false)
         let desc1 = String(describing: view1.body)
         let desc2 = String(describing: view2.body)
         XCTAssertFalse(desc1.isEmpty)

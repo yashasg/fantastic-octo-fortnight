@@ -49,7 +49,7 @@ final class ScreenTimeTracker: ScreenTimeTracking {
     /// Seconds to wait after `willResignActive` before resetting counters to zero.
     /// Brief interruptions (notification banners, incoming calls, Control Center) that
     /// resolve within this window resume counting rather than nuking accumulated time.
-    private let resetGracePeriod: TimeInterval = 5.0
+    private let resetGracePeriod: TimeInterval
 
     // MARK: - State
 
@@ -57,6 +57,12 @@ final class ScreenTimeTracker: ScreenTimeTracking {
     private var thresholds: [ReminderType: TimeInterval] = [:]
     private var paused: Set<ReminderType> = []
     private var tickTimer: Timer?
+
+    /// Monotonically incrementing counter. Incremented each time `stopTicking()` runs.
+    /// The timer closure captures the value at scheduling time; the enqueued `Task`
+    /// aborts if the captured generation no longer matches (`stopTicking()` ran after
+    /// the timer fired but before the `Task` body executed — the stale-task race).
+    private(set) var tickingGeneration: UInt = 0
 
     /// Records the `CACurrentMediaTime()` at each tick to compute the actual
     /// elapsed delta instead of assuming a constant 1.0 s per tick.
@@ -76,7 +82,18 @@ final class ScreenTimeTracker: ScreenTimeTracking {
 
     // MARK: - Init
 
-    init() {
+    /// - Parameter resetGracePeriod: Seconds to wait after `willResignActive` before
+    ///   clearing counters. Must be ≥ 0. Defaults to 5.0 s for production use; pass a
+    ///   smaller value in tests to exercise grace-period behaviour without long sleeps.
+    init(resetGracePeriod: TimeInterval = 5.0) {
+        if resetGracePeriod < 0 {
+            Logger.scheduling.warning(
+                "ScreenTimeTracker: ignoring negative resetGracePeriod (\(resetGracePeriod)) — using 0"
+            )
+            self.resetGracePeriod = 0
+        } else {
+            self.resetGracePeriod = resetGracePeriod
+        }
         for type in ReminderType.allCases {
             elapsed[type] = 0
         }
@@ -239,8 +256,11 @@ final class ScreenTimeTracker: ScreenTimeTracking {
     private func startTicking() {
         guard tickTimer == nil else { return }
         lastTickTime = 0  // reset so first tick uses default delta of 1.0
+        let gen = tickingGeneration
         tickTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated { self?.tick() }
+            Task { @MainActor [weak self] in
+                self?.tickGuarded(generation: gen)
+            }
         }
         tickTimer?.tolerance = 0.5
         Logger.scheduling.debug("ScreenTimeTracker: started ticking")
@@ -255,11 +275,29 @@ final class ScreenTimeTracker: ScreenTimeTracking {
     private func stopTicking() {
         tickTimer?.invalidate()
         tickTimer = nil
+        tickingGeneration &+= 1  // invalidate any in-flight Task that captured the old generation
         lastTickTime = 0  // reset so the next tick after resume uses default delta
     }
 
-    private func tick() {
-        let now = CACurrentMediaTime()
+    /// Guards against stale enqueued tasks by comparing `generation` to `tickingGeneration`.
+    ///
+    /// The timer closure captures the generation at scheduling time. If `stopTicking()`
+    /// ran between the timer firing and this Task body executing, the generations will
+    /// differ and `tick()` is skipped, preventing spurious elapsed advancement.
+    ///
+    /// This is also the test seam for the stale-task race: pass a stale generation to
+    /// verify that no elapsed advancement or threshold callback occurs.
+    func tickGuarded(generation: UInt, now: CFTimeInterval = CACurrentMediaTime()) {
+        guard generation == tickingGeneration else { return }
+        tick(now: now)
+    }
+
+    /// Advance all enabled, unpaused counters by one tick.
+    ///
+    /// The `now` parameter defaults to `CACurrentMediaTime()` for production use.
+    /// Pass an explicit value in unit tests to exercise the 2 s delta-cap without
+    /// running a real wall-clock timer.
+    func tick(now: CFTimeInterval = CACurrentMediaTime()) {
         // Use real elapsed time since the last tick rather than the nominal 1.0 s.
         // Cap at 2.0 s to avoid large jumps after device sleep or backgrounding.
         let delta: TimeInterval = lastTickTime > 0 ? min(now - lastTickTime, 2.0) : 1.0

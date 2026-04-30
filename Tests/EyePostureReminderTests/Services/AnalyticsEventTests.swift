@@ -1,4 +1,5 @@
 @testable import EyePostureReminder
+import ScreenTimeExtensionShared
 import XCTest
 
 /// Tests for `AnalyticsEvent` enum — validates associated values, exhaustiveness,
@@ -73,12 +74,12 @@ final class AnalyticsEventTests: XCTestCase {
 
     func test_reminderTriggered_allTypes() {
         for type in ReminderType.allCases {
-            AnalyticsLogger.log(.reminderTriggered(type: type, thresholdS: 1200))
+            AnalyticsLogger.log(.reminderTriggered(type: type, thresholdS: 1200, deliveryPath: .screenTimeThreshold))
         }
     }
 
     func test_reminderTriggered_zeroThreshold() {
-        AnalyticsLogger.log(.reminderTriggered(type: .eyes, thresholdS: 0))
+        AnalyticsLogger.log(.reminderTriggered(type: .eyes, thresholdS: 0, deliveryPath: .unknown))
     }
 
     // MARK: - AnalyticsEvent: Overlay Events
@@ -111,7 +112,53 @@ final class AnalyticsEventTests: XCTestCase {
     // MARK: - AnalyticsEvent: Settings Events
 
     func test_settingChanged_emptyValues() {
-        AnalyticsLogger.log(.settingChanged(setting: "", oldValue: "", newValue: ""))
+        AnalyticsLogger.log(.settingChanged(setting: .globalEnabled, oldValue: "", newValue: ""))
+    }
+
+    // MARK: - SettingKey
+
+    func test_settingKey_allCases_count() {
+        XCTAssertEqual(AnalyticsEvent.SettingKey.allCases.count, 11)
+    }
+
+    func test_settingKey_rawValues_matchExpectedSchema() {
+        XCTAssertEqual(AnalyticsEvent.SettingKey.globalEnabled.rawValue, "globalEnabled")
+        XCTAssertEqual(AnalyticsEvent.SettingKey.eyesEnabled.rawValue, "eyesEnabled")
+        XCTAssertEqual(AnalyticsEvent.SettingKey.eyesInterval.rawValue, "eyesInterval")
+        XCTAssertEqual(AnalyticsEvent.SettingKey.eyesBreakDuration.rawValue, "eyesBreakDuration")
+        XCTAssertEqual(AnalyticsEvent.SettingKey.postureEnabled.rawValue, "postureEnabled")
+        XCTAssertEqual(AnalyticsEvent.SettingKey.postureInterval.rawValue, "postureInterval")
+        XCTAssertEqual(AnalyticsEvent.SettingKey.postureBreakDuration.rawValue, "postureBreakDuration")
+        XCTAssertEqual(AnalyticsEvent.SettingKey.pauseDuringFocus.rawValue, "pauseDuringFocus")
+        XCTAssertEqual(AnalyticsEvent.SettingKey.pauseWhileDriving.rawValue, "pauseWhileDriving")
+        XCTAssertEqual(AnalyticsEvent.SettingKey.hapticsEnabled.rawValue, "hapticsEnabled")
+        XCTAssertEqual(
+            AnalyticsEvent.SettingKey.notificationFallbackEnabled.rawValue,
+            "notificationFallbackEnabled"
+        )
+    }
+
+    func test_settingChanged_emitsCorrectFields_viaTestHandler() {
+        var captured: [AnalyticsEvent] = []
+        AnalyticsLogger.testEventHandler = { captured.append($0) }
+        defer { AnalyticsLogger.testEventHandler = nil }
+
+        AnalyticsLogger.log(.settingChanged(setting: .eyesInterval, oldValue: "1200", newValue: "900"))
+
+        XCTAssertEqual(captured.count, 1)
+        if case let .settingChanged(setting, oldValue, newValue) = captured[0] {
+            XCTAssertEqual(setting, .eyesInterval)
+            XCTAssertEqual(oldValue, "1200")
+            XCTAssertEqual(newValue, "900")
+        } else {
+            XCTFail("Expected settingChanged event")
+        }
+    }
+
+    func test_settingChanged_allKeys_doNotCrash() {
+        for key in AnalyticsEvent.SettingKey.allCases {
+            AnalyticsLogger.log(.settingChanged(setting: key, oldValue: "false", newValue: "true"))
+        }
     }
 
     // MARK: - AnalyticsEvent: Pause Events
@@ -122,5 +169,185 @@ final class AnalyticsEventTests: XCTestCase {
 
     func test_pauseDeactivated_emptyType() {
         AnalyticsLogger.log(.pauseDeactivated(conditionType: ""))
+    }
+
+    // MARK: - AnalyticsEvent: Watchdog Recovery Events
+
+    func test_watchdogRecoveryTriggered_canBeConstructed() {
+        let event = AnalyticsEvent.watchdogRecoveryTriggered(
+            reason: .scheduledEyesBreak,
+            detail: "watchdog_device_activity_heartbeat_missing"
+        )
+        _ = event
+    }
+
+    func test_watchdogRecoveryTriggered_staleDetail_canBeLogged() {
+        AnalyticsLogger.log(.watchdogRecoveryTriggered(
+            reason: .scheduledPostureBreak,
+            detail: "watchdog_device_activity_heartbeat_stale:device_activity_interval_started"
+        ))
+    }
+
+    func test_watchdogRecoveryTriggered_missingDetail_canBeLogged() {
+        AnalyticsLogger.log(.watchdogRecoveryTriggered(
+            reason: .scheduledEyesBreak,
+            detail: "watchdog_device_activity_heartbeat_missing"
+        ))
+    }
+
+    func test_watchdogRecoveryTriggered_nilReason_canBeLogged() {
+        AnalyticsLogger.log(.watchdogRecoveryTriggered(
+            reason: nil,
+            detail: "watchdog_device_activity_heartbeat_missing"
+        ))
+    }
+
+    func test_watchdogRecoveryCompleted_allCombinations() {
+        AnalyticsLogger.log(.watchdogRecoveryCompleted(sessionCleared: true, fallbackScheduled: true))
+        AnalyticsLogger.log(.watchdogRecoveryCompleted(sessionCleared: true, fallbackScheduled: false))
+        AnalyticsLogger.log(.watchdogRecoveryCompleted(sessionCleared: false, fallbackScheduled: false))
+        AnalyticsLogger.log(.watchdogRecoveryCompleted(sessionCleared: false, fallbackScheduled: true))
+    }
+
+    // MARK: - AnalyticsEvent: IPC Health
+
+    func test_ipcOperationFailed_canBeConstructed() {
+        let event = AnalyticsEvent.ipcOperationFailed(operation: .readShieldSession, reason: .unavailable)
+        _ = event
+    }
+
+    func test_ipcOperation_rawValues() {
+        XCTAssertEqual(AnalyticsEvent.IPCOperation.readShieldSession.rawValue, "read_shield_session")
+        XCTAssertEqual(AnalyticsEvent.IPCOperation.readEvents.rawValue, "read_events")
+        XCTAssertEqual(AnalyticsEvent.IPCOperation.clearShieldSession.rawValue, "clear_shield_session")
+        XCTAssertEqual(AnalyticsEvent.IPCOperation.writeEvent.rawValue, "write_event")
+        XCTAssertEqual(AnalyticsEvent.IPCOperation.writeShieldSession.rawValue, "write_shield_session")
+        XCTAssertEqual(AnalyticsEvent.IPCOperation.readSelection.rawValue, "read_selection")
+    }
+
+    func test_ipcFailureReason_rawValues() {
+        XCTAssertEqual(AnalyticsEvent.IPCFailureReason.unavailable.rawValue, "unavailable")
+        XCTAssertEqual(AnalyticsEvent.IPCFailureReason.corrupt.rawValue, "corrupt")
+        XCTAssertEqual(AnalyticsEvent.IPCFailureReason.writeFailed.rawValue, "write_failed")
+        XCTAssertEqual(AnalyticsEvent.IPCFailureReason.unknown.rawValue, "unknown")
+    }
+
+    func test_ipcOperationFailed_allCombinations_doNotCrash() {
+        let operations: [AnalyticsEvent.IPCOperation] = [
+            .readShieldSession, .readEvents, .clearShieldSession,
+            .writeEvent, .writeShieldSession, .readSelection
+        ]
+        let reasons: [AnalyticsEvent.IPCFailureReason] = [.unavailable, .corrupt, .writeFailed, .unknown]
+        for op in operations {
+            for reason in reasons {
+                AnalyticsLogger.log(.ipcOperationFailed(operation: op, reason: reason))
+            }
+        }
+    }
+
+    // MARK: - ReminderDeliveryPath
+
+    func test_reminderDeliveryPath_rawValues() {
+        XCTAssertEqual(AnalyticsEvent.ReminderDeliveryPath.screenTimeThreshold.rawValue, "screen_time_threshold")
+        XCTAssertEqual(AnalyticsEvent.ReminderDeliveryPath.notificationFallback.rawValue, "notification_fallback")
+        XCTAssertEqual(AnalyticsEvent.ReminderDeliveryPath.unknown.rawValue, "unknown")
+    }
+
+    func test_reminderTriggered_allDeliveryPaths_canBeConstructed() {
+        let paths: [AnalyticsEvent.ReminderDeliveryPath] = [
+            .screenTimeThreshold, .notificationFallback, .unknown
+        ]
+        for path in paths {
+            let event = AnalyticsEvent.reminderTriggered(type: .eyes, thresholdS: 1200, deliveryPath: path)
+            _ = event
+        }
+    }
+
+    // MARK: - SchedulePath / SchedulePathReason
+
+    func test_schedulePath_rawValues() {
+        XCTAssertEqual(AnalyticsEvent.SchedulePath.shield.rawValue, "shield")
+        XCTAssertEqual(AnalyticsEvent.SchedulePath.notificationFallback.rawValue, "notification_fallback")
+    }
+
+    func test_schedulePathReason_rawValues() {
+        XCTAssertEqual(AnalyticsEvent.SchedulePathReason.deviceActivityAvailable.rawValue, "device_activity_available")
+        XCTAssertEqual(AnalyticsEvent.SchedulePathReason.shieldUnavailable.rawValue, "shield_unavailable")
+        XCTAssertEqual(AnalyticsEvent.SchedulePathReason.trueInterruptDisabled.rawValue, "true_interrupt_disabled")
+        XCTAssertEqual(
+            AnalyticsEvent.SchedulePathReason.trueInterruptEmptySelection.rawValue,
+            "true_interrupt_empty_selection"
+        )
+        XCTAssertEqual(
+            AnalyticsEvent.SchedulePathReason.unexpectedShieldRoutingState.rawValue,
+            "unexpected_shield_routing_state"
+        )
+    }
+
+    func test_schedulePathSelected_allCombinations_doNotCrash() {
+        let paths: [AnalyticsEvent.SchedulePath] = [.shield, .notificationFallback]
+        let reasons: [AnalyticsEvent.SchedulePathReason] = [
+            .deviceActivityAvailable, .shieldUnavailable,
+            .trueInterruptDisabled, .trueInterruptEmptySelection,
+            .unexpectedShieldRoutingState
+        ]
+        for path in paths {
+            for reason in reasons {
+                AnalyticsLogger.log(.schedulePathSelected(path: path, reason: reason))
+            }
+        }
+    }
+
+    // MARK: - Shield Lifecycle
+
+    func test_shieldActivated_canBeConstructed() {
+        let event = AnalyticsEvent.shieldActivated(reason: .scheduledEyesBreak)
+        _ = event
+    }
+
+    func test_shieldActivationFailed_canBeConstructed() {
+        let event = AnalyticsEvent.shieldActivationFailed(reason: .scheduledPostureBreak)
+        _ = event
+    }
+
+    func test_shieldDeactivated_canBeConstructed() {
+        let event = AnalyticsEvent.shieldDeactivated
+        _ = event
+    }
+
+    func test_shieldLifecycle_allCases_doNotCrash() {
+        AnalyticsLogger.log(.shieldActivated(reason: .scheduledEyesBreak))
+        AnalyticsLogger.log(.shieldActivated(reason: .scheduledPostureBreak))
+        AnalyticsLogger.log(.shieldActivationFailed(reason: .scheduledEyesBreak))
+        AnalyticsLogger.log(.shieldDeactivated)
+    }
+
+    // MARK: - OnboardingCTA
+
+    func test_onboardingCTA_rawValues() {
+        XCTAssertEqual(AnalyticsEvent.OnboardingCTA.getStarted.rawValue, "get_started")
+        XCTAssertEqual(AnalyticsEvent.OnboardingCTA.customize.rawValue, "customize")
+    }
+
+    func test_onboardingCTA_allCases_areTwo() {
+        XCTAssertEqual(AnalyticsEvent.OnboardingCTA.allCases.count, 2)
+    }
+
+    func test_onboardingCTA_initFromRawValue_getStarted() {
+        XCTAssertEqual(AnalyticsEvent.OnboardingCTA(rawValue: "get_started"), .getStarted)
+    }
+
+    func test_onboardingCTA_initFromRawValue_customize() {
+        XCTAssertEqual(AnalyticsEvent.OnboardingCTA(rawValue: "customize"), .customize)
+    }
+
+    func test_onboardingCTA_initFromRawValue_unknownReturnsNil() {
+        XCTAssertNil(AnalyticsEvent.OnboardingCTA(rawValue: "unknown"))
+    }
+
+    func test_onboardingCompleted_allCTAs_doNotCrash() {
+        for cta in AnalyticsEvent.OnboardingCTA.allCases {
+            AnalyticsLogger.log(.onboardingCompleted(cta: cta))
+        }
     }
 }

@@ -137,4 +137,22 @@ final class ComponentsTests: XCTestCase {
         let style: PrimaryButtonStyle = .primary
         _ = style
     }
+
+    // MARK: - PrimaryButtonStyle: Touch Target (#265)
+
+    /// Verifies the design-system token used by PrimaryButtonStyle meets iOS HIG 44pt minimum.
+    func test_primaryButtonStyle_minTapTarget_meetsHIGMinimum() {
+        XCTAssertGreaterThanOrEqual(
+            AppLayout.minTapTarget,
+            44,
+            "AppLayout.minTapTarget must be ≥44pt — PrimaryButtonStyle uses this as its frame minHeight")
+    }
+
+    /// Verifies minTapTarget is the 44pt canonical value, not a regression to a smaller number.
+    func test_primaryButtonStyle_minTapTarget_is44pt() {
+        XCTAssertEqual(
+            AppLayout.minTapTarget,
+            44,
+            "AppLayout.minTapTarget must be exactly 44pt per iOS HIG (PrimaryButtonStyle minHeight)")
+    }
 }

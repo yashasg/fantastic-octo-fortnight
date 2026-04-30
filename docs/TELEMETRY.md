@@ -1,7 +1,7 @@
 # kshana — Telemetry Event Schema & Dashboard Requirements
 
 > **Author:** Turk (Data Analyst)
-> **Date:** 2025-07-25
+> **Date:** 2026-04-30
 > **Status:** Active
 > **Informed by:** Rusty's telemetry-battery and testflight-telemetry decisions
 
@@ -12,13 +12,15 @@
 This document defines the complete telemetry strategy for kshana: every log point, every MetricKit subscription, and every dashboard tile we need to ship a healthy, measurable app.
 
 **Guiding principles:**
-- **Native Apple only.** No third-party SDKs. No data leaves the device except through Apple's own channels (os.log → App Store Connect / TestFlight feedback).
-- **Privacy first.** Aggregate data only. No user identifiers, no device fingerprinting, no PII in logs.
+- **Native Apple only.** No third-party SDKs and no developer-operated analytics backend. Apple-managed diagnostics, App Store Connect analytics, TestFlight feedback, and user-shared log bundles may process limited diagnostic data through Apple's systems.
+- **Privacy first.** Aggregate or operational data only. No user identifiers, no device fingerprinting, no PII in logs.
 - **Structured from day one.** `os.Logger` active from Phase 1 (M0.2). MetricKit active from Phase 2. Dashboard requirements defined now so we instrument correctly the first time.
 
 ---
 
 ## Phase 1 — os.Logger Event Catalog
+
+> **Note:** The Phase 1 category-based `Logger` calls below are the original design document and are partially superseded by the structured `AnalyticsLogger` / `AnalyticsEvent` catalog in the **True Interrupt Analytics Event Catalog** section. The `AnalyticsEvent` schema is the canonical source of truth for all events emitted in the current codebase. The Phase 1 tables are retained here for historical context only.
 
 ### Logger Setup
 
@@ -104,6 +106,306 @@ extension Logger {
 | Notification received (foreground) | `.info` | `Logger.appLife.info("notification_received delivery=foreground type=\(type.rawValue, privacy: .public)")` | `willPresent` delegate |
 | Notification received (background) | `.info` | `Logger.appLife.info("notification_received delivery=background type=\(type.rawValue, privacy: .public)")` | `didReceive response` delegate |
 | Notification dismissed without tap | `.info` | `Logger.appLife.info("notification_dismissed type=\(type.rawValue, privacy: .public)")` | `.dismiss` action in `didReceive` |
+| Onboarding completed | `.info` | `AnalyticsLogger.log(.onboardingCompleted(cta:))` | Fired when user exits onboarding via "Get Started" or "Customize Settings" CTA |
+
+---
+
+## True Interrupt Analytics Event Catalog
+
+> **Updated:** 2026-04-30 — reflects issues #247/#249/#253/#254/#257/#269/#278/#282/#286/#290/#291/#297/#316/#332/#346.
+>
+> All events are emitted via `AnalyticsLogger.log(_:)` → `os.Logger` (subsystem: `Bundle.main.bundleIdentifier`, category: `Analytics`). No SDK, no network calls. All payload fields use `privacy: .public` unless noted.
+
+---
+
+### Category: Session
+
+#### `app_session_start`
+
+| Field | Log key | Privacy | Notes |
+|-------|---------|---------|-------|
+| `eyeEnabled` | `eye_enabled` | `.public` | Whether eye break reminders are on |
+| `postureEnabled` | `posture_enabled` | `.public` | Whether posture break reminders are on |
+| `snoozeActive` | `snooze_active` | `.public` | Whether snooze is currently active |
+
+**Emitted:** when `scheduleReminders()` is called (session start).
+
+#### `app_session_end`
+
+| Field | Log key | Privacy | Notes |
+|-------|---------|---------|-------|
+| `sessionDurationS` | `session_duration_s` | `.public` | Session length in seconds (1 decimal place) |
+
+**Emitted:** when the app resigns active.
+
+---
+
+### Category: Reminders
+
+#### `reminder_triggered`
+
+Fired when a reminder is triggered. `deliveryPath` indicates whether the reminder was surfaced via the screen-time threshold (True Interrupt path) or the notification fallback.
+
+| Field | Log key | Privacy | Stable raw values |
+|-------|---------|---------|-------------------|
+| `type` | `type` | `.public` | `eyes`, `posture` (from `ReminderType`) |
+| `thresholdS` | `threshold_s` | `.public` | Threshold in seconds (0 decimal places) |
+| `deliveryPath` | `delivery_path` | `.public` | See `ReminderDeliveryPath` table |
+
+**`ReminderDeliveryPath` stable raw values:**
+
+| Case | Raw value | Meaning |
+|------|-----------|---------|
+| `screenTimeThreshold` | `screen_time_threshold` | Reminder surfaced by the foreground Screen Time threshold (True Interrupt path) |
+| `notificationFallback` | `notification_fallback` | Reminder surfaced by the notification fallback path |
+| `unknown` | `unknown` | Path could not be determined at trigger time |
+
+---
+
+### Category: Schedule Path Selection
+
+#### `schedule_path_selected`
+
+Fired when `scheduleReminders()` selects a delivery path. Emitted after IPC recording — provides the same routing decision in the analytics stream.
+
+| Field | Log key | Privacy | Stable raw values |
+|-------|---------|---------|-------------------|
+| `path` | `path` | `.public` | See `SchedulePath` table |
+| `reason` | `reason` | `.public` | See `SchedulePathReason` table |
+
+**`SchedulePath` stable raw values:**
+
+| Case | Raw value | Meaning |
+|------|-----------|---------|
+| `shield` | `shield` | True Interrupt path — DeviceActivity shield selected |
+| `notificationFallback` | `notification_fallback` | Notification fallback path selected |
+
+**`SchedulePathReason` stable raw values:**
+
+| Case | Raw value | Meaning |
+|------|-----------|---------|
+| `deviceActivityAvailable` | `device_activity_available` | Screen Time / DeviceActivity is available; shield path chosen |
+| `shieldUnavailable` | `shield_unavailable` | Shield is unavailable; fallback chosen |
+| `trueInterruptDisabled` | `true_interrupt_disabled` | True Interrupt feature is disabled; fallback chosen |
+| `trueInterruptEmptySelection` | `true_interrupt_empty_selection` | No app selection configured; fallback chosen |
+| `unexpectedShieldRoutingState` | `unexpected_shield_routing_state` | Defensive path: shield routing state became available between the `shouldScheduleNotificationFallback` check and `fallbackRoutingContext()` |
+
+---
+
+### Category: Shield Lifecycle
+
+#### `shield_activated`
+
+Fired when a DeviceActivity shield session starts successfully.
+
+| Field | Log key | Privacy | Stable raw values |
+|-------|---------|---------|-------------------|
+| `reason` | `reason` | `.public` | See `ShieldTriggerReason` table |
+
+#### `shield_activation_failed`
+
+Fired when a DeviceActivity shield activation attempt fails. Logged at `.error` level.
+
+| Field | Log key | Privacy | Stable raw values |
+|-------|---------|---------|-------------------|
+| `reason` | `reason` | `.public` | See `ShieldTriggerReason` table |
+
+#### `shield_deactivated`
+
+Fired when a DeviceActivity shield session is cancelled/deactivated. No payload fields.
+
+**`ShieldTriggerReason` stable raw values** (defined in `Extensions/Shared/ShieldTriggerReason.swift`):
+
+| Case | Raw value | Meaning |
+|------|-----------|---------|
+| `scheduledEyesBreak` | `eyes` | Scheduled eye-strain break (20-20-20 rule or configured interval) |
+| `scheduledPostureBreak` | `posture` | Scheduled posture/movement break |
+
+---
+
+### Category: Overlay
+
+#### `overlay_dismissed`
+
+| Field | Log key | Privacy | Stable raw values |
+|-------|---------|---------|-------------------|
+| `type` | `type` | `.public` | `eyes`, `posture` |
+| `method` | `method` | `.public` | See `DismissMethod` table |
+| `elapsedS` | `elapsed_s` | `.public` | Time from display to dismissal in seconds (1 decimal place) |
+
+**`DismissMethod` stable raw values:**
+
+| Case | Raw value | Meaning |
+|------|-----------|---------|
+| `button` | `button` | User tapped the dismiss button |
+| `swipe` | `swipe` | User used a swipe gesture |
+| `settingsTap` | `settings_tap` | User tapped the settings shortcut |
+
+#### `overlay_auto_dismissed`
+
+| Field | Log key | Privacy | Notes |
+|-------|---------|---------|-------|
+| `type` | `type` | `.public` | `eyes` or `posture` |
+| `durationS` | `duration_s` | `.public` | Configured display duration in seconds (0 decimal places) |
+
+---
+
+### Category: Snooze
+
+#### `snooze_activated`
+
+| Field | Log key | Privacy | Stable codes |
+|-------|---------|---------|--------------|
+| `durationOption` | `duration_option` | `.public` | See snooze duration code table |
+
+**Stable snooze duration codes** (from `SettingsViewModel.SnoozeOption.analyticsCode`):
+
+| Preset | Analytics code | Duration |
+|--------|---------------|---------|
+| `fiveMinutes` | `5m` | 5 minutes |
+| `oneHour` | `1h` | 1 hour |
+| `restOfDay` | `rest_of_day` | Until midnight / end of day |
+| Custom (legacy) | `<N>m` e.g. `30m` | Minute-count string for non-preset values |
+
+#### `snooze_expired`
+
+No payload. Fired when a snooze period expires and normal scheduling resumes.
+
+#### `snooze_cancelled`
+
+No payload. Fired when the user manually cancels an active snooze.
+
+---
+
+### Category: Settings
+
+#### `setting_changed`
+
+| Field | Log key | Privacy | Notes |
+|-------|---------|---------|-------|
+| `setting` | `setting` | `.public` | Key name of the changed setting (see table below) |
+| `oldValue` | `old_value` | `.private` | Previous value — **redacted** in Console unless explicitly unredacted |
+| `newValue` | `new_value` | `.private` | New value — **redacted** in Console unless explicitly unredacted |
+
+**Privacy decision:** `old_value` and `new_value` are deliberately `privacy: .private` (redacted) because they may reflect user schedule preferences, which are operationally sensitive even if not PII. Unredacting requires explicit device trust or TestFlight log export. This decision is intentional and should not be changed without a privacy review.
+
+**Instrumented `setting` key values:**
+
+| `setting` value | Type | Emitted from |
+|----------------|------|--------------|
+| `globalEnabled` | Bool | `SettingsViewModel.globalEnabled` setter (routed via `SettingsView` master toggle `onChange`) |
+| `eyesEnabled` | Bool | `SettingsViewModel.eyesEnabled` setter (routed via `SettingsView` `.onChange(of: settings.eyesEnabled)`) |
+| `eyesInterval` | TimeInterval | `SettingsViewModel.eyesInterval` setter |
+| `eyesBreakDuration` | TimeInterval | `SettingsViewModel.eyesBreakDuration` setter |
+| `postureEnabled` | Bool | `SettingsViewModel.postureEnabled` setter |
+| `postureInterval` | TimeInterval | `SettingsViewModel.postureInterval` setter |
+| `postureBreakDuration` | TimeInterval | `SettingsViewModel.postureBreakDuration` setter |
+| `pauseDuringFocus` | Bool | `SettingsViewModel.pauseDuringFocus` setter (routed via `SettingsSmartPauseSection` toggle `onChange`) |
+| `pauseWhileDriving` | Bool | `SettingsViewModel.pauseWhileDriving` setter |
+| `notificationFallbackEnabled` | Bool | `SettingsViewModel.notificationFallbackEnabled` setter (also triggers reschedule) |
+| `hapticsEnabled` | Bool | `SettingsViewModel.hapticsEnabled` setter (custom Binding in `SettingsView` Preferences section) |
+
+---
+
+### Category: Pause
+
+#### `pause_activated`
+
+| Field | Log key | Privacy | Notes |
+|-------|---------|---------|-------|
+| `conditionType` | `condition_type` | `.public` | Comma-separated sorted list of active pause condition raw values |
+
+**`PauseConditionSource` stable raw values:**
+
+| Case | Raw value | Meaning |
+|------|-----------|---------|
+| `focusMode` | `focus_mode` | iOS Focus mode is active and `pauseDuringFocus` is enabled |
+| `carPlay` | `car_play` | CarPlay connection detected and `pauseWhileDriving` is enabled |
+| `driving` | `driving` | CMMotionActivity automotive/high-confidence detected and `pauseWhileDriving` is enabled |
+
+When multiple conditions are active simultaneously, `condition_type` contains a sorted comma-separated list (e.g. `car_play,driving`). `pause_deactivated` always logs `condition_type=all_cleared`.
+
+#### `pause_deactivated`
+
+| Field | Log key | Privacy | Notes |
+|-------|---------|---------|-------|
+| `conditionType` | `condition_type` | `.public` | Always `all_cleared` — fires when the last active pause condition clears |
+
+---
+
+### Category: Watchdog Recovery
+
+#### `watchdog_recovery_triggered`
+
+Fired when a stale watchdog session is detected and recovery is initiated.
+
+| Field | Log key | Privacy | Notes |
+|-------|---------|---------|-------|
+| `reason` | `reason` | `.public` | `ShieldTriggerReason.rawValue` or `"unknown"` if nil (no recognisable reason in the stale session) |
+| `detail` | `detail` | `.public` | Heartbeat staleness category string (non-PII operational code) |
+
+#### `watchdog_recovery_completed`
+
+Fired at the end of a watchdog recovery attempt.
+
+| Field | Log key | Privacy | Notes |
+|-------|---------|---------|-------|
+| `sessionCleared` | `session_cleared` | `.public` | `true` if the stale shield session was successfully cleared |
+| `fallbackScheduled` | `fallback_scheduled` | `.public` | `true` if a fallback notification was rescheduled after recovery |
+
+---
+
+### Category: IPC Health
+
+#### `ipc_operation_failed`
+
+Fired when an App Group IPC read or write operation fails. Logged at `.error` level. Both fields are enumerated codes — no PII, no bundle identifiers, no raw errors.
+
+| Field | Log key | Privacy | Stable raw values |
+|-------|---------|---------|-------------------|
+| `operation` | `operation` | `.public` | See `IPCOperation` table |
+| `reason` | `reason` | `.public` | See `IPCFailureReason` table |
+
+**`IPCOperation` stable raw values:**
+
+| Case | Raw value | Meaning |
+|------|-----------|---------|
+| `readShieldSession` | `read_shield_session` | Reading the active shield session from App Group |
+| `readEvents` | `read_events` | Reading IPC event history from App Group |
+| `clearShieldSession` | `clear_shield_session` | Clearing the shield session record in App Group |
+| `writeEvent` | `write_event` | Writing an IPC event to App Group |
+| `writeShieldSession` | `write_shield_session` | Writing a shield session record to App Group |
+| `readSelection` | `read_selection` | Reading the app selection from App Group |
+
+**`IPCFailureReason` stable raw values:**
+
+| Case | Raw value | Meaning |
+|------|-----------|---------|
+| `unavailable` | `unavailable` | App Group container or UserDefaults was unavailable |
+| `corrupt` | `corrupt` | Stored data failed to decode (corrupt or schema mismatch) |
+| `writeFailed` | `write_failed` | Write operation returned a failure |
+| `unknown` | `unknown` | Unclassified failure |
+
+---
+
+### Event: `onboarding_completed`
+
+Fired when the user finishes onboarding. The `cta` parameter records which exit button was tapped.
+
+**Format:** `event=onboarding_completed cta=<OnboardingCTA>`
+
+**Associated type:** `AnalyticsEvent.OnboardingCTA`
+
+| Case | Raw Value | Description |
+|------|-----------|-------------|
+| `.getStarted` | `get_started` | User tapped "Get Started" — proceeds with defaults |
+| `.customize` | `customize` | User tapped "Customize Settings" — opens Settings on first launch |
+
+**Privacy:** `cta` uses `privacy: .public` — enumerated code, no PII.
+
+**Emission points:**
+- `OnboardingView.finishOnboarding()` → `.onboardingCompleted(cta: .getStarted)`
+- `OnboardingView.finishOnboardingAndCustomize()` → `.onboardingCompleted(cta: .customize)`
 
 ---
 
@@ -132,7 +434,7 @@ extension AppDelegate: MXMetricManagerSubscriber {
         for payload in payloads {
             guard let json = String(data: payload.jsonRepresentation(), encoding: .utf8) else { return }
             Logger.appLife.info("metrickit_payload received=\(payload.timeStampBegin, privacy: .public) json=\(json, privacy: .public)")
-            // Phase 3: forward to lightweight backend if needed
+            // Do not forward to a backend without a privacy-label review.
         }
     }
 
@@ -181,7 +483,7 @@ extension AppDelegate: MXMetricManagerSubscriber {
 - `cumulativeFingerprints` — baseline comparison
 - Look for `drain` values during active overlay display windows
 
-**Storage:** For Phase 2, payload JSON is written to `os.log` only. For Phase 3, if aggregate data is needed, write payload JSON to a bounded `UserDefaults` key (last 7 payloads) or a simple file in the app's Documents/Library directory. No external servers required.
+**Storage:** For Phase 2, MetricKit summaries are written to `os.log` only. If aggregate diagnostic history is needed later, keep it local and bounded (for example, last 7 payload summaries in `UserDefaults` or a simple file in the app's Library directory). Do not add external transmission without updating the privacy policy, Privacy Nutrition Labels guide, and App Store/TestFlight copy first.
 
 ---
 
@@ -211,43 +513,63 @@ What Turk, Tess (UX), and Reuben (Product) need to see. These drive the instrume
 
 | Metric | Derived From | Formula |
 |--------|-------------|---------|
-| Average dismissal time | `overlay_dismissed display_duration_sec` | Mean of `display_duration_sec` across all dismiss events |
-| Auto-dismiss rate | `overlay_dismissed source=auto` vs total dismiss | `auto_count / total_dismiss_count` |
-| Manual dismiss rate | `overlay_dismissed source=manual` | `manual_count / total_dismiss_count` |
-| Swipe dismiss rate | `overlay_dismissed source=swipe` | `swipe_count / total_dismiss_count` |
-| Snooze frequency by duration | `snooze_activated duration_sec` | Count grouped by `duration_sec` value |
-| Overlay queue rate | `overlay_queued` per session | Ratio of queue events to overlay shown events |
-| Notification tap rate | `overlay_shown trigger=notification_tap` vs `notification_received` | Engagement with notification banner |
+| Average dismissal time | `overlay_dismissed elapsed_s` | Mean of `elapsed_s` across all dismiss events |
+| Auto-dismiss rate | `event=overlay_auto_dismissed` vs total dismissals | `auto_count / (auto_count + dismissed_count)` |
+| Manual dismiss rate | `event=overlay_dismissed method=button` | `button_count / total_dismiss_count` |
+| Swipe dismiss rate | `event=overlay_dismissed method=swipe` | `swipe_count / total_dismiss_count` |
+| Settings-tap-from-overlay rate | `event=overlay_dismissed method=settings_tap` | `settings_tap_count / total_dismiss_count` |
+| Snooze frequency by duration | `event=snooze_activated duration_option` | Count grouped by `duration_option` value (`5m`, `1h`, `rest_of_day`) |
+| Delivery path split | `event=reminder_triggered delivery_path` | `screen_time_threshold` vs `notification_fallback` ratio |
 
-**Tess needs:** Swipe dismiss rate and manual dismiss rate — if swipe >> manual, that suggests the close button is hard to find or reach.
+**Tess needs:** Swipe dismiss rate and method breakdown — if swipe >> button, the dismiss button is hard to find or reach.
 
-**Reuben needs:** Snooze frequency by duration — validates the snooze preset options and helps refine the default.
+**Reuben needs:** Snooze frequency by duration — validates the snooze preset options. Delivery path split — confirms True Interrupt path adoption rate.
 
 ---
 
-### Tier 3 — Settings Patterns (os.log derived)
+### Tier 3 — True Interrupt Health (os.log derived)
+
+**Source:** Console.app / TestFlight log bundles — filter `category:Analytics event=schedule_path_selected`, `event=shield_*`, `event=watchdog_*`, `event=ipc_operation_failed`
 
 | Metric | Derived From | What It Tells Us |
 |--------|-------------|-----------------|
-| Most common eye interval | `interval_changed new_sec` distribution | Is 20 min the right default? |
-| Most common posture interval | `interval_changed new_sec` distribution | Is 30 min the right default? |
-| Most common overlay duration | `duration_changed new_sec` distribution | Is 10s enough? Are users extending it? |
-| Per-type enable/disable rate | `reminder_toggled` events | Which reminder type do people disable? |
-| Interval combos | Co-occurrence of eye+posture intervals | Are users tuning both, or just one? |
-| Settings-open-from-overlay rate | `overlay_settings_tapped` per session | Navigation pattern: overlay → settings |
+| Schedule path selection rate | `event=schedule_path_selected path` | Ratio of `shield` vs `notification_fallback` paths chosen |
+| Shield path reason distribution | `event=schedule_path_selected reason` | Why shield is or isn't selected (DeviceActivity availability, feature flags, empty selection) |
+| Shield success rate | `event=shield_activated` / (`event=shield_activated` + `event=shield_activation_failed`) | How reliably shields activate when chosen |
+| Shield failure reason | `event=shield_activation_failed reason` | Which shield trigger reasons fail most |
+| Watchdog recovery rate | `event=watchdog_recovery_triggered` per session | Frequency of stale-session recovery needed |
+| Watchdog recovery success | `event=watchdog_recovery_completed session_cleared=true` / total recovery events | Whether recovery clears stale sessions |
+| Fallback after recovery | `event=watchdog_recovery_completed fallback_scheduled=true` | Whether fallback notification rescheduling succeeds after recovery |
+| IPC failure rate | `event=ipc_operation_failed` per session | App Group IPC health; distinguish by `operation` and `reason` |
+| Notification fallback attribution | `event=reminder_triggered delivery_path=notification_fallback` | Reminder count surfaced by fallback rather than True Interrupt |
+| Unexpected shield routing | `event=schedule_path_selected reason=unexpected_shield_routing_state` | Frequency of defensive race-condition path — should be near zero |
+
+**Turk monitors:** Shield success rate and IPC failure rate as primary True Interrupt health KPIs.
 
 ---
 
-### Tier 4 — UX Health Signals (os.log derived)
+### Tier 4 — Settings Patterns (os.log derived)
+
+| Metric | Derived From | What It Tells Us |
+|--------|-------------|-----------------|
+| Most common eye interval | `event=setting_changed setting=eyesInterval new_value` (requires log unredaction) | Is 20 min the right default? |
+| Most common posture interval | `event=setting_changed setting=postureInterval new_value` (requires log unredaction) | Is 30 min the right default? |
+| Per-type enable/disable rate | `event=setting_changed setting=eyesEnabled\|postureEnabled` (requires unredaction) | Which reminder type do people disable? |
+| Global toggle rate | `event=setting_changed setting=globalEnabled` (requires unredaction) | How often do users disable all reminders? |
+| Break duration preferences | `event=setting_changed setting=eyesBreakDuration\|postureBreakDuration` (requires unredaction) | Are the default break durations appropriate? |
+
+---
+
+### Tier 5 — UX Health Signals (os.log derived)
 
 | Signal | Derived From | Healthy | Investigate If |
 |--------|-------------|---------|---------------|
 | Permission grant rate | `permission_granted` / (`permission_granted` + `permission_denied`) | >85% | <70% — onboarding copy unclear |
 | Permission revoke rate | `permission_denied type=notifications` after prior grant | <5% | >10% — overlay is too intrusive |
 | Force-quit / jetsam rate | `MXAppExitMetric backgroundExitData` | <2% of exits | >5% — memory issue |
-| Double-overlay (queue) rate | `overlay_queued` / `overlay_shown` | <1% | >5% — scheduling logic bug |
-| Cold launch after terminate | `app_launch type=cold` following `app_terminate` vs. crash | Baseline | Spikes = crash loop |
-| Settings-from-overlay funnel | `overlay_settings_tapped` → `setting_changed` | >50% | <30% — settings navigation broken |
+| Cold launch after terminate | `app_session_start` following `app_session_end` vs. no end event | Baseline | Spikes = crash loop |
+| Settings-from-overlay funnel | `overlay_dismissed method=settings_tap` → `setting_changed` | >50% | <30% — settings navigation broken |
+| IPC write failure rate | `event=ipc_operation_failed operation=write_event\|write_shield_session` | <1% | >5% — App Group degraded |
 
 ---
 
@@ -257,16 +579,19 @@ What Turk, Tess (UX), and Reuben (Product) need to see. These drive the instrume
 
 - [ ] **No usernames, emails, or account identifiers** — app has no accounts
 - [ ] **No device identifiers** — never log `UIDevice.current.identifierForVendor`
-- [ ] **No timestamps that could identify a user's schedule** — log relative durations (`display_duration_sec`), not wall-clock times of user actions
-- [ ] **All user-facing string values use `privacy: .private`** — if we ever add custom reminder labels, they must be private
-- [ ] **All structural values (type names, durations, counts) use `privacy: .public`** — these are enum values and integers, not personal data
-- [ ] **Log calls in release builds** — os.log is safe in release; debug-only calls use `.debug` level which is compiled to near-zero overhead
+- [ ] **No timestamps that could identify a user's schedule** — log relative durations (`elapsed_s`, `session_duration_s`), not wall-clock times of user actions
+- [ ] **All user-facing string values use `privacy: .private`** — `setting_changed old_value` and `new_value` are redacted; all other AnalyticsEvent fields are enumerated codes or numeric durations
+- [ ] **All structural values (type names, raw-value codes, durations, counts) use `privacy: .public`** — these are enum raw values and integers, not personal data
+- [ ] **IPC health events contain no bundle identifiers or raw error descriptions** — `ipc_operation_failed` uses only enumerated `IPCOperation` and `IPCFailureReason` codes
+- [ ] **Watchdog recovery events contain no raw session data** — `watchdog_recovery_triggered` logs only the `ShieldTriggerReason` raw value or `"unknown"`, and a staleness category code
+- [ ] **Shield lifecycle events contain no app selection data** — `shield_activated`/`shield_activation_failed` log only the `ShieldTriggerReason` raw value (`eyes` or `posture`)
+- [ ] **Log calls in release builds** — `os.log` is safe in release; debug-only calls use `.debug` level which is compiled to near-zero overhead
 
 ### No Device Identifiers
 
 - [ ] Never log `identifierForVendor` (IDFV)
 - [ ] Never log `advertisingIdentifier` (IDFA) — we have no AdServices entitlement
-- [ ] MetricKit payloads carry no user or device identifier — they are aggregate/diagnostic
+- [ ] MetricKit payloads carry no app-defined user or device identifier — they are aggregate/diagnostic and processed through Apple's systems
 - [ ] App Store Connect Analytics is aggregate-only; individual tester data is not accessible programmatically
 
 ### App Privacy Report Compliance
@@ -284,11 +609,36 @@ For the App Store submission, declare:
 |----------|-----------|-----------|--------------------|--------------------|
 | Diagnostics | Crash data | Yes (via MetricKit/App Store Connect, Apple-managed) | No | No |
 | Diagnostics | Performance data | Yes (via MetricKit, Apple-managed) | No | No |
-| App Usage | Other usage data | No (os.log stays on device) | N/A | N/A |
+| App Usage | Other usage data | No (local os.log and App Group IPC history stay on device unless included in user-shared Apple/TestFlight diagnostics) | N/A | N/A |
 | Contact Info | Any | No | N/A | N/A |
 | Identifiers | Any | No | N/A | N/A |
 
-**Correct declaration:** "Data Not Collected" for all user-linked categories. The crash/performance data is collected by Apple infrastructure, not by our app sending it to our servers. Select "Crash Data" under Diagnostics only if you forward MetricKit payloads to your own server in Phase 3 — in Phase 2, it stays in os.log and Apple's systems.
+**Correct declaration:** "Not Collected" for user-linked categories and local-only usage/IPC state. Disclose Apple-managed crash and performance diagnostics as described in `docs/PRIVACY_NUTRITION_LABELS.md`. If kshana ever transmits MetricKit payloads, Screen Time data, or local IPC history to a developer-operated service, reassess the labels before submission.
+
+---
+
+## Privacy Annotation Policy
+
+All `os.Logger` interpolations in this codebase must carry an explicit `privacy:` label.
+No interpolation may rely on the default (which is `.private`, redacting the value in
+Console.app and TestFlight diagnostics).
+
+### Decision table
+
+| Value category | Label | Rationale |
+|---|---|---|
+| Enumerated type codes, raw values, counts, durations | `privacy: .public` | Non-PII structural data required for crash forensics and field triage |
+| `error.localizedDescription` on system-API failure paths | `privacy: .public` | System error strings (e.g. `UNError`, `AVAudioSession` errors) contain no user data; visibility is essential for diagnosing field failures |
+| `exception.name`, `exception.reason` | `privacy: .public` | ObjC exception type and reason are framework-set diagnostic strings, not user data |
+| Setting old/new values, user-entered text | `privacy: .private` | May reflect user choices; redacted unless explicitly unredacted by the user |
+| `exception.userInfo`, call-stack symbols | `privacy: .private` | May include framework internals or user-generated values; redact by default |
+| App Group IPC errors | Use enumerated `IPCFailureReason` codes — never log raw error objects or bundle IDs | |
+
+### Enforcement
+
+- All new log call sites **must** include explicit `privacy:` labels; PRs without annotations will fail SwiftLint (once the custom rule lands in a follow-up).
+- Error paths that log `error.localizedDescription` use `.public` — verified in #360/#405 (commits `ebd0283`, current PR #411).
+- The exception handler in `AppDelegate.installUncaughtExceptionHandler()` marks `exception.reason` `.public` and `userInfo` / call-stack `.private` — verified in #405.
 
 ---
 
@@ -329,11 +679,15 @@ For the App Store submission, declare:
 ### Console.app Filters
 
 ```
-subsystem:com.yashasg.eyeposturereminder
-subsystem:com.yashasg.eyeposturereminder category:Scheduling
-subsystem:com.yashasg.eyeposturereminder category:Overlay
-subsystem:com.yashasg.eyeposturereminder "overlay_dismissed"
-subsystem:com.yashasg.eyeposturereminder "permission_denied"
+subsystem:com.yashasgujjar.kshana category:Analytics
+subsystem:com.yashasgujjar.kshana category:Analytics event=schedule_path_selected
+subsystem:com.yashasgujjar.kshana category:Analytics event=shield_activated
+subsystem:com.yashasgujjar.kshana category:Analytics event=shield_activation_failed
+subsystem:com.yashasgujjar.kshana category:Analytics event=watchdog_recovery_triggered
+subsystem:com.yashasgujjar.kshana category:Analytics event=watchdog_recovery_completed
+subsystem:com.yashasgujjar.kshana category:Analytics event=ipc_operation_failed
+subsystem:com.yashasgujjar.kshana category:Analytics event=reminder_triggered
+subsystem:com.yashasgujjar.kshana category:Analytics event=snooze_activated
 ```
 
 ### Key-Value Parsing

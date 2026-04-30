@@ -4,7 +4,11 @@
   "agentModelOverrides": {
     "danny": "claude-opus-4.6-1m",
     "rusty": "claude-opus-4.6-1m",
+    "linus": "gpt-5.3-codex",
+    "basher": "gpt-5.3-codex",
+    "livingston": "gpt-5.3-codex",
     "saul": "claude-opus-4.6-1m",
+    "virgil": "gpt-5.3-codex",
     "turk": "claude-opus-4.6-1m",
     "frank": "gpt-5.5"
   }

@@ -18,4 +18,13 @@ enum AppStorageKey {
     /// Set by XCUITest launch argument handlers to trigger a specific overlay type on startup.
     /// Value matches `ReminderType.rawValue` ("eyes" or "posture"). Cleared after use.
     static let uiTestOverlayType = "kshana.ui-test.overlayType"
+
+    /// Set to `true` when the user permanently dismisses the True Interrupt setup
+    /// suggestion banner on Home (shown post-onboarding when setup was skipped).
+    static let trueInterruptSkippedBannerDismissed = "kshana.trueInterruptSkippedBannerDismissed"
+
+    /// Set by XCUITest launch argument `--simulate-screen-time-not-determined` to override
+    /// the `ScreenTimeAuthorizationProviding` injected into `AppCoordinator` with a stub
+    /// that returns the stored `ScreenTimeAuthorizationStatus.rawValue`. Cleared after use.
+    static let uiTestScreenTimeStatus = "kshana.ui-test.screenTimeStatus"
 }

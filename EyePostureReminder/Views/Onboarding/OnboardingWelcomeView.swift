@@ -63,7 +63,7 @@ struct OnboardingWelcomeView: View {
                     .accessibilityHint(Text("onboarding.welcome.nextButton.hint", bundle: .module))
                     .accessibilityIdentifier("onboarding.welcome.nextButton")
                 }
-                .padding()
+                .padding(AppSpacing.md)
                 .frame(maxWidth: AppLayout.onboardingMaxContentWidth)
                 .frame(maxWidth: .infinity)
             }
@@ -73,5 +73,5 @@ struct OnboardingWelcomeView: View {
 }
 
 #Preview {
-    OnboardingWelcomeView { }
+    OnboardingWelcomeView(onNext: { })
 }

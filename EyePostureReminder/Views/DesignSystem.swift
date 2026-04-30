@@ -135,6 +135,11 @@ enum AppTypography {
 
     /// Reminder card icon — SF Symbol in an onboarding reminder card; scales with Dynamic Type.
     static let reminderCardIcon: Font = .system(.title2)
+
+    /// Generic icon container symbol — sized proportionally to the tokenized badge size.
+    static func iconContainer(size: CGFloat) -> Font {
+        .system(size: size * 0.44, weight: .semibold)
+    }
 }
 
 enum AppFont {
@@ -149,11 +154,17 @@ enum AppFont {
     static let settingsRowIcon = AppTypography.settingsRowIcon
     static let warningIcon = AppTypography.warningIcon
     static let reminderCardIcon = AppTypography.reminderCardIcon
+
+    static func iconContainer(size: CGFloat) -> Font {
+        AppTypography.iconContainer(size: size)
+    }
 }
 
 // MARK: - Spacing (4pt grid)
 
 enum AppSpacing {
+    /// 2pt — tight caption gap (status label / caption pair in settings rows)
+    static let xxs: CGFloat = 2
     /// 4pt — hair gap, icon badges
     static let xs: CGFloat = 4
     /// 8pt — tight internal padding, icon-label gap
@@ -208,6 +219,10 @@ enum AppAnimation {
     static let statusCrossfadeCurve: Animation = .easeInOut(duration: statusCrossfadeDuration)
     /// Yin-yang entrance spin — custom deceleration curve for the initial rotation.
     static let yinYangSpinCurve: Animation = .timingCurve(0.2, 0.0, 0.0, 1.0, duration: 2)
+    /// Yin-yang breathing pulse — 4-second ease-in-out cycle (repeating with autoreversal).
+    /// Referenced by YinYangEyeView; centralised here so the value is testable and
+    /// not duplicated across call-sites.
+    static let yinYangBreathingDuration: Double = 4.0
 }
 
 // MARK: - SF Symbol Names
@@ -227,6 +242,10 @@ enum AppSymbol {
     static let chevronUp     = "chevron.up"
     /// Permission warning banner icon
     static let warning       = "exclamationmark.triangle.fill"
+    /// Confirmation / included item icon
+    static let checkmark     = "checkmark.circle.fill"
+    /// Privacy / local-only data icon
+    static let lock          = "lock.fill"
     /// Snoozed / paused state icon
     static let snoozed       = "moon.zzz.fill"
     /// Bell / snooze-cancel icon
@@ -239,6 +258,14 @@ enum AppSymbol {
     static let clock             = "clock"
     /// Break duration / timer icon
     static let timer             = "timer"
+    /// True Interrupt Mode / app break access icon
+    static let trueInterrupt     = "lock.shield.fill"
+    /// Master on/off toggle icon (settings row)
+    static let masterToggle      = "power" // swiftlint:disable:this inclusive_language
+    /// Haptic feedback setting icon (settings row)
+    static let haptics           = "hand.tap.fill"
+    /// Trailing navigation chevron (settings disclosure / setup pill)
+    static let chevronTrailing   = "chevron.right"
 }
 
 // MARK: - Layout Constants
@@ -258,10 +285,27 @@ enum AppLayout {
     static let onboardingIllustrationSize: CGFloat = 72
     /// Entrance slide offset for CalmingEntrance animations — gentle 20pt upward drift.
     static let entranceSlideOffset: CGFloat = 20
-    // AppLayout.overlayIconSize / onboardingIllustrationSize / settingsRowIconWidth are
-    // intentionally fixed-size (decorative, accessibility-hidden). See AppFont.countdown for precedent.
+    /// Initial Y-offset that positions the overlay below the visible screen before the
+    /// entrance animation slides it to y=0. Sized to exceed any notch/safe-area overhang
+    /// so the overlay is never partially visible before the animation begins.
+    static let overlayEntranceOffset: CGFloat = 300
+    // AppLayout.overlayIconSize / onboardingIllustrationSize / settingsRowIconWidth /
+    // decorativeIconFrame are intentionally fixed-size (decorative, accessibility-hidden).
+    // See AppFont.countdown for precedent.
     /// Setup preview card icon column width (decorative icon frame)
     static let settingsRowIconWidth: CGFloat = 40
+    /// Decorative (non-interactive) icon frame used in preview cards and picker headers.
+    /// Intentionally 44pt to match the visual weight of surrounding interactive controls,
+    /// but must NOT be used as a tap-target size — use `minTapTarget` for interactive elements.
+    static let decorativeIconFrame: CGFloat = 44
+
+    // MARK: Border Widths
+    /// 0.5pt — hair-thin border ring (dark-mode elevation, pill outlines)
+    static let borderHair: CGFloat = 0.5
+    /// 1.0pt — standard separator border (cards, wellness card outline)
+    static let borderSoft: CGFloat = 1.0
+    /// 1.5pt — bold accent border (logo ring, emphasis stroke)
+    static let borderBold: CGFloat = 1.5
 
     // MARK: Corner Radii
     /// 12pt — small interactive controls (chips, tags, compact buttons)
@@ -301,12 +345,15 @@ extension AppTypography {
     static let homeLogoIcon: Font = .system(size: AppLayout.overlayIconSize * 0.42, weight: .semibold)
     /// Onboarding hero illustration icon — SF Symbol sized to `onboardingIllustrationSize` (decorative).
     static let illustrationIcon: Font = .system(size: AppLayout.onboardingIllustrationSize, weight: .semibold)
+    /// True Interrupt Mode shield icon — SF Symbol sized for onboarding/configuration hero cards.
+    static let trueInterruptIcon: Font = .system(size: AppLayout.onboardingIllustrationSize * 0.55, weight: .semibold)
 }
 
 extension AppFont {
     static let overlayIcon = AppTypography.overlayIcon
     static let homeLogoIcon = AppTypography.homeLogoIcon
     static let illustrationIcon = AppTypography.illustrationIcon
+    static let trueInterruptIcon = AppTypography.trueInterruptIcon
 }
 
 /// Applies a soft shadow in light mode and a flat border in dark mode.
@@ -315,13 +362,17 @@ extension AppFont {
 /// adapts correctly between colour schemes without any additional boilerplate.
 struct SoftElevation: ViewModifier {
     @Environment(\.colorScheme) private var colorScheme
+    var cornerRadius: CGFloat = AppLayout.radiusCard
 
     func body(content: Content) -> some View {
         if colorScheme == .dark {
             content
                 .overlay(
-                    RoundedRectangle(cornerRadius: AppLayout.radiusCard)
-                        .strokeBorder(AppColor.separatorSoft.opacity(AppOpacity.subtleBorder), lineWidth: 0.5)
+                    RoundedRectangle(cornerRadius: cornerRadius)
+                        .strokeBorder(
+                            AppColor.separatorSoft.opacity(AppOpacity.subtleBorder),
+                            lineWidth: AppLayout.borderHair
+                        )
                 )
         } else {
             content
@@ -337,7 +388,9 @@ struct SoftElevation: ViewModifier {
 
 extension View {
     /// Applies `SoftElevation` — soft shadow in light mode, thin border in dark mode.
-    func softElevation() -> some View {
-        modifier(SoftElevation())
+    /// - Parameter cornerRadius: Corner radius used for the dark-mode border overlay.
+    ///   Defaults to `AppLayout.radiusCard`.
+    func softElevation(cornerRadius: CGFloat = AppLayout.radiusCard) -> some View {
+        modifier(SoftElevation(cornerRadius: cornerRadius))
     }
 }

@@ -3,6 +3,7 @@ import SwiftUI
 import UIKit
 import XCTest
 
+// swiftlint:disable type_body_length
 /// Comprehensive view-body coverage tests.
 ///
 /// Each test renders a view through `UIHostingController.loadViewIfNeeded()` to
@@ -71,15 +72,19 @@ final class ViewBodyCoverageTests: XCTestCase {
         render(LegalDocumentView(document: .privacy))
     }
 
+    func test_legalDocumentView_disclaimer_renders() {
+        render(LegalDocumentView(document: .disclaimer))
+    }
+
     // MARK: - OnboardingWelcomeView
 
     func test_onboardingWelcomeView_renders() {
-        render(OnboardingWelcomeView {})
+        render(OnboardingWelcomeView(onNext: {}))
     }
 
     func test_onboardingWelcomeView_callbackFires() {
         var called = false
-        let view = OnboardingWelcomeView { called = true }
+        let view = OnboardingWelcomeView(onNext: { called = true })
         render(view)
         view.onNext()
         XCTAssertTrue(called)
@@ -243,10 +248,11 @@ final class ViewBodyCoverageTests: XCTestCase {
         var newValue: Bool?
         render(AccessibleToggle(
             isOn: .constant(true),
-            onChange: { newValue = $0 }
-        ) {
-            Text("Callback toggle")
-        })
+            onChange: { newValue = $0 },
+            label: {
+                Text("Callback toggle")
+            }
+        ))
         XCTAssertNil(newValue) // onChange only fires on user interaction
     }
 
@@ -355,13 +361,20 @@ final class ViewBodyCoverageTests: XCTestCase {
         XCTAssertFalse(described.isEmpty)
     }
 
+    func test_legalDocumentView_disclaimer_bodyEvaluation() {
+        let view = LegalDocumentView(document: .disclaimer)
+        let described = String(describing: view.body)
+        XCTAssertFalse(described.isEmpty)
+    }
+
     func test_reminderRowView_eyes_enabled_bodyEvaluation() {
         let view = ReminderRowView(
             type: .eyes,
             isEnabled: .constant(true),
             interval: .constant(1200),
             breakDuration: .constant(20),
-            onChanged: {})
+            onChanged: {},
+            reduceMotionOverride: false)
         let described = String(describing: view.body)
         XCTAssertFalse(described.isEmpty)
     }
@@ -372,7 +385,8 @@ final class ViewBodyCoverageTests: XCTestCase {
             isEnabled: .constant(false),
             interval: .constant(1200),
             breakDuration: .constant(20),
-            onChanged: {})
+            onChanged: {},
+            reduceMotionOverride: false)
         let described = String(describing: view.body)
         XCTAssertFalse(described.isEmpty)
     }
@@ -383,7 +397,8 @@ final class ViewBodyCoverageTests: XCTestCase {
             isEnabled: .constant(true),
             interval: .constant(1800),
             breakDuration: .constant(30),
-            onChanged: {})
+            onChanged: {},
+            reduceMotionOverride: false)
         let described = String(describing: view.body)
         XCTAssertFalse(described.isEmpty)
     }
@@ -394,19 +409,26 @@ final class ViewBodyCoverageTests: XCTestCase {
             isEnabled: .constant(false),
             interval: .constant(1800),
             breakDuration: .constant(30),
-            onChanged: {})
+            onChanged: {},
+            reduceMotionOverride: false)
         let described = String(describing: view.body)
         XCTAssertFalse(described.isEmpty)
     }
 
     func test_overlayView_eyes_bodyEvaluation() {
-        let view = OverlayView(type: .eyes, duration: 20, hapticsEnabled: true, onDismiss: {})
+        let view = OverlayView(
+            type: .eyes, duration: 20, hapticsEnabled: true, reduceMotionOverride: false,
+            onDismiss: {}
+        )
         let described = String(describing: view.body)
         XCTAssertFalse(described.isEmpty)
     }
 
     func test_overlayView_posture_bodyEvaluation() {
-        let view = OverlayView(type: .posture, duration: 10, hapticsEnabled: false, onDismiss: {})
+        let view = OverlayView(
+            type: .posture, duration: 10, hapticsEnabled: false, reduceMotionOverride: false,
+            onDismiss: {}
+        )
         let described = String(describing: view.body)
         XCTAssertFalse(described.isEmpty)
     }
@@ -414,6 +436,7 @@ final class ViewBodyCoverageTests: XCTestCase {
     func test_overlayView_allSubviews_bodyEvaluation() {
         let view = OverlayView(
             type: .eyes, duration: 20, hapticsEnabled: true,
+            reduceMotionOverride: false,
             onAnalyticsEvent: { _ in }, onSettingsTap: {}, onDismiss: {})
         // Force deep evaluation of body
         _ = view.body
@@ -422,7 +445,7 @@ final class ViewBodyCoverageTests: XCTestCase {
     }
 
     func test_yinYangEyeView_bodyEvaluation() {
-        let view = YinYangEyeView()
+        let view = YinYangEyeView(reduceMotionOverride: false)
         let described = String(describing: view.body)
         XCTAssertFalse(described.isEmpty)
     }
@@ -433,8 +456,9 @@ final class ViewBodyCoverageTests: XCTestCase {
             tint: AppColor.primaryRest,
             accessibilityIdentifier: "test",
             accessibilityHint: Text("hint"),
-            onChange: { _ in }
-        ) { Text("Label") }
+            onChange: { _ in },
+            label: { Text("Label") }
+        )
         let described = String(describing: view.body)
         XCTAssertFalse(described.isEmpty)
     }
@@ -496,3 +520,4 @@ final class ViewBodyCoverageTests: XCTestCase {
         XCTAssertNotNil(style)
     }
 }
+// swiftlint:enable type_body_length

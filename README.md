@@ -1,17 +1,17 @@
 # kshana — Eye & Posture Wellness
 
-A calming iOS wellness app — redesigned as **Restful Grove** with a yin-yang–inspired logo — that delivers healthy app breaks based on your screen time. **Phase 3 pivot: Now integrating Apple Screen Time APIs (FamilyControls + DeviceActivity + ManagedSettings) for True Interrupt Mode** — when breaks fire, kshana shields distracting apps, enforcing the break. Local notifications are fallback/noise. Choose which apps to shield, set your break timing, and kshana ensures you actually take them. Built exclusively with SwiftUI, UserNotifications, UIKit, and ScreenTime frameworks to minimise battery and memory usage.
+A calming iOS wellness app — redesigned as **Restful Grove** with a yin-yang–inspired logo — that delivers healthy app breaks based on your screen time. **Phase 3 pivot: Integrating Apple Screen Time APIs (FamilyControls + DeviceActivity + ManagedSettings) for True Interrupt Mode** — once Apple entitlement approval is complete, kshana will shield selected apps during breaks. Current builds use local reminder alerts and an in-app break screen while app-level shielding is pending. Built exclusively with SwiftUI, UserNotifications, UIKit, and ScreenTime frameworks to minimise battery and memory usage.
 
 ## Features
 
 - 👁 **Eye-rest reminders** – configurable interval and break duration (e.g. 20-20-20 rule)
 - 🧍 **Posture reminders** – configurable interval and break duration
-- 🚀 **True Interrupt Mode (beta)** – Screen Time Shield-based break suggestions over selected apps/categories when Apple entitlement is approved. Until then, fallback local alerts.
-- 🧠 **Smart Pause** – automatically pauses reminders during Focus Mode, CarPlay navigation, or when driving
+- 🚀 **True Interrupt Mode (coming Phase 3)** – Screen Time Shield-based break suggestions over selected apps/categories; arriving when Apple entitlement approval (#201) is complete. Current builds use local alerts as the primary reminder mechanism.
+- 🧠 **Smart Pause** – automatically pauses reminders during Focus Mode (requires `com.apple.developer.focus-status` entitlement), CarPlay navigation, or when driving
 - Full-screen break screen with countdown timer
 - Dropdown pickers for reminder interval and break length
 - Foreground screen-time tracking via a 1-second `Timer` — reminders fire based on actual eyes-on-screen time, not wall-clock intervals
-- 🎯 **App Selection** – choose which apps and categories trigger breaks (roadmap feature)
+- 🎯 **App Selection** – choose which apps and categories will be shielded during breaks once Screen Time entitlement approval is complete (Phase 3)
 - 🚀 **Onboarding flow** – 4-screen first-launch guide with calm pre-permission education
 - 📳 **Haptic feedback** – tactile notifications on reminder appear and dismiss (toggle in Settings)
 - 💤 **Snooze** – snooze active reminders with configurable limits
@@ -45,6 +45,28 @@ All build, test, and lint commands are standardised through `scripts/build.sh`.
 
 > **Note:** `swift build` does not work for this project because SwiftUI/UIKit are iOS-only frameworks.
 > The script uses `xcodebuild` and automatically falls back to Mac Catalyst if no iOS Simulator runtime is found.
+
+### UI Test Launch Arguments
+
+| Argument | Effect | Helper |
+|----------|--------|--------|
+| `--skip-onboarding` | Sets `hasSeenOnboarding = true`, resets settings → Home screen | `launchWithSkippedOnboarding()` |
+| `--reset-onboarding` | Clears `hasSeenOnboarding` → fresh onboarding flow | `launchWithOnboarding()` |
+| `--show-overlay-eyes` | Triggers eye break overlay on launch | `launchWithEyeOverlay()` |
+| `--show-overlay-posture` | Triggers posture check overlay on launch | `launchWithPostureOverlay()` |
+| `--simulate-screen-time-not-determined` | Seeds `.notDetermined` Screen Time auth stub → banner/pill visible | `launchWithTrueInterruptPending()` |
+
+### Accessibility Identifier Reference — Home Screen
+
+| Identifier | Element | Condition |
+|------------|---------|-----------|
+| `home.title` | App name text | Always |
+| `home.statusLabel` | Active/paused status text | Always |
+| `home.settingsButton` | Settings toolbar button | Always |
+| `home.trueInterrupt.skippedBanner` | TrueInterruptSkippedBanner container | `screenTimeAuthorization == .notDetermined` AND banner not dismissed |
+| `home.trueInterrupt.skippedBanner.setUp` | "Set Up" CTA button | Same as banner |
+| `home.trueInterrupt.skippedBanner.dismiss` | "Dismiss" CTA button | Same as banner |
+| `home.trueInterrupt.setupPill` | TrueInterruptSetupPill button | `screenTimeAuthorization == .notDetermined` AND banner dismissed |
 
 ### Signed TestFlight builds
 

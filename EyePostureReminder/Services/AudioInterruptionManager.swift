@@ -54,7 +54,7 @@ final class AudioInterruptionManager: MediaControlling {
             Logger.overlay.error(
                 """
                 AudioInterruptionManager.pauseExternalAudio failed: \
-                \(error.localizedDescription) — overlay shown without audio interruption
+                \(error.localizedDescription, privacy: .public) — overlay shown without audio interruption
                 """
             )
         }
@@ -67,7 +67,10 @@ final class AudioInterruptionManager: MediaControlling {
             try session.setActive(false, options: .notifyOthersOnDeactivation)
             Logger.overlay.debug("AudioInterruptionManager: external audio resumed")
         } catch {
-            Logger.overlay.error("AudioInterruptionManager.resumeExternalAudio failed: \(error.localizedDescription)")
+            Logger.overlay.error("""
+                AudioInterruptionManager.resumeExternalAudio failed: \
+                \(error.localizedDescription, privacy: .public)
+                """)
         }
     }
 }

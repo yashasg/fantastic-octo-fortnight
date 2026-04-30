@@ -39,6 +39,10 @@ XCODE_FLAGS=(
   CODE_SIGNING_REQUIRED=NO
   CODE_SIGNING_ALLOWED=NO
   ENABLE_BITCODE=NO
+  ENABLE_APP_INTENTS_METADATA_EXTRACTION=NO
+  ENABLE_APPINTENTS_METADATA_EXTRACTION=NO
+  SWIFT_TREAT_WARNINGS_AS_ERRORS=YES
+  GCC_TREAT_WARNINGS_AS_ERRORS=YES
 )
 
 # ── Guards ───────────────────────────────────────────────────────────────────
@@ -101,6 +105,63 @@ run_xcodebuild() {
   echo "  (took $(elapsed "$start"))"
 }
 
+summarize_xcresult_failures() {
+  local bundle_path="$1"
+
+  if [[ ! -d "$bundle_path" ]]; then
+    warn "Result bundle not found at: $bundle_path"
+    return
+  fi
+
+  python3 - "$bundle_path" <<'PY'
+import json
+import subprocess
+import sys
+
+bundle_path = sys.argv[1]
+
+def get_root(path: str):
+    commands = [
+        ["xcrun", "xcresulttool", "get", "object", "--legacy", "--path", path, "--format", "json"],
+        ["xcrun", "xcresulttool", "get", "object", "--path", path, "--format", "json"],
+    ]
+    for command in commands:
+        try:
+            return json.loads(subprocess.check_output(command, stderr=subprocess.DEVNULL))
+        except Exception:
+            continue
+    return None
+
+root = get_root(bundle_path)
+if not root:
+    print("⚠ Unable to parse xcresult bundle for failure details")
+    sys.exit(0)
+
+failures = (
+    root.get("actions", {})
+    .get("_values", [{}])[0]
+    .get("actionResult", {})
+    .get("issues", {})
+    .get("testFailureSummaries", {})
+    .get("_values", [])
+)
+
+if not failures:
+    print("⚠ xcodebuild failed, but xcresult has no testFailureSummaries")
+    sys.exit(0)
+
+print(f"✗ xcresult reports {len(failures)} failing tests:")
+max_items = 20
+for item in failures[:max_items]:
+    test_name = item.get("testCaseName", {}).get("_value", "<unknown test>")
+    message = item.get("message", {}).get("_value", "").splitlines()[0]
+    print(f"  - {test_name}: {message}")
+
+if len(failures) > max_items:
+    print(f"  ... and {len(failures) - max_items} more")
+PY
+}
+
 # ── Subcommands ───────────────────────────────────────────────────────────────
 
 cmd_build() {
@@ -134,12 +195,16 @@ cmd_test() {
 
   rm -rf "${PACKAGE_PATH}/TestResults.xcresult"
 
-  run_xcodebuild test \
+  if ! run_xcodebuild test \
     -scheme "$SCHEME" \
     -destination "$dest" \
     -derivedDataPath "$DERIVED_DATA_PATH" \
     -resultBundlePath "${PACKAGE_PATH}/TestResults.xcresult" \
-    -enableCodeCoverage YES
+    -enableCodeCoverage YES; then
+    fail "xcodebuild test failed"
+    summarize_xcresult_failures "${PACKAGE_PATH}/TestResults.xcresult"
+    exit 1
+  fi
 
   pass "Tests passed"
 }
@@ -151,12 +216,11 @@ cmd_lint() {
 
   if command -v swiftlint &>/dev/null; then
     info "Running SwiftLint…"
-    swiftlint lint "$PACKAGE_PATH"
+    swiftlint lint --strict --quiet "$PACKAGE_PATH"
     pass "Lint passed (took $(elapsed "$start"))"
   else
-    warn "swiftlint not found — skipping lint"
-    warn "Install with:  brew install swiftlint"
-    return 0
+    fail "swiftlint not found. Install with: brew install swiftlint"
+    exit 1
   fi
 }
 
@@ -182,11 +246,60 @@ cmd_uitest() {
   header "UI TEST"
   require_xcodebuild
 
-  local project="${PACKAGE_PATH}/UITests/EyePostureReminderUITests.xcodeproj"
+  local result_bundle_path="${PACKAGE_PATH}/UITestResults.xcresult"
+  local only_testing_filters=()
 
-  # Generate xcodeproj if not present
-  if [[ ! -d "$project" ]]; then
-    info "UITest xcodeproj not found — running setup…"
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --only-testing)
+        if [[ $# -lt 2 ]]; then
+          fail "--only-testing requires a value (e.g. EyePostureReminderUITests/HomeScreenTests)"
+          exit 1
+        fi
+        only_testing_filters+=("$2")
+        shift 2
+        ;;
+      --only-testing=*)
+        only_testing_filters+=("${1#*=}")
+        shift
+        ;;
+      --result-bundle-path)
+        if [[ $# -lt 2 ]]; then
+          fail "--result-bundle-path requires a path value"
+          exit 1
+        fi
+        result_bundle_path="$2"
+        shift 2
+        ;;
+      --result-bundle-path=*)
+        result_bundle_path="${1#*=}"
+        shift
+        ;;
+      *)
+        fail "Unknown uitest option: '$1'"
+        echo ""
+        usage
+        exit 1
+        ;;
+    esac
+  done
+
+  if [[ "$result_bundle_path" != /* ]]; then
+    result_bundle_path="${PACKAGE_PATH}/${result_bundle_path}"
+  fi
+
+  local only_testing_args=()
+  for only_testing_filter in "${only_testing_filters[@]}"; do
+    only_testing_args+=(-only-testing "$only_testing_filter")
+  done
+
+  local project="${PACKAGE_PATH}/UITests/EyePostureReminderUITests.xcodeproj"
+  local project_spec="${PACKAGE_PATH}/UITests/project.yml"
+  local project_file="${project}/project.pbxproj"
+
+  # Generate xcodeproj if not present or if the XcodeGen spec changed.
+  if [[ ! -d "$project" || ! -f "$project_file" || "$project_spec" -nt "$project_file" ]]; then
+    info "UITest xcodeproj missing or stale — running setup…"
     "${PACKAGE_PATH}/scripts/setup-uitests.sh"
   fi
 
@@ -194,8 +307,15 @@ cmd_uitest() {
   dest=$(detect_destination)
   info "Destination: $dest"
   info "UI Test scheme: $UI_TEST_SCHEME"
+  info "Result bundle: $result_bundle_path"
+  if [[ ${#only_testing_filters[@]} -gt 0 ]]; then
+    info "Running filtered UI tests:"
+    for only_testing_filter in "${only_testing_filters[@]}"; do
+      info "  - $only_testing_filter"
+    done
+  fi
 
-  rm -rf "${PACKAGE_PATH}/UITestResults.xcresult"
+  rm -rf "$result_bundle_path"
 
   # Step 1: build-for-testing generates a .xctestrun that correctly resolves
   # UITargetAppPath to EyePostureReminder.app (not the flat SPM binary).
@@ -260,20 +380,22 @@ cmd_uitest() {
   local attempt=1
   while true; do
     info "Attempt $attempt/$max_attempts..."
-    rm -rf "${PACKAGE_PATH}/UITestResults.xcresult"
+    rm -rf "$result_bundle_path"
 
     if run_xcodebuild test-without-building \
       -xctestrun "$xctestrun" \
       -destination "$dest" \
       -derivedDataPath "$DERIVED_DATA_PATH" \
-      -resultBundlePath "${PACKAGE_PATH}/UITestResults.xcresult" \
+      -resultBundlePath "$result_bundle_path" \
       -disable-concurrent-destination-testing \
-      -parallel-testing-enabled NO; then
+      -parallel-testing-enabled NO \
+      "${only_testing_args[@]}"; then
       break
     fi
 
     if (( attempt >= max_attempts )); then
       fail "UI tests failed after $max_attempts attempts"
+      summarize_xcresult_failures "$result_bundle_path"
       exit 1
     fi
 
@@ -341,6 +463,9 @@ usage() {
   echo "  build              Compile the project"
   echo "  test               Run unit tests"
   echo "  uitest             Run UI tests (generates xcodeproj if needed)"
+  echo "                     Options:"
+  echo "                       --only-testing <target/class[/test]>"
+  echo "                       --result-bundle-path <path>"
   echo "  lint               Run SwiftLint (skipped gracefully if not installed)"
   echo "  clean              Remove build artifacts"
   echo "  all                build + lint + test"
@@ -355,7 +480,7 @@ COMMAND="${1:-}"
 case "$COMMAND" in
   build)   cmd_build ;;
   test)    cmd_test  ;;
-  uitest)  cmd_uitest ;;
+  uitest)  shift || true; cmd_uitest "$@" ;;
   lint)    cmd_lint  ;;
   clean)   cmd_clean ;;
   all)     cmd_all   ;;

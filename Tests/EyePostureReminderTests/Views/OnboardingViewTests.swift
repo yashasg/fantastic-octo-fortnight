@@ -86,14 +86,22 @@ final class OnboardingViewTests: XCTestCase {
     /// The permission view instantiates and produces a valid SwiftUI body without crashing.
     func test_permissionView_instantiatesWithoutCrash() {
         let mock = MockNotificationCenter()
-        let view = OnboardingPermissionView(onNext: {}, notificationCenter: mock)
+        let view = OnboardingPermissionView(
+            onNext: {},
+            notificationCenter: mock,
+            accessibilityEnabledOverride: false
+        )
         _ = view.body
     }
 
     /// The permission view body description must be non-empty.
     func test_permissionView_bodyDescription_isNonEmpty() {
         let mock = MockNotificationCenter()
-        let view = OnboardingPermissionView(onNext: {}, notificationCenter: mock)
+        let view = OnboardingPermissionView(
+            onNext: {},
+            notificationCenter: mock,
+            accessibilityEnabledOverride: false
+        )
         let described = String(describing: view.body)
         XCTAssertFalse(described.isEmpty,
                        "OnboardingPermissionView body must produce a non-empty description")
@@ -118,7 +126,11 @@ final class OnboardingViewTests: XCTestCase {
     /// The permission view accepts a custom NotificationScheduling implementation.
     func test_permissionView_acceptsMockNotificationCenter() {
         let mock = MockNotificationCenter()
-        let view = OnboardingPermissionView(onNext: {}, notificationCenter: mock)
+        let view = OnboardingPermissionView(
+            onNext: {},
+            notificationCenter: mock,
+            accessibilityEnabledOverride: false
+        )
         _ = view.body
         // If it compiles and runs, the DI seam works.
     }
@@ -126,7 +138,11 @@ final class OnboardingViewTests: XCTestCase {
     /// The skip button has a known accessibility identifier.
     func test_permissionView_skipButton_accessibilityIdentifier() {
         let mock = MockNotificationCenter()
-        let view = OnboardingPermissionView(onNext: {}, notificationCenter: mock)
+        let view = OnboardingPermissionView(
+            onNext: {},
+            notificationCenter: mock,
+            accessibilityEnabledOverride: false
+        )
         let described = String(describing: view.body)
         XCTAssertTrue(described.contains("onboarding.permission.nextButton") || !described.isEmpty,
                        "Permission view must have skip button accessibility identifier")
@@ -135,7 +151,11 @@ final class OnboardingViewTests: XCTestCase {
     /// The permission view uses high priority gesture to block tab swipe.
     func test_permissionView_highPriorityGesture_rendersWithoutCrash() {
         let mock = MockNotificationCenter()
-        let view = OnboardingPermissionView(onNext: {}, notificationCenter: mock)
+        let view = OnboardingPermissionView(
+            onNext: {},
+            notificationCenter: mock,
+            accessibilityEnabledOverride: false
+        )
         let described = String(describing: view.body)
         XCTAssertFalse(described.isEmpty,
                        "Permission view with highPriorityGesture must render without crash")
@@ -245,7 +265,7 @@ final class OnboardingViewTests: XCTestCase {
             "onboarding.eyes.intervalPicker",
             "onboarding.eyes.durationPicker",
             "onboarding.posture.intervalPicker",
-            "onboarding.posture.durationPicker",
+            "onboarding.posture.durationPicker"
         ]
         for id in expectedIdentifiers {
             XCTAssertTrue(id.hasPrefix("onboarding."),
@@ -261,5 +281,82 @@ final class OnboardingViewTests: XCTestCase {
     func test_secondaryButtonStyle_instantiatesWithoutCrash() {
         let style = OnboardingSecondaryButtonStyle()
         _ = style
+    }
+
+    // MARK: - AccessibilityNotificationPosting / VoiceOver screen-change (#285)
+
+    /// `MockAccessibilityNotificationPoster` starts with zero recorded calls.
+    func test_mockPoster_initialCallCount_isZero() {
+        let mock = MockAccessibilityNotificationPoster()
+        XCTAssertEqual(mock.postScreenChangedCallCount, 0)
+    }
+
+    /// `MockAccessibilityNotificationPoster` increments call count on each invocation.
+    func test_mockPoster_postScreenChanged_incrementsCallCount() {
+        let mock = MockAccessibilityNotificationPoster()
+        mock.postScreenChanged(focusElement: nil)
+        XCTAssertEqual(mock.postScreenChangedCallCount, 1)
+        mock.postScreenChanged(focusElement: nil)
+        XCTAssertEqual(mock.postScreenChangedCallCount, 2)
+    }
+
+    /// `MockAccessibilityNotificationPoster` records the focus element argument.
+    func test_mockPoster_postScreenChanged_recordsFocusElement() {
+        let mock = MockAccessibilityNotificationPoster()
+        let sentinel = "headline" as AnyObject
+        mock.postScreenChanged(focusElement: sentinel)
+        XCTAssertTrue(mock.lastFocusElement as AnyObject === sentinel)
+    }
+
+    /// The default `postScreenChanged()` overload passes `nil` as focus element.
+    func test_mockPoster_defaultOverload_passesFocusElementNil() {
+        let mock = MockAccessibilityNotificationPoster()
+        mock.postScreenChanged()
+        XCTAssertEqual(mock.postScreenChangedCallCount, 1)
+        XCTAssertNil(mock.lastFocusElement)
+    }
+
+    /// `reset()` zeroes out recorded state.
+    func test_mockPoster_reset_clearsState() {
+        let mock = MockAccessibilityNotificationPoster()
+        mock.postScreenChanged(focusElement: "x" as AnyObject)
+        mock.reset()
+        XCTAssertEqual(mock.postScreenChangedCallCount, 0)
+        XCTAssertNil(mock.lastFocusElement)
+    }
+
+    /// `LiveAccessibilityNotificationPoster` conforms to the protocol (compile-time check).
+    func test_livePoster_conformsToProtocol() {
+        let poster: AccessibilityNotificationPosting = LiveAccessibilityNotificationPoster()
+        XCTAssertNotNil(poster)
+    }
+
+    /// `OnboardingView` can be instantiated with a custom `AccessibilityNotificationPosting`.
+    func test_onboardingView_acceptsAccessibilityNotificationPoster_withoutCrash() {
+        let mock = MockAccessibilityNotificationPoster()
+        let view = OnboardingView(accessibilityNotificationPoster: mock)
+        _ = view
+    }
+
+    // MARK: - Onboarding completion screen-changed notification (#402)
+
+    /// `finishOnboarding()` must post a `.screenChanged` notification so VoiceOver
+    /// announces the transition from OnboardingView to HomeView.
+    func test_finishOnboarding_postsScreenChangedNotification() {
+        let mock = MockAccessibilityNotificationPoster()
+        let view = OnboardingView(accessibilityNotificationPoster: mock)
+        view.finishOnboarding()
+        XCTAssertEqual(mock.postScreenChangedCallCount, 1,
+                       "finishOnboarding() must call postScreenChanged() exactly once (#402)")
+    }
+
+    /// `finishOnboardingAndCustomize()` must post a `.screenChanged` notification so
+    /// VoiceOver announces the transition even on the customize path.
+    func test_finishOnboardingAndCustomize_postsScreenChangedNotification() {
+        let mock = MockAccessibilityNotificationPoster()
+        let view = OnboardingView(accessibilityNotificationPoster: mock)
+        view.finishOnboardingAndCustomize()
+        XCTAssertEqual(mock.postScreenChangedCallCount, 1,
+                       "finishOnboardingAndCustomize() must call postScreenChanged() exactly once (#402)")
     }
 }

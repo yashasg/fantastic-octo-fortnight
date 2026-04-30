@@ -20,7 +20,8 @@ final class PreviewTests: XCTestCase {
             notificationCenter: MockNotificationCenter(),
             overlayManager: MockOverlayPresenting(),
             screenTimeTracker: MockScreenTimeTracker(),
-            pauseConditionProvider: MockPauseConditionProvider()
+            pauseConditionProvider: MockPauseConditionProvider(),
+            ipcStore: MockAppGroupIPCRecorder()
         )
     }
 
@@ -76,13 +77,18 @@ final class PreviewTests: XCTestCase {
         assertPreviewRenders(view)
     }
 
+    func test_legalDocumentView_disclaimer_preview() {
+        let view = LegalDocumentView(document: .disclaimer)
+        assertPreviewRenders(view)
+    }
+
     // MARK: - Onboarding
 
     // NOTE: OnboardingView wraps TabView with @EnvironmentObject — bundle proxy crash.
     // Individual screens (Welcome, Permission, Setup) are tested individually below.
 
     func test_onboardingWelcomeView_preview() {
-        let view = OnboardingWelcomeView {}
+        let view = OnboardingWelcomeView(onNext: {})
         assertPreviewRenders(view)
     }
 

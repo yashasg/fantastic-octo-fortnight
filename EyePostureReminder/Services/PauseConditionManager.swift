@@ -8,10 +8,11 @@ import os
 // MARK: - PauseConditionSource
 
 /// Identifies the source of a pause condition.
-enum PauseConditionSource: Hashable {
-    case focusMode
-    case carPlay
-    case driving
+/// Raw values are stable snake_case analytics codes — never change them between releases.
+enum PauseConditionSource: String, Hashable {
+    case focusMode = "focus_mode"
+    case carPlay   = "car_play"
+    case driving   = "driving"
 }
 
 // MARK: - Detector Protocols
@@ -195,7 +196,7 @@ final class PauseConditionManager: PauseConditionProviding {
         didSet {
             guard isPaused != oldValue else { return }
             if isPaused {
-                let conditionType = activeConditions.map { "\($0)" }.joined(separator: ",")
+                let conditionType = activeConditions.map { $0.rawValue }.sorted().joined(separator: ",")
                 AnalyticsLogger.log(.pauseActivated(conditionType: conditionType))
             } else {
                 AnalyticsLogger.log(.pauseDeactivated(conditionType: "all_cleared"))
