@@ -605,8 +605,6 @@ When `isPaused` changes:
 **Info.plist Permissions Required:**
 
 ```xml
-<key>NSLocationWhenInUseUsageDescription</key>
-<string>We use your location to avoid interrupting while driving.</string>
 <key>NSMotionUsageDescription</key>
 <string>We detect driving activity to pause reminders while you're behind the wheel.</string>
 ```
@@ -730,8 +728,8 @@ Phase 2: BREATHE
 **Risk:** `UNUserNotificationCenter` has a limit of 64 pending notifications per app.
 
 **Mitigation:**
-1. **Current design uses 2 notifications:** One for eyes, one for posture, both set to `repeats: true`. No limit risk.
-2. **If we add snooze:** Each snooze creates a one-time notification. Cap snooze count at 5 per day to stay well under 64.
+1. **Current design uses 2 notifications:** One for eyes, one for posture, both set to `repeats: false`. `ScreenTimeTracker` re-arms after each break. No limit risk.
+2. **Snooze wake notifications** are already implemented (Phase 2) as one-time `repeats: false` notifications — one per snooze activation. Cap snooze count at 5 per day to stay well under 64.
 
 **Severity:** Very Low. Design naturally avoids the limit.
 
@@ -858,8 +856,8 @@ jobs:
 
 **Group related files** in Xcode:
 - `Models/` folder contains all model types
-- `Protocols/` folder contains all protocol definitions
 - `Services/` folder contains all service implementations
+- Protocols are **co-located with their primary implementations** (no separate `Protocols/` folder — see §2 and §3)
 
 ---
 

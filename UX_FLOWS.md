@@ -185,9 +185,11 @@ iOS fires Eye Reminder notification
     │      │      ▼
     │      │  Overlay slides up and off-screen (0.2s ease-in)
     │      │  Overlay window removed from hierarchy
+    │      │  Snooze action sheet appears (Phase 2):
+    │      │    [Snooze 5 min]  [Snooze 1 hour]  [Rest of Day]  [No Snooze]
+    │      │  User selects option → snooze activated or dismissed
     │      │  User returns to what they were doing
     │      │  Next reminder already scheduled (repeat: false; ScreenTimeTracker re-arms after each break)
-    │      │  [No snooze sheet — snooze controls live in Settings only]
     │      │
     │      ├─ User taps ⚙️
     │      │      │
@@ -482,7 +484,7 @@ All reminders continue normally
     - "Remind me every" [10 min, 20 min, 30 min, 45 min, 60 min]
     - "Break duration" [10 s, 20 s, 30 s, 60 s]
 - **Per-type enable toggles** (Phase 1): Each reminder row includes an inline ON/OFF toggle, independent of the master toggle
-- **Snooze controls section** (Phase 1):
+- **Snooze controls section** (Phase 2):
   - Label: "Pause Reminders"
   - Three full-width buttons:
     - [5 minutes]
@@ -533,7 +535,7 @@ All reminders continue normally
   - SF Symbol `gearshape.fill`
   - 44pt tap target
   - Label: "Open Settings" (for VoiceOver)
-  - On tap: dismisses overlay and opens Settings screen (snooze controls accessible there)
+  - On tap: dismisses overlay and opens Settings screen (deeper configuration)
 - **Swipe-UP gesture:**
   - Pan gesture recognizer on full overlay surface
   - Overlay follows finger upward; on release, slides up and off-screen (0.2s ease-in)
@@ -617,12 +619,12 @@ All reminders continue normally
 - User returns to previous app state
 
 **Decision rationale:**
-- **Three dismissal methods** cover different user preferences and contexts:
-  - Tap ×: Precise, intentional dismiss
-  - Tap ⚙️: Opens Settings for snooze (deliberate path to snooze controls)
-  - Swipe UP: Natural "flick away" gesture
+- **Four dismissal methods** cover different user preferences and contexts:
+  - Tap ×: Shows snooze action sheet (5 min / 1 hour / Rest of Day / No Snooze) — Phase 2
+  - Swipe UP: Shows snooze action sheet — Phase 2
+  - Tap ⚙️: Opens Settings (deeper configuration)
   - Auto-dismiss: Zero interaction required (users who follow the break)
-- **Snooze is not on the overlay.** Users who want to snooze tap ⚙️ → Settings. This prevents accidental snooze and keeps the break screen calm.
+- **Snooze is on the overlay** as an action sheet after dismissal (Phase 2). Settings also exposes snooze controls ("Pause Reminders" section) as an additional path.
 
 ### 4.2 Animations
 
