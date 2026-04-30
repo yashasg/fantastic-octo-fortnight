@@ -287,7 +287,7 @@ EyePostureReminder/                  (SPM executable target)
 │   ├── DesignSystem.swift            AppColor, AppFont, AppSpacing, AppAnimation tokens
 │   ├── LegalDocumentView.swift       Terms of Service / Privacy Policy inline viewer
 │   └── Onboarding/
-│       ├── OnboardingView.swift      3-screen PageTabView container; writes hasSeenOnboarding
+│       ├── OnboardingView.swift      4-screen PageTabView container; writes hasSeenOnboarding
 │       ├── OnboardingWelcomeView.swift   Screen 0 — app intro + value proposition
 │       ├── OnboardingPermissionView.swift Screen 1 — notification permission request
 │       └── OnboardingSetupView.swift Screen 2 — reminder type setup / get-started CTA
