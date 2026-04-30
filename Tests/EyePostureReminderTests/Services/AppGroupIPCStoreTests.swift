@@ -385,6 +385,38 @@ final class AppGroupIPCStoreTests: XCTestCase {
         XCTAssertTrue(events.contains(newEvent), "New slot-key event must be readable alongside legacy events")
     }
 
+    // MARK: - Prune counter regression (issue #409)
+
+    /// Verifies that recording up to the cap does not prune any event, and that
+    /// `clearEvents()` resets the counter so the next batch of events is kept intact.
+    func test_pruneOnlyOccursAfterCapExceeded_andClearResetsCounter() throws {
+        // store uses maxEventCount = 3
+        let e1 = AppGroupIPCEvent(kind: .watchdogHeartbeat, timestamp: Date(timeIntervalSince1970: 1))
+        let e2 = AppGroupIPCEvent(kind: .shieldStarted,     timestamp: Date(timeIntervalSince1970: 2))
+        let e3 = AppGroupIPCEvent(kind: .shieldEnded,       timestamp: Date(timeIntervalSince1970: 3))
+
+        try store.recordEvent(e1)
+        try store.recordEvent(e2)
+        try store.recordEvent(e3)
+
+        // All 3 events are within the cap — none should be pruned.
+        XCTAssertEqual(try store.readEvents().count, 3, "Events 1-cap must not be pruned")
+
+        // Clear must reset the in-process counter.
+        store.clearEvents()
+
+        let e4 = AppGroupIPCEvent(kind: .watchdogHeartbeat, timestamp: Date(timeIntervalSince1970: 4))
+        let e5 = AppGroupIPCEvent(kind: .shieldStarted,     timestamp: Date(timeIntervalSince1970: 5))
+        let e6 = AppGroupIPCEvent(kind: .shieldEnded,       timestamp: Date(timeIntervalSince1970: 6))
+
+        try store.recordEvent(e4)
+        try store.recordEvent(e5)
+        try store.recordEvent(e6)
+
+        // Counter was reset, so the new batch fits within cap without spurious pruning.
+        XCTAssertEqual(try store.readEvents(), [e4, e5, e6], "Counter must be reset by clearEvents so second batch is not pruned prematurely")
+    }
+
     private func preservingStandardDefaults(for keys: [String], _ action: () throws -> Void) rethrows {
         let oldValues = Dictionary(uniqueKeysWithValues: keys.map { ($0, UserDefaults.standard.object(forKey: $0)) })
         keys.forEach { UserDefaults.standard.removeObject(forKey: $0) }

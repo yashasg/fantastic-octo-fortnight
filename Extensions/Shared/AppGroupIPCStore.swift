@@ -92,6 +92,10 @@ public final class AppGroupIPCStore {
     private let lock = NSLock()
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
+    /// In-process count of event slots written since the store was initialized.
+    /// Initialized once from existing defaults; incremented on each `recordEvent`;
+    /// reset to 0 on `clearEvents`. Serialized under `lock`.
+    private var eventSlotCount: Int
 
     public init(
         defaults: UserDefaults? = AppGroupDefaults.resolve(consumer: "AppGroupIPCStore"),
@@ -99,6 +103,14 @@ public final class AppGroupIPCStore {
     ) {
         self.defaults = defaults
         self.maxEventCount = max(1, maxEventCount)
+        // One-time scan at startup to seed the counter from any pre-existing slots.
+        if let defaults {
+            self.eventSlotCount = defaults.dictionaryRepresentation().keys
+                .filter { $0.hasPrefix(AppGroupIPCKeys.eventSlotPrefix) }
+                .count
+        } else {
+            self.eventSlotCount = 0
+        }
     }
 
     public var isAvailable: Bool {
@@ -223,7 +235,12 @@ public final class AppGroupIPCStore {
             if event.kind == .accessRequested {
                 defaults.set(event.timestamp.timeIntervalSince1970, forKey: AppGroupIPCKeys.lastAccessRequestAt)
             }
-            pruneEventSlots(defaults: defaults)
+            eventSlotCount += 1
+            if eventSlotCount > maxEventCount {
+                pruneEventSlots(defaults: defaults)
+                // After pruning we hold exactly maxEventCount slots.
+                eventSlotCount = maxEventCount
+            }
         }
     }
 
@@ -244,6 +261,7 @@ public final class AppGroupIPCStore {
                 where key.hasPrefix(AppGroupIPCKeys.eventSlotPrefix) {
                 defaults.removeObject(forKey: key)
             }
+            eventSlotCount = 0
             return true
         }
     }
