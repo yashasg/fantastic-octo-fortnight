@@ -202,3 +202,19 @@
 - Confirmed owner-only placeholders `[PUBLISHER NAME]`, `[CONTACT EMAIL]`, and `[JURISDICTION]` remain untouched and are already covered by owner-blocked release readiness.
 - Confirmed open blockers #185, #196, #201, #209, and #210 cover hosted privacy URL, custom EULA upload, FamilyControls entitlement, Screen Time legal docs/sign-off, and extension signing/CI.
 - Found one new material App Store metadata gap: the App Store description draft lacks explicit "not medical advice" / professional-care disclaimer language despite Health & Fitness positioning and 20-20-20/posture claims. Filed #302 for Danny to update listing copy with Frank review.
+
+### 2026-04-30 — Legal Placeholder Consistency Fix (Issue #358)
+
+- **Task:** Replace hardcoded 'Yashasg' publisher name in DISCLAIMER.md with [PUBLISHER NAME] placeholder to align with TERMS.md and PRIVACY.md
+- **Status:** ✅ Complete — PR #416 opened and merged
+- **Changes made:**
+  - DISCLAIMER.md line 4: Publisher header
+  - DISCLAIMER.md line 20: Short disclaimer usage responsibility  
+  - DISCLAIMER.md line 37: Full disclaimer liability clause (2 instances)
+  - DISCLAIMER.md line 51: One-line copyright notice
+- **Result:** All legal documents now consistently use [PUBLISHER NAME] placeholder
+- **Legal Rationale:** Maintains template flexibility for release preparation; prevents accidental publication of draft/placeholder values; supports multi-entity deployment patterns
+- **PR:** #416 — docs(legal): replace hardcoded 'Yashasg' with [PUBLISHER NAME] in DISCLAIMER.md
+- **Issue:** #358 — Closed
+
+**Key Insight:** Legal template consistency prevents downstream release errors. Placeholders must be uniform across TERMS.md, PRIVACY.md, and DISCLAIMER.md to catch missing substitutions during final audit.
