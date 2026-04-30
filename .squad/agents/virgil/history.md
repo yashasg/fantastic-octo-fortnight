@@ -169,3 +169,67 @@ All 4 targets need `family-controls` entitlement + App Groups:
 - Copilot trailer included in commit message
 - PR body updated to reflect consolidated scope
 
+
+---
+
+## Wave 21 — CI/Build/Warning Enforcement Read-Only Audit (2026-04-30)
+
+**Task:** Read-only CI/build audit. Verify warning-as-error enforcement, lint/test/coverage gates, artifact handling, action pinning, and signed/extension build blockers.
+
+**Outcome:** Two material gaps found; two GitHub issues filed.
+
+### Findings
+
+**✅ Passing (no gaps):**
+- `build.sh` enforces `SWIFT_TREAT_WARNINGS_AS_ERRORS=YES` + `GCC_TREAT_WARNINGS_AS_ERRORS=YES` on all simulator builds
+- `ci.yml` and `testflight.yml` actions are SHA-pinned (per #256, closed)
+- SwiftLint runs with `--strict` (all warnings = errors)
+- Coverage threshold at 80% enforced via `xcrun xccov` + `python3` with `exit 1` on fail
+- `if: always()` on coverage step prevents bypass when tests fail
+- Artifacts (dSYMs, test results, IPA) uploaded with retention-days and `if-no-files-found: error/warn`
+- `testflight.yml` CI gate polls for both "Build & Test" and "UI Tests" check results before deploy
+- Action pinning fully resolved for build/deploy workflows (ci.yml, testflight.yml)
+
+**🔴 Gap 1 — build_signed.sh archive missing warning-as-error flags (#304, p1):**
+- `build.sh` passes `SWIFT_TREAT_WARNINGS_AS_ERRORS=YES` + `GCC_TREAT_WARNINGS_AS_ERRORS=YES` via `XCODE_FLAGS`
+- `build_signed.sh` `cmd_archive` does NOT pass these flags to xcodebuild
+- A warning that fails CI could silently pass the distribution archive
+- `setup-screentime.sh --build` also uses grep-based warning detection (weaker) instead of compiler flags
+
+**🔴 Gap 2 — Squad infrastructure workflows unpinned (@v4, @v7) (#305, p2):**
+- squad-heartbeat.yml, squad-issue-assign.yml, squad-triage.yml, sync-squad-labels.yml all use `actions/checkout@v4` and `actions/github-script@v7`
+- #256 (closed) only fixed ci.yml and testflight.yml; squad workflows were out of scope
+- These workflows have `issues: write` permissions; floating tags are a supply-chain risk
+- Fix requires updating both active workflows AND `.squad/templates/workflows/` source so `squad upgrade` doesn't revert
+
+### Issues Filed
+
+- **#304** — `build_signed.sh` archive missing `SWIFT_TREAT_WARNINGS_AS_ERRORS` (p1)
+- **#305** — Squad workflow unpinned action refs, `@v4`/`@v7` (p2)
+
+### Not-Duplicated
+
+- #210 (extension signing/entitlement blocker) — explicitly excluded per task rules
+- #201 (entitlement approval) — upstream blocker, not a CI enforcement gap
+
+## Wave [next] — CI Hardening Pass: #304 + #305 Fixed (2026-04-30)
+
+**Task:** Fix warning-as-error parity and action SHA pinning in one pass.
+
+**Commit:** `5e2ab9786c50617b648ebf9650db092a2f180f24` on branch `fix/overlay-a11y-308-310`
+
+### #304 — Warning-as-error flags added to build_signed.sh and setup-screentime.sh
+- `scripts/build_signed.sh`: added `SWIFT_TREAT_WARNINGS_AS_ERRORS=YES` and `GCC_TREAT_WARNINGS_AS_ERRORS=YES` to the `run_xcodebuild` archive call (before `archive` verb), after `${AUTH_FLAGS[@]}` expansion
+- `scripts/setup-screentime.sh --build`: added same flags to the `xcodebuild build` invocation (previously only post-build grep detected warnings; now the compiler itself enforces them)
+- Parity achieved with `scripts/build.sh` XCODE_FLAGS array
+
+### #305 — All floating @vN action refs pinned
+- Pinned `actions/checkout@v4` → `@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1`
+- Pinned `actions/github-script@v7` → `@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1`
+- Applied to: `squad-heartbeat.yml`, `squad-issue-assign.yml`, `squad-triage.yml`, `sync-squad-labels.yml` (active + `.squad/templates/` copies)
+- SHAs verified via `gh api repos/actions/*/git/refs/tags`
+
+### Learnings
+- macOS workflow YAMLs had CRLF line endings — `sed -i '' 's/...@v4$/...'` with `$` anchor fails silently; must use `perl -i -pe` with `\r?$` to handle CRLF
+- Always check `.squad/templates/workflows/` when patching active workflows — otherwise `squad upgrade` reverts changes
+- Warning-as-error flags belong in every xcodebuild invocation, not just test/build; archive paths must match CI build paths exactly
