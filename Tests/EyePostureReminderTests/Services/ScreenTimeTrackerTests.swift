@@ -437,6 +437,65 @@ final class ScreenTimeTrackerTests: XCTestCase {
 
 }
 
+// MARK: - Delta Cap Tests (Issue #300 – Gap 3)
+
+extension ScreenTimeTrackerTests {
+
+    /// Verifies the `min(now - lastTickTime, 2.0)` cap in `tick(now:)`.
+    ///
+    /// Strategy:
+    ///   - threshold = 4.0 (needs 4 s of accumulated delta)
+    ///   - tick 1 at T       → lastTickTime == 0, so delta = 1.0 (first-tick default), elapsed = 1.0
+    ///   - tick 2 at T+10    → gap = 10 s; WITHOUT cap delta = 10.0 → elapsed = 11.0 ≥ 4.0 (fires)
+    ///                         WITH cap delta = 2.0 → elapsed = 3.0 < 4.0 (must NOT fire yet)
+    ///   - tick 3 at T+11    → gap = 1 s, delta = 1.0, elapsed = 4.0 ≥ 4.0 → fires
+    ///
+    /// The middle assertion (callCount == 0 after tick 2) would fail if the cap were removed.
+    func test_tick_deltaIsCappedAtTwoSeconds() {
+        var callCount = 0
+        sut.setThreshold(4.0, for: .eyes)
+        sut.onThresholdReached = { type in
+            guard type == .eyes else { return }
+            callCount += 1
+        }
+
+        // Tick 1: first tick uses default delta of 1.0 regardless of gap.
+        sut.tick(now: 1000.0)
+        XCTAssertEqual(callCount, 0, "threshold not reached after tick 1 (elapsed = 1.0 < 4.0)")
+
+        // Tick 2: 10 s wall-clock gap — capped to 2.0. elapsed = 3.0 < 4.0.
+        // Without the cap the uncapped delta would be 10.0 → elapsed = 11.0 ≥ 4.0, firing here.
+        sut.tick(now: 1010.0)
+        XCTAssertEqual(
+            callCount,
+            0,
+            "with 2 s delta cap, elapsed = 3.0 must not reach threshold = 4.0 (without cap it would be 11.0)")
+
+        // Tick 3: 1 s gap — delta = 1.0, elapsed = 4.0 ≥ 4.0 → threshold fires.
+        sut.tick(now: 1011.0)
+        XCTAssertEqual(
+            callCount,
+            1,
+            "threshold = 4.0 must be reached after three ticks (1.0 + 2.0 + 1.0 = 4.0)")
+    }
+
+    /// Verifies that the first tick always contributes delta = 1.0 even when
+    /// `tick(now:)` is called with an arbitrary `now` value (lastTickTime == 0 guard).
+    func test_tick_firstTickAlwaysUsesFallbackDeltaOfOneSecond() {
+        var callCount = 0
+        sut.setThreshold(0.5, for: .eyes)
+        sut.onThresholdReached = { type in
+            guard type == .eyes else { return }
+            callCount += 1
+        }
+
+        // Regardless of `now`, the first tick must use delta = 1.0.
+        sut.tick(now: 99_999.0)
+        XCTAssertEqual(callCount, 1, "first tick delta = 1.0 must fire threshold = 0.5")
+    }
+
+}
+
 // MARK: - Stop & Reset Tests
 
 extension ScreenTimeTrackerTests {

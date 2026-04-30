@@ -271,8 +271,12 @@ final class ScreenTimeTracker: ScreenTimeTracking {
         lastTickTime = 0  // reset so the next tick after resume uses default delta
     }
 
-    private func tick() {
-        let now = CACurrentMediaTime()
+    /// Advance all enabled, unpaused counters by one tick.
+    ///
+    /// The `now` parameter defaults to `CACurrentMediaTime()` for production use.
+    /// Pass an explicit value in unit tests to exercise the 2 s delta-cap without
+    /// running a real wall-clock timer.
+    func tick(now: CFTimeInterval = CACurrentMediaTime()) {
         // Use real elapsed time since the last tick rather than the nominal 1.0 s.
         // Cap at 2.0 s to avoid large jumps after device sleep or backgrounding.
         let delta: TimeInterval = lastTickTime > 0 ? min(now - lastTickTime, 2.0) : 1.0
