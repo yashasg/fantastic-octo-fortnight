@@ -56,19 +56,21 @@ Built for people who spend hours at a screen and want control over their break h
 ## 4. Keywords
 
 ```
-eye health,20-20-20,screen break,reminder,timer,eye strain,ergonomic,rest,screen time,neck pain
+eye health,20-20-20,screen break,reminder,posture check,eye strain,ergonomic,screen time,neck pain
 ```
 
-*(95 characters — within 100-char limit)*
+*(98 characters — within 100-char limit)*
 
 **Keyword strategy notes:**
 - Prioritized high-intent terms: "eye health", "screen break", "reminder"
 - Included the well-known "20-20-20" rule for discoverability
+- "posture check" added as a compound term directly representing the app's posture-check feature; Apple treats compound keywords as a single indexable phrase, giving better precision than a bare word
 - "eye strain" captures pain-point searchers
 - "ergonomic" broadens reach into health-conscious audiences
 - "screen time" captures high-intent users searching for screen-time management tools
 - "neck pain" targets users seeking relief from screen-related neck discomfort
-- Excluded words already in app name/subtitle (Apple indexes those separately); "wellness" and "posture" removed since both appear in the subtitle ("Eye & Posture Wellness")
+- Removed low-intent single word "rest" (Issue #376); removed "timer" to stay within the 100-char budget after adding "posture check"
+- Excluded words already in app name/subtitle (Apple indexes those separately); standalone "wellness" and standalone "posture" excluded since both appear in the subtitle ("Eye & Posture Wellness") — "posture check" as a compound is intentionally retained per Issue #376
 
 ---
 
