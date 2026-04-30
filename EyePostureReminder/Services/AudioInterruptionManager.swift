@@ -51,10 +51,11 @@ final class AudioInterruptionManager: MediaControlling {
             // call), log the error but continue. `resumeExternalAudio()` will still
             // call `setActive(false)` on dismiss — calling setActive(false) on an
             // already-inactive session is a no-op, so dismissal is always safe.
+            // System API error — localizedDescription comes from AVAudioSession/AVFoundation domain, not user input.
             Logger.overlay.error(
                 """
                 AudioInterruptionManager.pauseExternalAudio failed: \
-                \(error.localizedDescription) — overlay shown without audio interruption
+                \(error.localizedDescription, privacy: .public) — overlay shown without audio interruption
                 """
             )
         }
@@ -67,7 +68,8 @@ final class AudioInterruptionManager: MediaControlling {
             try session.setActive(false, options: .notifyOthersOnDeactivation)
             Logger.overlay.debug("AudioInterruptionManager: external audio resumed")
         } catch {
-            Logger.overlay.error("AudioInterruptionManager.resumeExternalAudio failed: \(error.localizedDescription)")
+            // System API error — localizedDescription comes from AVAudioSession/AVFoundation domain, not user input.
+            Logger.overlay.error("AudioInterruptionManager.resumeExternalAudio failed: \(error.localizedDescription, privacy: .public)")
         }
     }
 }

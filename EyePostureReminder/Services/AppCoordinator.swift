@@ -232,7 +232,8 @@ final class AppCoordinator: ObservableObject {
                 .requestAuthorization(options: [.alert, .sound, .badge])
             Logger.lifecycle.info("Notification authorisation \(granted ? "granted" : "denied")")
         } catch {
-            Logger.lifecycle.error("Notification authorisation request failed: \(error.localizedDescription)")
+            // System API error — localizedDescription comes from UNError domain, not user input.
+            Logger.lifecycle.error("Notification authorisation request failed: \(error.localizedDescription, privacy: .public)")
         }
         await refreshAuthStatus()
     }
@@ -550,7 +551,8 @@ final class AppCoordinator: ObservableObject {
             try await notificationCenter.add(request)
             Logger.scheduling.debug("Snooze wake notification scheduled in \(interval)s")
         } catch {
-            Logger.scheduling.error("Failed to schedule snooze wake notification: \(error.localizedDescription)")
+            // System API error — localizedDescription comes from UNError domain, not user input.
+            Logger.scheduling.error("Failed to schedule snooze wake notification: \(error.localizedDescription, privacy: .public)")
         }
     }
 

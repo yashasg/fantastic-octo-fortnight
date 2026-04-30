@@ -124,7 +124,8 @@ final class ReminderScheduler: ReminderScheduling {
             try await notificationCenter.add(request)
             Logger.scheduling.info("Scheduled \(type.rawValue) every \(reminderSettings.interval)s")
         } catch {
-            Logger.scheduling.error("Failed to schedule \(type.rawValue): \(error.localizedDescription)")
+            // System API error — localizedDescription comes from UNError domain, not user input.
+            Logger.scheduling.error("Failed to schedule \(type.rawValue): \(error.localizedDescription, privacy: .public)")
         }
     }
 

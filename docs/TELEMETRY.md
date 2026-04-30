@@ -251,6 +251,28 @@ What Turk, Tess (UX), and Reuben (Product) need to see. These drive the instrume
 
 ---
 
+## Privacy Annotation Policy
+
+All `os.Logger` interpolations **must** carry an explicit `privacy:` annotation. The two permitted levels are:
+
+| Data category | Annotation | Examples |
+|---|---|---|
+| System API errors (from Apple frameworks: `UNError`, `AVAudioSession`, `CLError`, etc.) | `privacy: .public` | `error.localizedDescription` from `UNUserNotificationCenter`, `AVAudioSession`, `NSSetUncaughtExceptionHandler` exception `name`/`reason` |
+| User-generated or arbitrary runtime data | `privacy: .private` | Custom text entered by the user, dictionary contents (`userInfo`), call stack symbols, file paths that could encode user data |
+
+### Rules
+
+1. **System API errors → `.public`.**  
+   `localizedDescription` from Apple system APIs contains only framework-level error strings (e.g., `"The operation couldn't be completed (UNErrorDomain error 1.)"`). These strings are defined by Apple and contain no PII. Annotate `.public` so they survive release-mode log redaction and remain useful in TestFlight diagnostics.
+
+2. **User-generated / arbitrary data → `.private`.**  
+   Anything that could reflect user behaviour, custom input, or internal state snapshots (e.g., `userInfo` dictionaries, call stack symbol strings) must be `.private`. The default os.log behaviour without an annotation is *also* redacted in release, but explicit `.private` makes the intent clear and prevents accidental future widening.
+
+3. **Never omit the annotation on `.error` or `.fault` calls.**  
+   Debug-level calls can omit annotations for brevity; error/fault calls are the most likely to be reviewed in crash reports and must be fully explicit.
+
+---
+
 ## Privacy Checklist
 
 ### No PII in Logs
