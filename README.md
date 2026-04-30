@@ -46,6 +46,28 @@ All build, test, and lint commands are standardised through `scripts/build.sh`.
 > **Note:** `swift build` does not work for this project because SwiftUI/UIKit are iOS-only frameworks.
 > The script uses `xcodebuild` and automatically falls back to Mac Catalyst if no iOS Simulator runtime is found.
 
+### UI Test Launch Arguments
+
+| Argument | Effect | Helper |
+|----------|--------|--------|
+| `--skip-onboarding` | Sets `hasSeenOnboarding = true`, resets settings → Home screen | `launchWithSkippedOnboarding()` |
+| `--reset-onboarding` | Clears `hasSeenOnboarding` → fresh onboarding flow | `launchWithOnboarding()` |
+| `--show-overlay-eyes` | Triggers eye break overlay on launch | `launchWithEyeOverlay()` |
+| `--show-overlay-posture` | Triggers posture check overlay on launch | `launchWithPostureOverlay()` |
+| `--simulate-screen-time-not-determined` | Seeds `.notDetermined` Screen Time auth stub → banner/pill visible | `launchWithTrueInterruptPending()` |
+
+### Accessibility Identifier Reference — Home Screen
+
+| Identifier | Element | Condition |
+|------------|---------|-----------|
+| `home.title` | App name text | Always |
+| `home.statusLabel` | Active/paused status text | Always |
+| `home.settingsButton` | Settings toolbar button | Always |
+| `home.trueInterrupt.skippedBanner` | TrueInterruptSkippedBanner container | `screenTimeAuthorization == .notDetermined` AND banner not dismissed |
+| `home.trueInterrupt.skippedBanner.setUp` | "Set Up" CTA button | Same as banner |
+| `home.trueInterrupt.skippedBanner.dismiss` | "Dismiss" CTA button | Same as banner |
+| `home.trueInterrupt.setupPill` | TrueInterruptSetupPill button | `screenTimeAuthorization == .notDetermined` AND banner dismissed |
+
 ### Signed TestFlight builds
 
 Use the separate signed runner when you want a local archive, IPA export, or App Store Connect upload. It does not run unit tests or UI tests; run `./scripts/build.sh all` separately when you want validation.

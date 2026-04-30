@@ -217,10 +217,7 @@ struct TrueInterruptSkippedBanner: View {
             RoundedRectangle(cornerRadius: AppLayout.radiusSmall)
                 .strokeBorder(AppColor.separatorSoft, lineWidth: AppLayout.borderHair)
         )
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text("home.trueInterrupt.skippedBanner.label", bundle: .module))
-        .accessibilityAction(named: Text("home.trueInterrupt.skippedBanner.setUp", bundle: .module), onSetUp)
-        .accessibilityAction(named: Text("home.trueInterrupt.skippedBanner.dismiss", bundle: .module), onDismiss)
+        .accessibilityIdentifier("home.trueInterrupt.skippedBanner")
     }
 }
 

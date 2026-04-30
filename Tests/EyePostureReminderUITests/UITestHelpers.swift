@@ -19,6 +19,11 @@ enum TestLaunchArguments {
     static let showOverlayEyes = "--show-overlay-eyes"
     /// Triggers the posture check overlay immediately on launch; used by OverlayTests and DarkModeUITests to display the overlay without waiting for the timer.
     static let showOverlayPosture = "--show-overlay-posture"
+    /// Seeds `ScreenTimeAuthorizationStub(.notDetermined)` into `AppCoordinator` so the
+    /// TrueInterruptSkippedBanner and TrueInterruptSetupPill can render in UITests.
+    /// The simulator's real FamilyControls status is `.unavailable`; without this arg
+    /// neither element would ever appear (#399).
+    static let simulateScreenTimeNotDetermined = "--simulate-screen-time-not-determined"
 }
 
 // MARK: - XCUIApplication + Test Helpers
@@ -49,6 +54,16 @@ extension XCUIApplication {
     /// Use in tests that verify the posture check overlay UI.
     func launchWithPostureOverlay() {
         launchArguments += [TestLaunchArguments.showOverlayPosture]
+        launch()
+    }
+
+    /// Seeds `.notDetermined` Screen Time authorization state and launches on the Home screen.
+    ///
+    /// Use in tests that verify `TrueInterruptSkippedBanner` (banner not yet dismissed) and
+    /// `TrueInterruptSetupPill` (banner dismissed). The simulator's real FamilyControls status
+    /// is `.unavailable`, so this argument is required to reach either element (#399).
+    func launchWithTrueInterruptPending() {
+        launchArguments += [TestLaunchArguments.simulateScreenTimeNotDetermined]
         launch()
     }
 }
