@@ -219,11 +219,11 @@
 
 ---
 
-## Phase 2: Polish 🔄 IN PROGRESS (~95% Complete)
+## Phase 2: Polish ✅ COMPLETE
 
 **Goal:** Elevate UX with onboarding, haptics, smart pause, accessibility, data-driven config, and App Store readiness.
 
-**Status:** Most milestones delivered. Screen-time triggers implemented (ScreenTimeTracker replacing wall-clock intervals). Smart pause complete (Focus Mode, CarPlay, driving detection). Onboarding, snooze, haptics, accessibility refined. Data-driven config via Asset Catalog (colors), String Catalog (copy), defaults.json (settings). App Store listing documented. Awaiting final submission.
+**Status:** Shipped. Screen-time triggers implemented (ScreenTimeTracker replacing wall-clock intervals). Smart pause complete (Focus Mode, CarPlay, driving detection). Onboarding, snooze, haptics, accessibility refined. Data-driven config via Asset Catalog (colors), String Catalog (copy), defaults.json (settings). App Store listing documented. v0.2.0 (Restful Grove) tagged and shipped.
 
 ### Milestones
 
@@ -253,7 +253,7 @@
 - **Owner:** Basher (Services Dev)
 - **Status:** ✅ Complete
 - **Delivered:**
-  - 5 min / 15 min / 30 min / rest-of-day snooze options
+  - 5 min / 1 hour / rest-of-day snooze options
   - Max 2 consecutive snoozes per reminder instance
   - Dual wake mechanism: in-process `Task` + silent notification
   - Unit tests for snooze limits and rescheduling
@@ -404,7 +404,7 @@ Local notification fallback ensures we gracefully degrade if Screen Time APIs un
 ### Architecture Changes (Phase 3)
 
 #### New Targets & Frameworks
-- **App Group:** `group.com.kshana.screentime` (shared between main app and extensions)
+- **App Group:** `group.com.yashasgujjar.kshana` (shared between main app and extensions)
 - **Main App Entitlements:** `com.apple.developer.family-controls` (FamilyControls)
 - **ShieldConfiguration Extension:** Implements `ShieldConfigurationProvider` protocol (ManagedSettingsUI)
 - **ShieldAction Extension:** Implements `ShieldActionProvider` protocol for app/website unblocker buttons
@@ -537,7 +537,7 @@ Device resumes normal activity
 - **Owner:** Basher (Services Dev)
 - **Status:** 🔄 PLANNED
 - **Scope:**
-  - App Group (group.com.kshana.screentime) UserDefaults syncing config + state
+  - App Group (`group.com.yashasgujjar.kshana`) UserDefaults syncing config + state
   - Main app writes: authorized apps, shield schedule, last shield time
   - Extensions read: config for shield rendering
   - Optional watchdog: separate app extension that monitors break compliance (logs to shared container)
@@ -624,7 +624,6 @@ Device resumes normal activity
 - ✅ Graceful fallback to notifications if Screen Time APIs unavailable
 - ✅ Legal review complete; privacy policy updated
 - ✅ TestFlight build includes extensions; ready for beta distribution
-  - Haptics fire reliably on watch
 
 #### M4.1: Advanced Testing & v1.1 Release
 - **Owner:** Livingston (Tester) + Saul (Code Reviewer)
@@ -666,10 +665,10 @@ Device resumes normal activity
 |---|---|---|---|
 | **Phase 0** | ✅ Complete | M0.1–M0.6 | 2 weeks; all foundation work shipped |
 | **Phase 1** | ✅ Complete | M1.1–M1.8 | 3 weeks; MVP with 65+ unit tests, notifications, overlay |
-| **Phase 2** | 🔄 ~95% | M2.1–M2.10 | 4 weeks; screen-time triggers, smart pause, onboarding, haptics, data-driven config, yin-yang logo animation, 7 quality passes, Restful Grove identity; App Store prep in final stages |
-| **Phase 3** | 🔄 Started | M3.1–M3.5 | Planned 3+ weeks; DI refactoring in progress (issues #13-14); iCloud sync, widgets, watchOS deferred |
+| **Phase 2** | ✅ Complete | M2.1–M2.10 | 4 weeks; screen-time triggers, smart pause, onboarding, haptics, data-driven config, yin-yang logo animation, 7 quality passes, Restful Grove identity; v0.2.0 shipped |
+| **Phase 3** | 🔄 In Progress | M3.1–M3.11 | Planned 3+ weeks; blocked on Screen Time API entitlement approval #201; iCloud sync, widgets, watchOS deferred |
 
-**Current Project Status:** v0.2.0 (Restful Grove) tagged and shipped. Awaiting decision on TestFlight/App Store submission (Phase 2 ~95%, Phase 3 optional).
+**Current Project Status:** v0.2.0 (Restful Grove) tagged and shipped. Phase 2 complete. Phase 3 (Interrupt Mode MVP) in progress — unblocked on Screen Time API entitlement approval (Apple Case ID 102881605113, issue #201).
 
 ---
 
@@ -677,9 +676,11 @@ Device resumes normal activity
 
 | Issue | Status | Owner | Priority |
 |---|---|---|---|
-| #14 | 🔄 In Progress | Livingston | HIGH – Add ScreenTimeTracking protocol for DI |
-| #13 | 🔄 In Progress | Livingston | HIGH – Inject PauseConditionManager via protocol |
-| #12 | 🔄 In Progress | Livingston | HIGH – Add common Lifecycle protocol for services |
+| #201 | 🔄 Blocked | Rusty | CRITICAL – Screen Time API entitlement approval (Apple Case ID 102881605113) — Phase 3 gated |
+| #196 | 🔄 In Progress | Basher | HIGH – DeviceActivity monitor extension implementation |
+| #209 | 🔄 In Progress | Linus | HIGH – ShieldConfiguration extension UI |
+| #210 | 🔄 In Progress | Linus | HIGH – ShieldAction extension button handling |
+| #185 | 🔄 In Progress | Rusty | MEDIUM – App Group shared state schema + IPC event log |
 | #2 | 🔄 Blocked | Rusty | MEDIUM – Fill in legal document placeholders (Frank to complete) |
 
 **Phase 2 Complete (Closed):** #11 (test fixes), #10 (integration tests), #9 (UI tests), #8 (test architecture), #7 (PauseConditionManager), #6 (pause tests), #5 (disclaimer UI), #4 (docs update), #3 (pause settings UI)
@@ -799,12 +800,13 @@ Phase 2: Polish 🔄 ~95%
   M0.4 + M2.5 → M2.10 (Yin-Yang Logo Animation) ✅
   M2.6 → M2.9 (App Store Prep) 🔄
 
-Phase 3: Advanced 🔄 Partially Started
-  Phase 2 → M3.1 (Dependency Injection Refactoring) 🔄 (issues #13-14)
-  M1.1 → M3.2 (iCloud Sync) 🔄 Planned
-  M1.1 + M3.2 → M3.3 (Widget) 🔄 Planned
-  M3.2 → M3.4 (watchOS) 🔄 Planned
-  M3.1 + M3.2 + M3.3 + M3.4 → M3.5 (Advanced Testing & Release) 🔄 Planned
+Phase 3: Interrupt Mode MVP 🔄 In Progress
+  Phase 2 → M3.1 (Screen Time Extension Architecture) 🔄 (blocked on entitlement #201)
+  Phase 2 → M3.6 (App Shielding) 🔄 Planned
+  Phase 2 → M3.7 (App Group Shared State) 🔄 Planned
+  M3.6 → M3.8 (App Category Picker) 🔄 Planned
+  M3.1 + M3.6 → M3.9 (Pre-Permission UX) 🔄 Planned
+  M3.6 + M3.9 → M3.11 (Notification Fallback Positioning) 🔄 Planned
 ```
 
 ---
@@ -821,6 +823,6 @@ Phase 3: Advanced 🔄 Partially Started
 **Ready for:**
 - 🔄 App Store submission (Phase 2 complete, docs ready, privacy policy published)
 - 🔄 TestFlight beta distribution
-- 🔄 Phase 3 (dependency injection refactoring + iCloud/widgets/watchOS post-launch)
+- 🔄 Phase 3 (Screen Time APIs + app shielding; entitlement approval #201 pending)
 
 **Next Decision:** Approve App Store submission or defer Phase 3 items to v1.0 release? (Recommend: v1.0 with Phase 1+2, Phase 3 as v1.1 post-launch)

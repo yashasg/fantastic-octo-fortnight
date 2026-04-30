@@ -2,7 +2,7 @@
 
 > **Owner:** Rusty (iOS Architect)  
 > **Last Updated:** 2026-04-27  
-> **Status:** Phase 2
+> **Status:** Phase 2 complete / Phase 3 active
 
 ---
 
@@ -452,8 +452,18 @@ The Asset Catalog defines the following semantic color tokens (each with light/d
 | `PermissionBanner` | `.permissionBanner` | Permission banner background |
 | `PermissionBannerText` | `.permissionBannerText` | Permission banner text |
 | `WarningText` | `.warningText` | Warning label text |
+| `RGPrimaryRest` | `.rgPrimaryRest` | Restful Grove primary (Sage) |
+| `RGSecondaryCalm` | `.rgSecondaryCalm` | Restful Grove secondary (calm tone) |
+| `RGAccentWarm` | `.rgAccentWarm` | Restful Grove accent (warm highlight) |
+| `RGSurface` | `.rgSurface` | Card/surface background |
+| `RGSurfaceTint` | `.rgSurfaceTint` | Surface tint (Mint) |
+| `RGBackground` | `.rgBackground` | Screen background |
+| `RGTextPrimary` | `.rgTextPrimary` | Primary text |
+| `RGTextSecondary` | `.rgTextSecondary` | Secondary/caption text |
+| `RGSeparatorSoft` | `.rgSeparatorSoft` | Dividers and borders |
+| `RGShadowCard` | `.rgShadowCard` | Card drop shadow |
 
-Additionally, `AppColor.overlayBackground` is computed in code as `Color(.systemBackground).opacity(0.6)` — not an Asset Catalog entry.
+> **Note (v0.2.0):** `AppColor.overlayBackground` was removed in v0.2.0 (Restful Grove). The overlay now uses `.ultraThinMaterial` (iOS 15+) directly — no custom computed color needed.
 
 ```swift
 // SwiftUI (automatic dark/light adaptation)
@@ -950,7 +960,7 @@ Phase 3 requires a new Xcode project (or XcodeGen `project.yml`) with **four tar
 
 All four targets must:
 - Be in the **same Xcode project**
-- Share **App Groups entitlement** (`com.apple.security.application-groups` with ID `group.com.yashasg.eyeposturereminder`)
+- Share **App Groups entitlement** (`com.apple.security.application-groups` with ID `group.com.yashasgujjar.kshana`)
 - Carry **FamilyControls entitlement** (`com.apple.developer.family-controls` with `individual` scope)
 
 ---
@@ -994,7 +1004,7 @@ class DeviceActivityMonitor: DeviceActivityScheduler {
         // Called by system when a scheduled interval begins (e.g., 20 min of Safari use)
         
         // Read App Group state to determine which apps to shield
-        let shared = UserDefaults(suiteName: "group.com.yashasg.eyeposturereminder")
+        let shared = UserDefaults(suiteName: "group.com.yashasgujjar.kshana")
         let shieldedApps = shared?.array(forKey: "shieldedApps") as? [String] ?? []
         
         // Apply ManagedSettingsStore shields
@@ -1007,7 +1017,7 @@ class DeviceActivityMonitor: DeviceActivityScheduler {
     
     override func intervalDidEnd(for activity: DeviceActivityName) {
         // Called when interval ends; main app can resume
-        let shared = UserDefaults(suiteName: "group.com.yashasg.eyeposturereminder")
+        let shared = UserDefaults(suiteName: "group.com.yashasgujjar.kshana")
         shared?.set(["shieldActive": false], forKey: "shieldState")
     }
 }
@@ -1015,7 +1025,7 @@ class DeviceActivityMonitor: DeviceActivityScheduler {
 
 **Key points:**
 - Extension runs in **separate process** (XPC sandbox) — no direct access to main app memory
-- Only communication channel: **App Groups shared container** (`UserDefaults(suiteName: "group.com.yashasg.eyeposturereminder")`)
+- Only communication channel: **App Groups shared container** (`UserDefaults(suiteName: "group.com.yashasgujjar.kshana")`)
 - Extension is **system-triggered** — not user-triggered, not controlled by main app
 
 ---
@@ -1083,7 +1093,7 @@ class ShieldActionHandler: ShieldActionDelegate {
         
         if action.label == ShieldConfiguration.Label(text: "Start Break") {
             // User tapped "Start Break" — defer (keep shield) + signal main app
-            let shared = UserDefaults(suiteName: "group.com.yashasg.eyeposturereminder")
+            let shared = UserDefaults(suiteName: "group.com.yashasgujjar.kshana")
             shared?.set(Date.now, forKey: "breakStartedAt")
             verdict = .defer
         } else {
@@ -1171,7 +1181,7 @@ This dual-mode design ensures:
 
 ### 5.5.10 App Group State Schema
 
-**Location:** `UserDefaults(suiteName: "group.com.yashasg.eyeposturereminder")`
+**Location:** `UserDefaults(suiteName: "group.com.yashasgujjar.kshana")`
 
 Used by main app ↔ extension communication:
 
