@@ -153,7 +153,7 @@ final class StringCatalogTests: XCTestCase {
             "onboarding.permission.title", "onboarding.permission.enableButton",
             "onboarding.permission.skipButton",
             "onboarding.setup.title", "onboarding.setup.getStartedButton",
-            "legal.dismissButton",
+            "legal.dismissButton", "legal.dismissButton.hint",
             "legal.terms.navTitle", "legal.terms.notMedical.heading", "legal.terms.notMedical.body",
             "legal.terms.professional.heading", "legal.terms.professional.body",
             "legal.terms.userResponsibilities.heading", "legal.terms.userResponsibilities.body",
@@ -191,6 +191,8 @@ final class StringCatalogTests: XCTestCase {
             "settings.section.about", "settings.section.advanced", "settings.section.legal",
             // settings.snooze.limitReached.hint — shown when snooze limit is reached
             "settings.snooze.limitReached.hint",
+            // settings.snooze.activated/cancelled.announcement — VoiceOver announcements (#406)
+            "settings.snooze.activated.announcement", "settings.snooze.cancelled.announcement",
             // settings.masterToggle.footer — footer below master toggle
             "settings.masterToggle.footer",
             // settings.about.* — version string in About section
@@ -344,7 +346,7 @@ final class StringCatalogTests: XCTestCase {
             "onboarding.setup.picker.every", "onboarding.setup.picker.breakFor",
             "onboarding.setup.changeInSettings", "onboarding.setup.getStartedButton",
             "onboarding.setup.getStartedButton.hint", "onboarding.setup.card.label",
-            "legal.dismissButton",
+            "legal.dismissButton", "legal.dismissButton.hint",
             "legal.terms.navTitle", "legal.terms.notMedical.heading", "legal.terms.notMedical.body",
             "legal.terms.professional.heading", "legal.terms.professional.body",
             "legal.terms.userResponsibilities.heading", "legal.terms.userResponsibilities.body",
@@ -645,7 +647,7 @@ final class StringCatalogTests: XCTestCase {
 
     func test_noDuplicateKeys_legalScreen() {
         let keys = [
-            "legal.dismissButton",
+            "legal.dismissButton", "legal.dismissButton.hint",
             "legal.terms.navTitle",
             "legal.terms.notMedical.heading", "legal.terms.notMedical.body",
             "legal.terms.professional.heading", "legal.terms.professional.body",
@@ -677,6 +679,24 @@ final class StringCatalogTests: XCTestCase {
         XCTAssertTrue(
             isTranslated("legal.dismissButton"),
             "'legal.dismissButton' must resolve from catalog, not fall back to key string")
+    }
+
+    func test_legalDismissButtonHint_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("legal.dismissButton.hint"),
+            "'legal.dismissButton.hint' must resolve from catalog (#404)")
+    }
+
+    func test_snoozeActivatedAnnouncement_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("settings.snooze.activated.announcement"),
+            "'settings.snooze.activated.announcement' must resolve from catalog (#406)")
+    }
+
+    func test_snoozeCancelledAnnouncement_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("settings.snooze.cancelled.announcement"),
+            "'settings.snooze.cancelled.announcement' must resolve from catalog (#406)")
     }
 
     func test_legalTermsNavTitle_resolvesToEnglish() {

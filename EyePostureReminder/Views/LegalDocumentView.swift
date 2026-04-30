@@ -41,6 +41,7 @@ struct LegalDocumentView: View {
                     }
                     .font(AppFont.bodyEmphasized)
                     .foregroundStyle(AppColor.primaryRest)
+                    .accessibilityHint(Text("legal.dismissButton.hint", bundle: .module))
                     .accessibilityIdentifier("legal.dismissButton")
                 }
             }

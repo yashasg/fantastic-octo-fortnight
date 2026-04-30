@@ -1114,6 +1114,28 @@
         }
       }
     },
+    "settings.snooze.activated.announcement": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reminders snoozed"
+          }
+        }
+      }
+    },
+    "settings.snooze.cancelled.announcement": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snooze cancelled. Reminders resumed."
+          }
+        }
+      }
+    },
     "settings.section.smartPause": {
       "extractionState": "manual",
       "localizations": {
@@ -1242,6 +1264,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Done"
+          }
+        }
+      }
+    },
+    "legal.dismissButton.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dismisses this document and returns to Settings"
           }
         }
       }

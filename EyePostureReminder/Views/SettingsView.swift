@@ -376,6 +376,13 @@ struct SettingsView: View {
                 : String(localized: "home.status.paused", bundle: .module)
             accessibilityNotificationPoster.postAnnouncement(message: message)
         }
+        // Announce snooze activate/cancel to VoiceOver (#406).
+        .onChange(of: settings.snoozedUntil) { (newValue: Date?) in
+            let message: String = newValue != nil
+                ? String(localized: "settings.snooze.activated.announcement", bundle: .module)
+                : String(localized: "settings.snooze.cancelled.announcement", bundle: .module)
+            accessibilityNotificationPoster.postAnnouncement(message: message)
+        }
         // Analytics instrumentation for per-reminder settings (#297).
         // Routed through ViewModel setters so the events are emitted with the same
         // structured format as the already-instrumented pause/notification settings.
