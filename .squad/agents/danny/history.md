@@ -251,3 +251,21 @@
 - Removed "Download now and build healthier screen time habits" CTA to avoid implying health outcome guarantees.
 - Screen Time feature disclaimer included per acceptance criteria.
 - Commit: 1e75388. Issue closed. Frank review requested for final copy polish.
+
+## 2026-04-30 — Fix #303 and #307: Docs drift + ASO keyword swap
+
+**Task:** Single product/docs pass to fix two issues — docs drift (#303) and ASO keyword optimization (#307).
+
+**Changes (commit cc06aff):**
+- CHANGELOG.md: snooze corrected to 3 options (5m/1h/rest-of-day); onboarding → 4-screen; SnoozeOption enum → 3 options
+- ARCHITECTURE.md: OnboardingView → 4-screen PageTabView container
+- UX_FLOWS.md: both stale 3-screen references → 4-screen
+- APP_STORE_LISTING.md: version header → v0.2.0 Restful Grove; What's New rewritten for v0.2.0; version field → 0.2.0; build → CI-assigned; keyword `wellness` → `screen time` (93 chars); screenshot snooze options corrected
+
+**Validation:**
+- Zero `3-screen` references remaining in target files
+- Zero `0.1.0` references remaining in APP_STORE_LISTING.md
+- Keyword string verified at 93 chars (≤ 100)
+- `wellness` confirmed absent from keyword field
+
+**Issues closed:** #303, #307
