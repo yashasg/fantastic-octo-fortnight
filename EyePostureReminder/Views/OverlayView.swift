@@ -138,6 +138,7 @@ struct OverlayView: View {
                 .foregroundStyle(AppColor.textPrimary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, AppSpacing.xl)
+                .accessibilitySortPriority(1)
 
             Text(type.overlaySupportiveText)
                 .font(AppFont.body)

@@ -238,6 +238,13 @@ final class OverlayManager: OverlayPresenting {
         // Debug assertion to catch accidental window retention.
         assert(overlayWindow == nil, "OverlayManager: overlayWindow must be nil after dismissal")
 
+        // Post screenChanged so VoiceOver focus returns to the underlying app.
+        // Skip when a queued overlay is about to appear immediately — its own
+        // showOverlay() call will post the notification, avoiding a double-post.
+        if overlayQueue.isEmpty {
+            accessibilityNotificationPoster.postScreenChanged(focusElement: nil)
+        }
+
         // Present the next queued overlay, if any.
         presentNextQueuedOverlay()
     }
