@@ -137,7 +137,7 @@ struct OnboardingInterruptModeView: View {
                     .accessibilityIdentifier("onboarding.interrupt.customizeButton")
                 }
             }
-            .padding()
+            .padding(AppSpacing.md)
             .frame(maxWidth: AppLayout.onboardingMaxContentWidth)
             .frame(maxWidth: .infinity)
             .highPriorityGesture(

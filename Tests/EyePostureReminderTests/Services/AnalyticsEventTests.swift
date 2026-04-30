@@ -283,6 +283,10 @@ final class AnalyticsEventTests: XCTestCase {
         XCTAssertEqual(AnalyticsEvent.OnboardingCTA.customize.rawValue, "customize")
     }
 
+    func test_onboardingCTA_allCases_areTwo() {
+        XCTAssertEqual(AnalyticsEvent.OnboardingCTA.allCases.count, 2)
+    }
+
     func test_onboardingCTA_initFromRawValue_getStarted() {
         XCTAssertEqual(AnalyticsEvent.OnboardingCTA(rawValue: "get_started"), .getStarted)
     }
@@ -296,7 +300,8 @@ final class AnalyticsEventTests: XCTestCase {
     }
 
     func test_onboardingCompleted_allCTAs_doNotCrash() {
-        AnalyticsLogger.log(.onboardingCompleted(cta: .getStarted))
-        AnalyticsLogger.log(.onboardingCompleted(cta: .customize))
+        for cta in AnalyticsEvent.OnboardingCTA.allCases {
+            AnalyticsLogger.log(.onboardingCompleted(cta: cta))
+        }
     }
 }

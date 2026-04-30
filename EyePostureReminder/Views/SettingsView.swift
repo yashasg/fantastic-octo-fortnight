@@ -166,7 +166,16 @@ struct SettingsView: View {
             // MARK: Preferences
             Section {
                 AccessibleToggle(
-                    isOn: $settings.hapticsEnabled,
+                    isOn: Binding(
+                        get: { viewModel?.hapticsEnabled ?? settings.hapticsEnabled },
+                        set: { newValue in
+                            if let viewModel {
+                                viewModel.hapticsEnabled = newValue
+                            } else {
+                                settings.hapticsEnabled = newValue
+                            }
+                        }
+                    ),
                     tint: AppColor.primaryRest,
                     accessibilityIdentifier: "settings.hapticFeedback",
                     accessibilityHint: Text("settings.hapticFeedback.hint", bundle: .module)

@@ -80,7 +80,7 @@ The **Restful Grove** release transforms kshana's visual identity and hardens ev
 - **Tests:** 65+ unit tests; 80 %+ coverage across Models, Services, ViewModels
 
 ### Phase 2: Polish
-- **Onboarding:** 4-screen first-launch flow (welcome, app break explanation, notification permission, setup) with `hasSeenOnboarding` persistence
+- **Onboarding:** 4-screen first-launch flow (Welcome → Notification Permission → Schedule Setup → True Interrupt Mode) with `hasSeenOnboarding` persistence
 - **Smart Pause:** Automatic reminder pause via Focus Mode detection, CarPlay detection, and CMMotionActivityManager driving detection; `PauseConditionManager` aggregates all conditions
 - **Screen-Time Triggers:** `ScreenTimeTracker` replaces wall-clock timers — reminders fire after continuous screen-on time only (M2.7)
 - **Snooze UI:** `SnoozeOption` enum with 3 duration options (5m / 1h / rest-of-day), max 2 consecutive snoozes, formatted labels in OverlayView action sheet

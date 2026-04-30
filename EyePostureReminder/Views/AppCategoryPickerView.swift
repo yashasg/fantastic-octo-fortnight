@@ -91,7 +91,7 @@ struct AppCategoryPickerView: View {
                     .accessibilityIdentifier("appCategoryPicker.doneButton")
                     .accessibilityHint(Text("appCategoryPicker.doneButton.hint", bundle: .module))
                 }
-                .padding()
+                .padding(AppSpacing.md)
                 .frame(maxWidth: AppLayout.onboardingMaxContentWidth)
                 .frame(maxWidth: .infinity)
             }

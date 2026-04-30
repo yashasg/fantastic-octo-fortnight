@@ -349,12 +349,13 @@ extension AppFont {
 /// adapts correctly between colour schemes without any additional boilerplate.
 struct SoftElevation: ViewModifier {
     @Environment(\.colorScheme) private var colorScheme
+    var cornerRadius: CGFloat = AppLayout.radiusCard
 
     func body(content: Content) -> some View {
         if colorScheme == .dark {
             content
                 .overlay(
-                    RoundedRectangle(cornerRadius: AppLayout.radiusCard)
+                    RoundedRectangle(cornerRadius: cornerRadius)
                         .strokeBorder(AppColor.separatorSoft.opacity(AppOpacity.subtleBorder), lineWidth: AppLayout.borderHair)
                 )
         } else {
@@ -371,7 +372,9 @@ struct SoftElevation: ViewModifier {
 
 extension View {
     /// Applies `SoftElevation` — soft shadow in light mode, thin border in dark mode.
-    func softElevation() -> some View {
-        modifier(SoftElevation())
+    /// - Parameter cornerRadius: Corner radius used for the dark-mode border overlay.
+    ///   Defaults to `AppLayout.radiusCard`.
+    func softElevation(cornerRadius: CGFloat = AppLayout.radiusCard) -> some View {
+        modifier(SoftElevation(cornerRadius: cornerRadius))
     }
 }

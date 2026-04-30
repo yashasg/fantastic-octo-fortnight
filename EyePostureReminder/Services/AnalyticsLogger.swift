@@ -145,7 +145,7 @@ enum AnalyticsEvent: Sendable {
     case onboardingCompleted(cta: OnboardingCTA)
 
     /// Non-PII code for the onboarding exit CTA the user tapped.
-    enum OnboardingCTA: String {
+    enum OnboardingCTA: String, CaseIterable {
         case getStarted = "get_started"
         case customize  = "customize"
     }

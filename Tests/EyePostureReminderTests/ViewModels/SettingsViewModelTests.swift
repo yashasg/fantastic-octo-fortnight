@@ -318,4 +318,41 @@ final class SettingsViewModelTests: XCTestCase {
         XCTAssertEqual(mockScheduler.scheduleRemindersCallCount, 1)
         XCTAssertTrue(mockScheduler.lastScheduledSettings === settings)
     }
+
+    // MARK: - hapticsEnabled
+
+    func test_hapticsEnabled_getter_readsFromSettings() {
+        settings.hapticsEnabled = false
+        XCTAssertFalse(sut.hapticsEnabled)
+    }
+
+    func test_hapticsEnabled_setter_passesValueToSettings() {
+        settings.hapticsEnabled = true
+        sut.hapticsEnabled = false
+        XCTAssertFalse(settings.hapticsEnabled, "hapticsEnabled false must persist to SettingsStore")
+    }
+
+    func test_hapticsEnabled_setter_canBeSetTrue() {
+        settings.hapticsEnabled = false
+        sut.hapticsEnabled = true
+        XCTAssertTrue(settings.hapticsEnabled, "hapticsEnabled true must persist to SettingsStore")
+    }
+
+    func test_hapticsEnabled_setter_emitsSettingChangedEvent() {
+        var captured: [AnalyticsEvent] = []
+        AnalyticsLogger.testEventHandler = { captured.append($0) }
+        defer { AnalyticsLogger.testEventHandler = nil }
+
+        let initial = settings.hapticsEnabled
+        sut.hapticsEnabled = !initial
+
+        let match = captured.first {
+            if case let .settingChanged(setting, _, _) = $0 { return setting == "hapticsEnabled" }
+            return false
+        }
+        XCTAssertNotNil(
+            match,
+            "Toggling hapticsEnabled via SettingsViewModel must emit settingChanged(setting: \"hapticsEnabled\")"
+        )
+    }
 }

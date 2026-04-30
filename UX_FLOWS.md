@@ -1156,7 +1156,7 @@ This document defines the complete user experience for kshana. Key takeaways:
 1. **Design is guided by 5 core principles** (helpful interruptions, low friction, user autonomy, battery efficiency, accessibility).
 2. **User flows are detailed and cover all states** — from first launch to edge cases like force-quit recovery.
 3. **The overlay interaction model balances flexibility and simplicity** — three dismissal methods, smooth animations, no stacking.
-4. **Onboarding is a warm 4-screen handshake** — Welcome → App Break Explanation → Permissions → Setup. Educates before asking, previews defaults, then gets out of the way.
+4. **Onboarding is a warm 4-screen handshake** — Welcome → Notification Permission → Schedule Setup → True Interrupt Mode. Educates before asking, previews defaults, then gets out of the way.
 5. **Edge cases are handled gracefully** — locked device, Low Power Mode, overlapping reminders, permission denial.
 6. **Success is measured by invisibility** — the best UX is when users forget the app exists until it helpfully reminds them.
 

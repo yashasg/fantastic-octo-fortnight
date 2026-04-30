@@ -248,6 +248,19 @@ final class SettingsViewModel: ObservableObject {
         }
     }
 
+    var hapticsEnabled: Bool {
+        get { settings.hapticsEnabled }
+        set {
+            let old = settings.hapticsEnabled
+            settings.hapticsEnabled = newValue
+            AnalyticsLogger.log(.settingChanged(
+                setting: "hapticsEnabled",
+                oldValue: String(old),
+                newValue: String(newValue)
+            ))
+        }
+    }
+
     var notificationFallbackEnabled: Bool {
         get { settings.notificationFallbackEnabled }
         set {

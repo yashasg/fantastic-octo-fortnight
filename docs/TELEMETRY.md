@@ -112,7 +112,7 @@ extension Logger {
 
 ## True Interrupt Analytics Event Catalog
 
-> **Updated:** 2025-07-25 — reflects issues #247/#249/#253/#254/#257/#269/#278/#282/#286/#290/#291/#297.
+> **Updated:** 2025-07-25 — reflects issues #247/#249/#253/#254/#257/#269/#278/#282/#286/#290/#291/#297/#316/#332/#346.
 >
 > All events are emitted via `AnalyticsLogger.log(_:)` → `os.Logger` (subsystem: `Bundle.main.bundleIdentifier`, category: `Analytics`). No SDK, no network calls. All payload fields use `privacy: .public` unless noted.
 

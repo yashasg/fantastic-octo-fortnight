@@ -21,7 +21,7 @@ struct WellnessCard: ViewModifier {
                 RoundedRectangle(cornerRadius: AppLayout.radiusCard, style: .continuous)
                     .strokeBorder(AppColor.separatorSoft, lineWidth: AppLayout.borderSoft)
             )
-            .applyIf(elevated) { $0.softElevation() }
+            .applyIf(elevated) { $0.softElevation(cornerRadius: AppLayout.radiusCard) }
     }
 }
 

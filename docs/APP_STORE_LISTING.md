@@ -87,7 +87,7 @@ kshana v0.2.0 — Restful Grove
 • Accessibility: WCAG AA contrast, VoiceOver live regions, 44pt tap targets
 • Improved stability and reliability
 
-Thank you for testing! Please report issues via TestFlight.
+Download kshana on the App Store and start building healthier break habits today.
 ```
 
 ---

@@ -109,7 +109,7 @@ Establish context and set a warm, confident tone. Tell the user what the app doe
 │                                    │
 │         [  Next  →  ]              │  ← CTA button
 │                                    │
-│            • ○ ○                   │  ← Page dots
+│            • ○ ○ ○                 │  ← Page dots
 └────────────────────────────────────┘
 ```
 

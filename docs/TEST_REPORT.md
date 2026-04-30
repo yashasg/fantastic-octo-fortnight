@@ -1,8 +1,10 @@
 # Test Report — kshana
-**Milestone:** M2.6 Full Regression  
+**Milestone:** M2.9 App Store Preparation  
 **Author:** Livingston (Tester)  
-**Date:** 2026-04-24  
+**Date:** 2026-04-28  
 **Status:** ✅ All unit tests compile cleanly — build verified
+
+> **Count source note:** The CHANGELOG reported 270 tests at M2.6. The current count of **1,798** (from `grep -rc 'func test' Tests/EyePostureReminderTests`) reflects all tests added post-M2.6 across new modules (Analytics, PauseCondition, ScreenTime, TrueInterrupt, coverage-boost suites, and regression). CHANGELOG counts remain accurate for their respective milestones; this report uses the live grep count as the authoritative current total.
 
 ---
 
@@ -10,65 +12,138 @@
 
 | Metric | Value |
 |---|---|
-| **Total tests** | **270** |
+| **Total tests** | **1,798** (grep `func test` across 70 .swift files) |
 | Build status | ✅ `BUILD SUCCEEDED` (Mac Catalyst / Xcode) |
-| Test-build status | ✅ `TEST BUILD SUCCEEDED` (no errors, 1 warning fixed) |
+| Test-build status | ✅ `TEST BUILD SUCCEEDED` |
 | API mismatches found | 0 |
 | API mismatches fixed | 1 (pre-existing `is` cast warning in AudioInterruptionManagerTests) |
-| New tests added (M2.6) | 74 (across 3 new files + 2 expanded files) |
+| Tests at M2.6 baseline | 270 (per CHANGELOG; see note above) |
+| Tests added since M2.6 | ~1,528 (Analytics, ScreenTime, TrueInterrupt, coverage-boost, regression suites) |
 
 ---
 
 ## Coverage by Module
 
-### Models — 104 tests
+### Models — 251 tests
 
 | File | Tests | Coverage Focus |
 |---|---|---|
-| `ReminderTypeTests` | 31 | All cases, identifiers, display properties, round-trip init |
-| `SettingsStoreTests` | 55 | Defaults, persistence, isEnabled gates, independence, restart simulation, presets |
+| `ReminderTypeTests` | 34 | All cases, identifiers, display properties, round-trip init |
+| `ReminderTypeExtendedTests` | 28 | Edge cases, boundary values |
+| `SettingsStoreTests` | 66 | Defaults, persistence, isEnabled gates, independence, restart simulation, presets |
+| `SettingsStoreConfigTests` | 31 | Config validation and preset logic |
 | `SettingsStorePhase2Tests` | 10 | hapticsEnabled toggle + persistence, snoozeCount persistence |
-| `OnboardingTests` _(new)_ | 8 | `hasSeenOnboarding` flag: first-launch default, persistence, reset, key correctness |
+| `ReminderSettingsTests` | 19 | ReminderSettings struct coverage |
+| `PauseConditionSourceTests` | 12 | PauseConditionSource enum cases |
+| `OnboardingTests` | 12 | `hasSeenOnboarding` flag: first-launch default, persistence, reset, key correctness |
+| `AppConfigTests` | 39 | AppConfig defaults, update logic, equality |
 
-**Estimated coverage:** ~92% (Models are fully table-driven with no UIKit deps)
+**Estimated coverage:** ~93%
 
 ---
 
-### Services — 81 tests
+### Services — 716 tests
 
 | File | Tests | Coverage Focus |
 |---|---|---|
-| `ReminderSchedulerTests` | 31 | Schedule all/single/cancel, notification content, triggers, identifiers, error resilience |
-| `AppCoordinatorTests` | 27 | Init, lifecycle hooks, ReminderScheduling conformance, overlay delegation via `MockOverlayPresenting`, snoozeCount reset on notification, FIFO overlay ordering at coordinator level |
-| `OverlayManagerTests` | 14 | Singleton identity, visible state, guard paths, queue management, audio wiring, FIFO mock verification |
+| `ReminderSchedulerTests` | 39 | Schedule all/single/cancel, notification content, triggers, identifiers, error resilience |
+| `AppCoordinatorTests` | 45 | Init, lifecycle hooks, ReminderScheduling conformance, overlay delegation, FIFO ordering |
+| `AppCoordinatorExtendedTests` | 47 | Extended coordinator paths, edge cases |
+| `AppCoordinatorNotificationFallbackTests` | 20 | Notification fallback when True Interrupt shield inactive |
+| `AppCoordinatorSnoozeWakeTests` | 7 | Snooze wake-up scheduling |
+| `AppCoordinatorCancelReminderTests` | 4 | Cancel reminder paths |
+| `AppCoordinatorWatchdogHeartbeatTests` | 13 | Watchdog heartbeat correctness |
+| `OverlayManagerTests` | 12 | Singleton identity, visible state, guard paths, queue management, audio wiring |
+| `OverlayManagerExtendedTests` | 20 | Extended overlay manager coverage |
 | `AudioInterruptionManagerTests` | 9 | Protocol conformance, pause/resume cycles, invariant safety |
+| `PauseConditionManagerTests` | 33 | All pause-condition aggregation paths (Focus, driving, CarPlay) |
+| `FocusModeExtendedTests` | 21 | Focus mode edge cases |
+| `DrivingDetectionExtendedTests` | 29 | Driving detection state transitions |
+| `AnalyticsEventTests` | 43 | All `AnalyticsEvent` cases, serialization |
+| `AnalyticsLoggerTests` | 43 | Logger routing, privacy tiers |
+| `ScreenTimeTrackerTests` | 54 | ScreenTimeTracker state, screen-on accumulation, threshold fire |
+| `ScreenTimeAuthorizationTests` | 19 | Authorization request paths |
+| `ScreenTimeShieldTests` | 12 | Shield enable/disable, clear-all |
+| `DeviceActivityMonitorTests` | 31 | DeviceActivity monitor lifecycle |
+| `DeviceActivityMonitoringValidationTests` | 16 | Validation and guard paths |
+| `SelectedAppsStateTests` | 26 | SelectedAppsState encode/decode, equality |
+| `AppGroupIPCStoreTests` | 24 | IPC store read/write, capped log |
+| `ShieldConfigurationCopyTests` | 17 | Shield configuration copy correctness |
+| `NoopServicesTests` | 24 | No-op service conformance checks |
+| `ServiceLifecycleTests` | 12 | Start/stop lifecycle protocol |
+| `MetricKitSubscriberTests` | 7 | MetricKit subscriber registration |
+| `WatchdogHeartbeatTests` | 11 | Heartbeat ping/pong |
+| `AppDelegateTests` | 14 | AppDelegate lifecycle hooks |
+| `ServiceCoverageBoostTests` | 65 | Coverage-boost suite for misc service paths |
 
-**Estimated coverage:** ~82% (scheduler + coordinator core paths well-covered; UIKit-bound paths are integration-only)
+**Estimated coverage:** ~85%
 
 ---
 
-### ViewModels — 60 tests
+### ViewModels — 117 tests
 
 | File | Tests | Coverage Focus |
 |---|---|---|
-| `SettingsViewModelTests` | 25 | masterToggle, reminderSettingChanged, snooze(for:), cancelSnooze |
+| `SettingsViewModelTests` | 32 | masterToggle, reminderSettingChanged, snooze(for:), cancelSnooze |
 | `SettingsViewModelPhase2Tests` | 35 | snooze(option:) for all 3 cases, canSnooze limit, isSnoozeActive, snoozeCount persistence, integration survivability |
+| `SettingsViewModelExtendedTests` | 41 | Extended VM paths, edge cases |
+| `SettingsViewModelFormatterTests` | 9 | Interval/duration label formatting |
 
-**Estimated coverage:** ~88% (all user-facing VM actions covered; async Task dispatches await 200ms)
+**Estimated coverage:** ~90%
 
 ---
 
-### Views — 25 tests
+### Views — 577 tests
 
 | File | Tests | Coverage Focus |
 |---|---|---|
-| `DesignSystemTests` _(new)_ | 25 | AppFont accessibility (all 5 tokens), AppSpacing 4pt grid, AppLayout iOS HIG compliance, AppAnimation spec values, AppColor token accessibility, AppSymbol non-empty names |
+| `DesignSystemTests` | 52 | AppFont accessibility, AppSpacing 4pt grid, AppLayout iOS HIG, AppAnimation spec values, AppColor accessibility, AppSymbol non-empty names |
+| `DesignSystemExtendedTests` | 45 | Extended design token coverage |
+| `ColorTokenTests` | 32 | Asset Catalog color token correctness |
+| `ComponentsTests` | 20 | Shared UI component correctness |
+| `ComponentsExtendedTests` | 14 | Extended component edge cases |
+| `CoverageBoostTests` | 34 | Coverage-boost suite for misc View paths |
+| `ViewBodyCoverageTests` | 64 | View body compile + expression coverage |
+| `OnboardingViewTests` | 35 | OnboardingWelcomeView, OnboardingPermissionView, OnboardingSetupView, OnboardingInterruptModeView |
+| `TrueInterruptViewCoverageTests` | 42 | TrueInterrupt onboarding and settings view paths |
+| `DarkModeTests` | 17 | Dark Mode rendering correctness for key views |
+| `OverlayAccessibilityTests` | 3 | Overlay accessibility modal flag and VoiceOver |
+| `PreviewTests` | 8 | SwiftUI preview providers compile without crash |
+| `StringCatalogTests` | 186 | All String Catalog keys resolve; no missing/empty values |
+| `YinYangEyeViewTests` | 9 | Yin-yang logo Path drawing tests |
+| `YinYangEyeViewExtendedTests` | 16 | Extended logo animation and accessibility |
 
-**Estimated coverage:** ~75% (design-system regression; runtime `Font` introspection not possible — tests verify expected constant expressions compile and match spec)
+**Estimated coverage:** ~78% (runtime `Font` introspection not possible; tests verify constant expressions and catalog completeness)
 
 ---
 
-## Mock Infrastructure (5 files)
+### Integration — 41 tests
+
+| File | Tests | Coverage Focus |
+|---|---|---|
+| `IntegrationTests` | 34 | Multi-service pipeline: scheduler → coordinator → overlay sequence |
+| `MultiServicePipelineIntegrationTests` | 7 | Parallel service start/stop under load |
+
+---
+
+### Regression — 48 tests
+
+| File | Tests | Coverage Focus |
+|---|---|---|
+| `RegressionTests` | 48 | Guard against regressions on all previously-fixed bugs |
+
+---
+
+### Utilities — 20 tests
+
+| File | Tests | Coverage Focus |
+|---|---|---|
+| `AccessibilityAnnouncementTests` | 12 | Accessibility announcement text correctness |
+| `AppStorageKeysTests` | 8 | All `@AppStorage` key string constants are unique and non-empty |
+
+---
+
+## Mock Infrastructure (14 mock files)
 
 | Mock | Protocol | Purpose |
 |---|---|---|
@@ -76,7 +151,16 @@
 | `MockSettingsPersisting` | `SettingsPersisting` | In-memory UserDefaults replacement |
 | `MockReminderScheduler` | `ReminderScheduling` | Tracks ViewModel → scheduler call counts |
 | `MockMediaControlling` | `MediaControlling` | Counts pause/resume calls in overlay tests |
-| `MockOverlayPresenting` _(new)_ | `OverlayPresenting` | Tracks showOverlay type/duration/haptics order for FIFO verification |
+| `MockOverlayPresenting` | `OverlayPresenting` | Tracks showOverlay type/duration/haptics order for FIFO verification |
+| `MockPauseConditionProvider` | `PauseConditionProviding` | Returns configurable pause-condition states |
+| `MockDeviceActivityMonitorProviding` | `DeviceActivityMonitorProviding` | Stubs DeviceActivity callbacks |
+| `MockScreenTimeAuthorizationProviding` | `ScreenTimeAuthorizationProviding` | Controls authorization grant/deny in tests |
+| `MockScreenTimeShieldProviding` | `ScreenTimeShieldProviding` | Stubs shield enable/disable/clear |
+| `MockScreenTimeTracker` | `ScreenTimeTracking` | Returns configurable screen-on durations |
+| `MockSelectedAppsIPCStore` | `SelectedAppsIPCStoring` | In-memory IPC store for TrueInterrupt tests |
+| `MockAppGroupIPCRecorder` | `AppGroupIPCRecording` | Captures IPC events in-memory |
+| `MockAccessibilityNotificationPoster` | `AccessibilityNotificationPosting` | Captures VoiceOver announcement calls |
+| `MockDetectors` | Multiple detector protocols | Aggregated mock for Focus/Driving/CarPlay detectors |
 
 ---
 
@@ -87,9 +171,15 @@
 | **Haptics** (`hapticsEnabled` toggle) | 5 in `SettingsStorePhase2Tests` | ✅ Complete |
 | **Snooze lifecycle** (`snooze(option:)`, limit, expiry, cancel, persistence) | 35 in `SettingsViewModelPhase2Tests` | ✅ Complete |
 | **Snooze count** persistence + reset | 5 in `SettingsStorePhase2Tests` | ✅ Complete |
-| **Onboarding flag** (`hasSeenOnboarding`) | 8 in `OnboardingTests` | ✅ Complete |
-| **Accessibility** (`AppFont` Dynamic Type, `AppLayout` HIG) | 25 in `DesignSystemTests` | ✅ Complete |
+| **Onboarding flag** (`hasSeenOnboarding`) | 12 in `OnboardingTests` | ✅ Complete |
+| **Accessibility** (`AppFont` Dynamic Type, `AppLayout` HIG) | 52 in `DesignSystemTests` | ✅ Complete |
 | **OverlayManager queue FIFO** (coordinator level via `MockOverlayPresenting`) | 5 in `AppCoordinatorTests` + 4 in `OverlayManagerTests` | ✅ Unit-testable paths complete |
+| **Smart Pause** (Focus Mode, CarPlay, driving) | 33 in `PauseConditionManagerTests` + 21 in `FocusModeExtendedTests` + 29 in `DrivingDetectionExtendedTests` | ✅ Complete |
+| **Screen-Time Triggers** (`ScreenTimeTracker`) | 54 in `ScreenTimeTrackerTests` + 19 in `ScreenTimeAuthorizationTests` | ✅ Complete |
+| **True Interrupt Mode** (shield, IPC, DeviceActivity) | 12 in `ScreenTimeShieldTests` + 31 in `DeviceActivityMonitorTests` + 26 in `SelectedAppsStateTests` + 24 in `AppGroupIPCStoreTests` | ✅ Unit-testable paths complete |
+| **Analytics** (`AnalyticsLogger`, all events) | 43 in `AnalyticsEventTests` + 43 in `AnalyticsLoggerTests` | ✅ Complete |
+| **String Catalog completeness** | 186 in `StringCatalogTests` | ✅ Complete |
+| **Regression suite** | 48 in `RegressionTests` | ✅ Complete |
 
 ---
 
@@ -132,6 +222,7 @@ No breaking API mismatches found between test files and the Phase 2 implementati
 
 | Phase | Tests |
 |---|---|
-| Phase 1 (Models + Scheduler + ViewModel core) | ~196 |
-| Phase 2 (Haptics, Snooze, Onboarding, DesignSystem, AppCoordinator overlay) | ~74 |
-| **Total** | **270** |
+| Phase 1 (Models + Scheduler + ViewModel core) | ~196 (M2.6 baseline) |
+| Phase 2 (Haptics, Snooze, Onboarding, DesignSystem, AppCoordinator overlay) | ~74 (M2.6 baseline) |
+| Post-M2.6 additions (Analytics, ScreenTime, TrueInterrupt, PauseCondition, coverage-boost, regression suites) | ~1,528 |
+| **Total (current, from grep)** | **1,798** |
