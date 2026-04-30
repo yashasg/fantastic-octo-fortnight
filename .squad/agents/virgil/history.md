@@ -129,3 +129,16 @@ Orchestration log recorded at 2026-04-30T09:27:10Z. Enhanced CI diagnostics docu
 - PR #411 run showed "0 failures" but 32 testFailureSummaries in result bundle (SEGV crashes during aggregation)
 - Commit `6815fed`: Updated scripts/build.sh to print concise xcresult failure summaries on xcodebuild test failure
 - Team impact: Basher can target real failures quickly from CI logs; future triage always inspects .xcresult
+
+## 2026-04-30 — Parallel UI test shards in CI (PR #411)
+
+- Split UI tests into matrix shards in `.github/workflows/ci.yml` (`uitest-shard`) with deterministic class-based filters:
+  - `onboarding` → `EyePostureReminderUITests/OnboardingFlowTests`
+  - `home` → `EyePostureReminderUITests/HomeScreenTests`
+  - `settings` → `EyePostureReminderUITests/SettingsFlowTests`
+  - `overlays-darkmode` → `OverlayTests`, `OverlayPresentationTests`, `OverlayPostureTests`, `DarkModeUITests`
+- Kept a top-level `UI Tests` gate job that depends on all shards so downstream workflows (TestFlight deploy check polling) continue to use a stable check name.
+- Extended `./scripts/build.sh uitest` with optional `--only-testing` (repeatable) and `--result-bundle-path` flags while preserving default full-suite behavior.
+- Preserved build-for-testing + test-without-building flow and TEST_TARGET_NAME ambiguity workaround; shard filtering is applied via `-only-testing` during `test-without-building`.
+- Added per-shard `.xcresult` paths and artifact names to prevent collisions in parallel jobs.
+- Local validation performed: shell syntax checks, CI YAML parse check, `./scripts/build.sh build`, and a targeted shard run (`HomeScreenTests`) using the new flags.

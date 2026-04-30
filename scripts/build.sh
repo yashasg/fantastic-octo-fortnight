@@ -246,6 +246,53 @@ cmd_uitest() {
   header "UI TEST"
   require_xcodebuild
 
+  local result_bundle_path="${PACKAGE_PATH}/UITestResults.xcresult"
+  local only_testing_filters=()
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --only-testing)
+        if [[ $# -lt 2 ]]; then
+          fail "--only-testing requires a value (e.g. EyePostureReminderUITests/HomeScreenTests)"
+          exit 1
+        fi
+        only_testing_filters+=("$2")
+        shift 2
+        ;;
+      --only-testing=*)
+        only_testing_filters+=("${1#*=}")
+        shift
+        ;;
+      --result-bundle-path)
+        if [[ $# -lt 2 ]]; then
+          fail "--result-bundle-path requires a path value"
+          exit 1
+        fi
+        result_bundle_path="$2"
+        shift 2
+        ;;
+      --result-bundle-path=*)
+        result_bundle_path="${1#*=}"
+        shift
+        ;;
+      *)
+        fail "Unknown uitest option: '$1'"
+        echo ""
+        usage
+        exit 1
+        ;;
+    esac
+  done
+
+  if [[ "$result_bundle_path" != /* ]]; then
+    result_bundle_path="${PACKAGE_PATH}/${result_bundle_path}"
+  fi
+
+  local only_testing_args=()
+  for only_testing_filter in "${only_testing_filters[@]}"; do
+    only_testing_args+=(-only-testing "$only_testing_filter")
+  done
+
   local project="${PACKAGE_PATH}/UITests/EyePostureReminderUITests.xcodeproj"
   local project_spec="${PACKAGE_PATH}/UITests/project.yml"
   local project_file="${project}/project.pbxproj"
@@ -260,8 +307,15 @@ cmd_uitest() {
   dest=$(detect_destination)
   info "Destination: $dest"
   info "UI Test scheme: $UI_TEST_SCHEME"
+  info "Result bundle: $result_bundle_path"
+  if [[ ${#only_testing_filters[@]} -gt 0 ]]; then
+    info "Running filtered UI tests:"
+    for only_testing_filter in "${only_testing_filters[@]}"; do
+      info "  - $only_testing_filter"
+    done
+  fi
 
-  rm -rf "${PACKAGE_PATH}/UITestResults.xcresult"
+  rm -rf "$result_bundle_path"
 
   # Step 1: build-for-testing generates a .xctestrun that correctly resolves
   # UITargetAppPath to EyePostureReminder.app (not the flat SPM binary).
@@ -326,20 +380,22 @@ cmd_uitest() {
   local attempt=1
   while true; do
     info "Attempt $attempt/$max_attempts..."
-    rm -rf "${PACKAGE_PATH}/UITestResults.xcresult"
+    rm -rf "$result_bundle_path"
 
     if run_xcodebuild test-without-building \
       -xctestrun "$xctestrun" \
       -destination "$dest" \
       -derivedDataPath "$DERIVED_DATA_PATH" \
-      -resultBundlePath "${PACKAGE_PATH}/UITestResults.xcresult" \
+      -resultBundlePath "$result_bundle_path" \
       -disable-concurrent-destination-testing \
-      -parallel-testing-enabled NO; then
+      -parallel-testing-enabled NO \
+      "${only_testing_args[@]}"; then
       break
     fi
 
     if (( attempt >= max_attempts )); then
       fail "UI tests failed after $max_attempts attempts"
+      summarize_xcresult_failures "$result_bundle_path"
       exit 1
     fi
 
@@ -407,6 +463,9 @@ usage() {
   echo "  build              Compile the project"
   echo "  test               Run unit tests"
   echo "  uitest             Run UI tests (generates xcodeproj if needed)"
+  echo "                     Options:"
+  echo "                       --only-testing <target/class[/test]>"
+  echo "                       --result-bundle-path <path>"
   echo "  lint               Run SwiftLint (skipped gracefully if not installed)"
   echo "  clean              Remove build artifacts"
   echo "  all                build + lint + test"
@@ -421,7 +480,7 @@ COMMAND="${1:-}"
 case "$COMMAND" in
   build)   cmd_build ;;
   test)    cmd_test  ;;
-  uitest)  cmd_uitest ;;
+  uitest)  shift || true; cmd_uitest "$@" ;;
   lint)    cmd_lint  ;;
   clean)   cmd_clean ;;
   all)     cmd_all   ;;

@@ -194,11 +194,27 @@ jobs:
           retention-days: 30
           if-no-files-found: error
 
-  uitest:
-    name: UI Tests
+  uitest-shard:
+    name: UI Tests / ${{ matrix.shard.name }}
     runs-on: macos-15
     needs: build-and-test
     timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        shard:
+          - id: onboarding
+            name: Onboarding
+            only_testing_csv: EyePostureReminderUITests/OnboardingFlowTests
+          - id: home
+            name: Home
+            only_testing_csv: EyePostureReminderUITests/HomeScreenTests
+          - id: settings
+            name: Settings
+            only_testing_csv: EyePostureReminderUITests/SettingsFlowTests
+          - id: overlays-darkmode
+            name: Overlays + Dark Mode
+            only_testing_csv: EyePostureReminderUITests/OverlayTests,EyePostureReminderUITests/OverlayPresentationTests,EyePostureReminderUITests/OverlayPostureTests,EyePostureReminderUITests/DarkModeUITests
 
     steps:
       - name: Checkout
@@ -272,14 +288,30 @@ jobs:
           # Extra settle time for system services
           sleep 5
 
-      - name: Run UI Tests
-        run: ./scripts/build.sh uitest
+      - name: Run UI Tests (shard ${{ matrix.shard.id }})
+        run: |
+          IFS=',' read -r -a ONLY_TESTING_FILTERS <<< "${{ matrix.shard.only_testing_csv }}"
+          CMD=(./scripts/build.sh uitest --result-bundle-path "UITestResults-${{ matrix.shard.id }}.xcresult")
+          for FILTER in "${ONLY_TESTING_FILTERS[@]}"; do
+            FILTER="$(echo "$FILTER" | xargs)"
+            [[ -n "$FILTER" ]] && CMD+=(--only-testing "$FILTER")
+          done
+          "${CMD[@]}"
 
       - name: Upload UI test results
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
         if: always()
         with:
-          name: ui-test-results-build${{ github.run_number }}
-          path: UITestResults.xcresult
+          name: ui-test-results-${{ matrix.shard.id }}-build${{ github.run_number }}
+          path: UITestResults-${{ matrix.shard.id }}.xcresult
           retention-days: 30
           if-no-files-found: error
+
+  uitest:
+    name: UI Tests
+    runs-on: macos-15
+    needs: uitest-shard
+    timeout-minutes: 10
+    steps:
+      - name: UI test shards passed
+        run: echo "All UI test shards passed."
