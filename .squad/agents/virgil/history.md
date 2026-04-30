@@ -313,3 +313,34 @@ All 4 targets need `family-controls` entitlement + App Groups:
 - macOS workflow YAMLs had CRLF line endings — `sed -i '' 's/...@v4$/...'` with `$` anchor fails silently; must use `perl -i -pe` with `\r?$` to handle CRLF
 - Always check `.squad/templates/workflows/` when patching active workflows — otherwise `squad upgrade` reverts changes
 - Warning-as-error flags belong in every xcodebuild invocation, not just test/build; archive paths must match CI build paths exactly
+
+## Wave [next+1] — Template Action Pinning: #317 (2026-04-30)
+
+**Task:** Pin floating `@vN` action refs in the 7 remaining `.squad/templates/workflows/` files out of scope for #305.
+
+### Files patched
+- `squad-ci.yml` — checkout@v4, setup-node@v4
+- `squad-docs.yml` — checkout@v4, setup-node@v4, upload-pages-artifact@v3, deploy-pages@v4
+- `squad-insider-release.yml` — checkout@v4, setup-node@v4
+- `squad-label-enforce.yml` — checkout@v4, github-script@v7
+- `squad-preview.yml` — checkout@v4, setup-node@v4
+- `squad-promote.yml` — checkout@v4 (×2 jobs)
+- `squad-release.yml` — checkout@v4, setup-node@v4
+
+### Resolved SHAs
+| Action | SHA | Version |
+|---|---|---|
+| actions/checkout | `34e114876b0b11c390a56381ad16ebd13914f8d5` | v4.3.1 |
+| actions/setup-node | `49933ea5288caeca8642d1e84afbd3f7d6820020` | v4.4.0 |
+| actions/github-script | `f28e40c7f34bde8b3046d885e986cb6290c5673b` | v7.1.0 |
+| actions/upload-pages-artifact | `56afc609e74202658d3ffba0e8f6dda462b719fa` | v3.0.1 |
+| actions/deploy-pages | `d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e` | v4.0.5 |
+
+### Validation
+- `grep -rn "uses:.*@v[0-9]" .squad/templates/workflows/squad-{ci,docs,insider-release,label-enforce,preview,promote,release}.yml` → zero results ✅
+- Only `.github/workflows/` and the 4 previously-pinned templates remain (already SHA-pinned from #305)
+
+### Learnings
+- `sed -i '' -e 's|...|...|g'` works cleanly on these YAML files (no CRLF issue unlike some macOS XCBuild scripts)
+- The `@v4` / `@v7` major tags are mutable floating refs — always resolve to commit SHA via `gh api repos/<owner>/<repo>/git/refs/tags/<tag>`
+- Deployed workflows were already fully pinned; #317 was template-only
