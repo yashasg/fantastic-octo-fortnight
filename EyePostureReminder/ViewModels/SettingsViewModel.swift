@@ -129,6 +129,99 @@ final class SettingsViewModel: ObservableObject {
         settings.snoozeCount < maxConsecutiveSnoozes
     }
 
+    // MARK: - Settings Pass-Through with Analytics
+
+    var globalEnabled: Bool {
+        get { settings.globalEnabled }
+        set {
+            let old = settings.globalEnabled
+            settings.globalEnabled = newValue
+            AnalyticsLogger.log(.settingChanged(
+                setting: "globalEnabled",
+                oldValue: String(old),
+                newValue: String(newValue)
+            ))
+        }
+    }
+
+    var eyesEnabled: Bool {
+        get { settings.eyesEnabled }
+        set {
+            let old = settings.eyesEnabled
+            settings.eyesEnabled = newValue
+            AnalyticsLogger.log(.settingChanged(
+                setting: "eyesEnabled",
+                oldValue: String(old),
+                newValue: String(newValue)
+            ))
+        }
+    }
+
+    var eyesInterval: TimeInterval {
+        get { settings.eyesInterval }
+        set {
+            let old = settings.eyesInterval
+            settings.eyesInterval = newValue
+            AnalyticsLogger.log(.settingChanged(
+                setting: "eyesInterval",
+                oldValue: String(old),
+                newValue: String(newValue)
+            ))
+        }
+    }
+
+    var eyesBreakDuration: TimeInterval {
+        get { settings.eyesBreakDuration }
+        set {
+            let old = settings.eyesBreakDuration
+            settings.eyesBreakDuration = newValue
+            AnalyticsLogger.log(.settingChanged(
+                setting: "eyesBreakDuration",
+                oldValue: String(old),
+                newValue: String(newValue)
+            ))
+        }
+    }
+
+    var postureEnabled: Bool {
+        get { settings.postureEnabled }
+        set {
+            let old = settings.postureEnabled
+            settings.postureEnabled = newValue
+            AnalyticsLogger.log(.settingChanged(
+                setting: "postureEnabled",
+                oldValue: String(old),
+                newValue: String(newValue)
+            ))
+        }
+    }
+
+    var postureInterval: TimeInterval {
+        get { settings.postureInterval }
+        set {
+            let old = settings.postureInterval
+            settings.postureInterval = newValue
+            AnalyticsLogger.log(.settingChanged(
+                setting: "postureInterval",
+                oldValue: String(old),
+                newValue: String(newValue)
+            ))
+        }
+    }
+
+    var postureBreakDuration: TimeInterval {
+        get { settings.postureBreakDuration }
+        set {
+            let old = settings.postureBreakDuration
+            settings.postureBreakDuration = newValue
+            AnalyticsLogger.log(.settingChanged(
+                setting: "postureBreakDuration",
+                oldValue: String(old),
+                newValue: String(newValue)
+            ))
+        }
+    }
+
     var pauseDuringFocus: Bool {
         get { settings.pauseDuringFocus }
         set {
