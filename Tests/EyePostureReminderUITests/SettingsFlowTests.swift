@@ -25,7 +25,7 @@ final class SettingsFlowTests: XCTestCase {
     private func openSettings() {
         let settingsButton = app.buttons["home.settingsButton"]
         XCTAssertTrue(
-            settingsButton.waitForExistence(timeout: 5),
+            settingsButton.waitForExistence(timeout: 3),
             "Settings toolbar button must exist on the Home screen. " +
             "Add .accessibilityIdentifier(\"home.settingsButton\") to the gear toolbar button in HomeView."
         )
@@ -40,7 +40,7 @@ final class SettingsFlowTests: XCTestCase {
 
         let settingsNav = app.navigationBars["Settings"]
         XCTAssertTrue(
-            settingsNav.waitForExistence(timeout: 5),
+            settingsNav.waitForExistence(timeout: 3),
             "Settings navigation bar should appear after tapping the settings button."
         )
     }
@@ -53,7 +53,7 @@ final class SettingsFlowTests: XCTestCase {
 
         let doneButton = app.buttons["settings.doneButton"]
         XCTAssertTrue(
-            doneButton.waitForExistence(timeout: 5),
+            doneButton.waitForExistence(timeout: 3),
             "Done button must exist in Settings toolbar. " +
             "Add .accessibilityIdentifier(\"settings.doneButton\") to the Done button in SettingsView."
         )
@@ -79,12 +79,12 @@ final class SettingsFlowTests: XCTestCase {
         let privacyButton = app.buttons["settings.legal.privacy"]
 
         XCTAssertTrue(
-            termsButton.waitForExistence(timeout: 5),
+            termsButton.waitForExistence(timeout: 3),
             "Terms row must exist in the Legal section of Settings. " +
             "Add .accessibilityIdentifier(\"settings.legal.terms\") to the Terms button in SettingsView."
         )
         XCTAssertTrue(
-            privacyButton.waitForExistence(timeout: 5),
+            privacyButton.waitForExistence(timeout: 3),
             "Privacy row must exist in the Legal section of Settings. " +
             "Add .accessibilityIdentifier(\"settings.legal.privacy\") to the Privacy button in SettingsView."
         )
@@ -100,12 +100,12 @@ final class SettingsFlowTests: XCTestCase {
         app.swipeUp()
 
         let termsButton = app.buttons["settings.legal.terms"]
-        XCTAssertTrue(termsButton.waitForExistence(timeout: 5))
+        XCTAssertTrue(termsButton.waitForExistence(timeout: 3))
         termsButton.tap()
 
         let termsNav = app.navigationBars["Terms & Conditions"]
         XCTAssertTrue(
-            termsNav.waitForExistence(timeout: 5),
+            termsNav.waitForExistence(timeout: 3),
             "Terms & Conditions sheet should open with the correct navigation title."
         )
 
@@ -127,12 +127,12 @@ final class SettingsFlowTests: XCTestCase {
         app.swipeUp()
 
         let privacyButton = app.buttons["settings.legal.privacy"]
-        XCTAssertTrue(privacyButton.waitForExistence(timeout: 5))
+        XCTAssertTrue(privacyButton.waitForExistence(timeout: 3))
         privacyButton.tap()
 
         let privacyNav = app.navigationBars["Privacy Policy"]
         XCTAssertTrue(
-            privacyNav.waitForExistence(timeout: 5),
+            privacyNav.waitForExistence(timeout: 3),
             "Privacy Policy sheet should open with the correct navigation title."
         )
 
@@ -155,13 +155,13 @@ final class SettingsFlowTests: XCTestCase {
         let drivingToggle = app.switches["settings.smartPause.pauseWhileDriving"]
 
         XCTAssertTrue(
-            focusToggle.waitForExistence(timeout: 5),
+            focusToggle.waitForExistence(timeout: 3),
             "Focus Mode toggle must exist in the Smart Pause section. " +
             "Add .accessibilityIdentifier(\"settings.smartPause.pauseDuringFocus\") " +
             "to the Focus toggle in SettingsView."
         )
         XCTAssertTrue(
-            drivingToggle.waitForExistence(timeout: 5),
+            drivingToggle.waitForExistence(timeout: 3),
             "Driving toggle must exist in the Smart Pause section. " +
             "Add .accessibilityIdentifier(\"settings.smartPause.pauseWhileDriving\") " +
             "to the Driving toggle in SettingsView."
@@ -176,7 +176,7 @@ final class SettingsFlowTests: XCTestCase {
 
         let globalToggle = app.switches["settings.masterToggle"]
         XCTAssertTrue(
-            globalToggle.waitForExistence(timeout: 5),
+            globalToggle.waitForExistence(timeout: 3),
             "The global toggle must be visible at the top of the Settings form. " +
             "AccessibleToggle must use .accessibilityIdentifier(\"settings.masterToggle\") in SettingsView."
         )
@@ -189,7 +189,7 @@ final class SettingsFlowTests: XCTestCase {
         openSettings()
 
         let globalToggle = app.switches["settings.masterToggle"]
-        XCTAssertTrue(globalToggle.waitForExistence(timeout: 5))
+        XCTAssertTrue(globalToggle.waitForExistence(timeout: 3))
 
         let initialValue = globalToggle.value as? String
         globalToggle.tap()
@@ -220,7 +220,7 @@ final class SettingsFlowTests: XCTestCase {
 
         let fallbackToggle = app.switches["settings.notificationFallback"]
         XCTAssertTrue(
-            fallbackToggle.waitForExistence(timeout: 5),
+            fallbackToggle.waitForExistence(timeout: 3),
             "Notification fallback toggle must exist in the Preferences section."
         )
     }
@@ -235,16 +235,16 @@ final class SettingsFlowTests: XCTestCase {
         app.swipeUp()
 
         let termsButton = app.buttons["settings.legal.terms"]
-        XCTAssertTrue(termsButton.waitForExistence(timeout: 5))
+        XCTAssertTrue(termsButton.waitForExistence(timeout: 3))
         termsButton.tap()
 
         let dismissButton = app.buttons["legal.dismissButton"]
-        XCTAssertTrue(dismissButton.waitForExistence(timeout: 5))
+        XCTAssertTrue(dismissButton.waitForExistence(timeout: 3))
         dismissButton.tap()
 
         let settingsNav = app.navigationBars["Settings"]
         XCTAssertTrue(
-            settingsNav.waitForExistence(timeout: 5),
+            settingsNav.waitForExistence(timeout: 3),
             "Settings navigation bar should reappear after dismissing the Terms sheet."
         )
     }
@@ -259,16 +259,16 @@ final class SettingsFlowTests: XCTestCase {
         app.swipeUp()
 
         let privacyButton = app.buttons["settings.legal.privacy"]
-        XCTAssertTrue(privacyButton.waitForExistence(timeout: 5))
+        XCTAssertTrue(privacyButton.waitForExistence(timeout: 3))
         privacyButton.tap()
 
         let dismissButton = app.buttons["legal.dismissButton"]
-        XCTAssertTrue(dismissButton.waitForExistence(timeout: 5))
+        XCTAssertTrue(dismissButton.waitForExistence(timeout: 3))
         dismissButton.tap()
 
         let settingsNav = app.navigationBars["Settings"]
         XCTAssertTrue(
-            settingsNav.waitForExistence(timeout: 5),
+            settingsNav.waitForExistence(timeout: 3),
             "Settings navigation bar should reappear after dismissing the Privacy sheet."
         )
     }
@@ -281,7 +281,7 @@ final class SettingsFlowTests: XCTestCase {
         app.swipeUp()
 
         let focusToggle = app.switches["settings.smartPause.pauseDuringFocus"]
-        XCTAssertTrue(focusToggle.waitForExistence(timeout: 5))
+        XCTAssertTrue(focusToggle.waitForExistence(timeout: 3))
 
         let initialValue = focusToggle.value as? String
         focusToggle.tap()
@@ -298,7 +298,7 @@ final class SettingsFlowTests: XCTestCase {
         app.swipeUp()
 
         let drivingToggle = app.switches["settings.smartPause.pauseWhileDriving"]
-        XCTAssertTrue(drivingToggle.waitForExistence(timeout: 5))
+        XCTAssertTrue(drivingToggle.waitForExistence(timeout: 3))
 
         let initialValue = drivingToggle.value as? String
         drivingToggle.tap()
@@ -316,7 +316,7 @@ final class SettingsFlowTests: XCTestCase {
 
         let hapticToggle = app.switches["settings.hapticFeedback"]
         XCTAssertTrue(
-            hapticToggle.waitForExistence(timeout: 5),
+            hapticToggle.waitForExistence(timeout: 3),
             "Haptic Feedback toggle must exist in Settings. " +
             "Add .accessibilityIdentifier(\"settings.hapticFeedback\") to the haptics toggle in SettingsView."
         )
@@ -332,7 +332,7 @@ final class SettingsFlowTests: XCTestCase {
 
         let resetButton = app.buttons["settings.resetToDefaults"]
         XCTAssertTrue(
-            resetButton.waitForExistence(timeout: 5),
+            resetButton.waitForExistence(timeout: 3),
             "Reset to Defaults button must exist in Settings. " +
             "Add .accessibilityIdentifier(\"settings.resetToDefaults\") to the reset button in SettingsView."
         )
@@ -348,7 +348,7 @@ final class SettingsFlowTests: XCTestCase {
 
         let feedbackButton = app.buttons["settings.feedback.sendFeedback"]
         XCTAssertTrue(
-            feedbackButton.waitForExistence(timeout: 5),
+            feedbackButton.waitForExistence(timeout: 3),
             "Send Feedback button must exist in Settings. " +
             "Add .accessibilityIdentifier(\"settings.feedback.sendFeedback\") to the feedback button in SettingsView."
         )
@@ -364,12 +364,12 @@ final class SettingsFlowTests: XCTestCase {
         let postureToggle = app.switches["settings.posture.toggle"]
 
         XCTAssertTrue(
-            eyesToggle.waitForExistence(timeout: 5),
+            eyesToggle.waitForExistence(timeout: 3),
             "Eye break toggle must exist in Settings. " +
             "ReminderRowView must set .accessibilityIdentifier(\"settings.eyes.toggle\")."
         )
         XCTAssertTrue(
-            postureToggle.waitForExistence(timeout: 5),
+            postureToggle.waitForExistence(timeout: 3),
             "Posture check toggle must exist in Settings. " +
             "ReminderRowView must set .accessibilityIdentifier(\"settings.posture.toggle\")."
         )
@@ -383,13 +383,13 @@ final class SettingsFlowTests: XCTestCase {
 
         let snooze5min = app.buttons["settings.snooze.5min"]
         XCTAssertTrue(
-            snooze5min.waitForExistence(timeout: 5),
+            snooze5min.waitForExistence(timeout: 3),
             "Snooze 5 min button must exist in Settings."
         )
 
         let snooze1hour = app.buttons["settings.snooze.1hour"]
         XCTAssertTrue(
-            snooze1hour.waitForExistence(timeout: 5),
+            snooze1hour.waitForExistence(timeout: 3),
             "Snooze 1 hour button must exist in Settings."
         )
 
@@ -398,7 +398,7 @@ final class SettingsFlowTests: XCTestCase {
 
         let snoozeRestOfDay = app.buttons["settings.snooze.restOfDay"]
         XCTAssertTrue(
-            snoozeRestOfDay.waitForExistence(timeout: 5),
+            snoozeRestOfDay.waitForExistence(timeout: 3),
             "Snooze Rest of Day button must exist in Settings."
         )
     }
