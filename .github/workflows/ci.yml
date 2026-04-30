@@ -125,7 +125,10 @@ jobs:
         run: ./scripts/build.sh test
 
       # ── Lint ─────────────────────────────────────────────────────────────────
+      # if: always() ensures SwiftLint runs and reports even when earlier steps
+      # (e.g. tests) fail — prevents silent lint gaps in a no-warning shop (#388).
       - name: Install SwiftLint
+        if: always()
         run: |
           if brew list swiftlint &>/dev/null 2>&1; then
             brew link --overwrite swiftlint 2>/dev/null || true
@@ -134,6 +137,7 @@ jobs:
           fi
 
       - name: Lint (SwiftLint)
+        if: always()
         run: ./scripts/build.sh lint
 
       # ── Coverage ─────────────────────────────────────────────────────────────

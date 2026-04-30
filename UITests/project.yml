@@ -44,6 +44,7 @@ targets:
         INFOPLIST_FILE: ../EyePostureReminder/Info.plist
         ENABLE_APP_INTENTS_METADATA_EXTRACTION: "NO"
         ENABLE_APPINTENTS_METADATA_EXTRACTION: "NO"
+        SWIFT_TREAT_WARNINGS_AS_ERRORS: "YES"
     # The SPM executable binary and resource bundle are built to BUILT_PRODUCTS_DIR
     # but Xcode's app-wrapper build phase doesn't auto-copy them into the .app bundle.
     # This script copies them in so the app bundle is valid for UI test installation.
@@ -98,6 +99,7 @@ targets:
         GENERATE_INFOPLIST_FILE: "YES"
         ENABLE_APP_INTENTS_METADATA_EXTRACTION: "NO"
         ENABLE_APPINTENTS_METADATA_EXTRACTION: "NO"
+        SWIFT_TREAT_WARNINGS_AS_ERRORS: "YES"
 
 schemes:
   EyePostureReminderUITests:

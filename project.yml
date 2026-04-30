@@ -4,7 +4,7 @@
 #   • ShieldConfigurationExtension  (ManagedSettingsUI / ShieldConfigurationDataSource)
 #   • DeviceActivityMonitorExtension (DeviceActivity / DeviceActivityMonitor)
 #
-# ShieldAction extension is deferred to a future phase (#203 Phase 2):
+# ShieldAction extension is deferred to a future phase (#410 Phase 2):
 #   Compiling ShieldActionExtension is unblocked, but real shield-action
 #   callbacks (intercepting primary/secondary button taps) provide no value
 #   until FamilyControls authorisation (#201) is active on device.
@@ -72,6 +72,7 @@ targets:
         ENABLE_APPINTENTS_METADATA_EXTRACTION: "NO"
         MARKETING_VERSION: "0.2.0"
         CURRENT_PROJECT_VERSION: "1"
+        SWIFT_TREAT_WARNINGS_AS_ERRORS: "YES"
     postBuildScripts:
       - name: "Assemble App Bundle"
         basedOnDependencyAnalysis: false
@@ -126,6 +127,7 @@ targets:
         ENABLE_APPINTENTS_METADATA_EXTRACTION: "NO"
         MARKETING_VERSION: "0.2.0"
         CURRENT_PROJECT_VERSION: "1"
+        SWIFT_TREAT_WARNINGS_AS_ERRORS: "YES"
 
   # ── DeviceActivityMonitorExtension ────────────────────────────────────────
   #
@@ -160,6 +162,7 @@ targets:
         ENABLE_APPINTENTS_METADATA_EXTRACTION: "NO"
         MARKETING_VERSION: "0.2.0"
         CURRENT_PROJECT_VERSION: "1"
+        SWIFT_TREAT_WARNINGS_AS_ERRORS: "YES"
 
 schemes:
   EyePostureReminderExtensions:
