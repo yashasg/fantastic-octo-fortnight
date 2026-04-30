@@ -13,13 +13,17 @@ import SwiftUI
 /// In the pre-entitlement state (`authorizationStatus == .unavailable`):
 /// - Shows informational copy about what True Interrupt Mode will do.
 /// - The "Set Up" button is replaced with "Coming Soon" and is disabled.
-/// - Users can skip directly to the main app.
+/// - Users can skip directly to the main app, or tap "Customize Settings" to
+///   open Settings immediately on arrival (sets `openSettingsOnLaunch`).
 ///
 /// Once #201 is resolved and the project gains the FamilyControls entitlement,
 /// the "Set Up" button will call `onSetUp` which presents `AppCategoryPickerView`.
 struct OnboardingInterruptModeView: View {
     let onGetStarted: () -> Void
     let onSetUp: (() -> Void)?
+    /// Called when the user taps "Customize Settings". The caller is responsible
+    /// for setting `openSettingsOnLaunch = true` before invoking `finishOnboarding()`.
+    let onCustomize: (() -> Void)?
     let authorizationStatus: ScreenTimeAuthorizationStatus
     private let accessibilityEnabledOverride: Bool?
 
@@ -28,11 +32,13 @@ struct OnboardingInterruptModeView: View {
     init(
         onGetStarted: @escaping () -> Void,
         onSetUp: (() -> Void)? = nil,
+        onCustomize: (() -> Void)? = nil,
         authorizationStatus: ScreenTimeAuthorizationStatus = .unavailable,
         accessibilityEnabledOverride: Bool? = nil
     ) {
         self.onGetStarted = onGetStarted
         self.onSetUp = onSetUp
+        self.onCustomize = onCustomize
         self.authorizationStatus = authorizationStatus
         self.accessibilityEnabledOverride = accessibilityEnabledOverride
     }
@@ -42,7 +48,7 @@ struct OnboardingInterruptModeView: View {
             VStack(spacing: AppSpacing.lg) {
                 Spacer(minLength: AppSpacing.xl)
 
-                // Hero illustration
+                // Hero illustration — decorative; title conveys the screen purpose.
                 Image(systemName: AppSymbol.trueInterrupt)
                     .font(AppFont.trueInterruptIcon)
                     .symbolRenderingMode(.hierarchical)
@@ -52,9 +58,7 @@ struct OnboardingInterruptModeView: View {
                         height: AppLayout.onboardingIllustrationSize
                     )
                     .background(Circle().fill(AppColor.surfaceTint))
-                    .accessibilityLabel(
-                        Text("onboarding.interrupt.illustrationLabel", bundle: .module)
-                    )
+                    .accessibilityHidden(true)
 
                 // Headline
                 Text("onboarding.interrupt.title", bundle: .module)
@@ -114,6 +118,24 @@ struct OnboardingInterruptModeView: View {
                     Text("onboarding.interrupt.skipButton.hint", bundle: .module)
                 )
                 .accessibilityIdentifier("onboarding.interrupt.skipButton")
+
+                // Tertiary CTA — skip and immediately open Settings for deeper customization
+                if let onCustomize {
+                    Button(action: onCustomize) {
+                        Text("onboarding.interrupt.customizeButton", bundle: .module)
+                            .font(AppFont.caption)
+                            .foregroundStyle(AppColor.textSecondary)
+                    }
+                    .frame(minHeight: AppLayout.minTapTarget)
+                    .contentShape(Rectangle())
+                    .accessibilityLabel(
+                        Text("onboarding.interrupt.customizeButton", bundle: .module)
+                    )
+                    .accessibilityHint(
+                        Text("onboarding.interrupt.customizeButton.hint", bundle: .module)
+                    )
+                    .accessibilityIdentifier("onboarding.interrupt.customizeButton")
+                }
             }
             .padding()
             .frame(maxWidth: AppLayout.onboardingMaxContentWidth)

@@ -46,6 +46,7 @@ struct OnboardingView: View {
             OnboardingInterruptModeView(
                 onGetStarted: finishOnboarding,
                 onSetUp: { showAppCategoryPicker = true },
+                onCustomize: finishOnboardingAndCustomize,
                 authorizationStatus: coordinator.screenTimeAuthorization.authorizationStatus
             )
                 .tag(3)
@@ -72,6 +73,13 @@ struct OnboardingView: View {
 
     private func finishOnboarding() {
         UserDefaults.standard.set(true, forKey: AppStorageKey.hasSeenOnboarding)
+    }
+
+    /// Completes onboarding and signals HomeView to open the Settings sheet immediately.
+    /// Sets `openSettingsOnLaunch` so HomeView auto-opens Settings on first appear.
+    private func finishOnboardingAndCustomize() {
+        UserDefaults.standard.set(true, forKey: AppStorageKey.openSettingsOnLaunch)
+        finishOnboarding()
     }
 
     private func openApplicationSettings() {

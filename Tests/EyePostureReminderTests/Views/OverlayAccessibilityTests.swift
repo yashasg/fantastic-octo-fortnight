@@ -33,4 +33,19 @@ final class OverlayAccessibilityTests: XCTestCase {
         XCTAssertFalse(described.isEmpty,
             "OverlayView posture body must evaluate without error after accessibilitySortPriority on headline")
     }
+
+    // MARK: - #313: No deprecated .isModal trait
+
+    /// Verifies OverlayView body evaluates cleanly after removing .accessibilityAddTraits(.isModal).
+    /// Modal suppression is owned by OverlayManager (UIKit layer) via accessibilityViewIsModal.
+    func test_overlayView_doesNotUseDeprecatedIsModalTrait_bodyEvaluates() {
+        let view = OverlayView(
+            type: .eyes, duration: 20, hapticsEnabled: false,
+            reduceMotionOverride: true,
+            onDismiss: {}
+        )
+        let described = String(describing: view.body)
+        XCTAssertFalse(described.isEmpty,
+            "OverlayView body must evaluate after removing deprecated .accessibilityAddTraits(.isModal)")
+    }
 }

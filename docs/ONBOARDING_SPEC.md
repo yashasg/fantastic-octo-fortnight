@@ -525,9 +525,53 @@ Button("Customize settings") {
 |---|---|---|
 | Eye Breaks card | `"Eye Breaks: every 20 minutes, 20 second break"` | (none) |
 | Posture Checks card | `"Posture Checks: every 30 minutes, 10 second break"` | (none) |
-| Get Started button | `"Get Started"` | `"Dismiss setup and begin using the app"` |
-| Customize button | `"Customize settings"` | `"Go to settings to adjust reminder intervals"` |
-| Page indicator | `"Page 4 of 4"` | — |
+| Get Started button | `"Get Started"` | `"Advance to the True Interrupt Mode introduction"` |
+| Page indicator | `"Page 4 of 5"` | — |
+
+---
+
+## Screen 5 — True Interrupt Mode (`OnboardingInterruptModeView`)
+
+### Purpose
+Introduce True Interrupt Mode before the user enters the app. Sets honest expectations while the FamilyControls entitlement (#201) is pending, and offers a path to immediately open Settings for deeper customization.
+
+### CTAs
+
+| Button | Action |
+|---|---|
+| `Coming Soon` (primary, disabled) | Disabled while entitlement is unavailable |
+| `Skip for Now` (secondary) | Calls `finishOnboarding()` — sets `hasSeenOnboarding = true` only |
+| `Customize Settings` (tertiary text link) | Calls `finishOnboardingAndCustomize()` — sets `openSettingsOnLaunch = true` then `hasSeenOnboarding = true`; HomeView opens Settings sheet on appear |
+
+### `Customize Settings` Behaviour
+
+```swift
+// OnboardingView.swift
+private func finishOnboardingAndCustomize() {
+    UserDefaults.standard.set(true, forKey: AppStorageKey.openSettingsOnLaunch)
+    finishOnboarding()
+}
+```
+
+HomeView observes `openSettingsOnLaunch` via `@AppStorage` and opens the Settings sheet automatically:
+
+```swift
+.onAppear {
+    if openSettingsOnLaunch {
+        openSettingsOnLaunch = false
+        showSettings = true
+    }
+}
+```
+
+### Accessibility
+
+| Element | VoiceOver Label | VoiceOver Hint |
+|---|---|---|
+| Hero illustration | Hidden (`.accessibilityHidden(true)`) | — |
+| Skip for Now button | `"Skip for Now"` | `"Continue without True Interrupt Mode. You can enable it later in Settings."` |
+| Customize Settings link | `"Customize Settings"` | `"Start using the app and open Settings immediately to adjust reminders."` |
+| Page indicator | `"Page 5 of 5"` | — |
 
 ---
 
@@ -623,9 +667,13 @@ struct OnboardingView: View {
                 .tag(0)
             NotificationPermissionScreen(onNext: { currentPage = 2 })
                 .tag(1)
-            QuickSetupScreen(onGetStarted: finishOnboarding,
-                             onCustomize: finishOnboarding)
+            QuickSetupScreen(onGetStarted: { currentPage = 3 })
                 .tag(2)
+            TrueInterruptModeScreen(
+                onGetStarted: finishOnboarding,
+                onCustomize: finishOnboardingAndCustomize
+            )
+            .tag(3)
         }
         .tabViewStyle(PageTabViewStyle(indexDisplayMode: .always))
         .indexViewStyle(PageIndexViewStyle(backgroundDisplayMode: .always))
@@ -633,8 +681,14 @@ struct OnboardingView: View {
     }
 
     private func finishOnboarding() {
-        UserDefaults.standard.set(true, forKey: "hasSeenOnboarding")
-        // Parent view observes this flag and transitions to SettingsView
+        UserDefaults.standard.set(true, forKey: AppStorageKey.hasSeenOnboarding)
+        // Parent view observes this flag and transitions to HomeView
+    }
+
+    /// Completes onboarding and signals HomeView to open the Settings sheet immediately.
+    private func finishOnboardingAndCustomize() {
+        UserDefaults.standard.set(true, forKey: AppStorageKey.openSettingsOnLaunch)
+        finishOnboarding()
     }
 }
 ```
@@ -696,7 +750,7 @@ Views/
 | Page indicator | `indexDisplayMode: .always` |
 | First-launch flag | `UserDefaults` key `"hasSeenOnboarding"` — use `@AppStorage` in parent |
 | Notification request | Screen 2 primary CTA; advances to Screen 3 regardless of outcome |
-| "Get Started" and "Customize" | Both set flag and go to `SettingsView` — no distinction in navigation |
+| "Get Started" and "Customize" | Screen 4 "Get Started" advances to Screen 5. Screen 5 "Skip for Now" = `finishOnboarding()`. Screen 5 "Customize Settings" = `finishOnboardingAndCustomize()` (also sets `openSettingsOnLaunch = true`) |
 | Animations | Fade + slide (20pt) on appear; respect `accessibilityReduceMotion` |
 | Button style | `.borderedProminent`, `.controlSize(.large)`, `.tint(.indigo)` |
 | Secondary actions | Plain text links, `.foregroundStyle(.secondary)` or `.foregroundStyle(.indigo)` |
