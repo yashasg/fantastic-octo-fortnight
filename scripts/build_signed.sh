@@ -447,6 +447,37 @@ inject_build_number() {
   pass "CFBundleVersion set to $build_num in archive (source Info.plist unchanged)"
 }
 
+verify_archived_extensions() {
+  [[ "$EXTENSION_PROFILES_AVAILABLE" == "YES" ]] || return 0
+
+  local plugins_dir="${ARCHIVE_PATH}/Products/Applications/${APP_TARGET}.app/PlugIns"
+  local missing=0
+  local shield_appex="${plugins_dir}/ShieldConfigurationExtension.appex"
+  local monitor_appex="${plugins_dir}/DeviceActivityMonitorExtension.appex"
+
+  if [[ ! -d "$plugins_dir" ]]; then
+    fail "Archive is missing PlugIns directory: $plugins_dir"
+    return 1
+  fi
+
+  if [[ ! -d "$shield_appex" ]]; then
+    fail "Archive is missing ShieldConfiguration extension binary."
+    missing=1
+  fi
+
+  if [[ ! -d "$monitor_appex" ]]; then
+    fail "Archive is missing DeviceActivityMonitor extension binary."
+    missing=1
+  fi
+
+  if [[ "$missing" -ne 0 ]]; then
+    fail "Extension archive validation failed. Check extension target embedding/signing settings."
+    return 1
+  fi
+
+  pass "Archive includes ShieldConfiguration + DeviceActivityMonitor extensions"
+}
+
 run_xcodebuild() {
   local start
   local status
@@ -801,7 +832,7 @@ cmd_doctor() {
     if entitlements_requests_focus_status "$SIGNED_ENTITLEMENTS_PATH"; then
       warn "Signed entitlements request Focus Status. The App ID/profile must include that capability."
     elif entitlements_requests_app_groups "$SIGNED_ENTITLEMENTS_PATH"; then
-      warn "Signed entitlements request App Groups. The App ID/profile must include group.com.yashasgujjar.kshana."
+      warn "Signed entitlements request App Groups. The App ID/profile must include group.com.yashasg.kshana."
     else
       pass "Signed entitlements: App Store profile-safe"
     fi
@@ -894,6 +925,7 @@ cmd_archive() {
   fi
 
   inject_build_number
+  verify_archived_extensions
   pass "Archive created: $ARCHIVE_PATH"
 }
 
