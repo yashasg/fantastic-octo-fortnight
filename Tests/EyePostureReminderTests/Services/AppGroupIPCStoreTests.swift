@@ -303,12 +303,27 @@ final class AppGroupIPCStoreTests: XCTestCase {
         XCTAssertEqual(defaults.double(forKey: AppGroupIPCKeys.lastAccessRequestAt), requestedAt.timeIntervalSince1970)
     }
 
-    func test_readEvents_corruptLog_throws() {
+    func test_readEvents_corruptLegacyLog_logsWarningAndContinues() {
         defaults.set(Data("not-json".utf8), forKey: AppGroupIPCKeys.eventLog)
 
-        XCTAssertThrowsError(try store.readEvents()) { error in
-            XCTAssertTrue(error is AppGroupIPCStore.StoreError)
-        }
+        XCTAssertNoThrow(try store.readEvents())
+        XCTAssertEqual(try store.readEvents(), [])
+    }
+
+    func test_readEvents_corruptLegacyLog_returnsValidSlotEvents() throws {
+        // Corrupt legacy key
+        defaults.set(Data("not-json".utf8), forKey: AppGroupIPCKeys.eventLog)
+
+        // Valid per-slot event
+        let slotEvent = AppGroupIPCEvent(
+            kind: .watchdogHeartbeat,
+            timestamp: Date(timeIntervalSince1970: 100),
+            detail: WatchdogHeartbeatDetail.deviceActivityIntervalStarted.rawValue
+        )
+        try store.recordEvent(slotEvent)
+
+        let events = try store.readEvents()
+        XCTAssertEqual(events, [slotEvent])
     }
 
     func test_clearEvents_removesLog() throws {

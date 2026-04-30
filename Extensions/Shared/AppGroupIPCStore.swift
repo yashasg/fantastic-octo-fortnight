@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 public enum AppGroupIPCKeys {
     public static let appGroupID = ShieldSessionKeys.appGroupID
@@ -80,6 +81,11 @@ public final class AppGroupIPCStore {
         case corruptSelectionMetadata
         case corruptShieldSession
     }
+
+    private static let log = Logger(
+        subsystem: "com.yashasgujjar.kshana",
+        category: "AppGroupIPC"
+    )
 
     private let defaults: UserDefaults?
     private let maxEventCount: Int
@@ -252,7 +258,7 @@ public final class AppGroupIPCStore {
             do {
                 events.append(contentsOf: try decoder.decode([AppGroupIPCEvent].self, from: data))
             } catch {
-                throw StoreError.corruptEventLog
+                Self.log.warning("Corrupt legacy eventLog key — skipping legacy events and continuing with per-slot reads")
             }
         }
 

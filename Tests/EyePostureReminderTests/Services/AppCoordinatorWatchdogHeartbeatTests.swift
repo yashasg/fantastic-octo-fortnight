@@ -189,6 +189,37 @@ final class AppCoordinatorWatchdogHeartbeatTests: XCTestCase {
         XCTAssertTrue(notificationCenter.addedRequests.isEmpty)
     }
 
+    func test_watchdogRecovery_corruptLegacyEventLog_stillTriggersRecovery() async throws {
+        // Regression test for issue #306: corrupt legacy eventLog key must not block
+        // watchdog recovery when per-slot events are readable.
+        // Part 1: prove real AppGroupIPCStore no longer throws on corrupt legacy data.
+        let suiteName = "WatchdogCorruptLegacyTest"
+        let testDefaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        testDefaults.removePersistentDomain(forName: suiteName)
+        defer { testDefaults.removePersistentDomain(forName: suiteName) }
+
+        let realIPCStore = AppGroupIPCStore(defaults: testDefaults, maxEventCount: 100)
+        testDefaults.set(Data("not-json".utf8), forKey: AppGroupIPCKeys.eventLog)
+        let events = try realIPCStore.readEvents()
+        XCTAssertEqual(events, [], "No valid events expected — legacy is corrupt, no slot events written")
+
+        // Part 2: verify watchdog recovery proceeds when readEvents succeeds (empty).
+        deviceActivityMonitor.stubbedIsAvailable = true
+        let sessionStart = Date(timeIntervalSince1970: 1)
+        ipcStore.shieldSessionSnapshot = ShieldSessionSnapshot(
+            reasonRaw: ReminderType.eyes.shieldReason.rawValue,
+            durationSeconds: 20,
+            triggeredAt: sessionStart
+        )
+
+        let recovered = await coordinator.recoverStaleDeviceActivityWatchdogIfNeeded()
+        try await Task.sleep(nanoseconds: 150_000_000)
+
+        XCTAssertTrue(recovered, "Watchdog recovery must succeed when legacy eventLog is corrupt but per-slot events are intact")
+        XCTAssertEqual(ipcStore.clearShieldSessionCallCount, 1)
+        XCTAssertEqual(deviceActivityMonitor.cancelCallCount, 1)
+    }
+
     func test_foregroundTransition_withOldSessionHeartbeatAndNewSessionMissingHeartbeat_recovers() async throws {
         // Regression test for issue #288: a fresh heartbeat from a prior session must not
         // suppress watchdog recovery for a newer session whose extension never heartbeat.
