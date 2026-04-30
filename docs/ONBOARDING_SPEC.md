@@ -296,7 +296,7 @@ Introduce True Interrupt Mode before the user enters the app. Sets honest expect
 | Button | Action |
 |---|---|
 | `Coming Soon` (primary, disabled) | Disabled while entitlement is unavailable |
-| `Get Started without True Interrupt` (secondary) | Calls `finishOnboarding()` — logs `onboardingCompleted(cta: .getStarted)`, sets `hasSeenOnboarding = true` |
+| `Skip for Now` (secondary) | Calls `finishOnboarding()` — logs `onboardingCompleted(cta: .getStarted)`, sets `hasSeenOnboarding = true` |
 | `Customize Settings` (tertiary text link) | Calls `finishOnboardingAndCustomize()` — logs `onboardingCompleted(cta: .customize)`, sets `openSettingsOnLaunch = true` then `hasSeenOnboarding = true`; HomeView opens Settings sheet on appear |
 
 ### Swipe Lock
@@ -330,7 +330,7 @@ HomeView observes `openSettingsOnLaunch` via `@AppStorage` and opens the Setting
 | Element | VoiceOver Label | VoiceOver Hint |
 |---|---|---|
 | Hero illustration | Hidden (`.accessibilityHidden(true)`) | — |
-| Get Started without True Interrupt button | `"Get Started without True Interrupt"` | `"Continue without True Interrupt Mode. You can enable it later in Settings."` |
+| Skip for Now button | `"Skip for Now"` | `"Continue without True Interrupt Mode. You can enable it later in Settings."` |
 | Customize Settings link | `"Customize Settings"` | `"Start using the app and open Settings immediately to adjust reminders."` |
 | Page indicator | `"Page 4 of 4"` | — |
 
@@ -518,7 +518,7 @@ Views/
 | Page indicator | `indexDisplayMode: .always` |
 | First-launch flag | `UserDefaults` key `"hasSeenOnboarding"` — use `@AppStorage` in parent |
 | Notification request | Screen 2 primary CTA (`Allow Reminder Alerts`); advances to Screen 3 regardless of outcome |
-| "Get Started" and "Customize" | Screen 3 "Get Started" advances to Screen 4. Screen 4 "Get Started without True Interrupt" = `finishOnboarding()`. Screen 4 "Customize Settings" = `finishOnboardingAndCustomize()` (also sets `openSettingsOnLaunch = true`) |
+| "Get Started" and "Customize" | Screen 3 "Get Started" advances to Screen 4. Screen 4 "Skip for Now" = `finishOnboarding()`. Screen 4 "Customize Settings" = `finishOnboardingAndCustomize()` (also sets `openSettingsOnLaunch = true`) |
 | Telemetry | `AnalyticsLogger.log(.onboardingCompleted(cta: .getStarted or .customize))` on completion |
 | Animations | Fade + slide (20pt) on appear via `.calmingEntrance()`; respects `accessibilityReduceMotion` |
 | Button style | `.primary` / `.secondary` (custom ButtonStyles in Components.swift) |

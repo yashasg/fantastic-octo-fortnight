@@ -119,7 +119,7 @@ ContentView checks @AppStorage("hasSeenOnboarding")
     │  │  while entitlement is pending.                    │
     │  │                                                   │
     │  │  [ Coming Soon ]    ← disabled (pre-entitlement) │
-    │  │  [ Get Started without True Interrupt ]           │
+    │  │  [ Skip for Now ]                                  │
     │  │                     ← sets hasSeenOnboarding,    │
     │  │                       transitions to HomeView     │
     │  │  "Customize Settings" ← sets hasSeenOnboarding   │
@@ -146,7 +146,7 @@ ContentView checks @AppStorage("hasSeenOnboarding")
 - **Defaults are pre-configured.** Pickers on Screen 3 start at sensible defaults (eye breaks every 20 min, posture every 30 min) so the user can tap "Get Started" immediately.
 - **Swipe lock on final screen.** `OnboardingInterruptModeView` (Screen 4) uses a `highPriorityGesture` to prevent accidental backward swipe past the completion CTAs.
 - **"Customize Settings" path.** Users who want to adjust deeper settings (haptics, snooze, notifications) can tap "Customize Settings" on Screen 4. This sets `openSettingsOnLaunch = true` so HomeView auto-opens the Settings sheet on arrival.
-- **Onboarding is shown exactly once.** The `hasSeenOnboarding` flag is only set on explicit completion ("Get Started without True Interrupt" or "Customize Settings" on Screen 4). Force-quitting mid-onboarding means it shows again next launch.
+- **Onboarding is shown exactly once.** The `hasSeenOnboarding` flag is only set on explicit completion ("Skip for Now" or "Customize Settings" on Screen 4). Force-quitting mid-onboarding means it shows again next launch.
 - **Telemetry.** `AnalyticsLogger.log(.onboardingCompleted(cta:))` fires with `.getStarted` or `.customize` on completion.
 - **Graceful degradation.** If permission is denied, the app works in foreground-only mode with local alerts. A persistent banner on the Home/Settings screen provides a path to fix (see Section 2.4).
 
@@ -723,7 +723,7 @@ OverlayManager checks: is an overlay currently visible?
 - **4-screen onboarding flow** (Welcome → Notification Permission → Reminder Setup → True Interrupt Mode) shown exactly once on first launch.
 - **Educate before asking.** The notification permission request comes on Screen 2, after the user understands the app's value. This produces higher grant rates than a cold prompt.
 - **Interactive setup.** Screen 3 lets users configure eye break and posture check intervals with live pickers that write directly to `SettingsStore`.
-- **Two completion paths on Screen 4:** "Get Started without True Interrupt" (use defaults) or "Customize Settings" (jump to Settings directly).
+- **Two completion paths on Screen 4:** "Skip for Now" (use defaults) or "Customize Settings" (jump to Settings directly).
 - **Swipe navigation** between screens via `TabView` with `PageTabViewStyle`. Page dots indicate progress.
 
 ### 5.2 First Launch Experience
@@ -735,7 +735,7 @@ OverlayManager checks: is an overlay currently visible?
 2. Welcome screen establishes context and tone
 3. Notification Permission screen explains why alerts matter, then offers "Allow Reminder Alerts" or "Not now"
 4. Reminder Setup screen lets user pick eye/posture intervals with interactive pickers; "Get Started" advances to Screen 4
-5. True Interrupt Mode screen explains Screen Time-based blocking; user taps "Get Started without True Interrupt" or "Customize Settings"
+5. True Interrupt Mode screen explains Screen Time-based blocking; user taps "Skip for Now" or "Customize Settings"
 6. `hasSeenOnboarding` flag set → ContentView crossfades to HomeView
 7. If "Customize Settings" was tapped, `openSettingsOnLaunch = true` → HomeView opens Settings sheet immediately
 8. Reminders are scheduled. Done.
@@ -745,7 +745,7 @@ OverlayManager checks: is an overlay currently visible?
 - `OnboardingView` uses a `TabView` with `PageTabViewStyle` for horizontal swipe between screens
 - `OnboardingInterruptModeView` (Screen 4) blocks accidental swipe-past with a `highPriorityGesture`
 - `OnboardingSetupView` (Screen 3) has one CTA: "Get Started" (advances to Screen 4); interval pickers bind directly to `SettingsStore`
-- `OnboardingInterruptModeView` (Screen 4) has two exit CTAs: "Get Started without True Interrupt" and "Customize Settings"
+- `OnboardingInterruptModeView` (Screen 4) has two exit CTAs: "Skip for Now" and "Customize Settings"
 - Force-quitting mid-onboarding re-shows onboarding (flag only set on explicit completion)
 
 ### 5.3 What We're NOT Doing
