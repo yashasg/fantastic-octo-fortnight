@@ -71,6 +71,10 @@ final class ViewBodyCoverageTests: XCTestCase {
         render(LegalDocumentView(document: .privacy))
     }
 
+    func test_legalDocumentView_disclaimer_renders() {
+        render(LegalDocumentView(document: .disclaimer))
+    }
+
     // MARK: - OnboardingWelcomeView
 
     func test_onboardingWelcomeView_renders() {
@@ -352,6 +356,12 @@ final class ViewBodyCoverageTests: XCTestCase {
 
     func test_legalDocumentView_privacy_bodyEvaluation() {
         let view = LegalDocumentView(document: .privacy)
+        let described = String(describing: view.body)
+        XCTAssertFalse(described.isEmpty)
+    }
+
+    func test_legalDocumentView_disclaimer_bodyEvaluation() {
+        let view = LegalDocumentView(document: .disclaimer)
         let described = String(describing: view.body)
         XCTAssertFalse(described.isEmpty)
     }

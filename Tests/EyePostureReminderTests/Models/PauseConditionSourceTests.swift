@@ -81,12 +81,18 @@ final class PauseConditionSourceTests: XCTestCase {
         _ = doc
     }
 
+    func test_legalDocument_disclaimer_exists() {
+        let doc = LegalDocument.disclaimer
+        _ = doc
+    }
+
     func test_legalDocument_switchExhaustiveness() {
-        let docs: [LegalDocument] = [.terms, .privacy]
+        let docs: [LegalDocument] = [.terms, .privacy, .disclaimer]
         for doc in docs {
             switch doc {
             case .terms:   XCTAssertTrue(true)
-            case .privacy: XCTAssertTrue(true)
+            case .privacy:    XCTAssertTrue(true)
+            case .disclaimer: XCTAssertTrue(true)
             }
         }
     }

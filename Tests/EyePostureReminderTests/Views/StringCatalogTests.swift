@@ -1546,4 +1546,104 @@ final class StringCatalogTests: XCTestCase {
             result.contains("%1$@") || result.contains("%2$@") || result.contains("%3$@"),
             "Must not contain un-substituted specifiers after formatting")
     }
+
+    // MARK: - #357: Dead key removed
+
+    /// onboarding.setup.body was unreferenced and should have been removed from the catalog.
+    func test_onboardingSetupBody_isRemovedFromCatalog() {
+        let value = str("onboarding.setup.body")
+        XCTAssertEqual(
+            value, "onboarding.setup.body",
+            "Dead key 'onboarding.setup.body' must no longer exist in catalog (should echo the key)")
+    }
+
+    // MARK: - #359: Configure unavailable hint
+
+    func test_settingsTrueInterruptConfigureUnavailableHint_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("settings.trueInterrupt.configure.unavailable.hint"),
+            "'settings.trueInterrupt.configure.unavailable.hint' must resolve from catalog")
+    }
+
+    func test_settingsTrueInterruptConfigureUnavailableHint_mentionsUnavailability() {
+        let value = str("settings.trueInterrupt.configure.unavailable.hint")
+        XCTAssertTrue(
+            value.localizedCaseInsensitiveContains("awaiting") ||
+            value.localizedCaseInsensitiveContains("not yet") ||
+            value.localizedCaseInsensitiveContains("unavailable"),
+            "'settings.trueInterrupt.configure.unavailable.hint' must convey unavailability — got: \(value)")
+    }
+
+    // MARK: - #356: Disclaimer localization keys
+
+    func test_settingsLegalDisclaimer_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("settings.legal.disclaimer"),
+            "'settings.legal.disclaimer' must resolve from catalog")
+    }
+
+    func test_settingsLegalDisclaimerHint_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("settings.legal.disclaimer.hint"),
+            "'settings.legal.disclaimer.hint' must resolve from catalog")
+    }
+
+    func test_legalDisclaimerNavTitle_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("legal.disclaimer.navTitle"),
+            "'legal.disclaimer.navTitle' must resolve from catalog")
+    }
+
+    func test_legalDisclaimerNotMedicalHeading_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("legal.disclaimer.notMedical.heading"),
+            "'legal.disclaimer.notMedical.heading' must resolve from catalog")
+    }
+
+    func test_legalDisclaimerNotMedicalBody_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("legal.disclaimer.notMedical.body"),
+            "'legal.disclaimer.notMedical.body' must resolve from catalog")
+    }
+
+    func test_legalDisclaimerProfessionalHeading_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("legal.disclaimer.professional.heading"),
+            "'legal.disclaimer.professional.heading' must resolve from catalog")
+    }
+
+    func test_legalDisclaimerOwnRiskHeading_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("legal.disclaimer.ownRisk.heading"),
+            "'legal.disclaimer.ownRisk.heading' must resolve from catalog")
+    }
+
+    func test_legalDisclaimerScreenTimeHeading_resolvesToEnglish() {
+        XCTAssertTrue(
+            isTranslated("legal.disclaimer.screenTime.heading"),
+            "'legal.disclaimer.screenTime.heading' must resolve from catalog")
+    }
+
+    func test_legalDisclaimerScreenTimeBody_mentionsScreenTime() {
+        let value = str("legal.disclaimer.screenTime.body")
+        XCTAssertTrue(
+            value.localizedCaseInsensitiveContains("screen time") ||
+            value.localizedCaseInsensitiveContains("screen-time"),
+            "'legal.disclaimer.screenTime.body' must mention Screen Time — got: \(value)")
+    }
+
+    func test_legalDisclaimerKeys_doNotContainOwnerName() {
+        let contentKeys = [
+            "legal.disclaimer.notMedical.body",
+            "legal.disclaimer.professional.body",
+            "legal.disclaimer.ownRisk.body",
+            "legal.disclaimer.screenTime.body"
+        ]
+        for key in contentKeys {
+            let value = str(key)
+            XCTAssertFalse(
+                value.localizedCaseInsensitiveContains("yashasg"),
+                "'\(key)' must not hardcode owner name — got: \(value)")
+        }
+    }
 }

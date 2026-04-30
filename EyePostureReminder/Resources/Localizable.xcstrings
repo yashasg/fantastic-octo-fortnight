@@ -266,17 +266,6 @@
         }
       }
     },
-    "onboarding.setup.body": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "You'll get gentle reminders to look away and sit up straight."
-          }
-        }
-      }
-    },
     "onboarding.setup.card.label": {
       "extractionState": "manual",
       "localizations": {
@@ -1829,13 +1818,13 @@
         }
       }
     },
-    "overlay.doneButton.hint" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ends this break and returns to the app"
+    "overlay.doneButton.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ends this break and returns to the app"
           }
         }
       }
@@ -2531,6 +2520,138 @@
           "stringUnit": {
             "state": "translated",
             "value": "Opens Settings to configure True Interrupt Mode"
+          }
+        }
+      }
+    },
+    "settings.trueInterrupt.configure.unavailable.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Awaiting entitlement approval — not yet available"
+          }
+        }
+      }
+    },
+    "settings.legal.disclaimer": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Disclaimer"
+          }
+        }
+      }
+    },
+    "settings.legal.disclaimer.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opens Disclaimer document"
+          }
+        }
+      }
+    },
+    "legal.disclaimer.navTitle": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Disclaimer"
+          }
+        }
+      }
+    },
+    "legal.disclaimer.notMedical.heading": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not a Medical App"
+          }
+        }
+      }
+    },
+    "legal.disclaimer.notMedical.body": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This app reminds you to take eye breaks and check your posture at intervals you set. It does not diagnose, treat, or prevent any medical condition. The 20-20-20 rule and posture reminders are general wellness guidelines — not medical advice."
+          }
+        }
+      }
+    },
+    "legal.disclaimer.professional.heading": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Consult a Healthcare Professional"
+          }
+        }
+      }
+    },
+    "legal.disclaimer.professional.body": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "If you have eye problems, chronic pain, spinal conditions, or any health concern, consult a qualified healthcare professional before following any reminder-based routine."
+          }
+        }
+      }
+    },
+    "legal.disclaimer.ownRisk.heading": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use at Your Own Risk"
+          }
+        }
+      }
+    },
+    "legal.disclaimer.ownRisk.body": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use this app at your own risk. The developer is not responsible for any health outcome, positive or negative, resulting from use of this app."
+          }
+        }
+      }
+    },
+    "legal.disclaimer.screenTime.heading": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Screen Time Features"
+          }
+        }
+      }
+    },
+    "legal.disclaimer.screenTime.body": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This app may use Apple's Screen Time and Device Activity APIs to deliver wellness reminders when you are using other apps. As of April 2026, this feature is pending Apple approval and is not yet available. Screen-time-triggered interruptions will not occur until this feature is explicitly released."
           }
         }
       }

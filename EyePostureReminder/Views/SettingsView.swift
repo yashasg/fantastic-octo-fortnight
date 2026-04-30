@@ -636,7 +636,9 @@ private struct SettingsTrueInterruptSection: View {
             .disabled(authStatus == .unavailable)
             .listRowBackground(AppColor.surface)
             .listRowSeparatorTint(AppColor.separatorSoft)
-            .accessibilityHint(Text("settings.trueInterrupt.configure.hint", bundle: .module))
+            .accessibilityHint(authStatus == .unavailable
+                ? Text("settings.trueInterrupt.configure.unavailable.hint", bundle: .module)
+                : Text("settings.trueInterrupt.configure.hint", bundle: .module))
             .accessibilityIdentifier("settings.trueInterrupt.configureButton")
         } header: {
             SettingsSectionHeader(
