@@ -102,6 +102,12 @@ if [[ "${1:-}" == "--build" ]]; then
   # The no-warning contract for our own app/extension targets is enforced by
   # SWIFT_TREAT_WARNINGS_AS_ERRORS = YES in each target's build settings
   # (project.yml → generated .xcodeproj), and by the warning grep below.
+  #
+  # CURRENT_PROJECT_VERSION must match the parent app's CFBundleVersion to
+  # avoid "extension CFBundleVersion must match containing app" warnings.
+  # CI sets BUILD_NUMBER (= github.run_number) before calling this script;
+  # locally it defaults to "1" which matches the project.yml baseline.
+  BUILD_NUMBER="${BUILD_NUMBER:-1}"
   set +e
   xcodebuild build \
     -project "$XCODEPROJ" \
@@ -114,6 +120,7 @@ if [[ "${1:-}" == "--build" ]]; then
     ENABLE_BITCODE=NO \
     ENABLE_APP_INTENTS_METADATA_EXTRACTION=NO \
     ENABLE_APPINTENTS_METADATA_EXTRACTION=NO \
+    CURRENT_PROJECT_VERSION="${BUILD_NUMBER}" \
     2>&1 | tee "$BUILD_LOG"
   build_status="${PIPESTATUS[0]}"
   set -e
