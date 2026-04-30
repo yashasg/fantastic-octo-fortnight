@@ -841,7 +841,7 @@ extension AppCoordinator {
         // Defensive path: shield routing became available between the
         // `shouldScheduleNotificationFallback` check and this evaluation.
         Logger.scheduling.error("fallbackRoutingContext: shield routing available — IPC state may have changed")
-        return ("unexpected_shield_routing_state", .trueInterruptEmptySelection)
+        return ("unexpected_shield_routing_state", .unexpectedShieldRoutingState)
     }
 
     private var isTrueInterruptEnabled: Bool {
@@ -913,6 +913,13 @@ extension AppCoordinator: ReminderScheduling {
         screenTimeTracker.disableTracking(for: type)
         overlayManager.clearQueue(for: type)
         if pendingOverlay?.type == type { pendingOverlay = nil }
+        // Cancel DeviceActivity monitoring when an active shield session for this type is live,
+        // so a stuck-shield cannot outlast a cancelled reminder. Avoid cancelling unrelated sessions.
+        if deviceActivityMonitor.isAvailable,
+           let session = try? ipcStore.readShieldSession(),
+           session.reason?.reminderType == type {
+            cancelDeviceActivityMonitoring()
+        }
     }
 
     func cancelAllReminders() {

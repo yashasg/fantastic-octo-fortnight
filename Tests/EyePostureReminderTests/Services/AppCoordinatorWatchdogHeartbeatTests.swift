@@ -215,6 +215,89 @@ final class AppCoordinatorWatchdogHeartbeatTests: XCTestCase {
         XCTAssertEqual(deviceActivityMonitor.cancelCallCount, 1)
     }
 
+    // MARK: - #286: Snooze guard in watchdog recovery
+
+    func test_watchdogRecovery_duringActiveSnooze_doesNotCallRescheduleReminder() async throws {
+        // Regression test for issue #286: stale watchdog recovery must not schedule
+        // a fallback notification while a snooze is still active.
+        // Call recoverStaleDeviceActivityWatchdogIfNeeded directly with a MockReminderScheduler
+        // so we can assert precisely that rescheduleReminder is never called.
+        let mockScheduler = MockReminderScheduler()
+        let snoozeCoordinator = AppCoordinator(
+            settings: settings,
+            scheduler: mockScheduler,
+            notificationCenter: notificationCenter,
+            overlayManager: MockOverlayPresenting(),
+            screenTimeTracker: tracker,
+            pauseConditionProvider: MockPauseConditionProvider(),
+            deviceActivityMonitor: deviceActivityMonitor,
+            ipcStore: ipcStore
+        )
+        defer { snoozeCoordinator.stopFallbackTimers() }
+
+        deviceActivityMonitor.stubbedIsAvailable = true
+        notificationCenter.authorizationGranted = true
+        settings.notificationFallbackEnabled = true
+        settings.snoozedUntil = Date(timeIntervalSinceNow: 300) // snooze active
+
+        ipcStore.shieldSessionSnapshot = ShieldSessionSnapshot(
+            reasonRaw: ReminderType.eyes.shieldReason.rawValue,
+            durationSeconds: 20,
+            triggeredAt: Date(timeIntervalSince1970: 1)
+        )
+
+        // Refresh auth status so notificationAuthStatus == .authorized before recovery check.
+        await snoozeCoordinator.refreshAuthStatus()
+        let recovered = await snoozeCoordinator.recoverStaleDeviceActivityWatchdogIfNeeded()
+        // Allow the async DeviceActivity cancel task to complete.
+        try await Task.sleep(nanoseconds: 150_000_000)
+
+        // Recovery must still run and clean up the stale session and DA monitoring…
+        XCTAssertTrue(recovered)
+        XCTAssertEqual(ipcStore.clearShieldSessionCallCount, 1)
+        XCTAssertEqual(deviceActivityMonitor.cancelCallCount, 1)
+        // …but must not call rescheduleReminder while snooze is active.
+        XCTAssertEqual(mockScheduler.rescheduleCallCount, 0,
+            "watchdogRecovery must not call rescheduleReminder during an active snooze")
+    }
+
+    func test_watchdogRecovery_whenSnoozeExpired_callsRescheduleReminder() async throws {
+        // Complement of the above: an expired snooze must not suppress fallback scheduling.
+        let mockScheduler = MockReminderScheduler()
+        let snoozeCoordinator = AppCoordinator(
+            settings: settings,
+            scheduler: mockScheduler,
+            notificationCenter: notificationCenter,
+            overlayManager: MockOverlayPresenting(),
+            screenTimeTracker: tracker,
+            pauseConditionProvider: MockPauseConditionProvider(),
+            deviceActivityMonitor: deviceActivityMonitor,
+            ipcStore: ipcStore
+        )
+        defer { snoozeCoordinator.stopFallbackTimers() }
+
+        deviceActivityMonitor.stubbedIsAvailable = true
+        notificationCenter.authorizationGranted = true
+        settings.notificationFallbackEnabled = true
+        settings.snoozedUntil = Date(timeIntervalSinceNow: -1) // already expired
+
+        ipcStore.shieldSessionSnapshot = ShieldSessionSnapshot(
+            reasonRaw: ReminderType.eyes.shieldReason.rawValue,
+            durationSeconds: 20,
+            triggeredAt: Date(timeIntervalSince1970: 1)
+        )
+
+        await snoozeCoordinator.refreshAuthStatus()
+        let recovered = await snoozeCoordinator.recoverStaleDeviceActivityWatchdogIfNeeded()
+        try await Task.sleep(nanoseconds: 150_000_000)
+
+        XCTAssertTrue(recovered)
+        XCTAssertEqual(ipcStore.clearShieldSessionCallCount, 1)
+        XCTAssertEqual(deviceActivityMonitor.cancelCallCount, 1)
+        XCTAssertEqual(mockScheduler.rescheduleCallCount, 1,
+            "watchdogRecovery must call rescheduleReminder when snooze has expired")
+    }
+
     private var heartbeatDetails: [WatchdogHeartbeatDetail] {
         ipcStore.events
             .filter { $0.kind == .watchdogHeartbeat }

@@ -43,10 +43,13 @@ enum AnalyticsEvent: Sendable {
 
     /// Non-PII reason code explaining why a particular schedule path was selected.
     enum SchedulePathReason: String {
-        case deviceActivityAvailable    = "device_activity_available"
-        case shieldUnavailable          = "shield_unavailable"
-        case trueInterruptDisabled      = "true_interrupt_disabled"
-        case trueInterruptEmptySelection = "true_interrupt_empty_selection"
+        case deviceActivityAvailable      = "device_activity_available"
+        case shieldUnavailable            = "shield_unavailable"
+        case trueInterruptDisabled        = "true_interrupt_disabled"
+        case trueInterruptEmptySelection  = "true_interrupt_empty_selection"
+        /// Defensive path: shield routing state became available between the
+        /// `shouldScheduleNotificationFallback` check and `fallbackRoutingContext()`.
+        case unexpectedShieldRoutingState = "unexpected_shield_routing_state"
     }
 
     // MARK: Shield Lifecycle
