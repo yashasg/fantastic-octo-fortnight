@@ -11,7 +11,7 @@ import XCTest
 ///
 /// ## What is NOT tested here
 /// - `DeviceActivityCenter` / `ManagedSettings` / `FamilyControls` — blocked by #201.
-/// - Real App Group `UserDefaults` (`group.com.yashasgujjar.kshana`) — requires device + entitlement.
+/// - Real App Group `UserDefaults` (`group.com.yashasg.kshana`) — requires device + entitlement.
 /// - Extension process lifecycle — requires Xcode project migration (M3.3).
 ///
 /// ## Coverage targets
