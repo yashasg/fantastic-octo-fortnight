@@ -203,3 +203,27 @@
 - **#200** tracks App Store listing coordination (when feature launches; blocking pre-requisite for shipping)
 - **#199** archived as completed-work summary with clear redirect to active tracker
 
+
+## 2026-04-30 — Post-#299 Release Readiness Audit
+
+**Task:** Read-only product/release readiness audit after True Interrupt issue marathon and #299 fix.
+
+**Findings:**
+- CHANGELOG snooze options wrong (says "5 min / 15 min / 30 min / rest-of-day" but code has 5 min / 1 hour / rest of day)
+- APP_STORE_LISTING.md stuck at v0.1.0-beta, What's New text doesn't reflect v0.2.0 Restful Grove
+- Onboarding screen count stale in CHANGELOG, ARCHITECTURE.md, UX_FLOWS.md (says 3, actual is 4)
+- Open blockers #185, #196, #201, #209, #210 verified — still valid, not duplicated
+
+**Issue created:** #303 — docs drift covering all three findings
+
+**Learnings:**
+- CHANGELOG entries written at Phase 1 time can rot as features evolve (snooze options changed post-Phase-1)
+- APP_STORE_LISTING.md needs a version bump pass after every release milestone
+- Closed audit issues (#292) don't guarantee fixes were applied — always re-verify
+
+### 2026-04-30 — #302 App Store disclaimer
+- Added concise "Not medical advice" disclaimer to `docs/APP_STORE_LISTING.md` Section 3.
+- Adapted language from `docs/legal/DISCLAIMER.md` full disclaimer, condensed for App Store character limits.
+- Removed "Download now and build healthier screen time habits" CTA to avoid implying health outcome guarantees.
+- Screen Time feature disclaimer included per acceptance criteria.
+- Commit: 1e75388. Issue closed. Frank review requested for final copy polish.
