@@ -1,7 +1,7 @@
 # Disclaimer
 
 **App:** kshana  
-**Publisher:** Yashasg
+**Publisher:** [PUBLISHER NAME]
 
 ---
 
@@ -17,7 +17,7 @@ This app reminds you to take eye breaks and check your posture at intervals you 
 
 **If you have eye problems, chronic pain, spinal conditions, or any health concern, consult a qualified healthcare professional before following any reminder-based routine.**
 
-Use this app at your own risk. Yashasg is not responsible for any health outcome, positive or negative, resulting from use of this app.
+Use this app at your own risk. [PUBLISHER NAME] is not responsible for any health outcome, positive or negative, resulting from use of this app.
 
 **Note on Screen Time Features:**  
 kshana may use Apple's Screen Time, FamilyControls, DeviceActivity, and ManagedSettings APIs to deliver wellness reminders when you are using other apps you choose. These features are intended only for your own user-owned device and self-care routine, not parental monitoring, employee monitoring, or supervising another person's device. As of April 2026, this feature is pending Apple approval (case ID 102881605113) and is not yet available. Do not expect screen-time-triggered interruptions until this feature is explicitly released.
@@ -34,7 +34,7 @@ kshana may use Apple's Screen Time, FamilyControls, DeviceActivity, and ManagedS
 
 **NOT A SUBSTITUTE FOR PROFESSIONAL CARE:** This app is not a substitute for consultation with a qualified healthcare professional. If you experience eye discomfort, vision changes, pain, or any health symptoms, consult a doctor, optometrist, or other licensed professional.
 
-**USE AT YOUR OWN RISK:** Yashasg makes no representations or warranties about health outcomes from using this app. All wellness decisions made based on app reminders are solely the user's own responsibility. Yashasg is not liable for any injury, health outcome, or loss arising from use of this app.
+**USE AT YOUR OWN RISK:** [PUBLISHER NAME] makes no representations or warranties about health outcomes from using this app. All wellness decisions made based on app reminders are solely the user's own responsibility. [PUBLISHER NAME] is not liable for any injury, health outcome, or loss arising from use of this app.
 
 **AS IS:** This app is provided "as is" without warranty of any kind. Timer accuracy and notification delivery depend on iOS system conditions.
 
@@ -48,7 +48,7 @@ kshana may use Apple's Screen Time, FamilyControls, DeviceActivity, and ManagedS
 
 ---
 
-> kshana is a wellness reminder tool, not medical advice. Use at your own risk. Not a substitute for professional healthcare. © Yashasg
+> kshana is a wellness reminder tool, not medical advice. Use at your own risk. Not a substitute for professional healthcare. © [PUBLISHER NAME]
 
 ---
 

@@ -51,7 +51,7 @@ struct ShieldSession: Sendable, Equatable {
         ShieldSessionSnapshot.isValidDurationSeconds(durationSeconds)
     }
 
-    // MARK: Shared UserDefaults keys (App Group: group.com.yashasgujjar.kshana)
+    // MARK: Shared UserDefaults keys (App Group: group.com.yashasg.kshana)
 
     static let sessionDataKey = ShieldSessionKeys.sessionData
     static let reasonKey = ShieldSessionKeys.breakReason

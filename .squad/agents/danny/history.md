@@ -84,3 +84,5 @@
 **Assessment:** All four issues are in the correct external/manual state. Checklists are clear, actionable, and prioritized by unblock dependencies. No code fixes available for these—all require manual Apple approval, ASC uploads, or hosting setup. Blocked chain is correct: #410 → #201 (external). Recommend: Yashas execute checklist items in parallel (#196 and #185 are independent and can proceed immediately while awaiting #201 Apple response).
 
 **Outcome:** All issues remain BLOCKED/PENDING external action. Status verified, checklists active, dependency chain is clear.
+
+**Issues closed:** #312
