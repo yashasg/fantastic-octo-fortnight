@@ -61,6 +61,7 @@ struct SettingsView: View {
 
     @State private var showTerms = false
     @State private var showPrivacy = false
+    @State private var showDisclaimer = false
     @State private var showResetConfirm = false
 
     private let accessibilityNotificationPoster: AccessibilityNotificationPosting
@@ -248,6 +249,15 @@ struct SettingsView: View {
                 .accessibilityIdentifier("settings.legal.privacy")
                 .listRowBackground(AppColor.surface)
                 .listRowSeparatorTint(AppColor.separatorSoft)
+
+                Button(action: { showDisclaimer = true },
+                       label: { Text("settings.legal.disclaimer", bundle: .module) })
+                .font(AppFont.body)
+                .foregroundStyle(AppColor.primaryRest)
+                .accessibilityHint(Text("settings.legal.disclaimer.hint", bundle: .module))
+                .accessibilityIdentifier("settings.legal.disclaimer")
+                .listRowBackground(AppColor.surface)
+                .listRowSeparatorTint(AppColor.separatorSoft)
             } header: {
                 SettingsSectionHeader(titleKey: "settings.section.legal")
             }
@@ -325,7 +335,7 @@ struct SettingsView: View {
             }
         }
         .scrollContentBackground(.hidden)
-        .background(AppColor.background)
+        .background(AppColor.background.ignoresSafeArea())
         .navigationTitle(Text("settings.navTitle", bundle: .module))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -344,6 +354,9 @@ struct SettingsView: View {
         }
         .sheet(isPresented: $showPrivacy) {
             LegalDocumentView(document: .privacy)
+        }
+        .sheet(isPresented: $showDisclaimer) {
+            LegalDocumentView(document: .disclaimer)
         }
         .onAppear {
             if vmBox.inner == nil {

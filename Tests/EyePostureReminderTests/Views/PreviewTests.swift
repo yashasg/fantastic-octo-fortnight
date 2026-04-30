@@ -77,6 +77,11 @@ final class PreviewTests: XCTestCase {
         assertPreviewRenders(view)
     }
 
+    func test_legalDocumentView_disclaimer_preview() {
+        let view = LegalDocumentView(document: .disclaimer)
+        assertPreviewRenders(view)
+    }
+
     // MARK: - Onboarding
 
     // NOTE: OnboardingView wraps TabView with @EnvironmentObject — bundle proxy crash.

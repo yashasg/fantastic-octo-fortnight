@@ -186,6 +186,7 @@ final class StringCatalogTests: XCTestCase {
             // settings.legal.* — legal section buttons and hints
             "settings.legal.privacy", "settings.legal.privacy.hint",
             "settings.legal.terms", "settings.legal.terms.hint",
+            "settings.legal.disclaimer", "settings.legal.disclaimer.hint",
             // settings section headers — about, advanced, legal
             "settings.section.about", "settings.section.advanced", "settings.section.legal",
             // settings.snooze.limitReached.hint — shown when snooze limit is reached
@@ -280,6 +281,7 @@ final class StringCatalogTests: XCTestCase {
             // settings.legal.* — legal section buttons
             "settings.legal.privacy", "settings.legal.privacy.hint",
             "settings.legal.terms", "settings.legal.terms.hint",
+            "settings.legal.disclaimer", "settings.legal.disclaimer.hint",
             // settings section headers and footers
             "settings.section.about", "settings.section.advanced", "settings.section.legal",
             "settings.snooze.limitReached.hint", "settings.masterToggle.footer",
@@ -363,7 +365,12 @@ final class StringCatalogTests: XCTestCase {
             "legal.privacy.rights.body", "legal.privacy.changesToPolicy.heading",
             "legal.privacy.changesToPolicy.body", "legal.privacy.contact.heading",
             "legal.privacy.contact.body",
-            // settings.smartPause.* keys (6) — added by Linus for Smart Pause feature
+            // legal.disclaimer.* content keys
+            "legal.disclaimer.navTitle",
+            "legal.disclaimer.notMedical.heading", "legal.disclaimer.notMedical.body",
+            "legal.disclaimer.professional.heading", "legal.disclaimer.professional.body",
+            "legal.disclaimer.ownRisk.heading", "legal.disclaimer.ownRisk.body",
+            "legal.disclaimer.screenTime.heading", "legal.disclaimer.screenTime.body",
             "settings.section.smartPause", "settings.smartPause.footer",
             "settings.smartPause.pauseDuringFocus", "settings.smartPause.pauseDuringFocus.hint",
             "settings.smartPause.pauseWhileDriving", "settings.smartPause.pauseWhileDriving.hint",
@@ -379,6 +386,7 @@ final class StringCatalogTests: XCTestCase {
             // settings.legal.*
             "settings.legal.privacy", "settings.legal.privacy.hint",
             "settings.legal.terms", "settings.legal.terms.hint",
+            "settings.legal.disclaimer", "settings.legal.disclaimer.hint",
             // settings section headers, footers, feedback, about
             "settings.section.about", "settings.section.advanced", "settings.section.legal",
             "settings.snooze.limitReached.hint", "settings.masterToggle.footer",
