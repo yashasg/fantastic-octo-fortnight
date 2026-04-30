@@ -56,7 +56,12 @@ struct OverlayView: View {
             centerContent
         }
         .accessibilityElement(children: .contain)
-        .accessibilityAddTraits(.isModal)
+        // Modal suppression is handled at the UIKit layer: OverlayManager sets
+        // hostingController.view.accessibilityViewIsModal = true on the hosting
+        // controller's view, which correctly prevents VoiceOver from escaping
+        // the overlay window. SwiftUI's accessibilityViewIsModal(_:) is not
+        // available in the current SDK; .accessibilityAddTraits(.isModal) only
+        // adds a trait without suppressing traversal, so it is omitted here.
         .accessibilityAction(AccessibilityActionKind.escape) {
             performDismiss(method: .button)
         }

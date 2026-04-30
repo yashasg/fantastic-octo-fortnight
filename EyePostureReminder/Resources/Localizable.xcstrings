@@ -1972,6 +1972,28 @@
         }
       }
     },
+    "onboarding.interrupt.customizeButton": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Customize Settings"
+          }
+        }
+      }
+    },
+    "onboarding.interrupt.customizeButton.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start using the app and open Settings immediately to adjust reminders."
+          }
+        }
+      }
+    },
     "onboarding.interrupt.skipButton": {
       "extractionState": "manual",
       "localizations": {

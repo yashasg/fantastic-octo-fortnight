@@ -414,6 +414,61 @@ final class TrueInterruptViewCoverageTests: XCTestCase {
         XCTAssertTrue(setUpCalled)
     }
 
+    // MARK: - #311: Hero illustration accessibilityHidden
+
+    /// Verifies the hero illustration in OnboardingInterruptModeView does NOT expose
+    /// the `onboarding.interrupt.illustrationLabel` key to the accessibility tree.
+    /// The image must be `.accessibilityHidden(true)` — the screen title conveys purpose.
+    func test_onboardingInterruptModeView_heroIllustration_isAccessibilityHidden() {
+        let view = OnboardingInterruptModeView(
+            onGetStarted: {},
+            authorizationStatus: .unavailable,
+            accessibilityEnabledOverride: false
+        )
+        let described = String(describing: view.body)
+        XCTAssertFalse(
+            described.contains("onboarding.interrupt.illustrationLabel"),
+            "Hero illustration must be accessibilityHidden — illustrationLabel key must not appear in body"
+        )
+    }
+
+    // MARK: - #314: onCustomize callback
+
+    /// Verifies the onCustomize callback is retained and invocable.
+    func test_onboardingInterruptModeView_onCustomize_isInvocable() {
+        var customizeCalled = false
+        let view = OnboardingInterruptModeView(
+            onGetStarted: {},
+            onCustomize: { customizeCalled = true },
+            authorizationStatus: .unavailable,
+            accessibilityEnabledOverride: false
+        )
+        view.onCustomize?()
+        XCTAssertTrue(customizeCalled, "onCustomize callback must be retained and callable")
+    }
+
+    /// Verifies OnboardingInterruptModeView body evaluates without crash when onCustomize is provided.
+    func test_onboardingInterruptModeView_withCustomize_bodyEvaluation() {
+        let view = OnboardingInterruptModeView(
+            onGetStarted: {},
+            onCustomize: {},
+            authorizationStatus: .unavailable,
+            accessibilityEnabledOverride: false
+        )
+        let described = String(describing: view.body)
+        XCTAssertFalse(described.isEmpty,
+            "OnboardingInterruptModeView body must evaluate when onCustomize is provided")
+    }
+
+    /// Verifies onCustomize is nil-safe when not provided (default init).
+    func test_onboardingInterruptModeView_withoutCustomize_customizeIsNil() {
+        let view = OnboardingInterruptModeView(
+            onGetStarted: {},
+            authorizationStatus: .unavailable
+        )
+        XCTAssertNil(view.onCustomize, "onCustomize must be nil when not provided at init")
+    }
+
     func test_trueInterruptSkippedBanner_onDismissIsInvocable() {
         var dismissCalled = false
         let view = TrueInterruptSkippedBanner(onSetUp: {}, onDismiss: { dismissCalled = true })

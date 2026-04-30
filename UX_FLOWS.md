@@ -146,12 +146,28 @@ ContentView checks @AppStorage("hasSeenOnboarding")
     │  │    • Backup local alerts when Screen Time         │
     │  │      access is unavailable                        │
     │  │                                                   │
-    │  │  [ Get Started ]    ← sets hasSeenOnboarding,     │
-    │  │                       transitions to HomeView     │
-    │  │  "Customize Settings" ← sets hasSeenOnboarding    │
-    │  │                         + openSettingsOnLaunch,    │
-    │  │                         opens Settings on arrival  │
+    │  │  [ Get Started ]    ← advances to Screen 5        │
     │  │  Page dots: ○ ○ ○ ●                               │
+    │  └──────────────────────────────────────────────────┘
+    │      │
+    │      ▼  (advances to Screen 5 — True Interrupt Mode)
+    │
+    │  ┌──────────────────────────────────────────────────┐
+    │  │  SCREEN 5 — True Interrupt Mode                  │
+    │  │  (OnboardingInterruptModeView)                    │
+    │  │                                                   │
+    │  │  Headline: "True Interrupt Mode"                  │
+    │  │  Body: Explains Screen Time-based blocking and    │
+    │  │  privacy guarantees. Shows Coming Soon badge      │
+    │  │  while entitlement is pending.                    │
+    │  │                                                   │
+    │  │  [ Coming Soon ]    ← disabled (pre-entitlement) │
+    │  │  [ Skip for Now ]   ← sets hasSeenOnboarding,    │
+    │  │                       transitions to HomeView     │
+    │  │  "Customize Settings" ← sets hasSeenOnboarding   │
+    │  │                         + openSettingsOnLaunch,   │
+    │  │                         opens Settings on arrival │
+    │  │  Page dots: ○ ○ ○ ○ ●                            │
     │  └──────────────────────────────────────────────────┘
     │      │
     │      ▼
@@ -172,8 +188,8 @@ ContentView checks @AppStorage("hasSeenOnboarding")
 - **Permission screen blocks accidental swipe-past.** A `highPriorityGesture` prevents horizontal swiping on Screen 3, ensuring the user makes a deliberate choice.
 - **"Maybe Later" / "Not now" paths are always available.** The user can skip permissions and still proceed. A banner on the Home/Settings screen later offers recovery (see Section 2.4). The app works in degraded mode with local alerts as fallback.
 - **Defaults are pre-configured.** Screen 4 previews the defaults so the user knows what to expect. No mandatory customization.
-- **"Customize Settings" path.** Users who want to adjust before starting can tap the secondary CTA, which opens Settings immediately after onboarding.
-- **Onboarding is shown exactly once.** The `hasSeenOnboarding` flag is only set on explicit completion ("Get Started" or "Customize"). Force-quitting mid-onboarding means it shows again next launch.
+- **"Customize Settings" path.** Users who want to adjust deeper settings (haptics, snooze, notifications) can tap "Customize Settings" on the final True Interrupt Mode screen (Screen 5). This sets `openSettingsOnLaunch = true` so HomeView auto-opens the Settings sheet on arrival.
+- **Onboarding is shown exactly once.** The `hasSeenOnboarding` flag is only set on explicit completion ("Skip for Now" or "Customize Settings" on Screen 5). Force-quitting mid-onboarding means it shows again next launch.
 - **Graceful degradation.** If permission is denied, the app works in foreground-only mode with local alerts. A persistent banner on the Home/Settings screen provides a path to fix (see Section 2.4).
 
 ---
@@ -744,10 +760,10 @@ OverlayManager checks: is an overlay currently visible?
 **Core belief:** Even a simple app benefits from a brief, warm introduction — especially when a system permission is required.
 
 **Approach:**
-- **4-screen onboarding flow** (Welcome → App Break Explanation → Permissions → Setup) shown exactly once on first launch.
-- **Educate before asking.** The permission request comes on Screen 3, after the user understands the app's value and how breaks work. This produces higher grant rates than a cold prompt.
+- **5-screen onboarding flow** (Welcome → Notification Permission → Setup Preview → True Interrupt Mode) shown exactly once on first launch.
+- **Educate before asking.** The permission request comes on Screen 2, after the user understands the app's value. This produces higher grant rates than a cold prompt.
 - **Preview defaults.** Screen 4 shows the default configuration so users feel confident before starting.
-- **Two completion paths:** "Get Started" (use defaults) or "Customize Settings" (jump to Settings).
+- **Two completion paths on Screen 5:** "Skip for Now" (use defaults) or "Customize Settings" (jump to Settings directly).
 - **Swipe navigation** between screens via `TabView` with `PageTabViewStyle`. Page dots indicate progress.
 
 ### 5.2 First Launch Experience
@@ -758,10 +774,11 @@ OverlayManager checks: is an overlay currently visible?
 1. App icon tap → launch screen (< 1s)
 2. Welcome screen establishes context and tone
 3. Permission screen explains why notifications matter, then offers "Enable Notifications" or "Not now"
-4. Setup screen previews default config (eye breaks every 20 min, posture checks every 30 min)
-5. User taps "Get Started" or "Customize Settings"
+4. Setup screen lets user pick eye/posture intervals; "Get Started" advances to Screen 5
+5. True Interrupt Mode screen explains Screen Time-based blocking; user taps "Skip for Now" or "Customize Settings"
 6. `hasSeenOnboarding` flag set → ContentView crossfades to HomeView
-7. Reminders are scheduled. Done.
+7. If "Customize Settings" was tapped, `openSettingsOnLaunch = true` → HomeView opens Settings sheet immediately
+8. Reminders are scheduled. Done.
 
 **Implementation details:**
 - `ContentView` checks `@AppStorage(hasSeenOnboarding)` to gate the flow
