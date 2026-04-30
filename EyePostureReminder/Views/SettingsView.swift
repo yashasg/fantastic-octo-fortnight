@@ -82,7 +82,7 @@ struct SettingsView: View {
                     tint: AppColor.primaryRest,
                     accessibilityIdentifier: "settings.masterToggle",
                     accessibilityHint: Text("settings.masterToggle.hint", bundle: .module),
-                    onChange: { _ in viewModel?.globalToggleChanged() },
+                    onChange: { newValue in viewModel?.globalEnabled = newValue; viewModel?.globalToggleChanged() },
                     label: {
                         HStack(spacing: AppSpacing.sm) {
                             SettingsRowIcon(systemName: "power", tint: AppColor.primaryRest)
@@ -354,6 +354,16 @@ struct SettingsView: View {
                 : String(localized: "home.status.paused", bundle: .module)
             accessibilityNotificationPoster.postAnnouncement(message: message)
         }
+        // Analytics instrumentation for per-reminder settings (#297).
+        // Routed through ViewModel setters so the events are emitted with the same
+        // structured format as the already-instrumented pause/notification settings.
+        // Note: old/new values are logged with `privacy: .private` (redacted in Console).
+        .onChange(of: settings.eyesEnabled) { newValue in viewModel?.eyesEnabled = newValue }
+        .onChange(of: settings.eyesInterval) { newValue in viewModel?.eyesInterval = newValue }
+        .onChange(of: settings.eyesBreakDuration) { newValue in viewModel?.eyesBreakDuration = newValue }
+        .onChange(of: settings.postureEnabled) { newValue in viewModel?.postureEnabled = newValue }
+        .onChange(of: settings.postureInterval) { newValue in viewModel?.postureInterval = newValue }
+        .onChange(of: settings.postureBreakDuration) { newValue in viewModel?.postureBreakDuration = newValue }
     }
 }
 

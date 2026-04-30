@@ -4,6 +4,33 @@ import XCTest
 /// Tests for `PauseConditionSource` and `LegalDocument` enums.
 final class PauseConditionSourceTests: XCTestCase {
 
+    // MARK: - PauseConditionSource: Raw Values
+
+    func test_pauseConditionSource_focusMode_rawValue() {
+        XCTAssertEqual(PauseConditionSource.focusMode.rawValue, "focus_mode")
+    }
+
+    func test_pauseConditionSource_carPlay_rawValue() {
+        XCTAssertEqual(PauseConditionSource.carPlay.rawValue, "car_play")
+    }
+
+    func test_pauseConditionSource_driving_rawValue() {
+        XCTAssertEqual(PauseConditionSource.driving.rawValue, "driving")
+    }
+
+    func test_pauseConditionSource_rawValues_areStableSnakeCase() {
+        // Pin all raw values to guard against accidental renames breaking analytics.
+        let expected: [(PauseConditionSource, String)] = [
+            (.focusMode, "focus_mode"),
+            (.carPlay,   "car_play"),
+            (.driving,   "driving")
+        ]
+        for (source, expectedRaw) in expected {
+            XCTAssertEqual(source.rawValue, expectedRaw,
+                           "PauseConditionSource.\(source) raw value must be stable for analytics")
+        }
+    }
+
     // MARK: - PauseConditionSource
 
     func test_pauseConditionSource_focusMode_isHashable() {

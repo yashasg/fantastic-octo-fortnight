@@ -232,6 +232,10 @@ final class AnalyticsEventTests: XCTestCase {
             AnalyticsEvent.SchedulePathReason.trueInterruptEmptySelection.rawValue,
             "true_interrupt_empty_selection"
         )
+        XCTAssertEqual(
+            AnalyticsEvent.SchedulePathReason.unexpectedShieldRoutingState.rawValue,
+            "unexpected_shield_routing_state"
+        )
     }
 
     func test_schedulePathSelected_allCombinations_doNotCrash() {

@@ -20,6 +20,8 @@ This document defines the complete telemetry strategy for kshana: every log poin
 
 ## Phase 1 — os.Logger Event Catalog
 
+> **Note:** The Phase 1 category-based `Logger` calls below are the original design document and are partially superseded by the structured `AnalyticsLogger` / `AnalyticsEvent` catalog in the **True Interrupt Analytics Event Catalog** section. The `AnalyticsEvent` schema is the canonical source of truth for all events emitted in the current codebase. The Phase 1 tables are retained here for historical context only.
+
 ### Logger Setup
 
 ```swift
@@ -109,7 +111,7 @@ extension Logger {
 
 ## True Interrupt Analytics Event Catalog
 
-> **Updated:** 2025-07-25 — reflects issues #247/#249/#253/#254/#257/#269/#278/#282/#286/#290/#291.
+> **Updated:** 2025-07-25 — reflects issues #247/#249/#253/#254/#257/#269/#278/#282/#286/#290/#291/#297.
 >
 > All events are emitted via `AnalyticsLogger.log(_:)` → `os.Logger` (subsystem: `Bundle.main.bundleIdentifier`, category: `Analytics`). No SDK, no network calls. All payload fields use `privacy: .public` unless noted.
 
@@ -280,9 +282,26 @@ No payload. Fired when the user manually cancels an active snooze.
 
 | Field | Log key | Privacy | Notes |
 |-------|---------|---------|-------|
-| `setting` | `setting` | `.public` | Key name of the changed setting |
+| `setting` | `setting` | `.public` | Key name of the changed setting (see table below) |
 | `oldValue` | `old_value` | `.private` | Previous value — **redacted** in Console unless explicitly unredacted |
 | `newValue` | `new_value` | `.private` | New value — **redacted** in Console unless explicitly unredacted |
+
+**Privacy decision:** `old_value` and `new_value` are deliberately `privacy: .private` (redacted) because they may reflect user schedule preferences, which are operationally sensitive even if not PII. Unredacting requires explicit device trust or TestFlight log export. This decision is intentional and should not be changed without a privacy review.
+
+**Instrumented `setting` key values:**
+
+| `setting` value | Type | Emitted from |
+|----------------|------|--------------|
+| `globalEnabled` | Bool | `SettingsViewModel.globalEnabled` setter (routed via `SettingsView` master toggle `onChange`) |
+| `eyesEnabled` | Bool | `SettingsViewModel.eyesEnabled` setter (routed via `SettingsView` `.onChange(of: settings.eyesEnabled)`) |
+| `eyesInterval` | TimeInterval | `SettingsViewModel.eyesInterval` setter |
+| `eyesBreakDuration` | TimeInterval | `SettingsViewModel.eyesBreakDuration` setter |
+| `postureEnabled` | Bool | `SettingsViewModel.postureEnabled` setter |
+| `postureInterval` | TimeInterval | `SettingsViewModel.postureInterval` setter |
+| `postureBreakDuration` | TimeInterval | `SettingsViewModel.postureBreakDuration` setter |
+| `pauseDuringFocus` | Bool | `SettingsViewModel.pauseDuringFocus` setter (routed via `SettingsSmartPauseSection` toggle `onChange`) |
+| `pauseWhileDriving` | Bool | `SettingsViewModel.pauseWhileDriving` setter |
+| `notificationFallbackEnabled` | Bool | `SettingsViewModel.notificationFallbackEnabled` setter (also triggers reschedule) |
 
 ---
 
@@ -292,13 +311,23 @@ No payload. Fired when the user manually cancels an active snooze.
 
 | Field | Log key | Privacy | Notes |
 |-------|---------|---------|-------|
-| `conditionType` | `condition_type` | `.public` | Pause condition type (e.g. `focus`, `driving`, `carplay`) |
+| `conditionType` | `condition_type` | `.public` | Comma-separated sorted list of active pause condition raw values |
+
+**`PauseConditionSource` stable raw values:**
+
+| Case | Raw value | Meaning |
+|------|-----------|---------|
+| `focusMode` | `focus_mode` | iOS Focus mode is active and `pauseDuringFocus` is enabled |
+| `carPlay` | `car_play` | CarPlay connection detected and `pauseWhileDriving` is enabled |
+| `driving` | `driving` | CMMotionActivity automotive/high-confidence detected and `pauseWhileDriving` is enabled |
+
+When multiple conditions are active simultaneously, `condition_type` contains a sorted comma-separated list (e.g. `car_play,driving`). `pause_deactivated` always logs `condition_type=all_cleared`.
 
 #### `pause_deactivated`
 
 | Field | Log key | Privacy | Notes |
 |-------|---------|---------|-------|
-| `conditionType` | `condition_type` | `.public` | Pause condition type |
+| `conditionType` | `condition_type` | `.public` | Always `all_cleared` — fires when the last active pause condition clears |
 
 ---
 
@@ -500,9 +529,11 @@ What Turk, Tess (UX), and Reuben (Product) need to see. These drive the instrume
 
 | Metric | Derived From | What It Tells Us |
 |--------|-------------|-----------------|
-| Most common eye interval | `event=setting_changed setting=eye_interval new_value` (requires log unredaction) | Is 20 min the right default? |
-| Most common posture interval | `event=setting_changed setting=posture_interval new_value` (requires log unredaction) | Is 30 min the right default? |
-| Per-type enable/disable rate | `event=setting_changed setting=eye_enabled\|posture_enabled` (requires unredaction) | Which reminder type do people disable? |
+| Most common eye interval | `event=setting_changed setting=eyesInterval new_value` (requires log unredaction) | Is 20 min the right default? |
+| Most common posture interval | `event=setting_changed setting=postureInterval new_value` (requires log unredaction) | Is 30 min the right default? |
+| Per-type enable/disable rate | `event=setting_changed setting=eyesEnabled\|postureEnabled` (requires unredaction) | Which reminder type do people disable? |
+| Global toggle rate | `event=setting_changed setting=globalEnabled` (requires unredaction) | How often do users disable all reminders? |
+| Break duration preferences | `event=setting_changed setting=eyesBreakDuration\|postureBreakDuration` (requires unredaction) | Are the default break durations appropriate? |
 
 ---
 
