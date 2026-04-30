@@ -586,9 +586,11 @@ All reminders continue normally
   - Title: "🧍 Posture Check"
   - Body: "Sit up straight and roll your shoulders."
 
-**Actions (Phase 2):**
-- [Done] — dismisses notification
-- [Snooze 5 min] — reschedules for 5 minutes later
+**Actions (Deferred — not in v0.2.0):**
+- [Done] — dismisses notification *(deferred)*
+- [Snooze 5 min] — reschedules for 5 minutes later *(deferred)*
+
+> These lock-screen notification action buttons were deferred from Phase 2 and are not implemented in v0.2.0. No `UNNotificationCategory` or `UNNotificationAction` is registered.
 
 ---
 
@@ -1088,7 +1090,7 @@ Snooze controls are in the **Settings screen**, not on the overlay. This separat
 
 **On snooze expiry or "Cancel snooze":** Shields re-applied (if True Interrupt configured), reminders rescheduled from now. See Section 6.7 for the full True Interrupt + snooze interaction.
 
-**Lock screen notification action (Phase 2):** A "Snooze 5 min" notification action on the lock screen remains a Phase 2 enhancement.
+**Lock screen notification action (Deferred):** A "Snooze 5 min" notification action on the lock screen was deferred from Phase 2; not in v0.2.0.
 
 ---
 
