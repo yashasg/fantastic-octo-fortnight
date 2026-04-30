@@ -151,6 +151,8 @@ struct TrueInterruptSetupPill: View {
             .background(AppColor.surface, in: Capsule())
             .overlay(Capsule().strokeBorder(AppColor.separatorSoft, lineWidth: 0.5))
         }
+        .frame(minHeight: AppLayout.minTapTarget)
+        .contentShape(Rectangle())
         .accessibilityLabel(Text("home.trueInterrupt.setupPill", bundle: .module))
         .accessibilityHint(Text("home.trueInterrupt.setupPill.hint", bundle: .module))
         .accessibilityIdentifier("home.trueInterrupt.setupPill")
@@ -191,6 +193,8 @@ struct TrueInterruptSkippedBanner: View {
                         Text("home.trueInterrupt.skippedBanner.setUp", bundle: .module)
                             .font(AppFont.captionEmphasized)
                     }
+                    .frame(minHeight: AppLayout.minTapTarget)
+                    .contentShape(Rectangle())
                     .foregroundStyle(AppColor.primaryRest)
                     .accessibilityHint(Text("home.trueInterrupt.skippedBanner.setUp.hint", bundle: .module))
                     .accessibilityIdentifier("home.trueInterrupt.skippedBanner.setUp")
@@ -199,6 +203,8 @@ struct TrueInterruptSkippedBanner: View {
                         Text("home.trueInterrupt.skippedBanner.dismiss", bundle: .module)
                             .font(AppFont.caption)
                     }
+                    .frame(minHeight: AppLayout.minTapTarget)
+                    .contentShape(Rectangle())
                     .foregroundStyle(AppColor.textSecondary)
                     .accessibilityHint(Text("home.trueInterrupt.skippedBanner.dismiss.hint", bundle: .module))
                     .accessibilityIdentifier("home.trueInterrupt.skippedBanner.dismiss")
@@ -206,9 +212,9 @@ struct TrueInterruptSkippedBanner: View {
             }
         }
         .padding(AppSpacing.sm)
-        .background(AppColor.surface, in: RoundedRectangle(cornerRadius: 10))
+        .background(AppColor.surface, in: RoundedRectangle(cornerRadius: AppLayout.radiusSmall))
         .overlay(
-            RoundedRectangle(cornerRadius: 10)
+            RoundedRectangle(cornerRadius: AppLayout.radiusSmall)
                 .strokeBorder(AppColor.separatorSoft, lineWidth: 0.5)
         )
         .accessibilityElement(children: .ignore)
