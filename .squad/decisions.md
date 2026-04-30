@@ -23280,3 +23280,57 @@ Keep validation in setters but avoid recursion:
 **Rationale:** Instead of testing every fix on CLI, build locally first and inspect what is failing
 
 This is a team practice preference for iterative debugging.
+
+---
+
+# Decision: Avoid self-assignment in @Published observers for SettingsStore durations
+
+**Date:** 2026-04-30  
+**Owner:** Basher (iOS Dev - Services)  
+**Context:** PR #411 CI `Test (simulator)` surfaced a large failure cluster. Local reproduction showed `SettingsStoreTests` crashing with `signal segv`, especially around break-duration mutation tests.
+
+**Decision:** Do not normalize `@Published` properties by reassigning the same property inside `didSet`. Use private published backing storage plus validated computed setters instead.
+
+**Why:** This preserves behavior (validation + persistence + UI updates) while eliminating observer self-mutation that produced simulator test-process instability.
+
+**Scope:** `SettingsStore.eyesBreakDuration` and `SettingsStore.postureBreakDuration`.
+
+---
+
+# Decision: SettingsStore break-duration patch — APPROVED
+
+**Date:** 2026-04-30  
+**Owner:** Saul (Code Reviewer)  
+**Artifact:** Basher's commit `04f73cd` on branch `fix/legal-disclaimer-356-357-359`
+
+**Verdict:** APPROVE
+
+**Rationale:**
+- Recursive `@Published` `didSet` self-assignment was the root cause of CI segfaults. The backing-storage + computed-setter pattern is the correct Swift/Combine fix.
+- SwiftUI reactivity is preserved: `@Published` on private storage fires `objectWillChange`. No code uses `$eyesBreakDuration` or `$postureBreakDuration` publishers directly.
+- UserDefaults persistence semantics are identical. API surface is unchanged.
+- All 35+ test callsites reference the same property names with the same read/write semantics.
+
+**Team rule:** Never reassign a `@Published` property inside its own `didSet`. Use private published backing storage with a validated computed setter.
+
+---
+
+# Decision: Xcode result-bundle failure summary behavior
+
+**Date:** 2026-04-30  
+**Owner:** Virgil (CI/CD)
+
+## Decision
+Treat `xcodebuild` exit code and `.xcresult` issue summaries as source of truth for CI pass/fail; do not trust XCTest stream summary lines alone.
+
+## Why
+On PR #411 run `25155651913`, console output included `Executed 508 tests, with 0 failures`, but the action still failed with 32 `testFailureSummaries` in the result bundle due to deterministic segv crashes (`SettingsStore` recursion). This is expected Xcode behavior when failures are captured during/after result aggregation (especially with parallel/crash paths).
+
+## Action Taken
+- Updated `scripts/build.sh` test path to print a concise xcresult failure summary whenever `xcodebuild test` fails.
+- This makes crash-class failures explicit in CI logs even when the live test stream looks successful.
+
+## Team Impact
+- Basher can target the real failing tests quickly from CI logs.
+- Livingston can validate crash regression scope with narrow `-only-testing` runs.
+- Future CI triage should always inspect `.xcresult` summaries for final truth.

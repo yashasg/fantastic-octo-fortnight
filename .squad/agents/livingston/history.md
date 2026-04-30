@@ -213,3 +213,12 @@
 - Root cause is recursive self-assignment inside `SettingsStore` `didSet` for `eyesBreakDuration` and `postureBreakDuration` (introduced by commit `744a709`, per `git log -L`).
 - Isolated repro confirmed: even one test (`SettingsStoreTests.test_setEyesBreakDuration_30_persistsAndLoads`) crashes with segv on simulator.
 - Reported finding in `.squad/decisions/inbox/livingston-settings-ci-finding.md` for Basher/coordinator implementation follow-up.
+
+## 2026-04-30 — PR #411 SettingsStore diagnostics (Scribe update)
+
+Orchestration log recorded at 2026-04-30T09:27:10Z. Root cause diagnosis documented in decisions.md:
+- Recursive `@Published` self-assignment in SettingsStore break-duration didSet
+- Targeted 4 SettingsStore tests + downstream AppCoordinator duration tests all fail with SEGV
+- Decision: Avoid @Published self-assignment; use backing-storage + computed-setter pattern
+- Basher implemented fix (commit `04f73cd`); Saul approved
+- Fix ready for validation via full simulator test suite

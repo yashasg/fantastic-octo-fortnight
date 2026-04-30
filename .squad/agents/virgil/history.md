@@ -121,3 +121,11 @@
 - Basher: owns SettingsStore crash fix.
 - Livingston: owns targeted verification for AppCoordinator fallout tests.
 - Virgil: owns CI parity checks from xcresult status + summary, not console pass text alone.
+
+## 2026-04-30 — PR #411 xcresult diagnostics enhancement (Scribe update)
+
+Orchestration log recorded at 2026-04-30T09:27:10Z. Enhanced CI diagnostics documented in decisions.md:
+- Root cause: xcodebuild exit code + .xcresult issue summaries are source of truth; live test stream can be misleading
+- PR #411 run showed "0 failures" but 32 testFailureSummaries in result bundle (SEGV crashes during aggregation)
+- Commit `6815fed`: Updated scripts/build.sh to print concise xcresult failure summaries on xcodebuild test failure
+- Team impact: Basher can target real failures quickly from CI logs; future triage always inspects .xcresult

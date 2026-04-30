@@ -203,3 +203,11 @@ Updated `ONBOARDING_SPEC.md` and `UX_FLOWS.md` to reflect 5-screen flow with the
   - `test_handleNotification_eyes_thenPresentPending_callsShowOverlayWithEyes`
 - Conclusion: this failure slice is downstream of `SettingsStore` break-duration recursive self-assignment in `didSet`, not an independent AppCoordinator/OverlayManager bug.
 - Handoff: Basher should land the SettingsStore fix; Livingston can rerun this AppCoordinator duration slice after that merge.
+
+## 2026-04-30 — PR #411 AppCoordinator diagnostics (Scribe update)
+
+Orchestration log recorded at 2026-04-30T09:27:10Z. Confirmed AppCoordinator test failures trace to SettingsStore recursion:
+- AppCoordinator duration tests fail downstream (set break duration first)
+- Non-duration AppCoordinator tests pass (e.g., overlay threshold tests)
+- Root cause is NOT AppCoordinator or OverlayManager logic
+- SettingsStore fix (commit `04f73cd`) will resolve AppCoordinator duration test failures automatically

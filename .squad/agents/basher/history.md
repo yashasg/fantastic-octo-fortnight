@@ -96,3 +96,12 @@ Services: AppCoordinator, ReminderScheduler, ScreenTimeTracker, OverlayManager, 
 - Root cause: mutating `@Published` break-duration properties from inside their own `didSet` caused unstable test-runner crashes under Xcode 26.4 simulator runs.
 - Fix: moved eyes/posture break durations to private published storage + validated computed setters, preserving validation/persistence behavior without self-assignment in observers.
 - Validation: targeted failing classes now pass; full `./scripts/build.sh test` passes; `./scripts/build.sh build` and `./scripts/build.sh lint` pass.
+
+## 2026-04-30 — SettingsStore recursion fix implemented (Scribe update)
+
+Orchestration log recorded at 2026-04-30T09:27:10Z. Fix approved and documented in decisions.md:
+- Commit `04f73cd`: Implemented backing-storage + computed-setter pattern
+- Eliminates recursive @Published self-assignment in eyesBreakDuration and postureBreakDuration
+- Local validation: lint, build, test all passing
+- Preserves validation, persistence, UI reactivity, and API surface
+- Ready for merge — awaiting final CI validation

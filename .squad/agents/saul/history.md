@@ -152,3 +152,17 @@
 - **TELEMETRY.md:** Matches analytics code schema accurately ✓
 
 **Key Learning:** The True Interrupt IPC architecture uses generational guards and withLock wrappers consistently. The serialized Task queue pattern in enqueueDeviceActivityMonitorOperation is sound because @MainActor Tasks run sequentially on the main thread, making the previousTask chain safe without additional locking.
+
+### 2026-04-30: SettingsStore Break-Duration Fix (PR #411)
+- **Reviewed:** Basher's commit `04f73cd` replacing recursive `@Published` `didSet` self-assignment with private published backing storage + validated computed setters for `eyesBreakDuration` and `postureBreakDuration`.
+- **Verdict:** APPROVED. Fix correctly eliminates observer self-mutation that caused simulator test-process segfaults. SwiftUI reactivity preserved via `@Published` on backing storage. UserDefaults persistence semantics unchanged. No API surface change—external callers see the same get/set interface. Minor redundant double-sanitization in `resetToDefaults` is harmless.
+- **Key Learning:** Never reassign a `@Published` property inside its own `didSet`—it triggers recursive observer calls. Use private published backing storage with a computed setter instead.
+
+## 2026-04-30 — SettingsStore recursion fix review (Scribe update)
+
+Orchestration log recorded at 2026-04-30T09:27:10Z. Code review approved; decision documented in decisions.md:
+- Reviewed Basher's commit `04f73cd` (backing-storage + computed-setter pattern)
+- Verdict: APPROVE
+- Verified SwiftUI reactivity (objectWillChange fires on private storage)
+- Confirmed API surface unchanged; all 35+ test callsites unaffected
+- Established team rule: Never reassign @Published inside didSet; use private published backing + computed setter
