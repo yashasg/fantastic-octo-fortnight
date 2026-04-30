@@ -33,7 +33,7 @@
 
 Set your timing. Let kshana gently nudge you to take healthier eye and posture breaks — without accounts, ads, or a custom backend.
 
-kshana uses local screen-time tracking and reminder alerts to suggest eye breaks (20-20-20 rule) and posture checks at customizable intervals. When you choose to take a break, a calm break screen guides you with a countdown timer. Smart Pause automatically silences reminders during Focus Mode, CarPlay navigation, and when driving. Screen Time Shield-based app-level interruption is in development and will arrive pending Apple's entitlement approval.
+kshana uses timer-based screen tracking and reminder alerts to suggest eye breaks (20-20-20 rule) and posture checks at customizable intervals. When you choose to take a break, a calm break screen guides you with a countdown timer. Smart Pause automatically silences reminders during Focus Mode, CarPlay navigation, and when driving. True Interrupt Mode (app-level shielding) is in development and will arrive in a future update pending Apple's entitlement approval.
 
 **Key features:**
 - Custom eye break and posture check timing
@@ -43,9 +43,9 @@ kshana uses local screen-time tracking and reminder alerts to suggest eye breaks
 - Snooze options (5 min, 1 hour, rest of day)
 - Battery-friendly—native iOS scheduling, minimal background activity
 - Privacy-first — no accounts, no ads, no tracking, and no custom analytics backend
-- Screen Time integration (app-level interruption coming in a future update when Apple entitlement is approved)
+- True Interrupt Mode (app-level shielding) coming in a future update when Apple entitlement is approved
 
-**Not medical advice.** kshana is a wellness reminder tool — not a medical device and not a substitute for professional healthcare. The 20-20-20 rule and posture reminders are general wellness suggestions, not medical advice, and are not intended to diagnose, treat, or prevent any condition. If you have health concerns, consult a qualified healthcare professional. Screen Time–based app interruption uses Apple's FamilyControls API with your authorization, for your own personal wellness use on your device; this feature is pending Apple entitlement approval and is not yet available.
+**Not medical advice.** kshana is a wellness reminder tool — not a medical device and not a substitute for professional healthcare. The 20-20-20 rule and posture reminders are general wellness suggestions, not medical advice, and are not intended to diagnose, treat, or prevent any condition. If you have health concerns, consult a qualified healthcare professional. True Interrupt Mode uses Apple's FamilyControls API with your authorization, for your own personal wellness use on your device; this feature is pending Apple entitlement approval and is not yet available.
 
 Built for people who spend hours at a screen and want control over their break habits.
 
@@ -108,9 +108,8 @@ The app uses Apple's built-in diagnostics and analytics tools, including **Metri
 #### How the app works
 
 - All your settings (reminder intervals, break durations, preferences) are stored locally on your device using iOS UserDefaults.
-- True Interrupt setup state is stored locally in the App Group container so the main app and Screen Time extensions can coordinate. This includes the enabled/disabled intent, aggregate app/category selection counts, active shield-session timestamps, and a capped operational event log for shield/fallback diagnostics.
 - Motion activity and Focus status are accessed transiently in memory to pause reminders — they are never stored or transmitted.
-- Current builds use local reminder alerts as the primary reminder mechanism. Screen Time Shield-based app-level interruption is not available in v0.2.0 and will arrive in a future phase when Apple's entitlement approval is complete.
+- Current builds use local reminder alerts as the primary reminder mechanism. True Interrupt Mode (app-level shielding) is not available in v0.2.0 and will arrive in a future update when Apple's entitlement approval is complete.
 - The app uses Apple's `os.Logger` framework for on-device diagnostic logging. These logs remain on your device. In release builds, values that could be sensitive are marked private/redacted. If you choose to share diagnostics with Apple or a TestFlight developer, some diagnostic logs may be included according to Apple's diagnostic-sharing settings.
 - No third-party SDKs or frameworks are used — the app is built exclusively with Apple's native iOS libraries (SwiftUI, UIKit, UserNotifications, MetricKit).
 
