@@ -1,4 +1,5 @@
 @testable import EyePostureReminder
+import ScreenTimeExtensionShared
 import XCTest
 
 /// Tests for `AnalyticsLogger` and `AnalyticsEvent`.
@@ -153,7 +154,7 @@ final class AnalyticsLoggerTests: XCTestCase {
 
     func test_log_watchdogRecoveryTriggered_doesNotCrash() {
         AnalyticsLogger.log(.watchdogRecoveryTriggered(
-            reason: "eye_care",
+            reason: .scheduledEyesBreak,
             detail: "watchdog_device_activity_heartbeat_stale:device_activity_interval_started"
         ))
     }
@@ -215,12 +216,12 @@ final class AnalyticsLoggerTests: XCTestCase {
     // MARK: - Shield Lifecycle
 
     func test_log_shieldActivated_doesNotCrash() {
-        AnalyticsLogger.log(.shieldActivated(reason: "eye_care"))
-        AnalyticsLogger.log(.shieldActivated(reason: "posture"))
+        AnalyticsLogger.log(.shieldActivated(reason: .scheduledEyesBreak))
+        AnalyticsLogger.log(.shieldActivated(reason: .scheduledPostureBreak))
     }
 
     func test_log_shieldActivationFailed_doesNotCrash() {
-        AnalyticsLogger.log(.shieldActivationFailed(reason: "eye_care"))
+        AnalyticsLogger.log(.shieldActivationFailed(reason: .scheduledEyesBreak))
     }
 
     func test_log_shieldDeactivated_doesNotCrash() {

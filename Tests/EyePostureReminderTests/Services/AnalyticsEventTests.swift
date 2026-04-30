@@ -1,4 +1,5 @@
 @testable import EyePostureReminder
+import ScreenTimeExtensionShared
 import XCTest
 
 /// Tests for `AnalyticsEvent` enum — validates associated values, exhaustiveness,
@@ -128,7 +129,7 @@ final class AnalyticsEventTests: XCTestCase {
 
     func test_watchdogRecoveryTriggered_canBeConstructed() {
         let event = AnalyticsEvent.watchdogRecoveryTriggered(
-            reason: "eye_care",
+            reason: .scheduledEyesBreak,
             detail: "watchdog_device_activity_heartbeat_missing"
         )
         _ = event
@@ -136,14 +137,21 @@ final class AnalyticsEventTests: XCTestCase {
 
     func test_watchdogRecoveryTriggered_staleDetail_canBeLogged() {
         AnalyticsLogger.log(.watchdogRecoveryTriggered(
-            reason: "posture",
+            reason: .scheduledPostureBreak,
             detail: "watchdog_device_activity_heartbeat_stale:device_activity_interval_started"
         ))
     }
 
     func test_watchdogRecoveryTriggered_missingDetail_canBeLogged() {
         AnalyticsLogger.log(.watchdogRecoveryTriggered(
-            reason: "eye_care",
+            reason: .scheduledEyesBreak,
+            detail: "watchdog_device_activity_heartbeat_missing"
+        ))
+    }
+
+    func test_watchdogRecoveryTriggered_nilReason_canBeLogged() {
+        AnalyticsLogger.log(.watchdogRecoveryTriggered(
+            reason: nil,
             detail: "watchdog_device_activity_heartbeat_missing"
         ))
     }
@@ -242,12 +250,12 @@ final class AnalyticsEventTests: XCTestCase {
     // MARK: - Shield Lifecycle
 
     func test_shieldActivated_canBeConstructed() {
-        let event = AnalyticsEvent.shieldActivated(reason: "eye_care")
+        let event = AnalyticsEvent.shieldActivated(reason: .scheduledEyesBreak)
         _ = event
     }
 
     func test_shieldActivationFailed_canBeConstructed() {
-        let event = AnalyticsEvent.shieldActivationFailed(reason: "posture")
+        let event = AnalyticsEvent.shieldActivationFailed(reason: .scheduledPostureBreak)
         _ = event
     }
 
@@ -257,9 +265,9 @@ final class AnalyticsEventTests: XCTestCase {
     }
 
     func test_shieldLifecycle_allCases_doNotCrash() {
-        AnalyticsLogger.log(.shieldActivated(reason: "eye_care"))
-        AnalyticsLogger.log(.shieldActivated(reason: "posture"))
-        AnalyticsLogger.log(.shieldActivationFailed(reason: "eye_care"))
+        AnalyticsLogger.log(.shieldActivated(reason: .scheduledEyesBreak))
+        AnalyticsLogger.log(.shieldActivated(reason: .scheduledPostureBreak))
+        AnalyticsLogger.log(.shieldActivationFailed(reason: .scheduledEyesBreak))
         AnalyticsLogger.log(.shieldDeactivated)
     }
 }

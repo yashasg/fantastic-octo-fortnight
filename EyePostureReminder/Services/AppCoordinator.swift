@@ -712,7 +712,7 @@ extension AppCoordinator {
                         reasonRaw: session.reason.rawValue,
                         detail: "device_activity_monitor_scheduled"
                     )
-                    AnalyticsLogger.log(.shieldActivated(reason: session.reason.rawValue))
+                    AnalyticsLogger.log(.shieldActivated(reason: session.reason))
                     Logger.scheduling.info(
                         "DeviceActivity monitoring scheduled for \(session.reason.rawValue)"
                     )
@@ -727,7 +727,7 @@ extension AppCoordinator {
                    notificationAuthStatus == .authorized,
                    settings.notificationFallbackEnabled,
                    let fallbackType = session.reason.reminderType {
-                    AnalyticsLogger.log(.shieldActivationFailed(reason: session.reason.rawValue))
+                    AnalyticsLogger.log(.shieldActivationFailed(reason: session.reason))
                     if dismissedDeviceActivityPresentationIDs.remove(presentationID) != nil {
                         recordIPCEvent(
                             .notificationFallbackSuppressed,
