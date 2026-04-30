@@ -125,6 +125,26 @@ final class DesignSystemExtendedTests: XCTestCase {
         XCTAssertEqual(AppLayout.settingsRowIconWidth, 40)
     }
 
+    func test_appLayout_overlayEntranceOffset_is300() {
+        XCTAssertEqual(AppLayout.overlayEntranceOffset, 300)
+    }
+
+    func test_appLayout_decorativeIconFrame_is44() {
+        XCTAssertEqual(AppLayout.decorativeIconFrame, 44)
+    }
+
+    func test_appLayout_borderHair_is0point5() {
+        XCTAssertEqual(AppLayout.borderHair, 0.5, accuracy: 0.001)
+    }
+
+    func test_appLayout_borderSoft_is1point0() {
+        XCTAssertEqual(AppLayout.borderSoft, 1.0, accuracy: 0.001)
+    }
+
+    func test_appLayout_borderBold_is1point5() {
+        XCTAssertEqual(AppLayout.borderBold, 1.5, accuracy: 0.001)
+    }
+
     // MARK: - AppSpacing: Complete token audit
 
     func test_appSpacing_xs_is4() {
@@ -152,9 +172,12 @@ final class DesignSystemExtendedTests: XCTestCase {
     }
 
     func test_appSpacing_isOn4ptGrid() {
-        let all: [CGFloat] = [AppSpacing.xs, AppSpacing.sm, AppSpacing.md,
+        let all: [CGFloat] = [AppSpacing.xxs, AppSpacing.xs, AppSpacing.sm, AppSpacing.md,
                               AppSpacing.lg, AppSpacing.xl, AppSpacing.xxl]
-        for value in all {
+        // xxs (2pt) is intentionally NOT on the 4pt grid — it is a 2pt micro-gap.
+        // Only check values from xs upward.
+        let gridAligned = all.dropFirst()
+        for value in gridAligned {
             XCTAssertEqual(
                 value.truncatingRemainder(dividingBy: 4), 0,
                 "\(value) must be a multiple of 4 (4pt grid)")
@@ -209,7 +232,8 @@ final class DesignSystemExtendedTests: XCTestCase {
             AppAnimation.statusCrossfadeDuration,
             AppAnimation.onboardingFadeIn,
             AppAnimation.onboardingFadeInDelay,
-            AppAnimation.countdownRingTick
+            AppAnimation.countdownRingTick,
+            AppAnimation.yinYangBreathingDuration
         ]
         for duration in durations {
             XCTAssertGreaterThan(duration, 0, "Animation duration must be > 0")

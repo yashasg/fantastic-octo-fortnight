@@ -219,6 +219,10 @@ enum AppAnimation {
     static let statusCrossfadeCurve: Animation = .easeInOut(duration: statusCrossfadeDuration)
     /// Yin-yang entrance spin — custom deceleration curve for the initial rotation.
     static let yinYangSpinCurve: Animation = .timingCurve(0.2, 0.0, 0.0, 1.0, duration: 2)
+    /// Yin-yang breathing pulse — 4-second ease-in-out cycle (repeating with autoreversal).
+    /// Referenced by YinYangEyeView; centralised here so the value is testable and
+    /// not duplicated across call-sites.
+    static let yinYangBreathingDuration: Double = 4.0
 }
 
 // MARK: - SF Symbol Names
