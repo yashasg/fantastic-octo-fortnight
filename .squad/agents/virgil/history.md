@@ -518,3 +518,62 @@ All 4 targets need `family-controls` entitlement + App Groups:
 - **XcodeGen bridge:** SPM executables work for single-app builds, but extension targets are Xcode-only. XcodeGen lets us declaratively define a multi-target project that references the SPM package for the main app — clean separation of concerns.
 - **Provisioning profile explosion:** 4 targets = 4 App IDs = 4 provisioning profiles. Not a blocker, but CI secret management scales (4 base64 secrets instead of 1). Worth automating profile discovery post-approval.
 - **Entitlements as per-target configuration:** Each target can have different capabilities (focus status might only apply to main app, not extensions in some designs). Separate `.entitlements` files force clarity — no surprises with inherited-vs-explicit capabilities.
+
+---
+
+## Wave 22 — Post-#304/#305 Read-Only CI Audit (2026-04-30)
+
+**Task:** Read-only audit after #304/#305 fixes. Verify warning-as-error enforcement, lint/test/coverage gates, action pinning, artifact handling, signed/archive parity, and no new warnings from #311–#314 SwiftUI/localization changes.
+
+**Outcome:** #304/#305 fixes confirmed correct. One new material gap found; one GitHub issue filed (#317, p2).
+
+### Audit Results
+
+**✅ Warning-as-error enforcement (post-#304):**
+- `build.sh` `XCODE_FLAGS`: `SWIFT_TREAT_WARNINGS_AS_ERRORS=YES` + `GCC_TREAT_WARNINGS_AS_ERRORS=YES` ✓
+- `build_signed.sh` `cmd_archive`: now passes both flags (lines 889–890) ✓
+- `setup-screentime.sh --build`: now passes both flags (lines 108–109) ✓
+- Parity confirmed across all three build paths
+
+**✅ Action pinning (post-#305):**
+- All 6 deployed `.github/workflows/` are fully SHA-pinned ✓
+- `squad-heartbeat`, `squad-issue-assign`, `squad-triage`, `sync-squad-labels` and their templates: pinned ✓
+
+**✅ Lint/test/coverage gates:**
+- SwiftLint `--strict` enforced in `build.sh lint` + `ci.yml` ✓
+- Coverage threshold 80% via `xcrun xccov` + `python3`, `if: always()` preventing bypass ✓
+- TestResults.xcresult artifact has `if-no-files-found: error`; UITestResults same ✓
+
+**✅ Artifact handling:**
+- dSYMs: `if-no-files-found: warn` (intentional — not all builds produce dSYMs)
+- Test results: `if-no-files-found: error`; IPA: no flag set (acceptable — preceding `build_signed.sh upload` step would fail first)
+- `retention-days: 90` for dSYMs, `30` for test/IPA ✓
+
+**✅ TestFlight CI gate:**
+- Polls both "Build & Test" AND "UI Tests" check results before deploy ✓
+
+**✅ #311–#314 SwiftUI/localization changes:**
+- `OverlayView.swift` (#313): removed `.accessibilityAddTraits(.isModal)` — correct; no deprecated API warnings
+- `OnboardingInterruptModeView.swift` (#311/#314): `accessibilityHidden(true)` pattern + new `onCustomize` CTA — clean, matches existing patterns
+- Localization keys: `onboarding.interrupt.customizeButton` and `.hint` added to `Localizable.xcstrings` ✓
+- **Note:** `onboarding.interrupt.illustrationLabel` key remains in `Localizable.xcstrings` but is no longer referenced in any Swift file (removed with #311's `accessibilityHidden` change). Cosmetic dead-string — no compiler warning emitted, no CI gate catches orphaned xcstrings keys. Not filing a CI gap issue (no enforcement mechanism exists).
+
+**🔴 Gap — 7 squad templates with floating @vN refs (#317, p2):**
+- `.squad/templates/workflows/` has 7 templates NOT covered by #305: `squad-ci.yml`, `squad-docs.yml`, `squad-insider-release.yml`, `squad-label-enforce.yml`, `squad-preview.yml`, `squad-promote.yml`, `squad-release.yml`
+- All contain `actions/checkout@v4`, `actions/setup-node@v4`, and/or `actions/github-script@v7` floating refs
+- Not deployed today but latent supply-chain risk if `squad upgrade` deploys them
+- **Filed:** #317
+
+### Issues Filed
+
+- **#317** — 7 remaining squad template workflows still have floating `@vN` refs (#305 follow-up, p2)
+
+### Not Duplicated
+
+- #210 (entitlement/signing blocker) — excluded per task rules
+- #304/#305 — already closed/fixed; fixes verified correct
+
+### Learnings
+
+- **`#305` scope gap:** Template pinning work must cover ALL templates, not just the ones with active deployed counterparts. Templates without deployed siblings can be silently skipped and then propagate floating refs when eventually deployed.
+- **Orphaned xcstrings keys don't trigger warnings:** Removing an `accessibilityLabel(Text("key", bundle: .module))` in favour of `accessibilityHidden(true)` leaves the key in Localizable.xcstrings as dead string. Swift compiler and SwiftLint `--strict` won't flag it. Consider a future xcstrings lint step if localization scale grows.
