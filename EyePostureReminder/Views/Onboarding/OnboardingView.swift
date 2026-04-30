@@ -71,17 +71,24 @@ struct OnboardingView: View {
         }
     }
 
-    private func finishOnboarding() {
+    func finishOnboarding() {
         AnalyticsLogger.log(.onboardingCompleted(cta: .getStarted))
-        UserDefaults.standard.set(true, forKey: AppStorageKey.hasSeenOnboarding)
+        markOnboardingComplete()
     }
 
     /// Completes onboarding and signals HomeView to open the Settings sheet immediately.
     /// Sets `openSettingsOnLaunch` so HomeView auto-opens Settings on first appear.
-    private func finishOnboardingAndCustomize() {
+    func finishOnboardingAndCustomize() {
         AnalyticsLogger.log(.onboardingCompleted(cta: .customize))
         UserDefaults.standard.set(true, forKey: AppStorageKey.openSettingsOnLaunch)
-        finishOnboarding()
+        markOnboardingComplete()
+    }
+
+    /// Shared persistence step: marks onboarding done without emitting an analytics event.
+    /// Both `finishOnboarding()` and `finishOnboardingAndCustomize()` call this so each
+    /// path emits exactly one `.onboardingCompleted` event with the correct CTA.
+    private func markOnboardingComplete() {
+        UserDefaults.standard.set(true, forKey: AppStorageKey.hasSeenOnboarding)
     }
 
     private func openApplicationSettings() {

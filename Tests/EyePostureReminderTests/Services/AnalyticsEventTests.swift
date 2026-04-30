@@ -242,7 +242,8 @@ final class AnalyticsEventTests: XCTestCase {
         let paths: [AnalyticsEvent.SchedulePath] = [.shield, .notificationFallback]
         let reasons: [AnalyticsEvent.SchedulePathReason] = [
             .deviceActivityAvailable, .shieldUnavailable,
-            .trueInterruptDisabled, .trueInterruptEmptySelection
+            .trueInterruptDisabled, .trueInterruptEmptySelection,
+            .unexpectedShieldRoutingState
         ]
         for path in paths {
             for reason in reasons {

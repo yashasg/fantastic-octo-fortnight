@@ -162,8 +162,17 @@ enum AnalyticsLogger {
         category: "Analytics"
     )
 
+#if DEBUG
+    /// Test-only hook. Set in unit tests to intercept emitted events; must be
+    /// reset to `nil` in `tearDown` to avoid cross-test contamination.
+    static var testEventHandler: ((AnalyticsEvent) -> Void)?
+#endif
+
     /// Emit an analytics event as a structured os.Logger entry.
     static func log(_ event: AnalyticsEvent) {
+#if DEBUG
+        testEventHandler?(event)
+#endif
         switch event {
 
         case let .appSessionStart(eyeEnabled, postureEnabled, snoozeActive):
