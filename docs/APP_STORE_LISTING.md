@@ -244,3 +244,78 @@ Complete every item before submitting for App Review.
 - [ ] Build uploaded via Xcode or `xcodebuild` and processed in App Store Connect
 - [ ] All App Review rejection risks reviewed (Frank's legal report)
 - [ ] Version number set to 1.0 (build number incremented from TestFlight)
+
+---
+
+## 12. Submission Workflow — Step-by-Step Sequence
+
+Follow this sequence to avoid mid-submission blockers. The two Legal & Privacy blockers must complete first.
+
+### Phase 1: Pre-Submission Preparation (Days 1–3)
+
+**Must complete before touching App Store Connect:**
+
+1. **[WEEKS BEFORE]** Host Privacy Policy at public HTTPS URL (#185)
+   - Choose hosting: GitHub Pages, Vercel, or custom domain
+   - Deploy `docs/legal/PRIVACY.md` content to HTTPS endpoint
+   - Test URL accessibility from multiple browsers
+   - Document final URL (e.g., `https://kshana-privacy.pages.dev/privacy`)
+
+2. **[WEEKS BEFORE]** Upload Custom EULA to App Store Connect (#196)
+   - Verify `docs/legal/TERMS.md` includes Apple's 7 required clauses
+   - Log into App Store Connect → My Apps → kshana → App Information
+   - Paste TERMS.md content into "License Agreement" field
+   - Save and verify it displays correctly
+
+3. **[1 WEEK BEFORE]** Run comprehensive pre-submission checks
+   - `./scripts/build.sh all` — build, test, lint must all pass
+   - Run UI tests: `xcodebuild test -scheme EyePostureReminder -destination generic/platform=iOS`
+   - Verify no crashes or warnings in Xcode console
+
+### Phase 2: App Store Connect Setup (Day 3–4)
+
+**After Legal & Privacy blockers complete, configure App Store Connect:**
+
+4. **Fill App Store Connect fields** (complete checklist items from Section 11)
+   - Bundle ID, SKU, support URL, app name, subtitle, keywords, description
+   - Age rating questionnaire
+   - Categories (Health & Fitness primary, Productivity secondary)
+   - Price (Free, all territories)
+
+5. **Upload Privacy Nutrition Labels**
+   - Follow step-by-step in `docs/PRIVACY_NUTRITION_LABELS.md`
+   - Answer: Yes to Diagnostics (MetricKit), No to all others
+   - Verify PrivacyInfo.xcprivacy consistency
+
+6. **Upload screenshots and app icon**
+   - Prepare 5 screenshots (iPhone 15 Pro + Pro Max sizes)
+   - Verify WCAG AA contrast on all callout text
+   - Upload 1024×1024 app icon (no alpha channel, no rounded corners)
+
+### Phase 3: Build Upload & Submission (Day 4–5)
+
+7. **Create and upload signed build**
+   - `APPLE_TEAM_ID=<team-id> ./scripts/build_signed.sh archive`
+   - `APPLE_TEAM_ID=<team-id> ./scripts/build_signed.sh export`
+   - `APPLE_TEAM_ID=<team-id> ./scripts/build_signed.sh upload`
+
+8. **Verify build in App Store Connect**
+   - Navigate to TestFlight → Internal Testing → Builds
+   - Wait for build processing (5–10 min)
+   - Verify it shows as "Ready to Submit"
+
+9. **Fill "What's New" and submit for review**
+   - Copy release notes from `docs/TESTFLIGHT_METADATA.md` → What's New
+   - Complete final checks from Section 11
+   - Click "Submit for Review" in App Store Connect
+
+### Common Blockers & Solutions
+
+| Blocker | Symptom | Solution |
+|---------|---------|----------|
+| Privacy URL not accessible | "Invalid Privacy Policy URL" in App Review feedback | Verify HTTPS endpoint is live and public; test from incognito browser |
+| EULA not accepted | "EULA terms cannot be reviewed" in App Review | Log into App Store Connect and upload text to License Agreement field |
+| Focus Status entitlement missing | Build rejected during processing | Regenerate App Store Connect distribution profile with Focus Status capability enabled |
+| Info.plist description strings missing | "Missing NSMotionUsageDescription" warning | Verify all usage description keys are present in `EyePostureReminder/Info.plist` |
+
+---
