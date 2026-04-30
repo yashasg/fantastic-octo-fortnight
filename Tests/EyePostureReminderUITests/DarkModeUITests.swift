@@ -36,13 +36,13 @@ final class DarkModeUITests: XCTestCase {
 
         let navBar = app.navigationBars.firstMatch
         XCTAssertTrue(
-            navBar.waitForExistence(timeout: 5),
+            navBar.waitForExistence(timeout: 3),
             "Home screen navigation bar should be visible in dark mode."
         )
 
         let statusLabel = app.staticTexts["home.statusLabel"]
         XCTAssertTrue(
-            statusLabel.waitForExistence(timeout: 5),
+            statusLabel.waitForExistence(timeout: 3),
             "Home screen status label must be visible in dark mode."
         )
     }
@@ -57,7 +57,7 @@ final class DarkModeUITests: XCTestCase {
 
         let settingsButton = app.buttons["home.settingsButton"]
         XCTAssertTrue(
-            settingsButton.waitForExistence(timeout: 5),
+            settingsButton.waitForExistence(timeout: 3),
             "Settings button must be present on Home screen in dark mode."
         )
         XCTAssertTrue(settingsButton.isHittable, "Settings button must be hittable in dark mode.")
@@ -72,12 +72,12 @@ final class DarkModeUITests: XCTestCase {
         app.launch()
 
         let settingsButton = app.buttons["home.settingsButton"]
-        XCTAssertTrue(settingsButton.waitForExistence(timeout: 5))
+        XCTAssertTrue(settingsButton.waitForExistence(timeout: 3))
         settingsButton.tap()
 
         let settingsNav = app.navigationBars["Settings"]
         XCTAssertTrue(
-            settingsNav.waitForExistence(timeout: 5),
+            settingsNav.waitForExistence(timeout: 3),
             "Settings sheet must open with correct navigation title in dark mode."
         )
     }
@@ -92,19 +92,19 @@ final class DarkModeUITests: XCTestCase {
 
         let doneButton = app.buttons["overlay.doneButton"]
         XCTAssertTrue(
-            doneButton.waitForExistence(timeout: 5),
+            doneButton.waitForExistence(timeout: 3),
             "Done button must be visible on the overlay in dark mode."
         )
 
         let dismissButton = app.buttons["overlay.dismissButton"]
         XCTAssertTrue(
-            dismissButton.waitForExistence(timeout: 5),
+            dismissButton.waitForExistence(timeout: 3),
             "Dismiss (×) button must be visible on the overlay in dark mode."
         )
 
         let supportiveText = app.staticTexts["overlay.supportiveText"]
         XCTAssertTrue(
-            supportiveText.waitForExistence(timeout: 5),
+            supportiveText.waitForExistence(timeout: 3),
             "Supportive text must be visible on the overlay in dark mode."
         )
     }
@@ -118,12 +118,12 @@ final class DarkModeUITests: XCTestCase {
         app.launch()
 
         let doneButton = app.buttons["overlay.doneButton"]
-        XCTAssertTrue(doneButton.waitForExistence(timeout: 5))
+        XCTAssertTrue(doneButton.waitForExistence(timeout: 3))
         doneButton.tap()
 
         let dismissButton = app.buttons["overlay.dismissButton"]
         XCTAssertFalse(
-            dismissButton.waitForExistence(timeout: 5),
+            dismissButton.waitForExistence(timeout: 3),
             "After tapping Done in dark mode, the overlay should be dismissed."
         )
     }
@@ -138,13 +138,13 @@ final class DarkModeUITests: XCTestCase {
 
         let nextButton = app.buttons["onboarding.welcome.nextButton"]
         XCTAssertTrue(
-            nextButton.waitForExistence(timeout: 5),
+            nextButton.waitForExistence(timeout: 3),
             "Onboarding Welcome screen Next button must be visible in dark mode."
         )
 
         let disclaimerElement = app.staticTexts["onboarding.welcome.disclaimer"]
         XCTAssertTrue(
-            disclaimerElement.waitForExistence(timeout: 5),
+            disclaimerElement.waitForExistence(timeout: 3),
             "Disclaimer text must be visible on the Welcome screen in dark mode."
         )
     }
@@ -159,13 +159,13 @@ final class DarkModeUITests: XCTestCase {
 
         let doneButton = app.buttons["overlay.doneButton"]
         XCTAssertTrue(
-            doneButton.waitForExistence(timeout: 5),
+            doneButton.waitForExistence(timeout: 3),
             "Done button must be visible on the posture overlay in dark mode."
         )
 
         let supportiveText = app.staticTexts["overlay.supportiveText"]
         XCTAssertTrue(
-            supportiveText.waitForExistence(timeout: 5),
+            supportiveText.waitForExistence(timeout: 3),
             "Supportive text must be visible on the posture overlay in dark mode."
         )
     }

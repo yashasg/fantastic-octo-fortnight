@@ -222,3 +222,17 @@ Orchestration log recorded at 2026-04-30T09:27:10Z. Root cause diagnosis documen
 - Decision: Avoid @Published self-assignment; use backing-storage + computed-setter pattern
 - Basher implemented fix (commit `04f73cd`); Saul approved
 - Fix ready for validation via full simulator test suite
+
+## 2026-04-30 — #412 UI wait-time trimming
+
+- Audited `Tests/EyePostureReminderUITests` and tightened overlong `waitForExistence` calls.
+- Reduced positive-path waits from 5s → 3s across Home, Settings, Dark Mode, Onboarding, and Overlay UI suites.
+- Kept slower transition-sensitive assertions at 5s (`overlay` dismiss to home nav, onboarding customize → settings sheet) to preserve determinism.
+- Measured UI test runtime with identical filtered suite command:
+  - Before: `real 545.51s`
+  - After: `real 527.53s`
+  - Improvement: `17.98s` faster (~3.3%).
+- Failure profile unchanged (same pre-existing 3 failing tests):
+  - `HomeScreenTests.test_homeScreen_trueInterruptBanner_exists`
+  - `HomeScreenTests.test_homeScreen_trueInterruptSetupPill_exists`
+  - `OnboardingFlowTests.test_onboarding_setupScreen_customizeButtonExists`
