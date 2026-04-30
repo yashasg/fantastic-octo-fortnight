@@ -437,7 +437,71 @@ final class ScreenTimeTrackerTests: XCTestCase {
 
 }
 
-// MARK: - Delta Cap Tests (Issue #300 – Gap 3)
+// MARK: - Stale-Task Race Tests (Issue #301)
+
+extension ScreenTimeTrackerTests {
+
+    /// Simulates the stale-task race:
+    ///   1. The tick timer fires and enqueues a Task (captures `generation = G`).
+    ///   2. `stopTicking()` runs before the Task body executes (increments generation to G+1).
+    ///   3. The Task body runs — `tickGuarded(generation: G)` must no-op because G ≠ G+1.
+    ///
+    /// This test drives the scenario deterministically via `tickGuarded` without needing
+    /// real timers or thread-ordering tricks.
+    func test_staleTask_afterStopTicking_doesNotAdvanceElapsedOrFireCallback() {
+        var callbackFired = false
+        sut.setThreshold(1.0, for: .eyes)
+        sut.onThresholdReached = { _ in callbackFired = true }
+
+        // Capture the generation that a live timer closure would have captured.
+        let staleGeneration = sut.tickingGeneration
+
+        // stopTicking (via stop()) increments tickingGeneration — simulates the race window.
+        sut.stop()
+
+        // The stale Task body runs with the old generation. Must be a no-op.
+        sut.tickGuarded(generation: staleGeneration, now: 1000.0)
+        sut.tickGuarded(generation: staleGeneration, now: 1001.0) // second stale tick
+
+        XCTAssertFalse(callbackFired, "stale task must not fire threshold callback after stopTicking")
+    }
+
+    /// Verifies that a fresh `tickGuarded` call (matching generation) does advance elapsed
+    /// and fire the threshold — confirming the guard only blocks stale generations.
+    func test_freshTickGuarded_matchingGeneration_advancesElapsedAndFiresCallback() {
+        var callbackFired = false
+        sut.setThreshold(1.0, for: .eyes)
+        sut.onThresholdReached = { _ in callbackFired = true }
+
+        // The current generation is live — tickGuarded must behave like tick().
+        let liveGeneration = sut.tickingGeneration
+        sut.tickGuarded(generation: liveGeneration, now: 1000.0)
+
+        XCTAssertTrue(callbackFired, "tickGuarded with matching generation must fire threshold callback")
+    }
+
+    /// After stopTicking + startTicking (via didBecomeActive), the new generation
+    /// must reject the old captured generation.
+    func test_staleTask_afterRestartTicking_doesNotFire() {
+        var callbackFired = false
+        sut.setThreshold(1.0, for: .eyes)
+        sut.onThresholdReached = { _ in callbackFired = true }
+
+        let staleGeneration = sut.tickingGeneration
+
+        // Stop then restart: simulates resign-active followed by became-active.
+        sut.stop()
+        NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
+
+        // Stale task runs with old generation — must not fire.
+        sut.tickGuarded(generation: staleGeneration, now: 1000.0)
+
+        XCTAssertFalse(callbackFired, "stale task must not fire callback after tracker restarts with new generation")
+        sut.stop()
+    }
+
+}
+
 
 extension ScreenTimeTrackerTests {
 

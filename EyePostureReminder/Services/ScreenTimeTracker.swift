@@ -58,6 +58,12 @@ final class ScreenTimeTracker: ScreenTimeTracking {
     private var paused: Set<ReminderType> = []
     private var tickTimer: Timer?
 
+    /// Monotonically incrementing counter. Incremented each time `stopTicking()` runs.
+    /// The timer closure captures the value at scheduling time; the enqueued `Task`
+    /// aborts if the captured generation no longer matches (`stopTicking()` ran after
+    /// the timer fired but before the `Task` body executed — the stale-task race).
+    private(set) var tickingGeneration: UInt = 0
+
     /// Records the `CACurrentMediaTime()` at each tick to compute the actual
     /// elapsed delta instead of assuming a constant 1.0 s per tick.
     /// `Timer` with `tolerance = 0.5` can fire significantly late; accumulating
@@ -250,9 +256,10 @@ final class ScreenTimeTracker: ScreenTimeTracking {
     private func startTicking() {
         guard tickTimer == nil else { return }
         lastTickTime = 0  // reset so first tick uses default delta of 1.0
+        let gen = tickingGeneration
         tickTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in
-                self?.tick()
+                self?.tickGuarded(generation: gen)
             }
         }
         tickTimer?.tolerance = 0.5
@@ -268,7 +275,21 @@ final class ScreenTimeTracker: ScreenTimeTracking {
     private func stopTicking() {
         tickTimer?.invalidate()
         tickTimer = nil
+        tickingGeneration &+= 1  // invalidate any in-flight Task that captured the old generation
         lastTickTime = 0  // reset so the next tick after resume uses default delta
+    }
+
+    /// Guards against stale enqueued tasks by comparing `generation` to `tickingGeneration`.
+    ///
+    /// The timer closure captures the generation at scheduling time. If `stopTicking()`
+    /// ran between the timer firing and this Task body executing, the generations will
+    /// differ and `tick()` is skipped, preventing spurious elapsed advancement.
+    ///
+    /// This is also the test seam for the stale-task race: pass a stale generation to
+    /// verify that no elapsed advancement or threshold callback occurs.
+    func tickGuarded(generation: UInt, now: CFTimeInterval = CACurrentMediaTime()) {
+        guard generation == tickingGeneration else { return }
+        tick(now: now)
     }
 
     /// Advance all enabled, unpaused counters by one tick.
