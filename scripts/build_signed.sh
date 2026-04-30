@@ -886,6 +886,8 @@ cmd_archive() {
     -archivePath "$ARCHIVE_PATH" \
     "${PROVISIONING_FLAGS[@]+"${PROVISIONING_FLAGS[@]}"}" \
     "${AUTH_FLAGS[@]+"${AUTH_FLAGS[@]}"}" \
+    SWIFT_TREAT_WARNINGS_AS_ERRORS=YES \
+    GCC_TREAT_WARNINGS_AS_ERRORS=YES \
     archive; then
     print_archive_failure_hint
     exit 1
