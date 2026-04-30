@@ -1197,7 +1197,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Reminders resume when conditions end."
+            "value": "Automatically pauses reminders during Focus Mode or while driving. Reminders resume when these modes end."
           }
         }
       }
