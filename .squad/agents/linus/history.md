@@ -100,137 +100,6 @@ OverlayView lives in UIWindow with no EnvironmentObjects; self-contained via UIH
 
 ---
 
-## 2026-04-28 — User Directive: Reminders Terminology Implementation
-
-**Task:** Apply user directive to replace "Notifications" terminology with "Reminders" in user-facing copy; validate and commit.
-
-**Work Summary:**
-- Received terminology guidance from Danny: standardize on "reminders" language vs. "notifications" to reflect overlay nature
-- Applied 7 string replacements to `EyePostureReminder/Resources/Localizable.xcstrings`:
-  - `onboarding.permission.body1`: "Notifications keep your break reminders on schedule."
-  - `settings.notifications.disabledBody`: "Turn on notifications in Settings so break reminders stay on schedule."
-  - `settings.notifications.disabledLabel`: "Notifications are off. Turn them on in Settings so break reminders stay on schedule."
-  - (4 additional settings strings updated similarly)
-- Preserved OS/accessibility terminology in settings hints (unavoidable iOS concepts)
-- Validated JSON schema (Python `json.load` successful; no syntax errors)
-- Built clean: `./scripts/build.sh build` → BUILD SUCCEEDED; no warnings
-- Committed: `4805aa9 copy: use reminders language instead of notifications`
-
-**Key insights:**
-- Terminology matters: "Reminders" vs. "Notifications" accurately reflects overlay-based feature
-- App architecture (overlay vs. notification service) should match user-facing language
-- Accessibility/OS terminology preserved only where unavoidable (Settings permissions)
-
-**Status:** ✅ Complete. JSON validated. Build passed. Commit pushed.
-
-
-### 2026-04-28 — Onboarding Interactive Reminder Pickers
-
-**Task:** Let users choose their reminder windows on the onboarding setup screen.
-
-**What changed:**
-- `OnboardingSetupView` now uses `@EnvironmentObject private var settings: SettingsStore`; replaced read-only `SetupPreviewCard` with private `OnboardingReminderPickerCard`
-- Pickers bind directly to `settings.eyesInterval`, `settings.eyesBreakDuration`, `settings.postureInterval`, `settings.postureBreakDuration` — no sync step needed
-- `OnboardingReminderPickerCard` uses `SettingsViewModel.intervalOptions` / `breakDurationOptions` and `labelForInterval` / `labelForBreakDuration` — no duplicated magic values
-- Removed `onCustomize` callback and `finishOnboardingAndCustomize()` from `OnboardingView` — single "Get Started" CTA is cleaner
-- Footer uses existing `onboarding.setup.changeInSettings` key: "You can always change these in Settings."
-- New string catalog keys: `onboarding.setup.picker.every`, `onboarding.setup.picker.breakFor`; removed 6 stale static value keys
-- `OnboardingView` forwards `SettingsStore` as `.environmentObject(settings)` explicitly to `OnboardingSetupView`
-
-**Key decisions:**
-- `@EnvironmentObject` over `@ObservedObject` param — matches SettingsView/HomeView pattern; store already in environment from `EyePostureReminderApp.swift`
-- Tests with `@EnvironmentObject` can NOT call `view.body` or `render()` in SPM test host (crashes). Convert to callback-only tests per project convention
-- `OnboardingViewTests` marked `@MainActor` so `SettingsViewModel.labelForInterval/labelForBreakDuration` (both `@MainActor`) can be called from tests
-- `typeID` param (e.g. "eyes", "posture") provides stable, localisation-safe accessibility identifiers instead of deriving from translated title strings
-
-**Accessibility identifiers committed:**
-- `onboarding.eyes.intervalPicker`, `onboarding.eyes.durationPicker`
-- `onboarding.posture.intervalPicker`, `onboarding.posture.durationPicker`
-
-**Status:** ✅ Complete. 1386 tests, 0 failures. Build verified.
-
-### 2026-04-28 — 1-Minute Test Interval Option
-
-- **Added `1 * 60` (60s) as first entry in `SettingsViewModel.intervalOptions`** for rapid reminder testing. Not the default — SettingsStore defaults are untouched.
-- **Label renders as "1 min"** via existing `settings.picker.minuteFormat` (`%d min`). No pluralization concern — "min" is already singular-safe.
-- **Test suite:** Updated `test_intervalOptions_hasExpectedCount` (5→6), `test_intervalOptions_containsExpectedValues` (added 60), and added `test_labelForInterval_60s_returns1Min` in `SettingsViewModelFormatterTests`.
-- **Affected files:** `SettingsViewModel.swift`, `SettingsViewModelExtendedTests.swift`, `SettingsViewModelFormatterTests.swift`
-- **All 247 tests pass** post-change.
-
-### 2026-04-28 — Onboarding Reminder Pickers & 1-Minute Interval Testing Option
-
-**Session:** Onboarding reminder picker implementation  
-**Outcome:** Interactive reminder picker cards bound to SettingsStore (1386 tests ✓) + 1-minute interval testing option (247 tests ✓)
-
-**Phase 1 — Interactive Pickers (d76ba3f):**
-- Decision: `OnboardingSetupView` uses `@EnvironmentObject private var settings: SettingsStore` for direct binding
-- No separate sync step — onboarding values immediately reflect in Settings on first open
-- Reuses canonical `SettingsViewModel` options (intervalOptions, breakDurationOptions)
-- Removed "Customize Settings" secondary flow — inline configuration on setup screen is cleaner
-- All 1386 tests pass
-
-**Phase 2 — 1-Minute Testing Interval (3c094e7):**
-- Applied user directive: Add 1-minute reminder window as test option (non-default)
-- Allows rapid QA cycles without waiting for standard intervals (15, 30, 45 minutes)
-- Default intervals unchanged — production UX unaffected
-- 247 targeted tests pass
-
-**Key Insights:**
-- `@EnvironmentObject` views cannot be rendered in SPM test hosts (`bundleProxyForCurrentProcess is nil`) — use callback-contract-only tests, mark with `@MainActor`
-- Stable accessibility identifiers using `typeID` ("eyes" / "posture") enable locale-independent UI automation
-- 1-minute interval is low-risk test tool; non-default status preserves production behavior
-
-**Commits:**
-- `d76ba3f` — `feat(onboarding): interactive reminder pickers on setup screen`
-- `3c094e7` — `feat: add 1-minute interval option for testing reminder popups`
-
-## Learnings
-
-### 2026-04-28 — Reminder Alert Copy Pass (OnboardingPermissionView)
-
-**Platform truth corrected:** iOS has no cross-app overlay permission. kshana delivers breaks via local notifications (alerts); tapping the alert opens the app and shows the full-screen break. Onboarding copy now reflects this accurately.
-
-**Copy decisions:**
-- `onboarding.permission.body1`: "Your reminders arrive as alerts — even while you're in another app." — sets expectation that alerts fire outside the app
-- `onboarding.permission.body2`: "Tap any alert to open your full-screen break in kshana." — explains the tap-to-break mechanic explicitly
-- `onboarding.permission.enableButton`: "Enable Reminders" → "Allow Reminder Alerts" — clearer about what system permission is being granted
-- `onboarding.permission.enableButton.hint`: Updated to "Allows kshana to send reminder alerts while you use other apps" — accurate scope description
-
-**No view code changes needed** — `OnboardingPermissionView.swift` uses catalog keys throughout; copy lives entirely in `Localizable.xcstrings`.
-
-**Denied-permission flow already exists** — `SettingsView` already shows `settings.notifications.disabledTitle` / `disabledBody` / `openSettings` banner via `coordinator.notificationAuthStatus`. No new UI needed.
-
-**UI test updated** — `OnboardingFlowTests.swift` renamed `test_onboarding_permissionScreen_enableNotificationsButtonExists` → `test_onboarding_permissionScreen_allowReminderAlertsButtonExists` and updated failure messages. Accessibility identifier `"onboarding.enableNotifications"` kept stable — changing it would break the test query.
-
-**Build verified:** `./scripts/build.sh build` → BUILD SUCCEEDED.
-
-## 2026-04-29T05:05:06Z: Squad Orchestration — Interrupt Mode Pivot
-
-**Orchestration log filed:**
-- `2026-04-29T05-05-06Z-linus-reminder-alert-copy.md` — copy governance, adopted pattern, commit d06b1e0
-
-**Session log:** `.squad/log/2026-04-29T05-05-06Z-interrupt-mode-pivot.md`
-
-**Decisions merged:** All 9 inbox files → canonical `.squad/decisions/decisions.md`.
-
-## 2026-04-29 — #204 Unblocked Compile-Safe Slice (Linus + Basher)
-
-**Issue:** #204 M3.4 FamilyControls Authorization & App/Category Picker UI
-**Branch:** `squad/m3-true-interrupt-mode`
-
-### New UI surfaces
-- **`OnboardingInterruptModeView`** — 4th onboarding page. Pre-permission copy, pending approval badge, Skip CTA. No `@EnvironmentObject` (avoids test host crash). `authorizationStatus` injected as plain value param defaulting to `.unavailable`.
-- **`AppCategoryPickerView`** — Configuration surface for True Interrupt Mode. Four state-driven layouts: `.unavailable` (banner), `.notDetermined` (pre-permission card), `.denied` (re-auth nudge), `.approved` (placeholder for `FamilyActivityPicker` #201). No `@EnvironmentObject`. Accepts `SelectedAppsState` as `@ObservedObject`.
-- **`OnboardingView`** — Updated from 3 → 4 pages. Setup page advances to new Interrupt Mode page which calls `finishOnboarding()`.
-- **`SettingsView`** — New `SettingsTrueInterruptSection` with status row + configure button (disabled when `.unavailable`). Sheet presents `AppCategoryPickerView`.
-- **`DesignSystem`** — Added `AppSymbol.trueInterrupt = "lock.shield.fill"`.
-
-### Copy conventions
-- User-facing: "Screen Time access", "True Interrupt Mode", "app break access", "break screen". Never "Family Controls".
-- 39 new `Localizable.xcstrings` keys: `onboarding.interrupt.*`, `settings.trueInterrupt.*`, `appCategoryPicker.*` (158 → 197 total).
-
-### Build verified: `./scripts/build.sh test` → ✓ Tests passed
-
 ## 2026-04-30 — Read-Only UI Implementation Audit (Post True Interrupt UI)
 
 **Task:** Full read-only audit of SwiftUI correctness, design token compliance, touch targets, Dynamic Type, accessibility identifiers, UIKit overlay bridge issues, and regressions from recent True Interrupt UI changes.
@@ -321,3 +190,16 @@ Added `onCustomize: (() -> Void)?` parameter to `OnboardingInterruptModeView`. R
 Updated `ONBOARDING_SPEC.md` and `UX_FLOWS.md` to reflect 5-screen flow with the Customize Settings CTA on Screen 5 (OnboardingInterruptModeView). Added 4 new unit tests.
 
 **Total tests:** 478 passed, 0 failures. BUILD SUCCEEDED.
+
+## 2026-04-30 — AppCoordinator duration test failure triage (PR #411)
+
+- Built locally first with `./scripts/build.sh build` (success).
+- Ran only the two assigned failing tests:
+  - `AppCoordinatorExtendedTests.test_thresholdCallback_usesBreakDurationFromSettings`
+  - `AppCoordinatorTests.test_handleNotification_thenPresentPending_usesDurationFromSettings`
+- Both tests crashed/restarted under xcodebuild when they set `settings.eyesBreakDuration` (45 / 30).
+- Verified adjacent AppCoordinator overlay-routing tests that do **not** mutate break duration both pass:
+  - `test_thresholdCallback_eyes_triggersShowOverlay`
+  - `test_handleNotification_eyes_thenPresentPending_callsShowOverlayWithEyes`
+- Conclusion: this failure slice is downstream of `SettingsStore` break-duration recursive self-assignment in `didSet`, not an independent AppCoordinator/OverlayManager bug.
+- Handoff: Basher should land the SettingsStore fix; Livingston can rerun this AppCoordinator duration slice after that merge.

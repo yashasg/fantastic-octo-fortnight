@@ -23026,3 +23026,257 @@ Once approved, the spike above can run within 1 day.
 
 ---
 
+
+# Decision: #205 DeviceActivity Monitoring Service — Compile-Safe Slice
+
+**Author:** Basher (iOS Dev — Services)  
+**Date:** 2026-04-29  
+**Status:** Proposed — awaiting coordinator review
+
+---
+
+## Context
+
+Issue #205 ("M3.5 DeviceActivity Monitoring Service") requires building the DeviceActivity
+scheduling layer for True Interrupt Mode. FamilyControls entitlement (#201) is not yet
+approved, so no code that requires a signed entitlement may block tests or compilation.
+
+Commit 5cc61ab (issue #204) added `ScreenTimeAuthorizationProviding`, `ScreenTimeAuthorizationNoop`,
+and `SelectedAppsState` as the compile-safe auth + picker-metadata slice.
+
+---
+
+## Decision: Separate `DeviceActivityMonitorProviding` from `ScreenTimeShieldProviding`
+
+`ScreenTimeShieldProviding` (defined in #202, `beginShield`/`endShield`) covers the
+conceptual "apply/remove shield" domain. `DeviceActivityMonitorProviding` (new in #205)
+covers the concrete `DeviceActivityCenter.startMonitoring(...)` scheduling concern.
+
+**Rationale:** Keeping them separate allows:
+1. A future `DeviceActivityMonitorScheduler` (real impl) to be injected and tested
+   independently of the ManagedSettings shield logic.
+2. `AppCoordinator` to clearly route: threshold fired → schedule monitoring window;
+   overlay dismissed / snooze → cancel monitoring window.
+3. The extension side (`DeviceActivityMonitorExtension`) and main-app side
+   (`DeviceActivityMonitorProviding`) to be evolved independently.
+
+**Alternative rejected:** Fold everything into `ScreenTimeShieldProviding.beginShield()`.
+This would merge scheduling + shield application into one opaque call, making it harder
+to test scheduling logic in isolation and harder to add per-app/per-category scoping
+(a #207 concern).
+
+---
+
+## Decision: `DeviceActivityMonitorNoop` is a true no-op (does not write App Group)
+
+The noop implementation does NOT write to the shared App Group `UserDefaults`.
+Writing to the App Group from a noop would create false state that the extension
+could accidentally read if it were somehow activated.
+
+The real implementation will write the session before scheduling.
+
+---
+
+## Decision: `isAvailable` guard at call sites, not inside methods
+
+`AppCoordinator` checks `deviceActivityMonitor.isAvailable` before calling
+`scheduleBreakMonitoring(for:)`. This is intentional: the protocol documents that
+callers SHOULD guard on `isAvailable`, making the availability check explicit and
+visible in the coordinator's flow. The noop's `scheduleBreakMonitoring` is still a
+safe no-op even if called without the guard, providing defense-in-depth.
+
+---
+
+## Remaining work (blocked on #201)
+
+- `DeviceActivityMonitorScheduler` — real implementation importing `DeviceActivity`.
+- `DeviceActivityName` constants for break activities.
+- `DeviceActivitySchedule` factory from `ShieldSession`.
+- `DeviceActivityMonitorExtension.intervalDidStart` — replace `_ = session` placeholder
+  with `ManagedSettingsStore.shield` scoped to user-selected apps from `SelectedAppsState`.
+- Wire `ScreenTimeShieldProviding` into `AppCoordinator` (defined in #202, not yet wired).
+  This is a separate issue from `DeviceActivityMonitorProviding` and should be tracked
+  as part of #206 or #207.
+
+### Rationale
+
+1. Apple's definition of "collect": *transmitting data off the device in a way that allows you and/or your third-party partners to access it.* MetricKit routes diagnostic payloads through Apple's infrastructure and surfaces them in App Store Connect — the developer does access this data.
+2. Apple has not published an exception for first-party apps using MetricKit from declaring diagnostics in their privacy manifest.
+3. The conservative posture already adopted in `PRIVACY_NUTRITION_LABELS.md` and `PRIVACY.md` is the correct one. The manifest was simply missing the corresponding declaration.
+4. Sources: [Apple App Privacy Details](https://developer.apple.com/app-store/app-privacy-details/), [Apple Privacy Manifest Files](https://developer.apple.com/documentation/bundleresources/privacy_manifest_files).
+
+### Manifest Entries Added
+
+```xml
+<dict>
+    <key>NSPrivacyCollectedDataType</key>
+    <string>NSPrivacyCrashData</string>
+    <key>NSPrivacyCollectedDataTypeLinked</key>
+    <false/>
+    <key>NSPrivacyCollectedDataTypeTracking</key>
+    <false/>
+    <key>NSPrivacyCollectedDataTypePurposes</key>
+    <array>
+        <string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+    </array>
+</dict>
+<dict>
+    <key>NSPrivacyCollectedDataType</key>
+    <string>NSPrivacyPerformanceData</string>
+    <key>NSPrivacyCollectedDataTypeLinked</key>
+    <false/>
+    <key>NSPrivacyCollectedDataTypeTracking</key>
+    <false/>
+    <key>NSPrivacyCollectedDataTypePurposes</key>
+    <array>
+        <string>NSPrivacyCollectedDataTypePurposeAnalytics</string>
+    </array>
+</dict>
+```
+
+---
+
+## Consistency Verification (pre-submission checklist)
+
+| Artifact | Status |
+|---|---|
+| `PrivacyInfo.xcprivacy` — Crash Data declared | ✅ |
+| `PrivacyInfo.xcprivacy` — Performance Data declared | ✅ |
+| `PRIVACY_NUTRITION_LABELS.md` — Crash Data = Collected, Not Linked, Not Tracking, App Functionality | ✅ |
+| `PRIVACY_NUTRITION_LABELS.md` — Performance Data = Collected, Not Linked, Not Tracking, Analytics | ✅ |
+| `docs/legal/PRIVACY.md` — MetricKit / App Store Connect analytics disclosed | ✅ |
+| `PrivacyInfo.xcprivacy` — `NSPrivacyTracking = false` | ✅ |
+| `PrivacyInfo.xcprivacy` — `NSPrivacyTrackingDomains` empty | ✅ |
+| No owner placeholders altered | ✅ |
+
+---
+
+## Future Maintenance Rule
+
+If MetricKit is removed from the app, remove both entries from `NSPrivacyCollectedDataTypes` in `PrivacyInfo.xcprivacy` and update `PRIVACY_NUTRITION_LABELS.md` before the next App Store submission.
+
+If a third-party crash or analytics SDK (e.g., Sentry, Firebase Crashlytics) is added, a new review of all four privacy artifacts is required per `PRIVACY_NUTRITION_LABELS.md` Section "If Third-Party Analytics Are Added Later".
+
+# Decision: All squad template workflow action refs must be SHA-pinned
+
+**Date:** 2026-04-30
+**Author:** Virgil
+**Issue:** #317
+
+## Decision
+
+All `uses:` action references in `.squad/templates/workflows/` must be pinned to full commit SHAs with an inline version comment, matching the style used in deployed `.github/workflows/`.
+
+**Format:** `uses: actions/<name>@<full-40-char-sha> # vX.Y.Z`
+
+## Rationale
+
+Template files deployed via `squad upgrade` directly become active workflows. Several squad templates carry `contents: write` or `issues: write` permissions. Floating major-version tags (`@v4`, `@v7`) are mutable and can be moved by maintainers or compromised in a supply-chain attack, silently changing what code runs with write permissions.
+
+## Resolved SHAs (as of 2026-04-30)
+
+| Action | SHA | Version |
+|---|---|---|
+| `actions/checkout` | `34e114876b0b11c390a56381ad16ebd13914f8d5` | v4.3.1 |
+| `actions/setup-node` | `49933ea5288caeca8642d1e84afbd3f7d6820020` | v4.4.0 |
+| `actions/github-script` | `f28e40c7f34bde8b3046d885e986cb6290c5673b` | v7.1.0 |
+| `actions/upload-pages-artifact` | `56afc609e74202658d3ffba0e8f6dda462b719fa` | v3.0.1 |
+| `actions/deploy-pages` | `d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e` | v4.0.5 |
+
+## How to resolve a SHA
+
+```bash
+gh api repos/actions/<action-name>/git/refs/tags/<tag> --jq '.object.sha'
+```
+
+## Enforcement
+
+When adding new actions to any template: resolve SHA before committing. Floating `@vN` refs must not appear in any file under `.squad/templates/workflows/` or `.github/workflows/`.
+
+# Decision: Warning-as-error parity + action SHA pinning policy
+
+**Date:** 2026-04-30  
+**Author:** Virgil (CI/CD Dev)  
+**Issues:** #304, #305  
+**Commit:** `5e2ab9786c50617b648ebf9650db092a2f180f24`
+
+## Warning-as-error must be present in every xcodebuild invocation
+
+`SWIFT_TREAT_WARNINGS_AS_ERRORS=YES` and `GCC_TREAT_WARNINGS_AS_ERRORS=YES` must be passed to **every** `xcodebuild` call in any project script — including archive, export, and validation builds. It is not sufficient to:
+- rely on grep-based post-build log scanning, or
+- assume the build scheme has these set by default.
+
+Reference implementation: `scripts/build.sh` XCODE_FLAGS array. Any new script that calls `xcodebuild` must include these flags.
+
+## GitHub Actions refs must be pinned to commit SHAs
+
+All `uses:` references to third-party GitHub Actions must use a full 40-character commit SHA with a comment noting the version. Floating major-version tags (`@v4`, `@v7`) are not acceptable in any workflow that has write permissions on issues, contents, or packages.
+
+Format:
+```yaml
+uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+```
+
+Current pinned versions (verified 2026-04-30):
+- `actions/checkout`: `34e114876b0b11c390a56381ad16ebd13914f8d5` (v4.3.1)
+- `actions/github-script`: `60a0d83039c74a4aee543508d2ffcb1c3799cdea` (v7.0.1)
+
+## Template parity
+
+When patching active workflows in `.github/workflows/`, the matching files in `.squad/templates/workflows/` must be updated in the same commit. Otherwise `squad upgrade` will revert the fix.
+
+## CRLF note for future maintainers
+
+The squad workflow YAML files use Windows line endings (CRLF). Use `perl -i -pe` with `\r?$` anchoring rather than `sed` when doing line-end-anchored substitutions on these files.
+
+
+---
+
+# Decision: PR #411 xcresult failure — SettingsStore recursion root cause
+
+**Date:** 2026-04-30  
+**Author:** Virgil (CI/CD) with findings from Livingston (Test) and Linus (Services)  
+**PR:** #411  
+**Status:** Handoff to Basher for implementation
+
+## Root Cause
+
+`SettingsStore` break-duration setters recursively self-assign in `didSet`, causing stack overflow:
+- `eyesBreakDuration` didSet assigns `eyesBreakDuration = ...`
+- `postureBreakDuration` didSet assigns `postureBreakDuration = ...`
+
+This re-enters `didSet` recursively and eventually segfaults when tests set durations or call `resetToDefaults()`.
+
+## Introducing Change
+
+Commit `744a709` (`fix: reject invalid shield durations`) introduced the recursive self-assignment pattern.
+
+## Evidence
+
+- All 4 targeted SettingsStore break-duration tests fail with `SEGV`
+- AppCoordinator duration tests fail downstream (they set break duration first)
+- Isolated single test (`test_setEyesBreakDuration_30_persistsAndLoads`) reproduces crash
+- Non-duration AppCoordinator tests pass (e.g., `test_thresholdCallback_eyes_triggersShowOverlay`)
+
+## Fix Direction (for Basher)
+
+Keep validation in setters but avoid recursion:
+1. Compute sanitized value first
+2. Only mutate storage once (or guard on equality)
+3. Persist sanitized value
+
+## Task Assignments
+
+- **Basher (Services):** Implement SettingsStore recursion fix
+- **Livingston (Tester):** Rerun targeted AppCoordinator duration tests post-fix
+- **Virgil (CI/CD):** Validate fix with full simulator test suite
+
+---
+
+# Directive: Build locally first, test incrementally
+
+**Date:** 2026-04-30  
+**Author:** yashasg (via Copilot)  
+**Rationale:** Instead of testing every fix on CLI, build locally first and inspect what is failing
+
+This is a team practice preference for iterative debugging.
