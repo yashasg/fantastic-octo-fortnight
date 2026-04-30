@@ -142,3 +142,21 @@ Orchestration log recorded at 2026-04-30T09:27:10Z. Enhanced CI diagnostics docu
 - Preserved build-for-testing + test-without-building flow and TEST_TARGET_NAME ambiguity workaround; shard filtering is applied via `-only-testing` during `test-without-building`.
 - Added per-shard `.xcresult` paths and artifact names to prevent collisions in parallel jobs.
 - Local validation performed: shell syntax checks, CI YAML parse check, `./scripts/build.sh build`, and a targeted shard run (`HomeScreenTests`) using the new flags.
+
+## 2026-04-30 — Release/TestFlight triage pass (#379, #377, #196, #185, #201, #410)
+
+- Completed code-fixable pre-submission blockers in PR #415:
+  - #379: Renamed shared App Group identifier to `group.com.yashasg.kshana` across all app/extension entitlements, shared constants, tests, and technical docs to match bundle prefix.
+  - #377: Updated App Store SKU in `docs/APP_STORE_LISTING.md` from `eye-posture-reminder` to `kshana` and added explicit immutable-SKU setup checklist item.
+- Validation performed:
+  - Baseline `./scripts/build.sh all` passed before changes.
+  - Post-change `./scripts/build.sh all` passed after changes.
+- External/manual issues triaged with concrete unblock checklists posted:
+  - #196 (Custom EULA upload in ASC), #185 (public HTTPS privacy policy hosting + ASC metadata wiring), #201 (Apple entitlement follow-up case 102881605113).
+- Dependency status:
+  - #410 confirmed BLOCKED in issue comment because #201 remains unresolved.
+
+### Learnings
+- For release-readiness tasks, mirror every in-repo config change with an explicit App Store Connect checklist line so operations cannot drift from source-controlled intent.
+- App Group identifiers should match the bundle namespace prefix when possible; mismatched prefixes create avoidable provisioning and registration mistakes during first submission.
+- `./scripts/build.sh all` mutates `TestResults.xcresult/Info.plist`; keep that artifact out of commits during docs/config triage by explicitly reverting it before commit.
