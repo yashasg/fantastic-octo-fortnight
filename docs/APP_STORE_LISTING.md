@@ -25,13 +25,15 @@
 
 *(22 characters — within Apple's 30-character App Store subtitle limit)*
 
+**Subtitle rationale:** The owner-selected subtitle "Eye & Posture Wellness" is intentionally retained for broader wellness positioning over the alternative "Eye & Posture Breaks". "Wellness" frames the app as a holistic health companion rather than a simple timer, appealing to a wider health-conscious audience. Per keyword strategy (Section 4), "wellness" and "posture" are excluded from the keyword field because Apple indexes subtitle words separately — avoiding duplication maximises keyword slot value.
+
 ---
 
 ## 3. Description
 
 Set your timing. Let kshana gently nudge you to take healthier eye and posture breaks — without accounts, ads, or a custom backend.
 
-kshana uses local screen-time tracking and reminder alerts to suggest eye breaks (20-20-20 rule) and posture checks at customizable intervals. When you choose to take a break, a calm break screen guides you with a countdown timer. Smart Pause automatically silences reminders during Focus Mode, CarPlay navigation, and when driving. Screen Time Shield-based app-level interruption is in development and will arrive when Apple's entitlement approval (#201) is complete.
+kshana uses local screen-time tracking and reminder alerts to suggest eye breaks (20-20-20 rule) and posture checks at customizable intervals. When you choose to take a break, a calm break screen guides you with a countdown timer. Smart Pause automatically silences reminders during Focus Mode, CarPlay navigation, and when driving. Screen Time Shield-based app-level interruption is in development and will arrive pending Apple's entitlement approval.
 
 **Key features:**
 - Custom eye break and posture check timing
@@ -41,7 +43,7 @@ kshana uses local screen-time tracking and reminder alerts to suggest eye breaks
 - Snooze options (5 min, 1 hour, rest of day)
 - Battery-friendly—native iOS scheduling, minimal background activity
 - Privacy-first — no accounts, no ads, no tracking, and no custom analytics backend
-- Screen Time integration (app-level interruption coming in Phase 3 when Apple entitlement is approved)
+- Screen Time integration (app-level interruption coming in a future update when Apple entitlement is approved)
 
 **Not medical advice.** kshana is a wellness reminder tool — not a medical device and not a substitute for professional healthcare. The 20-20-20 rule and posture reminders are general wellness suggestions, not medical advice, and are not intended to diagnose, treat, or prevent any condition. If you have health concerns, consult a qualified healthcare professional. Screen Time–based app interruption uses Apple's FamilyControls API with your authorization, for your own personal wellness use on your device; this feature is pending Apple entitlement approval and is not yet available.
 
@@ -83,7 +85,7 @@ kshana v0.2.0 — Restful Grove
 • 4-screen onboarding flow with app break explanation
 • In-app legal documents (Terms, Privacy, Disclaimer)
 • Accessibility: WCAG AA contrast, VoiceOver live regions, 44pt tap targets
-• 1,382 unit tests, 53 UI tests, 81%+ code coverage
+• Improved stability and reliability
 
 Thank you for testing! Please report issues via TestFlight.
 ```
