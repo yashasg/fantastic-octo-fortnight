@@ -30,13 +30,8 @@ final class HomeScreenTests: XCTestCase {
             "Home screen navigation bar should be visible on launch."
         )
 
-        // YinYangEyeView is a shape-based view, not an Image — query otherElements.
-        let statusIcon = app.otherElements["home.statusIcon"]
-        XCTAssertTrue(
-            statusIcon.waitForExistence(timeout: 5),
-            "Home screen status icon (YinYangEyeView) must be visible. " +
-            "Add .accessibilityIdentifier(\"home.statusIcon\") to the YinYangEyeView."
-        )
+        // YinYangEyeView is purely decorative — it has .accessibilityHidden(true)
+        // and is intentionally excluded from the accessibility tree to avoid VoiceOver noise.
 
         let titleText = app.staticTexts["home.title"]
         XCTAssertTrue(
@@ -117,7 +112,7 @@ final class HomeScreenTests: XCTestCase {
         XCTAssertTrue(settingsButton.waitForExistence(timeout: 5))
         settingsButton.tap()
 
-        let globalToggle = app.switches.firstMatch
+        let globalToggle = app.switches["settings.masterToggle"]
         XCTAssertTrue(globalToggle.waitForExistence(timeout: 5))
         globalToggle.tap()
 

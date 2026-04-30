@@ -60,7 +60,6 @@ struct YinYangEyeView: View {
         .frame(width: diameter, height: diameter)
         .rotationEffect(.degrees(spinComplete ? 360 : 0))
         .scaleEffect(breathing ? 1.06 : 1.0)
-        .accessibilityIdentifier("home.statusIcon")
         .accessibilityHidden(true)
         .onAppear {
             isVisible = true

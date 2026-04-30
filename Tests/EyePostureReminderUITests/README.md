@@ -66,7 +66,7 @@ app.launchWithSkippedOnboarding()  // or app.launchWithOnboarding()
 - Unavailable banner → `"appCategoryPicker.unavailableBanner"` ✅
 
 #### HomeView
-- Status icon `Image` → `"home.statusIcon"` ✅
+- Status icon (`YinYangEyeView`) — decorative, `.accessibilityHidden(true)`, no identifier exposed
 - Title `Text` → `"home.title"` ✅
 - Status label `Text` → `"home.statusLabel"` ✅
 - Settings toolbar `Button` → `"home.settingsButton"` ✅
