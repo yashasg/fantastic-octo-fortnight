@@ -165,16 +165,6 @@ final class AppCoordinator: ObservableObject {
     /// Used to compute session duration for the appSessionEnd analytics event.
     private var sessionStartTime: Date?
 
-    // MARK: - UI Test Mode
-
-    /// `true` when the app is launched by XCUITest with onboarding-control arguments.
-    /// Used to suppress background services (timers, permission requests) that prevent
-    /// the accessibility tree from settling between test interactions.
-    static let isUITestMode: Bool = CommandLine.arguments.contains("--skip-onboarding") ||
-                                    CommandLine.arguments.contains("--reset-onboarding") ||
-                                    CommandLine.arguments.contains("--show-overlay-eyes") ||
-                                    CommandLine.arguments.contains("--show-overlay-posture")
-
     // MARK: - Init
 
     init(
@@ -197,7 +187,16 @@ final class AppCoordinator: ObservableObject {
         self.scheduler = scheduler ?? ReminderScheduler()
         self.notificationCenter = notificationCenter
         self.overlayManager = overlayManager ?? OverlayManager()
-        self.screenTimeAuthorization = screenTimeAuthorization ?? ScreenTimeAuthorizationNoop()
+        self.screenTimeAuthorization = screenTimeAuthorization ?? {
+            #if DEBUG
+            if let raw = UserDefaults.standard.string(forKey: AppStorageKey.uiTestScreenTimeStatus),
+               let status = ScreenTimeAuthorizationStatus(rawValue: raw) {
+                UserDefaults.standard.removeObject(forKey: AppStorageKey.uiTestScreenTimeStatus)
+                return ScreenTimeAuthorizationStub(status: status)
+            }
+            #endif
+            return ScreenTimeAuthorizationNoop()
+        }()
         self.deviceActivityMonitor = deviceActivityMonitor ?? DeviceActivityMonitorNoop()
         self.ipcStore = ipcStore
         self.watchdogHeartbeatGraceInterval = watchdogHeartbeatGraceInterval
@@ -223,6 +222,12 @@ final class AppCoordinator: ObservableObject {
         self.screenTimeTracker.onThresholdReached = { [weak self] type in
             MainActor.assumeIsolated {
                 guard let self else { return }
+                // #407: Guard against the 300 ms per-type disable debounce window.
+                // If the user just toggled this type off, `disableTracking(for:)` is
+                // still in-flight; the tracker can still fire the callback before it
+                // is cancelled. Skip entirely so no overlay appears and snoozeCount
+                // is not reset for a reminder type the user disabled.
+                guard self.settings.isEnabled(for: type) else { return }
                 // New reminder cycle — reset consecutive snooze count so the user
                 // gets a fresh snooze budget on every threshold fire.
                 self.settings.snoozeCount = 0

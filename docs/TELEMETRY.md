@@ -617,6 +617,31 @@ For the App Store submission, declare:
 
 ---
 
+## Privacy Annotation Policy
+
+All `os.Logger` interpolations in this codebase must carry an explicit `privacy:` label.
+No interpolation may rely on the default (which is `.private`, redacting the value in
+Console.app and TestFlight diagnostics).
+
+### Decision table
+
+| Value category | Label | Rationale |
+|---|---|---|
+| Enumerated type codes, raw values, counts, durations | `privacy: .public` | Non-PII structural data required for crash forensics and field triage |
+| `error.localizedDescription` on system-API failure paths | `privacy: .public` | System error strings (e.g. `UNError`, `AVAudioSession` errors) contain no user data; visibility is essential for diagnosing field failures |
+| `exception.name`, `exception.reason` | `privacy: .public` | ObjC exception type and reason are framework-set diagnostic strings, not user data |
+| Setting old/new values, user-entered text | `privacy: .private` | May reflect user choices; redacted unless explicitly unredacted by the user |
+| `exception.userInfo`, call-stack symbols | `privacy: .private` | May include framework internals or user-generated values; redact by default |
+| App Group IPC errors | Use enumerated `IPCFailureReason` codes — never log raw error objects or bundle IDs | |
+
+### Enforcement
+
+- All new log call sites **must** include explicit `privacy:` labels; PRs without annotations will fail SwiftLint (once the custom rule lands in a follow-up).
+- Error paths that log `error.localizedDescription` use `.public` — verified in #360/#405 (commits `ebd0283`, current PR #411).
+- The exception handler in `AppDelegate.installUncaughtExceptionHandler()` marks `exception.reason` `.public` and `userInfo` / call-stack `.private` — verified in #405.
+
+---
+
 ## Implementation Checklist
 
 ### Phase 1 (M0.2 — Pre-TestFlight)

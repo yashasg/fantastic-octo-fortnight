@@ -184,7 +184,14 @@ enum AnalyticsLogger {
 #if DEBUG
     /// Test-only hook. Set in unit tests to intercept emitted events; must be
     /// reset to `nil` in `tearDown` to avoid cross-test contamination.
-    static var testEventHandler: ((AnalyticsEvent) -> Void)?
+    ///
+    /// `nonisolated(unsafe)` acknowledges the Swift 6 isolation trade-off:
+    /// XCTest serialises test cases within a process so no actual data race
+    /// occurs in practice. `log(_:)` is called exclusively from `@MainActor`-
+    /// isolated production paths, and test setUp/tearDown run on the main
+    /// thread. Marking `@MainActor` would force `log(_:)` onto the main actor
+    /// and risk deadlock in background-dispatch test helpers.
+    nonisolated(unsafe) static var testEventHandler: ((AnalyticsEvent) -> Void)?
 #endif
 
     /// Emit an analytics event as a structured os.Logger entry.

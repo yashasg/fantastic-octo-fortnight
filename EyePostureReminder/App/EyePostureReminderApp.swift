@@ -25,11 +25,15 @@ struct EyePostureReminderApp: App {
                     await coordinator.scheduleReminders()
                     // UI test mode: if a specific overlay type was requested via launch
                     // arguments, trigger it now that the coordinator is active.
+                    // `#if DEBUG` ensures this backdoor is compiled out of Release builds
+                    // (re: #350/#405).
+#if DEBUG
                     if let rawType = UserDefaults.standard.string(forKey: AppStorageKey.uiTestOverlayType),
                        let type = ReminderType(rawValue: rawType) {
                         UserDefaults.standard.removeObject(forKey: AppStorageKey.uiTestOverlayType)
                         coordinator.handleNotification(for: type)
                     }
+#endif
                 }
                 .onChange(of: scenePhase) { phase in
                     switch phase {

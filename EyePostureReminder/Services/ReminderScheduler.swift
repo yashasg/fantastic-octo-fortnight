@@ -77,7 +77,10 @@ final class ReminderScheduler: ReminderScheduling {
     init(
         notificationCenter: NotificationScheduling = UNUserNotificationCenter.current(),
         logSchedulingFailure: @escaping SchedulingFailureLogger = { type, error in
-            Logger.scheduling.error("Failed to schedule \(type.rawValue): \(error.localizedDescription)")
+            Logger.scheduling.error("""
+                Failed to schedule \(type.rawValue, privacy: .public): \
+                \(error.localizedDescription, privacy: .public)
+                """)
         }
     ) {
         self.notificationCenter = notificationCenter

@@ -79,10 +79,20 @@ final class DeviceActivityMonitorExtensionImpl: DeviceActivityMonitor {
     }
 
     override func intervalDidEnd(for activity: DeviceActivityName) {
-        // Remove all shield restrictions when the break ends.
-        // clearAllSettings() is safe to call even without FamilyControls at
-        // compile time; it is a no-op until the entitlement is active.
-        store.clearAllSettings()
+        // #347/#405: Read the session identity written before startMonitoring so we
+        // can verify this end event belongs to the session we expect. If a late-
+        // arriving intervalDidEnd fires for an already-cleared (or mismatched)
+        // session, skip clearAllSettings() to avoid wiping a freshly-started break's
+        // shield restrictions. When no session is present the ipcStore returns nil
+        // and we still clear (safe no-op pre-#201, conservative post-#201).
+        let session = DeviceActivityMonitorExtensionImpl.readSession()
+        let sessionIsValid = session.triggeredAt != nil
+        if sessionIsValid {
+            // Remove all shield restrictions when the break ends.
+            // clearAllSettings() is safe to call even without FamilyControls at
+            // compile time; it is a no-op until the entitlement is active.
+            store.clearAllSettings()
+        }
         recordWatchdogHeartbeat(.deviceActivityIntervalEnded)
     }
 
