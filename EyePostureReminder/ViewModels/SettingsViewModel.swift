@@ -271,8 +271,9 @@ final class SettingsViewModel: ObservableObject {
                 oldValue: String(old),
                 newValue: String(newValue)
             ))
-            Task {
-                await scheduler.scheduleReminders(using: settings)
+            Task { [weak self] in
+                guard let self else { return }
+                await self.scheduler.scheduleReminders(using: self.settings)
                 Logger.settings.info("Notification fallback → \(self.settings.notificationFallbackEnabled)")
             }
         }
@@ -303,11 +304,12 @@ final class SettingsViewModel: ObservableObject {
 
     /// Called when the master toggle is flipped.
     func globalToggleChanged() {
-        Task {
-            if settings.globalEnabled {
-                await scheduler.scheduleReminders(using: settings)
+        Task { [weak self] in
+            guard let self else { return }
+            if self.settings.globalEnabled {
+                await self.scheduler.scheduleReminders(using: self.settings)
             } else {
-                scheduler.cancelAllReminders()
+                self.scheduler.cancelAllReminders()
             }
             Logger.settings.info("Master toggle → \(self.settings.globalEnabled)")
         }
@@ -315,8 +317,9 @@ final class SettingsViewModel: ObservableObject {
 
     /// Called when per-type enabled state or interval/duration changes.
     func reminderSettingChanged(for type: ReminderType) {
-        Task {
-            await scheduler.rescheduleReminder(for: type, using: settings)
+        Task { [weak self] in
+            guard let self else { return }
+            await self.scheduler.rescheduleReminder(for: type, using: self.settings)
             Logger.settings.info("Settings updated for type=\(type.rawValue)")
         }
     }
@@ -374,8 +377,9 @@ final class SettingsViewModel: ObservableObject {
         settings.snoozedUntil = nil
         settings.snoozeCount  = 0
         AnalyticsLogger.log(.snoozeCancelled)
-        Task {
-            await scheduler.scheduleReminders(using: settings)
+        Task { [weak self] in
+            guard let self else { return }
+            await self.scheduler.scheduleReminders(using: self.settings)
             Logger.settings.info("Snooze cancelled — reminders rescheduled")
         }
     }
