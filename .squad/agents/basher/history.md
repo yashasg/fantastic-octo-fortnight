@@ -89,3 +89,10 @@ Services: AppCoordinator, ReminderScheduler, ScreenTimeTracker, OverlayManager, 
 - WatchdogHeartbeat: per-slot writes are cross-process safe (#299)
 - pruneEventSlots: counts only slot keys (not legacy), slight inaccuracy when legacy events exist — self-corrects, not critical
 - Snooze/cancel behavior correct in SettingsViewModel; cancelAllReminders() snooze-wake path uses last-known notificationAuthStatus (pre-existing, no new issue)
+
+## 2026-04-30 — PR #411 CI segv triage (SettingsStore)
+
+- Reproduced CI-style failures locally as `Test crashed with signal segv` in `SettingsStoreTests` (not assertion failures).
+- Root cause: mutating `@Published` break-duration properties from inside their own `didSet` caused unstable test-runner crashes under Xcode 26.4 simulator runs.
+- Fix: moved eyes/posture break durations to private published storage + validated computed setters, preserving validation/persistence behavior without self-assignment in observers.
+- Validation: targeted failing classes now pass; full `./scripts/build.sh test` passes; `./scripts/build.sh build` and `./scripts/build.sh lint` pass.

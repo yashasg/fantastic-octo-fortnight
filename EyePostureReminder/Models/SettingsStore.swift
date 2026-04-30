@@ -56,27 +56,34 @@ final class SettingsStore: ObservableObject {
 
     // MARK: - Per-Type Break Durations (seconds)
 
-    @Published var eyesBreakDuration: TimeInterval {
-        didSet {
-            eyesBreakDuration = Self.validBreakDurationForAssignment(
-                eyesBreakDuration,
-                previousValue: oldValue,
+    @Published private var eyesBreakDurationStorage: TimeInterval
+    @Published private var postureBreakDurationStorage: TimeInterval
+
+    var eyesBreakDuration: TimeInterval {
+        get { eyesBreakDurationStorage }
+        set {
+            let validated = Self.validBreakDurationForAssignment(
+                newValue,
+                previousValue: eyesBreakDurationStorage,
                 fallbackValue: AppConfig.fallback.defaults.eyeBreakDuration,
                 key: Keys.eyesBreakDuration
             )
-            store.set(eyesBreakDuration, forKey: Keys.eyesBreakDuration)
+            eyesBreakDurationStorage = validated
+            store.set(validated, forKey: Keys.eyesBreakDuration)
         }
     }
 
-    @Published var postureBreakDuration: TimeInterval {
-        didSet {
-            postureBreakDuration = Self.validBreakDurationForAssignment(
-                postureBreakDuration,
-                previousValue: oldValue,
+    var postureBreakDuration: TimeInterval {
+        get { postureBreakDurationStorage }
+        set {
+            let validated = Self.validBreakDurationForAssignment(
+                newValue,
+                previousValue: postureBreakDurationStorage,
                 fallbackValue: AppConfig.fallback.defaults.postureBreakDuration,
                 key: Keys.postureBreakDuration
             )
-            store.set(postureBreakDuration, forKey: Keys.postureBreakDuration)
+            postureBreakDurationStorage = validated
+            store.set(validated, forKey: Keys.postureBreakDuration)
         }
     }
 
@@ -175,13 +182,13 @@ final class SettingsStore: ObservableObject {
         postureEnabled = store.bool(forKey: Keys.postureEnabled, defaultValue: true)
 
         eyesInterval = store.double(forKey: Keys.eyesInterval, defaultValue: config.defaults.eyeInterval)
-        eyesBreakDuration = Self.sanitizedBreakDuration(
+        eyesBreakDurationStorage = Self.sanitizedBreakDuration(
             store.double(forKey: Keys.eyesBreakDuration, defaultValue: defaultEyesBreakDuration),
             defaultValue: defaultEyesBreakDuration,
             key: Keys.eyesBreakDuration
         )
         postureInterval = store.double(forKey: Keys.postureInterval, defaultValue: config.defaults.postureInterval)
-        postureBreakDuration = Self.sanitizedBreakDuration(
+        postureBreakDurationStorage = Self.sanitizedBreakDuration(
             store.double(forKey: Keys.postureBreakDuration, defaultValue: defaultPostureBreakDuration),
             defaultValue: defaultPostureBreakDuration,
             key: Keys.postureBreakDuration
