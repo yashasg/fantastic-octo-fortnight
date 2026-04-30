@@ -105,6 +105,63 @@ run_xcodebuild() {
   echo "  (took $(elapsed "$start"))"
 }
 
+summarize_xcresult_failures() {
+  local bundle_path="$1"
+
+  if [[ ! -d "$bundle_path" ]]; then
+    warn "Result bundle not found at: $bundle_path"
+    return
+  fi
+
+  python3 - "$bundle_path" <<'PY'
+import json
+import subprocess
+import sys
+
+bundle_path = sys.argv[1]
+
+def get_root(path: str):
+    commands = [
+        ["xcrun", "xcresulttool", "get", "object", "--legacy", "--path", path, "--format", "json"],
+        ["xcrun", "xcresulttool", "get", "object", "--path", path, "--format", "json"],
+    ]
+    for command in commands:
+        try:
+            return json.loads(subprocess.check_output(command, stderr=subprocess.DEVNULL))
+        except Exception:
+            continue
+    return None
+
+root = get_root(bundle_path)
+if not root:
+    print("⚠ Unable to parse xcresult bundle for failure details")
+    sys.exit(0)
+
+failures = (
+    root.get("actions", {})
+    .get("_values", [{}])[0]
+    .get("actionResult", {})
+    .get("issues", {})
+    .get("testFailureSummaries", {})
+    .get("_values", [])
+)
+
+if not failures:
+    print("⚠ xcodebuild failed, but xcresult has no testFailureSummaries")
+    sys.exit(0)
+
+print(f"✗ xcresult reports {len(failures)} failing tests:")
+max_items = 20
+for item in failures[:max_items]:
+    test_name = item.get("testCaseName", {}).get("_value", "<unknown test>")
+    message = item.get("message", {}).get("_value", "").splitlines()[0]
+    print(f"  - {test_name}: {message}")
+
+if len(failures) > max_items:
+    print(f"  ... and {len(failures) - max_items} more")
+PY
+}
+
 # ── Subcommands ───────────────────────────────────────────────────────────────
 
 cmd_build() {
@@ -138,12 +195,16 @@ cmd_test() {
 
   rm -rf "${PACKAGE_PATH}/TestResults.xcresult"
 
-  run_xcodebuild test \
+  if ! run_xcodebuild test \
     -scheme "$SCHEME" \
     -destination "$dest" \
     -derivedDataPath "$DERIVED_DATA_PATH" \
     -resultBundlePath "${PACKAGE_PATH}/TestResults.xcresult" \
-    -enableCodeCoverage YES
+    -enableCodeCoverage YES; then
+    fail "xcodebuild test failed"
+    summarize_xcresult_failures "${PACKAGE_PATH}/TestResults.xcresult"
+    exit 1
+  fi
 
   pass "Tests passed"
 }

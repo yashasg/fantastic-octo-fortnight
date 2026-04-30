@@ -99,3 +99,25 @@
 - `sed -i '' -e 's|...|...|g'` works cleanly on these YAML files (no CRLF issue unlike some macOS XCBuild scripts)
 - The `@v4` / `@v7` major tags are mutable floating refs — always resolve to commit SHA via `gh api repos/<owner>/<repo>/git/refs/tags/<tag>`
 - Deployed workflows were already fully pinned; #317 was template-only
+
+## Wave [next+2] — PR #411 CI Failure Forensics + Reporting Hardening (2026-04-30)
+
+**Context:** CI run `25155651913` on `fix/legal-disclaimer-356-357-359` (head `14657c9`) failed `Test (simulator)` with contradictory output: XCTest stream reported `Executed 508 tests, with 0 failures`, while xcodebuild exited 65.
+
+### Findings
+- This is normal for Xcode’s result-bundle aggregation under crash scenarios: live XCTest console can show suite-level pass counts, then xcodebuild marks the action failed from `testFailureSummaries` discovered in the `.xcresult` issue graph.
+- Extracted CI artifact `test-results-0.2.0-build123` and confirmed action status `failed` with **32** `testFailureSummaries`.
+- Failure summaries are deterministic crashes (segv) centered on `SettingsStore` (`eyesBreakDuration` getter/setter recursion), matching Livingston’s analysis and not #399 state pollution.
+
+### CI/Script improvement implemented
+- Patched `scripts/build.sh` (`cmd_test`) to handle xcodebuild test failures by parsing `TestResults.xcresult` and printing a concise `testFailureSummaries` list.
+- This closes the observability gap where console stream can look green while xcresult carries crash failures.
+
+### Local validation
+- Baseline and post-change local build both pass via `./scripts/build.sh build`.
+- Script syntax validated with `bash -n scripts/build.sh`.
+
+### Handoff
+- Basher: owns SettingsStore crash fix.
+- Livingston: owns targeted verification for AppCoordinator fallout tests.
+- Virgil: owns CI parity checks from xcresult status + summary, not console pass text alone.
