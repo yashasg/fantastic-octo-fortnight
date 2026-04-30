@@ -1,5 +1,6 @@
 import Foundation
 import os
+import ScreenTimeExtensionShared
 
 // MARK: - AnalyticsEvent
 
@@ -51,12 +52,12 @@ enum AnalyticsEvent: Sendable {
     // MARK: Shield Lifecycle
 
     /// Fired when a DeviceActivity shield session starts successfully.
-    /// `reason` is the non-PII shield reason raw value.
-    case shieldActivated(reason: String)
+    /// `reason` is the typed shield trigger reason.
+    case shieldActivated(reason: ShieldTriggerReason)
 
     /// Fired when a DeviceActivity shield activation attempt fails.
-    /// `reason` is the non-PII shield reason raw value.
-    case shieldActivationFailed(reason: String)
+    /// `reason` is the typed shield trigger reason.
+    case shieldActivationFailed(reason: ShieldTriggerReason)
 
     /// Fired when a DeviceActivity shield session is cancelled/deactivated.
     case shieldDeactivated
@@ -102,8 +103,9 @@ enum AnalyticsEvent: Sendable {
     // MARK: Watchdog Recovery
 
     /// Fired when a stale watchdog session is detected and recovery is initiated.
-    /// `reason` is the non-PII shield reason raw value; `detail` is the heartbeat staleness category.
-    case watchdogRecoveryTriggered(reason: String, detail: String)
+    /// `reason` is the typed shield trigger reason (nil if session had no recognisable reason);
+    /// `detail` is the heartbeat staleness category.
+    case watchdogRecoveryTriggered(reason: ShieldTriggerReason?, detail: String)
 
     /// Fired at the end of a watchdog recovery attempt.
     /// `sessionCleared` – whether the stale shield session was successfully cleared.
@@ -231,7 +233,7 @@ enum AnalyticsLogger {
         case let .watchdogRecoveryTriggered(reason, detail):
             logger.info("""
                 event=watchdog_recovery_triggered \
-                reason=\(reason, privacy: .public) \
+                reason=\(reason?.rawValue ?? "unknown", privacy: .public) \
                 detail=\(detail, privacy: .public)
                 """)
 
@@ -252,13 +254,13 @@ enum AnalyticsLogger {
         case let .shieldActivated(reason):
             logger.info("""
                 event=shield_activated \
-                reason=\(reason, privacy: .public)
+                reason=\(reason.rawValue, privacy: .public)
                 """)
 
         case let .shieldActivationFailed(reason):
             logger.error("""
                 event=shield_activation_failed \
-                reason=\(reason, privacy: .public)
+                reason=\(reason.rawValue, privacy: .public)
                 """)
 
         case .shieldDeactivated:

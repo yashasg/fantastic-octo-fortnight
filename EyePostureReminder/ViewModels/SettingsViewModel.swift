@@ -30,6 +30,16 @@ final class SettingsViewModel: ObservableObject {
             }
         }
 
+        /// Stable, non-localized analytics code for this snooze duration.
+        /// Used in `snoozeActivated` events — never changes between app versions or locales.
+        var analyticsCode: String {
+            switch self {
+            case .fiveMinutes: return "5m"
+            case .oneHour:     return "1h"
+            case .restOfDay:   return "rest_of_day"
+            }
+        }
+
         /// The absolute `Date` at which this snooze should expire.
         var endDate: Date {
             switch self {
@@ -220,7 +230,7 @@ final class SettingsViewModel: ObservableObject {
         settings.snoozedUntil = endDate
         settings.snoozeCount += 1
         scheduler.cancelAllReminders()
-        AnalyticsLogger.log(.snoozeActivated(durationOption: option.label))
+        AnalyticsLogger.log(.snoozeActivated(durationOption: option.analyticsCode))
         Logger.settings.info("Snoozed until \(endDate) via option: \(option.label) (count: \(self.settings.snoozeCount))")
     }
 
