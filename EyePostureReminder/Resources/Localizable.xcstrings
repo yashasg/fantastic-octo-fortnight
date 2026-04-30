@@ -1873,28 +1873,6 @@
         }
       }
     },
-    "onboarding.interrupt.subtitle": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Make breaks non-skippable"
-          }
-        }
-      }
-    },
-    "onboarding.interrupt.illustrationLabel": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lock shield icon representing True Interrupt Mode"
-          }
-        }
-      }
-    },
     "onboarding.interrupt.body1": {
       "extractionState": "manual",
       "localizations": {
@@ -1935,17 +1913,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Opens the Screen Time authorization request"
-          }
-        }
-      }
-    },
-    "onboarding.interrupt.pendingButton": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Approval Pending"
           }
         }
       }
