@@ -43,9 +43,11 @@ kshana uses local screen-time tracking and reminder alerts to suggest eye breaks
 - Privacy-first — no accounts, no ads, no tracking, and no custom analytics backend
 - Screen Time integration (app-level interruption coming in Phase 3 when Apple entitlement is approved)
 
-Built for people who spend hours at a screen and want control over their break habits. Download now and build healthier screen time habits on your terms.
+**Not medical advice.** kshana is a wellness reminder tool — not a medical device and not a substitute for professional healthcare. The 20-20-20 rule and posture reminders are general wellness suggestions, not medical advice, and are not intended to diagnose, treat, or prevent any condition. If you have health concerns, consult a qualified healthcare professional. Screen Time–based app interruption uses Apple's FamilyControls API with your authorization, for your own personal wellness use on your device; this feature is pending Apple entitlement approval and is not yet available.
 
-*(148 words)*
+Built for people who spend hours at a screen and want control over their break habits.
+
+*(~185 words)*
 
 ---
 
