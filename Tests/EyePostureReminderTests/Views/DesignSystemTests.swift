@@ -412,7 +412,13 @@ final class DesignSystemTests: XCTestCase {
             AppSymbol.pauseDuringFocus,
             AppSymbol.pauseWhileDriving,
             AppSymbol.clock,
-            AppSymbol.timer
+            AppSymbol.timer,
+            AppSymbol.masterToggle,
+            AppSymbol.haptics,
+            AppSymbol.trueInterrupt,
+            AppSymbol.chevronTrailing,
+            AppSymbol.checkmark,
+            AppSymbol.lock
         ]
         for symbol in symbols {
             XCTAssertFalse(symbol.isEmpty, "AppSymbol name must not be empty: \(symbol)")
@@ -423,9 +429,12 @@ final class DesignSystemTests: XCTestCase {
         let symbols = [
             AppSymbol.eyeBreak, AppSymbol.postureCheck, AppSymbol.dismiss,
             AppSymbol.settings, AppSymbol.chevronDown, AppSymbol.chevronUp,
-            AppSymbol.warning, AppSymbol.snoozed, AppSymbol.bell,
+            AppSymbol.warning, AppSymbol.checkmark, AppSymbol.lock,
+            AppSymbol.snoozed, AppSymbol.bell,
             AppSymbol.pauseDuringFocus, AppSymbol.pauseWhileDriving,
-            AppSymbol.clock, AppSymbol.timer
+            AppSymbol.clock, AppSymbol.timer,
+            AppSymbol.trueInterrupt, AppSymbol.masterToggle,
+            AppSymbol.haptics, AppSymbol.chevronTrailing
         ]
         XCTAssertEqual(
             Set(symbols).count,

@@ -71,7 +71,7 @@ struct OnboardingSetupView: View {
                 .accessibilityHint(Text("onboarding.setup.getStartedButton.hint", bundle: .module))
                 .accessibilityIdentifier("onboarding.setup.getStartedButton")
             }
-            .padding()
+            .padding(AppSpacing.md)
             .frame(maxWidth: AppLayout.onboardingMaxContentWidth)
             .frame(maxWidth: .infinity)
         }

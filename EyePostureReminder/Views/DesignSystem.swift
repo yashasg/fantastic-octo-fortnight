@@ -239,6 +239,12 @@ enum AppSymbol {
     static let clock             = "clock"
     /// Break duration / timer icon
     static let timer             = "timer"
+    static let trueInterrupt     = "lock.shield.fill"
+    static let masterToggle      = "power"
+    static let haptics           = "hand.tap.fill"
+    static let chevronTrailing   = "chevron.right"
+    static let checkmark         = "checkmark.circle.fill"
+    static let lock              = "lock.fill"
 }
 
 // MARK: - Layout Constants
@@ -315,12 +321,13 @@ extension AppFont {
 /// adapts correctly between colour schemes without any additional boilerplate.
 struct SoftElevation: ViewModifier {
     @Environment(\.colorScheme) private var colorScheme
+    var cornerRadius: CGFloat = AppLayout.radiusCard
 
     func body(content: Content) -> some View {
         if colorScheme == .dark {
             content
                 .overlay(
-                    RoundedRectangle(cornerRadius: AppLayout.radiusCard)
+                    RoundedRectangle(cornerRadius: cornerRadius)
                         .strokeBorder(AppColor.separatorSoft.opacity(AppOpacity.subtleBorder), lineWidth: 0.5)
                 )
         } else {
@@ -337,7 +344,9 @@ struct SoftElevation: ViewModifier {
 
 extension View {
     /// Applies `SoftElevation` — soft shadow in light mode, thin border in dark mode.
-    func softElevation() -> some View {
-        modifier(SoftElevation())
+    /// - Parameter cornerRadius: Corner radius used for the dark-mode border overlay.
+    ///   Defaults to `AppLayout.radiusCard`.
+    func softElevation(cornerRadius: CGFloat = AppLayout.radiusCard) -> some View {
+        modifier(SoftElevation(cornerRadius: cornerRadius))
     }
 }

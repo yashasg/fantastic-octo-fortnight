@@ -69,7 +69,7 @@ struct OnboardingPermissionView: View {
                         .accessibilityHint(Text("onboarding.permission.skipButton.hint", bundle: .module))
                         .accessibilityIdentifier("onboarding.permission.nextButton")
                 }
-                .padding()
+                .padding(AppSpacing.md)
                 .frame(maxWidth: AppLayout.onboardingMaxContentWidth)
                 .frame(maxWidth: .infinity)
                 // Block horizontal drags to prevent accidental swipe past the
