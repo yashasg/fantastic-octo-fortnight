@@ -174,3 +174,27 @@
 - Metadata key: `trueInterrupt.selectionMetadata`
 
 ### Build verified: `./scripts/build.sh test` → ✓ Tests passed (35 new tests)
+
+## 2026-04-30 — Services/Lifecycle Read-Only Audit (post-#299)
+
+### Audit Scope
+Services: AppCoordinator, ReminderScheduler, ScreenTimeTracker, OverlayManager, PauseConditionManager, ScreenTimeAuthorizationNoop, WatchdogHeartbeat, AppGroupIPCStore, SettingsViewModel, SelectedAppsState, ScreenTimeExtensions/Shared.
+
+### P0 Finding: #306 — readEventsCombined throws hard on corrupt legacy eventLog key
+
+**Root cause:** `readEventsCombined` (introduced in #299 commit a520be3) throws `StoreError.corruptEventLog` when the legacy `trueInterrupt.ipc.eventLog` key is corrupt. Per-slot corrupt entries are silently skipped (consistent behavior). Since `clearEvents()` has no production call site, a corrupt legacy key permanently blocks `readEvents()` and therefore `recoverStaleDeviceActivityWatchdogIfNeeded`. Watchdog recovery returns `false` on any `readEvents()` error.
+
+**Fix:** Downgrade `throw StoreError.corruptEventLog` in the legacy read path to a warning log + continue, consistent with per-slot skip behavior.
+
+**Owner:** Tess (squad:tess) — reviewer-lockout on #299 artifact.
+
+**Issue filed:** #306
+
+### All other service paths clean
+- ScreenTimeTracker: stale-tick race fixed (tickingGeneration, commit 587bf38); resetTask cancel-before-reassign confirmed fixed (from #118)
+- AppCoordinator: snooze guard path correct; notificationAuthStatus refreshed before snooze gate in scheduleReminders()
+- PauseConditionManager: focusMode initial state seeded (from #119)
+- OverlayManager: scene-activation drain observer present (from #133)
+- WatchdogHeartbeat: per-slot writes are cross-process safe (#299)
+- pruneEventSlots: counts only slot keys (not legacy), slight inaccuracy when legacy events exist — self-corrects, not critical
+- Snooze/cancel behavior correct in SettingsViewModel; cancelAllReminders() snooze-wake path uses last-known notificationAuthStatus (pre-existing, no new issue)

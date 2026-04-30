@@ -181,3 +181,39 @@ Tess completed comprehensive wellness design research proposing "Restful Grove" 
 
 **Status:** UX docs complete. Ready for implementation and team review.
 **Decision file:** `.squad/decisions/inbox/reuben-true-interrupt-ux.md`
+
+## 2026-04-30 — Read-Only UX Flow Audit
+
+**Task:** Read-only audit across first run, permission paths, App Break Access/True Interrupt future states, local-alert fallback, rediscovery after skipped setup, settings recovery, and release messaging.
+**Status:** ✅ Complete — issues filed where material gaps found
+
+### Audit scope covered
+- 4-screen onboarding: OnboardingView, OnboardingWelcomeView, OnboardingPermissionView, OnboardingSetupView, OnboardingInterruptModeView
+- Permission paths: notification permission (Screen 1), Screen Time authorization (InterruptModeView + AppCategoryPickerView)
+- Local-alert fallback: SettingsNotificationWarningSection (shows when notificationAuthStatus == .denied && notificationFallbackEnabled == true)
+- Rediscovery after skipped setup: HomeView TrueInterruptSkippedBanner → TrueInterruptSetupPill two-stage flow (well-implemented per #258 fix)
+- Settings recovery: SettingsTrueInterruptSection (denied-recovery card + Open Settings link per #252 fix)
+- Release messaging: TESTFLIGHT_METADATA.md, APP_STORE_LISTING.md, README.md
+
+### Issues found and filed
+- **#312** — TESTFLIGHT_METADATA.md test case #1 screen names don't match implementation (Welcome → App Break Explanation → Screen Time Permission → Setup vs. actual: Welcome → Notification Permission → Setup → True Interrupt Mode). Not covered by #292 or #272.
+- **#314** — "Customize Settings" onboarding path documented in ONBOARDING_SPEC.md and UX_FLOWS.md but `openSettingsOnLaunch` is never set from any onboarding screen. HomeView infrastructure exists; path never triggered.
+
+### Pre-existing tracked items (not duplicated)
+- **#303** (open): Covers CHANGELOG/APP_STORE_LISTING snooze "15 min" wrong copy + v0.1.0-beta stale What's New. The §7 Screenshot #5 snooze copy is subsumed by #303's AC to rewrite What's New for v0.2.0.
+- **#292** (closed): Onboarding screen count in ROADMAP
+- **#255, #258, #252, #262, #259** (all closed): Prior flow defects now resolved
+
+### Key insight: onboarding spec vs. implementation drift
+The ONBOARDING_SPEC.md describes a flow that predates the final implementation:
+- Spec: Screen 2 = App Break Explanation (Screen Time pre-education); Screen 3 = Screen Time Permission (with swipe lock)
+- Actual: Screen 1 = Notification Permission (with swipe lock); Screen 3 = Setup pickers; Screen 4 = True Interrupt (disabled, Coming Soon)
+The notification permission swipe lock is on Screen 1 in code; the spec placed it on the Screen Time permission screen (Screen 3). Both screens benefit from deliberate choice friction, but the ONBOARDING_SPEC.md is now out of sync with the code. TestFlight test case #1 inherited this stale naming (#312).
+
+### Flows confirmed working (no issues filed)
+- First-run routing: ContentView checks `hasSeenOnboarding` → OnboardingView (4 tabs) ✓
+- True Interrupt disabled state: PendingApprovalBadge shown, button disabled "Coming Soon" ✓
+- Post-onboarding skip rediscovery: Banner → Pill two-stage flow on HomeView ✓
+- Screen Time denied recovery in Settings: SettingsTrueInterruptSection shows warning card ✓
+- Notification denied recovery in Settings: SettingsNotificationWarningSection shows warning + Open Settings ✓
+- UX_FLOWS.md §2.6 shield vs. fallback routing logic: documented and appears well-specified ✓
