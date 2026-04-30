@@ -577,3 +577,27 @@ All 4 targets need `family-controls` entitlement + App Groups:
 
 - **`#305` scope gap:** Template pinning work must cover ALL templates, not just the ones with active deployed counterparts. Templates without deployed siblings can be silently skipped and then propagate floating refs when eventually deployed.
 - **Orphaned xcstrings keys don't trigger warnings:** Removing an `accessibilityLabel(Text("key", bundle: .module))` in favour of `accessibilityHidden(true)` leaves the key in Localizable.xcstrings as dead string. Swift compiler and SwiftLint `--strict` won't flag it. Consider a future xcstrings lint step if localization scale grows.
+
+---
+
+## Wave 22 — Privacy Manifest / Diagnostics Alignment (#315) (2026-04-30)
+
+**Task:** Fix gap between `PRIVACY_NUTRITION_LABELS.md` (Diagnostics = Collected) and `PrivacyInfo.xcprivacy` (empty `NSPrivacyCollectedDataTypes`).
+
+**Outcome:** ✅ Manifest updated. Decision filed. Issue #315 closed.
+
+### What was done
+
+1. `EyePostureReminder/PrivacyInfo.xcprivacy` — added two `NSPrivacyCollectedDataTypes` entries:
+   - `NSPrivacyCrashData` / Not Linked / Not Tracking / `NSPrivacyCollectedDataTypePurposeAppFunctionality`
+   - `NSPrivacyPerformanceData` / Not Linked / Not Tracking / `NSPrivacyCollectedDataTypePurposeAnalytics`
+2. `docs/PRIVACY_NUTRITION_LABELS.md` — added "Privacy Manifest Consistency" section with a table mapping manifest string values to App Store Connect answers and a maintenance rule.
+3. `plutil -lint` passed on updated manifest.
+4. Decision filed: `.squad/decisions/inbox/virgil-privacy-manifest-diagnostics.md`
+
+### Learnings
+
+- **MetricKit counts as "collected" per Apple's definition:** The developer registers with `MXMetricManager` and receives `MXCrashDiagnostic`/`MXMetricPayload` objects surfaced by Apple through App Store Connect. Apple's definition of "collect" is transmitting data off device in a way that lets you access it — this qualifies.
+- **Privacy manifest string values for diagnostics:** `NSPrivacyCrashData` / `NSPrivacyPerformanceData`; purposes: `NSPrivacyCollectedDataTypePurposeAppFunctionality` / `NSPrivacyCollectedDataTypePurposeAnalytics`.
+- **Three-way consistency check:** Before every App Store submission, verify `PrivacyInfo.xcprivacy`, `PRIVACY_NUTRITION_LABELS.md`, and `docs/legal/PRIVACY.md` all agree on every collected data type. The decision inbox file has the checklist.
+- **`plutil -lint` is the fast syntax validator for xcprivacy files** (they are plists).
