@@ -53,3 +53,34 @@
 - Noted test case #2 still references "Grant App Break Access" which doesn't match actual button text ("Allow Reminder Alerts") — separate scope
 
 **Issues closed:** #312
+
+## 2026-04-30 — TestFlight Blocker Status Audit (#201, #196, #185, #410)
+
+**Task:** Drive remaining TestFlight/external blockers and dependency status.
+
+**Findings:**
+
+1. **#201 — Entitlement Approval (BLOCKER):** External Apple Developer Support case (102881605113). Owner checklist posted 2026-04-30 11:52 UTC. Requires:
+   - Follow-up on Apple case status
+   - If approved: record approval date and entitlement enabled status
+   - If rejected: post rejection reason verbatim + remediation plan
+   - Unblock criteria: approval OR actionable rejection with documented remediation
+
+2. **#196 — Upload Custom EULA:** External App Store Connect manual task. Owner checklist posted 2026-04-30 11:52 UTC. Requires:
+   - Navigate ASC → App Information → License Agreement
+   - Paste content from `docs/legal/TERMS.md` (confirmed present, v1.0, dated 2026-04-26)
+   - Save and verify in app metadata
+   - Post screenshot/completion evidence
+
+3. **#185 — Host Privacy Policy HTTPS URL:** External dependency. Owner checklist posted 2026-04-30 11:52 UTC. Requires:
+   - Publish `docs/legal/PRIVACY.md` at stable public HTTPS URL (e.g., GitHub Pages)
+   - Verify reachable without auth in private/incognito browser
+   - Update ASC Privacy Policy URL field to match
+   - Verify in-app Settings link targets same URL
+   - Post final URL + verification note
+
+4. **#410 — ShieldAction Phase 2 (BLOCKED on #201):** Dependency comment posted 2026-04-30 11:52 UTC confirming blocker status. Will remain blocked until #201 resolved.
+
+**Assessment:** All four issues are in the correct external/manual state. Checklists are clear, actionable, and prioritized by unblock dependencies. No code fixes available for these—all require manual Apple approval, ASC uploads, or hosting setup. Blocked chain is correct: #410 → #201 (external). Recommend: Yashas execute checklist items in parallel (#196 and #185 are independent and can proceed immediately while awaiting #201 Apple response).
+
+**Outcome:** All issues remain BLOCKED/PENDING external action. Status verified, checklists active, dependency chain is clear.
