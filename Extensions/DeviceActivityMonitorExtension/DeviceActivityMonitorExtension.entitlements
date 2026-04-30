@@ -5,7 +5,7 @@
 	<!-- App Group: enables writing break reason/duration that extensions read. -->
 	<key>com.apple.security.application-groups</key>
 	<array>
-		<string>group.com.yashasgujjar.kshana</string>
+		<string>group.com.yashasg.kshana</string>
 	</array>
 	<!--
 	  com.apple.developer.family-controls is intentionally ABSENT.

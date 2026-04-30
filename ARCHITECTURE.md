@@ -374,7 +374,7 @@ Tests/
   - Push Notifications (for `UNUserNotificationCenter`)
   - Motion usage (`NSMotionUsageDescription` — driving detection)
   - Focus status usage (`NSFocusStatusUsageDescription` — Focus Mode detection)
-  - App Groups (`group.com.yashasgujjar.kshana`) for main app ↔ Screen Time extension state
+  - App Groups (`group.com.yashasg.kshana`) for main app ↔ Screen Time extension state
   - FamilyControls entitlement (`com.apple.developer.family-controls`) for runtime Screen Time shielding, blocked on Apple approval in #201
   - No `UIBackgroundModes: audio` (audio session is foreground-only)
 
@@ -958,7 +958,7 @@ Phase 3 requires a new Xcode project (or XcodeGen `project.yml`) with **four tar
 
 All four targets must:
 - Be in the **same Xcode project**
-- Share **App Groups entitlement** (`com.apple.security.application-groups` with ID `group.com.yashasgujjar.kshana`)
+- Share **App Groups entitlement** (`com.apple.security.application-groups` with ID `group.com.yashasg.kshana`)
 - Carry **FamilyControls entitlement** (`com.apple.developer.family-controls` with `individual` scope)
 
 ---
@@ -1002,7 +1002,7 @@ class DeviceActivityMonitor: DeviceActivityScheduler {
         // Called by system when a scheduled interval begins (e.g., 20 min of Safari use)
         
         // Read App Group state to determine which apps to shield
-        let shared = UserDefaults(suiteName: "group.com.yashasgujjar.kshana")
+        let shared = UserDefaults(suiteName: "group.com.yashasg.kshana")
         let shieldedApps = shared?.array(forKey: "shieldedApps") as? [String] ?? []
         
         // Apply ManagedSettingsStore shields
@@ -1015,7 +1015,7 @@ class DeviceActivityMonitor: DeviceActivityScheduler {
     
     override func intervalDidEnd(for activity: DeviceActivityName) {
         // Called when interval ends; main app can resume
-        let shared = UserDefaults(suiteName: "group.com.yashasgujjar.kshana")
+        let shared = UserDefaults(suiteName: "group.com.yashasg.kshana")
         shared?.set(["shieldActive": false], forKey: "shieldState")
     }
 }
@@ -1023,7 +1023,7 @@ class DeviceActivityMonitor: DeviceActivityScheduler {
 
 **Key points:**
 - Extension runs in **separate process** (XPC sandbox) — no direct access to main app memory
-- Only communication channel: **App Groups shared container** (`UserDefaults(suiteName: "group.com.yashasgujjar.kshana")`)
+- Only communication channel: **App Groups shared container** (`UserDefaults(suiteName: "group.com.yashasg.kshana")`)
 - Extension is **system-triggered** — not user-triggered, not controlled by main app
 
 ---
@@ -1091,7 +1091,7 @@ class ShieldActionHandler: ShieldActionDelegate {
         
         if action.label == ShieldConfiguration.Label(text: "Start Break") {
             // User tapped "Start Break" — defer (keep shield) + signal main app
-            let shared = UserDefaults(suiteName: "group.com.yashasgujjar.kshana")
+            let shared = UserDefaults(suiteName: "group.com.yashasg.kshana")
             shared?.set(Date.now, forKey: "breakStartedAt")
             verdict = .defer
         } else {
@@ -1179,7 +1179,7 @@ This dual-mode design ensures:
 
 ### 5.5.10 App Group State Schema
 
-**Location:** `UserDefaults(suiteName: "group.com.yashasgujjar.kshana")`
+**Location:** `UserDefaults(suiteName: "group.com.yashasg.kshana")`
 
 Used by main app ↔ extension communication:
 

@@ -142,3 +142,40 @@ Orchestration log recorded at 2026-04-30T09:27:10Z. Enhanced CI diagnostics docu
 - Preserved build-for-testing + test-without-building flow and TEST_TARGET_NAME ambiguity workaround; shard filtering is applied via `-only-testing` during `test-without-building`.
 - Added per-shard `.xcresult` paths and artifact names to prevent collisions in parallel jobs.
 - Local validation performed: shell syntax checks, CI YAML parse check, `./scripts/build.sh build`, and a targeted shard run (`HomeScreenTests`) using the new flags.
+
+## 2026-04-30 — Release/TestFlight triage pass (#379, #377, #196, #185, #201, #410)
+
+- Completed code-fixable pre-submission blockers in PR #415:
+  - #379: Renamed shared App Group identifier to `group.com.yashasg.kshana` across all app/extension entitlements, shared constants, tests, and technical docs to match bundle prefix.
+  - #377: Updated App Store SKU in `docs/APP_STORE_LISTING.md` from `eye-posture-reminder` to `kshana` and added explicit immutable-SKU setup checklist item.
+- Validation performed:
+  - Baseline `./scripts/build.sh all` passed before changes.
+  - Post-change `./scripts/build.sh all` passed after changes.
+- External/manual issues triaged with concrete unblock checklists posted:
+  - #196 (Custom EULA upload in ASC), #185 (public HTTPS privacy policy hosting + ASC metadata wiring), #201 (Apple entitlement follow-up case 102881605113).
+- Dependency status:
+  - #410 confirmed BLOCKED in issue comment because #201 remains unresolved.
+
+### Learnings
+- For release-readiness tasks, mirror every in-repo config change with an explicit App Store Connect checklist line so operations cannot drift from source-controlled intent.
+- App Group identifiers should match the bundle namespace prefix when possible; mismatched prefixes create avoidable provisioning and registration mistakes during first submission.
+- `./scripts/build.sh all` mutates `TestResults.xcresult/Info.plist`; keep that artifact out of commits during docs/config triage by explicitly reverting it before commit.
+
+## 2026-04-30 — #210 CI/CD extension-signing hardening follow-up
+
+- Extended CI trigger coverage so tests run on push to any branch (`.github/workflows/ci.yml` now uses `push.branches: ["**"]`).
+- Hardened signed archive validation in `scripts/build_signed.sh`:
+  - Added `verify_archived_extensions()` to fail archive when `EXTENSION_PROFILES_AVAILABLE=YES` but extension `.appex` binaries are missing from `PlugIns/`.
+  - Keeps current blocked path intact (`EXTENSION_PROFILES_AVAILABLE=NO`) while enforcing correctness once #201 profiles are configured.
+- Fixed App Group identifier typo in signed-build doctor output:
+  - `group.com.yashasgujjar.kshana` → `group.com.yashasg.kshana`.
+
+### Validation
+- Baseline before changes: `./scripts/build.sh all && ./scripts/setup-screentime.sh --build` ✅
+- Post-change: `./scripts/build.sh all && ./scripts/setup-screentime.sh --build` ✅
+- Script checks: `bash -n scripts/build_signed.sh scripts/setup-screentime.sh scripts/build.sh` ✅
+- Signing diagnostics: `./scripts/build_signed.sh doctor` ✅
+
+### Learnings
+- Archive success is not enough for extension distribution; CI/signing scripts should assert expected `.appex` payload presence explicitly when extension signing is enabled.
+- Keeping `EXTENSION_PROFILES_AVAILABLE` as the switch preserves pre-approval flow while giving a strict post-approval gate with zero workflow changes.

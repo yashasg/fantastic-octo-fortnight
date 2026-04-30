@@ -105,3 +105,9 @@ Orchestration log recorded at 2026-04-30T09:27:10Z. Fix approved and documented 
 - Local validation: lint, build, test all passing
 - Preserves validation, persistence, UI reactivity, and API surface
 - Ready for merge — awaiting final CI validation
+
+## 2026-04-30 — #354 Focus entitlement parity for distribution
+
+- Fixed App Store/TestFlight capability drift by adding `com.apple.developer.focus-status = true` to `EyePostureReminder.Distribution.entitlements`.
+- Added regression coverage in `DistributionEntitlementsTests` to assert the distribution entitlement file keeps Focus status enabled.
+- Validation: `./scripts/build.sh all` passed after change (build + lint + tests).

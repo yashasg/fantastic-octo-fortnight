@@ -26,7 +26,7 @@ final class HomeScreenTests: XCTestCase {
     func test_homeScreen_onLaunch_displaysRequiredElements() throws {
         let navBar = app.navigationBars.firstMatch
         XCTAssertTrue(
-            navBar.waitForExistence(timeout: 5),
+            navBar.waitForExistence(timeout: 3),
             "Home screen navigation bar should be visible on launch."
         )
 
@@ -35,21 +35,21 @@ final class HomeScreenTests: XCTestCase {
 
         let titleText = app.staticTexts["home.title"]
         XCTAssertTrue(
-            titleText.waitForExistence(timeout: 5),
+            titleText.waitForExistence(timeout: 3),
             "Home screen title must be visible. " +
             "Add .accessibilityIdentifier(\"home.title\") to the title Text in HomeView."
         )
 
         let statusLabel = app.staticTexts["home.statusLabel"]
         XCTAssertTrue(
-            statusLabel.waitForExistence(timeout: 5),
+            statusLabel.waitForExistence(timeout: 3),
             "Home screen status label must be visible. " +
             "Add .accessibilityIdentifier(\"home.statusLabel\") to the status Text in HomeView."
         )
 
         let settingsButton = app.buttons["home.settingsButton"]
         XCTAssertTrue(
-            settingsButton.waitForExistence(timeout: 5),
+            settingsButton.waitForExistence(timeout: 3),
             "Settings toolbar button must be visible on the Home screen. " +
             "Add .accessibilityIdentifier(\"home.settingsButton\") to the toolbar button in HomeView."
         )
@@ -61,12 +61,12 @@ final class HomeScreenTests: XCTestCase {
     /// Snooze is exposed via the Settings sheet — open settings and verify snooze row present.
     func test_homeScreen_openSettings_snoozeButtonExists() throws {
         let settingsButton = app.buttons["home.settingsButton"]
-        XCTAssertTrue(settingsButton.waitForExistence(timeout: 5))
+        XCTAssertTrue(settingsButton.waitForExistence(timeout: 3))
         settingsButton.tap()
 
         let snoozeButton = app.buttons["settings.snooze.5min"]
         XCTAssertTrue(
-            snoozeButton.waitForExistence(timeout: 5),
+            snoozeButton.waitForExistence(timeout: 3),
             "Snooze 5 min button must be present and tappable in Settings. " +
             "Add .accessibilityIdentifier(\"settings.snooze.5min\") to the snooze button in SettingsView."
         )
@@ -78,7 +78,7 @@ final class HomeScreenTests: XCTestCase {
     /// Verifies the navigation bar displays a title or button element.
     func test_homeScreen_onLaunch_navigationBarHasTitle() throws {
         let navBar = app.navigationBars.firstMatch
-        XCTAssertTrue(navBar.waitForExistence(timeout: 5))
+        XCTAssertTrue(navBar.waitForExistence(timeout: 3))
 
         XCTAssertTrue(
             navBar.staticTexts.firstMatch.waitForExistence(timeout: 3) ||
@@ -92,7 +92,7 @@ final class HomeScreenTests: XCTestCase {
     /// Verifies the settings toolbar button is tappable (not obscured or zero-size).
     func test_homeScreen_settingsButton_isHittable() throws {
         let settingsButton = app.buttons["home.settingsButton"]
-        XCTAssertTrue(settingsButton.waitForExistence(timeout: 5))
+        XCTAssertTrue(settingsButton.waitForExistence(timeout: 3))
         XCTAssertTrue(
             settingsButton.isHittable,
             "Settings toolbar button must be hittable (not obscured or zero-size)."
@@ -105,22 +105,22 @@ final class HomeScreenTests: XCTestCase {
     /// and verifies the status label reflects the paused state.
     func test_homeScreen_toggleGlobalSwitch_statusLabelChanges() throws {
         let statusLabel = app.staticTexts["home.statusLabel"]
-        XCTAssertTrue(statusLabel.waitForExistence(timeout: 5))
+        XCTAssertTrue(statusLabel.waitForExistence(timeout: 3))
         let initialText = statusLabel.label
 
         let settingsButton = app.buttons["home.settingsButton"]
-        XCTAssertTrue(settingsButton.waitForExistence(timeout: 5))
+        XCTAssertTrue(settingsButton.waitForExistence(timeout: 3))
         settingsButton.tap()
 
         let globalToggle = app.switches["settings.masterToggle"]
-        XCTAssertTrue(globalToggle.waitForExistence(timeout: 5))
+        XCTAssertTrue(globalToggle.waitForExistence(timeout: 3))
         globalToggle.tap()
 
         let doneButton = app.buttons["settings.doneButton"]
-        XCTAssertTrue(doneButton.waitForExistence(timeout: 5))
+        XCTAssertTrue(doneButton.waitForExistence(timeout: 3))
         doneButton.tap()
 
-        XCTAssertTrue(statusLabel.waitForExistence(timeout: 5))
+        XCTAssertTrue(statusLabel.waitForExistence(timeout: 3))
         let updatedText = statusLabel.label
         XCTAssertNotEqual(initialText, updatedText, "Status label should update after toggling the global switch.")
     }
@@ -131,7 +131,7 @@ final class HomeScreenTests: XCTestCase {
     func test_homeScreen_onLaunch_titleShowsKshana() throws {
         let titleText = app.staticTexts["home.title"]
         XCTAssertTrue(
-            titleText.waitForExistence(timeout: 5),
+            titleText.waitForExistence(timeout: 3),
             "Home screen title must be visible."
         )
         XCTAssertEqual(
@@ -145,7 +145,7 @@ final class HomeScreenTests: XCTestCase {
     /// Verifies the status label is non-empty (shows "active" or "paused" state).
     func test_homeScreen_onLaunch_statusLabelIsNotEmpty() throws {
         let statusLabel = app.staticTexts["home.statusLabel"]
-        XCTAssertTrue(statusLabel.waitForExistence(timeout: 5))
+        XCTAssertTrue(statusLabel.waitForExistence(timeout: 3))
         XCTAssertFalse(
             statusLabel.label.isEmpty,
             "Home screen status label should not be empty."
@@ -157,22 +157,22 @@ final class HomeScreenTests: XCTestCase {
     /// Opens Settings and closes it multiple times to verify no state corruption.
     func test_homeScreen_settingsSheet_canBeOpenedAndClosed() throws {
         let settingsButton = app.buttons["home.settingsButton"]
-        XCTAssertTrue(settingsButton.waitForExistence(timeout: 5))
+        XCTAssertTrue(settingsButton.waitForExistence(timeout: 3))
 
         settingsButton.tap()
         let settingsNav = app.navigationBars["Settings"]
-        XCTAssertTrue(settingsNav.waitForExistence(timeout: 5))
+        XCTAssertTrue(settingsNav.waitForExistence(timeout: 3))
 
         let doneButton = app.buttons["settings.doneButton"]
-        XCTAssertTrue(doneButton.waitForExistence(timeout: 5))
+        XCTAssertTrue(doneButton.waitForExistence(timeout: 3))
         doneButton.tap()
         XCTAssertFalse(settingsNav.waitForExistence(timeout: 3))
 
         XCTAssertTrue(settingsButton.waitForExistence(timeout: 3))
         settingsButton.tap()
-        XCTAssertTrue(settingsNav.waitForExistence(timeout: 5), "Settings should reopen successfully.")
+        XCTAssertTrue(settingsNav.waitForExistence(timeout: 3), "Settings should reopen successfully.")
 
-        XCTAssertTrue(doneButton.waitForExistence(timeout: 5))
+        XCTAssertTrue(doneButton.waitForExistence(timeout: 3))
         doneButton.tap()
     }
 
@@ -191,7 +191,7 @@ final class HomeScreenTests: XCTestCase {
 
         let banner = app.otherElements["home.trueInterrupt.skippedBanner"]
         XCTAssertTrue(
-            banner.waitForExistence(timeout: 5),
+            banner.waitForExistence(timeout: 3),
             "TrueInterruptSkippedBanner must be visible when Screen Time authorization " +
             "is .notDetermined and the banner has not been dismissed."
         )
@@ -224,14 +224,14 @@ final class HomeScreenTests: XCTestCase {
 
         let dismissButton = app.buttons["home.trueInterrupt.skippedBanner.dismiss"]
         XCTAssertTrue(
-            dismissButton.waitForExistence(timeout: 5),
+            dismissButton.waitForExistence(timeout: 3),
             "Dismiss button must be present before tapping to reveal the setup pill."
         )
         dismissButton.tap()
 
         let pill = app.buttons["home.trueInterrupt.setupPill"]
         XCTAssertTrue(
-            pill.waitForExistence(timeout: 5),
+            pill.waitForExistence(timeout: 3),
             "TrueInterruptSetupPill must appear after the banner is dismissed."
         )
         XCTAssertTrue(pill.isHittable, "TrueInterruptSetupPill must be hittable.")

@@ -5,7 +5,7 @@ import XCTest
 /// Unit tests for `SelectedAppsState` and shared App Group selection metadata.
 ///
 /// All tests use an isolated `UserDefaults` suite so they never touch the real
-/// App Group (`group.com.yashasgujjar.kshana`), which requires a provisioned
+/// App Group (`group.com.yashasg.kshana`), which requires a provisioned
 /// device + entitlement profile. This makes the tests runnable in any SPM host.
 @MainActor
 final class SelectedAppsStateTests: XCTestCase {
@@ -78,7 +78,7 @@ final class SelectedAppsStateTests: XCTestCase {
     func test_appGroupSuiteName_isStable() {
         XCTAssertEqual(
             SelectedAppsState.appGroupSuiteName,
-            "group.com.yashasgujjar.kshana",
+            "group.com.yashasg.kshana",
             "App Group suite name must match the provisioned App Group — changing it breaks extension communication"
         )
     }

@@ -404,7 +404,7 @@ Local notification fallback ensures we gracefully degrade if Screen Time APIs un
 ### Architecture Changes (Phase 3)
 
 #### New Targets & Frameworks
-- **App Group:** `group.com.yashasgujjar.kshana` (shared between main app and extensions)
+- **App Group:** `group.com.yashasg.kshana` (shared between main app and extensions)
 - **Main App Entitlements:** `com.apple.developer.family-controls` (FamilyControls)
 - **ShieldConfiguration Extension:** Implements `ShieldConfigurationProvider` protocol (ManagedSettingsUI)
 - **ShieldAction Extension:** Implements `ShieldActionProvider` protocol for app/website unblocker buttons
@@ -537,7 +537,7 @@ Device resumes normal activity
 - **Owner:** Basher (Services Dev)
 - **Status:** 🔄 PLANNED
 - **Scope:**
-  - App Group (`group.com.yashasgujjar.kshana`) UserDefaults syncing config + state
+  - App Group (`group.com.yashasg.kshana`) UserDefaults syncing config + state
   - Main app writes: authorized apps, shield schedule, last shield time
   - Extensions read: config for shield rendering
   - Optional watchdog: separate app extension that monitors break compliance (logs to shared container)
