@@ -306,3 +306,27 @@ Consolidated 2026-04-24 planning entries covering early architecture decisions (
 - **#200** tracks App Store listing coordination (when feature launches; blocking pre-requisite for shipping)
 - **#199** archived as completed-work summary with clear redirect to active tracker
 
+## 2026-04-30 — Post-#302–#314 Release Readiness Audit (Round 2)
+
+**Task:** Read-only product/release readiness audit after issues #302–#314.
+
+**Scope checked:**
+- ROADMAP.md, CHANGELOG.md, README.md — consistent with v0.2.0 Restful Grove, Phase 3 pivot messaging
+- APP_STORE_LISTING.md — version, keywords, What's New, disclaimer all current (fixed by #303/#307)
+- TESTFLIGHT_METADATA.md — test case #1 fixed (#312); test case #2 "Grant App Break Access" still stale
+- ONBOARDING_SPEC.md — screen names/content diverged from implementation
+- UX_FLOWS.md — flow diagram shows 5 screens (code has 4); §5.3 still says "3 screens"
+- ARCHITECTURE.md — §8.5 says "Three-screen flow" (code has 4); §3 file tree missing OnboardingInterruptModeView.swift
+- OnboardingView.swift line 4 comment says "3-screen" (code has 4)
+- Open blockers: #185, #196, #201, #209, #210 — all still valid, no duplicates
+
+**Findings:** 7 stale onboarding references across 5 files
+
+**Issue created:** #318
+
+**Learnings:**
+- Onboarding screen count/names are the #1 recurring drift pattern (third audit cycle catching variants)
+- "Zero stale references remaining" claims need full-file grep verification, not spot checks
+- Spec files (ONBOARDING_SPEC.md) can silently diverge when implementation evolves
+- Cross-referencing between docs creates a combinatorial verification burden; consider a single source of truth for screen inventory
+
