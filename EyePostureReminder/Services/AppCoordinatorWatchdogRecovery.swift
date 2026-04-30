@@ -11,7 +11,9 @@ extension AppCoordinator {
         do {
             session = try ipcStore.readShieldSession()
         } catch {
-            Logger.scheduling.error("Watchdog recovery could not read shield session: \(error.localizedDescription)")
+            Logger.scheduling.error(
+                "Watchdog recovery could not read shield session: \(error.localizedDescription, privacy: .public)"
+            )
             AnalyticsLogger.log(.ipcOperationFailed(
                 operation: .readShieldSession,
                 reason: ipcFailureReason(from: error)
@@ -27,7 +29,9 @@ extension AppCoordinator {
         do {
             events = try ipcStore.readEvents()
         } catch {
-            Logger.scheduling.error("Watchdog recovery could not read heartbeat events: \(error.localizedDescription)")
+            Logger.scheduling.error(
+                "Watchdog recovery could not read heartbeat events: \(error.localizedDescription, privacy: .public)"
+            )
             AnalyticsLogger.log(.ipcOperationFailed(
                 operation: .readEvents,
                 reason: ipcFailureReason(from: error)

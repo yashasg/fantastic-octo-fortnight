@@ -347,12 +347,55 @@ final class SettingsViewModelTests: XCTestCase {
         sut.hapticsEnabled = !initial
 
         let match = captured.first {
-            if case let .settingChanged(setting, _, _) = $0 { return setting == "hapticsEnabled" }
+            if case let .settingChanged(setting, _, _) = $0 { return setting == .hapticsEnabled }
             return false
         }
         XCTAssertNotNil(
             match,
             "Toggling hapticsEnabled via SettingsViewModel must emit settingChanged(setting: \"hapticsEnabled\")"
         )
+    }
+
+    func test_hapticsEnabled_setter_emitsCorrectOldAndNewValues() {
+        var captured: [AnalyticsEvent] = []
+        AnalyticsLogger.testEventHandler = { captured.append($0) }
+        defer { AnalyticsLogger.testEventHandler = nil }
+
+        settings.hapticsEnabled = false
+        sut.hapticsEnabled = true
+
+        if case let .settingChanged(_, oldValue, newValue) = captured.first {
+            XCTAssertEqual(oldValue, "false")
+            XCTAssertEqual(newValue, "true")
+        } else {
+            XCTFail("Expected settingChanged event with old=false new=true")
+        }
+    }
+
+    func test_notifySettingChanged_emitsEvent() {
+        var captured: [AnalyticsEvent] = []
+        AnalyticsLogger.testEventHandler = { captured.append($0) }
+        defer { AnalyticsLogger.testEventHandler = nil }
+
+        sut.notifySettingChanged(.eyesInterval, old: "1200", new: "900")
+
+        XCTAssertEqual(captured.count, 1)
+        if case let .settingChanged(setting, old, new) = captured[0] {
+            XCTAssertEqual(setting, .eyesInterval)
+            XCTAssertEqual(old, "1200")
+            XCTAssertEqual(new, "900")
+        } else {
+            XCTFail("Expected settingChanged event")
+        }
+    }
+
+    func test_notifySettingChanged_sameOldAndNew_doesNotEmit() {
+        var captured: [AnalyticsEvent] = []
+        AnalyticsLogger.testEventHandler = { captured.append($0) }
+        defer { AnalyticsLogger.testEventHandler = nil }
+
+        sut.notifySettingChanged(.globalEnabled, old: "true", new: "true")
+
+        XCTAssertTrue(captured.isEmpty, "No event should be emitted when old == new")
     }
 }

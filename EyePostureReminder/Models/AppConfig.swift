@@ -70,7 +70,9 @@ extension AppConfig {
             let data = try Data(contentsOf: url)
             return try JSONDecoder().decode(AppConfig.self, from: data)
         } catch {
-            Logger.settings.error("AppConfig: failed to decode defaults.json (\(error)) — using hardcoded fallback")
+            Logger.settings.error(
+                "AppConfig: failed to decode defaults.json (\(error, privacy: .public)) — using hardcoded fallback"
+            )
             return .fallback
         }
     }

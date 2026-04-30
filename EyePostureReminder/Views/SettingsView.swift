@@ -62,6 +62,13 @@ struct SettingsView: View {
     @State private var showTerms = false
     @State private var showPrivacy = false
     @State private var showDisclaimer = false
+    // Previous TimeInterval values for oldValue capture in analytics.
+    // SwiftUI mutates $settings.xxx bindings before onChange fires, so we cannot
+    // read the pre-mutation value inside the ViewModel setter (#386).
+    @State private var prevEyesInterval: TimeInterval = .zero
+    @State private var prevEyesBreakDuration: TimeInterval = .zero
+    @State private var prevPostureInterval: TimeInterval = .zero
+    @State private var prevPostureBreakDuration: TimeInterval = .zero
     @State private var showResetConfirm = false
 
     private let accessibilityNotificationPoster: AccessibilityNotificationPosting
@@ -83,7 +90,10 @@ struct SettingsView: View {
                     tint: AppColor.primaryRest,
                     accessibilityIdentifier: "settings.masterToggle",
                     accessibilityHint: Text("settings.masterToggle.hint", bundle: .module),
-                    onChange: { newValue in viewModel?.globalEnabled = newValue; viewModel?.globalToggleChanged() },
+                    onChange: { newValue in
+                        viewModel?.notifySettingChanged(.globalEnabled, old: String(!newValue), new: String(newValue))
+                        viewModel?.globalToggleChanged()
+                    },
                     label: {
                         HStack(spacing: AppSpacing.sm) {
                             SettingsRowIcon(systemName: AppSymbol.masterToggle, tint: AppColor.primaryRest)
@@ -365,6 +375,10 @@ struct SettingsView: View {
                     scheduler: coordinator
                 )
             }
+            prevEyesInterval = settings.eyesInterval
+            prevEyesBreakDuration = settings.eyesBreakDuration
+            prevPostureInterval = settings.postureInterval
+            prevPostureBreakDuration = settings.postureBreakDuration
         }
         .task {
             await coordinator.refreshAuthStatus()
@@ -383,16 +397,55 @@ struct SettingsView: View {
                 : String(localized: "settings.snooze.cancelled.announcement", bundle: .module)
             accessibilityNotificationPoster.postAnnouncement(message: message)
         }
-        // Analytics instrumentation for per-reminder settings (#297).
-        // Routed through ViewModel setters so the events are emitted with the same
-        // structured format as the already-instrumented pause/notification settings.
+        // Analytics instrumentation for per-reminder settings (#297, #386).
+        // SwiftUI mutates the store before onChange fires, so old values are captured here.
         // Note: old/new values are logged with `privacy: .private` (redacted in Console).
-        .onChange(of: settings.eyesEnabled) { newValue in viewModel?.eyesEnabled = newValue }
-        .onChange(of: settings.eyesInterval) { newValue in viewModel?.eyesInterval = newValue }
-        .onChange(of: settings.eyesBreakDuration) { newValue in viewModel?.eyesBreakDuration = newValue }
-        .onChange(of: settings.postureEnabled) { newValue in viewModel?.postureEnabled = newValue }
-        .onChange(of: settings.postureInterval) { newValue in viewModel?.postureInterval = newValue }
-        .onChange(of: settings.postureBreakDuration) { newValue in viewModel?.postureBreakDuration = newValue }
+        .onChange(of: settings.eyesEnabled) { newValue in
+            viewModel?.notifySettingChanged(
+                .eyesEnabled,
+                old: String(!newValue),
+                new: String(newValue)
+            )
+        }
+        .onChange(of: settings.eyesInterval) { newValue in
+            viewModel?.notifySettingChanged(
+                .eyesInterval,
+                old: String(prevEyesInterval),
+                new: String(newValue)
+            )
+            prevEyesInterval = newValue
+        }
+        .onChange(of: settings.eyesBreakDuration) { newValue in
+            viewModel?.notifySettingChanged(
+                .eyesBreakDuration,
+                old: String(prevEyesBreakDuration),
+                new: String(newValue)
+            )
+            prevEyesBreakDuration = newValue
+        }
+        .onChange(of: settings.postureEnabled) { newValue in
+            viewModel?.notifySettingChanged(
+                .postureEnabled,
+                old: String(!newValue),
+                new: String(newValue)
+            )
+        }
+        .onChange(of: settings.postureInterval) { newValue in
+            viewModel?.notifySettingChanged(
+                .postureInterval,
+                old: String(prevPostureInterval),
+                new: String(newValue)
+            )
+            prevPostureInterval = newValue
+        }
+        .onChange(of: settings.postureBreakDuration) { newValue in
+            viewModel?.notifySettingChanged(
+                .postureBreakDuration,
+                old: String(prevPostureBreakDuration),
+                new: String(newValue)
+            )
+            prevPostureBreakDuration = newValue
+        }
     }
 }
 
@@ -525,7 +578,13 @@ private struct SettingsSmartPauseSection: View {
                 tint: AppColor.primaryRest,
                     accessibilityIdentifier: "settings.smartPause.pauseDuringFocus",
                     accessibilityHint: Text("settings.smartPause.pauseDuringFocus.hint", bundle: .module),
-                    onChange: { newValue in viewModel?.pauseDuringFocus = newValue },
+                    onChange: { newValue in
+                        viewModel?.notifySettingChanged(
+                            .pauseDuringFocus,
+                            old: String(!newValue),
+                            new: String(newValue)
+                        )
+                    },
                     label: {
                         Label(
                             String(localized: "settings.smartPause.pauseDuringFocus", bundle: .module),
@@ -542,7 +601,13 @@ private struct SettingsSmartPauseSection: View {
                 tint: AppColor.primaryRest,
                     accessibilityIdentifier: "settings.smartPause.pauseWhileDriving",
                     accessibilityHint: Text("settings.smartPause.pauseWhileDriving.hint", bundle: .module),
-                    onChange: { newValue in viewModel?.pauseWhileDriving = newValue },
+                    onChange: { newValue in
+                        viewModel?.notifySettingChanged(
+                            .pauseWhileDriving,
+                            old: String(!newValue),
+                            new: String(newValue)
+                        )
+                    },
                     label: {
                         Label(
                             String(localized: "settings.smartPause.pauseWhileDriving", bundle: .module),

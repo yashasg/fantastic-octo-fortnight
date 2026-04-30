@@ -112,7 +112,53 @@ final class AnalyticsEventTests: XCTestCase {
     // MARK: - AnalyticsEvent: Settings Events
 
     func test_settingChanged_emptyValues() {
-        AnalyticsLogger.log(.settingChanged(setting: "", oldValue: "", newValue: ""))
+        AnalyticsLogger.log(.settingChanged(setting: .globalEnabled, oldValue: "", newValue: ""))
+    }
+
+    // MARK: - SettingKey
+
+    func test_settingKey_allCases_count() {
+        XCTAssertEqual(AnalyticsEvent.SettingKey.allCases.count, 11)
+    }
+
+    func test_settingKey_rawValues_matchExpectedSchema() {
+        XCTAssertEqual(AnalyticsEvent.SettingKey.globalEnabled.rawValue, "globalEnabled")
+        XCTAssertEqual(AnalyticsEvent.SettingKey.eyesEnabled.rawValue, "eyesEnabled")
+        XCTAssertEqual(AnalyticsEvent.SettingKey.eyesInterval.rawValue, "eyesInterval")
+        XCTAssertEqual(AnalyticsEvent.SettingKey.eyesBreakDuration.rawValue, "eyesBreakDuration")
+        XCTAssertEqual(AnalyticsEvent.SettingKey.postureEnabled.rawValue, "postureEnabled")
+        XCTAssertEqual(AnalyticsEvent.SettingKey.postureInterval.rawValue, "postureInterval")
+        XCTAssertEqual(AnalyticsEvent.SettingKey.postureBreakDuration.rawValue, "postureBreakDuration")
+        XCTAssertEqual(AnalyticsEvent.SettingKey.pauseDuringFocus.rawValue, "pauseDuringFocus")
+        XCTAssertEqual(AnalyticsEvent.SettingKey.pauseWhileDriving.rawValue, "pauseWhileDriving")
+        XCTAssertEqual(AnalyticsEvent.SettingKey.hapticsEnabled.rawValue, "hapticsEnabled")
+        XCTAssertEqual(
+            AnalyticsEvent.SettingKey.notificationFallbackEnabled.rawValue,
+            "notificationFallbackEnabled"
+        )
+    }
+
+    func test_settingChanged_emitsCorrectFields_viaTestHandler() {
+        var captured: [AnalyticsEvent] = []
+        AnalyticsLogger.testEventHandler = { captured.append($0) }
+        defer { AnalyticsLogger.testEventHandler = nil }
+
+        AnalyticsLogger.log(.settingChanged(setting: .eyesInterval, oldValue: "1200", newValue: "900"))
+
+        XCTAssertEqual(captured.count, 1)
+        if case let .settingChanged(setting, oldValue, newValue) = captured[0] {
+            XCTAssertEqual(setting, .eyesInterval)
+            XCTAssertEqual(oldValue, "1200")
+            XCTAssertEqual(newValue, "900")
+        } else {
+            XCTFail("Expected settingChanged event")
+        }
+    }
+
+    func test_settingChanged_allKeys_doNotCrash() {
+        for key in AnalyticsEvent.SettingKey.allCases {
+            AnalyticsLogger.log(.settingChanged(setting: key, oldValue: "false", newValue: "true"))
+        }
     }
 
     // MARK: - AnalyticsEvent: Pause Events

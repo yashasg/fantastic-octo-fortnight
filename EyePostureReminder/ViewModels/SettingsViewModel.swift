@@ -137,7 +137,7 @@ final class SettingsViewModel: ObservableObject {
             let old = settings.globalEnabled
             settings.globalEnabled = newValue
             AnalyticsLogger.log(.settingChanged(
-                setting: "globalEnabled",
+                setting: .globalEnabled,
                 oldValue: String(old),
                 newValue: String(newValue)
             ))
@@ -150,7 +150,7 @@ final class SettingsViewModel: ObservableObject {
             let old = settings.eyesEnabled
             settings.eyesEnabled = newValue
             AnalyticsLogger.log(.settingChanged(
-                setting: "eyesEnabled",
+                setting: .eyesEnabled,
                 oldValue: String(old),
                 newValue: String(newValue)
             ))
@@ -163,7 +163,7 @@ final class SettingsViewModel: ObservableObject {
             let old = settings.eyesInterval
             settings.eyesInterval = newValue
             AnalyticsLogger.log(.settingChanged(
-                setting: "eyesInterval",
+                setting: .eyesInterval,
                 oldValue: String(old),
                 newValue: String(newValue)
             ))
@@ -176,7 +176,7 @@ final class SettingsViewModel: ObservableObject {
             let old = settings.eyesBreakDuration
             settings.eyesBreakDuration = newValue
             AnalyticsLogger.log(.settingChanged(
-                setting: "eyesBreakDuration",
+                setting: .eyesBreakDuration,
                 oldValue: String(old),
                 newValue: String(newValue)
             ))
@@ -189,7 +189,7 @@ final class SettingsViewModel: ObservableObject {
             let old = settings.postureEnabled
             settings.postureEnabled = newValue
             AnalyticsLogger.log(.settingChanged(
-                setting: "postureEnabled",
+                setting: .postureEnabled,
                 oldValue: String(old),
                 newValue: String(newValue)
             ))
@@ -202,7 +202,7 @@ final class SettingsViewModel: ObservableObject {
             let old = settings.postureInterval
             settings.postureInterval = newValue
             AnalyticsLogger.log(.settingChanged(
-                setting: "postureInterval",
+                setting: .postureInterval,
                 oldValue: String(old),
                 newValue: String(newValue)
             ))
@@ -215,7 +215,7 @@ final class SettingsViewModel: ObservableObject {
             let old = settings.postureBreakDuration
             settings.postureBreakDuration = newValue
             AnalyticsLogger.log(.settingChanged(
-                setting: "postureBreakDuration",
+                setting: .postureBreakDuration,
                 oldValue: String(old),
                 newValue: String(newValue)
             ))
@@ -228,7 +228,7 @@ final class SettingsViewModel: ObservableObject {
             let old = settings.pauseDuringFocus
             settings.pauseDuringFocus = newValue
             AnalyticsLogger.log(.settingChanged(
-                setting: "pauseDuringFocus",
+                setting: .pauseDuringFocus,
                 oldValue: String(old),
                 newValue: String(newValue)
             ))
@@ -241,7 +241,7 @@ final class SettingsViewModel: ObservableObject {
             let old = settings.pauseWhileDriving
             settings.pauseWhileDriving = newValue
             AnalyticsLogger.log(.settingChanged(
-                setting: "pauseWhileDriving",
+                setting: .pauseWhileDriving,
                 oldValue: String(old),
                 newValue: String(newValue)
             ))
@@ -254,7 +254,7 @@ final class SettingsViewModel: ObservableObject {
             let old = settings.hapticsEnabled
             settings.hapticsEnabled = newValue
             AnalyticsLogger.log(.settingChanged(
-                setting: "hapticsEnabled",
+                setting: .hapticsEnabled,
                 oldValue: String(old),
                 newValue: String(newValue)
             ))
@@ -267,7 +267,7 @@ final class SettingsViewModel: ObservableObject {
             let old = settings.notificationFallbackEnabled
             settings.notificationFallbackEnabled = newValue
             AnalyticsLogger.log(.settingChanged(
-                setting: "notificationFallbackEnabled",
+                setting: .notificationFallbackEnabled,
                 oldValue: String(old),
                 newValue: String(newValue)
             ))
@@ -276,6 +276,14 @@ final class SettingsViewModel: ObservableObject {
                 Logger.settings.info("Notification fallback → \(self.settings.notificationFallbackEnabled)")
             }
         }
+    }
+
+    /// Emit a `setting_changed` analytics event with explicit old and new value strings.
+    /// Use this from SwiftUI `onChange` closures where the store is already mutated.
+    /// Skips emission when `old == new` (deduplication guard).
+    func notifySettingChanged(_ key: AnalyticsEvent.SettingKey, old: String, new: String) {
+        guard old != new else { return }
+        AnalyticsLogger.log(.settingChanged(setting: key, oldValue: old, newValue: new))
     }
 
     // MARK: - Init
@@ -337,7 +345,10 @@ final class SettingsViewModel: ObservableObject {
         settings.snoozeCount += 1
         scheduler.cancelAllReminders()
         AnalyticsLogger.log(.snoozeActivated(durationOption: option.analyticsCode))
-        Logger.settings.info("Snoozed until \(endDate) via option: \(option.label) (count: \(self.settings.snoozeCount))")
+        Logger.settings.info(
+            // swiftlint:disable:next line_length
+            "Snoozed via option=\(option.analyticsCode, privacy: .public) count=\(self.settings.snoozeCount, privacy: .public)"
+        )
     }
 
     /// Apply a snooze for an arbitrary number of minutes.

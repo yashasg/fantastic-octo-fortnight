@@ -64,7 +64,7 @@ final class AnalyticsLoggerTests: XCTestCase {
     }
 
     func test_settingChanged_canBeConstructed() {
-        let event = AnalyticsEvent.settingChanged(setting: "eyeInterval", oldValue: "20", newValue: "30")
+        let event = AnalyticsEvent.settingChanged(setting: .eyesInterval, oldValue: "20", newValue: "30")
         _ = event
     }
 
@@ -139,8 +139,8 @@ final class AnalyticsLoggerTests: XCTestCase {
     }
 
     func test_log_settingChanged_doesNotCrash() {
-        AnalyticsLogger.log(.settingChanged(setting: "eyeInterval", oldValue: "20", newValue: "30"))
-        AnalyticsLogger.log(.settingChanged(setting: "postureEnabled", oldValue: "true", newValue: "false"))
+        AnalyticsLogger.log(.settingChanged(setting: .eyesInterval, oldValue: "20", newValue: "30"))
+        AnalyticsLogger.log(.settingChanged(setting: .postureEnabled, oldValue: "true", newValue: "false"))
     }
 
     func test_log_pauseActivated_doesNotCrash() {

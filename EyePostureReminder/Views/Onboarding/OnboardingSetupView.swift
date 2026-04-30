@@ -36,6 +36,8 @@ struct OnboardingSetupView: View {
                         color: AppColor.primaryRest,
                         title: String(localized: "onboarding.setup.eyeBreaks.title", bundle: .module),
                         typeID: "eyes",
+                        intervalKey: .eyesInterval,
+                        durationKey: .eyesBreakDuration,
                         interval: $settings.eyesInterval,
                         breakDuration: $settings.eyesBreakDuration
                     )
@@ -44,6 +46,8 @@ struct OnboardingSetupView: View {
                         color: AppColor.secondaryCalm,
                         title: String(localized: "onboarding.setup.postureChecks.title", bundle: .module),
                         typeID: "posture",
+                        intervalKey: .postureInterval,
+                        durationKey: .postureBreakDuration,
                         interval: $settings.postureInterval,
                         breakDuration: $settings.postureBreakDuration
                     )
@@ -90,8 +94,12 @@ private struct OnboardingReminderPickerCard: View {
     let title: String
     /// Stable, localisation-safe identifier used for accessibility identifiers (e.g. "eyes", "posture").
     let typeID: String
+    let intervalKey: AnalyticsEvent.SettingKey
+    let durationKey: AnalyticsEvent.SettingKey
     @Binding var interval: TimeInterval
     @Binding var breakDuration: TimeInterval
+    @State private var prevInterval: TimeInterval = .zero
+    @State private var prevBreakDuration: TimeInterval = .zero
 
     var body: some View {
         VStack(alignment: .leading, spacing: AppSpacing.sm) {
@@ -129,6 +137,14 @@ private struct OnboardingReminderPickerCard: View {
                     title
                 )
             )
+            .onChange(of: interval) { newValue in
+                AnalyticsLogger.log(.settingChanged(
+                    setting: intervalKey,
+                    oldValue: String(prevInterval),
+                    newValue: String(newValue)
+                ))
+                prevInterval = newValue
+            }
 
             // Break duration picker — how long each break lasts
             Picker(String(localized: "onboarding.setup.picker.breakFor", bundle: .module), selection: $breakDuration) {
@@ -143,6 +159,18 @@ private struct OnboardingReminderPickerCard: View {
                     title
                 )
             )
+            .onChange(of: breakDuration) { newValue in
+                AnalyticsLogger.log(.settingChanged(
+                    setting: durationKey,
+                    oldValue: String(prevBreakDuration),
+                    newValue: String(newValue)
+                ))
+                prevBreakDuration = newValue
+            }
+        }
+        .onAppear {
+            prevInterval = interval
+            prevBreakDuration = breakDuration
         }
         .padding(AppSpacing.lg)
         .wellnessCard(elevated: true)

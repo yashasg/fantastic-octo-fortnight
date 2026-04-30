@@ -258,7 +258,7 @@ Fired when a DeviceActivity shield session is cancelled/deactivated. No payload 
 |-------|---------|---------|--------------|
 | `durationOption` | `duration_option` | `.public` | See snooze duration code table |
 
-**Stable snooze duration codes** (from `SettingsViewModel.SnoozeDuration.analyticsCode`):
+**Stable snooze duration codes** (from `SettingsViewModel.SnoozeOption.analyticsCode`):
 
 | Preset | Analytics code | Duration |
 |--------|---------------|---------|
@@ -303,6 +303,7 @@ No payload. Fired when the user manually cancels an active snooze.
 | `pauseDuringFocus` | Bool | `SettingsViewModel.pauseDuringFocus` setter (routed via `SettingsSmartPauseSection` toggle `onChange`) |
 | `pauseWhileDriving` | Bool | `SettingsViewModel.pauseWhileDriving` setter |
 | `notificationFallbackEnabled` | Bool | `SettingsViewModel.notificationFallbackEnabled` setter (also triggers reschedule) |
+| `hapticsEnabled` | Bool | `SettingsViewModel.hapticsEnabled` setter (custom Binding in `SettingsView` Preferences section) |
 
 ---
 

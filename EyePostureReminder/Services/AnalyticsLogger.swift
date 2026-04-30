@@ -93,7 +93,7 @@ enum AnalyticsEvent: Sendable {
     // MARK: Settings
 
     /// Fired when a user-facing setting is changed.
-    case settingChanged(setting: String, oldValue: String, newValue: String)
+    case settingChanged(setting: SettingKey, oldValue: String, newValue: String)
 
     // MARK: Pause
 
@@ -149,6 +149,25 @@ enum AnalyticsEvent: Sendable {
         case getStarted = "get_started"
         case customize  = "customize"
     }
+
+    // MARK: SettingKey
+
+    // swiftlint:disable redundant_string_enum_value
+    /// Non-PII key names for the `settingChanged` analytics event.
+    enum SettingKey: String, CaseIterable {
+        case globalEnabled               = "globalEnabled"
+        case eyesEnabled                 = "eyesEnabled"
+        case eyesInterval                = "eyesInterval"
+        case eyesBreakDuration           = "eyesBreakDuration"
+        case postureEnabled              = "postureEnabled"
+        case postureInterval             = "postureInterval"
+        case postureBreakDuration        = "postureBreakDuration"
+        case pauseDuringFocus            = "pauseDuringFocus"
+        case pauseWhileDriving           = "pauseWhileDriving"
+        case hapticsEnabled              = "hapticsEnabled"
+        case notificationFallbackEnabled = "notificationFallbackEnabled"
+    }
+    // swiftlint:enable redundant_string_enum_value
 }
 
 // MARK: - AnalyticsLogger
@@ -227,7 +246,7 @@ enum AnalyticsLogger {
         case let .settingChanged(setting, oldValue, newValue):
             logger.info("""
                 event=setting_changed \
-                setting=\(setting, privacy: .public) \
+                setting=\(setting.rawValue, privacy: .public) \
                 old_value=\(oldValue, privacy: .private) \
                 new_value=\(newValue, privacy: .private)
                 """)
@@ -303,7 +322,7 @@ enum AnalyticsLogger {
                 """)
 
         default:
-            break
+            assertionFailure("Unhandled analytics event — add a case to logExtended(_:): \(event)")
         }
     }
 }

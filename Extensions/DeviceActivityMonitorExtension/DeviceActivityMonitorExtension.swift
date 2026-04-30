@@ -97,7 +97,7 @@ final class DeviceActivityMonitorExtensionImpl: DeviceActivityMonitor {
     private func recordWatchdogHeartbeat(_ detail: WatchdogHeartbeatDetail) -> Bool {
         return WatchdogHeartbeat.record(detail, using: ipcStore) { _, error in
             os_log(
-                "DeviceActivity heartbeat IPC write failed: %{public}@",
+                "DeviceActivity heartbeat IPC write failed: %{private}@",
                 log: Self.ipcLog,
                 type: .error,
                 String(describing: error)

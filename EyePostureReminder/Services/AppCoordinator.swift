@@ -306,7 +306,8 @@ final class AppCoordinator: ObservableObject {
                 .requestAuthorization(options: [.alert, .sound, .badge])
             Logger.lifecycle.info("Notification authorisation \(granted ? "granted" : "denied")")
         } catch {
-            Logger.lifecycle.error("Notification authorisation request failed: \(error.localizedDescription)")
+            // swiftlint:disable:next line_length
+            Logger.lifecycle.error("Notification authorisation request failed: \(error.localizedDescription, privacy: .public)")
         }
         await refreshAuthStatus()
     }
@@ -353,7 +354,8 @@ final class AppCoordinator: ObservableObject {
                 if notificationAuthStatus == .authorized {
                     await scheduleSnoozeWakeNotification(at: snoozeEnd)
                 }
-                Logger.scheduling.info("Snooze active until \(snoozeEnd) — screen-time tracker paused")
+                // swiftlint:disable:next line_length
+                Logger.scheduling.info("Snooze active — screen-time tracker paused; expires in \(snoozeEnd.timeIntervalSinceNow, format: .fixed(precision: 0), privacy: .public)s")
                 return
             } else {
                 // Snooze has expired — clear state and fall through to normal scheduling.
@@ -522,7 +524,8 @@ final class AppCoordinator: ObservableObject {
                 if notificationAuthStatus == .authorized {
                     await scheduleSnoozeWakeNotification(at: snoozeEnd)
                 }
-                Logger.scheduling.info("Foreground transition: snooze still active until \(snoozeEnd)")
+                // swiftlint:disable:next line_length
+                Logger.scheduling.info("Foreground transition: snooze still active; expires in \(snoozeEnd.timeIntervalSinceNow, format: .fixed(precision: 0), privacy: .public)s")
             }
             return
         }
@@ -590,7 +593,8 @@ extension AppCoordinator {
             guard !Task.isCancelled else { return }
             await self?.handleSnoozeWake()
         }
-        Logger.scheduling.debug("Snooze wake task armed for \(date)")
+        // swiftlint:disable:next line_length
+        Logger.scheduling.debug("Snooze wake task armed; fires in \(date.timeIntervalSinceNow, format: .fixed(precision: 0), privacy: .public)s")
     }
 
     /// Cancel the in-process snooze wake task without removing the pending
@@ -640,7 +644,8 @@ extension AppCoordinator {
             try await notificationCenter.add(request)
             Logger.scheduling.debug("Snooze wake notification scheduled in \(interval)s")
         } catch {
-            Logger.scheduling.error("Failed to schedule snooze wake notification: \(error.localizedDescription)")
+            // swiftlint:disable:next line_length
+            Logger.scheduling.error("Failed to schedule snooze wake notification: \(error.localizedDescription, privacy: .public)")
         }
     }
 
@@ -750,7 +755,8 @@ extension AppCoordinator {
                     }
                 }
                 Logger.scheduling.error(
-                    "DeviceActivity monitor \(operation.logDescription) failed: \(error.localizedDescription)"
+                    // swiftlint:disable:next line_length
+                    "DeviceActivity monitor \(operation.logDescription, privacy: .public) failed: \(error.localizedDescription, privacy: .public)"
                 )
             }
             if case .cancel(let presentationID?) = operation {
@@ -876,7 +882,7 @@ extension AppCoordinator {
         do {
             try ipcStore.recordEvent(AppGroupIPCEvent(kind: kind, reasonRaw: reasonRaw, detail: detail))
         } catch {
-            Logger.scheduling.error("App Group IPC event write failed: \(error.localizedDescription)")
+            Logger.scheduling.error("App Group IPC event write failed: \(error.localizedDescription, privacy: .public)")
             AnalyticsLogger.log(.ipcOperationFailed(operation: .writeEvent, reason: .writeFailed))
         }
     }
@@ -885,7 +891,8 @@ extension AppCoordinator {
         do {
             try WatchdogHeartbeat.record(detail, using: ipcStore)
         } catch {
-            Logger.scheduling.error("App Group watchdog heartbeat write failed: \(error.localizedDescription)")
+            // swiftlint:disable:next line_length
+            Logger.scheduling.error("App Group watchdog heartbeat write failed: \(error.localizedDescription, privacy: .public)")
         }
     }
 }

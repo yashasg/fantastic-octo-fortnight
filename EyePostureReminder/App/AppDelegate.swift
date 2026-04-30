@@ -32,10 +32,13 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
             let reason = exception.reason ?? "nil"
             let info = String(describing: exception.userInfo)
             let stack = exception.callStackSymbols.joined(separator: "\n")
-            Logger.lifecycle.fault(
-                "Uncaught ObjC exception: name=\(name) reason=\(reason) userInfo=\(info)"
-            )
-            Logger.lifecycle.fault("Stack trace:\n\(stack)")
+            Logger.lifecycle.fault("""
+                Uncaught ObjC exception: \
+                name=\(name, privacy: .public) \
+                reason=\(reason, privacy: .private) \
+                userInfo=\(info, privacy: .private)
+                """)
+            Logger.lifecycle.fault("Stack trace:\n\(stack, privacy: .private)")
         }
     }
 
