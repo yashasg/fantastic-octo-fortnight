@@ -2,6 +2,17 @@
 
 ## Core Context
 
+**Post-#302–#314 Architecture Audit — 2026-04-29:**
+Read-only audit after issues #302–#314 landed. Audited concurrency patterns (@MainActor isolation, Timer lifecycle, closure captures, Task cancellation), app lifecycle (scenePhase, foreground/background transitions, service start/stop), app-extension IPC (App Group consistency, NSLock-protected atomic writes, noop fallbacks for FamilyControls), persistence (SettingsStore UserDefaults writes, AppConfig caching), battery (1s timer with 0.5s tolerance stops on background, no wake locks or background tasks), and entitlement boundaries (protocol-gated framework imports, centralized app group ID).
+
+**Result:** No new material issues found. The architecture is sound post-#302–#314. Key observations:
+- OverlayView Timer closure captures @State bindings (SwiftUI struct semantics), not a retain cycle risk.
+- AppCoordinator deinit omits `pauseConditionManager.stopMonitoring()` — acceptable because coordinator is app-scoped; deinit only fires on process termination when OS reclaims everything.
+- CarPlayDetector `startMonitoring()` could leak observers on duplicate calls, but PauseConditionManager guards with `if !cancellables.isEmpty { stopMonitoring() }` before re-subscribing.
+- `DispatchQueue.main.async` in detector callbacks is safe under swift-tools-version 5.9 (no strict concurrency). Would need `MainActor.assumeIsolated` if/when project adopts Swift 6 strict concurrency.
+- Notification identifier prefixes are inconsistent ("com.yashasg.eyeposturereminder" vs "com.yashasgujjar.kshana") but functionally harmless — they're just unique string identifiers.
+- ScreenTimeTracker tick callback uses `MainActor.assumeIsolated` (synchronous), eliminating the stale-Task race fixed in #301.
+
 **Initial Architecture Scaffolding (Rusty Pre-Phase1) — 2026-04-24:**
 Production-quality scaffold pre-built before Phase 1 team work: Models (ReminderType, ReminderSettings), Services (SettingsStore, ReminderScheduler, AppCoordinator, AppDelegate, OverlayManager), ViewModels, DesignSystem (AppColor, AppFont, AppSpacing, AppLayout, AppAnimation, AppSymbol). 
 - SettingsStore uses UserDefaults with `epr.` key prefix; @Published properties automatically notify SwiftUI views.
