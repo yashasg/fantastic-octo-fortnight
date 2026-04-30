@@ -21,7 +21,7 @@ struct OverlayView: View {
     @State private var secondsRemaining: Int
     @State private var timer: Timer?
     @State private var contentOpacity: Double = 0
-    @State private var slideOffset: CGFloat = 300
+    @State private var slideOffset: CGFloat = AppLayout.overlayEntranceOffset
     @State private var isDismissing = false
 
     // Generators created in onAppear and pre-prepared for low-latency haptics.

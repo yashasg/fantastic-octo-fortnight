@@ -281,10 +281,19 @@ enum AppLayout {
     static let onboardingIllustrationSize: CGFloat = 72
     /// Entrance slide offset for CalmingEntrance animations — gentle 20pt upward drift.
     static let entranceSlideOffset: CGFloat = 20
-    // AppLayout.overlayIconSize / onboardingIllustrationSize / settingsRowIconWidth are
-    // intentionally fixed-size (decorative, accessibility-hidden). See AppFont.countdown for precedent.
+    /// Initial Y-offset that positions the overlay below the visible screen before the
+    /// entrance animation slides it to y=0. Sized to exceed any notch/safe-area overhang
+    /// so the overlay is never partially visible before the animation begins.
+    static let overlayEntranceOffset: CGFloat = 300
+    // AppLayout.overlayIconSize / onboardingIllustrationSize / settingsRowIconWidth /
+    // decorativeIconFrame are intentionally fixed-size (decorative, accessibility-hidden).
+    // See AppFont.countdown for precedent.
     /// Setup preview card icon column width (decorative icon frame)
     static let settingsRowIconWidth: CGFloat = 40
+    /// Decorative (non-interactive) icon frame used in preview cards and picker headers.
+    /// Intentionally 44pt to match the visual weight of surrounding interactive controls,
+    /// but must NOT be used as a tap-target size — use `minTapTarget` for interactive elements.
+    static let decorativeIconFrame: CGFloat = 44
 
     // MARK: Border Widths
     /// 0.5pt — hair-thin border ring (dark-mode elevation, pill outlines)

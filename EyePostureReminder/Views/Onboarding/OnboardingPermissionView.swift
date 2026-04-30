@@ -110,7 +110,7 @@ private struct NotificationPreviewCard: View {
                     .symbolRenderingMode(.hierarchical)
                     .font(AppFont.caption)
                     .foregroundStyle(AppColor.primaryRest)
-                    .frame(width: AppLayout.minTapTarget, height: AppLayout.minTapTarget)
+                    .frame(width: AppLayout.decorativeIconFrame, height: AppLayout.decorativeIconFrame)
                     .background(
                         RoundedRectangle(cornerRadius: AppLayout.radiusSmall, style: .continuous)
                             .fill(AppColor.surfaceTint)
