@@ -7,7 +7,7 @@ A calming iOS wellness app — redesigned as **Restful Grove** with a yin-yang�
 - 👁 **Eye-rest reminders** – configurable interval and break duration (e.g. 20-20-20 rule)
 - 🧍 **Posture reminders** – configurable interval and break duration
 - 🚀 **True Interrupt Mode (coming Phase 3)** – Screen Time Shield-based break suggestions over selected apps/categories; arriving when Apple entitlement approval (#201) is complete. Current builds use local alerts as the primary reminder mechanism.
-- 🧠 **Smart Pause** – automatically pauses reminders during Focus Mode, CarPlay navigation, or when driving
+- 🧠 **Smart Pause** – automatically pauses reminders during Focus Mode (requires `com.apple.developer.focus-status` entitlement), CarPlay navigation, or when driving
 - Full-screen break screen with countdown timer
 - Dropdown pickers for reminder interval and break length
 - Foreground screen-time tracking via a 1-second `Timer` — reminders fire based on actual eyes-on-screen time, not wall-clock intervals

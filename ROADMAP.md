@@ -231,7 +231,7 @@
 - **Owner:** Reuben (Product Designer) + Linus (iOS UI Dev)
 - **Status:** ✅ Complete
 - **Delivered:**
-  - 3-screen onboarding: Welcome → Permissions → Setup
+  - 4-screen onboarding: Welcome → App Break Access (Pre-Permission) → Screen Time Permission → Quick Setup
   - "Get Started" triggers permission request
   - "Skip" option available
   - First-launch flag in UserDefaults
@@ -813,7 +813,7 @@ Phase 3: Advanced 🔄 Partially Started
 
 **What's Been Built:**
 - ✅ Full MVP (Phase 1): Settings, notifications, overlay with countdown, haptics, snooze
-- ✅ Polish (Phase 2): Onboarding (3 screens), smart pause (Focus/CarPlay/driving), accessibility (WCAG AA), data-driven config (Asset Catalog + String Catalog + defaults.json), screen-time triggers (continuous screen-on time with grace period), yin-yang logo animation (Restful Grove redesign — custom SwiftUI Path, spin→breathe, reduce-motion support)
+- ✅ Polish (Phase 2): Onboarding (4 screens), smart pause (Focus/CarPlay/driving), accessibility (WCAG AA), data-driven config (Asset Catalog + String Catalog + defaults.json), screen-time triggers (continuous screen-on time with grace period), yin-yang logo animation (Restful Grove redesign — custom SwiftUI Path, spin→breathe, reduce-motion support)
 - ✅ Test Coverage: 71+ unit tests, XCUITest scaffold (HomeScreen, Settings, Onboarding flows)
 - ✅ Architecture: MVVM established, ScreenTimeTracker service, PauseConditionManager with three detectors, protocols for testability
 - ✅ Team: 13 members (PM, Design, Architect, 2 iOS Devs, Tester, Code Reviewer, Legal, CI/CD, Data Analyst, Formatter, Scribe)
