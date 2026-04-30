@@ -7,6 +7,31 @@
 
 ## Learnings
 
+### 2026-04-30 — Post-#302–#314 Read-Only Coverage Audit
+
+**Scope:** Read-only audit of all test files against commits #302–#314 (IPC legacy corruption fix, overlay/onboarding a11y fixes, Customize Settings onboarding path, TestFlight docs correction, CI warning parity hardening).
+
+**Verdict per area:**
+
+| Area | Finding |
+|------|---------|
+| IPC legacy corruption (#306) | ✅ COVERED — 3 regression tests: `test_readEvents_corruptLegacyLog_*` (2) in `AppGroupIPCStoreTests` + `test_watchdogRecovery_corruptLegacyEventLog_stillTriggersRecovery` in `AppCoordinatorWatchdogHeartbeatTests` |
+| Overlay a11y — screenChanged on dismiss (#308/#309) | ✅ COVERED — guard path and queue-present path verified in `OverlayManagerExtendedTests`; real-dismiss success path requires UIWindowScene (documented known gap) |
+| Overlay a11y — headline sort priority (#310) | ✅ COVERED — `OverlayAccessibilityTests` eyes + posture body-eval tests |
+| Onboarding a11y — hero illustration hidden (#311) | ✅ COVERED — `TrueInterruptViewCoverageTests` body-string assertion |
+| TestFlight docs correction (#312) | ✅ N/A — docs-only fix, no regression test needed |
+| Overlay — remove deprecated .isModal trait (#313) | ✅ COVERED — `OverlayAccessibilityTests.test_overlayView_doesNotUseDeprecatedIsModalTrait_bodyEvaluates` |
+| Customize Settings onboarding path (#314) | 🔴 GAP — see issue #319 |
+| CI warning parity (#304/#305) | ✅ COVERED — `scripts/build.sh` XCODE_FLAGS includes both `SWIFT_TREAT_WARNINGS_AS_ERRORS=YES` and `GCC_TREAT_WARNINGS_AS_ERRORS=YES` for all invocations; action SHAs pinned in all 4 squad workflows |
+
+**Issue filed:** #319 — Missing UI tests for `onboarding.interrupt.customizeButton` (two methods listed in README don't exist in `OnboardingFlowTests.swift`; `finishOnboardingAndCustomize()` write-through unverified).
+
+**Key insight:** When a feature adds an accessibility identifier to production code and the README lists UI test method names for it, always verify the test methods actually exist in the file. The README→file discrepancy is a silent false-confidence signal — CI does not catch it because UI tests are in a separate target.
+
+**Key insight:** `finishOnboardingAndCustomize()` uses `UserDefaults.standard` directly and is `private` on `OnboardingView`. Unit tests for its write-through contract are not possible without UIKit hosting. The UI test is the ONLY verification path for the `openSettingsOnLaunch` flag write.
+
+---
+
 ### 2026-04-26 — Issue #169: Update UI Tests for Restful Grove Redesign
 
 **Baseline:** 889/889 unit tests pass; UI test suite passes (all pre-existing tests green).
