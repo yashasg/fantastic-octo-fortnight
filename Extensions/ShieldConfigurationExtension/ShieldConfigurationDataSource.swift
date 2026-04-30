@@ -4,7 +4,7 @@
 /// This stub compiles without the `com.apple.developer.family-controls`
 /// entitlement. Runtime shield rendering requires:
 ///   1. FamilyControls entitlement approved (issue #201)
-///   2. App Group provisioning profile including `group.com.yashasgujjar.kshana`
+///   2. App Group provisioning profile including `group.com.yashasg.kshana`
 ///
 /// The principal class is registered via `Info.plist` (`NSExtensionPrincipalClass`).
 /// `ShieldConfigurationDataSource` is an ObjC-rooted class; Swift subclasses are

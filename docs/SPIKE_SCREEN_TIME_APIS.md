@@ -68,7 +68,7 @@ kshana (Main App)
 - An Xcode project (`.xcodeproj`) with dedicated extension targets
 - Each extension has its own `Info.plist` (`NSExtension` key with `NSExtensionPointIdentifier`)
 - Each extension is embedded in the host via the "Embed App Extensions" build phase
-- Extensions and host share the same App Group (`group.com.yashasgujjar.kshana`)
+- Extensions and host share the same App Group (`group.com.yashasg.kshana`)
 
 This means **the current SPM-only project structure must be migrated to a proper Xcode project** before real Screen Time shield functionality can be added. This migration is the primary prerequisite for M3.3 (recommend new issue #203, see §8).
 
@@ -80,18 +80,18 @@ All three extension processes and the main app run in separate sandboxes. Commun
 
 | Mechanism | Use |
 |---|---|
-| `UserDefaults(suiteName: "group.com.yashasgujjar.kshana")` | Active shield state, break reason, duration |
+| `UserDefaults(suiteName: "group.com.yashasg.kshana")` | Active shield state, break reason, duration |
 | Shared file container | (Not needed for M3 scope) |
 | `CFNotificationCenter` (Darwin notifications) | (Not needed — extensions respond to DeviceActivity events, not app-initiated notifications) |
 
-**App Group identifier:** `group.com.yashasgujjar.kshana`  
+**App Group identifier:** `group.com.yashasg.kshana`  
 This must be added to both the main app and all three extension targets in their entitlements files.
 
 **Data written by main app, read by extensions:**
 ```
-group.com.yashasgujjar.kshana/shield.breakReason      — "eyes" | "posture"
-group.com.yashasgujjar.kshana/shield.durationSeconds  — Double / TimeInterval
-group.com.yashasgujjar.kshana/shield.triggeredAt      — Date
+group.com.yashasg.kshana/shield.breakReason      — "eyes" | "posture"
+group.com.yashasg.kshana/shield.durationSeconds  — Double / TimeInterval
+group.com.yashasg.kshana/shield.triggeredAt      — Date
 ```
 
 **Owned types (added in this spike):**
@@ -192,7 +192,7 @@ This preserves compatibility for users who haven't granted FamilyControls access
 1. Convert SPM-only project to Xcode project (retain `Package.swift` for test tooling compatibility)
 2. Add `ShieldConfigurationExtension` target with stub `ShieldConfigurationDataSource`
 3. Add `DeviceActivityMonitorExtension` target with stub `DeviceActivityMonitor`
-4. Configure app group `group.com.yashasgujjar.kshana` in all three entitlement files
+4. Configure app group `group.com.yashasg.kshana` in all three entitlement files
 5. Wire `ScreenTimeShieldProviding` protocol to a real `ScreenTimeShieldManager` (conditional compilation guard: `#if canImport(FamilyControls)`)
 6. Validate extension targets compile on device build (CI can't run these)
 

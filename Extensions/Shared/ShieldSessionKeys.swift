@@ -4,7 +4,7 @@
 /// `EyePostureReminder/Services/ScreenTimeShieldTypes.swift` (`ShieldSession`).
 /// Duplicated here because App Extension targets cannot import the main app module.
 ///
-/// App Group: `group.com.yashasgujjar.kshana`
+/// App Group: `group.com.yashasg.kshana`
 
 public enum ShieldSessionKeys {
     /// Encoded `ShieldSessionSnapshot` payload for atomic cross-process session reads.
@@ -16,5 +16,5 @@ public enum ShieldSessionKeys {
     /// Wall-clock trigger time stored as `timeIntervalSince1970` (`Double`).
     public static let triggeredAt = "shield.triggeredAt"
     /// Shared App Group suite name.
-    public static let appGroupID = "group.com.yashasgujjar.kshana"
+    public static let appGroupID = "group.com.yashasg.kshana"
 }

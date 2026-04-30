@@ -7,7 +7,7 @@
 /// **Testability:** The initialiser accepts any `UserDefaults` instance so unit
 /// tests can pass an isolated in-memory suite without requiring the real App Group
 /// to exist (which demands a device + provisioning profile). Tests never touch the
-/// real `group.com.yashasgujjar.kshana` suite.
+/// real `group.com.yashasg.kshana` suite.
 ///
 /// **Token serialisation:** `ApplicationToken` and `ActivityCategoryToken` values
 /// from `FamilyControls` are opaque and not `Codable`. Only aggregate counts that

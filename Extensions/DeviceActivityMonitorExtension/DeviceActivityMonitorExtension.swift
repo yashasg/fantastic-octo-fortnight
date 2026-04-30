@@ -3,7 +3,7 @@
 ///
 /// This extension applies and removes `ManagedSettingsStore` shield restrictions
 /// during a break session. It reads break context from the shared App Group
-/// `UserDefaults` (`group.com.yashasgujjar.kshana`) so it can customise shield
+/// `UserDefaults` (`group.com.yashasg.kshana`) so it can customise shield
 /// behaviour without importing the main app module.
 ///
 /// **Entitlement dependency:** Real shield application via `ManagedSettingsStore`
@@ -47,7 +47,7 @@ final class DeviceActivityMonitorExtensionImpl: DeviceActivityMonitor {
     /// fall back to a generic shield rather than skipping restrictions entirely.
     ///
     /// - Parameter defaults: The App Group `UserDefaults` suite. Defaults to the
-    ///   shared `group.com.yashasgujjar.kshana` suite.
+    ///   shared `group.com.yashasg.kshana` suite.
     static func readSession(
         from defaults: UserDefaults? = AppGroupDefaults.resolve(consumer: "DeviceActivityMonitorExtension")
     ) -> (reason: ShieldTriggerReason?, durationSeconds: Double, triggeredAt: Date?) {
