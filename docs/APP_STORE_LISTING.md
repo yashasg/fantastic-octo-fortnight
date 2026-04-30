@@ -2,7 +2,7 @@
 
 > **Author:** Danny (Product Manager)  
 > **Date:** 2026-04-24  
-> **Version:** v0.1.0-beta (TestFlight)  
+> **Version:** v0.2.0 — Restful Grove  
 > **Milestone:** M2.7 — App Store Preparation
 
 ---
@@ -54,35 +54,37 @@ Built for people who spend hours at a screen and want control over their break h
 ## 4. Keywords
 
 ```
-eye health,posture,20-20-20,screen break,reminder,timer,wellness,eye strain,ergonomic,rest
+eye health,posture,20-20-20,screen break,reminder,timer,eye strain,ergonomic,rest,screen time
 ```
 
-*(96 characters — within 100-char limit)*
+*(93 characters — within 100-char limit)*
 
 **Keyword strategy notes:**
 - Prioritized high-intent terms: "eye health", "screen break", "reminder"
 - Included the well-known "20-20-20" rule for discoverability
 - "eye strain" captures pain-point searchers
-- "ergonomic" and "wellness" broaden reach into health-conscious audiences
-- Excluded words already in app name/subtitle (Apple indexes those separately)
+- "ergonomic" broadens reach into health-conscious audiences
+- "screen time" captures high-intent users searching for screen-time management tools
+- Excluded words already in app name/subtitle (Apple indexes those separately); "wellness" removed since it appears in the subtitle
 
 ---
 
-## 5. What's New (v0.1.0-beta)
+## 5. What's New (v0.2.0 — Restful Grove)
 
 ```
-Welcome to the first TestFlight beta of kshana!
+kshana v0.2.0 — Restful Grove
 
-• Eye break reminders using the 20-20-20 rule
-• Posture check reminders at customizable intervals
-• Full-screen overlay with countdown timer
-• Customizable intervals (10–60 min) and break durations (10–60 s)
-• Haptic feedback on overlay appearance and dismissal
-• Snooze support (5 min, 15 min, or rest of day)
-• Battery-efficient background scheduling
-• VoiceOver and Dynamic Type accessibility support
+• New visual identity: Sage & Mint color palette with Restful Grove design tokens
+• Yin-yang logo animation with Reduce Motion support
+• Smart Pause: auto-silence reminders during Focus Mode, CarPlay, and driving
+• Screen-time-aware reminders: breaks fire after continuous screen-on time
+• Snooze options: 5 min, 1 hour, or rest of day
+• 4-screen onboarding flow with app break explanation
+• In-app legal documents (Terms, Privacy, Disclaimer)
+• Accessibility: WCAG AA contrast, VoiceOver live regions, 44pt tap targets
+• 1,382 unit tests, 53 UI tests, 81%+ code coverage
 
-We'd love your feedback! Please report any issues via TestFlight.
+Thank you for testing! Please report issues via TestFlight.
 ```
 
 ---
@@ -141,7 +143,7 @@ Five screenshots required for App Store listing. Capture on iPhone 15 Pro (6.1")
 | 2 | **Eye Break Overlay** | Full-screen eye break overlay with countdown ring, blurred background, eye icon | "Gentle eye breaks with the 20-20-20 rule" |
 | 3 | **Posture Check Overlay** | Full-screen posture overlay with countdown, posture icon, dismiss button visible | "Posture check reminders" |
 | 4 | **Onboarding Welcome** | First onboarding screen with app icon, welcome message, get-started flow | "Set up in seconds — no account needed" |
-| 5 | **Snooze Options** | Overlay or settings showing snooze choices (5 min / 15 min / rest of day) | "Snooze when you need to — no guilt" |
+| 5 | **Snooze Options** | Overlay or settings showing snooze choices (5 min / 1 hour / rest of day) | "Snooze when you need to — no guilt" |
 
 **Design notes:**
 - Use device frames (Xcode Screenshot tool or third-party frame generator)
@@ -182,8 +184,8 @@ All App Store age rating questionnaire answers are "No" / "None".
 | **Copyright** | © 2026 Yashasg |
 | **Support URL** | https://github.com/yashasg/fantastic-octo-fortnight |
 | **Marketing URL** | https://github.com/yashasg/fantastic-octo-fortnight |
-| **Version** | 0.1.0 |
-| **Build** | 1 |
+| **Version** | 0.2.0 |
+| **Build** | (CI-assigned via `github.run_number`) |
 | **Availability** | All territories |
 | **Price** | Free |
 | **In-App Purchases** | None |

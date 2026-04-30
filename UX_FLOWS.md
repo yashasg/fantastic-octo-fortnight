@@ -744,9 +744,9 @@ OverlayManager checks: is an overlay currently visible?
 **Core belief:** Even a simple app benefits from a brief, warm introduction — especially when a system permission is required.
 
 **Approach:**
-- **3-screen onboarding flow** (Welcome → Permissions → Setup) shown exactly once on first launch.
-- **Educate before asking.** The permission request comes on Screen 2, after the user understands the app's value. This produces higher grant rates than a cold prompt.
-- **Preview defaults.** Screen 3 shows the default configuration so users feel confident before starting.
+- **4-screen onboarding flow** (Welcome → App Break Explanation → Permissions → Setup) shown exactly once on first launch.
+- **Educate before asking.** The permission request comes on Screen 3, after the user understands the app's value and how breaks work. This produces higher grant rates than a cold prompt.
+- **Preview defaults.** Screen 4 shows the default configuration so users feel confident before starting.
 - **Two completion paths:** "Get Started" (use defaults) or "Customize Settings" (jump to Settings).
 - **Swipe navigation** between screens via `TabView` with `PageTabViewStyle`. Page dots indicate progress.
 
@@ -1180,7 +1180,7 @@ This document defines the complete user experience for kshana. Key takeaways:
 1. **Design is guided by 5 core principles** (helpful interruptions, low friction, user autonomy, battery efficiency, accessibility).
 2. **User flows are detailed and cover all states** — from first launch to edge cases like force-quit recovery.
 3. **The overlay interaction model balances flexibility and simplicity** — three dismissal methods, smooth animations, no stacking.
-4. **Onboarding is a warm 3-screen handshake** — Welcome → Permissions → Setup. Educates before asking, previews defaults, then gets out of the way.
+4. **Onboarding is a warm 4-screen handshake** — Welcome → App Break Explanation → Permissions → Setup. Educates before asking, previews defaults, then gets out of the way.
 5. **Edge cases are handled gracefully** — locked device, Low Power Mode, overlapping reminders, permission denial.
 6. **Success is measured by invisibility** — the best UX is when users forget the app exists until it helpfully reminds them.
 
