@@ -1522,4 +1522,28 @@ final class StringCatalogTests: XCTestCase {
         ]
         XCTAssertEqual(Set(keys).count, keys.count, "Setup pill keys must be unique")
     }
+
+    // MARK: - #351: Disabled preview button hint key
+
+    /// The disabled hint for the Preview App Selection CTA must resolve to a real string.
+    func test_onboardingInterruptPreviewButtonDisabledHint_resolvesFromCatalog() {
+        XCTAssertTrue(
+            isTranslated("onboarding.interrupt.previewButton.disabled.hint"),
+            "'onboarding.interrupt.previewButton.disabled.hint' must resolve from catalog")
+        XCTAssertFalse(
+            str("onboarding.interrupt.previewButton.disabled.hint").isEmpty,
+            "'onboarding.interrupt.previewButton.disabled.hint' must not be empty")
+    }
+
+    /// #355: onboarding.setup.card.label must be consumable via String(format:) with three args.
+    func test_onboardingSetupCardLabel_formatsWithIntervalAndBreakValues() {
+        let format = str("onboarding.setup.card.label")
+        let result = String(format: format, "Eye Breaks", "20 min", "20 sec")
+        XCTAssertTrue(
+            result.contains("Eye Breaks"),
+            "Formatted result must contain the type title")
+        XCTAssertFalse(
+            result.contains("%1$@") || result.contains("%2$@") || result.contains("%3$@"),
+            "Must not contain un-substituted specifiers after formatting")
+    }
 }

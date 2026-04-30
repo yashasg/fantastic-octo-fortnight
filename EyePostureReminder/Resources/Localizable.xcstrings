@@ -1939,6 +1939,17 @@
         }
       }
     },
+    "onboarding.interrupt.previewButton.disabled.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Feature coming soon — awaiting entitlement approval"
+          }
+        }
+      }
+    },
     "onboarding.interrupt.customizeButton": {
       "extractionState": "manual",
       "localizations": {

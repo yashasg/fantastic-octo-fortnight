@@ -157,8 +157,11 @@ struct OnboardingInterruptModeView: View {
             : "onboarding.interrupt.enableButton"
     }
 
-    private var primaryButtonHintKey: LocalizedStringKey {
-        authorizationStatus == .unavailable
+    var primaryButtonHintKey: LocalizedStringKey {
+        if isPrimaryButtonDisabled {
+            return "onboarding.interrupt.previewButton.disabled.hint"
+        }
+        return authorizationStatus == .unavailable
             ? "onboarding.interrupt.previewButton.hint"
             : "onboarding.interrupt.enableButton.hint"
     }

@@ -476,6 +476,50 @@ final class TrueInterruptViewCoverageTests: XCTestCase {
         XCTAssertTrue(dismissCalled)
     }
 
+    // MARK: - #351: Disabled preview button hint
+
+    /// When the primary button is disabled, primaryButtonHintKey returns the disabled hint key.
+    func test_onboardingInterruptModeView_disabled_usesDisabledHintKey() {
+        let view = OnboardingInterruptModeView(
+            onGetStarted: {},
+            onSetUp: nil,
+            authorizationStatus: .unavailable,
+            accessibilityEnabledOverride: false
+        )
+        XCTAssertEqual(
+            view.primaryButtonHintKey,
+            "onboarding.interrupt.previewButton.disabled.hint",
+            "Disabled primary button must use the disabled hint key")
+    }
+
+    /// When unavailable + onSetUp provided (button enabled), active preview hint key is used.
+    func test_onboardingInterruptModeView_unavailableWithSetup_usesPreviewHintKey() {
+        let view = OnboardingInterruptModeView(
+            onGetStarted: {},
+            onSetUp: {},
+            authorizationStatus: .unavailable,
+            accessibilityEnabledOverride: false
+        )
+        XCTAssertEqual(
+            view.primaryButtonHintKey,
+            "onboarding.interrupt.previewButton.hint",
+            "Enabled preview button must use the active preview hint key")
+    }
+
+    /// When approved, enable hint key is used (button is enabled).
+    func test_onboardingInterruptModeView_approved_usesEnableHintKey() {
+        let view = OnboardingInterruptModeView(
+            onGetStarted: {},
+            onSetUp: {},
+            authorizationStatus: .approved,
+            accessibilityEnabledOverride: false
+        )
+        XCTAssertEqual(
+            view.primaryButtonHintKey,
+            "onboarding.interrupt.enableButton.hint",
+            "Approved primary button must use the enable hint key")
+    }
+
     // MARK: - Contrast regression (#260)
 
     /// Verifies the placeholder body description does NOT contain a reduced-opacity modifier
