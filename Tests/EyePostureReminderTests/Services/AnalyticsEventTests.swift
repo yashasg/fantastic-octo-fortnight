@@ -274,4 +274,28 @@ final class AnalyticsEventTests: XCTestCase {
         AnalyticsLogger.log(.shieldActivationFailed(reason: .scheduledEyesBreak))
         AnalyticsLogger.log(.shieldDeactivated)
     }
+
+    // MARK: - OnboardingCTA
+
+    func test_onboardingCTA_rawValues() {
+        XCTAssertEqual(AnalyticsEvent.OnboardingCTA.getStarted.rawValue, "get_started")
+        XCTAssertEqual(AnalyticsEvent.OnboardingCTA.customize.rawValue, "customize")
+    }
+
+    func test_onboardingCTA_initFromRawValue_getStarted() {
+        XCTAssertEqual(AnalyticsEvent.OnboardingCTA(rawValue: "get_started"), .getStarted)
+    }
+
+    func test_onboardingCTA_initFromRawValue_customize() {
+        XCTAssertEqual(AnalyticsEvent.OnboardingCTA(rawValue: "customize"), .customize)
+    }
+
+    func test_onboardingCTA_initFromRawValue_unknownReturnsNil() {
+        XCTAssertNil(AnalyticsEvent.OnboardingCTA(rawValue: "unknown"))
+    }
+
+    func test_onboardingCompleted_allCTAs_doNotCrash() {
+        AnalyticsLogger.log(.onboardingCompleted(cta: .getStarted))
+        AnalyticsLogger.log(.onboardingCompleted(cta: .customize))
+    }
 }

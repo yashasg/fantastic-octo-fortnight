@@ -106,6 +106,7 @@ extension Logger {
 | Notification received (foreground) | `.info` | `Logger.appLife.info("notification_received delivery=foreground type=\(type.rawValue, privacy: .public)")` | `willPresent` delegate |
 | Notification received (background) | `.info` | `Logger.appLife.info("notification_received delivery=background type=\(type.rawValue, privacy: .public)")` | `didReceive response` delegate |
 | Notification dismissed without tap | `.info` | `Logger.appLife.info("notification_dismissed type=\(type.rawValue, privacy: .public)")` | `.dismiss` action in `didReceive` |
+| Onboarding completed | `.info` | `AnalyticsLogger.log(.onboardingCompleted(cta:))` | Fired when user exits onboarding via "Get Started" or "Customize Settings" CTA |
 
 ---
 
@@ -383,6 +384,27 @@ Fired when an App Group IPC read or write operation fails. Logged at `.error` le
 | `corrupt` | `corrupt` | Stored data failed to decode (corrupt or schema mismatch) |
 | `writeFailed` | `write_failed` | Write operation returned a failure |
 | `unknown` | `unknown` | Unclassified failure |
+
+---
+
+### Event: `onboarding_completed`
+
+Fired when the user finishes onboarding. The `cta` parameter records which exit button was tapped.
+
+**Format:** `event=onboarding_completed cta=<OnboardingCTA>`
+
+**Associated type:** `AnalyticsEvent.OnboardingCTA`
+
+| Case | Raw Value | Description |
+|------|-----------|-------------|
+| `.getStarted` | `get_started` | User tapped "Get Started" — proceeds with defaults |
+| `.customize` | `customize` | User tapped "Customize Settings" — opens Settings on first launch |
+
+**Privacy:** `cta` uses `privacy: .public` — enumerated code, no PII.
+
+**Emission points:**
+- `OnboardingView.finishOnboarding()` → `.onboardingCompleted(cta: .getStarted)`
+- `OnboardingView.finishOnboardingAndCustomize()` → `.onboardingCompleted(cta: .customize)`
 
 ---
 

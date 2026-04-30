@@ -72,12 +72,14 @@ struct OnboardingView: View {
     }
 
     private func finishOnboarding() {
+        AnalyticsLogger.log(.onboardingCompleted(cta: .getStarted))
         UserDefaults.standard.set(true, forKey: AppStorageKey.hasSeenOnboarding)
     }
 
     /// Completes onboarding and signals HomeView to open the Settings sheet immediately.
     /// Sets `openSettingsOnLaunch` so HomeView auto-opens Settings on first appear.
     private func finishOnboardingAndCustomize() {
+        AnalyticsLogger.log(.onboardingCompleted(cta: .customize))
         UserDefaults.standard.set(true, forKey: AppStorageKey.openSettingsOnLaunch)
         finishOnboarding()
     }

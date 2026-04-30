@@ -116,3 +116,18 @@
 - **#316 filed:** `onboardingCompleted` event missing. Two distinct onboarding exit CTAs ("Get Started" vs "Customize Settings") are uninstrumented. Cannot measure onboarding completion rate or CTA choice distribution. Original #31 schema proposed this event but it was never implemented. Now more impactful because #314 added a second CTA with different product intent.
 
 **No other gaps:** All other #302–#314 changes are docs, CI, a11y, or squad history — no telemetry surface area affected.
+
+### 2026-04-30 — Onboarding Completion CTA Analytics (#316)
+
+**Scope:** Implement `onboardingCompleted(cta:)` analytics event per #316 acceptance criteria.
+
+**Changes made:**
+- Added `AnalyticsEvent.OnboardingCTA` enum with stable raw values: `get_started`, `customize`.
+- Added `AnalyticsEvent.onboardingCompleted(cta:)` case.
+- Added `AnalyticsLogger.log()` handler with `cta` parameter at `privacy: .public`.
+- Wired `AnalyticsLogger.log(.onboardingCompleted(cta: .getStarted))` in `OnboardingView.finishOnboarding()`.
+- Wired `AnalyticsLogger.log(.onboardingCompleted(cta: .customize))` in `OnboardingView.finishOnboardingAndCustomize()`.
+- Updated `docs/TELEMETRY.md` with event schema, stable raw value table, emission points, and privacy annotation.
+- Added 5 unit tests: raw value stability, round-trip init, unknown rejection, and crash-safety logging for both CTAs.
+
+**Validation:** 42/42 `AnalyticsEventTests` passed. Zero PII, zero localized strings, zero free-form values. Privacy posture unchanged ("Data Not Collected").

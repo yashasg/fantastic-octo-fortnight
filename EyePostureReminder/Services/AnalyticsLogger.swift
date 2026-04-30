@@ -138,6 +138,17 @@ enum AnalyticsEvent: Sendable {
         case writeFailed = "write_failed"
         case unknown     = "unknown"
     }
+
+    // MARK: Onboarding
+
+    /// Fired when the user completes onboarding. `cta` records which exit button was tapped.
+    case onboardingCompleted(cta: OnboardingCTA)
+
+    /// Non-PII code for the onboarding exit CTA the user tapped.
+    enum OnboardingCTA: String {
+        case getStarted = "get_started"
+        case customize  = "customize"
+    }
 }
 
 // MARK: - AnalyticsLogger
@@ -274,6 +285,12 @@ enum AnalyticsLogger {
                 event=ipc_operation_failed \
                 operation=\(operation.rawValue, privacy: .public) \
                 reason=\(reason.rawValue, privacy: .public)
+                """)
+
+        case let .onboardingCompleted(cta):
+            logger.info("""
+                event=onboarding_completed \
+                cta=\(cta.rawValue, privacy: .public)
                 """)
 
         default:
