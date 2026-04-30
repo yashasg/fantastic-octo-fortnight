@@ -502,7 +502,6 @@ extension ScreenTimeTrackerTests {
 
 }
 
-
 extension ScreenTimeTrackerTests {
 
     /// Verifies the `min(now - lastTickTime, 2.0)` cap in `tick(now:)`.

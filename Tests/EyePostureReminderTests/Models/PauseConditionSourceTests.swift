@@ -22,8 +22,8 @@ final class PauseConditionSourceTests: XCTestCase {
         // Pin all raw values to guard against accidental renames breaking analytics.
         let expected: [(PauseConditionSource, String)] = [
             (.focusMode, "focus_mode"),
-            (.carPlay,   "car_play"),
-            (.driving,   "driving")
+            (.carPlay, "car_play"),
+            (.driving, "driving")
         ]
         for (source, expectedRaw) in expected {
             XCTAssertEqual(source.rawValue, expectedRaw,

@@ -276,7 +276,7 @@ public final class AppGroupIPCStore {
             do {
                 events.append(contentsOf: try decoder.decode([AppGroupIPCEvent].self, from: data))
             } catch {
-                Self.log.warning("Corrupt legacy eventLog key — skipping legacy events and continuing with per-slot reads")
+                Self.log.warning("Corrupt legacy eventLog key — skipping; continuing with per-slot reads")
             }
         }
 

@@ -42,7 +42,13 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
 
       - name: Select Xcode ${{ env.XCODE_VERSION }}
-        run: sudo xcode-select -switch /Applications/Xcode_${{ env.XCODE_VERSION }}.app/Contents/Developer
+        run: |
+          XCODE_PATH="/Applications/Xcode_${{ env.XCODE_VERSION }}.app/Contents/Developer"
+          if [[ -d "$XCODE_PATH" ]]; then
+            sudo xcode-select -switch "$XCODE_PATH"
+          else
+            echo "Xcode_${{ env.XCODE_VERSION }}.app not found; using current selection: $(xcode-select -p)"
+          fi
 
       - name: Ensure iOS Simulator runtime
         run: |
@@ -199,7 +205,13 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
 
       - name: Select Xcode ${{ env.XCODE_VERSION }}
-        run: sudo xcode-select -switch /Applications/Xcode_${{ env.XCODE_VERSION }}.app/Contents/Developer
+        run: |
+          XCODE_PATH="/Applications/Xcode_${{ env.XCODE_VERSION }}.app/Contents/Developer"
+          if [[ -d "$XCODE_PATH" ]]; then
+            sudo xcode-select -switch "$XCODE_PATH"
+          else
+            echo "Xcode_${{ env.XCODE_VERSION }}.app not found; using current selection: $(xcode-select -p)"
+          fi
 
       - name: Ensure iOS Simulator runtime
         run: |

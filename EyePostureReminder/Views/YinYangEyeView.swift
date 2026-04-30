@@ -93,7 +93,10 @@ struct YinYangEyeView: View {
             // Returning to view — restart breathing only
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 guard isVisible else { return }
-                withAnimation(.easeInOut(duration: AppAnimation.yinYangBreathingDuration).repeatForever(autoreverses: true)) {
+                withAnimation(
+                    .easeInOut(duration: AppAnimation.yinYangBreathingDuration)
+                    .repeatForever(autoreverses: true)
+                ) {
                     breathing = true
                 }
             }

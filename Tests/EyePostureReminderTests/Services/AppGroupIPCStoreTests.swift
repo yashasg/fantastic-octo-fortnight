@@ -392,8 +392,8 @@ final class AppGroupIPCStoreTests: XCTestCase {
     func test_pruneOnlyOccursAfterCapExceeded_andClearResetsCounter() throws {
         // store uses maxEventCount = 3
         let e1 = AppGroupIPCEvent(kind: .watchdogHeartbeat, timestamp: Date(timeIntervalSince1970: 1))
-        let e2 = AppGroupIPCEvent(kind: .shieldStarted,     timestamp: Date(timeIntervalSince1970: 2))
-        let e3 = AppGroupIPCEvent(kind: .shieldEnded,       timestamp: Date(timeIntervalSince1970: 3))
+        let e2 = AppGroupIPCEvent(kind: .shieldStarted, timestamp: Date(timeIntervalSince1970: 2))
+        let e3 = AppGroupIPCEvent(kind: .shieldEnded, timestamp: Date(timeIntervalSince1970: 3))
 
         try store.recordEvent(e1)
         try store.recordEvent(e2)
@@ -406,15 +406,17 @@ final class AppGroupIPCStoreTests: XCTestCase {
         store.clearEvents()
 
         let e4 = AppGroupIPCEvent(kind: .watchdogHeartbeat, timestamp: Date(timeIntervalSince1970: 4))
-        let e5 = AppGroupIPCEvent(kind: .shieldStarted,     timestamp: Date(timeIntervalSince1970: 5))
-        let e6 = AppGroupIPCEvent(kind: .shieldEnded,       timestamp: Date(timeIntervalSince1970: 6))
+        let e5 = AppGroupIPCEvent(kind: .shieldStarted, timestamp: Date(timeIntervalSince1970: 5))
+        let e6 = AppGroupIPCEvent(kind: .shieldEnded, timestamp: Date(timeIntervalSince1970: 6))
 
         try store.recordEvent(e4)
         try store.recordEvent(e5)
         try store.recordEvent(e6)
 
         // Counter was reset, so the new batch fits within cap without spurious pruning.
-        XCTAssertEqual(try store.readEvents(), [e4, e5, e6], "Counter must be reset by clearEvents so second batch is not pruned prematurely")
+        XCTAssertEqual(
+            try store.readEvents(), [e4, e5, e6],
+            "Counter must be reset by clearEvents so second batch is not pruned prematurely")
     }
 
     private func preservingStandardDefaults(for keys: [String], _ action: () throws -> Void) rethrows {

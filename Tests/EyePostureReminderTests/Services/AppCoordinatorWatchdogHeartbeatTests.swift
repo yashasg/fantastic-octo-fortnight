@@ -215,7 +215,9 @@ final class AppCoordinatorWatchdogHeartbeatTests: XCTestCase {
         let recovered = await coordinator.recoverStaleDeviceActivityWatchdogIfNeeded()
         try await Task.sleep(nanoseconds: 150_000_000)
 
-        XCTAssertTrue(recovered, "Watchdog recovery must succeed when legacy eventLog is corrupt but per-slot events are intact")
+        XCTAssertTrue(
+            recovered,
+            "Watchdog recovery must succeed when legacy eventLog is corrupt but per-slot events are intact")
         XCTAssertEqual(ipcStore.clearShieldSessionCallCount, 1)
         XCTAssertEqual(deviceActivityMonitor.cancelCallCount, 1)
     }

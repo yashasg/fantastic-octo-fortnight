@@ -261,7 +261,7 @@ enum AppSymbol {
     /// True Interrupt Mode / app break access icon
     static let trueInterrupt     = "lock.shield.fill"
     /// Master on/off toggle icon (settings row)
-    static let masterToggle      = "power"
+    static let masterToggle      = "power" // swiftlint:disable:this inclusive_language
     /// Haptic feedback setting icon (settings row)
     static let haptics           = "hand.tap.fill"
     /// Trailing navigation chevron (settings disclosure / setup pill)
@@ -369,7 +369,10 @@ struct SoftElevation: ViewModifier {
             content
                 .overlay(
                     RoundedRectangle(cornerRadius: cornerRadius)
-                        .strokeBorder(AppColor.separatorSoft.opacity(AppOpacity.subtleBorder), lineWidth: AppLayout.borderHair)
+                        .strokeBorder(
+                            AppColor.separatorSoft.opacity(AppOpacity.subtleBorder),
+                            lineWidth: AppLayout.borderHair
+                        )
                 )
         } else {
             content

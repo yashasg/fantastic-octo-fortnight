@@ -3,6 +3,7 @@ import SwiftUI
 import UIKit
 import XCTest
 
+// swiftlint:disable type_body_length
 /// Comprehensive view-body coverage tests.
 ///
 /// Each test renders a view through `UIHostingController.loadViewIfNeeded()` to
@@ -519,3 +520,4 @@ final class ViewBodyCoverageTests: XCTestCase {
         XCTAssertNotNil(style)
     }
 }
+// swiftlint:enable type_body_length

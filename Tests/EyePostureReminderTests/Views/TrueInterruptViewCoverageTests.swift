@@ -3,6 +3,7 @@ import SwiftUI
 import UIKit
 import XCTest
 
+// swiftlint:disable type_body_length
 @MainActor
 final class TrueInterruptViewCoverageTests: XCTestCase {
 
@@ -542,3 +543,4 @@ final class TrueInterruptViewCoverageTests: XCTestCase {
             "Placeholder text must not use reduced opacity regardless of selection state")
     }
 }
+// swiftlint:enable type_body_length

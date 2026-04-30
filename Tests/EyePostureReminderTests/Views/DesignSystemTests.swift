@@ -94,7 +94,9 @@ final class DesignSystemTests: XCTestCase {
     }
 
     func test_appSpacing_valuesAreAscending() {
-        let spacings: [CGFloat] = [AppSpacing.xxs, AppSpacing.xs, AppSpacing.sm, AppSpacing.md, AppSpacing.lg, AppSpacing.xl]
+        let spacings: [CGFloat] = [
+            AppSpacing.xxs, AppSpacing.xs, AppSpacing.sm, AppSpacing.md, AppSpacing.lg, AppSpacing.xl
+        ]
         for index in 1..<spacings.count {
             XCTAssertGreaterThan(
                 spacings[index],
