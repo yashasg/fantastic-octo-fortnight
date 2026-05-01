@@ -583,6 +583,7 @@ extension AppCoordinator {
     /// Retained for call-site compatibility (e.g., test `tearDown`).
     func stopFallbackTimers() {
         screenTimeTracker.stopMonitoring()
+        pauseConditionManager.stopMonitoring()
     }
 
     // MARK: - Snooze Wake (Private)

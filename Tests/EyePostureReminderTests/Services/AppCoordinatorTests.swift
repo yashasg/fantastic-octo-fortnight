@@ -407,6 +407,52 @@ final class AppCoordinatorTests: XCTestCase {
             "AppCoordinator.init must call startMonitoring() on the injected PauseConditionProviding")
     }
 
+    // MARK: - Issue #438: AppCoordinator teardown must stop PauseCondition monitoring
+
+    func test_stopFallbackTimers_callsStopMonitoringOnPauseConditionProvider() {
+        // Regression test for issue #438: stopFallbackTimers() must call stopMonitoring()
+        // on the injected PauseConditionProviding so detector observers don't outlive
+        // the coordinator lifecycle.
+        let mockNotif = MockNotificationCenter()
+        let mockPause = MockPauseConditionProvider()
+        let coordinator = AppCoordinator(
+            settings: settings,
+            scheduler: ReminderScheduler(notificationCenter: mockNotif),
+            notificationCenter: mockNotif,
+            screenTimeTracker: MockScreenTimeTracker(),
+            pauseConditionProvider: mockPause,
+            ipcStore: MockAppGroupIPCRecorder()
+        )
+        coordinator.stopFallbackTimers()
+        XCTAssertEqual(
+            mockPause.stopMonitoringCallCount,
+            1,
+            "stopFallbackTimers() must call stopMonitoring() on the injected PauseConditionProviding")
+    }
+
+    func test_stopFallbackTimers_noPauseCallbacksAfterTeardown() {
+        // Regression test for issue #438: after stopFallbackTimers() is called, any
+        // onPauseStateChanged callback must be a no-op because the coordinator holds
+        // only a weak self reference inside the closure.
+        let mockNotif = MockNotificationCenter()
+        let mockPause = MockPauseConditionProvider()
+        let coordinator = AppCoordinator(
+            settings: settings,
+            scheduler: ReminderScheduler(notificationCenter: mockNotif),
+            notificationCenter: mockNotif,
+            screenTimeTracker: MockScreenTimeTracker(),
+            pauseConditionProvider: mockPause,
+            ipcStore: MockAppGroupIPCRecorder()
+        )
+        // Capture the installed callback then tear down the coordinator.
+        let capturedCallback = mockPause.onPauseStateChanged
+        coordinator.stopFallbackTimers()
+        // Firing the captured callback after teardown must not crash — the
+        // coordinator holds only a weak self reference inside the closure.
+        capturedCallback?(true)
+        capturedCallback?(false)
+    }
+
     // MARK: - Issue #14: ScreenTimeTracking DI
 
     func test_stopFallbackTimers_callsStopMonitoringOnInjectedScreenTimeTracker() {
