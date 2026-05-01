@@ -496,6 +496,7 @@ cmd_uitest() {
   # delays to handle FBSOpenApplicationServiceErrorDomain / RequestDenied.
   local max_attempts=3
   local attempt=1
+  local retry_delay=0
   local -a current_only_testing_args=("${only_testing_args[@]}")
   local -a failed_test_filters=()
   while true; do
@@ -528,14 +529,16 @@ cmd_uitest() {
       for only_testing_filter in "${failed_test_filters[@]}"; do
         current_only_testing_args+=(-only-testing "$only_testing_filter")
       done
+      retry_delay=5
       warn "Attempt $attempt failed -- retrying only ${#failed_test_filters[@]} failed test(s)"
     else
       current_only_testing_args=("${only_testing_args[@]}")
+      retry_delay=$((attempt * 15))
       warn "Attempt $attempt failed -- failed tests could not be parsed, retrying full selection"
     fi
 
-    warn "Attempt $attempt failed -- retrying in $((attempt * 15))s..."
-    sleep $((attempt * 15))
+    warn "Attempt $attempt failed -- retrying in ${retry_delay}s..."
+    sleep "$retry_delay"
     attempt=$((attempt + 1))
   done
 
