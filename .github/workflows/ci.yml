@@ -115,6 +115,35 @@ jobs:
       # ── Screen Time extension scaffold ──────────────────────────────────────
       # Compile-only validation. Runtime FamilyControls/DeviceActivity behavior
       # still requires #201 entitlement approval and physical-device testing.
+
+      # Guardrail: reject any commit that accidentally adds com.apple.developer.family-controls
+      # to distribution entitlements before issue #201 (Apple entitlement approval) is resolved.
+      # This prevents a fake-success archive that App Store Connect would reject on upload.
+      - name: Validate distribution entitlements (no premature FamilyControls)
+        run: |
+          BLOCKED_KEY="com.apple.developer.family-controls"
+          DIST_ENTITLEMENTS=(
+            "EyePostureReminder/EyePostureReminder.Distribution.entitlements"
+            "Extensions/ShieldConfigurationExtension/ShieldConfigurationExtension.Distribution.entitlements"
+            "Extensions/DeviceActivityMonitorExtension/DeviceActivityMonitorExtension.Distribution.entitlements"
+          )
+          FAILED=0
+          for f in "${DIST_ENTITLEMENTS[@]}"; do
+            if [[ ! -f "$f" ]]; then
+              echo "::warning::Distribution entitlements file not found: $f"
+              continue
+            fi
+            if grep -q "$BLOCKED_KEY" "$f"; then
+              echo "::error file=${f}::Distribution entitlements contain ${BLOCKED_KEY} but issue #201 (FamilyControls approval) is still open. Remove it or merge #201 first."
+              FAILED=1
+            fi
+          done
+          if [[ "$FAILED" -ne 0 ]]; then
+            echo "Entitlements guardrail failed. See errors above."
+            exit 1
+          fi
+          echo "Distribution entitlements guardrail passed — no premature FamilyControls key."
+
       - name: Install XcodeGen
         run: |
           if brew list xcodegen &>/dev/null 2>&1; then

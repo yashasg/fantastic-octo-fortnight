@@ -423,10 +423,14 @@ ensure_extension_entitlements() {
   fi
 }
 
-# Inject CFBundleVersion into the already-built archive's Info.plist.
+# Inject CFBundleVersion into the already-built archive's Info.plist(s).
 # Does NOT touch source Info.plist — safe to call on any commit without
 # leaving a dirty working tree.  Uses BUILD_NUMBER env var when set (CI),
 # falls back to a YYYYMMDDHHmm timestamp for local signed builds.
+#
+# When EXTENSION_PROFILES_AVAILABLE=YES, extension .appex Info.plists are
+# updated to the same build number.  Apple rejects TestFlight uploads where
+# CFBundleVersion of a nested extension differs from the container app.
 inject_build_number() {
   local archive_plist="${ARCHIVE_PATH}/Products/Applications/${APP_TARGET}.app/Info.plist"
 
@@ -444,7 +448,21 @@ inject_build_number() {
   fi
 
   /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $build_num" "$archive_plist"
-  pass "CFBundleVersion set to $build_num in archive (source Info.plist unchanged)"
+  pass "CFBundleVersion set to $build_num in main app archive (source Info.plist unchanged)"
+
+  # Sync extension CFBundleVersions when extensions are included in the archive.
+  # Mismatched versions cause App Store Connect to reject the upload with:
+  #   "The bundle version ... in the extension ... must be the same as in the containing app."
+  if [[ "$EXTENSION_PROFILES_AVAILABLE" == "YES" ]]; then
+    local plugins_dir="${ARCHIVE_PATH}/Products/Applications/${APP_TARGET}.app/PlugIns"
+    for appex_plist in "${plugins_dir}"/*.appex/Info.plist; do
+      if [[ -f "$appex_plist" ]]; then
+        /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $build_num" "$appex_plist" 2>/dev/null \
+          || /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string $build_num" "$appex_plist"
+        pass "CFBundleVersion set to $build_num in $(basename "$(dirname "$appex_plist")")"
+      fi
+    done
+  fi
 }
 
 verify_archived_extensions() {
@@ -851,6 +869,21 @@ cmd_doctor() {
     fi
   else
     info "EXTENSION_PROFILES_AVAILABLE=NO — extension targets excluded from archive (blocked on #201)"
+    echo "" >&2
+    echo "  Post-#201 unblock checklist (complete in order):" >&2
+    echo "    1. Confirm FamilyControls entitlement approved at developer.apple.com → App IDs" >&2
+    echo "    2. Add com.apple.developer.family-controls to:" >&2
+    echo "         EyePostureReminder/EyePostureReminder.entitlements" >&2
+    echo "         EyePostureReminder/EyePostureReminder.Distribution.entitlements" >&2
+    echo "         Extensions/ShieldConfigurationExtension/*.entitlements (both variants)" >&2
+    echo "         Extensions/DeviceActivityMonitorExtension/*.entitlements (both variants)" >&2
+    echo "    3. Regenerate App Store Connect provisioning profiles for all five bundle IDs" >&2
+    echo "    4. Download profiles; verify via this doctor command with EXTENSION_PROFILES_AVAILABLE=YES" >&2
+    echo "    5. Add repo secrets: SHIELD_CONFIG_PROVISION_PROFILE_BASE64," >&2
+    echo "         DEVICE_ACTIVITY_PROVISION_PROFILE_BASE64, SHIELD_CONFIG_PROFILE_SPECIFIER," >&2
+    echo "         DEVICE_ACTIVITY_PROFILE_SPECIFIER" >&2
+    echo "    6. Run TestFlight workflow with EXTENSION_PROFILES_AVAILABLE=YES to include extensions" >&2
+    echo "  See: https://github.com/yashasg/fantastic-octo-fortnight/issues/201" >&2
   fi
 
   pass "Doctor complete"
