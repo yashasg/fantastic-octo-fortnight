@@ -366,7 +366,7 @@ enum AnalyticsLogger {
                 notification_auth=\(payload.notificationAuth.rawValue, privacy: .public) \
                 screen_time_available=\(payload.screenTimeAvailable, privacy: .public) \
                 watchdog_recovery_needed=\(payload.watchdogRecoveryNeeded, privacy: .public) \
-                latency_s=\(p.latencyS, format: .fixed(precision: 2), privacy: .public)
+                latency_s=\(payload.latencyS, format: .fixed(precision: 2), privacy: .public)
                 """)
 
         default:

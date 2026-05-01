@@ -265,7 +265,7 @@ extension AppCoordinator {
             (!deviceActivityMonitor.isAvailable || !isTrueInterruptEnabled || !hasTrueInterruptSelection)
     }
 
-    private var shouldUseShieldPath: Bool {
+    var shouldUseShieldPath: Bool {
         deviceActivityMonitor.isAvailable &&
             isTrueInterruptEnabled &&
             hasTrueInterruptSelection &&

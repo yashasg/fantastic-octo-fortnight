@@ -63,7 +63,7 @@ final class AppCoordinator: ObservableObject {
 
     /// Injected overlay manager — used to show overlays and clear the queue.
     /// Defaults to a fresh `OverlayManager()` in production.
-    private let overlayManager: OverlayPresenting
+    let overlayManager: OverlayPresenting
 
     // MARK: - Screen-Time Authorization
 
@@ -90,14 +90,14 @@ final class AppCoordinator: ObservableObject {
     /// Tracks continuous screen-on time per reminder type and fires callbacks
     /// when each type's threshold is reached. Replaces both UNNotification
     /// periodic triggers and the legacy foreground fallback timers.
-    private let screenTimeTracker: ScreenTimeTracking
+    let screenTimeTracker: ScreenTimeTracking
 
     // MARK: - Pause Condition Manager
 
     /// Aggregates Focus mode, CarPlay, and driving-activity signals. When any
     /// condition becomes active (and its corresponding setting is enabled) the
     /// screen-time tracker is paused until all conditions clear AND snooze is clear.
-    private let pauseConditionManager: PauseConditionProviding
+    let pauseConditionManager: PauseConditionProviding
 
     // MARK: - Published State
 
@@ -108,7 +108,7 @@ final class AppCoordinator: ObservableObject {
     // MARK: - Pending Overlay
 
     /// A stashed overlay request awaiting an active scene.
-    private struct PendingOverlay {
+    struct PendingOverlay {
         let type: ReminderType
         let duration: TimeInterval
     }
@@ -130,7 +130,7 @@ final class AppCoordinator: ObservableObject {
     /// When a notification-tap launches the app, `didReceive` fires before any
     /// `UIWindowScene` reaches `.foregroundActive`. We stash the overlay here
     /// and present it once `scenePhase` transitions to `.active`.
-    private var pendingOverlay: PendingOverlay?
+    var pendingOverlay: PendingOverlay?
 
     // MARK: - Reschedule Debounce
 
@@ -142,12 +142,12 @@ final class AppCoordinator: ObservableObject {
 
     /// In-process wake task — cancels the snooze and reschedules reminders
     /// when the snooze period expires while the app is in the foreground.
-    private var snoozeWakeTask: Task<Void, Never>?
+    var snoozeWakeTask: Task<Void, Never>?
 
     /// Serializes DeviceActivity start/cancel operations so a fast dismiss cannot
     /// race an in-flight schedule call and leave OS-level monitoring active.
-    private var deviceActivityMonitorTask: Task<Void, Never>?
-    private var dismissedDeviceActivityPresentationIDs: Set<UUID> = []
+    var deviceActivityMonitorTask: Task<Void, Never>?
+    var dismissedDeviceActivityPresentationIDs: Set<UUID> = []
 
     // MARK: - Session Timing
 
