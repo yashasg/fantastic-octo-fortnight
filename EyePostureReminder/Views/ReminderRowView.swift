@@ -61,6 +61,7 @@ struct ReminderRowView: View {
                         type.title
                     )
                 )
+                .accessibilityIdentifier("settings.\(type.rawValue).intervalPicker")
 
                 Picker(
                     String(localized: "settings.reminder.durationPicker", bundle: .module),
@@ -77,6 +78,7 @@ struct ReminderRowView: View {
                         type.title
                     )
                 )
+                .accessibilityIdentifier("settings.\(type.rawValue).durationPicker")
             }
         }
         .animation(shouldReduceMotion ? nil : AppAnimation.settingsExpandCurve, value: isEnabled)

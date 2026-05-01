@@ -2,7 +2,7 @@
 
 **App:** kshana  
 **Last Updated:** April 26, 2026  
-**Publisher:** [PUBLISHER NAME]
+**Publisher:** Yashasg
 
 ---
 
@@ -106,7 +106,7 @@ Apple may process App Store, diagnostics, crash, and performance information thr
 
 ## 7. Apple App Store
 
-The App is distributed through the Apple App Store. Apple may collect certain data as part of the download, installation, diagnostics, crash reporting, analytics, and App Store operation process, governed by [Apple's Privacy Policy](https://www.apple.com/legal/privacy/). [PUBLISHER NAME] does not control Apple's data practices.
+The App is distributed through the Apple App Store. Apple may collect certain data as part of the download, installation, diagnostics, crash reporting, analytics, and App Store operation process, governed by [Apple's Privacy Policy](https://www.apple.com/legal/privacy/). Yashasg does not control Apple's data practices.
 
 ---
 
@@ -114,7 +114,7 @@ The App is distributed through the Apple App Store. Apple may collect certain da
 
 kshana does not knowingly collect personal information from children under the age of 13 (or the applicable age of digital consent in your jurisdiction). The App does not require accounts, direct identifiers, advertising identifiers, or third-party tracking.
 
-If you are a parent or guardian and believe your child has somehow provided personal information through this App, please contact us at [CONTACT EMAIL]. We will promptly address the concern.
+If you are a parent or guardian and believe your child has somehow provided personal information through this App, please contact us at support@yashasg.dev. We will promptly address the concern.
 
 ---
 
@@ -130,7 +130,7 @@ The App does not transmit local preferences, motion activity data, or Focus stat
 
 We do not maintain user accounts or a user-level database about you. If you wish to delete App preferences stored on your device, deleting the App from your device will remove locally stored preferences.
 
-**GDPR (EU/EEA users):** Based on the App's minimal data practices, [PUBLISHER NAME] does not maintain a user-level profile or account database for access, deletion, or portability requests. Apple-native diagnostics and App Store data are handled through Apple's systems and your Apple privacy settings.
+**GDPR (EU/EEA users):** Based on the App's minimal data practices, Yashasg does not maintain a user-level profile or account database for access, deletion, or portability requests. Apple-native diagnostics and App Store data are handled through Apple's systems and your Apple privacy settings.
 
 **CCPA (California users):** We do not sell or share personal information for cross-context behavioral advertising. We do not use the App to track you across apps or websites.
 
@@ -138,7 +138,7 @@ We do not maintain user accounts or a user-level database about you. If you wish
 
 ## 11. Changes to This Privacy Policy
 
-[PUBLISHER NAME] may update this Privacy Policy from time to time. When changes are made, the "Last Updated" date at the top will be revised. We encourage you to review this policy periodically. Continued use of the App after changes are posted constitutes your acceptance of the revised policy.
+Yashasg may update this Privacy Policy from time to time. When changes are made, the "Last Updated" date at the top will be revised. We encourage you to review this policy periodically. Continued use of the App after changes are posted constitutes your acceptance of the revised policy.
 
 ---
 
@@ -146,8 +146,8 @@ We do not maintain user accounts or a user-level database about you. If you wish
 
 If you have questions or concerns about this Privacy Policy, contact:
 
-**[PUBLISHER NAME]**  
-**Email:** [CONTACT EMAIL]
+**Yashasg**  
+**Email:** support@yashasg.dev
 
 ---
 
