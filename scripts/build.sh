@@ -93,16 +93,21 @@ elapsed() {
 
 # ── xcodebuild runner (xcpretty fallback) ─────────────────────────────────────
 run_xcodebuild() {
-  local start
+  local start rc
   start=$(date +%s)
+  rc=0
 
   if command -v xcpretty &>/dev/null; then
-    xcodebuild "$@" "${XCODE_FLAGS[@]}" | xcpretty
+    # `|| true` prevents set -e from aborting before PIPESTATUS is captured.
+    xcodebuild "$@" "${XCODE_FLAGS[@]}" | xcpretty || true
+    rc=${PIPESTATUS[0]}
   else
-    xcodebuild "$@" "${XCODE_FLAGS[@]}"
+    xcodebuild "$@" "${XCODE_FLAGS[@]}" || rc=$?
   fi
 
   echo "  (took $(elapsed "$start"))"
+  # Propagate xcodebuild's exit code; the echo above must not mask it.
+  return "$rc"
 }
 
 summarize_xcresult_failures() {
@@ -203,6 +208,22 @@ cmd_test() {
     -enableCodeCoverage YES; then
     fail "xcodebuild test failed"
     summarize_xcresult_failures "${PACKAGE_PATH}/TestResults.xcresult"
+    exit 1
+  fi
+
+  # Secondary guard (#455): even when xcodebuild exits 0 the result bundle can
+  # be missing or corrupt (e.g. IDETesting mkstemp failure).  Treat either case
+  # as a test failure so CI never reports success with a broken xcresult.
+  local result_bundle="${PACKAGE_PATH}/TestResults.xcresult"
+  if [[ ! -d "$result_bundle" ]]; then
+    fail "TestResults.xcresult not found — result bundle was not written (see #455)"
+    exit 1
+  fi
+  if ! xcrun xcresulttool get object --path "$result_bundle" --format json \
+       &>/dev/null 2>&1 && \
+     ! xcrun xcresulttool get object --legacy --path "$result_bundle" \
+       --format json &>/dev/null 2>&1; then
+    fail "TestResults.xcresult cannot be parsed — result bundle may be corrupt (see #455)"
     exit 1
   fi
 
