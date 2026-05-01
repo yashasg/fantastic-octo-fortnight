@@ -150,7 +150,34 @@ We do not maintain user accounts or a user-level database about you. If you wish
 
 **GDPR (EU/EEA users):** Based on the App's minimal data practices, Yashasg does not maintain a user-level profile or account database for access, deletion, or portability requests. Apple-native diagnostics and App Store data are handled through Apple's systems and your Apple privacy settings.
 
-**CCPA (California users):** We do not sell or share personal information for cross-context behavioral advertising. We do not use the App to track you across apps or websites.
+**CCPA (California users):**
+
+We do not sell or share personal information for cross-context behavioral advertising. We do not use the App to track you across apps or websites.
+
+California residents have the following rights under the California Consumer Privacy Act (Cal. Civil Code §1798.100 et seq.), as amended by CPRA:
+
+- **Right to Know** — You may request disclosure of the categories and specific pieces of personal information we have collected about you, the categories of sources, and the purposes for collection.
+- **Right to Delete** — You may request deletion of personal information we have collected about you, subject to applicable exceptions.
+- **Right to Opt-Out of Sale / Sharing** — We do not sell or share personal information for cross-context behavioral advertising. No opt-out action is required.
+- **Right to Correct** — You may request correction of inaccurate personal information we maintain about you.
+- **Right to Non-Discrimination** — We will not discriminate against you for exercising any of these rights.
+
+**How to submit a CCPA request:**
+
+Email: **support@yashasg.dev**
+
+Please include "CCPA Request" in the subject line, describe your request, and include sufficient information for us to verify your identity.
+
+**Business address for service of legal notices:**
+
+> ⚠️ **OWNER ACTION REQUIRED — do not merge until resolved (#423):**  
+> Insert the legal business mailing address for Yashasg here. CCPA (Cal. Civil Code §1798.135) requires a designated mailing address (or equivalent contact method) for service of consumer-rights notices. If operating as an individual and preferring not to publish a home address, acceptable alternatives include a registered agent address or a P.O. Box. Replace this block with the final address before publishing.
+>
+> **Yashasg**  
+> [MAILING ADDRESS — TO BE PROVIDED BY OWNER]  
+> [CITY, STATE, ZIP]  
+> United States  
+> Email: support@yashasg.dev
 
 ---
 
