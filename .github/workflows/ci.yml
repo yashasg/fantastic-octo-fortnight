@@ -200,22 +200,7 @@ jobs:
             echo "::error::TestResults.xcresult not found — tests may have crashed before producing results"
             exit 1
           fi
-          COVERAGE=$(xcrun xccov view --report --json TestResults.xcresult \
-            | python3 -c "import json,sys
-raw = sys.stdin.read()
-if not raw.strip():
-    print('::error::Coverage JSON was empty from xccov', file=sys.stderr)
-    sys.exit(1)
-try:
-    data = json.loads(raw)
-except json.JSONDecodeError as exc:
-    print(f'::error::Failed to decode coverage JSON: {exc}', file=sys.stderr)
-    sys.exit(1)
-line_coverage = data.get('lineCoverage')
-if not isinstance(line_coverage, (int, float)):
-    print('::error::Coverage JSON missing numeric lineCoverage', file=sys.stderr)
-    sys.exit(1)
-print(line_coverage * 100)")
+          COVERAGE=$(xcrun xccov view --report --json TestResults.xcresult | python3 -c "import json,sys; raw=sys.stdin.read(); raw.strip() or (print('::error::Coverage JSON was empty from xccov', file=sys.stderr) or sys.exit(1)); data=json.loads(raw); line_coverage=data.get('lineCoverage'); isinstance(line_coverage, (int, float)) or (print('::error::Coverage JSON missing numeric lineCoverage', file=sys.stderr) or sys.exit(1)); print(line_coverage * 100)")
           if [[ ! "$COVERAGE" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
             echo "::error::Computed coverage is not numeric: '$COVERAGE'"
             exit 1
