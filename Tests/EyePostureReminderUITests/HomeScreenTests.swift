@@ -9,25 +9,15 @@ final class HomeScreenTests: XCTestCase {
 
     var app: XCUIApplication!
 
-    private func waitForTrueInterruptBanner(timeout: TimeInterval) -> Bool {
-        for attempt in 1...3 {
-            let banner = app.otherElements["home.trueInterrupt.skippedBanner"]
-            if banner.waitForExistence(timeout: timeout) {
-                return true
-            }
-            guard attempt < 3 else { break }
-            app.terminate()
-            app = XCUIApplication()
-            app.launchWithTrueInterruptPending()
-        }
-        return false
-    }
-
     override func setUpWithError() throws {
         continueAfterFailure = false
         app = XCUIApplication()
         if name.contains("trueInterrupt") {
             app.launchWithTrueInterruptPending()
+            // Wait for the Home screen anchor before any True Interrupt assertions.
+            // This ensures the view hierarchy is fully rendered so the banner and pill
+            // are immediately queryable without retries (#457).
+            app.waitForHomeScreenReady()
         } else {
             app.launchWithSkippedOnboarding()
         }
@@ -203,22 +193,23 @@ final class HomeScreenTests: XCTestCase {
     /// `ScreenTimeAuthorizationStub(.notDetermined)` is injected into `AppCoordinator`
     /// (the real simulator FamilyControls status is `.unavailable`).
     func test_homeScreen_trueInterruptBanner_exists() throws {
+        let banner = app.otherElements["home.trueInterrupt.skippedBanner"]
         XCTAssertTrue(
-            waitForTrueInterruptBanner(timeout: 8),
+            banner.waitForExistence(timeout: 5),
             "TrueInterruptSkippedBanner must be visible when Screen Time authorization " +
             "is .notDetermined and the banner has not been dismissed."
         )
 
         let setUpButton = app.buttons["home.trueInterrupt.skippedBanner.setUp"]
         XCTAssertTrue(
-            setUpButton.waitForExistence(timeout: 5),
+            setUpButton.waitForExistence(timeout: 3),
             "Set Up CTA must be present in TrueInterruptSkippedBanner."
         )
         XCTAssertTrue(setUpButton.isHittable, "Set Up CTA must be hittable.")
 
         let dismissButton = app.buttons["home.trueInterrupt.skippedBanner.dismiss"]
         XCTAssertTrue(
-            dismissButton.waitForExistence(timeout: 5),
+            dismissButton.waitForExistence(timeout: 3),
             "Dismiss CTA must be present in TrueInterruptSkippedBanner."
         )
         XCTAssertTrue(dismissButton.isHittable, "Dismiss CTA must be hittable.")
@@ -231,21 +222,16 @@ final class HomeScreenTests: XCTestCase {
     ///
     /// Flow: launch with `.notDetermined` state → dismiss banner → pill visible.
     func test_homeScreen_trueInterruptSetupPill_exists() throws {
-        XCTAssertTrue(
-            waitForTrueInterruptBanner(timeout: 8),
-            "TrueInterruptSkippedBanner must be visible before dismissing it."
-        )
-
         let dismissButton = app.buttons["home.trueInterrupt.skippedBanner.dismiss"]
         XCTAssertTrue(
-            dismissButton.waitForExistence(timeout: 8),
+            dismissButton.waitForExistence(timeout: 5),
             "Dismiss button must be present before tapping to reveal the setup pill."
         )
         dismissButton.tap()
 
         let pill = app.buttons["home.trueInterrupt.setupPill"]
         XCTAssertTrue(
-            pill.waitForExistence(timeout: 8),
+            pill.waitForExistence(timeout: 5),
             "TrueInterruptSetupPill must appear after the banner is dismissed."
         )
         XCTAssertTrue(pill.isHittable, "TrueInterruptSetupPill must be hittable.")
