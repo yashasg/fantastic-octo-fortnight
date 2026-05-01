@@ -401,4 +401,38 @@ final class SettingsViewModelTests: XCTestCase {
 
         XCTAssertTrue(captured.isEmpty, "No event should be emitted when old == new")
     }
+
+    @available(*, deprecated, message: "Tests legacy snooze(for:) bridge behavior")
+    func test_snoozeFor_knownMinutes_emitsStableAnalyticsCode() {
+        var captured: [AnalyticsEvent] = []
+        AnalyticsLogger.testEventHandler = { captured.append($0) }
+        defer { AnalyticsLogger.testEventHandler = nil }
+
+        sut.snooze(for: 5)
+
+        let event = captured.first {
+            if case let .snoozeActivated(durationOption) = $0 {
+                return durationOption == "5m"
+            }
+            return false
+        }
+        XCTAssertNotNil(event, "Legacy snooze(for:) should emit stable code for known options.")
+    }
+
+    @available(*, deprecated, message: "Tests legacy snooze(for:) bridge behavior")
+    func test_snoozeFor_unknownMinutes_emitsCustomAnalyticsCode() {
+        var captured: [AnalyticsEvent] = []
+        AnalyticsLogger.testEventHandler = { captured.append($0) }
+        defer { AnalyticsLogger.testEventHandler = nil }
+
+        sut.snooze(for: 73)
+
+        let event = captured.first {
+            if case let .snoozeActivated(durationOption) = $0 {
+                return durationOption == "custom"
+            }
+            return false
+        }
+        XCTAssertNotNil(event, "Legacy snooze(for:) should avoid emitting raw minute-derived analytics codes.")
+    }
 }
