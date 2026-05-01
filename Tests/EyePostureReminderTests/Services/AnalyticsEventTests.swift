@@ -349,4 +349,56 @@ final class AnalyticsEventTests: XCTestCase {
             AnalyticsLogger.log(.onboardingCompleted(cta: cta))
         }
     }
+
+    // MARK: - #444: ReminderDeliveryPath exhaustiveness
+
+    /// Validates that `ReminderDeliveryPath` has exactly the two meaningful cases
+    /// and that the unused `unknown` case is permanently absent (#444).
+    func test_reminderDeliveryPath_hasExactlyTwoCases() {
+        // If someone re-adds .unknown or another catch-all, this test will fail.
+        let allPaths: [AnalyticsEvent.ReminderDeliveryPath] = [
+            .screenTimeThreshold, .notificationFallback
+        ]
+        XCTAssertEqual(allPaths.count, 2)
+        XCTAssertEqual(AnalyticsEvent.ReminderDeliveryPath.screenTimeThreshold.rawValue, "screen_time_threshold")
+        XCTAssertEqual(AnalyticsEvent.ReminderDeliveryPath.notificationFallback.rawValue, "notification_fallback")
+    }
+
+    // MARK: - #446: AppLaunchReadiness enums
+
+    func test_launchType_rawValues() {
+        XCTAssertEqual(AnalyticsEvent.LaunchType.cold.rawValue, "cold")
+        XCTAssertEqual(AnalyticsEvent.LaunchType.warm.rawValue, "warm")
+    }
+
+    func test_notificationAuthCode_rawValues() {
+        XCTAssertEqual(AnalyticsEvent.NotificationAuthCode.authorized.rawValue, "authorized")
+        XCTAssertEqual(AnalyticsEvent.NotificationAuthCode.denied.rawValue, "denied")
+        XCTAssertEqual(AnalyticsEvent.NotificationAuthCode.notDetermined.rawValue, "not_determined")
+        XCTAssertEqual(AnalyticsEvent.NotificationAuthCode.provisional.rawValue, "provisional")
+        XCTAssertEqual(AnalyticsEvent.NotificationAuthCode.ephemeral.rawValue, "ephemeral")
+        XCTAssertEqual(AnalyticsEvent.NotificationAuthCode.unknown.rawValue, "unknown")
+    }
+
+    func test_appLaunchReadiness_cold_canBeConstructed() {
+        let event = AnalyticsEvent.appLaunchReadiness(
+            launchType: .cold,
+            notificationAuth: .authorized,
+            screenTimeAvailable: false,
+            watchdogRecoveryNeeded: false,
+            latencyS: 0.42
+        )
+        _ = event
+    }
+
+    func test_appLaunchReadiness_warm_withWatchdog_canBeConstructed() {
+        let event = AnalyticsEvent.appLaunchReadiness(
+            launchType: .warm,
+            notificationAuth: .denied,
+            screenTimeAvailable: true,
+            watchdogRecoveryNeeded: true,
+            latencyS: 1.20
+        )
+        _ = event
+    }
 }

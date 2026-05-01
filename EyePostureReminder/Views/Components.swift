@@ -81,6 +81,7 @@ struct IconContainer: View {
             .frame(width: size, height: size)
             .background(AppColor.surfaceTint)
             .clipShape(Circle())
+            .accessibilityHidden(true)
     }
 }
 

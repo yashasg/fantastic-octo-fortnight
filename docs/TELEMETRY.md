@@ -112,7 +112,7 @@ extension Logger {
 
 ## True Interrupt Analytics Event Catalog
 
-> **Updated:** 2026-04-30 — reflects issues #247/#249/#253/#254/#257/#269/#278/#282/#286/#290/#291/#297/#316/#332/#346.
+> **Updated:** 2026-04-30 — reflects issues #247/#249/#253/#254/#257/#269/#278/#282/#286/#290/#291/#297/#316/#332/#346/#444/#446.
 >
 > All events are emitted via `AnalyticsLogger.log(_:)` → `os.Logger` (subsystem: `Bundle.main.bundleIdentifier`, category: `Analytics`). No SDK, no network calls. All payload fields use `privacy: .public` unless noted.
 
@@ -137,6 +137,38 @@ extension Logger {
 | `sessionDurationS` | `session_duration_s` | `.public` | Session length in seconds (1 decimal place) |
 
 **Emitted:** when the app resigns active.
+
+---
+
+#### `app_launch_readiness`
+
+Fired **once per foreground/launch cycle** at the moment the app is ready to serve reminders (i.e., alongside `app_session_start`). Enables startup health comparison across healthy vs degraded launches. Never emitted during snooze re-entry.
+
+| Field | Log key | Privacy | Stable raw values |
+|-------|---------|---------|-------------------|
+| `launchType` | `launch_type` | `.public` | See `LaunchType` table |
+| `notificationAuth` | `notification_auth` | `.public` | See `NotificationAuthCode` table |
+| `screenTimeAvailable` | `screen_time_available` | `.public` | `true` if FamilyControls authorization status is `.approved` |
+| `watchdogRecoveryNeeded` | `watchdog_recovery_needed` | `.public` | `true` if a stale shield session was recovered at foreground |
+| `latencyS` | `latency_s` | `.public` | Seconds from foreground entry to readiness (2 decimal places) |
+
+**`LaunchType` stable raw values:**
+
+| Case | Raw value | Meaning |
+|------|-----------|---------|
+| `cold` | `cold` | First `scheduleReminders()` call in this process lifetime |
+| `warm` | `warm` | Foreground return via `handleForegroundTransition()` |
+
+**`NotificationAuthCode` stable raw values:**
+
+| Case | Raw value | Meaning |
+|------|-----------|---------|
+| `authorized` | `authorized` | User has granted notification permission |
+| `denied` | `denied` | User has denied notification permission |
+| `notDetermined` | `not_determined` | Permission has not been requested yet |
+| `provisional` | `provisional` | Provisional authorization granted |
+| `ephemeral` | `ephemeral` | Ephemeral authorization (App Clip) |
+| `unknown` | `unknown` | Unrecognised future `UNAuthorizationStatus` value |
 
 ---
 

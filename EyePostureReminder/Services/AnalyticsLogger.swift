@@ -16,6 +16,35 @@ enum AnalyticsEvent: Sendable {
     /// Fired when the app resigns active.
     case appSessionEnd(sessionDurationS: TimeInterval)
 
+    // MARK: App Launch Readiness
+
+    /// Fired once per foreground/launch cycle at the point the app is ready to serve reminders.
+    /// Captures a non-PII snapshot of key readiness signals for startup health monitoring.
+    /// Low-volume: at most once per foreground transition; never during snooze re-entry.
+    case appLaunchReadiness(
+        launchType: LaunchType,
+        notificationAuth: NotificationAuthCode,
+        screenTimeAvailable: Bool,
+        watchdogRecoveryNeeded: Bool,
+        latencyS: TimeInterval
+    )
+
+    /// Non-PII code distinguishing a process cold start from a warm foreground return.
+    enum LaunchType: String {
+        case cold = "cold"
+        case warm = "warm"
+    }
+
+    /// Non-PII code for notification authorization status at app readiness.
+    enum NotificationAuthCode: String {
+        case authorized    = "authorized"
+        case denied        = "denied"
+        case notDetermined = "not_determined"
+        case provisional   = "provisional"
+        case ephemeral     = "ephemeral"
+        case unknown       = "unknown"
+    }
+
     // MARK: Reminders
 
     /// Fired when a reminder is triggered. `deliveryPath` records whether the reminder
@@ -325,6 +354,16 @@ enum AnalyticsLogger {
             logger.info("""
                 event=onboarding_completed \
                 cta=\(cta.rawValue, privacy: .public)
+                """)
+
+        case let .appLaunchReadiness(launchType, notificationAuth, screenTimeAvailable, watchdogRecoveryNeeded, latencyS):
+            logger.info("""
+                event=app_launch_readiness \
+                launch_type=\(launchType.rawValue, privacy: .public) \
+                notification_auth=\(notificationAuth.rawValue, privacy: .public) \
+                screen_time_available=\(screenTimeAvailable, privacy: .public) \
+                watchdog_recovery_needed=\(watchdogRecoveryNeeded, privacy: .public) \
+                latency_s=\(latencyS, format: .fixed(precision: 2), privacy: .public)
                 """)
 
         default:

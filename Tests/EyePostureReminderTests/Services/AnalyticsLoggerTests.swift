@@ -239,6 +239,43 @@ final class AnalyticsLoggerTests: XCTestCase {
         }
     }
 
+    // MARK: - #446: AppLaunchReadiness crash-safety
+
+    func test_log_appLaunchReadiness_cold_doesNotCrash() {
+        AnalyticsLogger.log(.appLaunchReadiness(
+            launchType: .cold,
+            notificationAuth: .authorized,
+            screenTimeAvailable: false,
+            watchdogRecoveryNeeded: false,
+            latencyS: 0.25
+        ))
+    }
+
+    func test_log_appLaunchReadiness_warm_doesNotCrash() {
+        AnalyticsLogger.log(.appLaunchReadiness(
+            launchType: .warm,
+            notificationAuth: .denied,
+            screenTimeAvailable: true,
+            watchdogRecoveryNeeded: true,
+            latencyS: 1.50
+        ))
+    }
+
+    func test_log_appLaunchReadiness_allAuthCodes_doNotCrash() {
+        let codes: [AnalyticsEvent.NotificationAuthCode] = [
+            .authorized, .denied, .notDetermined, .provisional, .ephemeral, .unknown
+        ]
+        for code in codes {
+            AnalyticsLogger.log(.appLaunchReadiness(
+                launchType: .cold,
+                notificationAuth: code,
+                screenTimeAvailable: false,
+                watchdogRecoveryNeeded: false,
+                latencyS: 0.1
+            ))
+        }
+    }
+
     // MARK: - Repeated logging
 
     func test_log_calledRepeatedly_doesNotCrash() {

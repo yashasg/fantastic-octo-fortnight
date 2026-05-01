@@ -96,6 +96,7 @@ struct OverlayView: View {
                     .foregroundStyle(AppColor.textSecondary)
                     .frame(minWidth: AppLayout.minTapTarget, minHeight: AppLayout.minTapTarget)
                     .contentShape(Rectangle())
+                    .accessibilityHidden(true)
             }
         )
         .padding(.top, AppSpacing.lg)
