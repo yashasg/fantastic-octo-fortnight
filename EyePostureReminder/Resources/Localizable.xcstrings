@@ -526,7 +526,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Closes this reminder and opens the Settings screen"
+            "value": "Closes this reminder and opens Settings, where you can snooze or adjust reminders"
           }
         }
       }
@@ -1197,7 +1197,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Automatically pauses reminders during Focus Mode or while driving. Reminders resume when these modes end."
+            "value": "Smart Pause automatically skips reminders while Focus Mode is active or driving is detected, then resumes them when the condition clears. When both toggles are off, reminders always fire on schedule."
           }
         }
       }
@@ -2685,6 +2685,39 @@
           "stringUnit": {
             "state": "translated",
             "value": "This app may use Apple's Screen Time and Device Activity APIs to deliver wellness reminders when you are using other apps. As of April 2026, this feature is pending Apple approval and is not yet available. Screen-time-triggered interruptions will not occur until this feature is explicitly released."
+          }
+        }
+      }
+    },
+    "settings.savedBanner": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Settings saved"
+          }
+        }
+      }
+    },
+    "settings.reminder.pickers.visible.announcement": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Interval and duration options now visible"
+          }
+        }
+      }
+    },
+    "settings.reminder.pickers.hidden.announcement": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Interval and duration options hidden"
           }
         }
       }

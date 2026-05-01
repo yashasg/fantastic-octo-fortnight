@@ -162,6 +162,24 @@ final class OverlayPresentationTests: XCTestCase {
         )
     }
 
+    // MARK: - test_overlay_settingsLink_hintMentionsSnooze (#435)
+
+    /// Verifies the Settings button accessibility hint informs users they can snooze from Settings (#435).
+    func test_overlay_settingsLink_hintMentionsSnooze() throws {
+        let settingsLink = app.buttons["overlay.settingsLink"]
+        XCTAssertTrue(
+            settingsLink.waitForExistence(timeout: 3),
+            "Settings link must be visible on the overlay."
+        )
+
+        let hint = settingsLink.value(forKey: "accessibilityHint") as? String ?? ""
+        XCTAssertTrue(
+            hint.localizedCaseInsensitiveContains("snooze"),
+            "Settings button accessibility hint must mention 'snooze' so VoiceOver users " +
+            "discover the snooze feature (#435). Got hint: '\(hint)'"
+        )
+    }
+
 }
 
 // MARK: - OverlayPostureTests (--show-overlay-posture triggers the posture overlay)

@@ -70,6 +70,9 @@ struct SettingsView: View {
     @State private var prevPostureInterval: TimeInterval = .zero
     @State private var prevPostureBreakDuration: TimeInterval = .zero
     @State private var showResetConfirm = false
+    // #434: Transient "Settings saved" banner state.
+    @State private var showSavedBanner = false
+    @State private var savedBannerTask: Task<Void, Never>?
 
     private let accessibilityNotificationPoster: AccessibilityNotificationPosting
 
@@ -344,6 +347,16 @@ struct SettingsView: View {
                 .foregroundStyle(AppColor.textSecondary)
             }
         }
+        // #434: "Settings saved" transient feedback banner overlaid at bottom.
+        .overlay(alignment: .bottom) {
+            if showSavedBanner {
+                SettingsSavedBanner()
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .padding(.bottom, AppSpacing.xl)
+                    .accessibilityIdentifier("settings.savedBanner")
+            }
+        }
+        .animation(.easeInOut(duration: 0.25), value: showSavedBanner)
         .scrollContentBackground(.hidden)
         .background(AppColor.background.ignoresSafeArea())
         .navigationTitle(Text("settings.navTitle", bundle: .module))
@@ -389,6 +402,7 @@ struct SettingsView: View {
                 ? String(localized: "home.status.active", bundle: .module)
                 : String(localized: "home.status.paused", bundle: .module)
             accessibilityNotificationPoster.postAnnouncement(message: message)
+            showSavedFeedback()
         }
         // Announce snooze activate/cancel to VoiceOver (#406).
         .onChange(of: settings.snoozedUntil) { (newValue: Date?) in
@@ -396,6 +410,7 @@ struct SettingsView: View {
                 ? String(localized: "settings.snooze.activated.announcement", bundle: .module)
                 : String(localized: "settings.snooze.cancelled.announcement", bundle: .module)
             accessibilityNotificationPoster.postAnnouncement(message: message)
+            showSavedFeedback()
         }
         // Analytics instrumentation for per-reminder settings (#297, #386).
         // SwiftUI mutates the store before onChange fires, so old values are captured here.
@@ -406,6 +421,7 @@ struct SettingsView: View {
                 old: String(!newValue),
                 new: String(newValue)
             )
+            showSavedFeedback()
         }
         .onChange(of: settings.eyesInterval) { newValue in
             viewModel?.notifySettingChanged(
@@ -414,6 +430,7 @@ struct SettingsView: View {
                 new: String(newValue)
             )
             prevEyesInterval = newValue
+            showSavedFeedback()
         }
         .onChange(of: settings.eyesBreakDuration) { newValue in
             viewModel?.notifySettingChanged(
@@ -422,6 +439,7 @@ struct SettingsView: View {
                 new: String(newValue)
             )
             prevEyesBreakDuration = newValue
+            showSavedFeedback()
         }
         .onChange(of: settings.postureEnabled) { newValue in
             viewModel?.notifySettingChanged(
@@ -429,6 +447,7 @@ struct SettingsView: View {
                 old: String(!newValue),
                 new: String(newValue)
             )
+            showSavedFeedback()
         }
         .onChange(of: settings.postureInterval) { newValue in
             viewModel?.notifySettingChanged(
@@ -437,6 +456,7 @@ struct SettingsView: View {
                 new: String(newValue)
             )
             prevPostureInterval = newValue
+            showSavedFeedback()
         }
         .onChange(of: settings.postureBreakDuration) { newValue in
             viewModel?.notifySettingChanged(
@@ -445,7 +465,46 @@ struct SettingsView: View {
                 new: String(newValue)
             )
             prevPostureBreakDuration = newValue
+            showSavedFeedback()
         }
+        // #434: Surface saved banner for Smart Pause toggles.
+        .onChange(of: settings.pauseDuringFocus) { _ in showSavedFeedback() }
+        .onChange(of: settings.pauseWhileDriving) { _ in showSavedFeedback() }
+        // #434: Surface saved banner for preferences.
+        .onChange(of: settings.hapticsEnabled) { _ in showSavedFeedback() }
+        .onChange(of: settings.notificationFallbackEnabled) { _ in showSavedFeedback() }
+    }
+
+    // MARK: - Saved Banner (#434)
+
+    /// Shows the "Settings saved" toast for 1.5 s, debounced against rapid successive changes.
+    private func showSavedFeedback() {
+        savedBannerTask?.cancel()
+        showSavedBanner = true
+        savedBannerTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 1_500_000_000)
+            guard !Task.isCancelled else { return }
+            showSavedBanner = false
+        }
+    }
+}
+
+// MARK: - Saved Banner (#434)
+
+/// Pill-shaped transient confirmation shown for 1.5 s after any setting change.
+private struct SettingsSavedBanner: View {
+    var body: some View {
+        Label(
+            String(localized: "settings.savedBanner", bundle: .module),
+            systemImage: "checkmark.circle.fill"
+        )
+        .font(AppFont.bodyEmphasized)
+        .foregroundStyle(AppColor.textPrimary)
+        .padding(.horizontal, AppSpacing.lg)
+        .padding(.vertical, AppSpacing.sm)
+        .background(AppColor.surface, in: Capsule())
+        .shadow(color: .black.opacity(0.12), radius: 8, y: 4)
+        .accessibilityAddTraits(.isStaticText)
     }
 }
 

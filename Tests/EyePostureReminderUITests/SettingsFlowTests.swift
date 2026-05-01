@@ -555,4 +555,59 @@ final class SettingsFlowTests: XCTestCase {
             "Snooze Rest of Day button must exist in Settings."
         )
     }
+
+    // MARK: - test_settings_smartPause_footerVisible (#433)
+
+    /// Verifies the Smart Pause section footer text is present, confirming the feature is documented (#433).
+    func test_settings_smartPause_footerVisible() throws {
+        openSettings()
+
+        // Smart Pause toggles may be below the fold.
+        app.swipeUp()
+
+        let focusToggle = app.switches["settings.smartPause.pauseDuringFocus"]
+        XCTAssertTrue(
+            focusToggle.waitForExistence(timeout: 3),
+            "Smart Pause > Pause During Focus toggle must exist to verify section is visible (#433)."
+        )
+
+        // Footer text contains "Smart Pause" explanation. Check by searching for expected keyword.
+        let footerText = app.staticTexts.matching(
+            NSPredicate(format: "label CONTAINS[c] 'smart pause' OR label CONTAINS[c] 'focus mode' OR label CONTAINS[c] 'automatically'")
+        ).firstMatch
+        XCTAssertTrue(
+            footerText.waitForExistence(timeout: 2),
+            "Smart Pause section must display a footer explaining the feature (#433). " +
+            "Add footer text to SettingsSmartPauseSection describing auto-pause behavior."
+        )
+    }
+
+    // MARK: - test_settings_savedBanner_appearsOnToggle (#434)
+
+    /// Verifies the transient 'Settings saved' banner appears after toggling a setting (#434).
+    func test_settings_savedBanner_appearsOnToggle() throws {
+        openSettings()
+
+        // Tap the master toggle to trigger a setting change.
+        let masterToggle = app.switches["settings.masterToggle"]
+        XCTAssertTrue(
+            masterToggle.waitForExistence(timeout: 3),
+            "Master toggle must exist in Settings."
+        )
+        masterToggle.tap()
+
+        // The saved banner should appear immediately after the toggle.
+        let savedBanner = app.otherElements["settings.savedBanner"]
+            .firstMatch
+        let bannerAppeared = savedBanner.waitForExistence(timeout: 2)
+
+        // Restore toggle to avoid test pollution before asserting.
+        masterToggle.tap()
+
+        XCTAssertTrue(
+            bannerAppeared,
+            "'Settings saved' confirmation banner must appear after a setting change (#434). " +
+            "Add .accessibilityIdentifier(\"settings.savedBanner\") to the SettingsSavedBanner overlay."
+        )
+    }
 }
