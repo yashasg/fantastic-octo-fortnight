@@ -983,6 +983,12 @@ cmd_export() {
     "${PROVISIONING_FLAGS[@]+"${PROVISIONING_FLAGS[@]}"}" \
     "${AUTH_FLAGS[@]+"${AUTH_FLAGS[@]}"}"
 
+  IPA_PATH="${EXPORT_PATH}/EyePostureReminder.ipa"
+  if [[ ! -f "$IPA_PATH" ]]; then
+    fail "Export succeeded but IPA not found at expected path: $IPA_PATH"
+    exit 1
+  fi
+
   pass "Export complete: $EXPORT_PATH"
 }
 
@@ -1006,6 +1012,12 @@ cmd_upload() {
     -exportOptionsPlist "$EXPORT_OPTIONS_PLIST" \
     "${PROVISIONING_FLAGS[@]+"${PROVISIONING_FLAGS[@]}"}" \
     "${AUTH_FLAGS[@]+"${AUTH_FLAGS[@]}"}"
+
+  IPA_PATH="${EXPORT_PATH}/EyePostureReminder.ipa"
+  if [[ ! -f "$IPA_PATH" ]]; then
+    fail "Upload-mode export completed but IPA not found at expected path: $IPA_PATH — aborting before artifact upload."
+    exit 1
+  fi
 
   pass "Upload submitted to App Store Connect"
 }
