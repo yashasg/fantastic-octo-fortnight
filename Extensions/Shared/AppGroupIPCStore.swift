@@ -297,17 +297,34 @@ public final class AppGroupIPCStore {
     }
 
     /// Best-effort pruning: deletes the oldest slot keys when total exceeds `maxEventCount`.
+    /// Corrupt slot keys (non-decodable payload or non-Data value) are deleted unconditionally
+    /// before evaluating the cap, so they can never prevent valid-event pruning from firing.
     /// This is in-process only; the correctness guarantee comes from per-slot atomic writes.
     private func pruneEventSlots(defaults: UserDefaults) {
-        var slots: [(key: String, timestamp: Date)] = []
+        var validSlots: [(key: String, timestamp: Date)] = []
+        var corruptKeys: [String] = []
+
         for (key, value) in defaults.dictionaryRepresentation() {
-            guard key.hasPrefix(AppGroupIPCKeys.eventSlotPrefix), let data = value as? Data,
-                  let event = try? decoder.decode(AppGroupIPCEvent.self, from: data)
-            else { continue }
-            slots.append((key, event.timestamp))
+            guard key.hasPrefix(AppGroupIPCKeys.eventSlotPrefix) else { continue }
+            if let data = value as? Data,
+               let event = try? decoder.decode(AppGroupIPCEvent.self, from: data) {
+                validSlots.append((key, event.timestamp))
+            } else {
+                corruptKeys.append(key)
+            }
         }
-        guard slots.count > maxEventCount else { return }
-        let toDelete = slots.sorted { $0.timestamp < $1.timestamp }.prefix(slots.count - maxEventCount)
+
+        // Remove corrupt keys first — they are unreadable and must not drift indefinitely.
+        for key in corruptKeys {
+            Self.log.warning("pruneEventSlots: removing corrupt slot key '\(key, privacy: .public)'")
+            defaults.removeObject(forKey: key)
+        }
+
+        // Then prune oldest valid slots if the cap is still exceeded.
+        guard validSlots.count > maxEventCount else { return }
+        let toDelete = validSlots
+            .sorted { $0.timestamp < $1.timestamp }
+            .prefix(validSlots.count - maxEventCount)
         for item in toDelete {
             defaults.removeObject(forKey: item.key)
         }

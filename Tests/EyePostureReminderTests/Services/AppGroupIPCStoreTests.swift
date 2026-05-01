@@ -419,6 +419,87 @@ final class AppGroupIPCStoreTests: XCTestCase {
             "Counter must be reset by clearEvents so second batch is not pruned prematurely")
     }
 
+    // MARK: - Corrupt slot key pruning (issue #445)
+
+    /// A corrupt slot key whose payload cannot be decoded must be deleted when pruning fires,
+    /// not silently retained and allowed to grow unbounded.
+    func test_pruneEventSlots_corruptSlotKey_isDeletedOnPrune() throws {
+        // store uses maxEventCount = 3; write 3 valid events so the count is at the cap.
+        let e1 = AppGroupIPCEvent(kind: .watchdogHeartbeat, timestamp: Date(timeIntervalSince1970: 1))
+        let e2 = AppGroupIPCEvent(kind: .shieldStarted,    timestamp: Date(timeIntervalSince1970: 2))
+        let e3 = AppGroupIPCEvent(kind: .shieldEnded,      timestamp: Date(timeIntervalSince1970: 3))
+        try store.recordEvent(e1)
+        try store.recordEvent(e2)
+        try store.recordEvent(e3)
+
+        // Inject a corrupt slot key directly into defaults (simulates cross-process write corruption).
+        let corruptKey = AppGroupIPCKeys.eventSlotPrefix + UUID().uuidString
+        defaults.set(Data("not-json".utf8), forKey: corruptKey)
+
+        // Recording a 4th event exceeds the cap and must trigger pruning.
+        let e4 = AppGroupIPCEvent(kind: .watchdogHeartbeat, timestamp: Date(timeIntervalSince1970: 4))
+        try store.recordEvent(e4)
+
+        // Corrupt key must have been removed by pruning.
+        XCTAssertNil(defaults.object(forKey: corruptKey), "Corrupt slot key must be deleted by pruning")
+    }
+
+    /// Corrupt slot keys must not prevent the event cap from being enforced:
+    /// after pruning, the number of readable slot keys must not exceed maxEventCount.
+    func test_pruneEventSlots_corruptSlotKeys_doNotBlockCapEnforcement() throws {
+        // store uses maxEventCount = 3; seed 3 corrupt keys directly (simulates pre-existing corruption).
+        let corruptKeys = (0..<3).map { _ in AppGroupIPCKeys.eventSlotPrefix + UUID().uuidString }
+        for key in corruptKeys {
+            defaults.set(Data("garbage".utf8), forKey: key)
+        }
+        // Re-init store so eventSlotCount is seeded from the 3 corrupt keys already present.
+        store = AppGroupIPCStore(defaults: defaults, maxEventCount: 3)
+
+        // Record 4 new events; each write beyond the cap triggers pruning.
+        let events = (1...4).map { i in
+            AppGroupIPCEvent(kind: .watchdogHeartbeat, timestamp: Date(timeIntervalSince1970: Double(i)))
+        }
+        for event in events { try store.recordEvent(event) }
+
+        // All corrupt keys must be gone.
+        for key in corruptKeys {
+            XCTAssertNil(defaults.object(forKey: key), "Corrupt slot key \(key) must be pruned")
+        }
+
+        // Slot key count in defaults must not exceed maxEventCount.
+        let remainingSlots = defaults.dictionaryRepresentation().keys
+            .filter { $0.hasPrefix(AppGroupIPCKeys.eventSlotPrefix) }
+        XCTAssertLessThanOrEqual(remainingSlots.count, 3,
+            "Slot count must not exceed maxEventCount after corrupt-key pruning")
+    }
+
+    /// Valid events must be preserved and readable even when corrupt slot keys are present alongside them.
+    func test_pruneEventSlots_mixedValidAndCorruptSlots_preservesValidEvents() throws {
+        // Write 3 valid events at the cap.
+        let e1 = AppGroupIPCEvent(kind: .shieldStarted,    timestamp: Date(timeIntervalSince1970: 10))
+        let e2 = AppGroupIPCEvent(kind: .shieldEnded,      timestamp: Date(timeIntervalSince1970: 20))
+        let e3 = AppGroupIPCEvent(kind: .watchdogHeartbeat, timestamp: Date(timeIntervalSince1970: 30))
+        try store.recordEvent(e1)
+        try store.recordEvent(e2)
+        try store.recordEvent(e3)
+
+        // Inject corrupt slot keys (not via store, so eventSlotCount is not incremented).
+        for _ in 0..<5 {
+            defaults.set(Data("bad".utf8), forKey: AppGroupIPCKeys.eventSlotPrefix + UUID().uuidString)
+        }
+
+        // A 4th event record triggers pruning; corrupt keys must be swept, valid ones preserved.
+        let e4 = AppGroupIPCEvent(kind: .shieldStarted, timestamp: Date(timeIntervalSince1970: 40))
+        try store.recordEvent(e4)
+
+        // readEvents must return only valid, decodable events (up to cap).
+        let events = try store.readEvents()
+        XCTAssertEqual(events.count, 3, "Only valid events should remain after pruning corrupt keys")
+        XCTAssertTrue(events.contains(e2))
+        XCTAssertTrue(events.contains(e3))
+        XCTAssertTrue(events.contains(e4))
+    }
+
     private func preservingStandardDefaults(for keys: [String], _ action: () throws -> Void) rethrows {
         let oldValues = Dictionary(uniqueKeysWithValues: keys.map { ($0, UserDefaults.standard.object(forKey: $0)) })
         keys.forEach { UserDefaults.standard.removeObject(forKey: $0) }
