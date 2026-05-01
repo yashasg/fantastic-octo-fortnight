@@ -312,7 +312,7 @@ final class SettingsViewModelExtendedTests: XCTestCase {
         var localSUT: SettingsViewModel? = makeSUT()
         settings.globalEnabled = true
 
-        localSUT!.globalToggleChanged()
+        localSUT?.globalToggleChanged()
         // Deallocate before yielding; weak self inside Task becomes nil.
         localSUT = nil
 
@@ -327,7 +327,7 @@ final class SettingsViewModelExtendedTests: XCTestCase {
     func test_reminderSettingChanged_afterDealloc_doesNotCallReschedule() async {
         var localSUT: SettingsViewModel? = makeSUT()
 
-        localSUT!.reminderSettingChanged(for: .eyes)
+        localSUT?.reminderSettingChanged(for: .eyes)
         localSUT = nil
 
         await Task.yield()
@@ -340,10 +340,10 @@ final class SettingsViewModelExtendedTests: XCTestCase {
 
     func test_cancelSnooze_afterDealloc_doesNotCallScheduler() async {
         var localSUT: SettingsViewModel? = makeSUT()
-        localSUT!.snooze(option: .fiveMinutes)
+        localSUT?.snooze(option: .fiveMinutes)
         mockScheduler.reset()   // clear the snooze-path cancelAll call
 
-        localSUT!.cancelSnooze()
+        localSUT?.cancelSnooze()
         localSUT = nil
 
         await Task.yield()
@@ -358,7 +358,7 @@ final class SettingsViewModelExtendedTests: XCTestCase {
         var localSUT: SettingsViewModel? = makeSUT()
         settings.notificationFallbackEnabled = false
 
-        localSUT!.notificationFallbackEnabled = true
+        localSUT?.notificationFallbackEnabled = true
         localSUT = nil
 
         await Task.yield()

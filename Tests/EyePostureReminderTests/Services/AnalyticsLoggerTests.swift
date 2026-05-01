@@ -242,23 +242,23 @@ final class AnalyticsLoggerTests: XCTestCase {
     // MARK: - #446: AppLaunchReadiness crash-safety
 
     func test_log_appLaunchReadiness_cold_doesNotCrash() {
-        AnalyticsLogger.log(.appLaunchReadiness(
+        AnalyticsLogger.log(.appLaunchReadiness(.init(
             launchType: .cold,
             notificationAuth: .authorized,
             screenTimeAvailable: false,
             watchdogRecoveryNeeded: false,
             latencyS: 0.25
-        ))
+        )))
     }
 
     func test_log_appLaunchReadiness_warm_doesNotCrash() {
-        AnalyticsLogger.log(.appLaunchReadiness(
+        AnalyticsLogger.log(.appLaunchReadiness(.init(
             launchType: .warm,
             notificationAuth: .denied,
             screenTimeAvailable: true,
             watchdogRecoveryNeeded: true,
             latencyS: 1.50
-        ))
+        )))
     }
 
     func test_log_appLaunchReadiness_allAuthCodes_doNotCrash() {
@@ -266,13 +266,13 @@ final class AnalyticsLoggerTests: XCTestCase {
             .authorized, .denied, .notDetermined, .provisional, .ephemeral, .unknown
         ]
         for code in codes {
-            AnalyticsLogger.log(.appLaunchReadiness(
+            AnalyticsLogger.log(.appLaunchReadiness(.init(
                 launchType: .cold,
                 notificationAuth: code,
                 screenTimeAvailable: false,
                 watchdogRecoveryNeeded: false,
                 latencyS: 0.1
-            ))
+            )))
         }
     }
 

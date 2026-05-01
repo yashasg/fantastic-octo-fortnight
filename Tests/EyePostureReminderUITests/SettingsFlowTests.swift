@@ -456,11 +456,11 @@ final class SettingsFlowTests: XCTestCase {
         _ = settingsNav.waitForNonExistence(timeout: 3)
     }
 
-    // MARK: - test_settings_masterToggle_persistsAfterSheetDismissal
+    // MARK: - test_settings_globalToggle_persistsAfterSheetDismissal
 
     /// Verifies that flipping the global master toggle is persisted across a full
     /// Settings sheet dismiss-and-reopen cycle (#436).
-    func test_settings_masterToggle_persistsAfterSheetDismissal() throws {
+    func test_settings_globalToggle_persistsAfterSheetDismissal() throws {
         // 1. Open Settings and capture the initial toggle state.
         openSettings()
         let toggle = app.switches["settings.masterToggle"]
@@ -573,7 +573,7 @@ final class SettingsFlowTests: XCTestCase {
 
         // Footer text contains "Smart Pause" explanation. Check by searching for expected keyword.
         let footerText = app.staticTexts.matching(
-            NSPredicate(format: "label CONTAINS[c] 'smart pause' OR label CONTAINS[c] 'focus mode' OR label CONTAINS[c] 'automatically'")
+            NSPredicate(format: "label CONTAINS[c] 'smart pause' OR label CONTAINS[c] 'focus mode'")
         ).firstMatch
         XCTAssertTrue(
             footerText.waitForExistence(timeout: 2),
@@ -588,13 +588,13 @@ final class SettingsFlowTests: XCTestCase {
     func test_settings_savedBanner_appearsOnToggle() throws {
         openSettings()
 
-        // Tap the master toggle to trigger a setting change.
-        let masterToggle = app.switches["settings.masterToggle"]
+        // Tap the global toggle to trigger a setting change.
+        let globalToggle = app.switches["settings.masterToggle"]
         XCTAssertTrue(
-            masterToggle.waitForExistence(timeout: 3),
+            globalToggle.waitForExistence(timeout: 3),
             "Master toggle must exist in Settings."
         )
-        masterToggle.tap()
+        globalToggle.tap()
 
         // The saved banner should appear immediately after the toggle.
         let savedBanner = app.otherElements["settings.savedBanner"]
@@ -602,7 +602,7 @@ final class SettingsFlowTests: XCTestCase {
         let bannerAppeared = savedBanner.waitForExistence(timeout: 2)
 
         // Restore toggle to avoid test pollution before asserting.
-        masterToggle.tap()
+        globalToggle.tap()
 
         XCTAssertTrue(
             bannerAppeared,

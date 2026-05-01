@@ -381,24 +381,24 @@ final class AnalyticsEventTests: XCTestCase {
     }
 
     func test_appLaunchReadiness_cold_canBeConstructed() {
-        let event = AnalyticsEvent.appLaunchReadiness(
+        let event = AnalyticsEvent.appLaunchReadiness(.init(
             launchType: .cold,
             notificationAuth: .authorized,
             screenTimeAvailable: false,
             watchdogRecoveryNeeded: false,
             latencyS: 0.42
-        )
+        ))
         _ = event
     }
 
     func test_appLaunchReadiness_warm_withWatchdog_canBeConstructed() {
-        let event = AnalyticsEvent.appLaunchReadiness(
+        let event = AnalyticsEvent.appLaunchReadiness(.init(
             launchType: .warm,
             notificationAuth: .denied,
             screenTimeAvailable: true,
             watchdogRecoveryNeeded: true,
             latencyS: 1.20
-        )
+        ))
         _ = event
     }
 }

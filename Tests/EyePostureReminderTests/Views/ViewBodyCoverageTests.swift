@@ -530,7 +530,7 @@ final class ViewBodyCoverageTests: XCTestCase {
             "settings.eyes.intervalPicker",
             "settings.eyes.durationPicker",
             "settings.posture.intervalPicker",
-            "settings.posture.durationPicker",
+            "settings.posture.durationPicker"
         ]
         for id in expectedIdentifiers {
             XCTAssertTrue(

@@ -385,7 +385,10 @@ final class AppCoordinatorNotificationFallbackTests: XCTestCase {
 
         tracker.simulateThresholdReached(for: .eyes)
         overlay.simulateDismiss()
-        await awaitCondition { deviceActivityMonitor.cancelCallCount >= 1 && ipcStore.events.contains { $0.kind == .notificationFallbackSuppressed } }
+        await awaitCondition {
+            deviceActivityMonitor.cancelCallCount >= 1 &&
+            ipcStore.events.contains { $0.kind == .notificationFallbackSuppressed }
+        }
 
         XCTAssertEqual(deviceActivityMonitor.scheduleCallCount, 1)
         XCTAssertEqual(deviceActivityMonitor.cancelCallCount, 1)

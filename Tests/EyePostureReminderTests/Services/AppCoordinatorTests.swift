@@ -582,6 +582,17 @@ final class AppCoordinatorTests: XCTestCase {
         }
     }
 
+    /// Creates a coordinator + tracker pair for handleNotification tests that only need
+    /// a MockScreenTimeTracker (no notif-center assertions).
+    private func makeTrackedCoordinator() -> (AppCoordinator, MockScreenTimeTracker) {
+        let tracker = MockScreenTimeTracker()
+        let (coordinator, _, _) = makeCoordinator(
+            overlay: MockOverlayPresenting(),
+            notifCenter: MockNotificationCenter(),
+            screenTimeTracker: tracker)
+        return (coordinator, tracker)
+    }
+
     func test_scheduleReminders_authorized_bothEnabled_addsEyesAndPostureRequests() async {
         let mockNotif = MockNotificationCenter()
         mockNotif.authorizationGranted = true
@@ -748,12 +759,7 @@ final class AppCoordinatorTests: XCTestCase {
     // MARK: - handleNotification: ScreenTimeTracker reset
 
     func test_handleNotification_eyes_resetsEyesCounter() {
-        let mockNotif = MockNotificationCenter()
-        let mockTracker = MockScreenTimeTracker()
-        let (coordinator, _, _) = makeCoordinator(
-            overlay: MockOverlayPresenting(),
-            notifCenter: mockNotif,
-            screenTimeTracker: mockTracker)
+        let (coordinator, mockTracker) = makeTrackedCoordinator()
         defer { coordinator.stopFallbackTimers() }
 
         coordinator.handleNotification(for: .eyes)
@@ -764,12 +770,7 @@ final class AppCoordinatorTests: XCTestCase {
     }
 
     func test_handleNotification_posture_resetsPostureCounter() {
-        let mockNotif = MockNotificationCenter()
-        let mockTracker = MockScreenTimeTracker()
-        let (coordinator, _, _) = makeCoordinator(
-            overlay: MockOverlayPresenting(),
-            notifCenter: mockNotif,
-            screenTimeTracker: mockTracker)
+        let (coordinator, mockTracker) = makeTrackedCoordinator()
         defer { coordinator.stopFallbackTimers() }
 
         coordinator.handleNotification(for: .posture)
@@ -780,12 +781,7 @@ final class AppCoordinatorTests: XCTestCase {
     }
 
     func test_handleNotification_eyes_doesNotResetPostureCounter() {
-        let mockNotif = MockNotificationCenter()
-        let mockTracker = MockScreenTimeTracker()
-        let (coordinator, _, _) = makeCoordinator(
-            overlay: MockOverlayPresenting(),
-            notifCenter: mockNotif,
-            screenTimeTracker: mockTracker)
+        let (coordinator, mockTracker) = makeTrackedCoordinator()
         defer { coordinator.stopFallbackTimers() }
 
         coordinator.handleNotification(for: .eyes)

@@ -35,14 +35,15 @@ final class ComponentsExtendedTests: XCTestCase {
 
     func test_appOpacity_disabledButton_isLessThanPressedButton() {
         XCTAssertLessThan(AppOpacity.disabledButton, AppOpacity.pressedButton,
-            "Disabled opacity must be lower than pressed opacity — disabled state must be more visually suppressed (#430)")
+            "Disabled opacity must be lower than pressed opacity" +
+            " — disabled state must be more visually suppressed (#430)")
     }
 
     /// Verifies `SecondaryButtonStyle` still compiles after adding `@Environment(\\.isEnabled)`.
     func test_secondaryButtonStyle_readsIsEnabledEnvironment_compiles() {
         let style = SecondaryButtonStyle()
         // Exercise makeBody to confirm the @Environment(\.isEnabled) path doesn't crash at init.
-        let _ = style
+        _ = style
     }
 
     // MARK: - PrimaryButtonStyle

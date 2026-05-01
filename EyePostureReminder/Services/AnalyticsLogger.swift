@@ -18,21 +18,24 @@ enum AnalyticsEvent: Sendable {
 
     // MARK: App Launch Readiness
 
+    /// Parameters captured once per app launch/foreground cycle for startup health monitoring.
+    struct AppLaunchReadinessPayload: Sendable {
+        let launchType: LaunchType
+        let notificationAuth: NotificationAuthCode
+        let screenTimeAvailable: Bool
+        let watchdogRecoveryNeeded: Bool
+        let latencyS: TimeInterval
+    }
+
     /// Fired once per foreground/launch cycle at the point the app is ready to serve reminders.
     /// Captures a non-PII snapshot of key readiness signals for startup health monitoring.
     /// Low-volume: at most once per foreground transition; never during snooze re-entry.
-    case appLaunchReadiness(
-        launchType: LaunchType,
-        notificationAuth: NotificationAuthCode,
-        screenTimeAvailable: Bool,
-        watchdogRecoveryNeeded: Bool,
-        latencyS: TimeInterval
-    )
+    case appLaunchReadiness(AppLaunchReadinessPayload)
 
     /// Non-PII code distinguishing a process cold start from a warm foreground return.
     enum LaunchType: String {
-        case cold = "cold"
-        case warm = "warm"
+        case cold
+        case warm
     }
 
     /// Non-PII code for notification authorization status at app readiness.
@@ -356,14 +359,14 @@ enum AnalyticsLogger {
                 cta=\(cta.rawValue, privacy: .public)
                 """)
 
-        case let .appLaunchReadiness(launchType, notificationAuth, screenTimeAvailable, watchdogRecoveryNeeded, latencyS):
+        case let .appLaunchReadiness(payload):
             logger.info("""
                 event=app_launch_readiness \
-                launch_type=\(launchType.rawValue, privacy: .public) \
-                notification_auth=\(notificationAuth.rawValue, privacy: .public) \
-                screen_time_available=\(screenTimeAvailable, privacy: .public) \
-                watchdog_recovery_needed=\(watchdogRecoveryNeeded, privacy: .public) \
-                latency_s=\(latencyS, format: .fixed(precision: 2), privacy: .public)
+                launch_type=\(payload.launchType.rawValue, privacy: .public) \
+                notification_auth=\(payload.notificationAuth.rawValue, privacy: .public) \
+                screen_time_available=\(payload.screenTimeAvailable, privacy: .public) \
+                watchdog_recovery_needed=\(payload.watchdogRecoveryNeeded, privacy: .public) \
+                latency_s=\(p.latencyS, format: .fixed(precision: 2), privacy: .public)
                 """)
 
         default:
