@@ -61,7 +61,7 @@ final class MultiServicePipelineIntegrationTests: XCTestCase {
     func test_eyesIntervalChange_pipelineDoesNotBreak() async {
         store.eyesInterval = 600
         viewModel.reminderSettingChanged(for: .eyes)
-        try? await Task.sleep(nanoseconds: 200_000_000)
+        await awaitCondition { scheduler.rescheduleCallCount >= 1 }
 
         XCTAssertEqual(
             scheduler.rescheduleCallCount,
@@ -73,19 +73,19 @@ final class MultiServicePipelineIntegrationTests: XCTestCase {
     func test_globalToggle_off_then_on_schedulerCallsInOrder() async {
         store.globalEnabled = false
         viewModel.globalToggleChanged()
-        try? await Task.sleep(nanoseconds: 200_000_000)
+        await awaitCondition { scheduler.cancelAllCallCount >= 1 }
         XCTAssertEqual(scheduler.cancelAllCallCount, 1, "Disabling master must cancel all")
 
         store.globalEnabled = true
         viewModel.globalToggleChanged()
-        try? await Task.sleep(nanoseconds: 200_000_000)
+        await awaitCondition { scheduler.scheduleRemindersCallCount >= 1 }
         XCTAssertEqual(scheduler.scheduleRemindersCallCount, 1, "Re-enabling master must schedule")
     }
 
     func test_settingsChange_doesNotAffectPauseConditionManager() async {
         store.eyesInterval = 900
         viewModel.reminderSettingChanged(for: .eyes)
-        try? await Task.sleep(nanoseconds: 200_000_000)
+        await awaitCondition { scheduler.rescheduleCallCount >= 1 }
 
         XCTAssertFalse(
             pauseManager.isPaused,
@@ -131,8 +131,8 @@ final class MultiServicePipelineIntegrationTests: XCTestCase {
         store.eyesInterval = 600
         store.eyesInterval = 1200
 
-        // Give Combine publishers a moment to deliver.
-        try? await Task.sleep(nanoseconds: 50_000_000)
+        // Poll until Combine publishers deliver all three changes.
+        await awaitCondition { globalValues.count >= 1 && intervalValues.count >= 2 }
 
         XCTAssertEqual(
             globalValues,

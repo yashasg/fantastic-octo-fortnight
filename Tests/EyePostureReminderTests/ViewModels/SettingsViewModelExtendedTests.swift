@@ -252,7 +252,7 @@ final class SettingsViewModelExtendedTests: XCTestCase {
         let sut = makeSUT()
         sut.snooze(option: .fiveMinutes)
         sut.cancelSnooze()
-        try? await Task.sleep(nanoseconds: 200_000_000)
+        await awaitCondition { mockScheduler.scheduleRemindersCallCount >= 1 }
         XCTAssertNil(settings.snoozedUntil)
     }
 
@@ -260,7 +260,7 @@ final class SettingsViewModelExtendedTests: XCTestCase {
         let sut = makeSUT()
         sut.snooze(option: .fiveMinutes)
         sut.cancelSnooze()
-        try? await Task.sleep(nanoseconds: 200_000_000)
+        await awaitCondition { mockScheduler.scheduleRemindersCallCount >= 1 }
         XCTAssertEqual(settings.snoozeCount, 0)
     }
 
@@ -269,7 +269,7 @@ final class SettingsViewModelExtendedTests: XCTestCase {
         sut.snooze(option: .fiveMinutes)
         let countBefore = mockScheduler.scheduleRemindersCallCount
         sut.cancelSnooze()
-        try? await Task.sleep(nanoseconds: 200_000_000)
+        await awaitCondition { mockScheduler.scheduleRemindersCallCount > countBefore }
         XCTAssertEqual(mockScheduler.scheduleRemindersCallCount, countBefore + 1)
     }
 
@@ -290,14 +290,14 @@ final class SettingsViewModelExtendedTests: XCTestCase {
     func test_reminderSettingChanged_callsReschedule() async {
         let sut = makeSUT()
         sut.reminderSettingChanged(for: .eyes)
-        try? await Task.sleep(nanoseconds: 200_000_000)
+        await awaitCondition { mockScheduler.rescheduleCallCount >= 1 }
         XCTAssertEqual(mockScheduler.rescheduleCallCount, 1)
     }
 
     func test_reminderSettingChanged_forPosture_callsReschedule() async {
         let sut = makeSUT()
         sut.reminderSettingChanged(for: .posture)
-        try? await Task.sleep(nanoseconds: 200_000_000)
+        await awaitCondition { mockScheduler.rescheduleCallCount >= 1 }
         XCTAssertEqual(mockScheduler.rescheduleCallCount, 1)
     }
 }

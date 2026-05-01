@@ -407,7 +407,18 @@ final class ScreenTimeTrackerTests: XCTestCase {
 
         NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
 
-        try await Task.sleep(nanoseconds: 3_000_000_000)
+        // Use an inverted expectation: the test passes when the 3 s window expires without
+        // either callback firing (both are paused). Fails immediately if one fires early.
+        let noEyesFire    = XCTestExpectation(description: "eyes must NOT fire")
+        let noPostureFire = XCTestExpectation(description: "posture must NOT fire")
+        noEyesFire.isInverted    = true
+        noPostureFire.isInverted = true
+        sut.onThresholdReached = { type in
+            if type == .eyes    { noEyesFire.fulfill() }
+            if type == .posture { noPostureFire.fulfill() }
+        }
+
+        await fulfillment(of: [noEyesFire, noPostureFire], timeout: 3.0)
         XCTAssertFalse(eyesFired, "pauseAll must prevent .eyes callback")
         XCTAssertFalse(postureFired, "pauseAll must prevent .posture callback")
         sut.stop()

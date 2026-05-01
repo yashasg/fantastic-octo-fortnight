@@ -64,8 +64,8 @@ final class AppDelegateTests: XCTestCase {
 
         delegate.applicationDidBecomeActive(UIApplication.shared)
 
-        // Give the spawned MainActor Task time to run.
-        try await Task.sleep(nanoseconds: 100_000_000)
+        // Poll until the inner task clears the expired snooze fields.
+        await awaitCondition { settings.snoozedUntil == nil }
 
         XCTAssertNil(
             settings.snoozedUntil,
@@ -85,7 +85,8 @@ final class AppDelegateTests: XCTestCase {
 
         delegate.applicationDidBecomeActive(UIApplication.shared)
 
-        try await Task.sleep(nanoseconds: 100_000_000)
+        // Active snooze is never cleared — yield to let the inner task run and confirm no mutation.
+        for _ in 0..<5 { await Task.yield() }
 
         XCTAssertNotNil(settings.snoozedUntil, "An active snooze must not be cleared by applicationDidBecomeActive")
         XCTAssertEqual(settings.snoozeCount, 1, "snoozeCount must remain unchanged when snooze is still active")
@@ -97,7 +98,8 @@ final class AppDelegateTests: XCTestCase {
 
         delegate.applicationDidBecomeActive(UIApplication.shared)
 
-        try await Task.sleep(nanoseconds: 100_000_000)
+        // No mutation expected — yield to let the inner task run without crashing.
+        for _ in 0..<5 { await Task.yield() }
 
         XCTAssertNil(settings.snoozedUntil)
     }
@@ -109,7 +111,8 @@ final class AppDelegateTests: XCTestCase {
 
         delegate.applicationDidBecomeActive(UIApplication.shared)
 
-        try await Task.sleep(nanoseconds: 100_000_000)
+        // Optional chain exits immediately when coordinator is nil — one yield is sufficient.
+        await Task.yield()
         // No assertions needed — surviving without a coordinator is the behaviour under test.
     }
 

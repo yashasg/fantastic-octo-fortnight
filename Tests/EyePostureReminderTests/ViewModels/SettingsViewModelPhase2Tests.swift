@@ -14,8 +14,8 @@ import XCTest
 /// - Integration: snooze count resets after a reminder fires
 ///
 /// The class is `@MainActor` because `SettingsViewModel` is main-actor isolated.
-/// Inner `Task {}` dispatches are awaited with a 200 ms sleep before asserting
-/// call counts (same pattern as `SettingsViewModelTests`).
+/// Inner `Task {}` dispatches are awaited with `awaitCondition` (deterministic
+/// polling) rather than fixed-duration sleeps.
 @MainActor
 final class SettingsViewModelPhase2Tests: XCTestCase {
 
@@ -144,7 +144,7 @@ final class SettingsViewModelPhase2Tests: XCTestCase {
 
         sut.cancelSnooze()
 
-        try? await Task.sleep(nanoseconds: 200_000_000)
+        await awaitCondition { mockScheduler.scheduleRemindersCallCount >= 1 }
         XCTAssertNil(settings.snoozedUntil)
     }
 
@@ -154,7 +154,7 @@ final class SettingsViewModelPhase2Tests: XCTestCase {
 
         sut.cancelSnooze()
 
-        try? await Task.sleep(nanoseconds: 200_000_000)
+        await awaitCondition { mockScheduler.scheduleRemindersCallCount >= 1 }
         XCTAssertEqual(settings.snoozeCount, 0)
     }
 
@@ -163,7 +163,7 @@ final class SettingsViewModelPhase2Tests: XCTestCase {
 
         sut.cancelSnooze()
 
-        try? await Task.sleep(nanoseconds: 200_000_000)
+        await awaitCondition { mockScheduler.scheduleRemindersCallCount >= 1 }
         XCTAssertEqual(mockScheduler.scheduleRemindersCallCount, 1)
     }
 
@@ -221,7 +221,7 @@ final class SettingsViewModelPhase2Tests: XCTestCase {
 
         sut.cancelSnooze()                 // snoozeCount = 0
 
-        try? await Task.sleep(nanoseconds: 200_000_000)
+        await awaitCondition { mockScheduler.scheduleRemindersCallCount >= 1 }
         XCTAssertTrue(sut.canSnooze, "canSnooze must return true after cancelSnooze resets the count")
     }
 
@@ -253,7 +253,7 @@ final class SettingsViewModelPhase2Tests: XCTestCase {
 
         sut.cancelSnooze()
 
-        try? await Task.sleep(nanoseconds: 200_000_000)
+        await awaitCondition { mockScheduler.scheduleRemindersCallCount >= 1 }
         XCTAssertFalse(sut.isSnoozeActive)
     }
 
@@ -284,7 +284,7 @@ final class SettingsViewModelPhase2Tests: XCTestCase {
         sut.snooze(option: .fiveMinutes)
         sut.cancelSnooze()
 
-        try? await Task.sleep(nanoseconds: 200_000_000)
+        await awaitCondition { mockScheduler.scheduleRemindersCallCount >= 1 }
 
         let reloaded = SettingsStore(store: mockPersistence)
         XCTAssertEqual(reloaded.snoozeCount, 0, "snoozeCount of 0 must persist after cancelSnooze()")
@@ -300,7 +300,7 @@ final class SettingsViewModelPhase2Tests: XCTestCase {
         settings.eyesInterval = 600
         sut.reminderSettingChanged(for: .eyes)
 
-        try? await Task.sleep(nanoseconds: 200_000_000)
+        await awaitCondition { mockScheduler.rescheduleCallCount >= 1 }
 
         let snoozedUntilAfter = try XCTUnwrap(
             settings.snoozedUntil,
@@ -321,7 +321,7 @@ final class SettingsViewModelPhase2Tests: XCTestCase {
         sut.reminderSettingChanged(for: .posture)
         sut.reminderSettingChanged(for: .eyes)
 
-        try? await Task.sleep(nanoseconds: 300_000_000)
+        await awaitCondition { mockScheduler.rescheduleCallCount >= 3 }
 
         XCTAssertNotNil(settings.snoozedUntil, "snoozedUntil must persist across multiple settings-change reschedules")
     }
@@ -335,7 +335,7 @@ final class SettingsViewModelPhase2Tests: XCTestCase {
         settings.globalEnabled = false
         sut.globalToggleChanged()
 
-        try? await Task.sleep(nanoseconds: 200_000_000)
+        await awaitCondition { mockScheduler.cancelAllCallCount >= 1 }
 
         XCTAssertNotNil(settings.snoozedUntil, "globalToggleChanged must not clear an active snooze")
     }
