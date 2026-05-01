@@ -2,7 +2,7 @@
 
 **App:** kshana  
 **Last Updated:** April 26, 2026  
-**Publisher:** [PUBLISHER NAME]
+**Publisher:** Yashasg
 
 ---
 
@@ -76,7 +76,25 @@ All preference and True Interrupt coordination data stored by the App lives in *
 
 ---
 
-## 4. Apple Diagnostics and Analytics
+## 4. App Store Privacy Manifest (PrivacyInfo.xcprivacy)
+
+kshana includes an App Store Privacy Manifest (`EyePostureReminder/PrivacyInfo.xcprivacy`) as required by Apple for apps distributed on the App Store. This manifest is embedded in the app bundle and is used by Apple to generate the App Privacy nutrition label displayed on the App Store product page.
+
+The manifest declares the following, based on the app's actual behavior:
+
+| Declaration | Value |
+|---|---|
+| **Tracking** (`NSPrivacyTracking`) | `false` — the app does not track users |
+| **Tracking domains** (`NSPrivacyTrackingDomains`) | None — no tracking network domains |
+| **Crash data** (`NSPrivacyCrashData`) | Collected; not linked to identity; not used for tracking; purpose: App Functionality |
+| **Performance data** (`NSPrivacyPerformanceData`) | Collected; not linked to identity; not used for tracking; purpose: Analytics |
+| **UserDefaults API** (`NSPrivacyAccessedAPICategoryUserDefaults`) | Accessed; reason code `CA92.1` (storing app preferences and settings written by the user) |
+
+The manifest is the authoritative machine-readable disclosure to Apple. This section summarises it in human-readable form. If the app's data practices change, both this Privacy Policy and the manifest will be updated accordingly.
+
+---
+
+## 4a. Apple Diagnostics and Analytics
 
 The App uses Apple's built-in diagnostics and analytics tools, including MetricKit and App Store Connect analytics, to help understand app reliability and performance at an aggregate or diagnostic level.
 
@@ -106,7 +124,7 @@ Apple may process App Store, diagnostics, crash, and performance information thr
 
 ## 7. Apple App Store
 
-The App is distributed through the Apple App Store. Apple may collect certain data as part of the download, installation, diagnostics, crash reporting, analytics, and App Store operation process, governed by [Apple's Privacy Policy](https://www.apple.com/legal/privacy/). [PUBLISHER NAME] does not control Apple's data practices.
+The App is distributed through the Apple App Store. Apple may collect certain data as part of the download, installation, diagnostics, crash reporting, analytics, and App Store operation process, governed by [Apple's Privacy Policy](https://www.apple.com/legal/privacy/). Yashasg does not control Apple's data practices.
 
 ---
 
@@ -114,7 +132,7 @@ The App is distributed through the Apple App Store. Apple may collect certain da
 
 kshana does not knowingly collect personal information from children under the age of 13 (or the applicable age of digital consent in your jurisdiction). The App does not require accounts, direct identifiers, advertising identifiers, or third-party tracking.
 
-If you are a parent or guardian and believe your child has somehow provided personal information through this App, please contact us at [CONTACT EMAIL]. We will promptly address the concern.
+If you are a parent or guardian and believe your child has somehow provided personal information through this App, please contact us at support@yashasg.dev. We will promptly address the concern.
 
 ---
 
@@ -130,15 +148,42 @@ The App does not transmit local preferences, motion activity data, or Focus stat
 
 We do not maintain user accounts or a user-level database about you. If you wish to delete App preferences stored on your device, deleting the App from your device will remove locally stored preferences.
 
-**GDPR (EU/EEA users):** Based on the App's minimal data practices, [PUBLISHER NAME] does not maintain a user-level profile or account database for access, deletion, or portability requests. Apple-native diagnostics and App Store data are handled through Apple's systems and your Apple privacy settings.
+**GDPR (EU/EEA users):** Based on the App's minimal data practices, Yashasg does not maintain a user-level profile or account database for access, deletion, or portability requests. Apple-native diagnostics and App Store data are handled through Apple's systems and your Apple privacy settings.
 
-**CCPA (California users):** We do not sell or share personal information for cross-context behavioral advertising. We do not use the App to track you across apps or websites.
+**CCPA (California users):**
+
+We do not sell or share personal information for cross-context behavioral advertising. We do not use the App to track you across apps or websites.
+
+California residents have the following rights under the California Consumer Privacy Act (Cal. Civil Code §1798.100 et seq.), as amended by CPRA:
+
+- **Right to Know** — You may request disclosure of the categories and specific pieces of personal information we have collected about you, the categories of sources, and the purposes for collection.
+- **Right to Delete** — You may request deletion of personal information we have collected about you, subject to applicable exceptions.
+- **Right to Opt-Out of Sale / Sharing** — We do not sell or share personal information for cross-context behavioral advertising. No opt-out action is required.
+- **Right to Correct** — You may request correction of inaccurate personal information we maintain about you.
+- **Right to Non-Discrimination** — We will not discriminate against you for exercising any of these rights.
+
+**How to submit a CCPA request:**
+
+Email: **support@yashasg.dev**
+
+Please include "CCPA Request" in the subject line, describe your request, and include sufficient information for us to verify your identity.
+
+**Business address for service of legal notices:**
+
+> ⚠️ **OWNER ACTION REQUIRED — do not merge until resolved (#423):**  
+> Insert the legal business mailing address for Yashasg here. CCPA (Cal. Civil Code §1798.135) requires a designated mailing address (or equivalent contact method) for service of consumer-rights notices. If operating as an individual and preferring not to publish a home address, acceptable alternatives include a registered agent address or a P.O. Box. Replace this block with the final address before publishing.
+>
+> **Yashasg**  
+> [MAILING ADDRESS — TO BE PROVIDED BY OWNER]  
+> [CITY, STATE, ZIP]  
+> United States  
+> Email: support@yashasg.dev
 
 ---
 
 ## 11. Changes to This Privacy Policy
 
-[PUBLISHER NAME] may update this Privacy Policy from time to time. When changes are made, the "Last Updated" date at the top will be revised. We encourage you to review this policy periodically. Continued use of the App after changes are posted constitutes your acceptance of the revised policy.
+Yashasg may update this Privacy Policy from time to time. When changes are made, the "Last Updated" date at the top will be revised. We encourage you to review this policy periodically. Continued use of the App after changes are posted constitutes your acceptance of the revised policy.
 
 ---
 
@@ -146,8 +191,8 @@ We do not maintain user accounts or a user-level database about you. If you wish
 
 If you have questions or concerns about this Privacy Policy, contact:
 
-**[PUBLISHER NAME]**  
-**Email:** [CONTACT EMAIL]
+**Yashasg**  
+**Email:** support@yashasg.dev
 
 ---
 

@@ -210,3 +210,82 @@ The notification permission swipe lock is on Screen 1 in code; the spec placed i
 - Screen Time denied recovery in Settings: SettingsTrueInterruptSection shows warning card ✓
 - Notification denied recovery in Settings: SettingsNotificationWarningSection shows warning + Open Settings ✓
 - UX_FLOWS.md §2.6 shield vs. fallback routing logic: documented and appears well-specified ✓
+
+## 2026-04-30 — Comprehensive UX Flow Audit & Friction Reduction
+
+**Task:** Audit onboarding/settings/core reminder journey for friction points in code/docs/tests. File issues for improvements. Implement one actionable fix if safe.
+
+**Status:** ✅ Complete — 4 issues filed, 1 PR implemented
+
+### Audit Scope
+- **Onboarding:** First-run 4-screen flow (Welcome → Permission → Setup → True Interrupt)
+- **Settings:** Core reminder configuration (toggles, pickers, snooze)
+- **Reminder delivery:** Notification + local alert fallback
+- **Rediscovery:** True Interrupt skipped banner + setup pill on HomeView
+
+### Friction Points Identified
+
+**High-Priority:**
+- **#435** — Snooze feature discovery buried in Settings. Overlay ⚙️ button doesn't hint that it leads to snooze controls. Two-tap friction for common action (overlay → ⚙️ → Settings → Snooze).
+
+**Medium-Priority:**
+- **#433** — Smart Pause feature lacks documentation. Settings includes toggles but footer text doesn't explain WHAT the feature does. **IMPLEMENTED in PR #449** with improved footer: "Automatically pauses reminders during Focus Mode or while driving. Reminders resume when these modes end."
+- **#434** — Settings sheet lacks save confirmation. Users toggle settings but may not realize changes auto-persist. No transient feedback.
+- **#436** — Test gap: No UI test verifies settings persist after sheet dismissal. Critical journey uncovered.
+
+**Low-Priority (noted, not filed — Phase 2 backlog):**
+- Settings scroll position lost on re-open
+- Keyboard focus indicators missing on toggles
+- Reset to Defaults has no undo option
+
+### Implementation: PR #449
+
+**Smart Pause Footer Text Improvement**
+- Changed vague "Reminders resume when conditions end."
+- To: "Automatically pauses reminders during Focus Mode or while driving. Reminders resume when these modes end."
+- Rationale: Explains WHAT Smart Pause is (not just end behavior), activation conditions, expected outcome
+- Impact: Improves feature discoverability for users who encounter setting
+
+### Key Insights
+
+1. **Undocumented features create friction** — Smart Pause is powerful (respects user focus/driving context) but completely undocumented in onboarding. Users only discover by scrolling Settings. Consider documenting power-user features in release notes or What's New.
+
+2. **Settings persistence needs confirmation** — SwiftUI's reactive bindings make persistence transparent. Users expect explicit "Save" or confirmation. Consider transient feedback (toast/badge) to clarify changes persisted.
+
+3. **Two-tap friction acceptable with clear affordances** — Two-stage disclosure (dismiss then snooze) is valid design pattern to prevent accidental suppression. Current path (overlay → ⚙️ → Settings → Snooze) needs better hints or Phase 2 snooze sheet on dismiss.
+
+### Test Coverage Gaps Identified
+
+1. Settings persistence after sheet dismissal
+2. Smart Pause both-disabled state behavior
+3. Snooze discovery path (overlay ⚙️ → Settings)
+4. Reset confirmation + verification of defaults
+5. VoiceOver focus labels on all toggles
+6. Rediscovery flow end-to-end
+
+### Flows Confirmed Working ✓
+
+- Onboarding 4-screen TabView with page indicator
+- Notification permission preview card + system prompt
+- Settings pickers persist to SettingsStore
+- True Interrupt disabled state + "Coming Soon" badge
+- Permission denied recovery banners (both notification + Screen Time)
+- Snooze controls in Settings (5 min / 1 hr / rest of day)
+- Rediscovery: TrueInterruptSkippedBanner → TrueInterruptSetupPill two-stage flow
+
+### Issues Filed
+
+- #433 — Smart Pause footer lacks documentation
+- #434 — Settings sheet lacks save confirmation feedback
+- #435 — Snooze discovery buried in Settings (two-tap path)
+- #436 — Test gap: Settings persistence after sheet dismissal
+
+All labeled `squad:reuben` + `enhancement`. Ready for sprint planning.
+
+### Reusable Pattern: Feature Discoverability Debt
+
+Smart Pause exemplifies a pattern: powerful features hidden in settings without explanation. Phase 2 should systematize feature documentation:
+- In-UI footer explanations (all settings)
+- Release notes / What's New (new features)
+- Onboarding mention for Phase 1 features
+- Consider Settings → Help link for each section

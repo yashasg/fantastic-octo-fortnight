@@ -8,6 +8,35 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     /// callbacks into the SwiftUI-owned coordinator.
     var coordinator: AppCoordinator?
 
+#if DEBUG
+    /// Pre-seeds UI-test UserDefaults keys in `init()` — before `@StateObject
+    /// AppCoordinator()` in `EyePostureReminderApp` can read them. Without this
+    /// guard, `AppCoordinator.init()` races with `didFinishLaunchingWithOptions`
+    /// and falls back to `ScreenTimeAuthorizationNoop(.unavailable)`, which
+    /// prevents `TrueInterruptSkippedBanner` from ever rendering on the first
+    /// cold launch (#457).
+    override init() {
+        super.init()
+        preSeedUITestDefaults()
+    }
+
+    private func preSeedUITestDefaults() {
+        let args = CommandLine.arguments
+        if args.contains("--simulate-screen-time-not-determined") {
+            UserDefaults.standard.set(
+                ScreenTimeAuthorizationStatus.notDetermined.rawValue,
+                forKey: AppStorageKey.uiTestScreenTimeStatus
+            )
+            // Ensure the banner-dismissed flag is clear so the banner renders.
+            UserDefaults.standard.set(false, forKey: AppStorageKey.trueInterruptSkippedBannerDismissed)
+        } else {
+            // Remove any stale stub key so non-True-Interrupt launches use the
+            // real ScreenTimeAuthorizationNoop and don't accidentally show the banner.
+            UserDefaults.standard.removeObject(forKey: AppStorageKey.uiTestScreenTimeStatus)
+        }
+    }
+#endif
+
     // MARK: - UIApplicationDelegate
 
     func application(

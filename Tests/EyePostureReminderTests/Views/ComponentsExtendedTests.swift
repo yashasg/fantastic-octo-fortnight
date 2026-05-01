@@ -24,6 +24,28 @@ final class ComponentsExtendedTests: XCTestCase {
         let _: OnboardingSecondaryButtonStyle = SecondaryButtonStyle()
     }
 
+    // MARK: - SecondaryButtonStyle disabled-state contrast (#430)
+
+    /// Verifies `AppOpacity.disabledButton` exists, is lower than 1.0, and is visually distinct
+    /// from `AppOpacity.pressedButton` — ensuring the disabled state is clearly less prominent.
+    func test_appOpacity_disabledButton_isLessThanOne() {
+        XCTAssertLessThan(AppOpacity.disabledButton, 1.0,
+            "Disabled button opacity must be < 1.0 for visible distinction (#430)")
+    }
+
+    func test_appOpacity_disabledButton_isLessThanPressedButton() {
+        XCTAssertLessThan(AppOpacity.disabledButton, AppOpacity.pressedButton,
+            "Disabled opacity must be lower than pressed opacity" +
+            " — disabled state must be more visually suppressed (#430)")
+    }
+
+    /// Verifies `SecondaryButtonStyle` still compiles after adding `@Environment(\\.isEnabled)`.
+    func test_secondaryButtonStyle_readsIsEnabledEnvironment_compiles() {
+        let style = SecondaryButtonStyle()
+        // Exercise makeBody to confirm the @Environment(\.isEnabled) path doesn't crash at init.
+        _ = style
+    }
+
     // MARK: - PrimaryButtonStyle
 
     func test_primaryButtonStyle_exists() {

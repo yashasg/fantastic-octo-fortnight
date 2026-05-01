@@ -81,6 +81,7 @@ struct IconContainer: View {
             .frame(width: size, height: size)
             .background(AppColor.surfaceTint)
             .clipShape(Circle())
+            .accessibilityHidden(true)
     }
 }
 
@@ -144,15 +145,17 @@ extension View {
 // MARK: - SecondaryButton
 
 /// A low-prominence button style used for secondary actions (e.g., onboarding skip/customize).
-/// Applies a subtle opacity change on press.
+/// Applies a subtle opacity change on press and a stronger dim when the button is disabled.
 struct SecondaryButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var isEnabled
+
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(AppTypography.secondaryAction)
             .foregroundStyle(AppColor.textSecondary)
             .frame(minHeight: AppLayout.minTapTarget)
             .padding(.horizontal, AppSpacing.md)
-            .opacity(configuration.isPressed ? AppOpacity.pressedButton : 1)
+            .opacity(configuration.isPressed ? AppOpacity.pressedButton : (isEnabled ? 1 : AppOpacity.disabledButton))
     }
 }
 

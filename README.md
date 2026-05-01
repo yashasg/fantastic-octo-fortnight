@@ -2,6 +2,16 @@
 
 A calming iOS wellness app — redesigned as **Restful Grove** with a yin-yang–inspired logo — that delivers healthy app breaks based on your screen time. **Phase 3 pivot: Integrating Apple Screen Time APIs (FamilyControls + DeviceActivity + ManagedSettings) for True Interrupt Mode** — once Apple entitlement approval is complete, kshana will shield selected apps during breaks. Current builds use local reminder alerts and an in-app break screen while app-level shielding is pending. Built exclusively with SwiftUI, UserNotifications, UIKit, and ScreenTime frameworks to minimise battery and memory usage.
 
+## About kshana
+
+**kshana** (Sanskrit: क्षण) means *"a moment, an instant"* — a name chosen deliberately for an app whose entire purpose is to return your attention to the present moment.
+
+The name pairs with the **Restful Grove** visual identity: a sage-and-mint color palette, a yin-yang–inspired logo, and Eastern philosophy aesthetic that frames screen breaks not as interruptions but as intentional pauses. The yin-yang symbol reflects balance — between screen time and rest, between focus and recovery.
+
+This philosophy drives every product decision: reminders are gentle, not nagging; Smart Pause respects your Focus sessions; snooze is always available without guilt. kshana does not track you, has no ads, and requires no account. It simply holds space for the moment when you choose to look away.
+
+---
+
 ## Features
 
 - 👁 **Eye-rest reminders** – configurable interval and break duration (e.g. 20-20-20 rule)

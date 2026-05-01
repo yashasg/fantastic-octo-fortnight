@@ -73,7 +73,7 @@ final class AppCoordinatorWatchdogHeartbeatTests: XCTestCase {
         )
 
         await coordinator.handleForegroundTransition()
-        try await Task.sleep(nanoseconds: 100_000_000)
+        await awaitCondition { deviceActivityMonitor.cancelCallCount >= 1 }
 
         let event = try XCTUnwrap(ipcStore.events.first { $0.kind == .watchdogRecoveryTriggered })
         XCTAssertEqual(event.reasonRaw, ReminderType.eyes.shieldReason.rawValue)
@@ -95,7 +95,7 @@ final class AppCoordinatorWatchdogHeartbeatTests: XCTestCase {
         )
 
         await coordinator.handleForegroundTransition()
-        try await Task.sleep(nanoseconds: 100_000_000)
+        await awaitCondition { deviceActivityMonitor.cancelCallCount >= 1 }
 
         let event = try XCTUnwrap(ipcStore.events.first { $0.kind == .watchdogRecoveryTriggered })
         XCTAssertEqual(event.reasonRaw, ReminderType.posture.shieldReason.rawValue)
@@ -117,7 +117,8 @@ final class AppCoordinatorWatchdogHeartbeatTests: XCTestCase {
         )
 
         await coordinator.handleForegroundTransition()
-        try? await Task.sleep(nanoseconds: 100_000_000)
+        // No recovery expected — yield to allow any spurious tasks to complete.
+        await Task.yield()
 
         XCTAssertFalse(ipcStore.events.contains { $0.kind == .watchdogRecoveryTriggered })
         XCTAssertEqual(ipcStore.clearShieldSessionCallCount, 0)
@@ -163,7 +164,8 @@ final class AppCoordinatorWatchdogHeartbeatTests: XCTestCase {
         )
 
         await zeroGraceCoordinator.handleForegroundTransition()
-        try? await Task.sleep(nanoseconds: 100_000_000)
+        // No recovery expected with zero grace — yield to allow any spurious tasks to complete.
+        await Task.yield()
 
         XCTAssertFalse(ipcStore.events.contains { $0.kind == .watchdogRecoveryTriggered })
         XCTAssertEqual(ipcStore.clearShieldSessionCallCount, 0)
@@ -213,7 +215,7 @@ final class AppCoordinatorWatchdogHeartbeatTests: XCTestCase {
         )
 
         let recovered = await coordinator.recoverStaleDeviceActivityWatchdogIfNeeded()
-        try await Task.sleep(nanoseconds: 150_000_000)
+        await awaitCondition { deviceActivityMonitor.cancelCallCount >= 1 }
 
         XCTAssertTrue(
             recovered,
@@ -238,7 +240,7 @@ final class AppCoordinatorWatchdogHeartbeatTests: XCTestCase {
         )
 
         await coordinator.handleForegroundTransition()
-        try await Task.sleep(nanoseconds: 100_000_000)
+        await awaitCondition { deviceActivityMonitor.cancelCallCount >= 1 }
 
         // Recovery must be triggered via the .missing path (not suppressed by prior-session heartbeat).
         let event = try XCTUnwrap(ipcStore.events.first { $0.kind == .watchdogRecoveryTriggered })
@@ -282,8 +284,7 @@ final class AppCoordinatorWatchdogHeartbeatTests: XCTestCase {
         // Refresh auth status so notificationAuthStatus == .authorized before recovery check.
         await snoozeCoordinator.refreshAuthStatus()
         let recovered = await snoozeCoordinator.recoverStaleDeviceActivityWatchdogIfNeeded()
-        // Allow the async DeviceActivity cancel task to complete.
-        try await Task.sleep(nanoseconds: 150_000_000)
+        await awaitCondition { deviceActivityMonitor.cancelCallCount >= 1 }
 
         // Recovery must still run and clean up the stale session and DA monitoring…
         XCTAssertTrue(recovered)
@@ -322,13 +323,51 @@ final class AppCoordinatorWatchdogHeartbeatTests: XCTestCase {
 
         await snoozeCoordinator.refreshAuthStatus()
         let recovered = await snoozeCoordinator.recoverStaleDeviceActivityWatchdogIfNeeded()
-        try await Task.sleep(nanoseconds: 150_000_000)
+        await awaitCondition { deviceActivityMonitor.cancelCallCount >= 1 }
 
         XCTAssertTrue(recovered)
         XCTAssertEqual(ipcStore.clearShieldSessionCallCount, 1)
         XCTAssertEqual(deviceActivityMonitor.cancelCallCount, 1)
         XCTAssertEqual(mockScheduler.rescheduleCallCount, 1,
             "watchdogRecovery must call rescheduleReminder when snooze has expired")
+    }
+
+    func test_watchdogRecovery_usesInjectedNowForSnoozeGuard() async throws {
+        // Injected clock says snooze is still active, while wall clock says expired.
+        // Recovery must use the injected time source and skip fallback scheduling.
+        let mockScheduler = MockReminderScheduler()
+        let snoozeCoordinator = AppCoordinator(
+            settings: settings,
+            scheduler: mockScheduler,
+            notificationCenter: notificationCenter,
+            overlayManager: MockOverlayPresenting(),
+            screenTimeTracker: tracker,
+            pauseConditionProvider: MockPauseConditionProvider(),
+            deviceActivityMonitor: deviceActivityMonitor,
+            ipcStore: ipcStore
+        )
+        defer { snoozeCoordinator.stopFallbackTimers() }
+
+        deviceActivityMonitor.stubbedIsAvailable = true
+        notificationCenter.authorizationGranted = true
+        settings.notificationFallbackEnabled = true
+        settings.snoozedUntil = Date(timeIntervalSince1970: 2_000)
+
+        ipcStore.shieldSessionSnapshot = ShieldSessionSnapshot(
+            reasonRaw: ReminderType.eyes.shieldReason.rawValue,
+            durationSeconds: 20,
+            triggeredAt: Date(timeIntervalSince1970: 100)
+        )
+
+        await snoozeCoordinator.refreshAuthStatus()
+        let recovered = await snoozeCoordinator.recoverStaleDeviceActivityWatchdogIfNeeded(
+            now: Date(timeIntervalSince1970: 1_000)
+        )
+        await awaitCondition { deviceActivityMonitor.cancelCallCount >= 1 }
+
+        XCTAssertTrue(recovered)
+        XCTAssertEqual(mockScheduler.rescheduleCallCount, 0,
+            "watchdogRecovery must evaluate snooze using injected now, not wall clock")
     }
 
     private var heartbeatDetails: [WatchdogHeartbeatDetail] {

@@ -293,3 +293,11 @@ Result: **10/10 passed**
 **Tests:** Replaced `test_readEvents_corruptLog_throws` with two tests (warning-and-continue, corrupt legacy + valid slots → returns slots). Added watchdog recovery test proving corrupt legacy key doesn't block recovery.
 
 **Commit:** db4fac0
+
+## 2026-04-30: Audit-Wave PR Consolidation to main
+
+- Consolidated open squad audit-wave PRs targeting `main` into a single branch/PR for cleaner review and integration.
+- Integrated PRs #440, #449, #450, #452, #454, #459, and the unique analytics-only delta from #451.
+- Confirmed #439 had no remaining unique diff after #440 (legal updates already included).
+- Deliberately dropped `.worktrees/*` changes from #451 as environment-specific workspace artifacts, not product behavior.
+- Validation: `./scripts/build.sh build` and `./scripts/build.sh test` passed; `./scripts/build.sh lint` failed due pre-existing SwiftLint scanning `.worktrees/*/DerivedData` generated files outside the consolidated diff.

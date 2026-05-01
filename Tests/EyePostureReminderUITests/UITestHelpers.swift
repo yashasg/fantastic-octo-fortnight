@@ -63,7 +63,23 @@ extension XCUIApplication {
     /// `TrueInterruptSetupPill` (banner dismissed). The simulator's real FamilyControls status
     /// is `.unavailable`, so this argument is required to reach either element (#399).
     func launchWithTrueInterruptPending() {
-        launchArguments += [TestLaunchArguments.simulateScreenTimeNotDetermined]
+        launchArguments += [
+            TestLaunchArguments.skipOnboarding,
+            TestLaunchArguments.simulateScreenTimeNotDetermined
+        ]
         launch()
+    }
+
+    /// Waits for the Home screen anchor element (`home.title`) to be present,
+    /// confirming that the view hierarchy has fully rendered after launch.
+    ///
+    /// Call immediately after `launchWithTrueInterruptPending()` (or any launch
+    /// targeting the Home screen) so that subsequent element queries find a stable
+    /// accessibility tree rather than a partially-rendered layout.
+    ///
+    /// - Returns: `true` if the anchor appears within `timeout`; `false` otherwise.
+    @discardableResult
+    func waitForHomeScreenReady(timeout: TimeInterval = 5) -> Bool {
+        staticTexts["home.title"].waitForExistence(timeout: timeout)
     }
 }

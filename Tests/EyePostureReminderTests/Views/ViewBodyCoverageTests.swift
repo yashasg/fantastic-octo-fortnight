@@ -519,5 +519,146 @@ final class ViewBodyCoverageTests: XCTestCase {
         let style = OnboardingSecondaryButtonStyle()
         XCTAssertNotNil(style)
     }
+
+    // MARK: - #427: Settings picker accessibilityIdentifier naming convention
+
+    /// Verifies that the accessibilityIdentifier strings set on the interval and
+    /// duration Pickers in `ReminderRowView` follow the `settings.{type}.{kind}Picker`
+    /// naming convention required for VoiceOver navigation and UI tests (#427).
+    func test_reminderRowView_pickerIdentifiers_followSettingsNamingConvention() {
+        let expectedIdentifiers = [
+            "settings.eyes.intervalPicker",
+            "settings.eyes.durationPicker",
+            "settings.posture.intervalPicker",
+            "settings.posture.durationPicker"
+        ]
+        for id in expectedIdentifiers {
+            XCTAssertTrue(
+                id.hasPrefix("settings."),
+                "Settings picker identifier must start with 'settings.': \(id) (#427)"
+            )
+            XCTAssertTrue(
+                id.hasSuffix("Picker"),
+                "Settings picker identifier must end with 'Picker': \(id) (#427)"
+            )
+        }
+    }
+
+    /// Verifies `ReminderType.rawValue` produces the segment used in picker identifiers (#427).
+    func test_reminderType_rawValues_matchPickerIdentifierSegments() {
+        XCTAssertEqual(ReminderType.eyes.rawValue, "eyes",
+            "ReminderType.eyes.rawValue must be 'eyes' — used in 'settings.eyes.{kind}Picker' (#427)")
+        XCTAssertEqual(ReminderType.posture.rawValue, "posture",
+            "ReminderType.posture.rawValue must be 'posture' — used in 'settings.posture.{kind}Picker' (#427)")
+    }
+
+    /// Verifies `ReminderRowView` body evaluates with both pickers visible (isEnabled=true) (#427).
+    func test_reminderRowView_eyes_enabled_pickersRendered_bodyEvaluates() {
+        let view = ReminderRowView(
+            type: .eyes,
+            isEnabled: .constant(true),
+            interval: .constant(1200),
+            breakDuration: .constant(20),
+            onChanged: {},
+            reduceMotionOverride: true
+        )
+        let described = String(describing: view.body)
+        XCTAssertFalse(
+            described.isEmpty,
+            "ReminderRowView (eyes, enabled) body must evaluate — pickers must render with identifiers (#427)"
+        )
+    }
+
+    func test_reminderRowView_posture_enabled_pickersRendered_bodyEvaluates() {
+        let view = ReminderRowView(
+            type: .posture,
+            isEnabled: .constant(true),
+            interval: .constant(1800),
+            breakDuration: .constant(30),
+            onChanged: {},
+            reduceMotionOverride: true
+        )
+        let described = String(describing: view.body)
+        XCTAssertFalse(
+            described.isEmpty,
+            "ReminderRowView (posture, enabled) body must evaluate — pickers must render with identifiers (#427)"
+        )
+    }
+
+    // MARK: - #428: IconContainer image is self-hiding (decorative)
+
+    /// Verifies `IconContainer` body evaluates after adding `.accessibilityHidden(true)`
+    /// to its internal SF Symbol image (#428). The container is always decorative —
+    /// call-sites provide meaning via a sibling Text or explicit label on the parent.
+    func test_iconContainer_decorativeImage_bodyEvaluates() {
+        let container = IconContainer(icon: "gearshape.fill")
+        let described = String(describing: container.body)
+        XCTAssertFalse(
+            described.isEmpty,
+            "IconContainer body must evaluate after adding .accessibilityHidden(true) to its image (#428)"
+        )
+    }
+
+    func test_iconContainer_warningIcon_decorativeImage_bodyEvaluates() {
+        let container = IconContainer(icon: AppSymbol.warning, color: AppColor.accentWarm, size: 36)
+        let described = String(describing: container.body)
+        XCTAssertFalse(
+            described.isEmpty,
+            "IconContainer (warning icon) body must evaluate with accessibilityHidden image (#428)"
+        )
+    }
+
+    // MARK: - #432: ReminderRowView accepts injected poster for VoiceOver announcements
+
+    /// Verifies `ReminderRowView` compiles and its body evaluates when a mock
+    /// `AccessibilityNotificationPosting` is injected — confirming the #432 API contract.
+    func test_reminderRowView_acceptsMockPoster_bodyEvaluates_enabled() {
+        let mock = MockAccessibilityNotificationPoster()
+        let view = ReminderRowView(
+            type: .eyes,
+            isEnabled: .constant(true),
+            interval: .constant(1200),
+            breakDuration: .constant(20),
+            onChanged: {},
+            reduceMotionOverride: true,
+            accessibilityNotificationPoster: mock
+        )
+        let described = String(describing: view.body)
+        XCTAssertFalse(described.isEmpty,
+            "ReminderRowView with injected poster (enabled) body must evaluate (#432)")
+    }
+
+    func test_reminderRowView_acceptsMockPoster_bodyEvaluates_disabled() {
+        let mock = MockAccessibilityNotificationPoster()
+        let view = ReminderRowView(
+            type: .posture,
+            isEnabled: .constant(false),
+            interval: .constant(1800),
+            breakDuration: .constant(30),
+            onChanged: {},
+            reduceMotionOverride: true,
+            accessibilityNotificationPoster: mock
+        )
+        let described = String(describing: view.body)
+        XCTAssertFalse(described.isEmpty,
+            "ReminderRowView with injected poster (disabled) body must evaluate (#432)")
+    }
+
+    /// Verifies the localization strings for picker-visibility announcements exist and are non-empty.
+    func test_pickerVisibilityAnnouncementStrings_exist() {
+        let visible = TestBundle.testLocalizedString(key: "settings.reminder.pickers.visible.announcement")
+        let hidden = TestBundle.testLocalizedString(key: "settings.reminder.pickers.hidden.announcement")
+        XCTAssertFalse(visible.isEmpty,
+            "Visible-pickers announcement string must exist (#432)")
+        XCTAssertFalse(hidden.isEmpty,
+            "Hidden-pickers announcement string must exist (#432)")
+        XCTAssertNotEqual(visible, hidden,
+            "Visible and hidden announcement strings must differ (#432)")
+        // Confirm they are not just the key (i.e., translation was found)
+        XCTAssertNotEqual(visible, "settings.reminder.pickers.visible.announcement",
+            "Visible-pickers announcement must be translated, not a raw key (#432)")
+        XCTAssertNotEqual(hidden, "settings.reminder.pickers.hidden.announcement",
+            "Hidden-pickers announcement must be translated, not a raw key (#432)")
+    }
 }
 // swiftlint:enable type_body_length

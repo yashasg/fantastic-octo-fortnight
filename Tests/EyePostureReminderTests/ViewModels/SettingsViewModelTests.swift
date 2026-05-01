@@ -5,8 +5,8 @@ import XCTest
 /// Tests for `SettingsViewModel`.
 ///
 /// All methods are `@MainActor` because `SettingsViewModel` is isolated to the
-/// main actor. Async methods that internally spawn `Task {}` are given a short
-/// sleep to allow those tasks to complete before assertions.
+/// main actor. Async methods that internally spawn `Task {}` are awaited with
+/// `awaitCondition` (deterministic polling) rather than fixed-duration sleeps.
 @MainActor
 final class SettingsViewModelTests: XCTestCase {
 
@@ -41,7 +41,7 @@ final class SettingsViewModelTests: XCTestCase {
 
         sut.globalToggleChanged()
 
-        try? await Task.sleep(nanoseconds: 200_000_000) // 200ms for inner Task
+        await awaitCondition { mockScheduler.scheduleRemindersCallCount >= 1 }
         XCTAssertEqual(mockScheduler.scheduleRemindersCallCount, 1)
     }
 
@@ -50,7 +50,7 @@ final class SettingsViewModelTests: XCTestCase {
 
         sut.globalToggleChanged()
 
-        try? await Task.sleep(nanoseconds: 200_000_000)
+        await awaitCondition { mockScheduler.lastScheduledSettings != nil }
         XCTAssertTrue(
             mockScheduler.lastScheduledSettings === settings,
             "scheduleReminders must be called with the same SettingsStore instance")
@@ -61,7 +61,8 @@ final class SettingsViewModelTests: XCTestCase {
 
         sut.globalToggleChanged()
 
-        try? await Task.sleep(nanoseconds: 200_000_000)
+        // Wait for the enabled path (scheduleReminders) to complete, then verify cancelAll was not called.
+        await awaitCondition { mockScheduler.scheduleRemindersCallCount >= 1 }
         XCTAssertEqual(mockScheduler.cancelAllCallCount, 0)
     }
 
@@ -72,7 +73,7 @@ final class SettingsViewModelTests: XCTestCase {
 
         sut.globalToggleChanged()
 
-        try? await Task.sleep(nanoseconds: 200_000_000)
+        await awaitCondition { mockScheduler.cancelAllCallCount >= 1 }
         XCTAssertEqual(mockScheduler.cancelAllCallCount, 1)
     }
 
@@ -81,7 +82,8 @@ final class SettingsViewModelTests: XCTestCase {
 
         sut.globalToggleChanged()
 
-        try? await Task.sleep(nanoseconds: 200_000_000)
+        // cancelAllReminders is synchronous; wait for it then verify no schedule path ran.
+        await awaitCondition { mockScheduler.cancelAllCallCount >= 1 }
         XCTAssertEqual(mockScheduler.scheduleRemindersCallCount, 0)
     }
 
@@ -90,35 +92,35 @@ final class SettingsViewModelTests: XCTestCase {
     func test_reminderSettingChanged_forEyes_callsReschedule() async {
         sut.reminderSettingChanged(for: .eyes)
 
-        try? await Task.sleep(nanoseconds: 200_000_000)
+        await awaitCondition { mockScheduler.rescheduleCallCount >= 1 }
         XCTAssertEqual(mockScheduler.rescheduleCallCount, 1)
     }
 
     func test_reminderSettingChanged_forEyes_passesCorrectType() async {
         sut.reminderSettingChanged(for: .eyes)
 
-        try? await Task.sleep(nanoseconds: 200_000_000)
+        await awaitCondition { mockScheduler.rescheduleCallCount >= 1 }
         XCTAssertEqual(mockScheduler.lastRescheduledType, .eyes)
     }
 
     func test_reminderSettingChanged_forPosture_callsReschedule() async {
         sut.reminderSettingChanged(for: .posture)
 
-        try? await Task.sleep(nanoseconds: 200_000_000)
+        await awaitCondition { mockScheduler.rescheduleCallCount >= 1 }
         XCTAssertEqual(mockScheduler.rescheduleCallCount, 1)
     }
 
     func test_reminderSettingChanged_forPosture_passesCorrectType() async {
         sut.reminderSettingChanged(for: .posture)
 
-        try? await Task.sleep(nanoseconds: 200_000_000)
+        await awaitCondition { mockScheduler.rescheduleCallCount >= 1 }
         XCTAssertEqual(mockScheduler.lastRescheduledType, .posture)
     }
 
     func test_reminderSettingChanged_passesCorrectSettings() async {
         sut.reminderSettingChanged(for: .eyes)
 
-        try? await Task.sleep(nanoseconds: 200_000_000)
+        await awaitCondition { mockScheduler.lastScheduledSettings != nil }
         XCTAssertTrue(mockScheduler.lastScheduledSettings === settings)
     }
 
@@ -126,7 +128,7 @@ final class SettingsViewModelTests: XCTestCase {
         sut.reminderSettingChanged(for: .eyes)
         sut.reminderSettingChanged(for: .posture)
 
-        try? await Task.sleep(nanoseconds: 300_000_000)
+        await awaitCondition { mockScheduler.rescheduleCallCount >= 2 }
         XCTAssertEqual(mockScheduler.rescheduleCallCount, 2)
     }
 
@@ -135,12 +137,12 @@ final class SettingsViewModelTests: XCTestCase {
     func test_disablingGlobalToggle_triggersCancel_notSchedule() async {
         settings.globalEnabled = true
         sut.globalToggleChanged()
-        try? await Task.sleep(nanoseconds: 200_000_000)
+        await awaitCondition { mockScheduler.scheduleRemindersCallCount >= 1 }
         mockScheduler.reset()
 
         settings.globalEnabled = false
         sut.globalToggleChanged()
-        try? await Task.sleep(nanoseconds: 200_000_000)
+        await awaitCondition { mockScheduler.cancelAllCallCount >= 1 }
 
         XCTAssertEqual(mockScheduler.cancelAllCallCount, 1)
         XCTAssertEqual(mockScheduler.scheduleRemindersCallCount, 0)
@@ -149,12 +151,12 @@ final class SettingsViewModelTests: XCTestCase {
     func test_enablingGlobalToggle_triggersSchedule_notCancel() async {
         settings.globalEnabled = false
         sut.globalToggleChanged()
-        try? await Task.sleep(nanoseconds: 200_000_000)
+        await awaitCondition { mockScheduler.cancelAllCallCount >= 1 }
         mockScheduler.reset()
 
         settings.globalEnabled = true
         sut.globalToggleChanged()
-        try? await Task.sleep(nanoseconds: 200_000_000)
+        await awaitCondition { mockScheduler.scheduleRemindersCallCount >= 1 }
 
         XCTAssertEqual(mockScheduler.scheduleRemindersCallCount, 1)
         XCTAssertEqual(mockScheduler.cancelAllCallCount, 0)
@@ -219,7 +221,8 @@ final class SettingsViewModelTests: XCTestCase {
 
         sut.cancelSnooze()
 
-        try? await Task.sleep(nanoseconds: 200_000_000)
+        // snoozedUntil is cleared synchronously; await task completion as positive confirmation.
+        await awaitCondition { mockScheduler.scheduleRemindersCallCount >= 1 }
         XCTAssertNil(settings.snoozedUntil)
     }
 
@@ -228,7 +231,7 @@ final class SettingsViewModelTests: XCTestCase {
 
         sut.cancelSnooze()
 
-        try? await Task.sleep(nanoseconds: 200_000_000)
+        await awaitCondition { mockScheduler.scheduleRemindersCallCount >= 1 }
         XCTAssertEqual(mockScheduler.scheduleRemindersCallCount, 1)
     }
 
@@ -237,7 +240,7 @@ final class SettingsViewModelTests: XCTestCase {
 
         sut.cancelSnooze()
 
-        try? await Task.sleep(nanoseconds: 200_000_000)
+        await awaitCondition { mockScheduler.lastScheduledSettings != nil }
         XCTAssertTrue(mockScheduler.lastScheduledSettings === settings)
     }
 
@@ -246,7 +249,7 @@ final class SettingsViewModelTests: XCTestCase {
 
         sut.cancelSnooze()
 
-        try? await Task.sleep(nanoseconds: 200_000_000)
+        await awaitCondition { mockScheduler.scheduleRemindersCallCount >= 1 }
         XCTAssertEqual(mockScheduler.scheduleRemindersCallCount, 1)
     }
 
@@ -264,7 +267,7 @@ final class SettingsViewModelTests: XCTestCase {
         sut.reminderSettingChanged(for: .eyes)
         sut.reminderSettingChanged(for: .posture)
 
-        try? await Task.sleep(nanoseconds: 400_000_000)
+        await awaitCondition { mockScheduler.rescheduleCallCount >= 4 }
         XCTAssertEqual(
             mockScheduler.rescheduleCallCount,
             4,
@@ -305,15 +308,15 @@ final class SettingsViewModelTests: XCTestCase {
     func test_notificationFallbackEnabled_setter_persistsValue() async {
         sut.notificationFallbackEnabled = false
 
-        try? await Task.sleep(nanoseconds: 200_000_000)
-
+        // State is persisted synchronously; await task completion as positive signal.
+        await awaitCondition { mockScheduler.scheduleRemindersCallCount >= 1 }
         XCTAssertFalse(settings.notificationFallbackEnabled)
     }
 
     func test_notificationFallbackEnabled_setter_schedulesReminders() async {
         sut.notificationFallbackEnabled = false
 
-        try? await Task.sleep(nanoseconds: 200_000_000)
+        await awaitCondition { mockScheduler.scheduleRemindersCallCount >= 1 }
 
         XCTAssertEqual(mockScheduler.scheduleRemindersCallCount, 1)
         XCTAssertTrue(mockScheduler.lastScheduledSettings === settings)

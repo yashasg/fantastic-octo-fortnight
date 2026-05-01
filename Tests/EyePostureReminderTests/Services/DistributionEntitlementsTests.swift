@@ -21,9 +21,21 @@ final class DistributionEntitlementsTests: XCTestCase {
     }
 
     private var repositoryRoot: URL {
-        URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent() // Services
-            .deletingLastPathComponent() // EyePostureReminderTests
-            .deletingLastPathComponent() // Tests
+        // Walk up from this source file until Package.swift is found.
+        // This avoids hardcoded depth assumptions that break in worktrees
+        // or any non-standard execution context (fixes #458).
+        var url = URL(fileURLWithPath: #filePath)
+        while url.path != "/" {
+            url = url.deletingLastPathComponent()
+            if FileManager.default.fileExists(
+                atPath: url.appendingPathComponent("Package.swift").path
+            ) {
+                return url
+            }
+        }
+        preconditionFailure(
+            "Cannot locate repo root from \(#filePath): " +
+            "no Package.swift found in any ancestor directory."
+        )
     }
 }

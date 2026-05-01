@@ -8,8 +8,8 @@
 		<string>group.com.yashasg.kshana</string>
 	</array>
 	<!--
-	  com.apple.developer.family-controls is intentionally ABSENT from distribution entitlements.
-	  FamilyControls entitlement is blocked on issue #201 (external Apple approval required).
+	  The FamilyControls entitlement key is intentionally ABSENT from distribution entitlements.
+	  Gated on issue #201 (external Apple approval required).
 	  Add it here — and regenerate provisioning profiles — only after Apple approves the capability.
 	  See docs/SPIKE_SCREEN_TIME_APIS.md § Entitlement Blocker for full details.
 	-->

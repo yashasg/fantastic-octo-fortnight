@@ -232,10 +232,47 @@ final class AnalyticsLoggerTests: XCTestCase {
 
     func test_log_reminderTriggered_allDeliveryPaths_doNotCrash() {
         let paths: [AnalyticsEvent.ReminderDeliveryPath] = [
-            .screenTimeThreshold, .notificationFallback, .unknown
+            .screenTimeThreshold, .notificationFallback
         ]
         for path in paths {
             AnalyticsLogger.log(.reminderTriggered(type: .eyes, thresholdS: 1200, deliveryPath: path))
+        }
+    }
+
+    // MARK: - #446: AppLaunchReadiness crash-safety
+
+    func test_log_appLaunchReadiness_cold_doesNotCrash() {
+        AnalyticsLogger.log(.appLaunchReadiness(.init(
+            launchType: .cold,
+            notificationAuth: .authorized,
+            screenTimeAvailable: false,
+            watchdogRecoveryNeeded: false,
+            latencyS: 0.25
+        )))
+    }
+
+    func test_log_appLaunchReadiness_warm_doesNotCrash() {
+        AnalyticsLogger.log(.appLaunchReadiness(.init(
+            launchType: .warm,
+            notificationAuth: .denied,
+            screenTimeAvailable: true,
+            watchdogRecoveryNeeded: true,
+            latencyS: 1.50
+        )))
+    }
+
+    func test_log_appLaunchReadiness_allAuthCodes_doNotCrash() {
+        let codes: [AnalyticsEvent.NotificationAuthCode] = [
+            .authorized, .denied, .notDetermined, .provisional, .ephemeral, .unknown
+        ]
+        for code in codes {
+            AnalyticsLogger.log(.appLaunchReadiness(.init(
+                launchType: .cold,
+                notificationAuth: code,
+                screenTimeAvailable: false,
+                watchdogRecoveryNeeded: false,
+                latencyS: 0.1
+            )))
         }
     }
 

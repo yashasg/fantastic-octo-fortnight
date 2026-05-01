@@ -159,7 +159,7 @@ final class AppCoordinatorNotificationFallbackTests: XCTestCase {
             object: nil,
             userInfo: [AppGroupIPCStore.trueInterruptEnabledValueUserInfoKey: false]
         )
-        try? await Task.sleep(nanoseconds: 200_000_000)
+        await awaitCondition { notificationCenter.addedRequests.count >= 2 }
 
         XCTAssertEqual(notificationCenter.addedRequests.count, 2)
         XCTAssertTrue(ipcStore.recordedKinds.contains(.notificationFallbackScheduled))
@@ -178,7 +178,7 @@ final class AppCoordinatorNotificationFallbackTests: XCTestCase {
             object: nil,
             userInfo: [AppGroupIPCStore.trueInterruptEnabledValueUserInfoKey: true]
         )
-        try await Task.sleep(nanoseconds: 200_000_000)
+        await awaitCondition { ipcStore.events.contains { $0.kind == .shieldPathSelected } }
 
         XCTAssertTrue(notificationCenter.pendingRequests.isEmpty)
         XCTAssertEqual(notificationCenter.removeAllCallCount, 1)
@@ -200,7 +200,7 @@ final class AppCoordinatorNotificationFallbackTests: XCTestCase {
             object: nil,
             userInfo: [AppGroupIPCStore.trueInterruptEnabledValueUserInfoKey: false]
         )
-        try await Task.sleep(nanoseconds: 200_000_000)
+        await awaitCondition { notificationCenter.addedRequests.count >= 2 }
 
         XCTAssertEqual(notificationCenter.addedRequests.count, 2)
         let event = try XCTUnwrap(ipcStore.events.last { $0.kind == .notificationFallbackScheduled })
@@ -316,7 +316,7 @@ final class AppCoordinatorNotificationFallbackTests: XCTestCase {
         notificationCenter.reset()
 
         tracker.simulateThresholdReached(for: .eyes)
-        try? await Task.sleep(nanoseconds: 200_000_000)
+        await awaitCondition { notificationCenter.addedRequests.count >= 1 }
 
         XCTAssertEqual(notificationCenter.addedRequests.count, 1)
         XCTAssertEqual(
@@ -334,7 +334,7 @@ final class AppCoordinatorNotificationFallbackTests: XCTestCase {
         await coordinator.refreshAuthStatus()
 
         tracker.simulateThresholdReached(for: .eyes)
-        try await Task.sleep(nanoseconds: 100_000_000)
+        await awaitCondition { ipcStore.events.contains { $0.kind == .notificationFallbackSuppressed } }
 
         XCTAssertTrue(notificationCenter.addedRequests.isEmpty)
         let event = try XCTUnwrap(ipcStore.events.first { $0.kind == .notificationFallbackSuppressed })
@@ -353,14 +353,14 @@ final class AppCoordinatorNotificationFallbackTests: XCTestCase {
         await coordinator.refreshAuthStatus()
 
         tracker.simulateThresholdReached(for: .eyes)
-        try await Task.sleep(nanoseconds: 100_000_000)
+        await awaitCondition { overlay.showCallCount >= 1 }
         XCTAssertEqual(overlay.showCallCount, 1)
         XCTAssertTrue(notificationCenter.addedRequests.isEmpty)
 
         overlay.dismissOverlay()
         let onPresent = try XCTUnwrap(overlay.onPresentCalls.first)
         onPresent()
-        try await Task.sleep(nanoseconds: 100_000_000)
+        await awaitCondition { notificationCenter.addedRequests.count >= 1 }
 
         XCTAssertEqual(deviceActivityMonitor.scheduleCallCount, 1)
         XCTAssertEqual(notificationCenter.addedRequests.count, 1)
@@ -385,7 +385,10 @@ final class AppCoordinatorNotificationFallbackTests: XCTestCase {
 
         tracker.simulateThresholdReached(for: .eyes)
         overlay.simulateDismiss()
-        try await Task.sleep(nanoseconds: 250_000_000)
+        await awaitCondition {
+            deviceActivityMonitor.cancelCallCount >= 1 &&
+            ipcStore.events.contains { $0.kind == .notificationFallbackSuppressed }
+        }
 
         XCTAssertEqual(deviceActivityMonitor.scheduleCallCount, 1)
         XCTAssertEqual(deviceActivityMonitor.cancelCallCount, 1)

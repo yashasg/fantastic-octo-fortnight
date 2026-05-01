@@ -147,7 +147,7 @@ final class SettingsStoreViewModelIntegrationTests: XCTestCase {
 
         viewModel.cancelSnooze()
 
-        try? await Task.sleep(nanoseconds: 200_000_000)
+        await awaitCondition { scheduler.scheduleRemindersCallCount >= 1 }
         XCTAssertNil(store.snoozedUntil, "cancelSnooze must clear snoozedUntil on SettingsStore")
         XCTAssertEqual(store.snoozeCount, 0, "cancelSnooze must reset snoozeCount to 0")
         let raw = userDefaults.double(forKey: "kshana.snoozedUntil")
@@ -175,7 +175,7 @@ final class SettingsStoreViewModelIntegrationTests: XCTestCase {
     func test_publishedChange_globalEnabled_triggersDownstreamAction() async {
         store.globalEnabled = true
         viewModel.globalToggleChanged()
-        try? await Task.sleep(nanoseconds: 200_000_000)
+        await awaitCondition { scheduler.scheduleRemindersCallCount >= 1 }
 
         XCTAssertEqual(
             scheduler.scheduleRemindersCallCount,

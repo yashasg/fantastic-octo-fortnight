@@ -10,6 +10,8 @@ import UIKit
 /// persistence directly.
 struct OverlayView: View {
 
+    static let swipeDismissMinimumUpwardTravel: CGFloat = 30
+
     let type: ReminderType
     let duration: TimeInterval
     let hapticsEnabled: Bool
@@ -94,6 +96,7 @@ struct OverlayView: View {
                     .foregroundStyle(AppColor.textSecondary)
                     .frame(minWidth: AppLayout.minTapTarget, minHeight: AppLayout.minTapTarget)
                     .contentShape(Rectangle())
+                    .accessibilityHidden(true)
             }
         )
         .padding(.top, AppSpacing.lg)
@@ -229,10 +232,18 @@ struct OverlayView: View {
 
     /// Swipe-up drag gesture that dismisses the overlay, mirroring the upward slide entrance.
     private var swipeUpDismissGesture: some Gesture {
-        DragGesture(minimumDistance: 30)
+        DragGesture(minimumDistance: Self.swipeDismissMinimumUpwardTravel)
             .onEnded { value in
-                if value.translation.height < 0 { performDismiss(method: .swipe) }
+                if Self.shouldDismissForSwipe(translation: value.translation) {
+                    performDismiss(method: .swipe)
+                }
             }
+    }
+
+    static func shouldDismissForSwipe(translation: CGSize) -> Bool {
+        let upwardTravel = -translation.height
+        guard upwardTravel >= swipeDismissMinimumUpwardTravel else { return false }
+        return upwardTravel > abs(translation.width)
     }
 
     /// Prepares haptic generators, fires entrance animation, and starts the countdown timer.

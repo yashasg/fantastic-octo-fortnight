@@ -56,8 +56,8 @@ final class AppCoordinatorCancelReminderTests: XCTestCase {
         defer { coordinator.stopFallbackTimers() }
 
         coordinator.cancelReminder(for: .eyes)
-        // Allow the async DeviceActivity cancel task to execute.
-        try await Task.sleep(nanoseconds: 100_000_000)
+        // Wait for the inner DeviceActivity cancel task to complete.
+        await awaitCondition { deviceActivityMonitor.cancelCallCount >= 1 }
 
         XCTAssertEqual(deviceActivityMonitor.cancelCallCount, 1,
             "cancelReminder(for: .eyes) must cancel DeviceActivity monitoring when a matching shield session is active")
@@ -79,7 +79,8 @@ final class AppCoordinatorCancelReminderTests: XCTestCase {
         defer { coordinator.stopFallbackTimers() }
 
         coordinator.cancelReminder(for: .eyes)
-        try await Task.sleep(nanoseconds: 100_000_000)
+        // No inner task is spawned when session type doesn't match — no async wait needed.
+        await Task.yield()
 
         XCTAssertEqual(deviceActivityMonitor.cancelCallCount, 0,
             "cancelReminder(for: .eyes) must not cancel DeviceActivity when the active session is for a different type")
@@ -95,7 +96,8 @@ final class AppCoordinatorCancelReminderTests: XCTestCase {
         defer { coordinator.stopFallbackTimers() }
 
         coordinator.cancelReminder(for: .eyes)
-        try await Task.sleep(nanoseconds: 100_000_000)
+        // No inner task is spawned when there is no active shield session — no async wait needed.
+        await Task.yield()
 
         XCTAssertEqual(deviceActivityMonitor.cancelCallCount, 0,
             "cancelReminder must not call DeviceActivity cancel when there is no active shield session")
@@ -116,7 +118,8 @@ final class AppCoordinatorCancelReminderTests: XCTestCase {
         defer { coordinator.stopFallbackTimers() }
 
         coordinator.cancelReminder(for: .eyes)
-        try await Task.sleep(nanoseconds: 100_000_000)
+        // No inner task is spawned when DeviceActivity is unavailable — no async wait needed.
+        await Task.yield()
 
         XCTAssertEqual(deviceActivityMonitor.cancelCallCount, 0,
             "cancelReminder must not call cancel when DeviceActivity is unavailable")

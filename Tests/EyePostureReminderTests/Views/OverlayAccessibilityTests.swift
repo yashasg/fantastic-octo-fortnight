@@ -48,4 +48,36 @@ final class OverlayAccessibilityTests: XCTestCase {
         XCTAssertFalse(described.isEmpty,
             "OverlayView body must evaluate after removing deprecated .accessibilityAddTraits(.isModal)")
     }
+
+    // MARK: - #428: Decorative dismiss-button image is accessibility-hidden
+
+    /// Verifies OverlayView body evaluates after marking the dismiss-button's
+    /// SF Symbol image as `.accessibilityHidden(true)` (#428).
+    /// The button itself retains its label/hint/identifier — the image is decorative.
+    func test_overlayView_dismissButtonImage_isDecorativeHidden_bodyEvaluates() {
+        let view = OverlayView(
+            type: .eyes, duration: 20, hapticsEnabled: false,
+            reduceMotionOverride: true,
+            onDismiss: {}
+        )
+        let described = String(describing: view.body)
+        XCTAssertFalse(
+            described.isEmpty,
+            "OverlayView body must evaluate cleanly after adding .accessibilityHidden(true) " +
+            "to the dismiss-button SF Symbol image (#428)."
+        )
+    }
+
+    func test_overlayView_posture_dismissButtonImage_isDecorativeHidden_bodyEvaluates() {
+        let view = OverlayView(
+            type: .posture, duration: 10, hapticsEnabled: false,
+            reduceMotionOverride: true,
+            onDismiss: {}
+        )
+        let described = String(describing: view.body)
+        XCTAssertFalse(
+            described.isEmpty,
+            "OverlayView posture body must evaluate cleanly after dismiss-image accessibilityHidden fix (#428)."
+        )
+    }
 }

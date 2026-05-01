@@ -105,6 +105,33 @@ final class AppCoordinatorTests: XCTestCase {
         coordinator.stopFallbackTimers()
     }
 
+    func test_init_withUITestScreenTimeStatus_keepsStatusForRelaunches() {
+        UserDefaults.standard.set(
+            ScreenTimeAuthorizationStatus.notDetermined.rawValue,
+            forKey: AppStorageKey.uiTestScreenTimeStatus
+        )
+        defer {
+            UserDefaults.standard.removeObject(forKey: AppStorageKey.uiTestScreenTimeStatus)
+        }
+
+        let mockNotif = MockNotificationCenter()
+        let coordinator = AppCoordinator(
+            settings: SettingsStore(store: MockSettingsPersisting()),
+            scheduler: ReminderScheduler(notificationCenter: mockNotif),
+            notificationCenter: mockNotif,
+            screenTimeTracker: MockScreenTimeTracker(),
+            pauseConditionProvider: MockPauseConditionProvider(),
+            ipcStore: MockAppGroupIPCRecorder()
+        )
+        defer { coordinator.stopFallbackTimers() }
+
+        XCTAssertEqual(
+            UserDefaults.standard.string(forKey: AppStorageKey.uiTestScreenTimeStatus),
+            ScreenTimeAuthorizationStatus.notDetermined.rawValue,
+            "UITest status override should remain available for relaunches in the same test session."
+        )
+    }
+
     // MARK: - stopFallbackTimers
 
     func test_stopFallbackTimers_withNoTimersRunning_doesNotCrash() {
@@ -380,6 +407,52 @@ final class AppCoordinatorTests: XCTestCase {
             "AppCoordinator.init must call startMonitoring() on the injected PauseConditionProviding")
     }
 
+    // MARK: - Issue #438: AppCoordinator teardown must stop PauseCondition monitoring
+
+    func test_stopFallbackTimers_callsStopMonitoringOnPauseConditionProvider() {
+        // Regression test for issue #438: stopFallbackTimers() must call stopMonitoring()
+        // on the injected PauseConditionProviding so detector observers don't outlive
+        // the coordinator lifecycle.
+        let mockNotif = MockNotificationCenter()
+        let mockPause = MockPauseConditionProvider()
+        let coordinator = AppCoordinator(
+            settings: settings,
+            scheduler: ReminderScheduler(notificationCenter: mockNotif),
+            notificationCenter: mockNotif,
+            screenTimeTracker: MockScreenTimeTracker(),
+            pauseConditionProvider: mockPause,
+            ipcStore: MockAppGroupIPCRecorder()
+        )
+        coordinator.stopFallbackTimers()
+        XCTAssertEqual(
+            mockPause.stopMonitoringCallCount,
+            1,
+            "stopFallbackTimers() must call stopMonitoring() on the injected PauseConditionProviding")
+    }
+
+    func test_stopFallbackTimers_noPauseCallbacksAfterTeardown() {
+        // Regression test for issue #438: after stopFallbackTimers() is called, any
+        // onPauseStateChanged callback must be a no-op because the coordinator holds
+        // only a weak self reference inside the closure.
+        let mockNotif = MockNotificationCenter()
+        let mockPause = MockPauseConditionProvider()
+        let coordinator = AppCoordinator(
+            settings: settings,
+            scheduler: ReminderScheduler(notificationCenter: mockNotif),
+            notificationCenter: mockNotif,
+            screenTimeTracker: MockScreenTimeTracker(),
+            pauseConditionProvider: mockPause,
+            ipcStore: MockAppGroupIPCRecorder()
+        )
+        // Capture the installed callback then tear down the coordinator.
+        let capturedCallback = mockPause.onPauseStateChanged
+        coordinator.stopFallbackTimers()
+        // Firing the captured callback after teardown must not crash — the
+        // coordinator holds only a weak self reference inside the closure.
+        capturedCallback?(true)
+        capturedCallback?(false)
+    }
+
     // MARK: - Issue #14: ScreenTimeTracking DI
 
     func test_stopFallbackTimers_callsStopMonitoringOnInjectedScreenTimeTracker() {
@@ -507,6 +580,17 @@ final class AppCoordinatorTests: XCTestCase {
         notifCenter.addedRequests.filter {
             $0.content.categoryIdentifier != AppCoordinator.snoozeWakeCategory
         }
+    }
+
+    /// Creates a coordinator + tracker pair for handleNotification tests that only need
+    /// a MockScreenTimeTracker (no notif-center assertions).
+    private func makeTrackedCoordinator() -> (AppCoordinator, MockScreenTimeTracker) {
+        let tracker = MockScreenTimeTracker()
+        let (coordinator, _, _) = makeCoordinator(
+            overlay: MockOverlayPresenting(),
+            notifCenter: MockNotificationCenter(),
+            screenTimeTracker: tracker)
+        return (coordinator, tracker)
     }
 
     func test_scheduleReminders_authorized_bothEnabled_addsEyesAndPostureRequests() async {
@@ -675,12 +759,7 @@ final class AppCoordinatorTests: XCTestCase {
     // MARK: - handleNotification: ScreenTimeTracker reset
 
     func test_handleNotification_eyes_resetsEyesCounter() {
-        let mockNotif = MockNotificationCenter()
-        let mockTracker = MockScreenTimeTracker()
-        let (coordinator, _, _) = makeCoordinator(
-            overlay: MockOverlayPresenting(),
-            notifCenter: mockNotif,
-            screenTimeTracker: mockTracker)
+        let (coordinator, mockTracker) = makeTrackedCoordinator()
         defer { coordinator.stopFallbackTimers() }
 
         coordinator.handleNotification(for: .eyes)
@@ -691,12 +770,7 @@ final class AppCoordinatorTests: XCTestCase {
     }
 
     func test_handleNotification_posture_resetsPostureCounter() {
-        let mockNotif = MockNotificationCenter()
-        let mockTracker = MockScreenTimeTracker()
-        let (coordinator, _, _) = makeCoordinator(
-            overlay: MockOverlayPresenting(),
-            notifCenter: mockNotif,
-            screenTimeTracker: mockTracker)
+        let (coordinator, mockTracker) = makeTrackedCoordinator()
         defer { coordinator.stopFallbackTimers() }
 
         coordinator.handleNotification(for: .posture)
@@ -707,12 +781,7 @@ final class AppCoordinatorTests: XCTestCase {
     }
 
     func test_handleNotification_eyes_doesNotResetPostureCounter() {
-        let mockNotif = MockNotificationCenter()
-        let mockTracker = MockScreenTimeTracker()
-        let (coordinator, _, _) = makeCoordinator(
-            overlay: MockOverlayPresenting(),
-            notifCenter: mockNotif,
-            screenTimeTracker: mockTracker)
+        let (coordinator, mockTracker) = makeTrackedCoordinator()
         defer { coordinator.stopFallbackTimers() }
 
         coordinator.handleNotification(for: .eyes)

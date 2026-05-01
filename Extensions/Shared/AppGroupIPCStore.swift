@@ -92,10 +92,6 @@ public final class AppGroupIPCStore {
     private let lock = NSLock()
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
-    /// In-process count of event slots written since the store was initialized.
-    /// Initialized once from existing defaults; incremented on each `recordEvent`;
-    /// reset to 0 on `clearEvents`. Serialized under `lock`.
-    private var eventSlotCount: Int
 
     public init(
         defaults: UserDefaults? = AppGroupDefaults.resolve(consumer: "AppGroupIPCStore"),
@@ -103,14 +99,6 @@ public final class AppGroupIPCStore {
     ) {
         self.defaults = defaults
         self.maxEventCount = max(1, maxEventCount)
-        // One-time scan at startup to seed the counter from any pre-existing slots.
-        if let defaults {
-            self.eventSlotCount = defaults.dictionaryRepresentation().keys
-                .filter { $0.hasPrefix(AppGroupIPCKeys.eventSlotPrefix) }
-                .count
-        } else {
-            self.eventSlotCount = 0
-        }
     }
 
     public var isAvailable: Bool {
@@ -227,6 +215,10 @@ public final class AppGroupIPCStore {
     /// Each call writes exactly one UserDefaults key (`trueInterrupt.ipc.event.<UUID>`),
     /// eliminating the read-modify-write cycle that was not safe across process boundaries.
     /// NSLock still provides in-process thread safety for the encoder and side-effect keys.
+    ///
+    /// The cap check reads the live slot count from `dictionaryRepresentation()` **after**
+    /// writing, so pruning fires correctly even when another process has added slots since
+    /// this instance was initialized (fixes cross-process `maxEventCount` drift, issue #448).
     public func recordEvent(_ event: AppGroupIPCEvent) throws {
         try withLock {
             guard let defaults else { throw StoreError.appGroupSuiteUnavailable }
@@ -235,11 +227,12 @@ public final class AppGroupIPCStore {
             if event.kind == .accessRequested {
                 defaults.set(event.timestamp.timeIntervalSince1970, forKey: AppGroupIPCKeys.lastAccessRequestAt)
             }
-            eventSlotCount += 1
-            if eventSlotCount > maxEventCount {
+            // Count actual on-disk slots to detect writes from other processes.
+            let liveCount = defaults.dictionaryRepresentation().keys
+                .filter { $0.hasPrefix(AppGroupIPCKeys.eventSlotPrefix) }
+                .count
+            if liveCount > maxEventCount {
                 pruneEventSlots(defaults: defaults)
-                // After pruning we hold exactly maxEventCount slots.
-                eventSlotCount = maxEventCount
             }
         }
     }
@@ -261,7 +254,6 @@ public final class AppGroupIPCStore {
                 where key.hasPrefix(AppGroupIPCKeys.eventSlotPrefix) {
                 defaults.removeObject(forKey: key)
             }
-            eventSlotCount = 0
             return true
         }
     }
@@ -297,17 +289,34 @@ public final class AppGroupIPCStore {
     }
 
     /// Best-effort pruning: deletes the oldest slot keys when total exceeds `maxEventCount`.
+    /// Corrupt slot keys (non-decodable payload or non-Data value) are deleted unconditionally
+    /// before evaluating the cap, so they can never prevent valid-event pruning from firing.
     /// This is in-process only; the correctness guarantee comes from per-slot atomic writes.
     private func pruneEventSlots(defaults: UserDefaults) {
-        var slots: [(key: String, timestamp: Date)] = []
+        var validSlots: [(key: String, timestamp: Date)] = []
+        var corruptKeys: [String] = []
+
         for (key, value) in defaults.dictionaryRepresentation() {
-            guard key.hasPrefix(AppGroupIPCKeys.eventSlotPrefix), let data = value as? Data,
-                  let event = try? decoder.decode(AppGroupIPCEvent.self, from: data)
-            else { continue }
-            slots.append((key, event.timestamp))
+            guard key.hasPrefix(AppGroupIPCKeys.eventSlotPrefix) else { continue }
+            if let data = value as? Data,
+               let event = try? decoder.decode(AppGroupIPCEvent.self, from: data) {
+                validSlots.append((key, event.timestamp))
+            } else {
+                corruptKeys.append(key)
+            }
         }
-        guard slots.count > maxEventCount else { return }
-        let toDelete = slots.sorted { $0.timestamp < $1.timestamp }.prefix(slots.count - maxEventCount)
+
+        // Remove corrupt keys first — they are unreadable and must not drift indefinitely.
+        for key in corruptKeys {
+            Self.log.warning("pruneEventSlots: removing corrupt slot key '\(key, privacy: .public)'")
+            defaults.removeObject(forKey: key)
+        }
+
+        // Then prune oldest valid slots if the cap is still exceeded.
+        guard validSlots.count > maxEventCount else { return }
+        let toDelete = validSlots
+            .sorted { $0.timestamp < $1.timestamp }
+            .prefix(validSlots.count - maxEventCount)
         for item in toDelete {
             defaults.removeObject(forKey: item.key)
         }

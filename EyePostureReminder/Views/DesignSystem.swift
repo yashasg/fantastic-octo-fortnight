@@ -329,6 +329,8 @@ enum AppOpacity {
     static let warningSeparator: Double = 0.25
     /// Pressed-state button dimming — 68%.
     static let pressedButton: Double = 0.68
+    /// Disabled-state button dimming — 38% (WCAG low-emphasis convention).
+    static let disabledButton: Double = 0.38
     /// Muted timestamp / tertiary text — 72%.
     static let mutedTimestamp: Double = 0.72
     /// Subtle border ring (SoftElevation, yin-yang) — 65%.

@@ -16,6 +16,38 @@ enum AnalyticsEvent: Sendable {
     /// Fired when the app resigns active.
     case appSessionEnd(sessionDurationS: TimeInterval)
 
+    // MARK: App Launch Readiness
+
+    /// Parameters captured once per app launch/foreground cycle for startup health monitoring.
+    struct AppLaunchReadinessPayload: Sendable {
+        let launchType: LaunchType
+        let notificationAuth: NotificationAuthCode
+        let screenTimeAvailable: Bool
+        let watchdogRecoveryNeeded: Bool
+        let latencyS: TimeInterval
+    }
+
+    /// Fired once per foreground/launch cycle at the point the app is ready to serve reminders.
+    /// Captures a non-PII snapshot of key readiness signals for startup health monitoring.
+    /// Low-volume: at most once per foreground transition; never during snooze re-entry.
+    case appLaunchReadiness(AppLaunchReadinessPayload)
+
+    /// Non-PII code distinguishing a process cold start from a warm foreground return.
+    enum LaunchType: String {
+        case cold
+        case warm
+    }
+
+    /// Non-PII code for notification authorization status at app readiness.
+    enum NotificationAuthCode: String {
+        case authorized    = "authorized"
+        case denied        = "denied"
+        case notDetermined = "not_determined"
+        case provisional   = "provisional"
+        case ephemeral     = "ephemeral"
+        case unknown       = "unknown"
+    }
+
     // MARK: Reminders
 
     /// Fired when a reminder is triggered. `deliveryPath` records whether the reminder
@@ -26,7 +58,6 @@ enum AnalyticsEvent: Sendable {
     enum ReminderDeliveryPath: String {
         case screenTimeThreshold  = "screen_time_threshold"
         case notificationFallback = "notification_fallback"
-        case unknown              = "unknown"
     }
 
     // MARK: Schedule Path Selection
@@ -326,6 +357,16 @@ enum AnalyticsLogger {
             logger.info("""
                 event=onboarding_completed \
                 cta=\(cta.rawValue, privacy: .public)
+                """)
+
+        case let .appLaunchReadiness(payload):
+            logger.info("""
+                event=app_launch_readiness \
+                launch_type=\(payload.launchType.rawValue, privacy: .public) \
+                notification_auth=\(payload.notificationAuth.rawValue, privacy: .public) \
+                screen_time_available=\(payload.screenTimeAvailable, privacy: .public) \
+                watchdog_recovery_needed=\(payload.watchdogRecoveryNeeded, privacy: .public) \
+                latency_s=\(payload.latencyS, format: .fixed(precision: 2), privacy: .public)
                 """)
 
         default:
