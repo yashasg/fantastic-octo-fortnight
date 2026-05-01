@@ -127,6 +127,20 @@ If you downloaded the App from the Apple App Store, the following additional ter
 
 ---
 
+## 9a. Pricing, Refunds, and Cancellation
+
+**kshana is a free app.** It is available at no charge on the Apple App Store and has no in-app purchases, subscriptions, or premium tiers at this time.
+
+- **No purchase required.** You can download, install, and use all current app features at no cost.
+- **No subscriptions.** There are no recurring charges or subscription plans associated with this App.
+- **No in-app purchases.** The App does not offer paid upgrades, unlockable content, or consumable items.
+- **Refunds.** Because the App is free, there is no purchase price to refund. If Apple ever charges for a future version or in-app purchase, refund requests for those transactions are handled directly by Apple through the App Store. Yashasg does not process payments and cannot issue refunds for App Store transactions. To request a refund from Apple, visit [reportaproblem.apple.com](https://reportaproblem.apple.com).
+- **Cancellation.** You may stop using the App at any time by deleting it from your device. No cancellation process is required.
+
+If paid features or subscriptions are introduced in a future version, this section will be updated to reflect the applicable pricing, cancellation, and refund terms before those features are released.
+
+---
+
 ## 10. Termination
 
 You may stop using the App at any time by deleting it from your device. Yashasg reserves the right to discontinue the App or modify its functionality at any time without notice.

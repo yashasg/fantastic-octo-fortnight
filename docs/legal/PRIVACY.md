@@ -76,7 +76,25 @@ All preference and True Interrupt coordination data stored by the App lives in *
 
 ---
 
-## 4. Apple Diagnostics and Analytics
+## 4. App Store Privacy Manifest (PrivacyInfo.xcprivacy)
+
+kshana includes an App Store Privacy Manifest (`EyePostureReminder/PrivacyInfo.xcprivacy`) as required by Apple for apps distributed on the App Store. This manifest is embedded in the app bundle and is used by Apple to generate the App Privacy nutrition label displayed on the App Store product page.
+
+The manifest declares the following, based on the app's actual behavior:
+
+| Declaration | Value |
+|---|---|
+| **Tracking** (`NSPrivacyTracking`) | `false` — the app does not track users |
+| **Tracking domains** (`NSPrivacyTrackingDomains`) | None — no tracking network domains |
+| **Crash data** (`NSPrivacyCrashData`) | Collected; not linked to identity; not used for tracking; purpose: App Functionality |
+| **Performance data** (`NSPrivacyPerformanceData`) | Collected; not linked to identity; not used for tracking; purpose: Analytics |
+| **UserDefaults API** (`NSPrivacyAccessedAPICategoryUserDefaults`) | Accessed; reason code `CA92.1` (storing app preferences and settings written by the user) |
+
+The manifest is the authoritative machine-readable disclosure to Apple. This section summarises it in human-readable form. If the app's data practices change, both this Privacy Policy and the manifest will be updated accordingly.
+
+---
+
+## 4a. Apple Diagnostics and Analytics
 
 The App uses Apple's built-in diagnostics and analytics tools, including MetricKit and App Store Connect analytics, to help understand app reliability and performance at an aggregate or diagnostic level.
 
