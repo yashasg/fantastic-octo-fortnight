@@ -333,10 +333,8 @@ final class ScreenTimeTrackerTests: XCTestCase {
 
         NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
 
-        // Timer is running but .eyes is paused — wait 1 s, then resume.
-        // After resume the elapsed counter is 0 (pause resets it), so the threshold
-        // must fire after another ~2 s of ticking.
-        try await Task.sleep(nanoseconds: 1_000_000_000)
+        // Resume immediately: callback must still fire after ~2 s because pause
+        // resets elapsed time for this type.
         sut.resume(for: .eyes)
 
         await fulfillment(of: [exp], timeout: 5.0)
@@ -439,7 +437,6 @@ final class ScreenTimeTrackerTests: XCTestCase {
 
         NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
 
-        try await Task.sleep(nanoseconds: 500_000_000) // 0.5 s — still paused
         sut.resumeAll()
 
         await fulfillment(of: [eyesExp, postureExp], timeout: 6.0)
