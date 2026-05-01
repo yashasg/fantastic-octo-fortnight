@@ -189,36 +189,22 @@ final class AppCoordinator: ObservableObject {
             watchdogHeartbeatGraceInterval.isFinite && watchdogHeartbeatGraceInterval >= 0,
             "Watchdog heartbeat grace interval must be finite and non-negative"
         )
-        self.settings = settings ?? SettingsStore()
-        self.scheduler = scheduler ?? ReminderScheduler()
+        self.settings = Self.resolveSettings(settings)
+        self.scheduler = Self.resolveScheduler(scheduler)
         self.notificationCenter = notificationCenter
-        self.overlayManager = overlayManager ?? OverlayManager()
-        self.screenTimeAuthorization = screenTimeAuthorization ?? {
-            #if DEBUG
-            if let raw = UserDefaults.standard.string(forKey: AppStorageKey.uiTestScreenTimeStatus),
-               let status = ScreenTimeAuthorizationStatus(rawValue: raw) {
-                return ScreenTimeAuthorizationStub(status: status)
-            }
-            #endif
-            return ScreenTimeAuthorizationNoop()
-        }()
-        self.deviceActivityMonitor = deviceActivityMonitor ?? DeviceActivityMonitorNoop()
+        self.overlayManager = Self.resolveOverlayManager(overlayManager)
+        self.screenTimeAuthorization = Self.resolveScreenTimeAuthorization(screenTimeAuthorization)
+        self.deviceActivityMonitor = Self.resolveDeviceActivityMonitor(deviceActivityMonitor)
         self.ipcStore = ipcStore
         self.watchdogHeartbeatGraceInterval = watchdogHeartbeatGraceInterval
         // In UI test mode, use no-op stubs for services that register UIKit lifecycle
         // observers and start 1-second timers — they prevent XCUITest from settling
         // the accessibility tree between interactions, causing stale element reads.
-        self.screenTimeTracker = screenTimeTracker ?? (AppCoordinator.isUITestMode
-            ? NoopScreenTimeTracker()
-            : ScreenTimeTracker())
-        self.pauseConditionManager = pauseConditionProvider ?? (AppCoordinator.isUITestMode
-            ? NoopPauseConditionManager()
-            : PauseConditionManager(
-                settings: self.settings,
-                focusDetector: LiveFocusStatusDetector(),
-                carPlayDetector: LiveCarPlayDetector(),
-                drivingDetector: LiveDrivingActivityDetector()
-            ))
+        self.screenTimeTracker = Self.resolveScreenTimeTracker(screenTimeTracker)
+        self.pauseConditionManager = Self.resolvePauseConditionManager(
+            pauseConditionProvider,
+            settings: self.settings
+        )
         Logger.lifecycle.info("AppCoordinator initialised")
         recordWatchdogHeartbeat(.coordinatorInitialized)
 
@@ -600,4 +586,63 @@ final class AppCoordinator: ObservableObject {
         Logger.lifecycle.debug("App resigned active — ScreenTimeTracker will auto-reset elapsed counters")
     }
 
+}
+
+private extension AppCoordinator {
+    static func resolveSettings(_ settings: SettingsStore?) -> SettingsStore {
+        settings ?? SettingsStore()
+    }
+
+    static func resolveScheduler(_ scheduler: ReminderScheduling?) -> ReminderScheduling {
+        scheduler ?? ReminderScheduler()
+    }
+
+    static func resolveOverlayManager(_ overlayManager: OverlayPresenting?) -> OverlayPresenting {
+        overlayManager ?? OverlayManager()
+    }
+
+    static func resolveScreenTimeAuthorization(
+        _ screenTimeAuthorization: ScreenTimeAuthorizationProviding?
+    ) -> ScreenTimeAuthorizationProviding {
+        guard let screenTimeAuthorization else {
+            #if DEBUG
+            if let raw = UserDefaults.standard.string(forKey: AppStorageKey.uiTestScreenTimeStatus),
+               let status = ScreenTimeAuthorizationStatus(rawValue: raw) {
+                return ScreenTimeAuthorizationStub(status: status)
+            }
+            #endif
+            return ScreenTimeAuthorizationNoop()
+        }
+        return screenTimeAuthorization
+    }
+
+    static func resolveDeviceActivityMonitor(
+        _ deviceActivityMonitor: DeviceActivityMonitorProviding?
+    ) -> DeviceActivityMonitorProviding {
+        deviceActivityMonitor ?? DeviceActivityMonitorNoop()
+    }
+
+    static func resolveScreenTimeTracker(_ screenTimeTracker: ScreenTimeTracking?) -> ScreenTimeTracking {
+        guard let screenTimeTracker else {
+            return AppCoordinator.isUITestMode ? NoopScreenTimeTracker() : ScreenTimeTracker()
+        }
+        return screenTimeTracker
+    }
+
+    static func resolvePauseConditionManager(
+        _ pauseConditionProvider: PauseConditionProviding?,
+        settings: SettingsStore
+    ) -> PauseConditionProviding {
+        guard let pauseConditionProvider else {
+            return AppCoordinator.isUITestMode
+                ? NoopPauseConditionManager()
+                : PauseConditionManager(
+                    settings: settings,
+                    focusDetector: LiveFocusStatusDetector(),
+                    carPlayDetector: LiveCarPlayDetector(),
+                    drivingDetector: LiveDrivingActivityDetector()
+                )
+        }
+        return pauseConditionProvider
+    }
 }

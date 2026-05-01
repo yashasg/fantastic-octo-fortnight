@@ -159,7 +159,10 @@ final class AppCoordinatorNotificationFallbackTests: XCTestCase {
             object: nil,
             userInfo: [AppGroupIPCStore.trueInterruptEnabledValueUserInfoKey: false]
         )
-        await awaitCondition { notificationCenter.addedRequests.count >= 2 }
+        await awaitCondition {
+            notificationCenter.addedRequests.count >= 2 &&
+                ipcStore.recordedKinds.contains(.notificationFallbackScheduled)
+        }
 
         XCTAssertEqual(notificationCenter.addedRequests.count, 2)
         XCTAssertTrue(ipcStore.recordedKinds.contains(.notificationFallbackScheduled))
@@ -200,7 +203,10 @@ final class AppCoordinatorNotificationFallbackTests: XCTestCase {
             object: nil,
             userInfo: [AppGroupIPCStore.trueInterruptEnabledValueUserInfoKey: false]
         )
-        await awaitCondition { notificationCenter.addedRequests.count >= 2 }
+        await awaitCondition {
+            notificationCenter.addedRequests.count >= 2 &&
+                ipcStore.events.contains { $0.kind == .notificationFallbackScheduled }
+        }
 
         XCTAssertEqual(notificationCenter.addedRequests.count, 2)
         let event = try XCTUnwrap(ipcStore.events.last { $0.kind == .notificationFallbackScheduled })
@@ -360,7 +366,10 @@ final class AppCoordinatorNotificationFallbackTests: XCTestCase {
         overlay.dismissOverlay()
         let onPresent = try XCTUnwrap(overlay.onPresentCalls.first)
         onPresent()
-        await awaitCondition { notificationCenter.addedRequests.count >= 1 }
+        await awaitCondition {
+            notificationCenter.addedRequests.count >= 1 &&
+                ipcStore.events.contains { $0.kind == .notificationFallbackScheduled }
+        }
 
         XCTAssertEqual(deviceActivityMonitor.scheduleCallCount, 1)
         XCTAssertEqual(notificationCenter.addedRequests.count, 1)
