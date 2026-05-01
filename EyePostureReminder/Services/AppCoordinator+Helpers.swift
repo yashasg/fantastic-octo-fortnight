@@ -1,3 +1,4 @@
+import ScreenTimeExtensionShared
 import UserNotifications
 
 // MARK: - Fallback Timer Shims and Private Helpers

@@ -113,7 +113,7 @@ final class AppCoordinator: ObservableObject {
         let duration: TimeInterval
     }
 
-    private enum DeviceActivityMonitorOperation: Sendable {
+    enum DeviceActivityMonitorOperation: Sendable {
         case schedule(ShieldSession, presentationID: UUID)
         case cancel(presentationID: UUID?)
 
