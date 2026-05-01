@@ -102,26 +102,28 @@ enum AppTypography {
         }
     }
 
-    /// Overlay headline — custom font scales with Dynamic Type (base: 28pt bold).
-    static let headline: Font = .custom(fontFamilyName, size: 28, relativeTo: .title).weight(.bold)
+    /// Overlay headline — custom font scales with Dynamic Type (base: 28pt).
+    /// Note: bundled Nunito currently includes regular/italic only; avoid synthetic
+    /// weight requests that trigger runtime descriptor warnings.
+    static let headline: Font = .custom(fontFamilyName, size: 28, relativeTo: .title)
 
     /// Body text — custom font scales with Dynamic Type (base: 17pt regular).
     static let body: Font = .custom(fontFamilyName, size: 17, relativeTo: .body)
 
-    /// Snooze sheet title / settings labels — custom font scales with Dynamic Type (17pt semibold).
-    static let bodyEmphasized: Font = .custom(fontFamilyName, size: 17, relativeTo: .headline).weight(.semibold)
+    /// Snooze sheet title / settings labels — custom font scales with Dynamic Type (17pt).
+    static let bodyEmphasized: Font = .custom(fontFamilyName, size: 17, relativeTo: .headline)
 
     /// Caption — custom font scales with Dynamic Type (base: 13pt regular).
     static let caption: Font = .custom(fontFamilyName, size: 13, relativeTo: .footnote)
 
-    /// Caption emphasized — custom font scales with Dynamic Type (base: 13pt semibold).
-    static let captionEmphasized: Font = .custom(fontFamilyName, size: 13, relativeTo: .footnote).weight(.semibold)
+    /// Caption emphasized — custom font scales with Dynamic Type (base: 13pt).
+    static let captionEmphasized: Font = .custom(fontFamilyName, size: 13, relativeTo: .footnote)
 
     /// Secondary action buttons (onboarding, secondary CTAs) — custom font scales with Dynamic Type (base: 15pt regular).
     static let secondaryAction: Font = .custom(fontFamilyName, size: 15, relativeTo: .subheadline)
 
-    /// Overlay dismiss button — custom font scales with Dynamic Type (base: 28pt medium).
-    static let overlayDismiss: Font = .custom(fontFamilyName, size: 28, relativeTo: .title).weight(.medium)
+    /// Overlay dismiss button — custom font scales with Dynamic Type (base: 28pt).
+    static let overlayDismiss: Font = .custom(fontFamilyName, size: 28, relativeTo: .title)
 
     /// Countdown digits — fixed 64pt monospaced bold (decorative; not scaled).
     /// VoiceOver exposes a labelled accessibility element instead of reading this text directly.
