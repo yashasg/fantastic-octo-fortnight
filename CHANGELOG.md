@@ -7,6 +7,14 @@ Versioning strategy: `0.x.x` during TestFlight beta, `1.0.0` at App Store launch
 
 ---
 
+## Unreleased
+
+### ♿ Accessibility
+- **#427 — Settings pickers: `accessibilityIdentifier` for VoiceOver navigation:** `ReminderRowView` now sets `.accessibilityIdentifier("settings.{type}.intervalPicker")` and `.accessibilityIdentifier("settings.{type}.durationPicker")` on both reminder-type `Picker` rows so VoiceOver can navigate directly to them and UI tests can assert their presence.
+- **#428 — Decorative SF Symbol images: explicit accessibility attributes:** `IconContainer`'s internal image now carries `.accessibilityHidden(true)` (container is always decorative; sibling `Text` or parent label supplies meaning). The overlay dismiss-button `Image` is also marked hidden — the `Button` itself has the correct `.accessibilityLabel`/`.accessibilityHint`/`.accessibilityIdentifier`.
+
+---
+
 ## v0.2.0 — Restful Grove (2026-04-27)
 
 The **Restful Grove** release transforms kshana's visual identity and hardens every layer of the app through seven dedicated quality passes.
