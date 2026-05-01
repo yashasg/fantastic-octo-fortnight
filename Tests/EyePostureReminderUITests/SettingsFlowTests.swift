@@ -20,38 +20,6 @@ final class SettingsFlowTests: XCTestCase {
         app = nil
     }
 
-    // MARK: - Helpers
-
-    /// Opens the Settings sheet from the Home screen toolbar.
-    private func openSettings() {
-        let settingsNav = app.navigationBars["Settings"]
-        if settingsNav.exists {
-            return
-        }
-
-        let settingsButton = app.buttons["home.settingsButton"]
-        XCTAssertTrue(
-            settingsButton.waitForHittable(timeout: 3),
-            "Settings toolbar button must exist on the Home screen. " +
-            "Add .accessibilityIdentifier(\"home.settingsButton\") to the gear toolbar button in HomeView."
-        )
-        settingsButton.tap()
-        XCTAssertTrue(settingsNav.waitForExistence(timeout: 3), "Settings navigation bar should appear after opening Settings.")
-    }
-
-    /// Scrolls up until the requested element exists (or max swipes are exhausted).
-    private func scrollToElement(_ element: XCUIElement, maxSwipes: Int = 3) {
-        if element.exists {
-            return
-        }
-        for _ in 0..<maxSwipes {
-            app.swipeUp()
-            if element.waitForExistence(timeout: 0.5) {
-                return
-            }
-        }
-    }
-
     // MARK: - test_settings_openFromHome_sheetAppears
 
     /// Taps the settings gear on the Home screen and verifies the Settings sheet appears.
@@ -452,18 +420,6 @@ final class SettingsFlowTests: XCTestCase {
         )
     }
 
-    // MARK: - Persistence helpers
-
-    /// Taps the Done button to dismiss the Settings sheet and waits for the Home screen to stabilise.
-    private func dismissSettings() {
-        let doneButton = app.buttons["settings.doneButton"]
-        XCTAssertTrue(doneButton.waitForExistence(timeout: 3), "Done button must exist to dismiss Settings.")
-        doneButton.tap()
-        // Wait for sheet to fully disappear before continuing.
-        let settingsNav = app.navigationBars["Settings"]
-        _ = settingsNav.waitForNonExistence(timeout: 3)
-    }
-
     // MARK: - test_settings_globalToggle_persistsAfterSheetDismissal
 
     /// Verifies that flipping the global master toggle is persisted across a full
@@ -616,5 +572,51 @@ final class SettingsFlowTests: XCTestCase {
             "'Settings saved' confirmation banner must appear after a setting change (#434). " +
             "Add .accessibilityIdentifier(\"settings.savedBanner\") to the SettingsSavedBanner overlay."
         )
+    }
+}
+
+private extension SettingsFlowTests {
+    // MARK: - Helpers
+
+    /// Opens the Settings sheet from the Home screen toolbar.
+    func openSettings() {
+        let settingsNav = app.navigationBars["Settings"]
+        if settingsNav.exists {
+            return
+        }
+
+        let settingsButton = app.buttons["home.settingsButton"]
+        XCTAssertTrue(
+            settingsButton.waitForHittable(timeout: 3),
+            "Settings toolbar button must exist on the Home screen. " +
+            "Add .accessibilityIdentifier(\"home.settingsButton\") to the gear toolbar button in HomeView."
+        )
+        settingsButton.tap()
+        XCTAssertTrue(
+            settingsNav.waitForExistence(timeout: 3),
+            "Settings navigation bar should appear after opening Settings."
+        )
+    }
+
+    /// Scrolls up until the requested element exists (or max swipes are exhausted).
+    func scrollToElement(_ element: XCUIElement, maxSwipes: Int = 3) {
+        if element.exists {
+            return
+        }
+        for _ in 0..<maxSwipes {
+            app.swipeUp()
+            if element.waitForExistence(timeout: 0.5) {
+                return
+            }
+        }
+    }
+
+    /// Taps Done to dismiss Settings and waits for the sheet to disappear.
+    func dismissSettings() {
+        let doneButton = app.buttons["settings.doneButton"]
+        XCTAssertTrue(doneButton.waitForExistence(timeout: 3), "Done button must exist to dismiss Settings.")
+        doneButton.tap()
+        let settingsNav = app.navigationBars["Settings"]
+        _ = settingsNav.waitForNonExistence(timeout: 3)
     }
 }
