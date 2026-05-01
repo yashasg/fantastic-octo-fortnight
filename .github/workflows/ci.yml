@@ -201,7 +201,25 @@ jobs:
             exit 1
           fi
           COVERAGE=$(xcrun xccov view --report --json TestResults.xcresult \
-            | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['lineCoverage']*100)")
+            | python3 -c "import json,sys
+raw = sys.stdin.read()
+if not raw.strip():
+    print('::error::Coverage JSON was empty from xccov', file=sys.stderr)
+    sys.exit(1)
+try:
+    data = json.loads(raw)
+except json.JSONDecodeError as exc:
+    print(f'::error::Failed to decode coverage JSON: {exc}', file=sys.stderr)
+    sys.exit(1)
+line_coverage = data.get('lineCoverage')
+if not isinstance(line_coverage, (int, float)):
+    print('::error::Coverage JSON missing numeric lineCoverage', file=sys.stderr)
+    sys.exit(1)
+print(line_coverage * 100)")
+          if [[ ! "$COVERAGE" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
+            echo "::error::Computed coverage is not numeric: '$COVERAGE'"
+            exit 1
+          fi
           echo "Line coverage: ${COVERAGE}%"
           if (( $(echo "$COVERAGE < 80" | bc -l) )); then
             echo "::error::Coverage ${COVERAGE}% is below the minimum threshold (80%)"
