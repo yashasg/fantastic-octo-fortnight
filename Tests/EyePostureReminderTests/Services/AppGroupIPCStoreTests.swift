@@ -388,7 +388,7 @@ final class AppGroupIPCStoreTests: XCTestCase {
     // MARK: - Prune counter regression (issue #409)
 
     /// Verifies that recording up to the cap does not prune any event, and that
-    /// `clearEvents()` resets the counter so the next batch of events is kept intact.
+    /// `clearEvents()` removes all slots so the next batch of events is kept intact.
     func test_pruneOnlyOccursAfterCapExceeded_andClearResetsCounter() throws {
         // store uses maxEventCount = 3
         let e1 = AppGroupIPCEvent(kind: .watchdogHeartbeat, timestamp: Date(timeIntervalSince1970: 1))
@@ -402,7 +402,7 @@ final class AppGroupIPCStoreTests: XCTestCase {
         // All 3 events are within the cap — none should be pruned.
         XCTAssertEqual(try store.readEvents().count, 3, "Events 1-cap must not be pruned")
 
-        // Clear must reset the in-process counter.
+        // Clear removes all slots; the next batch starts from an empty store.
         store.clearEvents()
 
         let e4 = AppGroupIPCEvent(kind: .watchdogHeartbeat, timestamp: Date(timeIntervalSince1970: 4))
@@ -413,10 +413,49 @@ final class AppGroupIPCStoreTests: XCTestCase {
         try store.recordEvent(e5)
         try store.recordEvent(e6)
 
-        // Counter was reset, so the new batch fits within cap without spurious pruning.
+        // Cleared store has 0 slots, so the new batch fits within cap without spurious pruning.
         XCTAssertEqual(
             try store.readEvents(), [e4, e5, e6],
-            "Counter must be reset by clearEvents so second batch is not pruned prematurely")
+            "Second batch must not be pruned prematurely after clearEvents")
+    }
+
+    // MARK: - Cross-process cap drift (issue #448)
+
+    /// Simulates the multi-process scenario described in #448:
+    /// a second store instance (representing a different process) writes events
+    /// that are invisible to the first instance's old in-process counter.
+    /// The first instance must still enforce maxEventCount on its next write
+    /// because it now derives the cap trigger from the live on-disk slot count.
+    func test_recordEvent_crossProcessSlotDrift_doesNotExceedCap() throws {
+        // store1 represents the app process, store2 represents the extension process.
+        // Both share the same UserDefaults suite (shared app group in production).
+        let store1 = AppGroupIPCStore(defaults: defaults, maxEventCount: 3)
+        let store2 = AppGroupIPCStore(defaults: defaults, maxEventCount: 3)
+
+        // Extension (store2) fills up to the cap without the app knowing.
+        let ext1 = AppGroupIPCEvent(kind: .watchdogHeartbeat, timestamp: Date(timeIntervalSince1970: 1))
+        let ext2 = AppGroupIPCEvent(kind: .watchdogHeartbeat, timestamp: Date(timeIntervalSince1970: 2))
+        let ext3 = AppGroupIPCEvent(kind: .watchdogHeartbeat, timestamp: Date(timeIntervalSince1970: 3))
+        try store2.recordEvent(ext1)
+        try store2.recordEvent(ext2)
+        try store2.recordEvent(ext3)
+
+        // App (store1) writes one more event.  Previously this would push the total to 4
+        // because store1's in-process counter was still 0 and the cap check never fired.
+        let appEvent = AppGroupIPCEvent(kind: .shieldStarted, timestamp: Date(timeIntervalSince1970: 4))
+        try store1.recordEvent(appEvent)
+
+        // On-disk slot count must never exceed maxEventCount = 3.
+        let slotCount = defaults.dictionaryRepresentation().keys
+            .filter { $0.hasPrefix(AppGroupIPCKeys.eventSlotPrefix) }
+            .count
+        XCTAssertLessThanOrEqual(slotCount, 3,
+            "Slot count must not exceed maxEventCount after a cross-process write burst (#448)")
+
+        // The most-recent events (including the app's write) must be readable.
+        let events = try store1.readEvents()
+        XCTAssertEqual(events.count, 3)
+        XCTAssertTrue(events.contains(appEvent), "App's event must survive after cross-process pruning")
     }
 
     // MARK: - Corrupt slot key pruning (issue #445)

@@ -92,10 +92,6 @@ public final class AppGroupIPCStore {
     private let lock = NSLock()
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
-    /// In-process count of event slots written since the store was initialized.
-    /// Initialized once from existing defaults; incremented on each `recordEvent`;
-    /// reset to 0 on `clearEvents`. Serialized under `lock`.
-    private var eventSlotCount: Int
 
     public init(
         defaults: UserDefaults? = AppGroupDefaults.resolve(consumer: "AppGroupIPCStore"),
@@ -103,14 +99,6 @@ public final class AppGroupIPCStore {
     ) {
         self.defaults = defaults
         self.maxEventCount = max(1, maxEventCount)
-        // One-time scan at startup to seed the counter from any pre-existing slots.
-        if let defaults {
-            self.eventSlotCount = defaults.dictionaryRepresentation().keys
-                .filter { $0.hasPrefix(AppGroupIPCKeys.eventSlotPrefix) }
-                .count
-        } else {
-            self.eventSlotCount = 0
-        }
     }
 
     public var isAvailable: Bool {
@@ -227,6 +215,10 @@ public final class AppGroupIPCStore {
     /// Each call writes exactly one UserDefaults key (`trueInterrupt.ipc.event.<UUID>`),
     /// eliminating the read-modify-write cycle that was not safe across process boundaries.
     /// NSLock still provides in-process thread safety for the encoder and side-effect keys.
+    ///
+    /// The cap check reads the live slot count from `dictionaryRepresentation()` **after**
+    /// writing, so pruning fires correctly even when another process has added slots since
+    /// this instance was initialized (fixes cross-process `maxEventCount` drift, issue #448).
     public func recordEvent(_ event: AppGroupIPCEvent) throws {
         try withLock {
             guard let defaults else { throw StoreError.appGroupSuiteUnavailable }
@@ -235,11 +227,12 @@ public final class AppGroupIPCStore {
             if event.kind == .accessRequested {
                 defaults.set(event.timestamp.timeIntervalSince1970, forKey: AppGroupIPCKeys.lastAccessRequestAt)
             }
-            eventSlotCount += 1
-            if eventSlotCount > maxEventCount {
+            // Count actual on-disk slots to detect writes from other processes.
+            let liveCount = defaults.dictionaryRepresentation().keys
+                .filter { $0.hasPrefix(AppGroupIPCKeys.eventSlotPrefix) }
+                .count
+            if liveCount > maxEventCount {
                 pruneEventSlots(defaults: defaults)
-                // After pruning we hold exactly maxEventCount slots.
-                eventSlotCount = maxEventCount
             }
         }
     }
@@ -261,7 +254,6 @@ public final class AppGroupIPCStore {
                 where key.hasPrefix(AppGroupIPCKeys.eventSlotPrefix) {
                 defaults.removeObject(forKey: key)
             }
-            eventSlotCount = 0
             return true
         }
     }
