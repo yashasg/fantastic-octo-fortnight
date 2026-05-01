@@ -165,6 +165,22 @@ final class AppCoordinator: ObservableObject {
     /// Used to compute session duration for the appSessionEnd analytics event.
     private var sessionStartTime: Date?
 
+    // MARK: - Launch Readiness Tracking (#446)
+
+    /// Records the time when the app entered the foreground (cold or warm).
+    /// Set at the top of `handleForegroundTransition()` for warm launches and lazily
+    /// at the start of `scheduleReminders()` for cold launches. Reset after the
+    /// `appLaunchReadiness` event is emitted so each cycle is measured independently.
+    private var foregroundEntryTime: Date?
+
+    /// Whether the current launch/foreground cycle is cold (first scheduleReminders call)
+    /// or warm (foreground return via handleForegroundTransition).
+    private var pendingLaunchType: AnalyticsEvent.LaunchType = .cold
+
+    /// Whether `recoverStaleDeviceActivityWatchdogIfNeeded()` triggered recovery
+    /// during the most recent `handleForegroundTransition()`.
+    private var watchdogRecoveryNeededAtForeground = false
+
     // MARK: - Init
 
     init(
@@ -348,6 +364,12 @@ final class AppCoordinator: ObservableObject {
         await refreshAuthStatus()
         recordWatchdogHeartbeat(.scheduleReminders)
 
+        // Cold-launch proxy: handleForegroundTransition() sets this for warm paths.
+        // For true cold launch (EyePostureReminderApp .task), capture the time here.
+        if foregroundEntryTime == nil {
+            foregroundEntryTime = Date()
+        }
+
         // P1-1: Snooze guard — check before doing anything else.
         if let snoozeEnd = settings.snoozedUntil {
             if snoozeEnd > Date() {
@@ -412,11 +434,22 @@ final class AppCoordinator: ObservableObject {
         // while a session is already in progress.
         if sessionStartTime == nil {
             sessionStartTime = Date()
+            let latency = foregroundEntryTime.map { Date().timeIntervalSince($0) } ?? 0
+            AnalyticsLogger.log(.appLaunchReadiness(
+                launchType: pendingLaunchType,
+                notificationAuth: notificationAuthCode(from: notificationAuthStatus),
+                screenTimeAvailable: screenTimeAuthorization.authorizationStatus == .approved,
+                watchdogRecoveryNeeded: watchdogRecoveryNeededAtForeground,
+                latencyS: max(0, latency)
+            ))
             AnalyticsLogger.log(.appSessionStart(
                 eyeEnabled: settings.isEnabled(for: .eyes),
                 postureEnabled: settings.isEnabled(for: .posture),
                 snoozeActive: settings.snoozedUntil.map { $0 > Date() } ?? false
             ))
+            foregroundEntryTime = nil
+            pendingLaunchType = .cold
+            watchdogRecoveryNeededAtForeground = false
         }
         Logger.scheduling.info("Hybrid scheduling configured — background notifications + foreground screen-time tracker active")
     }
@@ -508,8 +541,11 @@ final class AppCoordinator: ObservableObject {
     /// `UIApplication.didBecomeActiveNotification` — no explicit timer
     /// restart is required here.
     func handleForegroundTransition() async {
+        foregroundEntryTime = Date()
+        pendingLaunchType = .warm
         await refreshAuthStatus()
-        await recoverStaleDeviceActivityWatchdogIfNeeded()
+        let recoveryNeeded = await recoverStaleDeviceActivityWatchdogIfNeeded()
+        watchdogRecoveryNeededAtForeground = recoveryNeeded
         recordWatchdogHeartbeat(.appForeground)
 
         // P1-1: Handle snooze state on foreground.
@@ -539,11 +575,22 @@ final class AppCoordinator: ObservableObject {
         // on subsequent foreground returns (scheduleReminders is not re-called here).
         if sessionStartTime == nil {
             sessionStartTime = Date()
+            let latency = foregroundEntryTime.map { Date().timeIntervalSince($0) } ?? 0
+            AnalyticsLogger.log(.appLaunchReadiness(
+                launchType: pendingLaunchType,
+                notificationAuth: notificationAuthCode(from: notificationAuthStatus),
+                screenTimeAvailable: screenTimeAuthorization.authorizationStatus == .approved,
+                watchdogRecoveryNeeded: watchdogRecoveryNeededAtForeground,
+                latencyS: max(0, latency)
+            ))
             AnalyticsLogger.log(.appSessionStart(
                 eyeEnabled: settings.isEnabled(for: .eyes),
                 postureEnabled: settings.isEnabled(for: .posture),
                 snoozeActive: settings.snoozedUntil.map { $0 > Date() } ?? false
             ))
+            foregroundEntryTime = nil
+            pendingLaunchType = .cold
+            watchdogRecoveryNeededAtForeground = false
         }
         Logger.scheduling.debug("Foreground transition: ScreenTimeTracker will resume via didBecomeActive")
     }
@@ -833,6 +880,18 @@ extension AppCoordinator {
             isTrueInterruptEnabled &&
             hasTrueInterruptSelection &&
             hasEnabledReminder
+    }
+
+    /// Maps `UNAuthorizationStatus` to a non-PII analytics code.
+    fileprivate func notificationAuthCode(from status: UNAuthorizationStatus) -> AnalyticsEvent.NotificationAuthCode {
+        switch status {
+        case .authorized:    return .authorized
+        case .denied:        return .denied
+        case .notDetermined: return .notDetermined
+        case .provisional:   return .provisional
+        case .ephemeral:     return .ephemeral
+        @unknown default:    return .unknown
+        }
     }
 
     /// Returns the IPC detail string and analytics reason for the current fallback routing state.

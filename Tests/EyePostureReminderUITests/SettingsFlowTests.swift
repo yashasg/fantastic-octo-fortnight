@@ -375,6 +375,159 @@ final class SettingsFlowTests: XCTestCase {
         )
     }
 
+    // MARK: - test_settings_eyesPickers_existWhenToggleEnabled (#427)
+
+    /// Enables the eyes-reminder toggle and verifies both the interval and duration
+    /// Pickers are exposed with their expected accessibilityIdentifiers (#427).
+    func test_settings_eyesPickers_existWhenToggleEnabled() throws {
+        openSettings()
+
+        let eyesToggle = app.switches["settings.eyes.toggle"]
+        XCTAssertTrue(
+            eyesToggle.waitForExistence(timeout: 3),
+            "Eye break toggle must exist in Settings."
+        )
+
+        // Ensure toggle is ON so pickers are visible.
+        if eyesToggle.value as? String == "0" {
+            eyesToggle.tap()
+        }
+
+        let intervalPicker = app.descendants(matching: .any)
+            .matching(identifier: "settings.eyes.intervalPicker").firstMatch
+        XCTAssertTrue(
+            intervalPicker.waitForExistence(timeout: 3),
+            "Eyes interval Picker must exist with identifier 'settings.eyes.intervalPicker' " +
+            "when the eyes toggle is on (#427)."
+        )
+
+        let durationPicker = app.descendants(matching: .any)
+            .matching(identifier: "settings.eyes.durationPicker").firstMatch
+        XCTAssertTrue(
+            durationPicker.waitForExistence(timeout: 3),
+            "Eyes duration Picker must exist with identifier 'settings.eyes.durationPicker' " +
+            "when the eyes toggle is on (#427)."
+        )
+    }
+
+    // MARK: - test_settings_posturePickers_existWhenToggleEnabled (#427)
+
+    /// Enables the posture-reminder toggle and verifies both the interval and duration
+    /// Pickers are exposed with their expected accessibilityIdentifiers (#427).
+    func test_settings_posturePickers_existWhenToggleEnabled() throws {
+        openSettings()
+
+        let postureToggle = app.switches["settings.posture.toggle"]
+        XCTAssertTrue(
+            postureToggle.waitForExistence(timeout: 3),
+            "Posture check toggle must exist in Settings."
+        )
+
+        if postureToggle.value as? String == "0" {
+            postureToggle.tap()
+        }
+
+        let intervalPicker = app.descendants(matching: .any)
+            .matching(identifier: "settings.posture.intervalPicker").firstMatch
+        XCTAssertTrue(
+            intervalPicker.waitForExistence(timeout: 3),
+            "Posture interval Picker must exist with identifier 'settings.posture.intervalPicker' " +
+            "when the posture toggle is on (#427)."
+        )
+
+        let durationPicker = app.descendants(matching: .any)
+            .matching(identifier: "settings.posture.durationPicker").firstMatch
+        XCTAssertTrue(
+            durationPicker.waitForExistence(timeout: 3),
+            "Posture duration Picker must exist with identifier 'settings.posture.durationPicker' " +
+            "when the posture toggle is on (#427)."
+        )
+    }
+
+    // MARK: - Persistence helpers
+
+    /// Taps the Done button to dismiss the Settings sheet and waits for the Home screen to stabilise.
+    private func dismissSettings() {
+        let doneButton = app.buttons["settings.doneButton"]
+        XCTAssertTrue(doneButton.waitForExistence(timeout: 3), "Done button must exist to dismiss Settings.")
+        doneButton.tap()
+        // Wait for sheet to fully disappear before continuing.
+        let settingsNav = app.navigationBars["Settings"]
+        _ = settingsNav.waitForNonExistence(timeout: 3)
+    }
+
+    // MARK: - test_settings_masterToggle_persistsAfterSheetDismissal
+
+    /// Verifies that flipping the global master toggle is persisted across a full
+    /// Settings sheet dismiss-and-reopen cycle (#436).
+    func test_settings_masterToggle_persistsAfterSheetDismissal() throws {
+        // 1. Open Settings and capture the initial toggle state.
+        openSettings()
+        let toggle = app.switches["settings.masterToggle"]
+        XCTAssertTrue(toggle.waitForExistence(timeout: 3))
+        let initialValue = toggle.value as? String ?? ""
+
+        // 2. Flip the toggle.
+        toggle.tap()
+        let flippedValue = toggle.value as? String ?? ""
+        XCTAssertNotEqual(initialValue, flippedValue, "Toggle must change state after tap.")
+
+        // 3. Dismiss and reopen Settings.
+        dismissSettings()
+        openSettings()
+
+        // 4. Assert the toggled state survived the round-trip.
+        let persistedToggle = app.switches["settings.masterToggle"]
+        XCTAssertTrue(persistedToggle.waitForExistence(timeout: 3))
+        XCTAssertEqual(
+            persistedToggle.value as? String,
+            flippedValue,
+            "Master toggle value must persist after Settings sheet is dismissed and reopened (#436)."
+        )
+
+        // 5. Restore to initial state so the test is non-destructive.
+        persistedToggle.tap()
+        dismissSettings()
+    }
+
+    // MARK: - test_settings_eyesReminderToggle_persistsAfterSheetDismissal
+
+    /// Verifies that the eye-break reminder toggle state is persisted across a full
+    /// Settings sheet dismiss-and-reopen cycle (#436).
+    func test_settings_eyesReminderToggle_persistsAfterSheetDismissal() throws {
+        // 1. Open Settings and capture the initial eyes-toggle state.
+        openSettings()
+        let toggle = app.switches["settings.eyes.toggle"]
+        XCTAssertTrue(
+            toggle.waitForExistence(timeout: 3),
+            "Eye-break toggle must exist. ReminderRowView must expose " +
+            ".accessibilityIdentifier(\"settings.eyes.toggle\")."
+        )
+        let initialValue = toggle.value as? String ?? ""
+
+        // 2. Flip the toggle.
+        toggle.tap()
+        let flippedValue = toggle.value as? String ?? ""
+        XCTAssertNotEqual(initialValue, flippedValue, "Eyes toggle must change state after tap.")
+
+        // 3. Dismiss and reopen Settings.
+        dismissSettings()
+        openSettings()
+
+        // 4. Assert the toggled state survived the round-trip.
+        let persistedToggle = app.switches["settings.eyes.toggle"]
+        XCTAssertTrue(persistedToggle.waitForExistence(timeout: 3))
+        XCTAssertEqual(
+            persistedToggle.value as? String,
+            flippedValue,
+            "Eye-break toggle value must persist after Settings sheet is dismissed and reopened (#436)."
+        )
+
+        // 5. Restore to initial state so the test is non-destructive.
+        persistedToggle.tap()
+        dismissSettings()
+    }
+
     // MARK: - test_settings_snoozeButtons_allThreeExist
 
     /// Verifies all three snooze duration buttons are visible in Settings.
