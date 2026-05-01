@@ -300,4 +300,72 @@ final class SettingsViewModelExtendedTests: XCTestCase {
         await awaitCondition { mockScheduler.rescheduleCallCount >= 1 }
         XCTAssertEqual(mockScheduler.rescheduleCallCount, 1)
     }
+
+    // MARK: - Lifecycle / weak-self guard (Issue #441)
+    //
+    // Verifies that the `guard let self else { return }` inside each Task closure
+    // exits early without touching the scheduler when the ViewModel is deallocated
+    // before the Task body runs. The test exploits @MainActor cooperative scheduling:
+    // the Task body cannot execute until we yield, so we nil out the SUT first.
+
+    func test_globalToggleChanged_afterDealloc_doesNotCallScheduler() async {
+        var localSUT: SettingsViewModel? = makeSUT()
+        settings.globalEnabled = true
+
+        localSUT!.globalToggleChanged()
+        // Deallocate before yielding; weak self inside Task becomes nil.
+        localSUT = nil
+
+        await Task.yield()
+
+        XCTAssertEqual(
+            mockScheduler.scheduleRemindersCallCount, 0,
+            "Scheduler must not be called when ViewModel is deallocated before Task body executes"
+        )
+    }
+
+    func test_reminderSettingChanged_afterDealloc_doesNotCallReschedule() async {
+        var localSUT: SettingsViewModel? = makeSUT()
+
+        localSUT!.reminderSettingChanged(for: .eyes)
+        localSUT = nil
+
+        await Task.yield()
+
+        XCTAssertEqual(
+            mockScheduler.rescheduleCallCount, 0,
+            "Reschedule must not be called when ViewModel is deallocated before Task body executes"
+        )
+    }
+
+    func test_cancelSnooze_afterDealloc_doesNotCallScheduler() async {
+        var localSUT: SettingsViewModel? = makeSUT()
+        localSUT!.snooze(option: .fiveMinutes)
+        mockScheduler.reset()   // clear the snooze-path cancelAll call
+
+        localSUT!.cancelSnooze()
+        localSUT = nil
+
+        await Task.yield()
+
+        XCTAssertEqual(
+            mockScheduler.scheduleRemindersCallCount, 0,
+            "scheduleReminders must not be called when ViewModel is deallocated before Task body executes"
+        )
+    }
+
+    func test_notificationFallbackEnabled_setter_afterDealloc_doesNotCallScheduler() async {
+        var localSUT: SettingsViewModel? = makeSUT()
+        settings.notificationFallbackEnabled = false
+
+        localSUT!.notificationFallbackEnabled = true
+        localSUT = nil
+
+        await Task.yield()
+
+        XCTAssertEqual(
+            mockScheduler.scheduleRemindersCallCount, 0,
+            "scheduleReminders must not be called when ViewModel is deallocated before Task body executes"
+        )
+    }
 }
