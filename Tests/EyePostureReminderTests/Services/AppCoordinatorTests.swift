@@ -105,6 +105,33 @@ final class AppCoordinatorTests: XCTestCase {
         coordinator.stopFallbackTimers()
     }
 
+    func test_init_withUITestScreenTimeStatus_keepsStatusForRelaunches() {
+        UserDefaults.standard.set(
+            ScreenTimeAuthorizationStatus.notDetermined.rawValue,
+            forKey: AppStorageKey.uiTestScreenTimeStatus
+        )
+        defer {
+            UserDefaults.standard.removeObject(forKey: AppStorageKey.uiTestScreenTimeStatus)
+        }
+
+        let mockNotif = MockNotificationCenter()
+        let coordinator = AppCoordinator(
+            settings: SettingsStore(store: MockSettingsPersisting()),
+            scheduler: ReminderScheduler(notificationCenter: mockNotif),
+            notificationCenter: mockNotif,
+            screenTimeTracker: MockScreenTimeTracker(),
+            pauseConditionProvider: MockPauseConditionProvider(),
+            ipcStore: MockAppGroupIPCRecorder()
+        )
+        defer { coordinator.stopFallbackTimers() }
+
+        XCTAssertEqual(
+            UserDefaults.standard.string(forKey: AppStorageKey.uiTestScreenTimeStatus),
+            ScreenTimeAuthorizationStatus.notDetermined.rawValue,
+            "UITest status override should remain available for relaunches in the same test session."
+        )
+    }
+
     // MARK: - stopFallbackTimers
 
     func test_stopFallbackTimers_withNoTimersRunning_doesNotCrash() {
