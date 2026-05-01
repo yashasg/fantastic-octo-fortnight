@@ -68,7 +68,7 @@ extension AppCoordinator {
         var fallbackScheduled = false
         if notificationAuthStatus == .authorized,
            settings.notificationFallbackEnabled,
-           (settings.snoozedUntil ?? .distantPast) <= Date(),
+           (settings.snoozedUntil ?? .distantPast) <= now,
            let fallbackType = session.reason?.reminderType {
             await scheduler.rescheduleReminder(for: fallbackType, using: settings)
             fallbackScheduled = true

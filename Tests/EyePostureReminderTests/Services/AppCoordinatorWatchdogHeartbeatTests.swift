@@ -331,6 +331,44 @@ final class AppCoordinatorWatchdogHeartbeatTests: XCTestCase {
             "watchdogRecovery must call rescheduleReminder when snooze has expired")
     }
 
+    func test_watchdogRecovery_usesInjectedNowForSnoozeGuard() async throws {
+        // Injected clock says snooze is still active, while wall clock says expired.
+        // Recovery must use the injected time source and skip fallback scheduling.
+        let mockScheduler = MockReminderScheduler()
+        let snoozeCoordinator = AppCoordinator(
+            settings: settings,
+            scheduler: mockScheduler,
+            notificationCenter: notificationCenter,
+            overlayManager: MockOverlayPresenting(),
+            screenTimeTracker: tracker,
+            pauseConditionProvider: MockPauseConditionProvider(),
+            deviceActivityMonitor: deviceActivityMonitor,
+            ipcStore: ipcStore
+        )
+        defer { snoozeCoordinator.stopFallbackTimers() }
+
+        deviceActivityMonitor.stubbedIsAvailable = true
+        notificationCenter.authorizationGranted = true
+        settings.notificationFallbackEnabled = true
+        settings.snoozedUntil = Date(timeIntervalSince1970: 2_000)
+
+        ipcStore.shieldSessionSnapshot = ShieldSessionSnapshot(
+            reasonRaw: ReminderType.eyes.shieldReason.rawValue,
+            durationSeconds: 20,
+            triggeredAt: Date(timeIntervalSince1970: 100)
+        )
+
+        await snoozeCoordinator.refreshAuthStatus()
+        let recovered = await snoozeCoordinator.recoverStaleDeviceActivityWatchdogIfNeeded(
+            now: Date(timeIntervalSince1970: 1_000)
+        )
+        try await Task.sleep(nanoseconds: 150_000_000)
+
+        XCTAssertTrue(recovered)
+        XCTAssertEqual(mockScheduler.rescheduleCallCount, 0,
+            "watchdogRecovery must evaluate snooze using injected now, not wall clock")
+    }
+
     private var heartbeatDetails: [WatchdogHeartbeatDetail] {
         ipcStore.events
             .filter { $0.kind == .watchdogHeartbeat }
