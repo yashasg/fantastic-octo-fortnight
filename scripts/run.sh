@@ -204,22 +204,45 @@ assemble_app_bundle() {
     exit 1
   fi
 
-  # If the .app bundle already exists, refresh the binary and Info.plist
+  # If the .app bundle already exists, refresh the binary and preserve
+  # the built bundle identifier for real app targets with extensions.
   if [[ -d "$app_path" ]]; then
     header "REFRESHING APP BUNDLE"
-    info "Updating binary and Info.plist in existing bundle…"
+    info "Updating existing bundle…"
     cp "$exe_path" "$app_path/${SCHEME}"
     chmod +x "$app_path/${SCHEME}"
 
-    # Always re-process Info.plist so new keys (privacy descriptions etc.) are picked up
-    local workspace_name
-    workspace_name=$(basename "$PACKAGE_PATH")
-    local bundle_id="${workspace_name}.${SCHEME}"
-    sed \
-      -e "s/\$(PRODUCT_BUNDLE_IDENTIFIER)/${bundle_id}/g" \
-      -e "s/\$(EXECUTABLE_NAME)/${SCHEME}/g" \
-      -e "s/\$(PRODUCT_NAME)/${SCHEME}/g" \
-      "$src_plist" > "$app_path/Info.plist"
+    # For real app targets, the built Info.plist already contains the resolved
+    # PRODUCT_BUNDLE_IDENTIFIER. Replacing it with workspace-derived IDs breaks
+    # app-extension placeholder validation at install time.
+    if [[ -d "${app_path}/PlugIns" ]]; then
+      local current_bundle_id
+      current_bundle_id=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "${app_path}/Info.plist" 2>/dev/null || true)
+
+      local ext_plist
+      ext_plist=$(/usr/bin/find "${app_path}/PlugIns" -name "Info.plist" -print 2>/dev/null | head -1)
+
+      if [[ -n "$ext_plist" ]]; then
+        local ext_bundle_id inferred_bundle_id
+        ext_bundle_id=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$ext_plist" 2>/dev/null || true)
+        inferred_bundle_id="${ext_bundle_id%.*}"
+
+        if [[ -n "$inferred_bundle_id" && "$current_bundle_id" != "$inferred_bundle_id" ]]; then
+          /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier ${inferred_bundle_id}" "${app_path}/Info.plist" 2>/dev/null \
+            || /usr/libexec/PlistBuddy -c "Add :CFBundleIdentifier string ${inferred_bundle_id}" "${app_path}/Info.plist"
+          info "Adjusted app bundle ID to match embedded extensions: ${inferred_bundle_id}"
+        fi
+      fi
+    else
+      local workspace_name
+      workspace_name=$(basename "$PACKAGE_PATH")
+      local bundle_id="${workspace_name}.${SCHEME}"
+      sed \
+        -e "s/\$(PRODUCT_BUNDLE_IDENTIFIER)/${bundle_id}/g" \
+        -e "s/\$(EXECUTABLE_NAME)/${SCHEME}/g" \
+        -e "s/\$(PRODUCT_NAME)/${SCHEME}/g" \
+        "$src_plist" > "$app_path/Info.plist"
+    fi
 
     # Re-embed the SPM resource bundle so Bundle.module resolves at runtime
     embed_resource_bundle "$app_path"
@@ -294,6 +317,20 @@ install_and_launch() {
   fi
 
   # Extract the real bundle identifier from the built app
+  if [[ -d "${app_path}/PlugIns" ]]; then
+    local current_bundle_id ext_plist ext_bundle_id inferred_bundle_id
+    current_bundle_id=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "${app_path}/Info.plist" 2>/dev/null || true)
+    ext_plist=$(/usr/bin/find "${app_path}/PlugIns" -name "Info.plist" -print 2>/dev/null | head -1)
+    if [[ -n "$ext_plist" ]]; then
+      ext_bundle_id=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$ext_plist" 2>/dev/null || true)
+      inferred_bundle_id="${ext_bundle_id%.*}"
+      if [[ -n "$inferred_bundle_id" && "$current_bundle_id" != "$inferred_bundle_id" ]]; then
+        /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier ${inferred_bundle_id}" "${app_path}/Info.plist" 2>/dev/null \
+          || /usr/libexec/PlistBuddy -c "Add :CFBundleIdentifier string ${inferred_bundle_id}" "${app_path}/Info.plist"
+      fi
+    fi
+  fi
+
   local bundle_id
   bundle_id=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "${app_path}/Info.plist" 2>/dev/null)
   if [[ -z "$bundle_id" ]]; then
