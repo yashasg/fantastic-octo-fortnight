@@ -442,6 +442,7 @@ final class AppCoordinator: ObservableObject {
             watchdogRecoveryNeededAtForeground = false
         }
         Logger.scheduling.info("Hybrid scheduling configured — background notifications + foreground screen-time tracker active")
+    }
 
     // MARK: - Per-Type Auth-Aware Reschedule
 
