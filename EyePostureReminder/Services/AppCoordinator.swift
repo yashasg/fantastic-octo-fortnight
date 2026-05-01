@@ -191,7 +191,6 @@ final class AppCoordinator: ObservableObject {
             #if DEBUG
             if let raw = UserDefaults.standard.string(forKey: AppStorageKey.uiTestScreenTimeStatus),
                let status = ScreenTimeAuthorizationStatus(rawValue: raw) {
-                UserDefaults.standard.removeObject(forKey: AppStorageKey.uiTestScreenTimeStatus)
                 return ScreenTimeAuthorizationStub(status: status)
             }
             #endif
