@@ -10,6 +10,7 @@ struct ReminderRowView: View {
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     private let reduceMotionOverride: Bool?
+    private let accessibilityNotificationPoster: AccessibilityNotificationPosting
 
     init(
         type: ReminderType,
@@ -17,7 +18,8 @@ struct ReminderRowView: View {
         interval: Binding<TimeInterval>,
         breakDuration: Binding<TimeInterval>,
         onChanged: @escaping () -> Void,
-        reduceMotionOverride: Bool? = nil
+        reduceMotionOverride: Bool? = nil,
+        accessibilityNotificationPoster: AccessibilityNotificationPosting = LiveAccessibilityNotificationPoster()
     ) {
         self.type = type
         _isEnabled = isEnabled
@@ -25,6 +27,7 @@ struct ReminderRowView: View {
         _breakDuration = breakDuration
         self.onChanged = onChanged
         self.reduceMotionOverride = reduceMotionOverride
+        self.accessibilityNotificationPoster = accessibilityNotificationPoster
     }
 
     var body: some View {
@@ -82,6 +85,13 @@ struct ReminderRowView: View {
             }
         }
         .animation(shouldReduceMotion ? nil : AppAnimation.settingsExpandCurve, value: isEnabled)
+        // Announce picker visibility change to VoiceOver when the reminder is toggled (#432).
+        .onChange(of: isEnabled) { newValue in
+            let message = newValue
+                ? String(localized: "settings.reminder.pickers.visible.announcement", bundle: .module)
+                : String(localized: "settings.reminder.pickers.hidden.announcement", bundle: .module)
+            accessibilityNotificationPoster.postAnnouncement(message: message)
+        }
     }
 
     // MARK: - Formatting

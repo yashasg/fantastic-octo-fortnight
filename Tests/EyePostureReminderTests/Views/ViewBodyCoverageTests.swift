@@ -607,5 +607,58 @@ final class ViewBodyCoverageTests: XCTestCase {
             "IconContainer (warning icon) body must evaluate with accessibilityHidden image (#428)"
         )
     }
+
+    // MARK: - #432: ReminderRowView accepts injected poster for VoiceOver announcements
+
+    /// Verifies `ReminderRowView` compiles and its body evaluates when a mock
+    /// `AccessibilityNotificationPosting` is injected — confirming the #432 API contract.
+    func test_reminderRowView_acceptsMockPoster_bodyEvaluates_enabled() {
+        let mock = MockAccessibilityNotificationPoster()
+        let view = ReminderRowView(
+            type: .eyes,
+            isEnabled: .constant(true),
+            interval: .constant(1200),
+            breakDuration: .constant(20),
+            onChanged: {},
+            reduceMotionOverride: true,
+            accessibilityNotificationPoster: mock
+        )
+        let described = String(describing: view.body)
+        XCTAssertFalse(described.isEmpty,
+            "ReminderRowView with injected poster (enabled) body must evaluate (#432)")
+    }
+
+    func test_reminderRowView_acceptsMockPoster_bodyEvaluates_disabled() {
+        let mock = MockAccessibilityNotificationPoster()
+        let view = ReminderRowView(
+            type: .posture,
+            isEnabled: .constant(false),
+            interval: .constant(1800),
+            breakDuration: .constant(30),
+            onChanged: {},
+            reduceMotionOverride: true,
+            accessibilityNotificationPoster: mock
+        )
+        let described = String(describing: view.body)
+        XCTAssertFalse(described.isEmpty,
+            "ReminderRowView with injected poster (disabled) body must evaluate (#432)")
+    }
+
+    /// Verifies the localization strings for picker-visibility announcements exist and are non-empty.
+    func test_pickerVisibilityAnnouncementStrings_exist() {
+        let visible = TestBundle.testLocalizedString(key: "settings.reminder.pickers.visible.announcement")
+        let hidden = TestBundle.testLocalizedString(key: "settings.reminder.pickers.hidden.announcement")
+        XCTAssertFalse(visible.isEmpty,
+            "Visible-pickers announcement string must exist (#432)")
+        XCTAssertFalse(hidden.isEmpty,
+            "Hidden-pickers announcement string must exist (#432)")
+        XCTAssertNotEqual(visible, hidden,
+            "Visible and hidden announcement strings must differ (#432)")
+        // Confirm they are not just the key (i.e., translation was found)
+        XCTAssertNotEqual(visible, "settings.reminder.pickers.visible.announcement",
+            "Visible-pickers announcement must be translated, not a raw key (#432)")
+        XCTAssertNotEqual(hidden, "settings.reminder.pickers.hidden.announcement",
+            "Hidden-pickers announcement must be translated, not a raw key (#432)")
+    }
 }
 // swiftlint:enable type_body_length
