@@ -79,7 +79,7 @@ final class AnalyticsEventTests: XCTestCase {
     }
 
     func test_reminderTriggered_zeroThreshold() {
-        AnalyticsLogger.log(.reminderTriggered(type: .eyes, thresholdS: 0, deliveryPath: .unknown))
+        AnalyticsLogger.log(.reminderTriggered(type: .eyes, thresholdS: 0, deliveryPath: .notificationFallback))
     }
 
     // MARK: - AnalyticsEvent: Overlay Events
@@ -250,12 +250,11 @@ final class AnalyticsEventTests: XCTestCase {
     func test_reminderDeliveryPath_rawValues() {
         XCTAssertEqual(AnalyticsEvent.ReminderDeliveryPath.screenTimeThreshold.rawValue, "screen_time_threshold")
         XCTAssertEqual(AnalyticsEvent.ReminderDeliveryPath.notificationFallback.rawValue, "notification_fallback")
-        XCTAssertEqual(AnalyticsEvent.ReminderDeliveryPath.unknown.rawValue, "unknown")
     }
 
     func test_reminderTriggered_allDeliveryPaths_canBeConstructed() {
         let paths: [AnalyticsEvent.ReminderDeliveryPath] = [
-            .screenTimeThreshold, .notificationFallback, .unknown
+            .screenTimeThreshold, .notificationFallback
         ]
         for path in paths {
             let event = AnalyticsEvent.reminderTriggered(type: .eyes, thresholdS: 1200, deliveryPath: path)

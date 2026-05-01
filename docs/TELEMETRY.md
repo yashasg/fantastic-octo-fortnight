@@ -158,7 +158,6 @@ Fired when a reminder is triggered. `deliveryPath` indicates whether the reminde
 |------|-----------|---------|
 | `screenTimeThreshold` | `screen_time_threshold` | Reminder surfaced by the foreground Screen Time threshold (True Interrupt path) |
 | `notificationFallback` | `notification_fallback` | Reminder surfaced by the notification fallback path |
-| `unknown` | `unknown` | Path could not be determined at trigger time |
 
 ---
 

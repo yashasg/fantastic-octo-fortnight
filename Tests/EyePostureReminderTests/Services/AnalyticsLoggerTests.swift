@@ -232,7 +232,7 @@ final class AnalyticsLoggerTests: XCTestCase {
 
     func test_log_reminderTriggered_allDeliveryPaths_doNotCrash() {
         let paths: [AnalyticsEvent.ReminderDeliveryPath] = [
-            .screenTimeThreshold, .notificationFallback, .unknown
+            .screenTimeThreshold, .notificationFallback
         ]
         for path in paths {
             AnalyticsLogger.log(.reminderTriggered(type: .eyes, thresholdS: 1200, deliveryPath: path))
