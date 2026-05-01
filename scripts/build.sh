@@ -268,7 +268,10 @@ cmd_uitest() {
   require_xcodebuild
 
   local result_bundle_path="${PACKAGE_PATH}/UITestResults.xcresult"
-  local only_testing_filters=()
+  local -a only_testing_filters=()
+  local -a only_testing_args=()
+  local only_testing_count=0
+  local xctestrun_path=""
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -278,10 +281,14 @@ cmd_uitest() {
           exit 1
         fi
         only_testing_filters+=("$2")
+        only_testing_args+=(-only-testing "$2")
+        only_testing_count=$((only_testing_count + 1))
         shift 2
         ;;
       --only-testing=*)
         only_testing_filters+=("${1#*=}")
+        only_testing_args+=(-only-testing "${1#*=}")
+        only_testing_count=$((only_testing_count + 1))
         shift
         ;;
       --result-bundle-path)
@@ -296,6 +303,18 @@ cmd_uitest() {
         result_bundle_path="${1#*=}"
         shift
         ;;
+      --xctestrun-path)
+        if [[ $# -lt 2 ]]; then
+          fail "--xctestrun-path requires a file path"
+          exit 1
+        fi
+        xctestrun_path="$2"
+        shift 2
+        ;;
+      --xctestrun-path=*)
+        xctestrun_path="${1#*=}"
+        shift
+        ;;
       *)
         fail "Unknown uitest option: '$1'"
         echo ""
@@ -308,20 +327,20 @@ cmd_uitest() {
   if [[ "$result_bundle_path" != /* ]]; then
     result_bundle_path="${PACKAGE_PATH}/${result_bundle_path}"
   fi
-
-  local only_testing_args=()
-  for only_testing_filter in "${only_testing_filters[@]}"; do
-    only_testing_args+=(-only-testing "$only_testing_filter")
-  done
+  if [[ -n "$xctestrun_path" && "$xctestrun_path" != /* ]]; then
+    xctestrun_path="${PACKAGE_PATH}/${xctestrun_path}"
+  fi
 
   local project="${PACKAGE_PATH}/UITests/EyePostureReminderUITests.xcodeproj"
   local project_spec="${PACKAGE_PATH}/UITests/project.yml"
   local project_file="${project}/project.pbxproj"
 
-  # Generate xcodeproj if not present or if the XcodeGen spec changed.
-  if [[ ! -d "$project" || ! -f "$project_file" || "$project_spec" -nt "$project_file" ]]; then
-    info "UITest xcodeproj missing or stale — running setup…"
-    "${PACKAGE_PATH}/scripts/setup-uitests.sh"
+  # Generate xcodeproj only when we need to run build-for-testing locally.
+  if [[ -z "$xctestrun_path" ]]; then
+    if [[ ! -d "$project" || ! -f "$project_file" || "$project_spec" -nt "$project_file" ]]; then
+      info "UITest xcodeproj missing or stale — running setup…"
+      "${PACKAGE_PATH}/scripts/setup-uitests.sh"
+    fi
   fi
 
   local dest
@@ -329,7 +348,7 @@ cmd_uitest() {
   info "Destination: $dest"
   info "UI Test scheme: $UI_TEST_SCHEME"
   info "Result bundle: $result_bundle_path"
-  if [[ ${#only_testing_filters[@]} -gt 0 ]]; then
+  if (( only_testing_count > 0 )); then
     info "Running filtered UI tests:"
     for only_testing_filter in "${only_testing_filters[@]}"; do
       info "  - $only_testing_filter"
@@ -338,28 +357,33 @@ cmd_uitest() {
 
   rm -rf "$result_bundle_path"
 
-  # Step 1: build-for-testing generates a .xctestrun that correctly resolves
-  # UITargetAppPath to EyePostureReminder.app (not the flat SPM binary).
-  # Step 2: test-without-building uses the xctestrun directly, bypassing the
-  # TEST_TARGET_NAME ambiguity that occurs when 'xcodebuild test' runs both
-  # build and test in a single invocation.
-  info "Step 1/2 — building for testing…"
-  run_xcodebuild build-for-testing \
-    -project "$project" \
-    -scheme "$UI_TEST_SCHEME" \
-    -destination "$dest" \
-    -derivedDataPath "$DERIVED_DATA_PATH"
-
-  # Locate the generated xctestrun file
   local xctestrun
-  xctestrun=$(find "${DERIVED_DATA_PATH}/Build/Products" \
-    -name "${UI_TEST_SCHEME}_*.xctestrun" \
-    -maxdepth 1 \
-    -print \
-    | sort | tail -1)
+  if [[ -n "$xctestrun_path" ]]; then
+    xctestrun="$xctestrun_path"
+    info "Using prebuilt xctestrun: $xctestrun"
+  else
+    # Step 1: build-for-testing generates a .xctestrun that correctly resolves
+    # UITargetAppPath to EyePostureReminder.app (not the flat SPM binary).
+    # Step 2: test-without-building uses the xctestrun directly, bypassing the
+    # TEST_TARGET_NAME ambiguity that occurs when 'xcodebuild test' runs both
+    # build and test in a single invocation.
+    info "Step 1/2 — building for testing…"
+    run_xcodebuild build-for-testing \
+      -project "$project" \
+      -scheme "$UI_TEST_SCHEME" \
+      -destination "$dest" \
+      -derivedDataPath "$DERIVED_DATA_PATH"
 
-  if [[ -z "$xctestrun" ]]; then
-    fail "No .xctestrun found after build-for-testing"
+    # Locate the generated xctestrun file
+    xctestrun=$(find "${DERIVED_DATA_PATH}/Build/Products" \
+      -name "${UI_TEST_SCHEME}_*.xctestrun" \
+      -maxdepth 1 \
+      -print \
+      | sort | tail -1)
+  fi
+
+  if [[ -z "$xctestrun" || ! -f "$xctestrun" ]]; then
+    fail "No valid .xctestrun found at: ${xctestrun:-<empty>}"
     exit 1
   fi
   info "xctestrun: $xctestrun"
@@ -374,7 +398,9 @@ cmd_uitest() {
   # Ensure the .app bundle contains the executable and resource bundle.
   # The xcodeproj app-wrapper target builds them to BUILT_PRODUCTS_DIR but
   # doesn't always copy them into the .app; copy them if missing.
-  local products_dir="${DERIVED_DATA_PATH}/Build/Products/Debug-iphonesimulator"
+  local products_root
+  products_root="$(cd "$(dirname "$xctestrun")" && pwd)"
+  local products_dir="${products_root}/Debug-iphonesimulator"
   local app_dir="${products_dir}/EyePostureReminder.app"
   local spm_bin="${products_dir}/EyePostureReminder"
   local app_bin="${app_dir}/EyePostureReminder"
@@ -487,6 +513,7 @@ usage() {
   echo "                     Options:"
   echo "                       --only-testing <target/class[/test]>"
   echo "                       --result-bundle-path <path>"
+  echo "                       --xctestrun-path <path>"
   echo "  lint               Run SwiftLint (skipped gracefully if not installed)"
   echo "  clean              Remove build artifacts"
   echo "  all                build + lint + test"
