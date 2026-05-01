@@ -82,4 +82,38 @@ extension XCUIApplication {
     func waitForHomeScreenReady(timeout: TimeInterval = 5) -> Bool {
         staticTexts["home.title"].waitForExistence(timeout: timeout)
     }
+
+    /// Waits until the overlay's primary controls and supportive text are queryable.
+    ///
+    /// This reduces flakes where one element is queried before the accessibility tree
+    /// has fully stabilized after launch.
+    @discardableResult
+    func waitForOverlayReady(timeout: TimeInterval = 5) -> Bool {
+        let doneButton = buttons["overlay.doneButton"]
+        let dismissButton = buttons["overlay.dismissButton"]
+        let supportiveText = staticTexts["overlay.supportiveText"]
+        return doneButton.waitForHittable(timeout: timeout)
+            && dismissButton.waitForHittable(timeout: timeout)
+            && supportiveText.waitForExistence(timeout: timeout)
+    }
+}
+
+extension XCUIElement {
+    /// Waits until the element both exists and is hittable.
+    @discardableResult
+    func waitForHittable(timeout: TimeInterval = 5) -> Bool {
+        guard waitForExistence(timeout: timeout) else { return false }
+        let predicate = NSPredicate(format: "hittable == true")
+        let expectation = XCTNSPredicateExpectation(predicate: predicate, object: self)
+        return XCTWaiter().wait(for: [expectation], timeout: timeout) == .completed
+    }
+
+    /// Taps an element after waiting for a hittable state.
+    @discardableResult
+    func tapWhenHittable(timeout: TimeInterval = 5) -> Bool {
+        guard waitForHittable(timeout: timeout) else { return false }
+        tap()
+        return true
+    }
+
 }

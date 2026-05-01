@@ -167,6 +167,77 @@ if len(failures) > max_items:
 PY
 }
 
+extract_failed_test_identifiers() {
+  local bundle_path="$1"
+  local default_target="$2"
+
+  if [[ ! -d "$bundle_path" ]]; then
+    return
+  fi
+
+  python3 - "$bundle_path" "$default_target" <<'PY'
+import json
+import re
+import subprocess
+import sys
+
+bundle_path = sys.argv[1]
+default_target = sys.argv[2]
+
+def get_root(path: str):
+    commands = [
+        ["xcrun", "xcresulttool", "get", "object", "--legacy", "--path", path, "--format", "json"],
+        ["xcrun", "xcresulttool", "get", "object", "--path", path, "--format", "json"],
+    ]
+    for command in commands:
+        try:
+            return json.loads(subprocess.check_output(command, stderr=subprocess.DEVNULL))
+        except Exception:
+            continue
+    return None
+
+def to_only_testing_filter(test_case_name: str):
+    # Expected xcresult style: -[Target.Class test_method]
+    match = re.match(r"^-\[([^.]+)\.([^\s]+)\s([^\]]+)\]$", test_case_name)
+    if match:
+        target, class_name, method_name = match.groups()
+        return f"{target}/{class_name}/{method_name}"
+
+    # Alternate xcresult style: ClassName.testMethod
+    dot_style = re.match(r"^([A-Za-z0-9_]+)\.([A-Za-z0-9_]+)$", test_case_name)
+    if dot_style and default_target:
+        class_name, method_name = dot_style.groups()
+        return f"{default_target}/{class_name}/{method_name}"
+
+    # Fallback for already-normalized identifiers.
+    if test_case_name.count("/") >= 2:
+        return test_case_name
+    return None
+
+root = get_root(bundle_path)
+if not root:
+    sys.exit(0)
+
+failures = (
+    root.get("actions", {})
+    .get("_values", [{}])[0]
+    .get("actionResult", {})
+    .get("issues", {})
+    .get("testFailureSummaries", {})
+    .get("_values", [])
+)
+
+seen = set()
+for item in failures:
+    test_case_name = item.get("testCaseName", {}).get("_value", "")
+    identifier = to_only_testing_filter(test_case_name)
+    if not identifier or identifier in seen:
+        continue
+    seen.add(identifier)
+    print(identifier)
+PY
+}
+
 # ── Subcommands ───────────────────────────────────────────────────────────────
 
 cmd_build() {
@@ -425,6 +496,8 @@ cmd_uitest() {
   # delays to handle FBSOpenApplicationServiceErrorDomain / RequestDenied.
   local max_attempts=3
   local attempt=1
+  local -a current_only_testing_args=("${only_testing_args[@]}")
+  local -a failed_test_filters=()
   while true; do
     info "Attempt $attempt/$max_attempts..."
     rm -rf "$result_bundle_path"
@@ -436,7 +509,7 @@ cmd_uitest() {
       -resultBundlePath "$result_bundle_path" \
       -disable-concurrent-destination-testing \
       -parallel-testing-enabled NO \
-      "${only_testing_args[@]}"; then
+      "${current_only_testing_args[@]}"; then
       break
     fi
 
@@ -444,6 +517,21 @@ cmd_uitest() {
       fail "UI tests failed after $max_attempts attempts"
       summarize_xcresult_failures "$result_bundle_path"
       exit 1
+    fi
+
+    failed_test_filters=()
+    while IFS= read -r only_testing_filter; do
+      [[ -n "$only_testing_filter" ]] && failed_test_filters+=("$only_testing_filter")
+    done < <(extract_failed_test_identifiers "$result_bundle_path" "$UI_TEST_SCHEME")
+    if (( ${#failed_test_filters[@]} > 0 )); then
+      current_only_testing_args=()
+      for only_testing_filter in "${failed_test_filters[@]}"; do
+        current_only_testing_args+=(-only-testing "$only_testing_filter")
+      done
+      warn "Attempt $attempt failed -- retrying only ${#failed_test_filters[@]} failed test(s)"
+    else
+      current_only_testing_args=("${only_testing_args[@]}")
+      warn "Attempt $attempt failed -- failed tests could not be parsed, retrying full selection"
     fi
 
     warn "Attempt $attempt failed -- retrying in $((attempt * 15))s..."
