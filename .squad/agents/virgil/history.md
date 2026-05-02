@@ -188,3 +188,5 @@ Orchestration log recorded at 2026-04-30T09:27:10Z. Enhanced CI diagnostics docu
 
 ## Learnings
 - UI shard retries must validate `.xcresult` status + failure summaries after every green exit to prevent command-stream false positives.
+- Overlay-heavy shards can fail repeatedly on element hittability when setup depends on immediate tappability; gate setup on overlay root existence first, then assert tappability per-test.
+- Keep CI simulator target aligned with local reproducible simulator generation (Xcode 26.4 currently stable on iPhone 17 in this repo) to reduce shard-only geometry/hit-point variance.
