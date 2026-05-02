@@ -28,7 +28,7 @@ extension XCTestCase {
                 XCTFail("awaitCondition timed out after \(timeout)s", file: file, line: line)
                 return
             }
-            await Task.yield()
+            try? await Task.sleep(nanoseconds: 1_000_000) // 1ms back-off
         }
     }
 }

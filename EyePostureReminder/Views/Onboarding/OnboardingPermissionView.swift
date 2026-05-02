@@ -93,7 +93,11 @@ struct OnboardingPermissionView: View {
 
     private func requestNotificationPermission() {
         Task {
-            _ = try? await notificationCenter.requestAuthorization(options: [.alert, .sound, .badge])
+            do {
+                _ = try await notificationCenter.requestAuthorization(options: [.alert, .sound, .badge])
+            } catch {
+                Logger.scheduling.error("Notification permission request failed: \(error)")
+            }
             await MainActor.run { onNext() }
         }
     }

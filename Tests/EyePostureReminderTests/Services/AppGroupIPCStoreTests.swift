@@ -4,11 +4,12 @@ import XCTest
 
 @MainActor
 final class AppGroupIPCStoreTests: XCTestCase {
-    private let suiteName = "AppGroupIPCStoreTests"
+    private var suiteName: String = ""
     private var defaults: UserDefaults!
     private var store: AppGroupIPCStore!
 
     override func setUpWithError() throws {
+        suiteName = "AppGroupIPCStoreTests.\(UUID().uuidString)"
         try super.setUpWithError()
         defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
         defaults.removePersistentDomain(forName: suiteName)

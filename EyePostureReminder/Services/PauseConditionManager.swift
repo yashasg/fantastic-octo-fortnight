@@ -291,6 +291,9 @@ final class PauseConditionManager: PauseConditionProviding {
         drivingDetector.stopMonitoring()
         activeConditions.removeAll()
         isPaused = false
+        focusDetector.onFocusChanged = nil
+        carPlayDetector.onCarPlayChanged = nil
+        drivingDetector.onDrivingChanged = nil
         Logger.scheduling.debug("PauseConditionManager: monitoring stopped")
     }
 
