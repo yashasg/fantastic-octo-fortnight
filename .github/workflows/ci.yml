@@ -29,7 +29,7 @@ env:
   SCHEME: "EyePostureReminder"
   # No .xcodeproj — project uses Swift Package Manager.
   # xcodebuild resolves the package directly from Package.swift.
-  SIMULATOR: "platform=iOS Simulator,name=iPhone 16"
+  SIMULATOR: "platform=iOS Simulator,name=iPhone 17"
   DERIVED_DATA_PATH: "${{ github.workspace }}/DerivedData"
 
 jobs:

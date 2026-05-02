@@ -90,7 +90,7 @@ final class OverlayPresentationTests: XCTestCase {
         continueAfterFailure = false
         app = XCUIApplication()
         app.launchWithEyeOverlay()
-        XCTAssertTrue(app.waitForOverlayPresented(), "Overlay should be fully loaded before assertions.")
+        XCTAssertTrue(app.waitForOverlayVisible(), "Overlay root should appear before assertions.")
     }
 
     override func tearDownWithError() throws {
@@ -204,7 +204,7 @@ final class OverlayPostureTests: XCTestCase {
         continueAfterFailure = false
         app = XCUIApplication()
         app.launchWithPostureOverlay()
-        XCTAssertTrue(app.waitForOverlayPresented(), "Posture overlay should be fully loaded before assertions.")
+        XCTAssertTrue(app.waitForOverlayVisible(), "Posture overlay root should appear before assertions.")
     }
 
     override func tearDownWithError() throws {

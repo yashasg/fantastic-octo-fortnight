@@ -7,7 +7,7 @@ import Foundation
 @MainActor
 final class MockScreenTimeTracker: ScreenTimeTracking {
 
-    var onThresholdReached: ((ReminderType) -> Void)?
+    var onThresholdReached: (@MainActor (ReminderType) -> Void)?
 
     // MARK: - Recorded Calls
 

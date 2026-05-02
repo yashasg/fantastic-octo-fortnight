@@ -796,8 +796,9 @@ final class AppCoordinatorExtendedTests: XCTestCase {
 
 /// Minimal `PauseConditionProviding` stub whose `isPaused` is always `true`.
 /// Used to test `configureScreenTimeTracker` guard path without a live system.
+@MainActor
 private final class AlwaysPausedProvider: PauseConditionProviding {
-    var onPauseStateChanged: (@Sendable (Bool) -> Void)?
+    var onPauseStateChanged: (@MainActor (Bool) -> Void)?
     var isPaused: Bool { true }
     func startMonitoring() {}
     func stopMonitoring() {}

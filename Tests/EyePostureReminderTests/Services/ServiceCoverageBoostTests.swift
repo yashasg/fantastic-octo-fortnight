@@ -343,36 +343,55 @@ final class ServiceCoverageBoostTests2: XCTestCase {
     }
 
     func test_appCoordinator_refreshAuthStatus() async {
+        let mockNotificationCenter = MockNotificationCenter()
+        mockNotificationCenter.authorizationGranted = false
         let coordinator = AppCoordinator(
+            settings: SettingsStore(store: MockSettingsPersisting()),
             scheduler: MockReminderScheduler(),
-            notificationCenter: MockNotificationCenter(),
+            notificationCenter: mockNotificationCenter,
             overlayManager: MockOverlayPresenting(),
             screenTimeTracker: MockScreenTimeTracker(),
             pauseConditionProvider: MockPauseConditionProvider(),
             ipcStore: MockAppGroupIPCRecorder())
+
+        XCTAssertEqual(coordinator.notificationAuthStatus, .notDetermined)
         await coordinator.refreshAuthStatus()
+        XCTAssertEqual(coordinator.notificationAuthStatus, .denied)
     }
 
     func test_appCoordinator_clearExpiredSnoozeIfNeeded() async {
+        let settings = SettingsStore(store: MockSettingsPersisting())
+        settings.snoozedUntil = Date(timeIntervalSinceNow: -60)
+        settings.snoozeCount = 2
         let coordinator = AppCoordinator(
+            settings: settings,
             scheduler: MockReminderScheduler(),
             notificationCenter: MockNotificationCenter(),
             overlayManager: MockOverlayPresenting(),
             screenTimeTracker: MockScreenTimeTracker(),
             pauseConditionProvider: MockPauseConditionProvider(),
             ipcStore: MockAppGroupIPCRecorder())
+
         await coordinator.clearExpiredSnoozeIfNeeded()
+        XCTAssertNil(settings.snoozedUntil)
+        XCTAssertEqual(settings.snoozeCount, 0)
     }
 
     func test_appCoordinator_handleForegroundTransition() async {
+        let mockNotificationCenter = MockNotificationCenter()
+        mockNotificationCenter.authorizationGranted = true
         let coordinator = AppCoordinator(
+            settings: SettingsStore(store: MockSettingsPersisting()),
             scheduler: MockReminderScheduler(),
-            notificationCenter: MockNotificationCenter(),
+            notificationCenter: mockNotificationCenter,
             overlayManager: MockOverlayPresenting(),
             screenTimeTracker: MockScreenTimeTracker(),
             pauseConditionProvider: MockPauseConditionProvider(),
             ipcStore: MockAppGroupIPCRecorder())
+
+        XCTAssertEqual(coordinator.notificationAuthStatus, .notDetermined)
         await coordinator.handleForegroundTransition()
+        XCTAssertEqual(coordinator.notificationAuthStatus, .authorized)
     }
 
     // MARK: - AudioInterruptionManager
