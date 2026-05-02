@@ -14,6 +14,11 @@ final class SettingsFlowTests: XCTestCase {
         app = XCUIApplication()
         app.launchWithSkippedOnboarding()
         XCTAssertTrue(app.waitForHomeScreenReady(timeout: 3), "Home screen should be ready before opening Settings.")
+        let settingsButton = app.buttons["home.settingsButton"]
+        XCTAssertTrue(
+            settingsButton.waitForExistence(timeout: 1),
+            "Settings toolbar button must exist on the Home screen before each test starts."
+        )
     }
 
     override func tearDownWithError() throws {
@@ -592,10 +597,18 @@ private extension SettingsFlowTests {
 
         let settingsButton = app.buttons["home.settingsButton"]
         XCTAssertTrue(
-            settingsButton.waitForHittable(timeout: 3),
+            settingsButton.waitForExistence(timeout: 1),
             "Settings toolbar button must exist on the Home screen. " +
             "Add .accessibilityIdentifier(\"home.settingsButton\") to the gear toolbar button in HomeView."
         )
+        if !waitUntilHittable(settingsButton, timeout: 1.0) {
+            attachOpenSettingsDiagnostics()
+            XCTFail(
+                "Settings toolbar button exists but is not hittable. " +
+                "This usually indicates transient UI state overlap (sheet/overlay/animation)."
+            )
+            return
+        }
         settingsButton.tap()
         XCTAssertTrue(
             settingsNav.waitForExistence(timeout: 3),
@@ -623,5 +636,33 @@ private extension SettingsFlowTests {
         doneButton.tap()
         let settingsNav = app.navigationBars["Settings"]
         _ = settingsNav.waitForNonExistence(timeout: 3)
+    }
+
+    /// Fast-path polling helper: tiny intervals, no fixed sleeps.
+    func waitUntilHittable(_ element: XCUIElement, timeout: TimeInterval) -> Bool {
+        if element.isHittable {
+            return true
+        }
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if element.isHittable {
+                return true
+            }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+        }
+        return element.isHittable
+    }
+
+    /// Collect diagnostics only on failure path to avoid happy-path CI overhead.
+    func attachOpenSettingsDiagnostics() {
+        let screenshotAttachment = XCTAttachment(screenshot: app.screenshot())
+        screenshotAttachment.name = "settings-open-failure"
+        screenshotAttachment.lifetime = .keepAlways
+        add(screenshotAttachment)
+
+        let treeAttachment = XCTAttachment(string: app.debugDescription)
+        treeAttachment.name = "settings-open-ui-tree"
+        treeAttachment.lifetime = .keepAlways
+        add(treeAttachment)
     }
 }
