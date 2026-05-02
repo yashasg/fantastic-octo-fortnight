@@ -55,9 +55,10 @@ final class OverlayTests: XCTestCase {
         )
         let dismissButton = app.buttons["overlay.dismissButton"]
         XCTAssertTrue(
-            dismissButton.waitForNotHittable(timeout: 1.5),
-            "Overlay dismiss button should not be visible on normal app launch without a pending reminder."
+            app.waitForOverlayToRemainAbsent(timeout: 2),
+            "Overlay root should remain absent throughout normal launch without a pending reminder."
         )
+        XCTAssertFalse(dismissButton.exists, "Overlay dismiss button should not exist when overlay root stays absent.")
     }
 
     // MARK: - test_overlay_onNormalLaunch_homeScreenIsVisible
@@ -71,9 +72,10 @@ final class OverlayTests: XCTestCase {
 
         let dismissButton = app.buttons["overlay.dismissButton"]
         XCTAssertTrue(
-            dismissButton.waitForNotHittable(timeout: 1.5),
-            "Overlay should not be covering the Home screen on normal launch."
+            app.waitForOverlayToRemainAbsent(timeout: 2),
+            "Overlay root should remain absent so the Home screen is not covered on normal launch."
         )
+        XCTAssertFalse(dismissButton.exists, "Overlay dismiss button should not exist when overlay root stays absent.")
     }
 
 }

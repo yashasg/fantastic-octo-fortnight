@@ -121,6 +121,12 @@ extension XCUIApplication {
         return overlayRoot.waitForNonExistence(timeout: remaining)
     }
 
+    /// Verifies that `overlay.root` never appears throughout the full observation window.
+    @discardableResult
+    func waitForOverlayToRemainAbsent(timeout: TimeInterval = 2, pollInterval: TimeInterval = 0.1) -> Bool {
+        otherElements["overlay.root"].waitForContinuousNonExistence(timeout: timeout, pollInterval: pollInterval)
+    }
+
     /// Backward-compatible alias kept for existing tests.
     @discardableResult
     func waitForOverlayReady(timeout: TimeInterval = 4) -> Bool {
@@ -152,6 +158,18 @@ extension XCUIElement {
     @discardableResult
     func waitForNonExistence(timeout: TimeInterval = 3) -> Bool {
         waitFor(predicate: NSPredicate(format: "exists == false"), timeout: timeout)
+    }
+
+    /// Verifies `exists == false` for the full timeout window, failing if the element appears at any point.
+    @discardableResult
+    func waitForContinuousNonExistence(timeout: TimeInterval = 3, pollInterval: TimeInterval = 0.1) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if exists { return false }
+            let step = min(pollInterval, max(0.01, deadline.timeIntervalSinceNow))
+            RunLoop.current.run(until: Date().addingTimeInterval(step))
+        }
+        return !exists
     }
 
     /// Waits until the element is not hittable (covers hidden-but-mounted cases).
