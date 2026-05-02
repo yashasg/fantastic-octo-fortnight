@@ -115,16 +115,16 @@ final class ReminderScheduler: ReminderScheduling {
         let reminderSettings = settings.settings(for: type)
         let identifier = NotificationID.identifier(for: type)
 
-        // UNTimeIntervalNotificationTrigger requires timeInterval >= 60 for repeating triggers.
-        // Any sub-60s value (e.g. from a version migration or direct UserDefaults manipulation)
-        // silently produces a one-shot notification that fires once and never repeats. Guard
-        // explicitly so the failure is loud instead of a silent scheduling dead-end. Fixes #493.
-        guard reminderSettings.interval >= 60 else {
-            Logger.scheduling.error(
+        // UNTimeIntervalNotificationTrigger silently degrades to a one-shot trigger when
+        // timeInterval < 60s. Make the behaviour explicit: sub-60s intervals schedule a
+        // single-fire notification (repeats: false) and emit a warning so the condition
+        // is visible in logs. Fixes #493.
+        let repeats = reminderSettings.interval >= 60
+        if !repeats {
+            Logger.scheduling.warning(
                 // swiftlint:disable:next line_length
-                "Rejecting reschedule for \(type.rawValue, privacy: .public): interval \(reminderSettings.interval, privacy: .public)s is below the 60s minimum required by UNTimeIntervalNotificationTrigger. No notification scheduled."
+                "Scheduling one-shot (not repeating) reminder for \(type.rawValue, privacy: .public): interval \(reminderSettings.interval, privacy: .public)s is below UNTimeIntervalNotificationTrigger's 60s minimum for repeating triggers."
             )
-            return
         }
 
         let content = UNMutableNotificationContent()
@@ -135,7 +135,7 @@ final class ReminderScheduler: ReminderScheduling {
 
         let trigger = UNTimeIntervalNotificationTrigger(
             timeInterval: reminderSettings.interval,
-            repeats: true  // interval >= 60 guaranteed by guard above
+            repeats: repeats
         )
 
         let request = UNNotificationRequest(
