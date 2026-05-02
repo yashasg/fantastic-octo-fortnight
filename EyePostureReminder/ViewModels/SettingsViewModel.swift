@@ -365,11 +365,20 @@ final class SettingsViewModel: ObservableObject {
             Logger.settings.info("Snooze limit reached — ignoring snooze request")
             return
         }
+        guard minutes > 0 else {
+            Logger.settings.warning(
+                "snooze(for:) received non-positive minutes=\(minutes, privacy: .public) — ignoring"
+            )
+            return
+        }
+        let analyticsCode = Self.snoozeOptions.first(where: { $0.minutes == minutes })?.analyticsCode ?? "custom"
         settings.snoozedUntil = Date().addingTimeInterval(TimeInterval(minutes * 60))
         settings.snoozeCount += 1
         scheduler.cancelAllReminders()
-        AnalyticsLogger.log(.snoozeActivated(durationOption: "\(minutes)m"))
-        Logger.settings.info("Snoozed for \(minutes) minutes (count: \(self.settings.snoozeCount))")
+        AnalyticsLogger.log(.snoozeActivated(durationOption: analyticsCode))
+        Logger.settings.info(
+            "Snoozed via option=\(analyticsCode, privacy: .public) count=\(self.settings.snoozeCount, privacy: .public)"
+        )
     }
 
     /// Cancel an active snooze and reschedule reminders immediately.

@@ -117,10 +117,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-brew-xcodegen-swiftlint-
 
-      # ── Build ────────────────────────────────────────────────────────────────
-      - name: Build (simulator, no signing)
-        run: ./scripts/build.sh build
-
       # ── Screen Time extension scaffold ──────────────────────────────────────
       # Compile-only validation. Runtime FamilyControls/DeviceActivity behavior
       # still requires #201 entitlement approval and physical-device testing.
@@ -164,15 +160,8 @@ jobs:
       - name: Build Screen Time extensions (simulator, no signing)
         run: ./scripts/setup-screentime.sh --build
 
-      # ── Test ─────────────────────────────────────────────────────────────────
-      - name: Test (simulator)
-        run: ./scripts/build.sh test
-
-      # ── Lint ─────────────────────────────────────────────────────────────────
-      # if: always() ensures SwiftLint runs and reports even when earlier steps
-      # (e.g. tests) fail — prevents silent lint gaps in a no-warning shop (#388).
+      # ── Build + lint + test ──────────────────────────────────────────────────
       - name: Install SwiftLint
-        if: always()
         run: |
           if brew list swiftlint &>/dev/null 2>&1; then
             brew link --overwrite swiftlint 2>/dev/null || true
@@ -180,9 +169,8 @@ jobs:
             brew install swiftlint
           fi
 
-      - name: Lint (SwiftLint)
-        if: always()
-        run: ./scripts/build.sh lint
+      - name: Build, lint, and test (simulator)
+        run: ./scripts/build.sh all
 
       # ── Coverage ─────────────────────────────────────────────────────────────
       - name: Report coverage
@@ -200,8 +188,11 @@ jobs:
             echo "::error::TestResults.xcresult not found — tests may have crashed before producing results"
             exit 1
           fi
-          COVERAGE=$(xcrun xccov view --report --json TestResults.xcresult \
-            | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['lineCoverage']*100)")
+          COVERAGE=$(xcrun xccov view --report --json TestResults.xcresult | python3 -c "import json,sys; raw=sys.stdin.read(); raw.strip() or (print('::error::Coverage JSON was empty from xccov', file=sys.stderr) or sys.exit(1)); data=json.loads(raw); line_coverage=data.get('lineCoverage'); isinstance(line_coverage, (int, float)) or (print('::error::Coverage JSON missing numeric lineCoverage', file=sys.stderr) or sys.exit(1)); print(line_coverage * 100)")
+          if [[ ! "$COVERAGE" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
+            echo "::error::Computed coverage is not numeric: '$COVERAGE'"
+            exit 1
+          fi
           echo "Line coverage: ${COVERAGE}%"
           if (( $(echo "$COVERAGE < 80" | bc -l) )); then
             echo "::error::Coverage ${COVERAGE}% is below the minimum threshold (80%)"

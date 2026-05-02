@@ -96,6 +96,7 @@ struct SettingsView: View {
                     onChange: { newValue in
                         viewModel?.notifySettingChanged(.globalEnabled, old: String(!newValue), new: String(newValue))
                         viewModel?.globalToggleChanged()
+                        showSavedFeedback()
                     },
                     label: {
                         HStack(spacing: AppSpacing.sm) {
@@ -347,12 +348,12 @@ struct SettingsView: View {
                 .foregroundStyle(AppColor.textSecondary)
             }
         }
-        // #434: "Settings saved" transient feedback banner overlaid at bottom.
-        .overlay(alignment: .bottom) {
+        // #434: "Settings saved" transient feedback banner at bottom.
+        .safeAreaInset(edge: .bottom) {
             if showSavedBanner {
                 SettingsSavedBanner()
                     .transition(.move(edge: .bottom).combined(with: .opacity))
-                    .padding(.bottom, AppSpacing.xl)
+                    .padding(.bottom, AppSpacing.md)
                     .accessibilityIdentifier("settings.savedBanner")
             }
         }
@@ -500,6 +501,7 @@ private struct SettingsSavedBanner: View {
         )
         .font(AppFont.bodyEmphasized)
         .foregroundStyle(AppColor.textPrimary)
+        .accessibilityIdentifier("settings.savedBanner")
         .padding(.horizontal, AppSpacing.lg)
         .padding(.vertical, AppSpacing.sm)
         .background(AppColor.surface, in: Capsule())
