@@ -384,7 +384,8 @@ jobs:
           path: UITestResults-${{ matrix.shard.id }}.xcresult
           retention-days: 30
           if-no-files-found: error
-    timeout-minutes: 10
-    steps:
-      - name: UI test shards passed
-        run: echo "All UI test shards passed."
+
+  uitest:
+    name: UI Tests
+    runs-on: macos-15
+    needs: uitest-shard
