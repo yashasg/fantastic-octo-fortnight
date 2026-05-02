@@ -117,6 +117,9 @@ final class OverlayManager: OverlayPresenting {
     /// Pending show requests queued while an overlay is already on screen.
     private var overlayQueue: [QueuedOverlay] = []
 
+    /// Tracks whether external audio was paused by this overlay so we only resume when needed.
+    private var isAudioPaused = false
+
     var isOverlayVisible: Bool {
         overlayWindow != nil && overlayWindow?.isHidden == false
     }
@@ -186,6 +189,7 @@ final class OverlayManager: OverlayPresenting {
 
         if pauseMediaEnabled {
             audioManager.pauseExternalAudio()
+            isAudioPaused = true
         }
         dismissCallback = callbacks.onDismiss
 
@@ -227,7 +231,10 @@ final class OverlayManager: OverlayPresenting {
         overlayWindow?.rootViewController = nil
         overlayWindow = nil
 
-        audioManager.resumeExternalAudio()
+        if isAudioPaused {
+            audioManager.resumeExternalAudio()
+            isAudioPaused = false
+        }
 
         let callback = dismissCallback
         dismissCallback = nil
