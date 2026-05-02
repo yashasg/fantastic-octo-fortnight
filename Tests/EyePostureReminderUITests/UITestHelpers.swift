@@ -97,21 +97,30 @@ extension XCUIApplication {
         staticTexts["home.title"].waitForExistence(timeout: timeout)
     }
 
-    /// Waits for a single "overlay fully presented" anchor.
+    /// Waits for a single "overlay fully presented" anchor using a two-phase,
+    /// independent-deadline strategy that eliminates the time-budget bleed race.
     ///
-    /// `overlay.doneButton` being hittable is the strongest stable signal that:
-    /// 1) the overlay exists, and
-    /// 2) entrance animation/layout has progressed enough for user interaction.
+    /// **Why two phases?**
+    /// The overlay trigger chain is:
+    ///   `launch → scheduleReminders() async → handleNotification
+    ///    → UIWindow.makeKeyAndVisible → SwiftUI render → onAppear
+    ///    → 0.5 s entrance animation`
+    /// Under CI load this chain can consume most of a shared 2.5 s budget,
+    /// leaving the entrance-animation wait starved (< 0.1 s) and the test flaky.
     ///
-    /// Tests should call this once, then use shorter follow-up waits for secondary
-    /// elements (dismiss button, supportive text, settings link).
+    /// Phase 1 (`timeout`): wait for `overlay.root` existence — accounts for
+    ///   the async launch + scheduleReminders chain.
+    /// Phase 2 (fixed 2.0 s fresh budget): wait for `overlay.doneButton`
+    ///   hittability — accounts for the 0.5 s entrance animation with 4× margin,
+    ///   independent of how long Phase 1 took.
+    ///
+    /// Tests should call this once, then use shorter follow-up waits for
+    /// secondary elements (dismiss button, supportive text, settings link).
     @discardableResult
-    func waitForOverlayPresented(timeout: TimeInterval = 2.5) -> Bool {
-        let overlayRoot = otherElements["overlay.root"]
-        let readinessDeadline = Date().addingTimeInterval(timeout)
-        guard overlayRoot.waitForExistence(timeout: timeout) else { return false }
-        let remaining = max(0.1, readinessDeadline.timeIntervalSinceNow)
-        return buttons["overlay.doneButton"].waitForHittable(timeout: remaining)
+    func waitForOverlayPresented(timeout: TimeInterval = 5) -> Bool {
+        guard otherElements["overlay.root"].waitForExistence(timeout: timeout) else { return false }
+        // Fresh independent budget: entrance animation is ~0.5 s; 2.0 s gives 4× margin.
+        return buttons["overlay.doneButton"].waitForHittable(timeout: 2.0)
     }
 
     /// Waits for overlay dismissal using a positive fallback state and explicit
@@ -127,7 +136,7 @@ extension XCUIApplication {
 
     /// Backward-compatible alias kept for existing tests.
     @discardableResult
-    func waitForOverlayReady(timeout: TimeInterval = 2.5) -> Bool {
+    func waitForOverlayReady(timeout: TimeInterval = 5) -> Bool {
         waitForOverlayPresented(timeout: timeout)
     }
 }
@@ -156,6 +165,12 @@ extension XCUIElement {
     @discardableResult
     func waitForNonExistence(timeout: TimeInterval = 3) -> Bool {
         waitFor(predicate: NSPredicate(format: "exists == false"), timeout: timeout)
+    }
+
+    /// Waits until the element is not hittable (covers hidden-but-mounted cases).
+    @discardableResult
+    func waitForNotHittable(timeout: TimeInterval = 3) -> Bool {
+        waitFor(predicate: NSPredicate(format: "hittable == false"), timeout: timeout)
     }
 
     /// Taps an element after waiting for a hittable state.
