@@ -1,3 +1,4 @@
+import Combine
 import Foundation
 import os
 
@@ -113,6 +114,7 @@ final class SettingsViewModel: ObservableObject {
 
     let settings: SettingsStore
     private let scheduler: ReminderScheduling
+    private var cancellables: Set<AnyCancellable> = []
 
     // MARK: - Computed State (M2.3)
 
@@ -297,6 +299,9 @@ final class SettingsViewModel: ObservableObject {
         self.settings  = settings
         self.scheduler = scheduler
         self.maxConsecutiveSnoozes = maxSnoozeCount
+        settings.objectWillChange
+            .sink { [weak self] in self?.objectWillChange.send() }
+            .store(in: &cancellables)
         Logger.settings.debug("SettingsViewModel initialised")
     }
 

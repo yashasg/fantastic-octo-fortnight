@@ -176,15 +176,18 @@ final class OverlayPresentationTests: XCTestCase {
             "Settings link must be visible on the overlay."
         )
 
+        // Navigation requires: overlay dismiss animation → UserDefaults write →
+        // onChange fires → sheet presentation animation. Use 5s to match original
+        // budget (#489 — reduced to 3s in #469 caused CI failures on loaded runners).
         let settingsNav = app.navigationBars["Settings"]
         XCTAssertTrue(
-            settingsNav.waitForExistence(timeout: 3),
+            settingsNav.waitForExistence(timeout: 5),
             "Tapping overlay Settings should open the Settings sheet."
         )
 
         let snoozeButton = app.buttons["settings.snooze.5min"]
         XCTAssertTrue(
-            snoozeButton.waitForExistence(timeout: 3),
+            snoozeButton.waitForExistence(timeout: 5),
             "Settings opened from the overlay must expose snooze controls."
         )
     }

@@ -4,6 +4,7 @@
 // Onboarding Screen 2 — Notification Permission.
 // Educates the user about WHY notifications are needed before triggering the system prompt.
 
+import os
 import SwiftUI
 import UserNotifications
 
@@ -93,7 +94,11 @@ struct OnboardingPermissionView: View {
 
     private func requestNotificationPermission() {
         Task {
-            _ = try? await notificationCenter.requestAuthorization(options: [.alert, .sound, .badge])
+            do {
+                _ = try await notificationCenter.requestAuthorization(options: [.alert, .sound, .badge])
+            } catch {
+                Logger.scheduling.error("Notification permission request failed: \(error)")
+            }
             await MainActor.run { onNext() }
         }
     }
