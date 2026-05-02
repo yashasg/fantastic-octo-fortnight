@@ -250,6 +250,10 @@ jobs:
           echo "Available iOS simulators:"
           xcrun simctl list devices available | grep -i iphone | head -5
 
+      - name: Generate UI test project
+        run: |
+          ./scripts/setup-uitests.sh
+
       - name: Build UI tests for testing (once)
         run: |
           xcodebuild build-for-testing \
