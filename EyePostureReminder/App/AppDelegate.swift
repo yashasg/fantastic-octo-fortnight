@@ -81,29 +81,32 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
 #if DEBUG
     private func applyUITestLaunchArguments() {
         let args = CommandLine.arguments
+        let defaults = UserDefaults.standard
+        defaults.removeObject(forKey: AppStorageKey.uiTestOverlayType)
         if args.contains("--skip-onboarding") {
-            UserDefaults.standard.set(true, forKey: AppStorageKey.hasSeenOnboarding)
+            defaults.set(true, forKey: AppStorageKey.hasSeenOnboarding)
             // Reset all settings to defaults so each test starts from a clean, known state.
             // Without this, toggling settings in one test pollutes the next test's launch state.
             SettingsStore().resetToDefaults()
         }
         if args.contains("--reset-onboarding") {
-            UserDefaults.standard.removeObject(forKey: AppStorageKey.hasSeenOnboarding)
+            defaults.removeObject(forKey: AppStorageKey.hasSeenOnboarding)
+            SettingsStore().resetToDefaults()
         }
         if args.contains("--show-overlay-eyes") {
-            UserDefaults.standard.set(true, forKey: AppStorageKey.hasSeenOnboarding)
+            defaults.set(true, forKey: AppStorageKey.hasSeenOnboarding)
             SettingsStore().resetToDefaults()
-            UserDefaults.standard.set(ReminderType.eyes.rawValue, forKey: AppStorageKey.uiTestOverlayType)
+            defaults.set(ReminderType.eyes.rawValue, forKey: AppStorageKey.uiTestOverlayType)
         }
         if args.contains("--show-overlay-posture") {
-            UserDefaults.standard.set(true, forKey: AppStorageKey.hasSeenOnboarding)
+            defaults.set(true, forKey: AppStorageKey.hasSeenOnboarding)
             SettingsStore().resetToDefaults()
-            UserDefaults.standard.set(ReminderType.posture.rawValue, forKey: AppStorageKey.uiTestOverlayType)
+            defaults.set(ReminderType.posture.rawValue, forKey: AppStorageKey.uiTestOverlayType)
         }
         if args.contains("--simulate-screen-time-not-determined") {
-            UserDefaults.standard.set(true, forKey: AppStorageKey.hasSeenOnboarding)
+            defaults.set(true, forKey: AppStorageKey.hasSeenOnboarding)
             SettingsStore().resetToDefaults()
-            UserDefaults.standard.set(
+            defaults.set(
                 ScreenTimeAuthorizationStatus.notDetermined.rawValue,
                 forKey: AppStorageKey.uiTestScreenTimeStatus
             )

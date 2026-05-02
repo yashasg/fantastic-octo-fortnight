@@ -80,6 +80,7 @@ extension XCUIApplication {
             TestLaunchArguments.skipOnboarding,
             TestLaunchArguments.simulateScreenTimeNotDetermined
         ]
+        launchEnvironment["UITEST_SCREEN_TIME_STATUS"] = "notDetermined"
         appendDarkModeArgumentIfNeeded(darkMode)
         launch()
     }
@@ -131,6 +132,23 @@ extension XCUIApplication {
     @discardableResult
     func waitForOverlayReady(timeout: TimeInterval = 4) -> Bool {
         waitForOverlayPresented(timeout: timeout)
+    }
+
+    /// Performs up to `maxSwipes` upward scrolls and waits for the element to become hittable.
+    @discardableResult
+    func revealAndWaitForHittable(
+        _ element: XCUIElement,
+        timeout: TimeInterval = 5,
+        maxSwipes: Int = 3
+    ) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        for _ in 0...maxSwipes {
+            if element.exists && element.isHittable { return true }
+            let remaining = max(0.1, deadline.timeIntervalSinceNow)
+            if element.waitForHittable(timeout: remaining) { return true }
+            swipeUp()
+        }
+        return element.exists && element.isHittable
     }
 }
 

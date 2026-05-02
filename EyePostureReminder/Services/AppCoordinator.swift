@@ -607,6 +607,12 @@ private extension AppCoordinator {
     ) -> ScreenTimeAuthorizationProviding {
         guard let screenTimeAuthorization else {
             #if DEBUG
+            if ProcessInfo.processInfo.environment["UITEST_SCREEN_TIME_STATUS"] == "notDetermined" {
+                return ScreenTimeAuthorizationStub(status: .notDetermined)
+            }
+            if CommandLine.arguments.contains("--simulate-screen-time-not-determined") {
+                return ScreenTimeAuthorizationStub(status: .notDetermined)
+            }
             if let raw = UserDefaults.standard.string(forKey: AppStorageKey.uiTestScreenTimeStatus),
                let status = ScreenTimeAuthorizationStatus(rawValue: raw) {
                 return ScreenTimeAuthorizationStub(status: status)

@@ -16,3 +16,8 @@ Accessibility trees can keep elements mounted during transitions, making raw exi
 - `waitForOverlayPresented()` anchored on a hittable control.
 - `waitForOverlayDismissed()` anchored on fallback screen + overlay root non-existence.
 - `waitForNotHittable()` for hidden mounted elements.
+
+## Runtime-gated prompt pattern
+- For simulator-dependent surfaces (permissions/Screen Time prompts), assert one of the valid UI affordances (e.g., banner **or** fallback pill) instead of one brittle branch.
+- If the runtime exposes neither affordance despite test setup, prefer `XCTSkip` over false-red failure and log the exact missing precondition.
+- Keep skips narrowly scoped to the runtime-gated tests; do not broaden to unrelated UI checks.
