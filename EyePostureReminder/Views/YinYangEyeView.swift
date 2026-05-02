@@ -71,7 +71,7 @@ struct YinYangEyeView: View {
                 breathing = false
             }
         }
-        .onChange(of: shouldReduceMotion) { newValue in
+        .onChangeCompat(of: shouldReduceMotion) { newValue in
             if newValue {
                 withAnimation(.easeInOut(duration: 0.3)) {
                     breathing = false

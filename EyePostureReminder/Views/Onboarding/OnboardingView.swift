@@ -55,7 +55,7 @@ struct OnboardingView: View {
         .indexViewStyle(PageIndexViewStyle(backgroundDisplayMode: .always))
         .background(AppColor.background.ignoresSafeArea())
         .onAppear { _ = Self.configurePageControl }
-        .onChange(of: currentPage) { _ in
+        .onChangeCompat(of: currentPage) { _ in
             accessibilityNotificationPoster.postScreenChanged()
         }
         .sheet(isPresented: $showAppCategoryPicker) {

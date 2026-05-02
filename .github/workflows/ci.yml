@@ -383,7 +383,7 @@ jobs:
           name: ui-test-results-${{ matrix.shard.id }}-build${{ github.run_number }}
           path: UITestResults-${{ matrix.shard.id }}.xcresult
           retention-days: 30
-          if-no-files-found: warn
+          if-no-files-found: error
 
   uitest:
     name: UI Tests

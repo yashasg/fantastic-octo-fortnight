@@ -18,6 +18,7 @@
 
 import Combine
 import Foundation
+import os
 import ScreenTimeExtensionShared
 
 /// App-facing name for the shared App Group selection payload.
@@ -78,11 +79,36 @@ final class SelectedAppsState: ObservableObject {
     /// Create a state object backed by an explicit IPC store (for testing).
     init(ipcStore: any SelectedAppsIPCStoring) {
         self.ipcStore = ipcStore
-        let initialMetadata = (try? ipcStore.readSelection()) ?? .empty
+
+        // Distinguish a successful read-returning-empty from a read failure.
+        // Only clean up the storedEnabled/empty inconsistency when the read
+        // actually succeeded — a failed read cannot distinguish "no apps selected"
+        // from "App Group store unavailable", and we must not permanently disable
+        // True Interrupt Mode on a transient IPC error. Fixes #491.
+        let readResult = Result { try ipcStore.readSelection() }
+        let initialMetadata: SelectedAppsMetadata
+        let readSucceeded: Bool
+        switch readResult {
+        case .success(let metadata):
+            initialMetadata = metadata
+            readSucceeded = true
+        case .failure(let error):
+            Logger.settings.error(
+                // swiftlint:disable:next line_length
+                "SelectedAppsState: failed to read App Group selection — True Interrupt state preserved: \(error.localizedDescription, privacy: .public)"
+            )
+            initialMetadata = .empty
+            readSucceeded = false
+        }
+
         selectionMetadata = initialMetadata
         let storedEnabled = ipcStore.isTrueInterruptEnabled()
         isTrueInterruptEnabled = storedEnabled && !initialMetadata.isEmpty
-        if storedEnabled && initialMetadata.isEmpty {
+
+        // Only reconcile the "enabled but nothing selected" inconsistency when
+        // the read succeeded — if it failed we cannot know whether the selection
+        // is genuinely empty or merely unreadable.
+        if readSucceeded && storedEnabled && initialMetadata.isEmpty {
             _ = ipcStore.setTrueInterruptEnabled(false)
         }
     }

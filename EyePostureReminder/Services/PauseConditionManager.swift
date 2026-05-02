@@ -80,7 +80,11 @@ final class LiveFocusStatusDetector: NSObject, FocusStatusDetecting {
                 ) { [weak self] _, _ in
                     guard let self else { return }
                     let focused = INFocusStatusCenter.default.focusStatus.isFocused ?? false
-                    DispatchQueue.main.async {
+                    // Use [weak self] on the inner dispatch to prevent a stale-write race:
+                    // if stopMonitoring() + startMonitoring() run while this block is queued,
+                    // the freshly-initialised isFocused must not be overwritten. Fixes #492.
+                    DispatchQueue.main.async { [weak self] in
+                        guard let self else { return }
                         self.isFocused = focused
                         self.onFocusChanged?(focused)
                     }
@@ -117,8 +121,11 @@ final class LiveCarPlayDetector: CarPlayDetecting {
         ) { [weak self] _ in
             guard let self else { return }
             let active = self.checkCarPlay()
-            DispatchQueue.main.async {
-                guard active != self.isCarPlayActive else { return }
+            // Use [weak self] on the inner dispatch to prevent a stale-write race:
+            // if stopMonitoring() + startMonitoring() run while this block is queued,
+            // the freshly-initialised isCarPlayActive must not be overwritten. Fixes #492.
+            DispatchQueue.main.async { [weak self] in
+                guard let self, active != self.isCarPlayActive else { return }
                 self.isCarPlayActive = active
                 self.onCarPlayChanged?(active)
             }

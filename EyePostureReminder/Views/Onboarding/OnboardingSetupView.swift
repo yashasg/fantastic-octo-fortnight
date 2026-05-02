@@ -137,7 +137,7 @@ private struct OnboardingReminderPickerCard: View {
                     title
                 )
             )
-            .onChange(of: interval) { newValue in
+            .onChangeCompat(of: interval) { newValue in
                 AnalyticsLogger.log(.settingChanged(
                     setting: intervalKey,
                     oldValue: String(prevInterval),
@@ -159,7 +159,7 @@ private struct OnboardingReminderPickerCard: View {
                     title
                 )
             )
-            .onChange(of: breakDuration) { newValue in
+            .onChangeCompat(of: breakDuration) { newValue in
                 AnalyticsLogger.log(.settingChanged(
                     setting: durationKey,
                     oldValue: String(prevBreakDuration),

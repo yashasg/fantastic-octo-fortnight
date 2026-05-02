@@ -1,4 +1,5 @@
 import Foundation
+import os
 import ScreenTimeExtensionShared
 
 // MARK: - ReminderScheduling Conformance
@@ -26,10 +27,20 @@ extension AppCoordinator: ReminderScheduling {
         if pendingOverlay?.type == type { pendingOverlay = nil }
         // Cancel DeviceActivity monitoring when an active shield session for this type is live,
         // so a stuck-shield cannot outlast a cancelled reminder. Avoid cancelling unrelated sessions.
-        if deviceActivityMonitor.isAvailable,
-           let session = try? ipcStore.readShieldSession(),
-           session.reason?.reminderType == type {
-            cancelDeviceActivityMonitoring()
+        // Use do/catch instead of try? so a read failure is logged and does not silently leave
+        // an active ScreenTime shield stuck. Fixes #490.
+        if deviceActivityMonitor.isAvailable {
+            do {
+                let session = try ipcStore.readShieldSession()
+                if session.reason?.reminderType == type {
+                    cancelDeviceActivityMonitoring()
+                }
+            } catch {
+                Logger.scheduling.error(
+                    // swiftlint:disable:next line_length
+                    "cancelReminder(\(type.rawValue, privacy: .public)): failed to read shield session — DeviceActivity monitor may remain active: \(error.localizedDescription, privacy: .public)"
+                )
+            }
         }
     }
 

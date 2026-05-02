@@ -115,6 +115,18 @@ final class ReminderScheduler: ReminderScheduling {
         let reminderSettings = settings.settings(for: type)
         let identifier = NotificationID.identifier(for: type)
 
+        // UNTimeIntervalNotificationTrigger silently degrades to a one-shot trigger when
+        // timeInterval < 60s. Make the behaviour explicit: sub-60s intervals schedule a
+        // single-fire notification (repeats: false) and emit a warning so the condition
+        // is visible in logs. Fixes #493.
+        let repeats = reminderSettings.interval >= 60
+        if !repeats {
+            Logger.scheduling.warning(
+                // swiftlint:disable:next line_length
+                "Scheduling one-shot (not repeating) reminder for \(type.rawValue, privacy: .public): interval \(reminderSettings.interval, privacy: .public)s is below UNTimeIntervalNotificationTrigger's 60s minimum for repeating triggers."
+            )
+        }
+
         let content = UNMutableNotificationContent()
         content.title              = type.notificationTitle
         content.body               = type.notificationBody
@@ -123,7 +135,7 @@ final class ReminderScheduler: ReminderScheduling {
 
         let trigger = UNTimeIntervalNotificationTrigger(
             timeInterval: reminderSettings.interval,
-            repeats: reminderSettings.interval >= 60
+            repeats: repeats
         )
 
         let request = UNNotificationRequest(

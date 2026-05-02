@@ -13,6 +13,9 @@ jobs:
     # Only trigger on squad:{member} labels (not the base "squad" label)
     if: startsWith(github.event.label.name, 'squad:')
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
@@ -118,7 +121,7 @@ jobs:
         if: github.event.label.name == 'squad:copilot'
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
         with:
-          github-token: ${{ secrets.COPILOT_ASSIGN_TOKEN }}
+          github-token: ${{ secrets.COPILOT_ASSIGN_TOKEN || secrets.GITHUB_TOKEN }}
           script: |
             const owner = context.repo.owner;
             const repo = context.repo.repo;
