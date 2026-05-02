@@ -40,6 +40,7 @@ Use the `XCUIApplication` convenience helpers instead of raw strings:
 // In setUpWithError():
 app = XCUIApplication()
 app.launchWithSkippedOnboarding()  // or app.launchWithOnboarding()
+app.launchWithEyeOverlay(darkMode: true) // optional dark-mode variant
 ```
 
 ### Accessibility Identifiers
@@ -109,6 +110,7 @@ app.launchWithSkippedOnboarding()  // or app.launchWithOnboarding()
 - Dismiss `Button` → `"legal.dismissButton"` ✅
 
 #### OverlayView
+- Overlay root container `ZStack` → `"overlay.root"` ✅
 - × dismiss `Button` → `"overlay.dismissButton"` ✅
 - Done CTA `Button` → `"overlay.doneButton"` ✅
 - Supportive subtitle `Text` → `"overlay.supportiveText"` ✅

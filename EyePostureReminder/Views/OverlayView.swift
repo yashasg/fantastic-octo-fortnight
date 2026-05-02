@@ -58,6 +58,7 @@ struct OverlayView: View {
             centerContent
         }
         .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("overlay.root")
         // Modal suppression is handled at the UIKit layer: OverlayManager sets
         // hostingController.view.accessibilityViewIsModal = true on the hosting
         // controller's view, which correctly prevents VoiceOver from escaping

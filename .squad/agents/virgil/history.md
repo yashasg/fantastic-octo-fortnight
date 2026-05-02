@@ -179,3 +179,12 @@ Orchestration log recorded at 2026-04-30T09:27:10Z. Enhanced CI diagnostics docu
 ### Learnings
 - Archive success is not enough for extension distribution; CI/signing scripts should assert expected `.appex` payload presence explicitly when extension signing is enabled.
 - Keeping `EXTENSION_PROFILES_AVAILABLE` as the switch preserves pre-approval flow while giving a strict post-approval gate with zero workflow changes.
+
+## 2026-05-02 — UI shard false-green hardening
+
+- Hardened `scripts/build.sh cmd_uitest` retry loop to gate success on xcresult truth, not command exit text alone.
+- Added `xcresult_attempt_passed()` and now treat an attempt as failed when `.xcresult` is missing, unparsable, has `testFailureSummaries`, or reports non-success action status.
+- Retry narrowing still targets only failed tests when available, preserving fast recovery while preventing false-green shards.
+
+## Learnings
+- UI shard retries must validate `.xcresult` status + failure summaries after every green exit to prevent command-stream false positives.

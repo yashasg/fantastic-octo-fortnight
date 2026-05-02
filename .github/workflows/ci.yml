@@ -223,10 +223,75 @@ jobs:
           retention-days: 30
           if-no-files-found: error
 
+  uitest-prepare:
+    name: UI Tests / Prepare artifacts
+    runs-on: macos-15
+    needs: build-and-test
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+
+      - name: Select Xcode ${{ env.XCODE_VERSION }}
+        run: |
+          XCODE_PATH="/Applications/Xcode_${{ env.XCODE_VERSION }}.app/Contents/Developer"
+          if [[ -d "$XCODE_PATH" ]]; then
+            sudo xcode-select -switch "$XCODE_PATH"
+          else
+            echo "Xcode_${{ env.XCODE_VERSION }}.app not found; using current selection: $(xcode-select -p)"
+          fi
+
+      - name: Ensure iOS Simulator runtime
+        run: |
+          if ! xcrun simctl list devices available 2>/dev/null | grep -q "iPhone"; then
+            echo "No iOS simulators found — downloading runtime…"
+            xcodebuild -downloadPlatform iOS -quiet || true
+          fi
+          echo "Available iOS simulators:"
+          xcrun simctl list devices available | grep -i iphone | head -5
+
+      - name: Generate UI test project
+        run: |
+          ./scripts/setup-uitests.sh
+
+      - name: Build UI tests for testing (once)
+        run: |
+          xcodebuild build-for-testing \
+            -project UITests/EyePostureReminderUITests.xcodeproj \
+            -scheme EyePostureReminderUITests \
+            -destination "${{ env.SIMULATOR }}" \
+            -derivedDataPath "${{ env.DERIVED_DATA_PATH }}" \
+            CODE_SIGN_IDENTITY= \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            ENABLE_BITCODE=NO \
+            ENABLE_APP_INTENTS_METADATA_EXTRACTION=NO \
+            ENABLE_APPINTENTS_METADATA_EXTRACTION=NO \
+            SWIFT_TREAT_WARNINGS_AS_ERRORS=YES \
+            GCC_TREAT_WARNINGS_AS_ERRORS=YES
+
+      - name: Verify prebuilt xctestrun
+        run: |
+          XCTESTRUN_PATH=$(find "${{ env.DERIVED_DATA_PATH }}/Build/Products" \
+            -name "EyePostureReminderUITests_*.xctestrun" -maxdepth 1 -print | sort | tail -1)
+          if [[ -z "$XCTESTRUN_PATH" ]]; then
+            echo "::error::No EyePostureReminderUITests_*.xctestrun found in prebuilt artifacts"
+            exit 1
+          fi
+          echo "Prepared xctestrun: $XCTESTRUN_PATH"
+
+      - name: Upload UI prebuilt artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
+        with:
+          name: ui-prebuilt-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.DERIVED_DATA_PATH }}/Build/Products
+          retention-days: 1
+          if-no-files-found: error
+
   uitest-shard:
     name: UI Tests / ${{ matrix.shard.name }}
     runs-on: macos-15
-    needs: build-and-test
+    needs: uitest-prepare
     timeout-minutes: 45
     strategy:
       fail-fast: false
@@ -267,23 +332,11 @@ jobs:
           echo "Available iOS simulators:"
           xcrun simctl list devices available | grep -i iphone | head -5
 
-      # ── Dependency cache ─────────────────────────────────────────────────────
-      - name: Cache DerivedData
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v4.3.0
+      - name: Download UI prebuilt artifacts
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4
         with:
-          path: ${{ env.DERIVED_DATA_PATH }}
-          key: derived-data-branch-${{ runner.os }}-xcode${{ env.XCODE_VERSION }}-${{ github.head_ref || github.ref_name }}-${{ hashFiles('Package.swift', 'Package.resolved', 'scripts/build.sh', '.github/workflows/ci.yml') }}
-          restore-keys: |
-            derived-data-branch-${{ runner.os }}-xcode${{ env.XCODE_VERSION }}-${{ github.head_ref || github.ref_name }}-
-            derived-data-branch-${{ runner.os }}-xcode${{ env.XCODE_VERSION }}-main-
-
-      - name: Cache SwiftPM SourcePackages
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v4.3.0
-        with:
-          path: ${{ env.DERIVED_DATA_PATH }}/SourcePackages
-          key: spm-sourcepackages-${{ runner.os }}-xcode${{ env.XCODE_VERSION }}-${{ hashFiles('Package.resolved') }}
-          restore-keys: |
-            spm-sourcepackages-${{ runner.os }}-xcode${{ env.XCODE_VERSION }}-
+          name: ui-prebuilt-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.DERIVED_DATA_PATH }}/Build/Products
 
       - name: Boot Simulator
         run: |
@@ -307,8 +360,15 @@ jobs:
 
       - name: Run UI Tests (shard ${{ matrix.shard.id }})
         run: |
+          XCTESTRUN_PATH=$(find "${{ env.DERIVED_DATA_PATH }}/Build/Products" \
+            -name "EyePostureReminderUITests_*.xctestrun" -maxdepth 1 -print | sort | tail -1)
+          if [[ -z "$XCTESTRUN_PATH" ]]; then
+            echo "::error::Prebuilt xctestrun not found in downloaded artifacts"
+            exit 1
+          fi
+
           IFS=',' read -r -a ONLY_TESTING_FILTERS <<< "${{ matrix.shard.only_testing_csv }}"
-          CMD=(./scripts/build.sh uitest --result-bundle-path "UITestResults-${{ matrix.shard.id }}.xcresult")
+          CMD=(./scripts/build.sh uitest --xctestrun-path "$XCTESTRUN_PATH" --result-bundle-path "UITestResults-${{ matrix.shard.id }}.xcresult")
           for FILTER in "${ONLY_TESTING_FILTERS[@]}"; do
             FILTER="$(echo "$FILTER" | xargs)"
             [[ -n "$FILTER" ]] && CMD+=(--only-testing "$FILTER")
