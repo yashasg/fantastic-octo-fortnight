@@ -121,12 +121,7 @@ extension XCUIApplication {
     func waitForOverlayPresented(timeout: TimeInterval = 8) -> Bool {
         guard waitForOverlayVisible(timeout: timeout) else { return false }
         let doneButton = buttons["overlay.doneButton"]
-        let deadline = Date().addingTimeInterval(timeout)
-        if doneButton.waitForHittable(timeout: max(0.1, deadline.timeIntervalSinceNow)) {
-            return true
-        }
-        activate()
-        return doneButton.waitForHittable(timeout: max(0.1, deadline.timeIntervalSinceNow))
+        return waitForElementHittable(doneButton, timeout: timeout)
     }
 
     /// Waits until the overlay root exists, regardless of button hittability.
@@ -156,6 +151,17 @@ extension XCUIApplication {
     @discardableResult
     func waitForOverlayReady(timeout: TimeInterval = 4) -> Bool {
         waitForOverlayPresented(timeout: timeout)
+    }
+
+    /// Waits for an element to become hittable and retries once after activating the app.
+    @discardableResult
+    func waitForElementHittable(_ element: XCUIElement, timeout: TimeInterval = 8) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        if element.waitForHittable(timeout: max(0.1, deadline.timeIntervalSinceNow)) {
+            return true
+        }
+        activate()
+        return element.waitForHittable(timeout: max(0.1, deadline.timeIntervalSinceNow))
     }
 
     /// Performs up to `maxSwipes` upward scrolls and waits for the element to become hittable.

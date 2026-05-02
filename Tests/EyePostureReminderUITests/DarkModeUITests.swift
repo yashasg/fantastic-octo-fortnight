@@ -27,13 +27,13 @@ final class DarkModeUITests: XCTestCase {
     private func launchDarkModeEyeOverlay() {
         app = XCUIApplication()
         app.launchWithEyeOverlay(darkMode: true)
-        XCTAssertTrue(app.waitForOverlayVisible(), "Eye overlay root should appear in dark mode.")
+        XCTAssertTrue(app.waitForOverlayPresented(), "Eye overlay should become interactive in dark mode.")
     }
 
     private func launchDarkModePostureOverlay() {
         app = XCUIApplication()
         app.launchWithPostureOverlay(darkMode: true)
-        XCTAssertTrue(app.waitForOverlayVisible(), "Posture overlay root should appear in dark mode.")
+        XCTAssertTrue(app.waitForOverlayPresented(), "Posture overlay should become interactive in dark mode.")
     }
 
     override func setUpWithError() throws {
@@ -83,7 +83,8 @@ final class DarkModeUITests: XCTestCase {
         launchDarkModeHome()
 
         let settingsButton = app.buttons["home.settingsButton"]
-        XCTAssertTrue(settingsButton.tapWhenHittable(timeout: 3))
+        XCTAssertTrue(app.waitForElementHittable(settingsButton))
+        settingsButton.tap()
 
         let settingsNav = app.navigationBars["Settings"]
         XCTAssertTrue(
@@ -100,7 +101,7 @@ final class DarkModeUITests: XCTestCase {
 
         let doneButton = app.buttons["overlay.doneButton"]
         XCTAssertTrue(
-            doneButton.waitForHittable(timeout: 3),
+            app.waitForElementHittable(doneButton),
             "Done button must be visible on the overlay in dark mode."
         )
 
@@ -124,7 +125,8 @@ final class DarkModeUITests: XCTestCase {
         launchDarkModeEyeOverlay()
 
         let doneButton = app.buttons["overlay.doneButton"]
-        XCTAssertTrue(doneButton.tapWhenHittable(timeout: 3))
+        XCTAssertTrue(app.waitForElementHittable(doneButton))
+        doneButton.tap()
 
         XCTAssertTrue(
             app.waitForOverlayDismissed(timeout: 3),
@@ -160,7 +162,7 @@ final class DarkModeUITests: XCTestCase {
 
         let doneButton = app.buttons["overlay.doneButton"]
         XCTAssertTrue(
-            doneButton.waitForHittable(timeout: 3),
+            app.waitForElementHittable(doneButton),
             "Done button must be visible on the posture overlay in dark mode."
         )
 
