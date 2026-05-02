@@ -4,9 +4,9 @@
 // Onboarding Screen 2 — Notification Permission.
 // Educates the user about WHY notifications are needed before triggering the system prompt.
 
+import os
 import SwiftUI
 import UserNotifications
-import os
 
 struct OnboardingPermissionView: View {
     let onNext: () -> Void

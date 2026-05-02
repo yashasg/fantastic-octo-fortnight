@@ -483,7 +483,8 @@ struct SettingsView: View {
     private func showSavedFeedback() {
         savedBannerTask?.cancel()
         showSavedBanner = true
-        accessibilityNotificationPoster.postAnnouncement(message: String(localized: "settings.savedBanner", bundle: .module))
+        let msg = String(localized: "settings.savedBanner", bundle: .module)
+        accessibilityNotificationPoster.postAnnouncement(message: msg)
         savedBannerTask = Task { @MainActor in
             try? await Task.sleep(nanoseconds: 1_500_000_000)
             guard !Task.isCancelled else { return }
