@@ -88,20 +88,26 @@ extension XCUIApplication {
     /// This reduces flakes where one element is queried before the accessibility tree
     /// has fully stabilized after launch.
     @discardableResult
-    func waitForOverlayReady(timeout: TimeInterval = 5) -> Bool {
+    func waitForOverlayReady(timeout: TimeInterval = 3) -> Bool {
         let doneButton = buttons["overlay.doneButton"]
         let dismissButton = buttons["overlay.dismissButton"]
         let supportiveText = staticTexts["overlay.supportiveText"]
-        return doneButton.waitForHittable(timeout: timeout)
-            && dismissButton.waitForHittable(timeout: timeout)
-            && supportiveText.waitForExistence(timeout: timeout)
+        let deadline = Date().addingTimeInterval(timeout)
+
+        func remaining() -> TimeInterval {
+            max(0.1, deadline.timeIntervalSinceNow)
+        }
+
+        guard doneButton.waitForHittable(timeout: remaining()) else { return false }
+        guard dismissButton.waitForHittable(timeout: remaining()) else { return false }
+        return supportiveText.waitForExistence(timeout: remaining())
     }
 }
 
 extension XCUIElement {
     /// Waits until the element both exists and is hittable.
     @discardableResult
-    func waitForHittable(timeout: TimeInterval = 5) -> Bool {
+    func waitForHittable(timeout: TimeInterval = 3) -> Bool {
         guard waitForExistence(timeout: timeout) else { return false }
         let predicate = NSPredicate(format: "hittable == true")
         let expectation = XCTNSPredicateExpectation(predicate: predicate, object: self)
@@ -110,7 +116,7 @@ extension XCUIElement {
 
     /// Taps an element after waiting for a hittable state.
     @discardableResult
-    func tapWhenHittable(timeout: TimeInterval = 5) -> Bool {
+    func tapWhenHittable(timeout: TimeInterval = 3) -> Bool {
         guard waitForHittable(timeout: timeout) else { return false }
         tap()
         return true
