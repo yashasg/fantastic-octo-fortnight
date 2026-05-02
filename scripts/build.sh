@@ -238,6 +238,62 @@ for item in failures:
 PY
 }
 
+xcresult_attempt_passed() {
+  local bundle_path="$1"
+
+  if [[ ! -d "$bundle_path" ]]; then
+    warn "Result bundle not found at: $bundle_path"
+    return 1
+  fi
+
+  python3 - "$bundle_path" <<'PY'
+import json
+import subprocess
+import sys
+
+bundle_path = sys.argv[1]
+
+def get_root(path: str):
+    commands = [
+        ["xcrun", "xcresulttool", "get", "object", "--legacy", "--path", path, "--format", "json"],
+        ["xcrun", "xcresulttool", "get", "object", "--path", path, "--format", "json"],
+    ]
+    for command in commands:
+        try:
+            return json.loads(subprocess.check_output(command, stderr=subprocess.DEVNULL))
+        except Exception:
+            continue
+    return None
+
+root = get_root(bundle_path)
+if not root:
+    print("⚠ Unable to parse xcresult bundle for pass/fail validation")
+    sys.exit(1)
+
+action_result = (
+    root.get("actions", {})
+    .get("_values", [{}])[0]
+    .get("actionResult", {})
+)
+status = action_result.get("status", {}).get("_value", "")
+failures = (
+    action_result.get("issues", {})
+    .get("testFailureSummaries", {})
+    .get("_values", [])
+)
+
+if failures:
+    print(f"⚠ xcresult contains {len(failures)} testFailureSummaries despite successful command exit")
+    sys.exit(1)
+
+if status and status not in {"succeeded", "success"}:
+    print(f"⚠ xcresult action status is '{status}' (expected succeeded)")
+    sys.exit(1)
+
+sys.exit(0)
+PY
+}
+
 # ── Subcommands ───────────────────────────────────────────────────────────────
 
 cmd_build() {
@@ -499,11 +555,12 @@ cmd_uitest() {
   local retry_delay=0
   local -a current_only_testing_args=("${only_testing_args[@]}")
   local -a failed_test_filters=()
+  local attempt_failed=0
   while true; do
     info "Attempt $attempt/$max_attempts..."
     rm -rf "$result_bundle_path"
-
-    if run_xcodebuild test-without-building \
+    attempt_failed=0
+    if ! run_xcodebuild test-without-building \
       -xctestrun "$xctestrun" \
       -destination "$dest" \
       -derivedDataPath "$DERIVED_DATA_PATH" \
@@ -511,6 +568,15 @@ cmd_uitest() {
       -disable-concurrent-destination-testing \
       -parallel-testing-enabled NO \
       "${current_only_testing_args[@]}"; then
+      attempt_failed=1
+    fi
+
+    if (( attempt_failed == 0 )) && ! xcresult_attempt_passed "$result_bundle_path"; then
+      warn "Attempt $attempt exited 0, but xcresult indicates failure. Treating as failed attempt."
+      attempt_failed=1
+    fi
+
+    if (( attempt_failed == 0 )); then
       break
     fi
 
