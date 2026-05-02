@@ -115,6 +115,17 @@ final class ReminderScheduler: ReminderScheduling {
         let reminderSettings = settings.settings(for: type)
         let identifier = NotificationID.identifier(for: type)
 
+        // UNTimeIntervalNotificationTrigger requires timeInterval >= 60 for repeating triggers.
+        // Any sub-60s value (e.g. from a version migration or direct UserDefaults manipulation)
+        // silently produces a one-shot notification that fires once and never repeats. Guard
+        // explicitly so the failure is loud instead of a silent scheduling dead-end. Fixes #493.
+        guard reminderSettings.interval >= 60 else {
+            Logger.scheduling.error(
+                "Rejecting reschedule for \(type.rawValue, privacy: .public): interval \(reminderSettings.interval, privacy: .public)s is below the 60s minimum required by UNTimeIntervalNotificationTrigger. No notification scheduled."
+            )
+            return
+        }
+
         let content = UNMutableNotificationContent()
         content.title              = type.notificationTitle
         content.body               = type.notificationBody
@@ -123,7 +134,7 @@ final class ReminderScheduler: ReminderScheduling {
 
         let trigger = UNTimeIntervalNotificationTrigger(
             timeInterval: reminderSettings.interval,
-            repeats: reminderSettings.interval >= 60
+            repeats: true  // interval >= 60 guaranteed by guard above
         )
 
         let request = UNNotificationRequest(

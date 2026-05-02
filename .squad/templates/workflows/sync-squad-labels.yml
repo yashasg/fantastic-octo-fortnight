@@ -2,6 +2,7 @@ name: Sync Squad Labels
 
 on:
   push:
+    branches: [main]  # only sync on main — prevents label churn on every feature branch push
     paths:
       - '.squad/team.md'
       - '.ai-team/team.md'
@@ -14,6 +15,9 @@ permissions:
 jobs:
   sync-labels:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 

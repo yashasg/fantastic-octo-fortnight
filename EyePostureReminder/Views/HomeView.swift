@@ -109,7 +109,7 @@ struct HomeView: View {
                 showSettings = true
             }
         }
-        .onChange(of: openSettingsOnLaunch) { newValue in
+        .onChange(of: openSettingsOnLaunch) { _, newValue in
             if newValue {
                 openSettingsOnLaunch = false
                 showSettings = true
@@ -117,7 +117,7 @@ struct HomeView: View {
         }
         // Announce master-toggle state changes to VoiceOver (#287).
         // Guard prevents double-announcement while SettingsView sheet is open.
-        .onChange(of: settings.globalEnabled) { _ in
+        .onChange(of: settings.globalEnabled) {
             guard !showSettings else { return }
             accessibilityNotificationPoster.postAnnouncement(message: statusLabel)
         }

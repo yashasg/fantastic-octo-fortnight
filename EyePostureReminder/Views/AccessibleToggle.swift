@@ -59,7 +59,7 @@ struct AccessibleToggle<LabelContent: View>: View {
     private var productionBody: some View {
         Toggle(isOn: $isOn, label: label)
             .tint(tint)
-            .onChange(of: isOn) { newValue in onChange?(newValue) }
+            .onChange(of: isOn) { _, newValue in onChange?(newValue) }
             .accessibilityModifiers(id: accessibilityIdentifier, hint: accessibilityHint)
     }
 

@@ -383,12 +383,7 @@ jobs:
           name: ui-test-results-${{ matrix.shard.id }}-build${{ github.run_number }}
           path: UITestResults-${{ matrix.shard.id }}.xcresult
           retention-days: 30
-          if-no-files-found: warn
-
-  uitest:
-    name: UI Tests
-    runs-on: macos-15
-    needs: uitest-shard
+          if-no-files-found: error
     timeout-minutes: 10
     steps:
       - name: UI test shards passed

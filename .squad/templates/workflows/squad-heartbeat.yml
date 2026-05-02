@@ -8,8 +8,8 @@ name: Squad Heartbeat (Ralph)
 
 on:
   schedule:
-    # Every 30 minutes — adjust via cron expression as needed
-    - cron: '*/30 * * * *'
+    # Every 6 hours — reduced from */30 to avoid burning ~1,440 runner-minutes/month at idle
+    - cron: '0 */6 * * *'
 
   # React to completed work or new squad work
   issues:
@@ -28,6 +28,9 @@ permissions:
 jobs:
   heartbeat:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
