@@ -366,7 +366,9 @@ final class SettingsViewModel: ObservableObject {
             return
         }
         guard minutes > 0 else {
-            Logger.settings.warning("snooze(for:) received non-positive minutes=\(minutes, privacy: .public) — ignoring")
+            Logger.settings.warning(
+                "snooze(for:) received non-positive minutes=\(minutes, privacy: .public) — ignoring"
+            )
             return
         }
         let analyticsCode = Self.snoozeOptions.first(where: { $0.minutes == minutes })?.analyticsCode ?? "custom"
