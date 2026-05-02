@@ -335,7 +335,7 @@ final class OnboardingFlowTests: XCTestCase {
         // automatically via openSettingsOnLaunch. Assert the Settings sheet is present.
         let doneButton = app.buttons["settings.doneButton"]
         XCTAssertTrue(
-            doneButton.waitForExistence(timeout: 5),
+            doneButton.waitForExistence(timeout: 3),
             "Settings sheet should open automatically after tapping \"Customize Settings\". " +
             "HomeView reads openSettingsOnLaunch and presents SettingsView on appear."
         )

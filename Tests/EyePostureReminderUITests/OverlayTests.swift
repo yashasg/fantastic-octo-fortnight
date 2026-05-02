@@ -143,7 +143,7 @@ final class OverlayPresentationTests: XCTestCase {
         // dismiss button may still linger in the tree briefly.
         let homeNav = app.navigationBars.firstMatch
         XCTAssertTrue(
-            homeNav.waitForExistence(timeout: 5),
+            homeNav.waitForExistence(timeout: 3),
             "After tapping Done, the Home screen navigation bar should reappear."
         )
     }
