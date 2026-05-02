@@ -37,6 +37,7 @@ extension AppCoordinator: ReminderScheduling {
                 }
             } catch {
                 Logger.scheduling.error(
+                    // swiftlint:disable:next line_length
                     "cancelReminder(\(type.rawValue, privacy: .public)): failed to read shield session — DeviceActivity monitor may remain active: \(error.localizedDescription, privacy: .public)"
                 )
             }

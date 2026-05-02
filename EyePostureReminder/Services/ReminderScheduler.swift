@@ -121,6 +121,7 @@ final class ReminderScheduler: ReminderScheduling {
         // explicitly so the failure is loud instead of a silent scheduling dead-end. Fixes #493.
         guard reminderSettings.interval >= 60 else {
             Logger.scheduling.error(
+                // swiftlint:disable:next line_length
                 "Rejecting reschedule for \(type.rawValue, privacy: .public): interval \(reminderSettings.interval, privacy: .public)s is below the 60s minimum required by UNTimeIntervalNotificationTrigger. No notification scheduled."
             )
             return

@@ -94,6 +94,7 @@ final class SelectedAppsState: ObservableObject {
             readSucceeded = true
         case .failure(let error):
             Logger.settings.error(
+                // swiftlint:disable:next line_length
                 "SelectedAppsState: failed to read App Group selection — True Interrupt state preserved: \(error.localizedDescription, privacy: .public)"
             )
             initialMetadata = .empty
