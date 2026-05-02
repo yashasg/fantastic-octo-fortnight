@@ -18,6 +18,24 @@ final class DarkModeUITests: XCTestCase {
 
     var app: XCUIApplication!
 
+    private func launchDarkModeHome() {
+        app = XCUIApplication()
+        app.launchWithSkippedOnboarding(darkMode: true)
+        XCTAssertTrue(app.waitForHomeScreenReady(timeout: 3), "Home screen should be ready in dark mode.")
+    }
+
+    private func launchDarkModeEyeOverlay() {
+        app = XCUIApplication()
+        app.launchWithEyeOverlay(darkMode: true)
+        XCTAssertTrue(app.waitForOverlayPresented(), "Eye overlay should be fully loaded in dark mode.")
+    }
+
+    private func launchDarkModePostureOverlay() {
+        app = XCUIApplication()
+        app.launchWithPostureOverlay(darkMode: true)
+        XCTAssertTrue(app.waitForOverlayPresented(), "Posture overlay should be fully loaded in dark mode.")
+    }
+
     override func setUpWithError() throws {
         continueAfterFailure = false
     }
@@ -30,9 +48,7 @@ final class DarkModeUITests: XCTestCase {
 
     /// Verifies the Home screen launches in dark mode with all essential elements visible.
     func test_darkMode_homeScreen_launches() throws {
-        app = XCUIApplication()
-        app.launchArguments += [TestLaunchArguments.skipOnboarding, "-AppleInterfaceStyle", "Dark"]
-        app.launch()
+        launchDarkModeHome()
 
         let navBar = app.navigationBars.firstMatch
         XCTAssertTrue(
@@ -51,29 +67,23 @@ final class DarkModeUITests: XCTestCase {
 
     /// Verifies the Settings toolbar button is tappable in dark mode.
     func test_darkMode_homeScreen_settingsButtonIsHittable() throws {
-        app = XCUIApplication()
-        app.launchArguments += [TestLaunchArguments.skipOnboarding, "-AppleInterfaceStyle", "Dark"]
-        app.launch()
+        launchDarkModeHome()
 
         let settingsButton = app.buttons["home.settingsButton"]
         XCTAssertTrue(
-            settingsButton.waitForExistence(timeout: 3),
+            settingsButton.waitForHittable(timeout: 3),
             "Settings button must be present on Home screen in dark mode."
         )
-        XCTAssertTrue(settingsButton.isHittable, "Settings button must be hittable in dark mode.")
     }
 
     // MARK: - test_darkMode_settings_canBeOpened
 
     /// Verifies the Settings sheet opens correctly in dark mode.
     func test_darkMode_settings_canBeOpened() throws {
-        app = XCUIApplication()
-        app.launchArguments += [TestLaunchArguments.skipOnboarding, "-AppleInterfaceStyle", "Dark"]
-        app.launch()
+        launchDarkModeHome()
 
         let settingsButton = app.buttons["home.settingsButton"]
-        XCTAssertTrue(settingsButton.waitForExistence(timeout: 3))
-        settingsButton.tap()
+        XCTAssertTrue(settingsButton.tapWhenHittable(timeout: 3))
 
         let settingsNav = app.navigationBars["Settings"]
         XCTAssertTrue(
@@ -86,10 +96,7 @@ final class DarkModeUITests: XCTestCase {
 
     /// Verifies the eye break overlay shows its essential elements in dark mode.
     func test_darkMode_overlay_essentialElementsVisible() throws {
-        app = XCUIApplication()
-        app.launchArguments += [TestLaunchArguments.showOverlayEyes, "-AppleInterfaceStyle", "Dark"]
-        app.launch()
-        XCTAssertTrue(app.waitForOverlayPresented(), "Eye overlay should be fully loaded in dark mode.")
+        launchDarkModeEyeOverlay()
 
         let doneButton = app.buttons["overlay.doneButton"]
         XCTAssertTrue(
@@ -114,17 +121,13 @@ final class DarkModeUITests: XCTestCase {
 
     /// Taps the Done button in dark mode and verifies the overlay is dismissed.
     func test_darkMode_overlay_doneButton_dismissesOverlay() throws {
-        app = XCUIApplication()
-        app.launchArguments += [TestLaunchArguments.showOverlayEyes, "-AppleInterfaceStyle", "Dark"]
-        app.launch()
-        XCTAssertTrue(app.waitForOverlayPresented(), "Eye overlay should be fully loaded in dark mode.")
+        launchDarkModeEyeOverlay()
 
         let doneButton = app.buttons["overlay.doneButton"]
         XCTAssertTrue(doneButton.tapWhenHittable(timeout: 3))
 
-        let dismissButton = app.buttons["overlay.dismissButton"]
-        XCTAssertFalse(
-            dismissButton.waitForExistence(timeout: 3),
+        XCTAssertTrue(
+            app.waitForOverlayDismissed(timeout: 3),
             "After tapping Done in dark mode, the overlay should be dismissed."
         )
     }
@@ -134,8 +137,7 @@ final class DarkModeUITests: XCTestCase {
     /// Verifies the onboarding Welcome screen launches in dark mode without crashing.
     func test_darkMode_onboarding_welcomeScreenLaunches() throws {
         app = XCUIApplication()
-        app.launchArguments += [TestLaunchArguments.resetOnboarding, "-AppleInterfaceStyle", "Dark"]
-        app.launch()
+        app.launchWithOnboarding(darkMode: true)
 
         let nextButton = app.buttons["onboarding.welcome.nextButton"]
         XCTAssertTrue(
@@ -154,10 +156,7 @@ final class DarkModeUITests: XCTestCase {
 
     /// Verifies the posture check overlay renders in dark mode with essential elements visible.
     func test_darkMode_postureOverlay_essentialElementsVisible() throws {
-        app = XCUIApplication()
-        app.launchArguments += [TestLaunchArguments.showOverlayPosture, "-AppleInterfaceStyle", "Dark"]
-        app.launch()
-        XCTAssertTrue(app.waitForOverlayPresented(), "Posture overlay should be fully loaded in dark mode.")
+        launchDarkModePostureOverlay()
 
         let doneButton = app.buttons["overlay.doneButton"]
         XCTAssertTrue(
