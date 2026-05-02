@@ -610,7 +610,7 @@ private extension SettingsFlowTests {
         }
         for _ in 0..<maxSwipes {
             app.swipeUp()
-            if element.waitForExistence(timeout: 1.5) {
+            if element.exists || element.waitForExistence(timeout: 0.6) {
                 return
             }
         }

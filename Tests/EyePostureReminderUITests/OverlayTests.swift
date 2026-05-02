@@ -111,7 +111,7 @@ final class OverlayPresentationTests: XCTestCase {
     func test_overlay_onShowOverlayEyes_doneButtonVisible() throws {
         let doneButton = app.buttons["overlay.doneButton"]
         XCTAssertTrue(
-            doneButton.waitForHittable(timeout: 5),
+            doneButton.waitForHittable(timeout: 3),
             "Done button must be visible on the overlay. " +
             "OverlayView must have .accessibilityIdentifier(\"overlay.doneButton\") " +
             "on the primary Done PrimaryButton."
@@ -136,7 +136,7 @@ final class OverlayPresentationTests: XCTestCase {
     /// Taps the Done button and verifies the overlay dismisses (Home screen returns).
     func test_overlay_doneButton_dismissesOverlay() throws {
         let doneButton = app.buttons["overlay.doneButton"]
-        XCTAssertTrue(doneButton.tapWhenHittable(timeout: 5))
+        XCTAssertTrue(doneButton.tapWhenHittable(timeout: 3))
 
         // Wait for the Home screen to reappear — the positive dismiss signal.
         // The overlay dismiss animation takes ~0.3s + asyncAfter delay, so the
@@ -167,19 +167,19 @@ final class OverlayPresentationTests: XCTestCase {
     func test_overlay_settingsLink_opensSettingsWithSnoozeOptions() throws {
         let settingsLink = app.buttons["overlay.settingsLink"]
         XCTAssertTrue(
-            settingsLink.tapWhenHittable(timeout: 5),
+            settingsLink.tapWhenHittable(timeout: 3),
             "Settings link must be visible on the overlay."
         )
 
         let settingsNav = app.navigationBars["Settings"]
         XCTAssertTrue(
-            settingsNav.waitForExistence(timeout: 5),
+            settingsNav.waitForExistence(timeout: 3),
             "Tapping overlay Settings should open the Settings sheet."
         )
 
         let snoozeButton = app.buttons["settings.snooze.5min"]
         XCTAssertTrue(
-            snoozeButton.waitForExistence(timeout: 5),
+            snoozeButton.waitForExistence(timeout: 3),
             "Settings opened from the overlay must expose snooze controls."
         )
     }
@@ -220,7 +220,7 @@ final class OverlayPostureTests: XCTestCase {
     func test_overlay_postureVariant_doneButtonVisible() throws {
         let doneButton = app.buttons["overlay.doneButton"]
         XCTAssertTrue(
-            doneButton.waitForHittable(timeout: 5),
+            doneButton.waitForHittable(timeout: 3),
             "Done button must be visible on the posture overlay."
         )
     }
@@ -241,11 +241,11 @@ final class OverlayPostureTests: XCTestCase {
     /// Taps Done on the posture overlay and verifies it dismisses.
     func test_overlay_postureVariant_doneButtonDismissesOverlay() throws {
         let doneButton = app.buttons["overlay.doneButton"]
-        XCTAssertTrue(doneButton.tapWhenHittable(timeout: 5))
+        XCTAssertTrue(doneButton.tapWhenHittable(timeout: 3))
 
         let dismissButton = app.buttons["overlay.dismissButton"]
         XCTAssertFalse(
-            dismissButton.waitForExistence(timeout: 5),
+            dismissButton.waitForExistence(timeout: 3),
             "After tapping Done on posture overlay, the overlay should be dismissed."
         )
     }
