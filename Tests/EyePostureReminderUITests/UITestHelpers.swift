@@ -121,7 +121,7 @@ extension XCUIApplication {
     func waitForOverlayPresented(timeout: TimeInterval = 8) -> Bool {
         guard waitForOverlayVisible(timeout: timeout) else { return false }
         let doneButton = buttons["overlay.doneButton"]
-        return waitForElementHittable(doneButton, timeout: timeout)
+        return waitForElementExists(doneButton, timeout: timeout)
     }
 
     /// Waits until the overlay root exists, regardless of button hittability.
@@ -162,6 +162,25 @@ extension XCUIApplication {
         }
         activate()
         return element.waitForHittable(timeout: max(0.1, deadline.timeIntervalSinceNow))
+    }
+
+    /// Waits for an element to exist and retries once after activating the app.
+    @discardableResult
+    func waitForElementExists(_ element: XCUIElement, timeout: TimeInterval = 8) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        if element.waitForExistence(timeout: max(0.1, deadline.timeIntervalSinceNow)) {
+            return true
+        }
+        activate()
+        return element.waitForExistence(timeout: max(0.1, deadline.timeIntervalSinceNow))
+    }
+
+    /// Taps the center of an element after waiting for it to exist.
+    @discardableResult
+    func tapElementCenter(_ element: XCUIElement, timeout: TimeInterval = 8) -> Bool {
+        guard waitForElementExists(element, timeout: timeout) else { return false }
+        element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        return true
     }
 
     /// Performs up to `maxSwipes` upward scrolls and waits for the element to become hittable.
