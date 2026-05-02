@@ -33,6 +33,12 @@ enum TestLaunchArguments {
 // MARK: - XCUIApplication + Test Helpers
 
 extension XCUIApplication {
+    private func launchFresh() {
+        if state != .notRunning {
+            terminate()
+        }
+    }
+
     private func appendDarkModeArgumentIfNeeded(_ darkMode: Bool) {
         guard darkMode else { return }
         launchArguments += [TestLaunchArguments.appleInterfaceStyle, TestLaunchArguments.darkAppearance]
@@ -41,6 +47,7 @@ extension XCUIApplication {
     /// Appends `--skip-onboarding` and launches the app.
     /// Use in `setUpWithError()` for tests that start from the Home screen.
     func launchWithSkippedOnboarding(darkMode: Bool = false) {
+        launchFresh()
         launchArguments += [TestLaunchArguments.skipOnboarding]
         appendDarkModeArgumentIfNeeded(darkMode)
         launch()
@@ -49,6 +56,7 @@ extension XCUIApplication {
     /// Appends `--reset-onboarding` and launches the app.
     /// Use in `setUpWithError()` for tests that verify the onboarding flow from scratch.
     func launchWithOnboarding(darkMode: Bool = false) {
+        launchFresh()
         launchArguments += [TestLaunchArguments.resetOnboarding]
         appendDarkModeArgumentIfNeeded(darkMode)
         launch()
@@ -57,6 +65,7 @@ extension XCUIApplication {
     /// Appends `--show-overlay-eyes` and launches the app.
     /// Use in tests that verify the eye break overlay UI.
     func launchWithEyeOverlay(darkMode: Bool = false) {
+        launchFresh()
         launchArguments += [TestLaunchArguments.showOverlayEyes]
         appendDarkModeArgumentIfNeeded(darkMode)
         launch()
@@ -65,6 +74,7 @@ extension XCUIApplication {
     /// Appends `--show-overlay-posture` and launches the app.
     /// Use in tests that verify the posture check overlay UI.
     func launchWithPostureOverlay(darkMode: Bool = false) {
+        launchFresh()
         launchArguments += [TestLaunchArguments.showOverlayPosture]
         appendDarkModeArgumentIfNeeded(darkMode)
         launch()
@@ -76,6 +86,7 @@ extension XCUIApplication {
     /// `TrueInterruptSetupPill` (banner dismissed). The simulator's real FamilyControls status
     /// is `.unavailable`, so this argument is required to reach either element (#399).
     func launchWithTrueInterruptPending(darkMode: Bool = false) {
+        launchFresh()
         launchArguments += [
             TestLaunchArguments.skipOnboarding,
             TestLaunchArguments.simulateScreenTimeNotDetermined
