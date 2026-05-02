@@ -98,9 +98,14 @@ run_xcodebuild() {
   rc=0
 
   if command -v xcpretty &>/dev/null; then
-    # `|| true` prevents set -e from aborting before PIPESTATUS is captured.
-    xcodebuild "$@" "${XCODE_FLAGS[@]}" | xcpretty || true
+    # Disable pipefail temporarily: without it the pipeline exits with xcpretty's
+    # status (typically 0), so set -e will not abort early, and PIPESTATUS[0]
+    # still holds xcodebuild's real exit code.  Using `|| true` instead would
+    # reset PIPESTATUS to (0) before we can read it — that was the false-green bug.
+    set +o pipefail
+    xcodebuild "$@" "${XCODE_FLAGS[@]}" | xcpretty
     rc=${PIPESTATUS[0]}
+    set -o pipefail
   else
     xcodebuild "$@" "${XCODE_FLAGS[@]}" || rc=$?
   fi
@@ -286,7 +291,11 @@ if failures:
     print(f"⚠ xcresult contains {len(failures)} testFailureSummaries despite successful command exit")
     sys.exit(1)
 
-if status and status not in {"succeeded", "success"}:
+if not status:
+    print("⚠ xcresult action status is missing — result bundle may be incomplete or corrupt")
+    sys.exit(1)
+
+if status not in {"succeeded", "success"}:
     print(f"⚠ xcresult action status is '{status}' (expected succeeded)")
     sys.exit(1)
 
