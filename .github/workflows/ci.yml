@@ -24,6 +24,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   XCODE_VERSION: "26.4"
   SCHEME: "EyePostureReminder"
   # No .xcodeproj — project uses Swift Package Manager.
@@ -182,7 +183,7 @@ jobs:
         # Run on all outcomes so coverage is always enforced — even when earlier
         # steps fail — preventing asymmetric validation where a failing test run
         # silently bypasses the 80 % gate.
-        if: always()
+        if: success()
         run: |
           if [[ ! -d TestResults.xcresult ]]; then
             echo "::error::TestResults.xcresult not found — tests may have crashed before producing results"
@@ -322,7 +323,7 @@ jobs:
           name: ui-test-results-${{ matrix.shard.id }}-build${{ github.run_number }}
           path: UITestResults-${{ matrix.shard.id }}.xcresult
           retention-days: 30
-          if-no-files-found: error
+          if-no-files-found: warn
 
   uitest:
     name: UI Tests

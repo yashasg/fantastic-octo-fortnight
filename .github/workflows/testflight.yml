@@ -39,6 +39,7 @@ permissions:
   checks: read
 
 env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   XCODE_VERSION: "26.4"
   SCHEME: "EyePostureReminder"
   DERIVED_DATA_PATH: "${{ github.workspace }}/DerivedData"
