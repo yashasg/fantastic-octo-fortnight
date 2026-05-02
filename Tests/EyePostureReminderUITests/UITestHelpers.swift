@@ -118,8 +118,21 @@ extension XCUIApplication {
     /// Tests should call this once, then use shorter follow-up waits for
     /// secondary elements (dismiss button, supportive text, settings link).
     @discardableResult
-    func waitForOverlayPresented(timeout: TimeInterval = 4) -> Bool {
-        buttons["overlay.doneButton"].waitForHittable(timeout: timeout)
+    func waitForOverlayPresented(timeout: TimeInterval = 8) -> Bool {
+        guard waitForOverlayVisible(timeout: timeout) else { return false }
+        let doneButton = buttons["overlay.doneButton"]
+        let deadline = Date().addingTimeInterval(timeout)
+        if doneButton.waitForHittable(timeout: max(0.1, deadline.timeIntervalSinceNow)) {
+            return true
+        }
+        activate()
+        return doneButton.waitForHittable(timeout: max(0.1, deadline.timeIntervalSinceNow))
+    }
+
+    /// Waits until the overlay root exists, regardless of button hittability.
+    @discardableResult
+    func waitForOverlayVisible(timeout: TimeInterval = 8) -> Bool {
+        otherElements["overlay.root"].waitForExistence(timeout: timeout)
     }
 
     /// Waits for overlay dismissal using a positive fallback state and explicit

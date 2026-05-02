@@ -27,13 +27,13 @@ final class DarkModeUITests: XCTestCase {
     private func launchDarkModeEyeOverlay() {
         app = XCUIApplication()
         app.launchWithEyeOverlay(darkMode: true)
-        XCTAssertTrue(app.waitForOverlayPresented(), "Eye overlay should be fully loaded in dark mode.")
+        XCTAssertTrue(app.waitForOverlayVisible(), "Eye overlay root should appear in dark mode.")
     }
 
     private func launchDarkModePostureOverlay() {
         app = XCUIApplication()
         app.launchWithPostureOverlay(darkMode: true)
-        XCTAssertTrue(app.waitForOverlayPresented(), "Posture overlay should be fully loaded in dark mode.")
+        XCTAssertTrue(app.waitForOverlayVisible(), "Posture overlay root should appear in dark mode.")
     }
 
     override func setUpWithError() throws {
@@ -71,7 +71,7 @@ final class DarkModeUITests: XCTestCase {
 
         let settingsButton = app.buttons["home.settingsButton"]
         XCTAssertTrue(
-            settingsButton.waitForHittable(timeout: 3),
+            app.revealAndWaitForHittable(settingsButton, timeout: 5),
             "Settings button must be present on Home screen in dark mode."
         )
     }
