@@ -389,3 +389,7 @@ jobs:
     name: UI Tests
     runs-on: macos-15
     needs: uitest-shard
+    timeout-minutes: 10
+    steps:
+      - name: UI test shards passed
+        run: echo "All UI test shards passed."
