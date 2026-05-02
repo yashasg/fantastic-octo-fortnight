@@ -89,7 +89,7 @@ final class DarkModeUITests: XCTestCase {
         app = XCUIApplication()
         app.launchArguments += [TestLaunchArguments.showOverlayEyes, "-AppleInterfaceStyle", "Dark"]
         app.launch()
-        XCTAssertTrue(app.waitForOverlayReady(), "Eye overlay should be fully loaded in dark mode.")
+        XCTAssertTrue(app.waitForOverlayPresented(), "Eye overlay should be fully loaded in dark mode.")
 
         let doneButton = app.buttons["overlay.doneButton"]
         XCTAssertTrue(
@@ -99,13 +99,13 @@ final class DarkModeUITests: XCTestCase {
 
         let dismissButton = app.buttons["overlay.dismissButton"]
         XCTAssertTrue(
-            dismissButton.waitForExistence(timeout: 3),
+            dismissButton.waitForExistence(timeout: 1.5),
             "Dismiss (×) button must be visible on the overlay in dark mode."
         )
 
         let supportiveText = app.staticTexts["overlay.supportiveText"]
         XCTAssertTrue(
-            supportiveText.waitForExistence(timeout: 3),
+            supportiveText.waitForExistence(timeout: 1.5),
             "Supportive text must be visible on the overlay in dark mode."
         )
     }
@@ -117,7 +117,7 @@ final class DarkModeUITests: XCTestCase {
         app = XCUIApplication()
         app.launchArguments += [TestLaunchArguments.showOverlayEyes, "-AppleInterfaceStyle", "Dark"]
         app.launch()
-        XCTAssertTrue(app.waitForOverlayReady(), "Eye overlay should be fully loaded in dark mode.")
+        XCTAssertTrue(app.waitForOverlayPresented(), "Eye overlay should be fully loaded in dark mode.")
 
         let doneButton = app.buttons["overlay.doneButton"]
         XCTAssertTrue(doneButton.tapWhenHittable(timeout: 3))
@@ -157,7 +157,7 @@ final class DarkModeUITests: XCTestCase {
         app = XCUIApplication()
         app.launchArguments += [TestLaunchArguments.showOverlayPosture, "-AppleInterfaceStyle", "Dark"]
         app.launch()
-        XCTAssertTrue(app.waitForOverlayReady(), "Posture overlay should be fully loaded in dark mode.")
+        XCTAssertTrue(app.waitForOverlayPresented(), "Posture overlay should be fully loaded in dark mode.")
 
         let doneButton = app.buttons["overlay.doneButton"]
         XCTAssertTrue(
@@ -167,7 +167,7 @@ final class DarkModeUITests: XCTestCase {
 
         let supportiveText = app.staticTexts["overlay.supportiveText"]
         XCTAssertTrue(
-            supportiveText.waitForExistence(timeout: 3),
+            supportiveText.waitForExistence(timeout: 1.5),
             "Supportive text must be visible on the posture overlay in dark mode."
         )
     }

@@ -83,24 +83,23 @@ extension XCUIApplication {
         staticTexts["home.title"].waitForExistence(timeout: timeout)
     }
 
-    /// Waits until the overlay's primary controls and supportive text are queryable.
+    /// Waits for a single "overlay fully presented" anchor.
     ///
-    /// This reduces flakes where one element is queried before the accessibility tree
-    /// has fully stabilized after launch.
+    /// `overlay.doneButton` being hittable is the strongest stable signal that:
+    /// 1) the overlay exists, and
+    /// 2) entrance animation/layout has progressed enough for user interaction.
+    ///
+    /// Tests should call this once, then use shorter follow-up waits for secondary
+    /// elements (dismiss button, supportive text, settings link).
     @discardableResult
-    func waitForOverlayReady(timeout: TimeInterval = 3) -> Bool {
-        let doneButton = buttons["overlay.doneButton"]
-        let dismissButton = buttons["overlay.dismissButton"]
-        let supportiveText = staticTexts["overlay.supportiveText"]
-        let deadline = Date().addingTimeInterval(timeout)
+    func waitForOverlayPresented(timeout: TimeInterval = 2.5) -> Bool {
+        buttons["overlay.doneButton"].waitForHittable(timeout: timeout)
+    }
 
-        func remaining() -> TimeInterval {
-            max(0.1, deadline.timeIntervalSinceNow)
-        }
-
-        guard doneButton.waitForHittable(timeout: remaining()) else { return false }
-        guard dismissButton.waitForHittable(timeout: remaining()) else { return false }
-        return supportiveText.waitForExistence(timeout: remaining())
+    /// Backward-compatible alias kept for existing tests.
+    @discardableResult
+    func waitForOverlayReady(timeout: TimeInterval = 2.5) -> Bool {
+        waitForOverlayPresented(timeout: timeout)
     }
 }
 

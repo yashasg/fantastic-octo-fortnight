@@ -85,7 +85,7 @@ final class OverlayPresentationTests: XCTestCase {
         continueAfterFailure = false
         app = XCUIApplication()
         app.launchWithEyeOverlay()
-        XCTAssertTrue(app.waitForOverlayReady(), "Overlay should be fully loaded before assertions.")
+        XCTAssertTrue(app.waitForOverlayPresented(), "Overlay should be fully loaded before assertions.")
     }
 
     override func tearDownWithError() throws {
@@ -98,7 +98,7 @@ final class OverlayPresentationTests: XCTestCase {
     func test_overlay_onShowOverlayEyes_dismissButtonVisible() throws {
         let dismissButton = app.buttons["overlay.dismissButton"]
         XCTAssertTrue(
-            dismissButton.waitForExistence(timeout: 3),
+            dismissButton.waitForExistence(timeout: 1.5),
             "Overlay dismiss button must be visible when --show-overlay-eyes is used. " +
             "Check that AppDelegate stores 'eyes' in AppStorageKey.uiTestOverlayType and " +
             "EyePostureReminderApp calls coordinator.handleNotification(for:) in its .task."
@@ -124,7 +124,7 @@ final class OverlayPresentationTests: XCTestCase {
     func test_overlay_onShowOverlayEyes_supportiveTextVisible() throws {
         let supportiveText = app.staticTexts["overlay.supportiveText"]
         XCTAssertTrue(
-            supportiveText.waitForExistence(timeout: 3),
+            supportiveText.waitForExistence(timeout: 1.5),
             "Overlay supportive text must be visible. " +
             "OverlayView must have .accessibilityIdentifier(\"overlay.supportiveText\") " +
             "on the subtitle Text element."
@@ -154,7 +154,7 @@ final class OverlayPresentationTests: XCTestCase {
     func test_overlay_onShowOverlayEyes_settingsLinkVisible() throws {
         let settingsLink = app.buttons["overlay.settingsLink"]
         XCTAssertTrue(
-            settingsLink.waitForExistence(timeout: 3),
+            settingsLink.waitForExistence(timeout: 1.5),
             "Settings link must be visible on the overlay. " +
             "OverlayView must have .accessibilityIdentifier(\"overlay.settingsLink\") " +
             "on the secondary Settings button."
@@ -196,7 +196,7 @@ final class OverlayPostureTests: XCTestCase {
         continueAfterFailure = false
         app = XCUIApplication()
         app.launchWithPostureOverlay()
-        XCTAssertTrue(app.waitForOverlayReady(), "Posture overlay should be fully loaded before assertions.")
+        XCTAssertTrue(app.waitForOverlayPresented(), "Posture overlay should be fully loaded before assertions.")
     }
 
     override func tearDownWithError() throws {
@@ -209,7 +209,7 @@ final class OverlayPostureTests: XCTestCase {
     func test_overlay_postureVariant_dismissButtonVisible() throws {
         let dismissButton = app.buttons["overlay.dismissButton"]
         XCTAssertTrue(
-            dismissButton.waitForExistence(timeout: 3),
+            dismissButton.waitForExistence(timeout: 1.5),
             "Overlay dismiss button must be visible when --show-overlay-posture is used."
         )
     }
@@ -231,7 +231,7 @@ final class OverlayPostureTests: XCTestCase {
     func test_overlay_postureVariant_supportiveTextVisible() throws {
         let supportiveText = app.staticTexts["overlay.supportiveText"]
         XCTAssertTrue(
-            supportiveText.waitForExistence(timeout: 3),
+            supportiveText.waitForExistence(timeout: 1.5),
             "Supportive text must be visible on the posture overlay."
         )
     }
