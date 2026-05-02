@@ -26,7 +26,7 @@ import UIKit
 /// All methods must be called on the main thread (owned by `@MainActor AppCoordinator`).
 @MainActor
 protocol ScreenTimeTracking: ServiceLifecycle {
-    var onThresholdReached: ((ReminderType) -> Void)? { get set }
+    var onThresholdReached: (@MainActor (ReminderType) -> Void)? { get set }
     func setThreshold(_ interval: TimeInterval, for type: ReminderType)
     func disableTracking(for type: ReminderType)
     func pause(for type: ReminderType)
@@ -42,7 +42,7 @@ protocol ScreenTimeTracking: ServiceLifecycle {
 @MainActor
 final class ScreenTimeTracker: ScreenTimeTracking {
 
-    typealias ThresholdCallback = (ReminderType) -> Void
+    typealias ThresholdCallback = @MainActor (ReminderType) -> Void
 
     // MARK: - Configuration Constants
 
