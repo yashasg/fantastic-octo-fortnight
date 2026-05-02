@@ -57,7 +57,7 @@ struct ReminderRowView: View {
                         Text(formatInterval(seconds)).tag(seconds)
                     }
                 }
-                .onChange(of: interval) { _, _ in onChanged() }
+                .onChange(of: interval) { _ in onChanged() }
                 .accessibilityHint(
                     String(
                         format: String(localized: "settings.reminder.intervalPicker.hint", bundle: .module),
@@ -74,7 +74,7 @@ struct ReminderRowView: View {
                         Text(formatDuration(seconds)).tag(seconds)
                     }
                 }
-                .onChange(of: breakDuration) { _, _ in onChanged() }
+                .onChange(of: breakDuration) { _ in onChanged() }
                 .accessibilityHint(
                     String(
                         format: String(localized: "settings.reminder.durationPicker.hint", bundle: .module),
@@ -86,7 +86,7 @@ struct ReminderRowView: View {
         }
         .animation(shouldReduceMotion ? nil : AppAnimation.settingsExpandCurve, value: isEnabled)
         // Announce picker visibility change to VoiceOver when the reminder is toggled (#432).
-        .onChange(of: isEnabled) { _, newValue in
+        .onChange(of: isEnabled) { newValue in
             let message = newValue
                 ? String(localized: "settings.reminder.pickers.visible.announcement", bundle: .module)
                 : String(localized: "settings.reminder.pickers.hidden.announcement", bundle: .module)

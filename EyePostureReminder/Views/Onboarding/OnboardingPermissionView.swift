@@ -6,6 +6,7 @@
 
 import SwiftUI
 import UserNotifications
+import os
 
 struct OnboardingPermissionView: View {
     let onNext: () -> Void
