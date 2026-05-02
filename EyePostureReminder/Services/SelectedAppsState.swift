@@ -18,6 +18,7 @@
 
 import Combine
 import Foundation
+import os
 import ScreenTimeExtensionShared
 
 /// App-facing name for the shared App Group selection payload.
@@ -92,7 +93,7 @@ final class SelectedAppsState: ObservableObject {
             initialMetadata = metadata
             readSucceeded = true
         case .failure(let error):
-            Logger.services.error(
+            Logger.settings.error(
                 "SelectedAppsState: failed to read App Group selection — True Interrupt state preserved: \(error.localizedDescription, privacy: .public)"
             )
             initialMetadata = .empty
