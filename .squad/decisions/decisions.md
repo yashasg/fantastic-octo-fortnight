@@ -4758,3 +4758,102 @@ Screen Time Shield requires three extension targets in addition to the main app:
 2. DeviceActivitySchedule: DateComponents-based window or duration from now?
 3. ShieldActionExtension required in M3 or omit "Ask for More Time" button?
 
+
+---
+
+# Basher Decision: Keep Focus Status entitlement in Distribution profile
+
+- **Date:** 2026-04-30
+- **Owner:** Basher
+- **Related issue:** #354
+
+## Context
+Focus-mode pause behavior worked in debug/development builds but failed in TestFlight/App Store because the distribution entitlements file omitted `com.apple.developer.focus-status`.
+
+## Decision
+Add `com.apple.developer.focus-status` to `EyePostureReminder.Distribution.entitlements` and enforce it with a unit test (`DistributionEntitlementsTests`) so future edits cannot silently remove it.
+
+## Consequence
+Distribution builds now preserve Focus-status capability parity with development builds, and CI will fail if the entitlement is accidentally removed.
+
+---
+
+# Linus Decision: Overlay readiness anchor for UI tests
+
+- **Date:** 2026-05-02
+- **Owner:** Linus (iOS UI)
+- **Context:** Overlay UI tests were flaky when readiness depended only on `overlay.doneButton` hittability during launch/animation transitions.
+- **Decision:** Add a dedicated overlay root accessibility identifier (`overlay.root`) and update UI test readiness helper to gate on root existence first, then button hittability with remaining timeout budget.
+- **Why:** This reduces race sensitivity without inflating global timeouts and keeps wait logic deterministic across normal and dark-mode overlay flows.
+
+---
+
+# Livingston Decision: Deterministic Overlay UI Synchronization
+
+## Decision
+Use explicit UI-state anchors for overlay tests instead of negative existence waits on transient elements.
+
+## Why
+`overlay.dismissButton` can remain in the accessibility tree while hidden or during dismissal transitions. `XCTAssertFalse(waitForExistence(...))` introduced race-prone false failures and unnecessary timeout cost.
+
+## Applied Pattern
+- Presentation anchor: `overlay.doneButton` must become hittable.
+- Dismissal anchor: `home.title` appears, then `overlay.root` becomes non-existent.
+- Normal-launch guard: assert overlay controls are **not hittable** (hidden-mounted safe), not strictly non-existent.
+- Keep retries bounded and evidence-based; no broad sleeps added.
+
+## Impact
+Stabilized overlay/dark-mode tests and reduced focused shard runtime in local verification.
+
+---
+
+# Saul Review: UI Shards / Overlay Sync / Gate-Time
+
+Verdict: **REJECT**
+
+Blocking issue:
+1. `Tests/EyePostureReminderUITests/OverlayTests.swift` now uses `waitForNotHittable` for normal-launch overlay absence assertions (`test_overlay_onNormalLaunch_notPresent`, `test_overlay_onNormalLaunch_homeScreenIsVisible`).
+   - Why blocking: `waitForNotHittable` can succeed immediately before a regressed overlay becomes hittable, creating a false-green path exactly in the anti-false-green scope.
+   - Required fix: use a disappearance/non-existence assertion tied to `overlay.root` (or keep `waitForExistence == false`) over the full observation window, rather than a single `hittable == false` predicate.
+
+Non-blocking notes:
+- `scripts/build.sh` correctly addresses PIPESTATUS false-green and adds xcresult pass/fail validation.
+- Overlay/dark-mode synchronization improvements (`waitForOverlayPresented`, shared launch helpers, root identifier) are directionally good.
+
+---
+
+# Virgil Decision: Parallel UI Test Shards in CI
+
+## Decision
+Adopt class-based UI-test sharding in CI using a GitHub Actions matrix job (`uitest-shard`) and keep a lightweight aggregate `UI Tests` gate job.
+
+## Why
+- The previous single UI-test step was long-running and serialized.
+- Class-level shards are deterministic and map cleanly to existing suite ownership/areas.
+- Maintaining the aggregate `UI Tests` check preserves compatibility with downstream release gating that expects a stable check name.
+
+## Implementation Convention
+1. CI UI tests run as matrix shards using `./scripts/build.sh uitest` with repeated `--only-testing` filters.
+2. `build.sh uitest` defaults to full-suite behavior when no filters are passed (local DX unchanged).
+3. Each shard writes a unique result bundle path via `--result-bundle-path` and uploads a uniquely named artifact.
+4. Keep build-for-testing + test-without-building for UITests; do not collapse back to single-pass `xcodebuild test` due to known `TEST_TARGET_NAME` ambiguity.
+
+## Initial Shard Layout
+- `onboarding`: `EyePostureReminderUITests/OnboardingFlowTests`
+- `home`: `EyePostureReminderUITests/HomeScreenTests`
+- `settings`: `EyePostureReminderUITests/SettingsFlowTests`
+- `overlays-darkmode`: `EyePostureReminderUITests/OverlayTests`, `EyePostureReminderUITests/OverlayPresentationTests`, `EyePostureReminderUITests/OverlayPostureTests`, `EyePostureReminderUITests/DarkModeUITests`
+
+## Follow-up
+Rebalance shards by timing data if one shard becomes the long pole; keep naming and artifact conventions unchanged.
+
+---
+
+# Virgil Decision: UI shard false-green guard
+
+- **Date:** 2026-05-02
+- **Decision:** `scripts/build.sh uitest` now validates each successful `xcodebuild test-without-building` attempt against the produced `.xcresult` before declaring success.
+- **Why:** We observed shard behavior (notably Overlays + Dark Mode) where command output/exit could appear green while result-bundle truth still indicates failure. Exit-code-only gating is insufficient.
+- **Implementation:** Added `xcresult_attempt_passed()` and wired retry loop so success requires both command exit `0` and xcresult status/failure-summary consistency.
+- **Impact:** Eliminates false-green UI shard outcomes without inflating global timeout budgets; targeted retry behavior is preserved.
+
