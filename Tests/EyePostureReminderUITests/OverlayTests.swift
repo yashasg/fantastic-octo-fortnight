@@ -49,9 +49,13 @@ final class OverlayTests: XCTestCase {
     /// Verifies the overlay is NOT visible on normal app launch (no pending reminders).
     /// The overlay is only shown when a reminder fires via notification or fallback timer.
     func test_overlay_onNormalLaunch_notPresent() throws {
+        XCTAssertTrue(
+            app.waitForHomeScreenReady(timeout: 3),
+            "Home screen should be ready before asserting overlay absence."
+        )
         let dismissButton = app.buttons["overlay.dismissButton"]
-        XCTAssertFalse(
-            dismissButton.waitForExistence(timeout: 2),
+        XCTAssertTrue(
+            dismissButton.waitForNotHittable(timeout: 1.5),
             "Overlay dismiss button should not be visible on normal app launch without a pending reminder."
         )
     }
@@ -60,15 +64,14 @@ final class OverlayTests: XCTestCase {
 
     /// Verifies the Home screen is in the foreground (not an overlay) on launch.
     func test_overlay_onNormalLaunch_homeScreenIsVisible() throws {
-        let homeNavBar = app.navigationBars.firstMatch
         XCTAssertTrue(
-            homeNavBar.waitForExistence(timeout: 3),
+            app.waitForHomeScreenReady(timeout: 3),
             "Home screen navigation bar should be visible on launch, not the overlay."
         )
 
         let dismissButton = app.buttons["overlay.dismissButton"]
-        XCTAssertFalse(
-            dismissButton.waitForExistence(timeout: 2),
+        XCTAssertTrue(
+            dismissButton.waitForNotHittable(timeout: 1.5),
             "Overlay should not be covering the Home screen on normal launch."
         )
     }
@@ -243,9 +246,8 @@ final class OverlayPostureTests: XCTestCase {
         let doneButton = app.buttons["overlay.doneButton"]
         XCTAssertTrue(doneButton.tapWhenHittable(timeout: 3))
 
-        let dismissButton = app.buttons["overlay.dismissButton"]
-        XCTAssertFalse(
-            dismissButton.waitForExistence(timeout: 3),
+        XCTAssertTrue(
+            app.waitForOverlayDismissed(timeout: 3),
             "After tapping Done on posture overlay, the overlay should be dismissed."
         )
     }

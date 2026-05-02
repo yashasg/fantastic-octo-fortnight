@@ -236,3 +236,7 @@ Orchestration log recorded at 2026-04-30T09:27:10Z. Root cause diagnosis documen
   - `HomeScreenTests.test_homeScreen_trueInterruptBanner_exists`
   - `HomeScreenTests.test_homeScreen_trueInterruptSetupPill_exists`
   - `OnboardingFlowTests.test_onboarding_setupScreen_customizeButtonExists`
+
+## Learnings
+
+- 2026-05-02: Overlay UI-test flakiness was primarily synchronization drift, not animation duration. Using deterministic anchors (`home.title`, `overlay.doneButton` hittable, `overlay.root` disappearance) removed false negatives from hidden-but-mounted overlay elements and cut focused overlay/dark-mode shard time from 278s (5 failures) to 144s (0 failures) on identical filtered selection.

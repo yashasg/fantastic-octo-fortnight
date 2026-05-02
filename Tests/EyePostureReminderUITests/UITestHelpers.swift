@@ -97,30 +97,17 @@ extension XCUIApplication {
         staticTexts["home.title"].waitForExistence(timeout: timeout)
     }
 
-    /// Waits for a single "overlay fully presented" anchor using a two-phase,
-    /// independent-deadline strategy that eliminates the time-budget bleed race.
+    /// Waits for a single "overlay fully presented" anchor.
     ///
-    /// **Why two phases?**
-    /// The overlay trigger chain is:
-    ///   `launch → scheduleReminders() async → handleNotification
-    ///    → UIWindow.makeKeyAndVisible → SwiftUI render → onAppear
-    ///    → 0.5 s entrance animation`
-    /// Under CI load this chain can consume most of a shared 2.5 s budget,
-    /// leaving the entrance-animation wait starved (< 0.1 s) and the test flaky.
-    ///
-    /// Phase 1 (`timeout`): wait for `overlay.root` existence — accounts for
-    ///   the async launch + scheduleReminders chain.
-    /// Phase 2 (fixed 2.0 s fresh budget): wait for `overlay.doneButton`
-    ///   hittability — accounts for the 0.5 s entrance animation with 4× margin,
-    ///   independent of how long Phase 1 took.
+    /// `overlay.doneButton` hittability is the most deterministic signal that:
+    /// 1) the overlay exists, and
+    /// 2) the entrance animation has completed enough for user interaction.
     ///
     /// Tests should call this once, then use shorter follow-up waits for
     /// secondary elements (dismiss button, supportive text, settings link).
     @discardableResult
-    func waitForOverlayPresented(timeout: TimeInterval = 5) -> Bool {
-        guard otherElements["overlay.root"].waitForExistence(timeout: timeout) else { return false }
-        // Fresh independent budget: entrance animation is ~0.5 s; 2.0 s gives 4× margin.
-        return buttons["overlay.doneButton"].waitForHittable(timeout: 2.0)
+    func waitForOverlayPresented(timeout: TimeInterval = 4) -> Bool {
+        buttons["overlay.doneButton"].waitForHittable(timeout: timeout)
     }
 
     /// Waits for overlay dismissal using a positive fallback state and explicit
@@ -136,7 +123,7 @@ extension XCUIApplication {
 
     /// Backward-compatible alias kept for existing tests.
     @discardableResult
-    func waitForOverlayReady(timeout: TimeInterval = 5) -> Bool {
+    func waitForOverlayReady(timeout: TimeInterval = 4) -> Bool {
         waitForOverlayPresented(timeout: timeout)
     }
 }
