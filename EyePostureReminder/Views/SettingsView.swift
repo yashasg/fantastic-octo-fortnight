@@ -399,7 +399,7 @@ struct SettingsView: View {
             await coordinator.refreshAuthStatus()
         }
         // Announce master-toggle state changes to VoiceOver (#287).
-        .onChange(of: settings.globalEnabled) { _, newValue in
+        .onChangeCompat(of: settings.globalEnabled) { newValue in
             let message = newValue
                 ? String(localized: "home.status.active", bundle: .module)
                 : String(localized: "home.status.paused", bundle: .module)
@@ -407,7 +407,7 @@ struct SettingsView: View {
             showSavedFeedback()
         }
         // Announce snooze activate/cancel to VoiceOver (#406).
-        .onChange(of: settings.snoozedUntil) { _, newValue in
+        .onChangeCompat(of: settings.snoozedUntil) { newValue in
             let message: String = newValue != nil
                 ? String(localized: "settings.snooze.activated.announcement", bundle: .module)
                 : String(localized: "settings.snooze.cancelled.announcement", bundle: .module)
@@ -417,7 +417,7 @@ struct SettingsView: View {
         // Analytics instrumentation for per-reminder settings (#297, #386).
         // SwiftUI mutates the store before onChange fires, so old values are captured here.
         // Note: old/new values are logged with `privacy: .private` (redacted in Console).
-        .onChange(of: settings.eyesEnabled) { _, newValue in
+        .onChangeCompat(of: settings.eyesEnabled) { newValue in
             viewModel?.notifySettingChanged(
                 .eyesEnabled,
                 old: String(!newValue),
@@ -425,7 +425,7 @@ struct SettingsView: View {
             )
             showSavedFeedback()
         }
-        .onChange(of: settings.eyesInterval) { _, newValue in
+        .onChangeCompat(of: settings.eyesInterval) { newValue in
             viewModel?.notifySettingChanged(
                 .eyesInterval,
                 old: String(prevEyesInterval),
@@ -434,7 +434,7 @@ struct SettingsView: View {
             prevEyesInterval = newValue
             showSavedFeedback()
         }
-        .onChange(of: settings.eyesBreakDuration) { _, newValue in
+        .onChangeCompat(of: settings.eyesBreakDuration) { newValue in
             viewModel?.notifySettingChanged(
                 .eyesBreakDuration,
                 old: String(prevEyesBreakDuration),
@@ -443,7 +443,7 @@ struct SettingsView: View {
             prevEyesBreakDuration = newValue
             showSavedFeedback()
         }
-        .onChange(of: settings.postureEnabled) { _, newValue in
+        .onChangeCompat(of: settings.postureEnabled) { newValue in
             viewModel?.notifySettingChanged(
                 .postureEnabled,
                 old: String(!newValue),
@@ -451,7 +451,7 @@ struct SettingsView: View {
             )
             showSavedFeedback()
         }
-        .onChange(of: settings.postureInterval) { _, newValue in
+        .onChangeCompat(of: settings.postureInterval) { newValue in
             viewModel?.notifySettingChanged(
                 .postureInterval,
                 old: String(prevPostureInterval),
@@ -460,7 +460,7 @@ struct SettingsView: View {
             prevPostureInterval = newValue
             showSavedFeedback()
         }
-        .onChange(of: settings.postureBreakDuration) { _, newValue in
+        .onChangeCompat(of: settings.postureBreakDuration) { newValue in
             viewModel?.notifySettingChanged(
                 .postureBreakDuration,
                 old: String(prevPostureBreakDuration),
@@ -470,11 +470,11 @@ struct SettingsView: View {
             showSavedFeedback()
         }
         // #434: Surface saved banner for Smart Pause toggles.
-        .onChange(of: settings.pauseDuringFocus) { showSavedFeedback() }
-        .onChange(of: settings.pauseWhileDriving) { showSavedFeedback() }
+        .onChangeCompat(of: settings.pauseDuringFocus) { _ in showSavedFeedback() }
+        .onChangeCompat(of: settings.pauseWhileDriving) { _ in showSavedFeedback() }
         // #434: Surface saved banner for preferences.
-        .onChange(of: settings.hapticsEnabled) { showSavedFeedback() }
-        .onChange(of: settings.notificationFallbackEnabled) { showSavedFeedback() }
+        .onChangeCompat(of: settings.hapticsEnabled) { _ in showSavedFeedback() }
+        .onChangeCompat(of: settings.notificationFallbackEnabled) { _ in showSavedFeedback() }
     }
 
     // MARK: - Saved Banner (#434)
