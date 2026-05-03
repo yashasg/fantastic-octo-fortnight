@@ -14,6 +14,7 @@ Use when a service method currently takes `now: Date = Date()` and production co
 - Add a zero-argument method that calls the explicit overload with `dateProvider.now`.
 - Keep `func method(now: Date)` for deterministic test control.
 - For guard logic without overloads (e.g., snooze-active checks), route comparisons through `dateProvider.now` and assert both injected-now inversion cases in tests.
+- For enum or helper structs that currently compute dates from `Date()`, add a `referenceDate` overload and keep the old computed property as a convenience wrapper.
 
 ## Benefits
 - Production path no longer depends on implicit `Date()` globals.
@@ -25,3 +26,5 @@ Use when a service method currently takes `now: Date = Date()` and production co
 - `Tests/EyePostureReminderTests/Services/AppCoordinatorWatchdogHeartbeatTests.swift`
 - `EyePostureReminder/Services/AppCoordinator+ReminderScheduling.swift`
 - `Tests/EyePostureReminderTests/Services/AppCoordinatorExtendedTests.swift`
+- `EyePostureReminder/ViewModels/SettingsViewModel.swift`
+- `Tests/EyePostureReminderTests/ViewModels/SettingsViewModelExtendedTests.swift`

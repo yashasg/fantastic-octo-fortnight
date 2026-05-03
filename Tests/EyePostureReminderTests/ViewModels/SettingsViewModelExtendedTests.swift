@@ -424,4 +424,41 @@ final class SettingsViewModelExtendedTests: XCTestCase {
             "snooze(for:5) must persist exactly now + 5 min using the injected date provider"
         )
     }
+
+    func test_snoozeOptionOneHour_persistsNowPlusDuration_usingMockedDate() throws {
+        let fixedNow = Date(timeIntervalSince1970: 1_000_000)
+        let dateProvider = MockDateProvider(now: fixedNow)
+        let sut = makeSUT(dateProvider: dateProvider)
+
+        sut.snooze(option: .oneHour)
+
+        let snoozedUntil = try XCTUnwrap(settings.snoozedUntil)
+        let expected = fixedNow.addingTimeInterval(60 * 60)
+        XCTAssertEqual(
+            snoozedUntil.timeIntervalSince1970,
+            expected.timeIntervalSince1970,
+            accuracy: 0.001,
+            "snooze(option:.oneHour) must use injected date provider now"
+        )
+    }
+
+    func test_snoozeOptionRestOfDay_usesInjectedReferenceDateForMidnightCutoff() throws {
+        let fixedNow = Date(timeIntervalSince1970: 1_000_000)
+        let dateProvider = MockDateProvider(now: fixedNow)
+        let sut = makeSUT(dateProvider: dateProvider)
+
+        sut.snooze(option: .restOfDay)
+
+        let calendar = Calendar.current
+        let expected = try XCTUnwrap(
+            calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: fixedNow))
+        )
+        let snoozedUntil = try XCTUnwrap(settings.snoozedUntil)
+        XCTAssertEqual(
+            snoozedUntil.timeIntervalSince1970,
+            expected.timeIntervalSince1970,
+            accuracy: 0.001,
+            "restOfDay must compute midnight from the injected current date"
+        )
+    }
 }
