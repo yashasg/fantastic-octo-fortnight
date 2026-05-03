@@ -114,6 +114,7 @@ final class SettingsViewModel: ObservableObject {
 
     let settings: SettingsStore
     private let scheduler: ReminderScheduling
+    private let dateProvider: DateProviding
     private var cancellables: Set<AnyCancellable> = []
 
     // MARK: - Computed State (M2.3)
@@ -121,7 +122,7 @@ final class SettingsViewModel: ObservableObject {
     /// `true` while a snooze is active (snoozedUntil is a future date).
     var isSnoozeActive: Bool {
         guard let until = settings.snoozedUntil else { return false }
-        return until > Date()
+        return until > dateProvider.now
     }
 
     /// `true` when the user is allowed to apply another snooze.
@@ -294,11 +295,13 @@ final class SettingsViewModel: ObservableObject {
     init(
         settings: SettingsStore,
         scheduler: ReminderScheduling,
-        maxSnoozeCount: Int = AppConfig.load().features.maxSnoozeCount
+        maxSnoozeCount: Int = AppConfig.load().features.maxSnoozeCount,
+        dateProvider: DateProviding = SystemDateProvider()
     ) {
         self.settings  = settings
         self.scheduler = scheduler
         self.maxConsecutiveSnoozes = maxSnoozeCount
+        self.dateProvider = dateProvider
         settings.objectWillChange
             .sink { [weak self] in self?.objectWillChange.send() }
             .store(in: &cancellables)
@@ -342,7 +345,7 @@ final class SettingsViewModel: ObservableObject {
             return
         }
         let endDate = option.endDate
-        guard endDate > Date() else {
+        guard endDate > dateProvider.now else {
             // Guard against clock skew or NTP drift producing a past end date;
             // applying a past snoozedUntil would be cleared immediately by
             // scheduleReminders() making snooze appear broken.
@@ -377,7 +380,7 @@ final class SettingsViewModel: ObservableObject {
             return
         }
         let analyticsCode = Self.snoozeOptions.first(where: { $0.minutes == minutes })?.analyticsCode ?? "custom"
-        settings.snoozedUntil = Date().addingTimeInterval(TimeInterval(minutes * 60))
+        settings.snoozedUntil = dateProvider.now.addingTimeInterval(TimeInterval(minutes * 60))
         settings.snoozeCount += 1
         scheduler.cancelAllReminders()
         AnalyticsLogger.log(.snoozeActivated(durationOption: analyticsCode))
