@@ -83,6 +83,8 @@ final class AppCoordinator: ObservableObject {
     /// app extensions and watchdog diagnostics can observe the selected path.
     let ipcStore: AppGroupIPCProviding
     let dateProvider: DateProviding
+    typealias HasActiveSceneProvider = () -> Bool
+    private let hasActiveSceneProvider: HasActiveSceneProvider
     private let isUITestModeEnabled: Bool
     private let lifecycleNotificationCenter: NotificationCenter
     private var trueInterruptEnabledObserver: NSObjectProtocol?
@@ -199,6 +201,8 @@ final class AppCoordinator: ObservableObject {
         makeIPCStore: @escaping () -> AppGroupIPCProviding = { AppGroupIPCStore() },
         lifecycleNotificationCenter: NotificationCenter? = nil,
         makeLifecycleNotificationCenter: @escaping () -> NotificationCenter = { .default },
+        hasActiveSceneProvider: HasActiveSceneProvider? = nil,
+        makeHasActiveSceneProvider: (() -> HasActiveSceneProvider)? = nil,
         watchdogHeartbeatGraceInterval: TimeInterval = 10,
         dateProvider: DateProviding? = nil,
         makeDateProvider: @escaping () -> DateProviding = { SystemDateProvider() }
@@ -224,6 +228,17 @@ final class AppCoordinator: ObservableObject {
         self.ipcStore = ipcStore ?? makeIPCStore()
         self.dateProvider = dateProvider ?? makeDateProvider()
         self.lifecycleNotificationCenter = lifecycleNotificationCenter ?? makeLifecycleNotificationCenter()
+        if let hasActiveSceneProvider {
+            self.hasActiveSceneProvider = hasActiveSceneProvider
+        } else if let makeHasActiveSceneProvider {
+            self.hasActiveSceneProvider = makeHasActiveSceneProvider()
+        } else {
+            self.hasActiveSceneProvider = {
+                UIApplication.shared.connectedScenes
+                    .compactMap { $0 as? UIWindowScene }
+                    .contains { $0.activationState == .foregroundActive }
+            }
+        }
         self.watchdogHeartbeatGraceInterval = watchdogHeartbeatGraceInterval
         let resolvedUITestMode = uiTestMode ?? Self.isUITestMode(launchArguments: resolvedLaunchArguments)
         self.isUITestModeEnabled = resolvedUITestMode
@@ -509,9 +524,7 @@ final class AppCoordinator: ObservableObject {
 
         let duration = settings.settings(for: type).breakDuration
 
-        let hasActiveScene = UIApplication.shared.connectedScenes
-            .compactMap { $0 as? UIWindowScene }
-            .contains { $0.activationState == .foregroundActive }
+        let hasActiveScene = hasActiveSceneProvider()
 
         if hasActiveScene {
             showBreakOverlay(for: type, duration: duration)
