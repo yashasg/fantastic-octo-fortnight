@@ -181,6 +181,7 @@ final class AppCoordinator: ObservableObject {
         screenTimeTracker: ScreenTimeTracking? = nil,
         pauseConditionProvider: PauseConditionProviding? = nil,
         screenTimeAuthorization: ScreenTimeAuthorizationProviding? = nil,
+        uiTestStatusStore: UserDefaults = .standard,
         deviceActivityMonitor: DeviceActivityMonitorProviding? = nil,
         ipcStore: AppGroupIPCProviding = AppGroupIPCStore(),
         watchdogHeartbeatGraceInterval: TimeInterval = 10
@@ -193,7 +194,10 @@ final class AppCoordinator: ObservableObject {
         self.scheduler = Self.resolveScheduler(scheduler)
         self.notificationCenter = notificationCenter
         self.overlayManager = Self.resolveOverlayManager(overlayManager)
-        self.screenTimeAuthorization = Self.resolveScreenTimeAuthorization(screenTimeAuthorization)
+        self.screenTimeAuthorization = Self.resolveScreenTimeAuthorization(
+            screenTimeAuthorization,
+            uiTestStatusStore: uiTestStatusStore
+        )
         self.deviceActivityMonitor = Self.resolveDeviceActivityMonitor(deviceActivityMonitor)
         self.ipcStore = ipcStore
         self.watchdogHeartbeatGraceInterval = watchdogHeartbeatGraceInterval
@@ -603,7 +607,8 @@ private extension AppCoordinator {
     }
 
     static func resolveScreenTimeAuthorization(
-        _ screenTimeAuthorization: ScreenTimeAuthorizationProviding?
+        _ screenTimeAuthorization: ScreenTimeAuthorizationProviding?,
+        uiTestStatusStore: UserDefaults
     ) -> ScreenTimeAuthorizationProviding {
         guard let screenTimeAuthorization else {
             #if DEBUG
@@ -613,7 +618,7 @@ private extension AppCoordinator {
             if CommandLine.arguments.contains("--simulate-screen-time-not-determined") {
                 return ScreenTimeAuthorizationStub(status: .notDetermined)
             }
-            if let raw = UserDefaults.standard.string(forKey: AppStorageKey.uiTestScreenTimeStatus),
+            if let raw = uiTestStatusStore.string(forKey: AppStorageKey.uiTestScreenTimeStatus),
                let status = ScreenTimeAuthorizationStatus(rawValue: raw) {
                 return ScreenTimeAuthorizationStub(status: status)
             }
