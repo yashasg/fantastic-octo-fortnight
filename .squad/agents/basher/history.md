@@ -210,3 +210,6 @@
 - For value-type convenience initializers with `Date()` defaults, prefer `timestamp: Date? = nil` plus `makeTimestamp` fallback factory and resolve once in the initializer body; add paired tests for fallback-used and explicit-date-bypass (`EyePostureReminder/Services/ScreenTimeShieldTypes.swift`, `Tests/EyePostureReminderTests/Services/DeviceActivityMonitorTests.swift`).
 - For coordinator-owned collaborators with concrete defaults, prefer `dependency: Protocol? = nil` plus `makeDependency` fallback and resolve once in `init`; this removes hidden construction from service initializers while preserving production behavior (`EyePostureReminder/Services/AppCoordinator.swift`, `Tests/EyePostureReminderTests/Services/AppCoordinatorTests.swift`).
 - For #462 Phase A micro-slices, keep DI/SRP PRs to one constructor seam and two narrow fallback/bypass tests; avoid touching runtime lifecycle logic unless required.
+
+## Learnings
+- For AppCoordinator service defaults, prefer `scheduler: ReminderScheduling? = nil` plus `makeScheduler` fallback resolved once in `init`; test both fallback-used and explicit-bypass paths to remove hidden `ReminderScheduler()` construction while preserving behavior (`EyePostureReminder/Services/AppCoordinator.swift`, `Tests/EyePostureReminderTests/Services/AppCoordinatorTests.swift`).
