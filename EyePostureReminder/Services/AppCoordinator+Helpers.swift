@@ -30,13 +30,15 @@ extension AppCoordinator {
     func scheduleSnoozeWakeTask(at date: Date) {
         snoozeWakeTask?.cancel()
         snoozeWakeTask = Task { [weak self] in
-            let interval = max(0, date.timeIntervalSinceNow)
+            guard let self else { return }
+            let interval = max(0, date.timeIntervalSince(self.dateProvider.now))
             try? await Task.sleep(nanoseconds: UInt64(interval * 1_000_000_000))
             guard !Task.isCancelled else { return }
-            await self?.handleSnoozeWake()
+            await self.handleSnoozeWake()
         }
         // swiftlint:disable:next line_length
-        Logger.scheduling.debug("Snooze wake task armed; fires in \(date.timeIntervalSinceNow, format: .fixed(precision: 0), privacy: .public)s")
+        Logger.scheduling.debug(
+            "Snooze wake task armed; fires in \(date.timeIntervalSince(self.dateProvider.now), format: .fixed(precision: 0), privacy: .public)s")
     }
 
     /// Cancel the in-process snooze wake task without removing the pending
@@ -61,7 +63,7 @@ extension AppCoordinator {
     /// Schedule a silent one-time UNNotification that fires when the snooze
     /// period expires. Wakes the app even if it was killed and relaunched.
     func scheduleSnoozeWakeNotification(at date: Date) async {
-        let interval = max(1, date.timeIntervalSinceNow)
+        let interval = max(1, date.timeIntervalSince(dateProvider.now))
 
         let content = UNMutableNotificationContent()
         // Truly silent wake notification — no banner, no sound, no badge.
