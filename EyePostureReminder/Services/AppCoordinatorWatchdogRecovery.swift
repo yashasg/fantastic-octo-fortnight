@@ -4,7 +4,12 @@ import ScreenTimeExtensionShared
 
 extension AppCoordinator {
     @discardableResult
-    func recoverStaleDeviceActivityWatchdogIfNeeded(now: Date = Date()) async -> Bool {
+    func recoverStaleDeviceActivityWatchdogIfNeeded() async -> Bool {
+        await recoverStaleDeviceActivityWatchdogIfNeeded(now: dateProvider.now)
+    }
+
+    @discardableResult
+    func recoverStaleDeviceActivityWatchdogIfNeeded(now: Date) async -> Bool {
         guard deviceActivityMonitor.isAvailable else { return false }
 
         let session: ShieldSessionSnapshot
