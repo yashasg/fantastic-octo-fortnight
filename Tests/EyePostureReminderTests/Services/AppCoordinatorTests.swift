@@ -532,6 +532,58 @@ final class AppCoordinatorTests: XCTestCase {
         XCTAssertNil(settings.snoozedUntil)
     }
 
+    func test_clearExpiredSnoozeIfNeeded_usesInjectedDateProvider_whenWallClockPastButInjectedFuture() async {
+        let mockDateProvider = MockDateProvider(now: Date(timeIntervalSinceNow: -3_600))
+        let mockNotif = MockNotificationCenter()
+        let coordinator = AppCoordinator(
+            settings: settings,
+            scheduler: ReminderScheduler(notificationCenter: mockNotif),
+            notificationCenter: mockNotif,
+            screenTimeTracker: MockScreenTimeTracker(),
+            pauseConditionProvider: MockPauseConditionProvider(),
+            ipcStore: MockAppGroupIPCRecorder(),
+            dateProvider: mockDateProvider
+        )
+        defer { coordinator.stopFallbackTimers() }
+
+        let wallClockPast = Date(timeIntervalSinceNow: -60)
+        settings.snoozedUntil = wallClockPast
+        settings.snoozeCount = 2
+
+        await coordinator.clearExpiredSnoozeIfNeeded()
+
+        XCTAssertEqual(
+            settings.snoozedUntil,
+            wallClockPast,
+            "clearExpiredSnoozeIfNeeded should use injected DateProviding instead of wall clock")
+        XCTAssertEqual(settings.snoozeCount, 2)
+    }
+
+    func test_clearExpiredSnoozeIfNeeded_usesInjectedDateProvider_whenWallClockFutureButInjectedExpired() async {
+        let mockDateProvider = MockDateProvider(now: Date(timeIntervalSinceNow: 3_600))
+        let mockNotif = MockNotificationCenter()
+        let coordinator = AppCoordinator(
+            settings: settings,
+            scheduler: ReminderScheduler(notificationCenter: mockNotif),
+            notificationCenter: mockNotif,
+            screenTimeTracker: MockScreenTimeTracker(),
+            pauseConditionProvider: MockPauseConditionProvider(),
+            ipcStore: MockAppGroupIPCRecorder(),
+            dateProvider: mockDateProvider
+        )
+        defer { coordinator.stopFallbackTimers() }
+
+        settings.snoozedUntil = Date(timeIntervalSinceNow: 60)
+        settings.snoozeCount = 2
+
+        await coordinator.clearExpiredSnoozeIfNeeded()
+
+        XCTAssertNil(
+            settings.snoozedUntil,
+            "clearExpiredSnoozeIfNeeded should clear snooze when injected DateProviding marks it expired")
+        XCTAssertEqual(settings.snoozeCount, 0)
+    }
+
     func test_scheduleReminders_snoozeWakeNotification_isSilent() async {
         // Arrange: inject auth-authorized mock so the silent notification is actually scheduled.
         let mockNotif = MockNotificationCenter()
