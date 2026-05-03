@@ -370,6 +370,42 @@ final class AppCoordinatorWatchdogHeartbeatTests: XCTestCase {
             "watchdogRecovery must evaluate snooze using injected now, not wall clock")
     }
 
+    func test_watchdogRecovery_withoutExplicitNow_usesDateProviderNow() async throws {
+        let mockScheduler = MockReminderScheduler()
+        let mockDateProvider = MockDateProvider(now: Date(timeIntervalSince1970: 1_000))
+        let snoozeCoordinator = AppCoordinator(
+            settings: settings,
+            scheduler: mockScheduler,
+            notificationCenter: notificationCenter,
+            overlayManager: MockOverlayPresenting(),
+            screenTimeTracker: tracker,
+            pauseConditionProvider: MockPauseConditionProvider(),
+            deviceActivityMonitor: deviceActivityMonitor,
+            ipcStore: ipcStore,
+            dateProvider: mockDateProvider
+        )
+        defer { snoozeCoordinator.stopFallbackTimers() }
+
+        deviceActivityMonitor.stubbedIsAvailable = true
+        notificationCenter.authorizationGranted = true
+        settings.notificationFallbackEnabled = true
+        settings.snoozedUntil = Date(timeIntervalSince1970: 2_000)
+
+        ipcStore.shieldSessionSnapshot = ShieldSessionSnapshot(
+            reasonRaw: ReminderType.eyes.shieldReason.rawValue,
+            durationSeconds: 20,
+            triggeredAt: Date(timeIntervalSince1970: 100)
+        )
+
+        await snoozeCoordinator.refreshAuthStatus()
+        let recovered = await snoozeCoordinator.recoverStaleDeviceActivityWatchdogIfNeeded()
+        await awaitCondition { deviceActivityMonitor.cancelCallCount >= 1 }
+
+        XCTAssertTrue(recovered)
+        XCTAssertEqual(mockScheduler.rescheduleCallCount, 0,
+            "watchdogRecovery must source now from injected DateProviding by default")
+    }
+
     private var heartbeatDetails: [WatchdogHeartbeatDetail] {
         ipcStore.events
             .filter { $0.kind == .watchdogHeartbeat }

@@ -23334,3 +23334,45 @@ On PR #411 run `25155651913`, console output included `Executed 508 tests, with 
 - Basher can target the real failing tests quickly from CI logs.
 - Livingston can validate crash regression scope with narrow `-only-testing` runs.
 - Future CI triage should always inspect `.xcresult` summaries for final truth.
+
+---
+
+# Decision: #462 Phase A DI/SRP — DateProviding Seam for AppCoordinator Watchdog Recovery
+
+**Date:** 2026-05-03  
+**Owner:** Basher (iOS Dev — Services)  
+**Issue:** #462 Phase A Dependency Injection & Single Responsibility Principle refactoring
+
+## Context
+Phase A focuses on DI/SRP quick wins across service layers. The `AppCoordinator.recoverStaleDeviceActivityWatchdogIfNeeded()` method relied on a default `Date()` parameter on the production code path, creating a hidden wall-clock dependency in service lifecycle code.
+
+## Decision
+Inject `DateProviding` seam into `AppCoordinator` and route the default watchdog-recovery path through `dateProvider.now`, while preserving an explicit `now` overload for deterministic tests.
+
+## Why
+- **Removes hidden dependency:** Eliminates direct `Date()` calls from service lifecycle code.
+- **Zero production impact:** Production path unchanged (`SystemDateProvider` supplies wall clock as before).
+- **Preserves test precision:** Explicit `now` parameter overload retained; deterministic watchdog heartbeat and stale detection tests remain fully controlled.
+- **DI/SRP consistency:** Aligns with broader Phase A pattern of injecting seams for clock, event bus, and lifecycle handlers.
+
+## Scope
+- `EyePostureReminder/Services/AppCoordinator.swift` — Added `dateProvider: DateProviding` constructor parameter
+- `EyePostureReminder/Services/AppCoordinatorWatchdogRecovery.swift` — Route default recovery through `dateProvider.now`
+- `Tests/EyePostureReminderTests/Services/AppCoordinatorWatchdogHeartbeatTests.swift` — New deterministic clock injection tests
+- `.squad/skills/date-provider-default-seam/SKILL.md` — Seam documentation for future DI slices
+
+## Implementation
+- Injected `DateProviding` alongside existing dependencies (no breaking changes to public API)
+- Preserved backward-compatible `now:` parameter overload for test fixtures
+- Updated heartbeat tests to verify stale/missing detection with controlled clock
+- Build: ✅ Clean; Tests: ✅ 100% passing; Integration: ✅ No regressions
+
+## PR
+- **Branch:** `basher/462-phasea-next-di-microslice`
+- **Commit:** cab1807
+- **URL:** https://github.com/yashasg/fantastic-octo-fortnight/pull/516
+
+## Team Impact
+- **Basher:** Ready for Phase A next micro-slice (SRP: AppCoordinator → Lifecycle + Watchdog handlers)
+- **Livingston:** Clock injection pattern now available for test coverage in downstream services
+- **Future:** DateProviding seam documented as reusable SKILL for any service requiring wall-clock injection

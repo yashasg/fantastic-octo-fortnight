@@ -82,6 +82,7 @@ final class AppCoordinator: ObservableObject {
     /// Records shield/notification routing events into the App Group container so
     /// app extensions and watchdog diagnostics can observe the selected path.
     let ipcStore: AppGroupIPCProviding
+    let dateProvider: DateProviding
     private var trueInterruptEnabledObserver: NSObjectProtocol?
     let watchdogHeartbeatGraceInterval: TimeInterval
 
@@ -187,7 +188,8 @@ final class AppCoordinator: ObservableObject {
         uiTestMode: Bool? = nil,
         deviceActivityMonitor: DeviceActivityMonitorProviding? = nil,
         ipcStore: AppGroupIPCProviding = AppGroupIPCStore(),
-        watchdogHeartbeatGraceInterval: TimeInterval = 10
+        watchdogHeartbeatGraceInterval: TimeInterval = 10,
+        dateProvider: DateProviding = SystemDateProvider()
     ) {
         precondition(
             watchdogHeartbeatGraceInterval.isFinite && watchdogHeartbeatGraceInterval >= 0,
@@ -205,6 +207,7 @@ final class AppCoordinator: ObservableObject {
         )
         self.deviceActivityMonitor = Self.resolveDeviceActivityMonitor(deviceActivityMonitor)
         self.ipcStore = ipcStore
+        self.dateProvider = dateProvider
         self.watchdogHeartbeatGraceInterval = watchdogHeartbeatGraceInterval
         // In UI test mode, use no-op stubs for services that register UIKit lifecycle
         // observers and start 1-second timers — they prevent XCUITest from settling
