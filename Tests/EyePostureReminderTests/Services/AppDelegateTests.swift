@@ -208,6 +208,46 @@ final class AppDelegateTests: XCTestCase {
         XCTAssertEqual(factoryMetricKitSubscriber.registerCallCount, 1)
     }
 
+    func test_didFinishLaunching_calledTwice_reusesFactoryNotificationCenterInstance() {
+        let factoryCenter = MockUserNotificationCenter()
+        let mockMetricKitSubscriber = MockMetricKitSubscriber()
+        var makeNotificationCenterCallCount = 0
+        let sut = AppDelegate(
+            notificationCenter: nil,
+            metricKitSubscriber: mockMetricKitSubscriber,
+            makeNotificationCenter: {
+                makeNotificationCenterCallCount += 1
+                return factoryCenter
+            }
+        )
+
+        _ = sut.application(UIApplication.shared, didFinishLaunchingWithOptions: nil)
+        _ = sut.application(UIApplication.shared, didFinishLaunchingWithOptions: nil)
+
+        XCTAssertEqual(makeNotificationCenterCallCount, 1)
+        XCTAssertTrue(factoryCenter.delegate === sut)
+    }
+
+    func test_didFinishLaunching_calledTwice_reusesFactoryMetricKitSubscriberInstance() {
+        let mockCenter = MockUserNotificationCenter()
+        let factoryMetricKitSubscriber = MockMetricKitSubscriber()
+        var makeMetricKitSubscriberCallCount = 0
+        let sut = AppDelegate(
+            notificationCenter: mockCenter,
+            metricKitSubscriber: nil,
+            makeMetricKitSubscriber: {
+                makeMetricKitSubscriberCallCount += 1
+                return factoryMetricKitSubscriber
+            }
+        )
+
+        _ = sut.application(UIApplication.shared, didFinishLaunchingWithOptions: nil)
+        _ = sut.application(UIApplication.shared, didFinishLaunchingWithOptions: nil)
+
+        XCTAssertEqual(makeMetricKitSubscriberCallCount, 1)
+        XCTAssertEqual(factoryMetricKitSubscriber.registerCallCount, 2)
+    }
+
 #if DEBUG
     func test_init_withoutUITestDefaults_usesInjectedDefaultsFactory() throws {
         let defaults = try makeIsolatedDefaults(suffix: #function)
