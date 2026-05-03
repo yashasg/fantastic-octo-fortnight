@@ -132,6 +132,49 @@ final class MetricKitSubscriberTests: XCTestCase {
         XCTAssertEqual(fallbackManager.addCallCount, 0)
     }
 
+    func test_register_withNilLogger_usesFactoryLogger() {
+        let manager = MockMetricKitManager()
+        let fallbackLogger = MockMetricKitLogger()
+        var factoryCallCount = 0
+        let subscriber = MetricKitSubscriber(
+            metricManager: manager,
+            logger: nil,
+            makeLogger: {
+                factoryCallCount += 1
+                return fallbackLogger
+            }
+        )
+
+        subscriber.register()
+
+        XCTAssertEqual(factoryCallCount, 1)
+        XCTAssertEqual(
+            fallbackLogger.infoMessages,
+            ["MetricKit subscriber registered"]
+        )
+    }
+
+    func test_register_withInjectedLogger_bypassesFactory() {
+        let manager = MockMetricKitManager()
+        let logger = MockMetricKitLogger()
+        let fallbackLogger = MockMetricKitLogger()
+        var factoryCallCount = 0
+        let subscriber = MetricKitSubscriber(
+            metricManager: manager,
+            logger: logger,
+            makeLogger: {
+                factoryCallCount += 1
+                return fallbackLogger
+            }
+        )
+
+        subscriber.register()
+
+        XCTAssertEqual(factoryCallCount, 0)
+        XCTAssertEqual(logger.infoMessages, ["MetricKit subscriber registered"])
+        XCTAssertTrue(fallbackLogger.infoMessages.isEmpty)
+    }
+
     // MARK: - didReceive([MXMetricPayload])
 
     /// Empty payload array must be handled gracefully — the `for` loop
