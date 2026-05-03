@@ -1,7 +1,7 @@
 // MockDateProvider.swift
 
-import Foundation
 @testable import EyePostureReminder
+import Foundation
 
 /// Test double for `DateProviding`.
 ///

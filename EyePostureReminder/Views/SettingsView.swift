@@ -45,6 +45,7 @@ private struct SettingsSectionHeader: View {
     }
 }
 
+// swiftlint:disable type_body_length
 struct SettingsView: View {
 
     @EnvironmentObject var settings: SettingsStore
@@ -76,7 +77,7 @@ struct SettingsView: View {
     @State private var savedBannerTask: Task<Void, Never>?
 
     private let accessibilityNotificationPoster: AccessibilityNotificationPosting
-    private let hostedPrivacyPolicyURL = URL(string: "https://github.com/yashasg/fantastic-octo-fortnight/blob/main/docs/legal/PRIVACY.md")!
+    private let hostedPrivacyPolicyURL = URL(string: "https://github.com/yashasg/fantastic-octo-fortnight/blob/main/docs/legal/PRIVACY.md")
 
     init(
         isPresented: Binding<Bool>,
@@ -267,6 +268,7 @@ struct SettingsView: View {
                 .listRowSeparatorTint(AppColor.separatorSoft)
 
                 Button {
+                    guard let hostedPrivacyPolicyURL else { return }
                     openURL(hostedPrivacyPolicyURL)
                 } label: {
                     Text("Hosted Privacy Policy (Web)")
@@ -506,6 +508,7 @@ struct SettingsView: View {
         }
     }
 }
+// swiftlint:enable type_body_length
 
 // MARK: - Saved Banner (#434)
 
