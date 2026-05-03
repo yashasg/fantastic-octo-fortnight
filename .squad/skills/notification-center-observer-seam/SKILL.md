@@ -19,3 +19,10 @@ Use when a service/coordinator registers observers via `NotificationCenter.defau
 - Preserves runtime behavior in production.
 - Removes hidden global coupling.
 - Prevents cross-test interference from shared notification observers.
+
+## Example
+- `EyePostureReminder/Services/AppCoordinator.swift` + `Tests/EyePostureReminderTests/Services/AppCoordinatorNotificationFallbackTests.swift`
+- `EyePostureReminder/Services/ScreenTimeTracker.swift` + `Tests/EyePostureReminderTests/Services/ScreenTimeTrackerTests.swift` (lifecycle observer seam + default-center isolation test)
+## Example
+- `EyePostureReminder/Services/AppCoordinator.swift` + `Tests/EyePostureReminderTests/Services/AppCoordinatorNotificationFallbackTests.swift`
+- `EyePostureReminder/Services/ScreenTimeTracker.swift` + `Tests/EyePostureReminderTests/Services/ScreenTimeTrackerTests.swift` (lifecycle observer seam + default-center isolation test)
