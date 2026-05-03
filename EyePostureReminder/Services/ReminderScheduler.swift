@@ -77,7 +77,7 @@ final class ReminderScheduler: ReminderScheduling {
 
     init(
         notificationCenter: NotificationScheduling? = nil,
-        makeNotificationCenter: @escaping NotificationCenterFactory = { UNUserNotificationCenter.current() },
+        makeNotificationCenter: NotificationCenterFactory? = nil,
         logSchedulingFailure: @escaping SchedulingFailureLogger = { type, error in
             Logger.scheduling.error("""
                 Failed to schedule \(type.rawValue, privacy: .public): \
@@ -85,7 +85,8 @@ final class ReminderScheduler: ReminderScheduling {
                 """)
         }
     ) {
-        self.notificationCenter = notificationCenter ?? makeNotificationCenter()
+        let resolvedMakeNotificationCenter = makeNotificationCenter ?? { UNUserNotificationCenter.current() }
+        self.notificationCenter = notificationCenter ?? resolvedMakeNotificationCenter()
         self.logSchedulingFailure = logSchedulingFailure
     }
 
