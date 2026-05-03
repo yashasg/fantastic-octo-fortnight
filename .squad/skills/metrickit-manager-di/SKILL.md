@@ -15,6 +15,7 @@ Use this when a service calls `MXMetricManager.shared` directly, but the behavio
 - Inject the protocol into the service initializer with `MXMetricManager.shared` as the default.
 - Keep singleton entrypoints (like `static let shared`) for production wiring.
 - If app lifecycle code triggers registration, inject a `MetricKitSubscribing` seam at the delegate boundary and lazily fallback to `MetricKitSubscriber.shared` at callback time.
+- If delegate code needs a production fallback, inject `makeMetricKitSubscriber` and resolve it only when explicit subscriber injection is absent so fallback paths are unit-testable.
 
 ## Examples
 - `EyePostureReminder/Services/MetricKitSubscriber.swift`
