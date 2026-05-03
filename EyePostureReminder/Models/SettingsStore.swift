@@ -165,36 +165,45 @@ final class SettingsStore: ObservableObject {
     private let store: SettingsPersisting
 
     typealias SettingsStoreFactory = () -> SettingsPersisting
+    typealias AppConfigFactory = () -> AppConfig
 
     init(
         store: SettingsPersisting? = nil,
         makeStore: @escaping SettingsStoreFactory = { UserDefaults.standard },
-        config: AppConfig = AppConfig.load()
+        config: AppConfig? = nil,
+        makeConfig: @escaping AppConfigFactory = { AppConfig.load() }
     ) {
         let resolvedStore = store ?? makeStore()
+        let resolvedConfig = config ?? makeConfig()
         self.store = resolvedStore
         let defaultEyesBreakDuration = Self.sanitizedBreakDuration(
-            config.defaults.eyeBreakDuration,
+            resolvedConfig.defaults.eyeBreakDuration,
             defaultValue: AppConfig.fallback.defaults.eyeBreakDuration,
             key: Keys.eyesBreakDuration
         )
         let defaultPostureBreakDuration = Self.sanitizedBreakDuration(
-            config.defaults.postureBreakDuration,
+            resolvedConfig.defaults.postureBreakDuration,
             defaultValue: AppConfig.fallback.defaults.postureBreakDuration,
             key: Keys.postureBreakDuration
         )
 
-        globalEnabled = resolvedStore.bool(forKey: Keys.globalEnabled, defaultValue: config.features.globalEnabledDefault)
+        globalEnabled = resolvedStore.bool(
+            forKey: Keys.globalEnabled,
+            defaultValue: resolvedConfig.features.globalEnabledDefault
+        )
         eyesEnabled = resolvedStore.bool(forKey: Keys.eyesEnabled, defaultValue: true)
         postureEnabled = resolvedStore.bool(forKey: Keys.postureEnabled, defaultValue: true)
 
-        eyesInterval = resolvedStore.double(forKey: Keys.eyesInterval, defaultValue: config.defaults.eyeInterval)
+        eyesInterval = resolvedStore.double(forKey: Keys.eyesInterval, defaultValue: resolvedConfig.defaults.eyeInterval)
         eyesBreakDurationStorage = Self.sanitizedBreakDuration(
             resolvedStore.double(forKey: Keys.eyesBreakDuration, defaultValue: defaultEyesBreakDuration),
             defaultValue: defaultEyesBreakDuration,
             key: Keys.eyesBreakDuration
         )
-        postureInterval = resolvedStore.double(forKey: Keys.postureInterval, defaultValue: config.defaults.postureInterval)
+        postureInterval = resolvedStore.double(
+            forKey: Keys.postureInterval,
+            defaultValue: resolvedConfig.defaults.postureInterval
+        )
         postureBreakDurationStorage = Self.sanitizedBreakDuration(
             resolvedStore.double(forKey: Keys.postureBreakDuration, defaultValue: defaultPostureBreakDuration),
             defaultValue: defaultPostureBreakDuration,

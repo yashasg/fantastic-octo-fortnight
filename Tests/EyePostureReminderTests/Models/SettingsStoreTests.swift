@@ -97,6 +97,58 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertFalse(reloaded.globalEnabled)
     }
 
+    func test_init_withoutConfig_usesInjectedConfigFactory() {
+        let injectedConfig = AppConfig(
+            defaults: AppConfig.Defaults(
+                eyeInterval: 777,
+                eyeBreakDuration: 20,
+                postureInterval: 888,
+                postureBreakDuration: 10
+            ),
+            features: AppConfig.Features(globalEnabledDefault: false, maxSnoozeCount: 3)
+        )
+        var factoryCallCount = 0
+
+        let reloaded = SettingsStore(
+            store: MockSettingsPersisting(),
+            config: nil,
+            makeConfig: {
+                factoryCallCount += 1
+                return injectedConfig
+            }
+        )
+
+        XCTAssertEqual(factoryCallCount, 1)
+        XCTAssertFalse(reloaded.globalEnabled)
+        XCTAssertEqual(reloaded.eyesInterval, 777)
+        XCTAssertEqual(reloaded.postureInterval, 888)
+    }
+
+    func test_init_withExplicitConfig_doesNotCallInjectedConfigFactory() {
+        let explicitConfig = AppConfig(
+            defaults: AppConfig.Defaults(
+                eyeInterval: 1200,
+                eyeBreakDuration: 20,
+                postureInterval: 1800,
+                postureBreakDuration: 10
+            ),
+            features: AppConfig.Features(globalEnabledDefault: true, maxSnoozeCount: 3)
+        )
+        var didCallFactory = false
+
+        let reloaded = SettingsStore(
+            store: MockSettingsPersisting(),
+            config: explicitConfig,
+            makeConfig: {
+                didCallFactory = true
+                return .fallback
+            }
+        )
+
+        XCTAssertFalse(didCallFactory)
+        XCTAssertTrue(reloaded.globalEnabled)
+    }
+
     // MARK: - Persistence: Booleans
 
     func test_setGlobalEnabled_false_persistsAndLoads() {
