@@ -63,6 +63,8 @@ struct ShieldSession: Sendable, Equatable {
 // MARK: - ShieldSession + ReminderType
 
 extension ShieldSession {
+    typealias TriggeredAtFactory = () -> Date
+
     /// Convenience initialiser that derives the `ShieldTriggerReason` from a `ReminderType`.
     ///
     /// Used by `AppCoordinator` when bridging the `ScreenTimeTracker.onThresholdReached`
@@ -71,9 +73,16 @@ extension ShieldSession {
     /// - Parameters:
     ///   - type: The reminder type that reached its threshold.
     ///   - durationSeconds: Break duration in seconds (read from `SettingsStore`).
-    ///   - triggeredAt: Wall-clock trigger time. Defaults to `Date()`.
-    init(type: ReminderType, durationSeconds: TimeInterval, triggeredAt: Date = Date()) {
-        self.init(reason: type.shieldReason, durationSeconds: durationSeconds, triggeredAt: triggeredAt)
+    ///   - triggeredAt: Wall-clock trigger time. Uses `makeTriggeredAt()` when `nil`.
+    ///   - makeTriggeredAt: Factory for the default trigger time.
+    init(
+        type: ReminderType,
+        durationSeconds: TimeInterval,
+        triggeredAt: Date? = nil,
+        makeTriggeredAt: TriggeredAtFactory = Date.init
+    ) {
+        let resolvedTriggeredAt = triggeredAt ?? makeTriggeredAt()
+        self.init(reason: type.shieldReason, durationSeconds: durationSeconds, triggeredAt: resolvedTriggeredAt)
     }
 }
 

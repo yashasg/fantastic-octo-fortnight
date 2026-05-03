@@ -207,3 +207,4 @@
 ### 2026-05-03T20:10:00Z: #462 Phase A resetToDefaults config seam
 - `SettingsStore.resetToDefaults()` now resolves config via the init-injected `makeConfig` seam when no explicit config is passed, removing eager `AppConfig.load()` from the method signature while keeping production defaults behavior.
 - Added focused unit tests covering factory-path reset and explicit-config reset bypass.
+- For value-type convenience initializers with `Date()` defaults, prefer `timestamp: Date? = nil` plus `makeTimestamp` fallback factory and resolve once in the initializer body; add paired tests for fallback-used and explicit-date-bypass (`EyePostureReminder/Services/ScreenTimeShieldTypes.swift`, `Tests/EyePostureReminderTests/Services/DeviceActivityMonitorTests.swift`).
