@@ -260,3 +260,17 @@
 ## Learnings
 
 - For static launch-context helpers, add a tiny resolver seam (`launchArguments: [String]?` + `launchArgumentsProvider`) and have the public static computed property call it; this removes hard `CommandLine.arguments` coupling while preserving behavior and enables focused fallback/bypass tests (`EyePostureReminder/Services/AppCoordinator+UITestMode.swift`, `Tests/EyePostureReminderTests/Services/AppCoordinatorUITestModeResolverTests.swift`).
+
+## 2026-05-03T22:14:06Z: #462 Phase A — AppDelegate Exception Handler Installer Seam (COMPLETED)
+
+- Branch: `basher/462-phasea-appdelegate-exceptionhandler-registrar-seam`
+- Slice: Added `installUncaughtExceptionHandler: (() -> Void)?` seam to `AppDelegate` and resolved it once in `init`; production still installs the same uncaught exception handler via `NSSetUncaughtExceptionHandler`.
+- Validation: `./scripts/build.sh build` ✅, `./scripts/build.sh test` ✅.
+- Scope: `EyePostureReminder/App/AppDelegate.swift`, `Tests/EyePostureReminderTests/Services/AppDelegateTests.swift`.
+
+## Learnings
+
+- For Objective-C exception-hook wiring in app lifecycle delegates, inject an installer closure (`(() -> Void)?`) and resolve once in `init` instead of hard-coding `NSSetUncaughtExceptionHandler` inside lifecycle paths; this keeps crash logging behavior unchanged while making delegate launch wiring deterministic in tests.
+- Focus seam tests on callback invocation counts (`installUncaughtExceptionHandler()` direct call and `didFinishLaunching`) to prove lifecycle wiring without mutating global uncaught-exception handler state.
+- User preference reaffirmed: keep #462 Phase A changes to one tiny DI/SRP seam plus focused tests and run `./scripts/build.sh build` + `./scripts/build.sh test` every slice.
+- Key paths: `EyePostureReminder/App/AppDelegate.swift`, `Tests/EyePostureReminderTests/Services/AppDelegateTests.swift`, `.squad/skills/exception-handler-installer-seam/SKILL.md`.

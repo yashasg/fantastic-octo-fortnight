@@ -130,19 +130,34 @@ final class AppDelegateTests: XCTestCase {
 
     // MARK: - Uncaught exception handler
 
-    /// Verifies `installUncaughtExceptionHandler` sets a non-nil global handler.
-    /// Called directly because `application(_:didFinishLaunchingWithOptions:)` touches
-    /// MetricKit and UNNotificationCenter which crash in the unit-test host.
-    func test_appDelegate_installsUncaughtExceptionHandler() {
-        NSSetUncaughtExceptionHandler(nil)
-        XCTAssertNil(NSGetUncaughtExceptionHandler(), "precondition: handler should be nil")
-
-        delegate.installUncaughtExceptionHandler()
-
-        XCTAssertNotNil(
-            NSGetUncaughtExceptionHandler(),
-            "installUncaughtExceptionHandler must set a global exception handler"
+    func test_installUncaughtExceptionHandler_usesInjectedInstaller() {
+        var registerCallCount = 0
+        let sut = AppDelegate(
+            installUncaughtExceptionHandler: {
+                registerCallCount += 1
+            }
         )
+
+        sut.installUncaughtExceptionHandler()
+
+        XCTAssertEqual(registerCallCount, 1)
+    }
+
+    func test_didFinishLaunching_registersUncaughtExceptionHandlerViaInjectedInstaller() {
+        let mockCenter = MockUserNotificationCenter()
+        let mockMetricKitSubscriber = MockMetricKitSubscriber()
+        var registerCallCount = 0
+        let sut = AppDelegate(
+            notificationCenter: mockCenter,
+            metricKitSubscriber: mockMetricKitSubscriber,
+            installUncaughtExceptionHandler: {
+                registerCallCount += 1
+            }
+        )
+
+        _ = sut.application(UIApplication.shared, didFinishLaunchingWithOptions: nil)
+
+        XCTAssertEqual(registerCallCount, 1)
     }
 
     func test_didFinishLaunching_registersDelegateAndMetricKitViaInjectedSeams() {

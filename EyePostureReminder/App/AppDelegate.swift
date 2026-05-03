@@ -10,9 +10,12 @@ extension UNUserNotificationCenter: UserNotificationCenterDelegating {}
 
 final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
 
+    typealias ExceptionHandlerInstaller = () -> Void
+
     private let notificationCenter: UserNotificationCenterDelegating?
     private let metricKitSubscriber: MetricKitSubscribing?
     private let settingsStore: SettingsStore?
+    private let installUncaughtExceptionHandlerImpl: ExceptionHandlerInstaller
     private let launchArguments: [String]
     private let uiTestDefaults: UserDefaults
     private let launchArgumentsProvider: () -> [String]
@@ -31,6 +34,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         notificationCenter: UserNotificationCenterDelegating? = nil,
         metricKitSubscriber: MetricKitSubscribing? = nil,
         settingsStore: SettingsStore? = nil,
+        installUncaughtExceptionHandler: ExceptionHandlerInstaller? = nil,
         launchArguments: [String]? = nil,
         uiTestDefaults: UserDefaults? = nil,
         launchArgumentsProvider: @escaping () -> [String] = { CommandLine.arguments },
@@ -42,6 +46,8 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         self.notificationCenter = notificationCenter
         self.metricKitSubscriber = metricKitSubscriber
         self.settingsStore = settingsStore
+        self.installUncaughtExceptionHandlerImpl =
+            installUncaughtExceptionHandler ?? Self.installDefaultUncaughtExceptionHandler
         self.launchArgumentsProvider = launchArgumentsProvider
         self.launchArguments = launchArguments ?? launchArgumentsProvider()
         self.makeUITestDefaults = makeUITestDefaults
@@ -103,6 +109,10 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     /// are logged at fault level before the process terminates.
     /// Fault-level messages persist to disk immediately, surviving the crash.
     func installUncaughtExceptionHandler() {
+        installUncaughtExceptionHandlerImpl()
+    }
+
+    private static func installDefaultUncaughtExceptionHandler() {
         NSSetUncaughtExceptionHandler { exception in
             let name = exception.name.rawValue
             let reason = exception.reason ?? "nil"
