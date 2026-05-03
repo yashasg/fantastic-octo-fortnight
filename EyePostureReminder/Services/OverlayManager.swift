@@ -96,6 +96,8 @@ final class OverlayManager: OverlayPresenting {
 
     // MARK: - Dependencies
 
+    typealias NotificationCenterFactory = () -> NotificationCenter
+
     private let audioManager: MediaControlling
     private let accessibilityNotificationPoster: AccessibilityNotificationPosting
     private let notificationCenter: NotificationCenter
@@ -130,12 +132,13 @@ final class OverlayManager: OverlayPresenting {
     init(
         audioManager: MediaControlling = AudioInterruptionManager(),
         accessibilityNotificationPoster: AccessibilityNotificationPosting = LiveAccessibilityNotificationPoster(),
-        notificationCenter: NotificationCenter = .default
+        notificationCenter: NotificationCenter? = nil,
+        makeNotificationCenter: @escaping NotificationCenterFactory = { .default }
     ) {
         self.audioManager = audioManager
         self.accessibilityNotificationPoster = accessibilityNotificationPoster
-        self.notificationCenter = notificationCenter
-        sceneActivationObserver = notificationCenter.addObserver(
+        self.notificationCenter = notificationCenter ?? makeNotificationCenter()
+        sceneActivationObserver = self.notificationCenter.addObserver(
             forName: UIScene.didActivateNotification,
             object: nil,
             queue: .main
