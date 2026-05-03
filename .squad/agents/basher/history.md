@@ -324,3 +324,16 @@
 ## Learnings
 
 - Keep CI gate names and commands aligned: if a required check is "Build & Test", wire it to build/test commands only; run lint in a dedicated lint gate to avoid unrelated debt blocking functional PRs.
+
+## 2026-05-04T00:00:00Z: #462 Phase A — AppDelegate Notification Route SRP seam (COMPLETED)
+
+- Slice: centralized category-ID routing into `AppDelegate.notificationRoute(for:)` + shared `dispatchNotificationRoute(_:)` so both notification delegate callbacks use one source of truth.
+- Validation: `./scripts/build.sh build` ✅ and `./scripts/build.sh test` ✅ (2044 tests, 0 failures).
+- Scope: `EyePostureReminder/App/AppDelegate.swift`, `Tests/EyePostureReminderTests/Services/AppDelegateTests.swift`.
+
+## Learnings
+
+- For duplicate UNUserNotificationCenter delegate branches (`willPresent`/`didReceive`), extract a shared route enum + resolver method and dispatch helper in AppDelegate to keep routing behavior consistent and testable.
+- Focus route tests on category-ID → route mapping (`.reminder`, `.snoozeWake`, `.ignore`) so callback coverage does not depend on constructing system-only `UNNotification` objects.
+- User preference reinforced: keep #462 Phase A slices surgical (one DI/SRP production seam + focused tests + required `./scripts/build.sh build` and `./scripts/build.sh test`).
+- Key file paths: `EyePostureReminder/App/AppDelegate.swift`, `Tests/EyePostureReminderTests/Services/AppDelegateTests.swift`.

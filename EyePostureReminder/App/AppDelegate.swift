@@ -10,6 +10,12 @@ extension UNUserNotificationCenter: UserNotificationCenterDelegating {}
 
 final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
 
+    enum NotificationRoute: Equatable {
+        case reminder(ReminderType)
+        case snoozeWake
+        case ignore
+    }
+
     typealias ExceptionHandlerInstaller = () -> Void
 
     private let notificationCenter: UserNotificationCenterDelegating?
@@ -204,6 +210,32 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
 
     // MARK: - UNUserNotificationCenterDelegate
 
+    func notificationRoute(for categoryID: String) -> NotificationRoute {
+        if let type = ReminderType(categoryIdentifier: categoryID) {
+            return .reminder(type)
+        }
+        if categoryID == AppCoordinator.snoozeWakeCategory {
+            return .snoozeWake
+        }
+        return .ignore
+    }
+
+    private func dispatchNotificationRoute(_ route: NotificationRoute) {
+        switch route {
+        case .reminder(let type):
+            Task { @MainActor [weak self] in
+                self?.coordinator?.handleNotification(for: type)
+            }
+        case .snoozeWake:
+            Task { @MainActor [weak self] in
+                self?.coordinator?.cancelSnoozeWakeTaskIfNeeded()
+                await self?.coordinator?.scheduleReminders()
+            }
+        case .ignore:
+            break
+        }
+    }
+
     /// Foreground delivery — show overlay immediately via coordinator.
     func userNotificationCenter(
         _ center: UNUserNotificationCenter,
@@ -211,18 +243,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
         let categoryID = notification.request.content.categoryIdentifier
-        if let type = ReminderType(categoryIdentifier: categoryID) {
-            Task { @MainActor [weak self] in
-                self?.coordinator?.handleNotification(for: type)
-            }
-        } else if categoryID == AppCoordinator.snoozeWakeCategory {
-            // Snooze has expired — cancel the in-process wake Task first so it
-            // doesn't also call handleSnoozeWake() and double-fire analytics.
-            Task { @MainActor [weak self] in
-                self?.coordinator?.cancelSnoozeWakeTaskIfNeeded()
-                await self?.coordinator?.scheduleReminders()
-            }
-        }
+        dispatchNotificationRoute(notificationRoute(for: categoryID))
         // Suppress the system banner — our overlay (or no-op) is the UI.
         completionHandler([])
     }
@@ -234,18 +255,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
         let categoryID = response.notification.request.content.categoryIdentifier
-        if let type = ReminderType(categoryIdentifier: categoryID) {
-            Task { @MainActor [weak self] in
-                self?.coordinator?.handleNotification(for: type)
-            }
-        } else if categoryID == AppCoordinator.snoozeWakeCategory {
-            // Snooze notification tapped (or delivered silently) — cancel the in-process
-            // wake Task before resuming so the two paths don't double-reschedule.
-            Task { @MainActor [weak self] in
-                self?.coordinator?.cancelSnoozeWakeTaskIfNeeded()
-                await self?.coordinator?.scheduleReminders()
-            }
-        }
+        dispatchNotificationRoute(notificationRoute(for: categoryID))
         completionHandler()
     }
 }
