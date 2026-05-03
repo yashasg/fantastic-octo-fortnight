@@ -98,6 +98,7 @@ final class OverlayManager: OverlayPresenting {
 
     private let audioManager: MediaControlling
     private let accessibilityNotificationPoster: AccessibilityNotificationPosting
+    private let notificationCenter: NotificationCenter
 
     // MARK: - State
 
@@ -128,11 +129,13 @@ final class OverlayManager: OverlayPresenting {
 
     init(
         audioManager: MediaControlling = AudioInterruptionManager(),
-        accessibilityNotificationPoster: AccessibilityNotificationPosting = LiveAccessibilityNotificationPoster()
+        accessibilityNotificationPoster: AccessibilityNotificationPosting = LiveAccessibilityNotificationPoster(),
+        notificationCenter: NotificationCenter = .default
     ) {
         self.audioManager = audioManager
         self.accessibilityNotificationPoster = accessibilityNotificationPoster
-        sceneActivationObserver = NotificationCenter.default.addObserver(
+        self.notificationCenter = notificationCenter
+        sceneActivationObserver = notificationCenter.addObserver(
             forName: UIScene.didActivateNotification,
             object: nil,
             queue: .main
@@ -145,7 +148,7 @@ final class OverlayManager: OverlayPresenting {
 
     deinit {
         if let obs = sceneActivationObserver {
-            NotificationCenter.default.removeObserver(obs)
+            notificationCenter.removeObserver(obs)
         }
     }
 
