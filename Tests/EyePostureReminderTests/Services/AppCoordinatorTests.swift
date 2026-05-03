@@ -87,6 +87,48 @@ final class AppCoordinatorTests: XCTestCase {
         XCTAssertEqual(sut.notificationAuthStatus, .notDetermined)
     }
 
+    func test_init_withoutSettings_usesInjectedSettingsFactory() {
+        var factoryCallCount = 0
+        let factorySettings = SettingsStore(store: MockSettingsPersisting())
+        let coordinator = AppCoordinator(
+            settings: nil,
+            makeSettings: {
+                factoryCallCount += 1
+                return factorySettings
+            },
+            scheduler: MockReminderScheduler(),
+            notificationCenter: MockNotificationCenter(),
+            screenTimeTracker: MockScreenTimeTracker(),
+            pauseConditionProvider: MockPauseConditionProvider(),
+            ipcStore: MockAppGroupIPCRecorder()
+        )
+        defer { coordinator.stopFallbackTimers() }
+
+        XCTAssertEqual(factoryCallCount, 1)
+        XCTAssertTrue(coordinator.settings === factorySettings)
+    }
+
+    func test_init_withExplicitSettings_doesNotCallSettingsFactory() {
+        var factoryCallCount = 0
+        let injectedSettings = SettingsStore(store: MockSettingsPersisting())
+        let coordinator = AppCoordinator(
+            settings: injectedSettings,
+            makeSettings: {
+                factoryCallCount += 1
+                return SettingsStore(store: MockSettingsPersisting())
+            },
+            scheduler: MockReminderScheduler(),
+            notificationCenter: MockNotificationCenter(),
+            screenTimeTracker: MockScreenTimeTracker(),
+            pauseConditionProvider: MockPauseConditionProvider(),
+            ipcStore: MockAppGroupIPCRecorder()
+        )
+        defer { coordinator.stopFallbackTimers() }
+
+        XCTAssertEqual(factoryCallCount, 0)
+        XCTAssertTrue(coordinator.settings === injectedSettings)
+    }
+
     func test_init_withoutScheduler_usesInjectedSchedulerFactory() {
         var factoryCallCount = 0
         let factoryScheduler = MockReminderScheduler()

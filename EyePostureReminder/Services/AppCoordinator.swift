@@ -180,6 +180,7 @@ final class AppCoordinator: ObservableObject {
 
     init(
         settings: SettingsStore? = nil,
+        makeSettings: (() -> SettingsStore)? = nil,
         scheduler: ReminderScheduling? = nil,
         makeScheduler: (() -> ReminderScheduling)? = nil,
         notificationCenter: NotificationScheduling? = nil,
@@ -213,7 +214,7 @@ final class AppCoordinator: ObservableObject {
             watchdogHeartbeatGraceInterval.isFinite && watchdogHeartbeatGraceInterval >= 0,
             "Watchdog heartbeat grace interval must be finite and non-negative"
         )
-        self.settings = Self.resolveSettings(settings)
+        self.settings = Self.resolveSettings(settings, makeSettings: makeSettings)
         self.scheduler = Self.resolveScheduler(scheduler, makeScheduler: makeScheduler)
         self.notificationCenter = notificationCenter ?? makeNotificationCenter()
         self.overlayManager = Self.resolveOverlayManager(
@@ -647,8 +648,17 @@ final class AppCoordinator: ObservableObject {
 }
 
 private extension AppCoordinator {
-    static func resolveSettings(_ settings: SettingsStore?) -> SettingsStore {
-        settings ?? SettingsStore()
+    static func resolveSettings(
+        _ settings: SettingsStore?,
+        makeSettings: (() -> SettingsStore)?
+    ) -> SettingsStore {
+        if let settings {
+            return settings
+        }
+        if let makeSettings {
+            return makeSettings()
+        }
+        return SettingsStore()
     }
 
     static func resolveScheduler(

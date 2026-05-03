@@ -213,3 +213,4 @@
 
 ## Learnings
 - For AppCoordinator service defaults, prefer `scheduler: ReminderScheduling? = nil` plus `makeScheduler` fallback resolved once in `init`; test both fallback-used and explicit-bypass paths to remove hidden `ReminderScheduler()` construction while preserving behavior (`EyePostureReminder/Services/AppCoordinator.swift`, `Tests/EyePostureReminderTests/Services/AppCoordinatorTests.swift`).
+- For AppCoordinator persistence defaults, prefer `settings: SettingsStore? = nil` plus `makeSettings` fallback factory and resolve once in `init`; add fallback-used and explicit-bypass tests to remove hidden `SettingsStore()` construction while preserving behavior (`EyePostureReminder/Services/AppCoordinator.swift`, `Tests/EyePostureReminderTests/Services/AppCoordinatorTests.swift`).
