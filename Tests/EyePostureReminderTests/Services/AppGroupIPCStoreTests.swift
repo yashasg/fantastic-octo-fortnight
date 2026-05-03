@@ -63,6 +63,37 @@ final class AppGroupIPCStoreTests: XCTestCase {
         XCTAssertEqual(observedValues, [true])
     }
 
+    func test_trueInterruptEnabled_postsChangeNotificationOnInjectedCenterOnly() throws {
+        let injectedCenter = NotificationCenter()
+        let store = AppGroupIPCStore(defaults: defaults, maxEventCount: 3, notificationCenter: injectedCenter)
+        var injectedCount = 0
+        var defaultCount = 0
+        let injectedObserver = injectedCenter.addObserver(
+            forName: AppGroupIPCStore.trueInterruptEnabledDidChangeNotification,
+            object: nil,
+            queue: nil
+        ) { _ in
+            injectedCount += 1
+        }
+        let defaultObserver = NotificationCenter.default.addObserver(
+            forName: AppGroupIPCStore.trueInterruptEnabledDidChangeNotification,
+            object: nil,
+            queue: nil
+        ) { _ in
+            defaultCount += 1
+        }
+        defer {
+            injectedCenter.removeObserver(injectedObserver)
+            NotificationCenter.default.removeObserver(defaultObserver)
+        }
+        try store.writeSelection(AppGroupSelectionSnapshot(categoryCount: 0, appCount: 1, lastUpdated: Date()))
+
+        XCTAssertTrue(store.setTrueInterruptEnabled(true))
+
+        XCTAssertEqual(injectedCount, 1)
+        XCTAssertEqual(defaultCount, 0)
+    }
+
     func test_trueInterruptEnabled_doesNotPostChangeNotificationWhenValueUnchanged() {
         var notificationCount = 0
         let observer = NotificationCenter.default.addObserver(
