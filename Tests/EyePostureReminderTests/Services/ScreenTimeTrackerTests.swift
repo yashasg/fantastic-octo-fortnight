@@ -228,6 +228,58 @@ final class ScreenTimeTrackerTests: XCTestCase {
         XCTAssertFalse(fired, "startIfActive must be a no-op when appStateProvider returns .background")
     }
 
+    func test_startIfActive_withNilAppStateProvider_usesFactoryProvider() async {
+        let center = NotificationCenter()
+        var factoryCallCount = 0
+        let tracker = ScreenTimeTracker(
+            resetGracePeriod: 5.0,
+            lifecycleNotificationCenter: center,
+            appStateProvider: nil,
+            makeAppStateProvider: {
+                factoryCallCount += 1
+                return MockAppStateProvider(state: .active)
+            }
+        )
+        defer { tracker.stop() }
+
+        tracker.setThreshold(1.0, for: .eyes)
+        let exp = expectation(description: "threshold fires via factory app state provider")
+        tracker.onThresholdReached = { type in
+            if type == .eyes { exp.fulfill() }
+        }
+
+        tracker.startIfActive()
+
+        await fulfillment(of: [exp], timeout: 4.0)
+        XCTAssertEqual(factoryCallCount, 1)
+    }
+
+    func test_startIfActive_withInjectedAppStateProvider_bypassesFactory() async {
+        let center = NotificationCenter()
+        var factoryCallCount = 0
+        let tracker = ScreenTimeTracker(
+            resetGracePeriod: 5.0,
+            lifecycleNotificationCenter: center,
+            appStateProvider: MockAppStateProvider(state: .active),
+            makeAppStateProvider: {
+                factoryCallCount += 1
+                return MockAppStateProvider(state: .background)
+            }
+        )
+        defer { tracker.stop() }
+
+        tracker.setThreshold(1.0, for: .eyes)
+        let exp = expectation(description: "threshold fires via injected app state provider")
+        tracker.onThresholdReached = { type in
+            if type == .eyes { exp.fulfill() }
+        }
+
+        tracker.startIfActive()
+
+        await fulfillment(of: [exp], timeout: 4.0)
+        XCTAssertEqual(factoryCallCount, 0)
+    }
+
     // MARK: - onThresholdReached callback
 
     func test_onThresholdReached_canBeAssigned() {

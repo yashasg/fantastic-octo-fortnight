@@ -105,10 +105,14 @@ final class ScreenTimeTracker: ScreenTimeTracking {
     ///   - appStateProvider: Provides `UIApplication.applicationState` for `startIfActive()`.
     ///     Defaults to `UIApplication.shared`. Inject a mock to drive active/background behavior
     ///     in unit tests without depending on the real UIApplication singleton.
+    ///   - makeAppStateProvider: Optional fallback factory used when `appStateProvider` is nil.
+    ///     Keeps production behavior (`UIApplication.shared`) while enabling deterministic
+    ///     fallback-path tests.
     init(
         resetGracePeriod: TimeInterval = 5.0,
         lifecycleNotificationCenter: NotificationCenter = .default,
-        appStateProvider: AppStateProviding? = nil
+        appStateProvider: AppStateProviding? = nil,
+        makeAppStateProvider: (() -> AppStateProviding)? = nil
     ) {
         if resetGracePeriod < 0 {
             Logger.scheduling.warning(
@@ -119,7 +123,8 @@ final class ScreenTimeTracker: ScreenTimeTracking {
             self.resetGracePeriod = resetGracePeriod
         }
         self.lifecycleNotificationCenter = lifecycleNotificationCenter
-        self.appStateProvider = appStateProvider ?? UIApplication.shared
+        let resolvedAppStateProvider = makeAppStateProvider ?? { UIApplication.shared }
+        self.appStateProvider = appStateProvider ?? resolvedAppStateProvider()
         for type in ReminderType.allCases {
             elapsed[type] = 0
         }
