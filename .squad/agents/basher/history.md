@@ -123,3 +123,10 @@
 - Architecture decision: preserve behavior by changing only `handleForegroundTransition` session-start initialization and proving seam usage with a focused `appSessionEnd` duration assertion.
 - Validation: `./scripts/build.sh build` and `./scripts/build.sh test` passed after the change.
 - Key file paths: `EyePostureReminder/Services/AppCoordinator.swift`, `Tests/EyePostureReminderTests/Services/AppCoordinatorTests.swift`.
+
+## 2026-05-03T12:50:00Z: #462 Phase A DI/SRP — Foreground Launch Readiness Clock Seam (COMPLETED)
+
+- Learned pattern: for launch-readiness analytics, both foreground-entry capture and latency delta should use injected `dateProvider.now` so timing remains deterministic in tests.
+- Architecture decision: preserve behavior by replacing only `Date()` reads in `AppCoordinator` foreground/session analytics paths and asserting a single focused latency seam test.
+- Validation: `./scripts/build.sh build` and `./scripts/build.sh test` passed after the change.
+- Key file paths: `EyePostureReminder/Services/AppCoordinator.swift`, `Tests/EyePostureReminderTests/Services/AppCoordinatorTests.swift`, `.squad/skills/date-provider-default-seam/SKILL.md`.
