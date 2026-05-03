@@ -194,3 +194,7 @@
 ## Learnings
 
 - For singleton-backed logging collaborators, prefer `logger: Protocol? = nil` plus `makeLogger` fallback factory and resolve once in `init`; add fallback-used and explicit-bypass tests around a public behavior (`register`) to remove eager concrete logger coupling while preserving runtime output.
+- For app-state lifecycle seams, prefer `appStateProvider: AppStateProviding? = nil` plus `makeAppStateProvider` fallback and resolve once in `init`; this removes direct `UIApplication.shared` coupling while preserving `startIfActive()` behavior.
+- Architecture decision: keep this #462 slice scoped to one constructor seam in `ScreenTimeTracker` and validate through existing timer-threshold behavior tests to avoid lifecycle callback regressions.
+- User preference reinforced: keep every #462 Phase A PR surgical (single DI/SRP improvement + focused unit assertions + full `./scripts/build.sh build` and `./scripts/build.sh test`).
+- Key file paths: `EyePostureReminder/Services/ScreenTimeTracker.swift`, `Tests/EyePostureReminderTests/Services/ScreenTimeTrackerTests.swift`.
