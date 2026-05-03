@@ -16,7 +16,17 @@ extension AppCoordinator {
     /// `#if DEBUG` ensures this `CommandLine` inspection is compiled out of Release/TestFlight
     /// builds, preventing accidental onboarding state resets in production (re: #350/#405).
 #if DEBUG
-    static let isUITestMode: Bool = isUITestMode(launchArguments: CommandLine.arguments)
+    static var isUITestMode: Bool {
+        resolveIsUITestMode()
+    }
+
+    static func resolveIsUITestMode(
+        launchArguments: [String]? = nil,
+        launchArgumentsProvider: () -> [String] = { CommandLine.arguments }
+    ) -> Bool {
+        let resolvedLaunchArguments = launchArguments ?? launchArgumentsProvider()
+        return isUITestMode(launchArguments: resolvedLaunchArguments)
+    }
 
     static func isUITestMode(launchArguments: [String]) -> Bool {
         launchArguments.contains("--skip-onboarding") ||
@@ -26,7 +36,14 @@ extension AppCoordinator {
             launchArguments.contains("--simulate-screen-time-not-determined")
     }
 #else
-    static let isUITestMode: Bool = false
+    static var isUITestMode: Bool { false }
+
+    static func resolveIsUITestMode(
+        launchArguments: [String]? = nil,
+        launchArgumentsProvider: () -> [String] = { CommandLine.arguments }
+    ) -> Bool {
+        false
+    }
 
     static func isUITestMode(launchArguments: [String]) -> Bool {
         false

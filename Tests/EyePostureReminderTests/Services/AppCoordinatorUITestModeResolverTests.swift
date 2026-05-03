@@ -8,6 +8,33 @@ final class AppCoordinatorUITestModeResolverTests: XCTestCase {
         XCTAssertTrue(AppCoordinator.isUITestMode(launchArguments: ["--show-overlay-eyes"]))
     }
 
+    func test_resolveIsUITestMode_withoutLaunchArguments_usesInjectedProvider() {
+        var providerCallCount = 0
+
+        let mode = AppCoordinator.resolveIsUITestMode(launchArgumentsProvider: {
+            providerCallCount += 1
+            return ["--show-overlay-posture"]
+        })
+
+        XCTAssertEqual(providerCallCount, 1)
+        XCTAssertTrue(mode)
+    }
+
+    func test_resolveIsUITestMode_withExplicitLaunchArguments_bypassesProvider() {
+        var providerCallCount = 0
+
+        let mode = AppCoordinator.resolveIsUITestMode(
+            launchArguments: ["--skip-onboarding"],
+            launchArgumentsProvider: {
+                providerCallCount += 1
+                return []
+            }
+        )
+
+        XCTAssertEqual(providerCallCount, 0)
+        XCTAssertTrue(mode)
+    }
+
     func test_init_withUITestLaunchArgument_andNoTracker_resolvesNoopScreenTimeTracker() {
         let mockNotif = MockNotificationCenter()
         let coordinator = AppCoordinator(

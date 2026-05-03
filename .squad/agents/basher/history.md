@@ -256,3 +256,7 @@
 - For protocols mirroring SDK singleton methods, avoid reusing the exact SDK method name/signature (e.g., INFocusStatusCenter.requestAuthorization has a different label and type than what a generic protocol would expect); use a distinct wrapper method name (requestFocusAuthorization) that converts to a simpler Bool to sidestep ambiguity.
 - KVO observation tokens can be typed as AnyObject in protocol return positions; NSKeyValueObservation deinit calls invalidate() automatically so setting token = nil safely cancels observation.
 - AnyObject token pattern (observeFocusChanges returning AnyObject) lets mocks return NSObject() as a no-op token without needing to subclass NSKeyValueObservation.
+
+## Learnings
+
+- For static launch-context helpers, add a tiny resolver seam (`launchArguments: [String]?` + `launchArgumentsProvider`) and have the public static computed property call it; this removes hard `CommandLine.arguments` coupling while preserving behavior and enables focused fallback/bypass tests (`EyePostureReminder/Services/AppCoordinator+UITestMode.swift`, `Tests/EyePostureReminderTests/Services/AppCoordinatorUITestModeResolverTests.swift`).
