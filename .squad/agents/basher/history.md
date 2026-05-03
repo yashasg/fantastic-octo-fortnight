@@ -133,3 +133,9 @@
 - Validation: `./scripts/build.sh build` and `./scripts/build.sh test` passed after the change.
 - Key file paths: `EyePostureReminder/Services/AppCoordinator.swift`, `Tests/EyePostureReminderTests/Services/AppCoordinatorTests.swift`, `.squad/skills/date-provider-default-seam/SKILL.md`.
 - For AppCoordinator notification-driven rerouting, inject a dedicated `NotificationCenter` dependency for observer registration/removal instead of using `NotificationCenter.default`; this preserves production behavior while isolating tests from global observer cross-talk.
+
+## Learnings
+
+- LiveCarPlayDetector Phase A seam: inject notificationCenter plus deterministic isCarPlayActiveProvider and verify injected-center route-change delivery plus default-center isolation to remove global observer coupling without changing runtime defaults.
+- For `@MainActor` detector callbacks driven by nonisolated `NotificationCenter` closures, inject a state-provider closure seam and mark it `nonisolated(unsafe)` so observer handlers stay compile-safe in Swift 6 while production behavior remains unchanged (`EyePostureReminder/Services/PauseConditionManager.swift`).
+- For NotificationCenter observer seams in services, keep one positive test on the injected center and one negative test on `NotificationCenter.default` to prove isolation from global callbacks (`Tests/EyePostureReminderTests/Services/LiveCarPlayDetectorTests.swift`).
