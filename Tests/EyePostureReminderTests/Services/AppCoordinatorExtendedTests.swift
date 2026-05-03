@@ -587,6 +587,38 @@ final class AppCoordinatorExtendedTests: XCTestCase {
         await coordinator.handleForegroundTransition()
     }
 
+    func test_handleForegroundTransition_usesInjectedDateProvider_whenWallClockPastButInjectedFuture() async {
+        let wallClockPast = Date(timeIntervalSinceNow: -60)
+        let mockDateProvider = MockDateProvider(now: Date(timeIntervalSinceNow: -3_600))
+        settings.snoozedUntil = wallClockPast
+        settings.snoozeCount = 1
+        let (coordinator, _, _, _) = makeCoordinator(dateProvider: mockDateProvider)
+        defer { coordinator.stopFallbackTimers() }
+
+        await coordinator.handleForegroundTransition()
+
+        XCTAssertEqual(
+            settings.snoozedUntil,
+            wallClockPast,
+            "handleForegroundTransition should keep snooze active when injected DateProviding reports future")
+        XCTAssertEqual(settings.snoozeCount, 1)
+    }
+
+    func test_handleForegroundTransition_usesInjectedDateProvider_whenWallClockFutureButInjectedExpired() async {
+        let mockDateProvider = MockDateProvider(now: Date(timeIntervalSinceNow: 3_600))
+        settings.snoozedUntil = Date(timeIntervalSinceNow: 60)
+        settings.snoozeCount = 1
+        let (coordinator, _, _, _) = makeCoordinator(dateProvider: mockDateProvider)
+        defer { coordinator.stopFallbackTimers() }
+
+        await coordinator.handleForegroundTransition()
+
+        XCTAssertNil(
+            settings.snoozedUntil,
+            "handleForegroundTransition should clear snooze when injected DateProviding marks it expired")
+        XCTAssertEqual(settings.snoozeCount, 0)
+    }
+
     // MARK: - startFallbackTimers
 
     func test_startFallbackTimers_doesNotCrash() {
