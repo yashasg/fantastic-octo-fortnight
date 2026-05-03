@@ -2,6 +2,16 @@
 import MetricKit
 import XCTest
 
+private final class MockMetricKitManager: MetricKitManaging {
+    private(set) var addCallCount = 0
+    private(set) var addedSubscribers: [MXMetricManagerSubscriber] = []
+
+    func add(_ subscriber: MXMetricManagerSubscriber) {
+        addCallCount += 1
+        addedSubscribers.append(subscriber)
+    }
+}
+
 /// Unit tests for `MetricKitSubscriber`.
 ///
 /// MetricKit payload objects cannot be instantiated in unit tests — they are
@@ -32,18 +42,27 @@ final class MetricKitSubscriberTests: XCTestCase {
 
     // MARK: - register()
 
-    /// `register()` calls `MXMetricManager.shared.add(self)`.
-    /// In a test process this is a no-op from MetricKit's perspective
-    /// but must not crash.
-    func test_register_doesNotCrash() {
-        MetricKitSubscriber.shared.register()
+    /// `register()` calls the injected manager's `add(self)`.
+    func test_register_addsSubscriberViaInjectedManager() throws {
+        let manager = MockMetricKitManager()
+        let subscriber = MetricKitSubscriber(metricManager: manager)
+
+        subscriber.register()
+
+        XCTAssertEqual(manager.addCallCount, 1)
+        let addedSubscriber = try XCTUnwrap(manager.addedSubscribers.first)
+        XCTAssertTrue(addedSubscriber === subscriber)
     }
 
-    /// `MXMetricManager` silently ignores duplicate `add()` calls for the same subscriber,
-    /// so calling `register()` multiple times is safe and must not crash.
-    func test_register_calledMultipleTimes_doesNotCrash() {
-        MetricKitSubscriber.shared.register()
-        MetricKitSubscriber.shared.register()
+    func test_register_calledMultipleTimes_recordsEachRegistrationCall() {
+        let manager = MockMetricKitManager()
+        let subscriber = MetricKitSubscriber(metricManager: manager)
+
+        subscriber.register()
+        subscriber.register()
+
+        XCTAssertEqual(manager.addCallCount, 2)
+        XCTAssertTrue(manager.addedSubscribers.allSatisfy { $0 === subscriber })
     }
 
     // MARK: - didReceive([MXMetricPayload])
