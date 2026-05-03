@@ -145,3 +145,4 @@
 - Keep launch-argument DI tests focused on fallback/bypass behavior: one test proves provider invocation when explicit args are absent, and one proves explicit args bypass provider.
 - User preference reinforced: Phase A slices stay surgical (single DI/SRP seam + focused tests + full `./scripts/build.sh build` and `./scripts/build.sh test`).
 - Key file paths: `EyePostureReminder/Services/AppCoordinator.swift`, `Tests/EyePostureReminderTests/Services/AppCoordinatorUITestLaunchContextTests.swift`, `.squad/skills/launch-context-di-seam/SKILL.md`.
+- For AppCoordinator UI-test guards, persist the resolved `uiTestMode` from init in an instance property and use it in lifecycle methods (e.g., `refreshAuthStatus`) instead of static `AppCoordinator.isUITestMode`; this keeps launch-context DI deterministic for each coordinator instance while preserving behavior.

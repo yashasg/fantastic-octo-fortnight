@@ -68,4 +68,40 @@ final class AppCoordinatorUITestModeResolverTests: XCTestCase {
 
         XCTAssertTrue(coordinator.pauseConditionManager is NoopPauseConditionManager)
     }
+
+    func test_refreshAuthStatus_withInjectedUITestModeTrue_skipsAuthFetch() async {
+        let mockNotif = MockNotificationCenter()
+        mockNotif.authorizationGranted = false
+        let coordinator = AppCoordinator(
+            settings: SettingsStore(store: MockSettingsPersisting()),
+            scheduler: ReminderScheduler(notificationCenter: mockNotif),
+            notificationCenter: mockNotif,
+            pauseConditionProvider: MockPauseConditionProvider(),
+            uiTestMode: true,
+            ipcStore: MockAppGroupIPCRecorder()
+        )
+        defer { coordinator.stopFallbackTimers() }
+
+        await coordinator.refreshAuthStatus()
+
+        XCTAssertEqual(coordinator.notificationAuthStatus, .notDetermined)
+    }
+
+    func test_refreshAuthStatus_withInjectedUITestModeFalse_fetchesAuthStatus() async {
+        let mockNotif = MockNotificationCenter()
+        mockNotif.authorizationGranted = false
+        let coordinator = AppCoordinator(
+            settings: SettingsStore(store: MockSettingsPersisting()),
+            scheduler: ReminderScheduler(notificationCenter: mockNotif),
+            notificationCenter: mockNotif,
+            pauseConditionProvider: MockPauseConditionProvider(),
+            uiTestMode: false,
+            ipcStore: MockAppGroupIPCRecorder()
+        )
+        defer { coordinator.stopFallbackTimers() }
+
+        await coordinator.refreshAuthStatus()
+
+        XCTAssertEqual(coordinator.notificationAuthStatus, .denied)
+    }
 }

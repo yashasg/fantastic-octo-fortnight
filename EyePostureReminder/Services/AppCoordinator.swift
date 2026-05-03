@@ -83,6 +83,7 @@ final class AppCoordinator: ObservableObject {
     /// app extensions and watchdog diagnostics can observe the selected path.
     let ipcStore: AppGroupIPCProviding
     let dateProvider: DateProviding
+    private let isUITestModeEnabled: Bool
     private let lifecycleNotificationCenter: NotificationCenter
     private var trueInterruptEnabledObserver: NSObjectProtocol?
     let watchdogHeartbeatGraceInterval: TimeInterval
@@ -215,6 +216,7 @@ final class AppCoordinator: ObservableObject {
         self.lifecycleNotificationCenter = lifecycleNotificationCenter
         self.watchdogHeartbeatGraceInterval = watchdogHeartbeatGraceInterval
         let resolvedUITestMode = uiTestMode ?? Self.isUITestMode(launchArguments: resolvedLaunchArguments)
+        self.isUITestModeEnabled = resolvedUITestMode
 
         // In UI test mode, use no-op stubs for services that register UIKit lifecycle
         // observers and start 1-second timers — they prevent XCUITest from settling
@@ -332,7 +334,7 @@ final class AppCoordinator: ObservableObject {
         // Skip the system async call in UI test mode — it suspends the main actor,
         // which can prevent a Toggle binding update from executing before XCUITest
         // reads the element's accessibility value immediately after tap().
-        guard !AppCoordinator.isUITestMode else { return }
+        guard !isUITestModeEnabled else { return }
         notificationAuthStatus = await notificationCenter.getAuthorizationStatus()
         Logger.lifecycle.debug("Notification auth status: \(self.notificationAuthStatus.rawValue)")
     }
