@@ -104,6 +104,58 @@ final class SelectedAppsStateTests: XCTestCase {
         XCTAssertFalse(sut.isTrueInterruptEnabled)
     }
 
+    func test_init_withExplicitIPCStore_bypassesFactory() {
+        let expectedMetadata = SelectedAppsMetadata(
+            categoryCount: 1,
+            appCount: 2,
+            lastUpdated: Date(timeIntervalSince1970: 6_000_000)
+        )
+        let explicitStore = MockSelectedAppsIPCStore()
+        explicitStore.storedSnapshot = expectedMetadata
+        explicitStore.storedEnabled = true
+        var factoryCallCount = 0
+
+        let sut = SelectedAppsState(
+            defaults: testDefaults,
+            ipcStore: explicitStore,
+            makeIPCStore: { _ in
+                factoryCallCount += 1
+                return MockSelectedAppsIPCStore()
+            }
+        )
+
+        XCTAssertEqual(factoryCallCount, 0)
+        XCTAssertEqual(sut.selectionMetadata, expectedMetadata)
+        XCTAssertTrue(sut.isTrueInterruptEnabled)
+    }
+
+    func test_init_withoutExplicitIPCStore_usesFactoryWithPassedDefaults() {
+        let expectedMetadata = SelectedAppsMetadata(
+            categoryCount: 2,
+            appCount: 1,
+            lastUpdated: Date(timeIntervalSince1970: 7_000_000)
+        )
+        let factoryStore = MockSelectedAppsIPCStore()
+        factoryStore.storedSnapshot = expectedMetadata
+        factoryStore.storedEnabled = true
+        var capturedDefaults: UserDefaults?
+        var factoryCallCount = 0
+
+        let sut = SelectedAppsState(
+            defaults: testDefaults,
+            makeIPCStore: { defaults in
+                factoryCallCount += 1
+                capturedDefaults = defaults
+                return factoryStore
+            }
+        )
+
+        XCTAssertEqual(factoryCallCount, 1)
+        XCTAssertTrue(capturedDefaults === testDefaults)
+        XCTAssertEqual(sut.selectionMetadata, expectedMetadata)
+        XCTAssertTrue(sut.isTrueInterruptEnabled)
+    }
+
     // MARK: - setEnabled
 
     func test_setEnabled_trueWithSelection_persistsToDefaults() {

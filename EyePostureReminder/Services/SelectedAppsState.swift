@@ -71,9 +71,13 @@ final class SelectedAppsState: ObservableObject {
     ///   leaves extension-critical persistence unavailable instead of falling
     ///   back to standard defaults.
     convenience init(
-        defaults: UserDefaults? = AppGroupDefaults.resolve(consumer: "SelectedAppsState")
+        defaults: UserDefaults? = AppGroupDefaults.resolve(consumer: "SelectedAppsState"),
+        ipcStore: (any SelectedAppsIPCStoring)? = nil,
+        makeIPCStore: (UserDefaults?) -> any SelectedAppsIPCStoring = { defaults in
+            AppGroupIPCStore(defaults: defaults)
+        }
     ) {
-        self.init(ipcStore: AppGroupIPCStore(defaults: defaults))
+        self.init(ipcStore: ipcStore ?? makeIPCStore(defaults))
     }
 
     /// Create a state object backed by an explicit IPC store (for testing).
