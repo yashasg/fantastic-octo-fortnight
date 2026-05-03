@@ -179,7 +179,8 @@ final class AppCoordinator: ObservableObject {
     init(
         settings: SettingsStore? = nil,
         scheduler: ReminderScheduling? = nil,
-        notificationCenter: NotificationScheduling = UNUserNotificationCenter.current(),
+        notificationCenter: NotificationScheduling? = nil,
+        makeNotificationCenter: @escaping () -> NotificationScheduling = { UNUserNotificationCenter.current() },
         overlayManager: OverlayPresenting? = nil,
         screenTimeTracker: ScreenTimeTracking? = nil,
         pauseConditionProvider: PauseConditionProviding? = nil,
@@ -201,7 +202,7 @@ final class AppCoordinator: ObservableObject {
         )
         self.settings = Self.resolveSettings(settings)
         self.scheduler = Self.resolveScheduler(scheduler)
-        self.notificationCenter = notificationCenter
+        self.notificationCenter = notificationCenter ?? makeNotificationCenter()
         self.overlayManager = Self.resolveOverlayManager(overlayManager)
         let resolvedLaunchArguments = launchArguments ?? launchArgumentsProvider()
         self.screenTimeAuthorization = Self.resolveScreenTimeAuthorization(

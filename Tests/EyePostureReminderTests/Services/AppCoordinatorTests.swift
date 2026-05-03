@@ -105,6 +105,54 @@ final class AppCoordinatorTests: XCTestCase {
         coordinator.stopFallbackTimers()
     }
 
+    func test_init_withoutNotificationCenter_usesInjectedNotificationCenterFactory() async {
+        var factoryCallCount = 0
+        let factoryCenter = MockNotificationCenter()
+        factoryCenter.authorizationGranted = false
+        let coordinator = AppCoordinator(
+            settings: SettingsStore(store: MockSettingsPersisting()),
+            scheduler: ReminderScheduler(notificationCenter: factoryCenter),
+            notificationCenter: nil,
+            makeNotificationCenter: {
+                factoryCallCount += 1
+                return factoryCenter
+            },
+            screenTimeTracker: MockScreenTimeTracker(),
+            pauseConditionProvider: MockPauseConditionProvider(),
+            ipcStore: MockAppGroupIPCRecorder()
+        )
+        defer { coordinator.stopFallbackTimers() }
+
+        await coordinator.refreshAuthStatus()
+
+        XCTAssertEqual(factoryCallCount, 1)
+        XCTAssertEqual(coordinator.notificationAuthStatus, .denied)
+    }
+
+    func test_init_withExplicitNotificationCenter_doesNotCallNotificationCenterFactory() async {
+        var factoryCallCount = 0
+        let injectedCenter = MockNotificationCenter()
+        injectedCenter.authorizationGranted = false
+        let coordinator = AppCoordinator(
+            settings: SettingsStore(store: MockSettingsPersisting()),
+            scheduler: ReminderScheduler(notificationCenter: injectedCenter),
+            notificationCenter: injectedCenter,
+            makeNotificationCenter: {
+                factoryCallCount += 1
+                return MockNotificationCenter()
+            },
+            screenTimeTracker: MockScreenTimeTracker(),
+            pauseConditionProvider: MockPauseConditionProvider(),
+            ipcStore: MockAppGroupIPCRecorder()
+        )
+        defer { coordinator.stopFallbackTimers() }
+
+        await coordinator.refreshAuthStatus()
+
+        XCTAssertEqual(factoryCallCount, 0)
+        XCTAssertEqual(coordinator.notificationAuthStatus, .denied)
+    }
+
     func test_init_withUITestScreenTimeStatus_keepsStatusForRelaunches() {
         UserDefaults.standard.set(
             ScreenTimeAuthorizationStatus.notDetermined.rawValue,
