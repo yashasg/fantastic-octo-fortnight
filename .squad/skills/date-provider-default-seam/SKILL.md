@@ -47,3 +47,17 @@ Use when a service method currently takes `now: Date = Date()` and production co
 - `Tests/EyePostureReminderTests/Services/AppCoordinatorTests.swift` (`cancelAllReminders` fallback/bypass assertions)
 - `EyePostureReminder/Services/ScreenTimeShieldTypes.swift` (`makeTriggeredAt` convenience-init seam)
 - `Tests/EyePostureReminderTests/Services/DeviceActivityMonitorTests.swift` (`ShieldSession` fallback/bypass assertions)
+
+---
+
+## Pattern: SDK Singleton Abstraction via Distinct Wrapper Method
+
+**Context:** When injecting a protocol over an SDK singleton whose method names/signatures differ across versions or conflict with generic protocol naming.
+
+**Problem:** Mirroring an SDK method name (e.g., `requestAuthorization`) in a protocol can cause type-inference ambiguity when the SDK method uses a different argument label or parameter type.
+
+**Solution:** Use a distinct wrapper method name (e.g., `requestFocusAuthorization(_ handler: @escaping (Bool) -> Void)`) that converts the SDK's native type to a simpler protocol-level type (`Bool`). Implement it in an extension on the SDK class.
+
+**Token pattern for KVO:** Return `AnyObject` from observation methods; `NSKeyValueObservation`'s deinit calls `invalidate()` automatically, so `token = nil` cleanly cancels. Mock can return `NSObject()` as a no-op token.
+
+**Files:** `EyePostureReminder/Services/PauseConditionManager.swift`, `Tests/EyePostureReminderTests/Services/LiveFocusStatusDetectorTests.swift`

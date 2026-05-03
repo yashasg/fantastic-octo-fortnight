@@ -53,6 +53,38 @@ protocol PauseConditionProviding: ServiceLifecycle {
     var onPauseStateChanged: (@MainActor (Bool) -> Void)? { get set }
 }
 
+// MARK: - FocusStatusCenterProviding
+
+/// Abstracts `INFocusStatusCenter` for testability.
+///
+/// Concrete conformance is provided by `INFocusStatusCenter` via extension.
+/// Tests inject a `MockFocusStatusCenter` to exercise authorization and
+/// observation paths without real Focus mode permissions.
+protocol FocusStatusCenterProviding: AnyObject {
+    /// Request Focus mode authorization and deliver the result as a `Bool`
+    /// (`true` = authorized, `false` = denied/restricted).
+    func requestFocusAuthorization(_ handler: @escaping (Bool) -> Void)
+    /// Current Focus active state (wraps `focusStatus.isFocused ?? false`).
+    var currentIsFocused: Bool { get }
+    /// Register for future focus state changes. The returned token must be retained
+    /// for as long as observation is desired; releasing it cancels delivery.
+    func observeFocusChanges(_ handler: @escaping (Bool) -> Void) -> AnyObject
+}
+
+extension INFocusStatusCenter: FocusStatusCenterProviding {
+    var currentIsFocused: Bool { focusStatus.isFocused ?? false }
+
+    func requestFocusAuthorization(_ handler: @escaping (Bool) -> Void) {
+        requestAuthorization { status in handler(status == .authorized) }
+    }
+
+    func observeFocusChanges(_ handler: @escaping (Bool) -> Void) -> AnyObject {
+        return observe(\.focusStatus, options: [.new]) { center, _ in
+            handler(center.focusStatus.isFocused ?? false)
+        }
+    }
+}
+
 // MARK: - LiveFocusStatusDetector
 
 /// Observes `INFocusStatusCenter` for Focus mode changes.
@@ -61,31 +93,36 @@ protocol PauseConditionProviding: ServiceLifecycle {
 @MainActor
 final class LiveFocusStatusDetector: NSObject, FocusStatusDetecting {
 
+    typealias FocusCenterFactory = () -> FocusStatusCenterProviding
+
+    private let focusCenter: FocusStatusCenterProviding
     private(set) var isFocused: Bool = false
     var onFocusChanged: ((Bool) -> Void)?
 
-    private var focusObservation: NSKeyValueObservation?
+    /// Retained to keep observation alive; releasing it cancels KVO delivery.
+    private var focusObservation: AnyObject?
+
+    init(
+        focusCenter: FocusStatusCenterProviding? = nil,
+        makeFocusCenter: @escaping FocusCenterFactory = { INFocusStatusCenter.default }
+    ) {
+        self.focusCenter = focusCenter ?? makeFocusCenter()
+    }
 
     func startMonitoring() {
         // Request authorization first. KVO is deferred until after auth completes
         // to avoid accessing focusStatus before the usage description is acknowledged —
         // an early access crashes the app even when Info.plist has the key.
-        INFocusStatusCenter.default.requestAuthorization { [weak self] status in
-            guard let self else { return }
-            guard status == .authorized else { return }
+        focusCenter.requestFocusAuthorization { [weak self] authorized in
+            guard let self, authorized else { return }
 
-            let focused = INFocusStatusCenter.default.focusStatus.isFocused ?? false
+            let focused = self.focusCenter.currentIsFocused
             DispatchQueue.main.async {
                 self.isFocused = focused
                 self.onFocusChanged?(focused)
 
-                // KVO on `focusStatus` — fires whenever Focus mode activates or deactivates.
-                self.focusObservation = INFocusStatusCenter.default.observe(
-                    \.focusStatus,
-                    options: [.new]
-                ) { [weak self] _, _ in
-                    guard let self else { return }
-                    let focused = INFocusStatusCenter.default.focusStatus.isFocused ?? false
+                // Observation token: releasing cancels KVO delivery automatically.
+                self.focusObservation = self.focusCenter.observeFocusChanges { [weak self] focused in
                     // Use [weak self] on the inner dispatch to prevent a stale-write race:
                     // if stopMonitoring() + startMonitoring() run while this block is queued,
                     // the freshly-initialised isFocused must not be overwritten. Fixes #492.
@@ -100,7 +137,6 @@ final class LiveFocusStatusDetector: NSObject, FocusStatusDetecting {
     }
 
     func stopMonitoring() {
-        focusObservation?.invalidate()
         focusObservation = nil
     }
 }
