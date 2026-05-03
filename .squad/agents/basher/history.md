@@ -216,3 +216,10 @@
 - For AppCoordinator persistence defaults, prefer `settings: SettingsStore? = nil` plus `makeSettings` fallback factory and resolve once in `init`; add fallback-used and explicit-bypass tests to remove hidden `SettingsStore()` construction while preserving behavior (`EyePostureReminder/Services/AppCoordinator.swift`, `Tests/EyePostureReminderTests/Services/AppCoordinatorTests.swift`).
 - 2026-05-03: Fixed a flaky foreground snooze seam test by making snooze-wake scheduling derive delay from `dateProvider.now` instead of wall-clock `Date()`. This keeps injected-clock inversion tests deterministic while preserving production behavior when `SystemDateProvider` is used.
 - 2026-05-03: For `AppDelegate` UI-test launch handlers that mutate settings repeatedly, inject `settingsStore: SettingsStore? = nil` plus `makeSettingsStore` fallback and resolve once with a lazy property; add focused tests for fallback-used-once and explicit-settings-bypass to keep launch behavior deterministic while removing repeated factory construction (`EyePostureReminder/App/AppDelegate.swift`, `Tests/EyePostureReminderTests/Services/AppDelegateTests.swift`).
+
+## 2026-05-03T21:08:31Z: #462 Phase A — AppDelegate Settings Store DI Seam (CHECKPOINTS)
+
+- Checkpoint 1 (scope verification): Confirmed micro-slice implementation exists on branch `basher/462-phasea-notificationdelegate-factory-seam` with deliverables in `AppDelegate.swift`, `AppDelegateTests.swift`, and skill doc `.squad/skills/appdelegate-settings-store-seam/SKILL.md`.
+- Checkpoint 2 (PR alignment): Confirmed PR `#579` is open from `basher/462-phasea-notificationdelegate-factory-seam` to `main` with title `#462 Phase A: AppDelegate settings store resolution seam`.
+- Checkpoint 3 (validation): Ran `./scripts/build.sh build` and `./scripts/build.sh test` successfully (exit code 0) after confirming the seam + focused tests.
+- Checkpoint 4 (branch state): Confirmed branch is in sync with `origin/basher/462-phasea-notificationdelegate-factory-seam` (no ahead/behind commits) and ready for review/merge.
