@@ -115,3 +115,10 @@
 - Architecture decision: preserve behavior by changing only the snooze guard expression and adding wall-clock/injected-clock inversion tests that assert both continue-scheduling and suppress-scheduling paths.
 - User preference reinforced: keep each #462 slice surgical (single DI seam + focused tests + full `./scripts/build.sh build` and `./scripts/build.sh test`).
 - Key file paths: `EyePostureReminder/Services/AppCoordinator.swift`, `Tests/EyePostureReminderTests/Services/AppCoordinatorTests.swift`, `.squad/skills/date-provider-default-seam/SKILL.md`.
+
+## 2026-05-03T12:32:00Z: #462 Phase A DI/SRP — Foreground SessionStart Clock Seam (COMPLETED)
+
+- Learned pattern: warm-foreground session telemetry must seed `sessionStartTime` from injected `dateProvider.now` (not `Date()`) to keep `appSessionEnd` durations deterministic.
+- Architecture decision: preserve behavior by changing only `handleForegroundTransition` session-start initialization and proving seam usage with a focused `appSessionEnd` duration assertion.
+- Validation: `./scripts/build.sh build` and `./scripts/build.sh test` passed after the change.
+- Key file paths: `EyePostureReminder/Services/AppCoordinator.swift`, `Tests/EyePostureReminderTests/Services/AppCoordinatorTests.swift`.
