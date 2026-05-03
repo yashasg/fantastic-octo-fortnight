@@ -30,6 +30,15 @@ final class SettingsViewModelExtendedTests: XCTestCase {
         SettingsViewModel(settings: settings, scheduler: mockScheduler, maxSnoozeCount: maxSnoozeCount)
     }
 
+    private func makeSUT(maxSnoozeCount: Int = 2, dateProvider: DateProviding) -> SettingsViewModel {
+        SettingsViewModel(
+            settings: settings,
+            scheduler: mockScheduler,
+            maxSnoozeCount: maxSnoozeCount,
+            dateProvider: dateProvider
+        )
+    }
+
     // MARK: - SnoozeOption.allCases
 
     func test_snoozeOptions_countIsThree() {
@@ -366,6 +375,53 @@ final class SettingsViewModelExtendedTests: XCTestCase {
         XCTAssertEqual(
             mockScheduler.scheduleRemindersCallCount, 0,
             "scheduleReminders must not be called when ViewModel is deallocated before Task body executes"
+        )
+    }
+
+    // MARK: - DateProviding seam (deterministic snooze tests)
+
+    func test_isSnoozeActive_withMockedNow_exactlyAtExpiry_returnsFalse() {
+        let fixedNow = Date(timeIntervalSince1970: 1_000_000)
+        let dateProvider = MockDateProvider(now: fixedNow)
+        let sut = makeSUT(dateProvider: dateProvider)
+        // snoozedUntil == now → not active (snooze has expired)
+        settings.snoozedUntil = fixedNow
+        XCTAssertFalse(sut.isSnoozeActive,
+            "A snoozedUntil equal to the current time must not be considered active")
+    }
+
+    func test_isSnoozeActive_withMockedNow_oneSecondBeforeExpiry_returnsTrue() {
+        let fixedNow = Date(timeIntervalSince1970: 1_000_000)
+        let dateProvider = MockDateProvider(now: fixedNow)
+        let sut = makeSUT(dateProvider: dateProvider)
+        // snoozedUntil is 1 second in the future relative to mocked now
+        settings.snoozedUntil = fixedNow.addingTimeInterval(1)
+        XCTAssertTrue(sut.isSnoozeActive,
+            "A snoozedUntil one second in the future must be considered active")
+    }
+
+    func test_isSnoozeActive_withMockedNow_oneSecondPastExpiry_returnsFalse() {
+        let fixedNow = Date(timeIntervalSince1970: 1_000_000)
+        let dateProvider = MockDateProvider(now: fixedNow)
+        let sut = makeSUT(dateProvider: dateProvider)
+        settings.snoozedUntil = fixedNow.addingTimeInterval(-1)
+        XCTAssertFalse(sut.isSnoozeActive,
+            "A snoozedUntil one second in the past must not be considered active")
+    }
+
+    @available(*, deprecated, message: "Tests legacy snooze(for:) date-provider seam")
+    func test_snoozeForLegacy_persistsNowPlusDuration_usingMockedDate() throws {
+        let fixedNow = Date(timeIntervalSince1970: 1_000_000)
+        let dateProvider = MockDateProvider(now: fixedNow)
+        let sut = makeSUT(dateProvider: dateProvider)
+        sut.snooze(for: 5)
+        let snoozedUntil = try XCTUnwrap(settings.snoozedUntil)
+        let expected = fixedNow.addingTimeInterval(5 * 60)
+        XCTAssertEqual(
+            snoozedUntil.timeIntervalSince1970,
+            expected.timeIntervalSince1970,
+            accuracy: 0.001,
+            "snooze(for:5) must persist exactly now + 5 min using the injected date provider"
         )
     }
 }
