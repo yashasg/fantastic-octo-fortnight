@@ -60,7 +60,7 @@ extension AppCoordinator: ReminderScheduling {
         // while staying in the foreground throughout the snooze period.
         // #73: Also schedule the silent background notification so a backgrounded
         // app can wake even if the in-process task is killed by the OS.
-        if let snoozeEnd = settings.snoozedUntil, snoozeEnd > Date() {
+        if let snoozeEnd = settings.snoozedUntil, snoozeEnd > dateProvider.now {
             scheduleSnoozeWakeTask(at: snoozeEnd)
             if notificationAuthStatus == .authorized {
                 Task { [weak self] in await self?.scheduleSnoozeWakeNotification(at: snoozeEnd) }
