@@ -519,7 +519,7 @@ final class AppCoordinator: ObservableObject {
     /// `snoozedUntil` (left by a swiped-away snooze-wake notification on a
     /// killed app) is cleaned up before `scheduleReminders()` runs.
     func clearExpiredSnoozeIfNeeded() async {
-        guard let snoozeEnd = settings.snoozedUntil, snoozeEnd <= Date() else { return }
+        guard let snoozeEnd = settings.snoozedUntil, snoozeEnd <= dateProvider.now else { return }
         settings.snoozedUntil = nil
         settings.snoozeCount  = 0
         AnalyticsLogger.log(.snoozeExpired)
