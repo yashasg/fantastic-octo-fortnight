@@ -573,27 +573,25 @@ extension ScreenTimeTrackerTests {
 
     // MARK: - Behavioral: stop invalidates timer
 
-    /// After `stop()`, no threshold callbacks must fire even if the timer would have
-    /// fired had it kept running.
-    func test_stop_preventsCallbacksAfterStop() async throws {
-        let firstExp = expectation(description: "first callback fires before stop")
+    /// After `stop()`, stale timer tasks (captured with the previous generation)
+    /// must not advance elapsed counters or fire callbacks.
+    func test_stop_preventsCallbacksAfterStop() {
         var callCount = 0
 
         sut.setThreshold(1, for: .eyes)
         sut.onThresholdReached = { type in
             guard type == .eyes else { return }
             callCount += 1
-            firstExp.fulfill()
         }
 
-        NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
+        // Fresh tracker generation starts at 0.
+        sut.tickGuarded(generation: 0, now: 1.0)
+        XCTAssertEqual(callCount, 1, "Initial guarded tick should fire once before stop()")
 
-        await fulfillment(of: [firstExp], timeout: 5.0)
-        sut.stop() // invalidates the timer immediately
+        sut.stop()
+        sut.tickGuarded(generation: 0, now: 2.0)
 
-        let countAfterStop = callCount
-        try await Task.sleep(nanoseconds: 2_000_000_000) // 2 s — timer should be dead
-        XCTAssertEqual(callCount, countAfterStop, "stop() must invalidate the timer — no callbacks after stop")
+        XCTAssertEqual(callCount, 1, "stop() must invalidate stale generation ticks")
     }
 
     // MARK: - Behavioral: reset zeroes elapsed counter
@@ -601,39 +599,28 @@ extension ScreenTimeTrackerTests {
     /// After `reset(for:)`, the type must require a full threshold period before
     /// firing the callback — i.e. the elapsed counter is genuinely zeroed.
     ///
-    /// Strategy: set threshold = 1, start the timer, wait 0.8 s (close to threshold
-    /// but before it fires), reset the counter, then measure the time until the
-    /// callback fires.  It must be ≥ ~0.8 s from the reset (not ~0.2 s), proving
-    /// the counter was zeroed.
-    func test_reset_zeroesElapsed_delaysNextCallback() async throws {
-        let exp = expectation(description: "callback fires after reset")
+    /// Strategy: deterministically drive ticks. Accumulate ~1 s, reset, verify one
+    /// additional tick does not fire, and the following tick does.
+    func test_reset_zeroesElapsed_delaysNextCallback() {
         var callCount = 0
 
         sut.setThreshold(2, for: .eyes)
         sut.onThresholdReached = { type in
             guard type == .eyes else { return }
             callCount += 1
-            exp.fulfill()
         }
 
-        NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
-
-        // Wait ~1 s so elapsed is approximately 1 (half of threshold=2).
-        try await Task.sleep(nanoseconds: 1_100_000_000)
-        // Reset elapsed to 0 — callback should NOT fire for another ~2 s.
+        // Build partial elapsed (~1.0), then reset.
+        sut.tick(now: 1.0)
         sut.reset(for: .eyes)
 
-        let resetTime = Date()
-        await fulfillment(of: [exp], timeout: 5.0)
-        let elapsed = Date().timeIntervalSince(resetTime)
+        // After reset, one tick is not enough to reach threshold=2.
+        sut.tick(now: 2.0)
+        XCTAssertEqual(callCount, 0, "reset(for:) must clear elapsed so callback does not fire early")
 
-        XCTAssertGreaterThanOrEqual(
-            elapsed,
-            1.5,
-            "After reset, callback must not fire sooner than ~threshold (2 s) — elapsed was \(elapsed) s"
-        )
-        XCTAssertEqual(callCount, 1, "Exactly one callback must fire after reset")
-        sut.stop()
+        // The following tick reaches threshold from zeroed state.
+        sut.tick(now: 3.0)
+        XCTAssertEqual(callCount, 1, "Callback should fire only after a full post-reset threshold period")
     }
 }
 
@@ -654,37 +641,33 @@ extension ScreenTimeTrackerTests {
     ///
     /// Strategy:
     ///   1. Create a tracker with a 0.1 s grace period and a 2 s threshold.
-    ///   2. Start ticking and accumulate ~1.2 s of elapsed time.
+    ///   2. Deterministically drive ticks and accumulate ~2.2 s of elapsed time.
     ///   3. Resign active (arms the 0.1 s grace timer).
-    ///   4. Return within 50 ms — well inside the grace window.
-    ///   5. The callback must fire within ~1 s of resume (not ~2 s from scratch),
-    ///      proving the accumulated time was not erased.
-    func test_gracePeriod_withinGrace_preservesElapsedTime() async throws {
+    ///   4. Return immediately — well inside the grace window.
+    ///   5. One additional tick must fire the callback (preserved elapsed), proving
+    ///      counters were not erased during the short background transition.
+    func test_gracePeriod_withinGrace_preservesElapsedTime() {
         let tracker = ScreenTimeTracker(resetGracePeriod: 0.1)
         defer { tracker.stop() }
 
-        let exp = expectation(description: "callback fires with preserved elapsed")
-        tracker.setThreshold(2, for: .eyes)
+        var callCount = 0
+        tracker.setThreshold(3, for: .eyes)
         tracker.onThresholdReached = { type in
-            if type == .eyes { exp.fulfill() }
+            if type == .eyes { callCount += 1 }
         }
 
-        // Arm the tick timer.
-        NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
-
-        // Accumulate ~1.2 s of elapsed time (60 % of the 2 s threshold).
-        try await Task.sleep(nanoseconds: 1_200_000_000)
+        // Accumulate ~2.2 s (below threshold=3).
+        tracker.tick(now: 1.0)
+        tracker.tick(now: 2.2)
+        XCTAssertEqual(callCount, 0)
 
         // Pause the timer; arms the 0.1 s grace window.
         NotificationCenter.default.post(name: UIApplication.willResignActiveNotification, object: nil)
-
-        // Return after 50 ms — inside the 100 ms grace period.
-        try await Task.sleep(nanoseconds: 50_000_000)
         NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
 
-        // With ~1.2 s already accumulated the callback should fire within ~1.5 s
-        // of resume (threshold = 2 s, ~0.8 s remaining).  Give a generous 4 s timeout.
-        await fulfillment(of: [exp], timeout: 4.0)
+        // If elapsed was preserved, one post-resume tick reaches threshold.
+        tracker.tick(now: 3.2)
+        XCTAssertEqual(callCount, 1, "Returning within grace must preserve elapsed counters")
     }
 
     // MARK: - willResignActive with grace expired: counters reset
@@ -695,45 +678,41 @@ extension ScreenTimeTrackerTests {
     ///
     /// Strategy:
     ///   1. Create a tracker with a 0.1 s grace period and a 2 s threshold.
-    ///   2. Start ticking and accumulate ~1.2 s of elapsed time.
+    ///   2. Deterministically drive ticks and accumulate ~2.2 s of elapsed time.
     ///   3. Resign active (arms the 0.1 s grace timer).
-    ///   4. Wait 300 ms — the grace period expires and counters reset to 0.
-    ///   5. Return to active and measure time until callback fires.
-    ///      It must be ≥ 1.5 s, proving counters were genuinely zeroed.
+    ///   4. Wait via `awaitCondition` until after grace expiry.
+    ///   5. Return to active. The first tick must NOT fire (counters reset), and
+    ///      three ticks from resume should trigger the callback exactly once.
     func test_gracePeriod_expired_resetsCounters() async throws {
         let tracker = ScreenTimeTracker(resetGracePeriod: 0.1)
         defer { tracker.stop() }
 
-        let exp = expectation(description: "callback fires after full threshold wait")
-        tracker.setThreshold(2, for: .eyes)
+        var callCount = 0
+        tracker.setThreshold(3, for: .eyes)
         tracker.onThresholdReached = { type in
-            if type == .eyes { exp.fulfill() }
+            if type == .eyes { callCount += 1 }
         }
 
-        // Arm the tick timer.
-        NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
-
-        // Accumulate ~1.2 s of elapsed time (60 % of the 2 s threshold).
-        try await Task.sleep(nanoseconds: 1_200_000_000)
+        // Accumulate ~2.2 s (below threshold=3).
+        tracker.tick(now: 1.0)
+        tracker.tick(now: 2.2)
+        XCTAssertEqual(callCount, 0)
 
         // Pause; arms the 0.1 s grace window.
         NotificationCenter.default.post(name: UIApplication.willResignActiveNotification, object: nil)
 
-        // Wait 300 ms — well past the 100 ms grace — so counters are reset to 0.
-        try await Task.sleep(nanoseconds: 300_000_000)
+        // Wait past grace-period expiry without fixed Task.sleep synchronization.
+        let afterGrace = Date(timeIntervalSinceNow: 0.15)
+        await awaitCondition(timeout: 1.0) { Date() >= afterGrace }
 
-        // Return to active.  Elapsed is now 0 so the full 2 s threshold is needed.
-        let resumeTime = Date()
+        // Return to active. Elapsed is now 0 so one tick must not fire.
         NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
+        tracker.tick(now: 3.2)
+        XCTAssertEqual(callCount, 0, "After grace expiry, counters must reset before resume")
 
-        await fulfillment(of: [exp], timeout: 6.0)
-        let elapsed = Date().timeIntervalSince(resumeTime)
-
-        XCTAssertGreaterThanOrEqual(
-            elapsed,
-            1.5,
-            // swiftlint:disable:next line_length
-            "After grace expiry, counters reset to 0 — callback must not fire sooner than ~threshold; elapsed was \(elapsed) s"
-        )
+        // Three ticks from zero should cross threshold exactly once.
+        tracker.tick(now: 4.2)
+        tracker.tick(now: 5.2)
+        XCTAssertEqual(callCount, 1, "After reset-to-zero, callback should require full threshold accumulation")
     }
 }
