@@ -98,10 +98,12 @@ final class OverlayManager: OverlayPresenting {
 
     typealias AudioManagerFactory = () -> MediaControlling
     typealias NotificationCenterFactory = () -> NotificationCenter
+    typealias SettingsStoreFactory = () -> SettingsPersisting
 
     private let audioManager: MediaControlling
     private let accessibilityNotificationPoster: AccessibilityNotificationPosting
     private let notificationCenter: NotificationCenter
+    private let settingsStore: SettingsPersisting
 
     // MARK: - State
 
@@ -134,12 +136,15 @@ final class OverlayManager: OverlayPresenting {
         audioManager: MediaControlling? = nil,
         accessibilityNotificationPoster: AccessibilityNotificationPosting = LiveAccessibilityNotificationPoster(),
         notificationCenter: NotificationCenter? = nil,
+        settingsStore: SettingsPersisting? = nil,
         makeAudioManager: @escaping AudioManagerFactory = { AudioInterruptionManager() },
-        makeNotificationCenter: @escaping NotificationCenterFactory = { .default }
+        makeNotificationCenter: @escaping NotificationCenterFactory = { .default },
+        makeSettingsStore: @escaping SettingsStoreFactory = { UserDefaults.standard }
     ) {
         self.audioManager = audioManager ?? makeAudioManager()
         self.accessibilityNotificationPoster = accessibilityNotificationPoster
         self.notificationCenter = notificationCenter ?? makeNotificationCenter()
+        self.settingsStore = settingsStore ?? makeSettingsStore()
         sceneActivationObserver = self.notificationCenter.addObserver(
             forName: UIScene.didActivateNotification,
             object: nil,
@@ -213,8 +218,8 @@ final class OverlayManager: OverlayPresenting {
                 duration: duration,
                 hapticsEnabled: hapticsEnabled,
                 onAnalyticsEvent: AnalyticsLogger.log,
-                onSettingsTap: {
-                    UserDefaults.standard.set(true, forKey: AppStorageKey.openSettingsOnLaunch)
+                onSettingsTap: { [settingsStore = self.settingsStore] in
+                    settingsStore.set(true, forKey: AppStorageKey.openSettingsOnLaunch)
                 },
                 onDismiss: { [weak self] in
                     Task { @MainActor in self?.dismissOverlay() }

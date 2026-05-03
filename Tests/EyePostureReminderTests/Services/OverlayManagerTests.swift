@@ -81,6 +81,34 @@ final class OverlayManagerTests: XCTestCase {
         XCTAssertFalse(factoryCalled)
     }
 
+    func test_init_withoutSettingsStore_usesFactoryOnce() {
+        var factoryCallCount = 0
+        let mockStore = MockSettingsPersisting()
+        _ = OverlayManager(
+            settingsStore: nil,
+            makeSettingsStore: {
+                factoryCallCount += 1
+                return mockStore
+            }
+        )
+
+        XCTAssertEqual(factoryCallCount, 1)
+    }
+
+    func test_init_withSettingsStore_bypassesFactory() {
+        var factoryCalled = false
+        let injectedStore = MockSettingsPersisting()
+        _ = OverlayManager(
+            settingsStore: injectedStore,
+            makeSettingsStore: {
+                factoryCalled = true
+                return MockSettingsPersisting()
+            }
+        )
+
+        XCTAssertFalse(factoryCalled)
+    }
+
     // MARK: - isOverlayVisible — initial state
 
     /// In a headless test environment there is no window scene, so no overlay
