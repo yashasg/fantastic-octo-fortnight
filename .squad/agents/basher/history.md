@@ -175,3 +175,7 @@
 - Architecture decision: `AppCoordinator.resolveScreenTimeTracker` now accepts `makeScreenTimeTracker` and only constructs `ScreenTimeTracker()` on the final production fallback path.
 - Validation: `./scripts/build.sh build` and `./scripts/build.sh test` passed after change.
 - Key file paths: `EyePostureReminder/Services/AppCoordinator.swift`, `Tests/EyePostureReminderTests/Services/AppCoordinatorTests.swift`.
+
+## Learnings
+
+- For view-model constructor clocks, prefer `dateProvider: DateProviding? = nil` plus `makeDateProvider` fallback and resolve once in `init`; add fallback-used and explicit-bypass tests through `snooze(for:)` to remove eager `SystemDateProvider()` coupling while preserving behavior (`EyePostureReminder/ViewModels/SettingsViewModel.swift`, `Tests/EyePostureReminderTests/ViewModels/SettingsViewModelExtendedTests.swift`).

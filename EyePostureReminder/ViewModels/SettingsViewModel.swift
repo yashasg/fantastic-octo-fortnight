@@ -13,6 +13,7 @@ import os
 /// preview and production wire-up minimal while keeping unit tests clean.
 @MainActor
 final class SettingsViewModel: ObservableObject {
+    typealias DateProviderFactory = () -> DateProviding
 
     // MARK: - Snooze Options (M2.3)
 
@@ -302,12 +303,14 @@ final class SettingsViewModel: ObservableObject {
         settings: SettingsStore,
         scheduler: ReminderScheduling,
         maxSnoozeCount: Int = AppConfig.load().features.maxSnoozeCount,
-        dateProvider: DateProviding = SystemDateProvider()
+        dateProvider: DateProviding? = nil,
+        makeDateProvider: @escaping DateProviderFactory = { SystemDateProvider() }
     ) {
+        let resolvedDateProvider = dateProvider ?? makeDateProvider()
         self.settings  = settings
         self.scheduler = scheduler
         self.maxConsecutiveSnoozes = maxSnoozeCount
-        self.dateProvider = dateProvider
+        self.dateProvider = resolvedDateProvider
         settings.objectWillChange
             .sink { [weak self] in self?.objectWillChange.send() }
             .store(in: &cancellables)
