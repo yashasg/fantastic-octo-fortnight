@@ -11,7 +11,7 @@ Use when a coordinator/service initializer defaults a notification dependency di
 
 ## Patterns
 - Replace eager concrete default args with optional protocol injection (`notificationCenter: Protocol? = nil`).
-- Add a fallback factory closure (`makeNotificationCenter`) that keeps production singleton wiring.
+- Add an optional fallback factory closure (`makeNotificationCenter: (() -> Protocol)? = nil`) that keeps production singleton wiring.
 - Resolve the dependency once in `init` and store the resolved instance.
 - Add two tests: fallback factory invoked when explicit dependency is nil, and factory bypassed when explicit dependency is provided.
 
@@ -20,6 +20,8 @@ Use when a coordinator/service initializer defaults a notification dependency di
 - `Tests/EyePostureReminderTests/Services/AppCoordinatorTests.swift`
 - `EyePostureReminder/Views/Onboarding/OnboardingPermissionView.swift`
 - `Tests/EyePostureReminderTests/Views/OnboardingViewTests.swift`
+- `EyePostureReminder/Services/ReminderScheduler.swift`
+- `Tests/EyePostureReminderTests/Services/ReminderSchedulerTests.swift`
 
 ## Anti-Patterns
 - `notificationCenter: NotificationScheduling = UNUserNotificationCenter.current()` in initializer signatures.

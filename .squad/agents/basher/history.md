@@ -274,3 +274,14 @@
 - Focus seam tests on callback invocation counts (`installUncaughtExceptionHandler()` direct call and `didFinishLaunching`) to prove lifecycle wiring without mutating global uncaught-exception handler state.
 - User preference reaffirmed: keep #462 Phase A changes to one tiny DI/SRP seam plus focused tests and run `./scripts/build.sh build` + `./scripts/build.sh test` every slice.
 - Key paths: `EyePostureReminder/App/AppDelegate.swift`, `Tests/EyePostureReminderTests/Services/AppDelegateTests.swift`, `.squad/skills/exception-handler-installer-seam/SKILL.md`.
+
+## 2026-05-03T22:35:00Z: #462 Phase A — ReminderScheduler Optional Notification Center Factory Seam (COMPLETED)
+
+- Branch: `basher/462-phasea-settingsstore-observercenter-seam`
+- Slice: Changed `ReminderScheduler` init to accept `makeNotificationCenter` as an optional factory (`nil` defaults to `UNUserNotificationCenter.current()`), resolved once in init, and preserved explicit dependency precedence.
+- Validation: `./scripts/build.sh build` ✅, `./scripts/build.sh test` ✅.
+- Scope: `EyePostureReminder/Services/ReminderScheduler.swift`, `Tests/EyePostureReminderTests/Services/ReminderSchedulerTests.swift`.
+
+## Learnings
+
+- For notification-center seams in scheduler services, prefer `makeNotificationCenter: (() -> NotificationScheduling)? = nil` with a local resolved fallback closure; this keeps production singleton behavior while allowing tests to explicitly pass `nil` factory and verify injected-center precedence without constructing system centers.

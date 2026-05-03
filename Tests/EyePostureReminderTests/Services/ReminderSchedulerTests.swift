@@ -62,6 +62,17 @@ final class ReminderSchedulerTests: XCTestCase {
         XCTAssertFalse(factoryCalled)
     }
 
+    func test_init_withNotificationCenter_andNilFactory_usesInjectedCenter() {
+        let scheduler = ReminderScheduler(
+            notificationCenter: mockCenter,
+            makeNotificationCenter: nil
+        )
+
+        scheduler.cancelAllReminders()
+
+        XCTAssertEqual(mockCenter.removeAllCallCount, 1)
+    }
+
     // MARK: - scheduleReminders — request count
 
     func test_scheduleAll_bothEnabled_addsTwoRequests() async {
