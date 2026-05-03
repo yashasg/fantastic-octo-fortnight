@@ -472,6 +472,58 @@ final class AppCoordinatorTests: XCTestCase {
             "AppCoordinator.init must call startMonitoring() on the injected PauseConditionProviding")
     }
 
+    func test_pauseConditionResume_usesInjectedDateProvider_whenWallClockFutureButInjectedExpired() {
+        let mockDateProvider = MockDateProvider(now: Date(timeIntervalSinceNow: 3_600))
+        let mockNotif = MockNotificationCenter()
+        let mockPause = MockPauseConditionProvider()
+        let mockTracker = MockScreenTimeTracker()
+        settings.snoozedUntil = Date(timeIntervalSinceNow: 300)
+
+        let coordinator = AppCoordinator(
+            settings: settings,
+            scheduler: ReminderScheduler(notificationCenter: mockNotif),
+            notificationCenter: mockNotif,
+            screenTimeTracker: mockTracker,
+            pauseConditionProvider: mockPause,
+            ipcStore: MockAppGroupIPCRecorder(),
+            dateProvider: mockDateProvider
+        )
+        defer { coordinator.stopFallbackTimers() }
+
+        mockPause.simulatePauseStateChange(false)
+
+        XCTAssertEqual(
+            mockTracker.resumeAllCallCount,
+            1,
+            "Pause clear should resume when injected DateProviding marks snooze expired")
+    }
+
+    func test_pauseConditionResume_usesInjectedDateProvider_whenWallClockPastButInjectedFuture() {
+        let mockDateProvider = MockDateProvider(now: Date(timeIntervalSinceNow: -3_600))
+        let mockNotif = MockNotificationCenter()
+        let mockPause = MockPauseConditionProvider()
+        let mockTracker = MockScreenTimeTracker()
+        settings.snoozedUntil = Date(timeIntervalSinceNow: -60)
+
+        let coordinator = AppCoordinator(
+            settings: settings,
+            scheduler: ReminderScheduler(notificationCenter: mockNotif),
+            notificationCenter: mockNotif,
+            screenTimeTracker: mockTracker,
+            pauseConditionProvider: mockPause,
+            ipcStore: MockAppGroupIPCRecorder(),
+            dateProvider: mockDateProvider
+        )
+        defer { coordinator.stopFallbackTimers() }
+
+        mockPause.simulatePauseStateChange(false)
+
+        XCTAssertEqual(
+            mockTracker.resumeAllCallCount,
+            0,
+            "Pause clear should stay paused when injected DateProviding marks snooze active")
+    }
+
     // MARK: - Issue #438: AppCoordinator teardown must stop PauseCondition monitoring
 
     func test_stopFallbackTimers_callsStopMonitoringOnPauseConditionProvider() {
