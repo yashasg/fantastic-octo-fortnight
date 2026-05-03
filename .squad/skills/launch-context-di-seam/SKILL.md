@@ -20,6 +20,7 @@ Use this when service or coordinator logic branches on process launch context
 - For singleton-backed callbacks (e.g., app launch wiring), inject a zero-arg factory (`makeNotificationCenter`) and use it only on the fallback path so tests can validate callback behavior without invoking fragile system singletons directly.
 - For launch-argument consumers in delegates/services, use `launchArguments: [String]? = nil` with an injected `launchArgumentsProvider` fallback closure so tests can verify both fallback and explicit-argument bypass paths deterministically.
 - For coordinators that consume launch arguments in multiple places, resolve once (`let resolvedLaunchArguments = launchArguments ?? launchArgumentsProvider()`) and thread the resolved value through each branch to avoid mixed injected/global behavior.
+- For coordinator lifecycle methods that branch on UI-test mode after init (for example `refreshAuthStatus`), persist the resolved init value in an instance property and guard on that property instead of static globals.
 
 ## Examples
 - `AppCoordinator.init(..., processEnvironment: [String: String] = ProcessInfo.processInfo.environment, launchArguments: [String]? = nil, launchArgumentsProvider: @escaping () -> [String] = { CommandLine.arguments }, ...)`
