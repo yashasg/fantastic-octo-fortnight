@@ -18,17 +18,17 @@ private final class MockMetricKitSubscriber: MetricKitSubscribing {
 ///
 /// ## What is tested here
 /// - `applicationDidBecomeActive` → clears an expired `snoozedUntil` (via coordinator)
-/// - `ReminderType(categoryIdentifier:)` parsing — the core category-routing logic
-///   used by both `willPresent` and `didReceive`
-/// - `AppCoordinator.snoozeWakeCategory` is distinct from all `ReminderType` identifiers
-///   so snooze-wake routes to `scheduleReminders()` instead of `handleNotification`
+/// - `AppDelegate.notificationRoute(for:)` category routing used by both
+///   `willPresent` and `didReceive`
+/// - `AppCoordinator.snoozeWakeCategory` routes to `scheduleReminders()`
+///   instead of `handleNotification(for:)`
 ///
 /// ## Why `willPresent` and `didReceive` are not called directly
 /// `UNNotification` and `UNNotificationResponse` have no public initialisers — they
 /// are vended exclusively by the system. Because the routing logic inside those two
 /// delegate methods is entirely determined by `categoryIdentifier` string → action
-/// dispatch, testing `ReminderType(categoryIdentifier:)` and the coordinator's
-/// downstream methods provides equivalent coverage without system-object construction.
+/// dispatch, testing `notificationRoute(for:)` and the coordinator's downstream
+/// methods provides equivalent coverage without system-object construction.
 @MainActor
 final class AppDelegateTests: XCTestCase {
 
@@ -482,34 +482,31 @@ final class AppDelegateTests: XCTestCase {
     }
 #endif
 
-    // MARK: - Category-identifier routing logic (ReminderType parsing)
+    // MARK: - Category-identifier routing logic
 
-    /// The two valid reminder category identifiers must parse to the correct types.
-    func test_categoryIdentifier_eyeReminder_parsesToEyes() {
-        let type = ReminderType(categoryIdentifier: "EYE_REMINDER")
-        XCTAssertEqual(type, .eyes, "'EYE_REMINDER' must parse to .eyes")
+    func test_notificationRoute_eyeReminder_routesToEyes() {
+        let route = delegate.notificationRoute(for: "EYE_REMINDER")
+
+        XCTAssertEqual(route, .reminder(.eyes))
     }
 
-    func test_categoryIdentifier_postureReminder_parsesToPosture() {
-        let type = ReminderType(categoryIdentifier: "POSTURE_REMINDER")
-        XCTAssertEqual(type, .posture, "'POSTURE_REMINDER' must parse to .posture")
+    func test_notificationRoute_postureReminder_routesToPosture() {
+        let route = delegate.notificationRoute(for: "POSTURE_REMINDER")
+
+        XCTAssertEqual(route, .reminder(.posture))
     }
 
-    /// An unrecognised category identifier must return `nil` — the delegate no-ops.
-    func test_categoryIdentifier_unknown_returnsNil() {
-        XCTAssertNil(ReminderType(categoryIdentifier: "UNKNOWN_CATEGORY"))
-        XCTAssertNil(ReminderType(categoryIdentifier: ""))
-        XCTAssertNil(ReminderType(categoryIdentifier: "eye_reminder")) // case-sensitive
+    func test_notificationRoute_snoozeWake_routesToSnoozeWake() {
+        let route = delegate.notificationRoute(for: AppCoordinator.snoozeWakeCategory)
+
+        XCTAssertEqual(route, .snoozeWake)
     }
 
-    /// The snooze-wake category must NOT map to any `ReminderType` — this is what
-    /// causes the delegate to route to `scheduleReminders()` instead of
-    /// `handleNotification(for:)`.
-    func test_snoozeWakeCategory_doesNotParseToAnyReminderType() {
-        let type = ReminderType(categoryIdentifier: AppCoordinator.snoozeWakeCategory)
-        XCTAssertNil(
-            type,
-            "snoozeWakeCategory must not map to a ReminderType — it has its own routing branch")
+    /// An unrecognised category identifier must route to `.ignore`.
+    func test_notificationRoute_unknown_routesToIgnore() {
+        XCTAssertEqual(delegate.notificationRoute(for: "UNKNOWN_CATEGORY"), .ignore)
+        XCTAssertEqual(delegate.notificationRoute(for: ""), .ignore)
+        XCTAssertEqual(delegate.notificationRoute(for: "eye_reminder"), .ignore) // case-sensitive
     }
 
     /// Every `ReminderType` case must produce a `categoryIdentifier` that round-trips
