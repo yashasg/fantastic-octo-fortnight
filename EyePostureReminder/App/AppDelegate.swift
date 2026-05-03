@@ -12,6 +12,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
 
     private let notificationCenter: UserNotificationCenterDelegating?
     private let metricKitSubscriber: MetricKitSubscribing?
+    private let settingsStore: SettingsStore?
     private let launchArguments: [String]
     private let uiTestDefaults: UserDefaults
     private let launchArgumentsProvider: () -> [String]
@@ -23,10 +24,13 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         notificationCenter ?? makeNotificationCenter()
     private lazy var resolvedMetricKitSubscriber: MetricKitSubscribing =
         metricKitSubscriber ?? makeMetricKitSubscriber()
+    private lazy var resolvedSettingsStore: SettingsStore =
+        settingsStore ?? makeSettingsStore()
 
     init(
         notificationCenter: UserNotificationCenterDelegating? = nil,
         metricKitSubscriber: MetricKitSubscribing? = nil,
+        settingsStore: SettingsStore? = nil,
         launchArguments: [String]? = nil,
         uiTestDefaults: UserDefaults? = nil,
         launchArgumentsProvider: @escaping () -> [String] = { CommandLine.arguments },
@@ -37,6 +41,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     ) {
         self.notificationCenter = notificationCenter
         self.metricKitSubscriber = metricKitSubscriber
+        self.settingsStore = settingsStore
         self.launchArgumentsProvider = launchArgumentsProvider
         self.launchArguments = launchArguments ?? launchArgumentsProvider()
         self.makeUITestDefaults = makeUITestDefaults
@@ -127,15 +132,15 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
             defaults.set(true, forKey: AppStorageKey.hasSeenOnboarding)
             // Reset all settings to defaults so each test starts from a clean, known state.
             // Without this, toggling settings in one test pollutes the next test's launch state.
-            makeSettingsStore().resetToDefaults()
+            resolvedSettingsStore.resetToDefaults()
         }
         if args.contains("--reset-onboarding") {
             defaults.removeObject(forKey: AppStorageKey.hasSeenOnboarding)
-            makeSettingsStore().resetToDefaults()
+            resolvedSettingsStore.resetToDefaults()
         }
         if args.contains("--show-overlay-eyes") {
             defaults.set(true, forKey: AppStorageKey.hasSeenOnboarding)
-            let settings = makeSettingsStore()
+            let settings = resolvedSettingsStore
             settings.resetToDefaults()
             settings.eyesBreakDuration = 120
             settings.postureBreakDuration = 120
@@ -143,7 +148,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         }
         if args.contains("--show-overlay-posture") {
             defaults.set(true, forKey: AppStorageKey.hasSeenOnboarding)
-            let settings = makeSettingsStore()
+            let settings = resolvedSettingsStore
             settings.resetToDefaults()
             settings.eyesBreakDuration = 120
             settings.postureBreakDuration = 120
@@ -151,7 +156,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         }
         if args.contains("--simulate-screen-time-not-determined") {
             defaults.set(true, forKey: AppStorageKey.hasSeenOnboarding)
-            makeSettingsStore().resetToDefaults()
+            resolvedSettingsStore.resetToDefaults()
             defaults.set(
                 ScreenTimeAuthorizationStatus.notDetermined.rawValue,
                 forKey: AppStorageKey.uiTestScreenTimeStatus
