@@ -212,7 +212,7 @@ extension AppCoordinator {
     func performReschedule(for type: ReminderType) async {
         // #74: Skip tracker restart when snooze is active — settings changes
         // during a snooze must not override the explicit pauseAll() applied at snooze start.
-        guard (settings.snoozedUntil ?? .distantPast) <= Date() else {
+        guard (settings.snoozedUntil ?? .distantPast) <= dateProvider.now else {
             Logger.scheduling.debug("performReschedule skipped — snooze still active")
             return
         }
