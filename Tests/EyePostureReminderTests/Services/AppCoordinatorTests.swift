@@ -237,6 +237,50 @@ final class AppCoordinatorTests: XCTestCase {
         XCTAssertEqual(factoryCallCount, 0)
     }
 
+    func test_init_withoutOverlayManager_usesInjectedOverlayManagerFactory() {
+        var factoryCallCount = 0
+        let factoryOverlay = MockOverlayPresenting()
+        let coordinator = AppCoordinator(
+            settings: SettingsStore(store: MockSettingsPersisting()),
+            scheduler: ReminderScheduler(notificationCenter: MockNotificationCenter()),
+            notificationCenter: MockNotificationCenter(),
+            overlayManager: nil,
+            makeOverlayManager: {
+                factoryCallCount += 1
+                return factoryOverlay
+            },
+            screenTimeTracker: MockScreenTimeTracker(),
+            pauseConditionProvider: MockPauseConditionProvider(),
+            ipcStore: MockAppGroupIPCRecorder()
+        )
+        defer { coordinator.stopFallbackTimers() }
+
+        XCTAssertEqual(factoryCallCount, 1)
+        XCTAssertTrue((coordinator.overlayManager as AnyObject) === factoryOverlay)
+    }
+
+    func test_init_withExplicitOverlayManager_doesNotCallOverlayManagerFactory() {
+        var factoryCallCount = 0
+        let injectedOverlay = MockOverlayPresenting()
+        let coordinator = AppCoordinator(
+            settings: SettingsStore(store: MockSettingsPersisting()),
+            scheduler: ReminderScheduler(notificationCenter: MockNotificationCenter()),
+            notificationCenter: MockNotificationCenter(),
+            overlayManager: injectedOverlay,
+            makeOverlayManager: {
+                factoryCallCount += 1
+                return MockOverlayPresenting()
+            },
+            screenTimeTracker: MockScreenTimeTracker(),
+            pauseConditionProvider: MockPauseConditionProvider(),
+            ipcStore: MockAppGroupIPCRecorder()
+        )
+        defer { coordinator.stopFallbackTimers() }
+
+        XCTAssertEqual(factoryCallCount, 0)
+        XCTAssertTrue((coordinator.overlayManager as AnyObject) === injectedOverlay)
+    }
+
     func test_init_withoutHasActiveSceneProvider_usesInjectedFactory() {
         var providerFactoryCallCount = 0
         var providerCallCount = 0
