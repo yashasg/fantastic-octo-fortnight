@@ -184,6 +184,7 @@ final class AppCoordinator: ObservableObject {
         uiTestStatusStore: UserDefaults = .standard,
         processEnvironment: [String: String] = ProcessInfo.processInfo.environment,
         launchArguments: [String] = CommandLine.arguments,
+        uiTestMode: Bool? = nil,
         deviceActivityMonitor: DeviceActivityMonitorProviding? = nil,
         ipcStore: AppGroupIPCProviding = AppGroupIPCStore(),
         watchdogHeartbeatGraceInterval: TimeInterval = 10
@@ -208,7 +209,10 @@ final class AppCoordinator: ObservableObject {
         // In UI test mode, use no-op stubs for services that register UIKit lifecycle
         // observers and start 1-second timers — they prevent XCUITest from settling
         // the accessibility tree between interactions, causing stale element reads.
-        self.screenTimeTracker = Self.resolveScreenTimeTracker(screenTimeTracker)
+        self.screenTimeTracker = Self.resolveScreenTimeTracker(
+            screenTimeTracker,
+            uiTestMode: uiTestMode ?? AppCoordinator.isUITestMode
+        )
         self.pauseConditionManager = Self.resolvePauseConditionManager(
             pauseConditionProvider,
             settings: self.settings
@@ -640,9 +644,12 @@ private extension AppCoordinator {
         deviceActivityMonitor ?? DeviceActivityMonitorNoop()
     }
 
-    static func resolveScreenTimeTracker(_ screenTimeTracker: ScreenTimeTracking?) -> ScreenTimeTracking {
+    static func resolveScreenTimeTracker(
+        _ screenTimeTracker: ScreenTimeTracking?,
+        uiTestMode: Bool
+    ) -> ScreenTimeTracking {
         guard let screenTimeTracker else {
-            return AppCoordinator.isUITestMode ? NoopScreenTimeTracker() : ScreenTimeTracker()
+            return uiTestMode ? NoopScreenTimeTracker() : ScreenTimeTracker()
         }
         return screenTimeTracker
     }
