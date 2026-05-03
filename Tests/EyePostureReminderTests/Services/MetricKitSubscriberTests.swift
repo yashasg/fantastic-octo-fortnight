@@ -12,6 +12,24 @@ private final class MockMetricKitManager: MetricKitManaging {
     }
 }
 
+private final class MockMetricKitLogger: MetricKitLogging {
+    private(set) var infoMessages: [String] = []
+    private(set) var warningMessages: [String] = []
+    private(set) var errorMessages: [String] = []
+
+    func info(_ message: String) {
+        infoMessages.append(message)
+    }
+
+    func warning(_ message: String) {
+        warningMessages.append(message)
+    }
+
+    func error(_ message: String) {
+        errorMessages.append(message)
+    }
+}
+
 /// Unit tests for `MetricKitSubscriber`.
 ///
 /// MetricKit payload objects cannot be instantiated in unit tests — they are
@@ -45,24 +63,31 @@ final class MetricKitSubscriberTests: XCTestCase {
     /// `register()` calls the injected manager's `add(self)`.
     func test_register_addsSubscriberViaInjectedManager() throws {
         let manager = MockMetricKitManager()
-        let subscriber = MetricKitSubscriber(metricManager: manager)
+        let logger = MockMetricKitLogger()
+        let subscriber = MetricKitSubscriber(metricManager: manager, logger: logger)
 
         subscriber.register()
 
         XCTAssertEqual(manager.addCallCount, 1)
         let addedSubscriber = try XCTUnwrap(manager.addedSubscribers.first)
         XCTAssertTrue(addedSubscriber === subscriber)
+        XCTAssertEqual(logger.infoMessages, ["MetricKit subscriber registered"])
     }
 
     func test_register_calledMultipleTimes_recordsEachRegistrationCall() {
         let manager = MockMetricKitManager()
-        let subscriber = MetricKitSubscriber(metricManager: manager)
+        let logger = MockMetricKitLogger()
+        let subscriber = MetricKitSubscriber(metricManager: manager, logger: logger)
 
         subscriber.register()
         subscriber.register()
 
         XCTAssertEqual(manager.addCallCount, 2)
         XCTAssertTrue(manager.addedSubscribers.allSatisfy { $0 === subscriber })
+        XCTAssertEqual(
+            logger.infoMessages,
+            ["MetricKit subscriber registered", "MetricKit subscriber registered"]
+        )
     }
 
     // MARK: - didReceive([MXMetricPayload])

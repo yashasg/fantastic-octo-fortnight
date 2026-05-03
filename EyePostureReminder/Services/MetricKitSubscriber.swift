@@ -7,6 +7,26 @@ protocol MetricKitManaging {
 
 extension MXMetricManager: MetricKitManaging {}
 
+protocol MetricKitLogging {
+    func info(_ message: String)
+    func warning(_ message: String)
+    func error(_ message: String)
+}
+
+private struct LifecycleMetricKitLogger: MetricKitLogging {
+    func info(_ message: String) {
+        Logger.lifecycle.info("\(message, privacy: .public)")
+    }
+
+    func warning(_ message: String) {
+        Logger.lifecycle.warning("\(message, privacy: .public)")
+    }
+
+    func error(_ message: String) {
+        Logger.lifecycle.error("\(message, privacy: .public)")
+    }
+}
+
 protocol MetricKitSubscribing {
     func register()
 }
@@ -30,16 +50,21 @@ final class MetricKitSubscriber: NSObject, MXMetricManagerSubscriber {
     static let shared = MetricKitSubscriber()
 
     private let metricManager: MetricKitManaging
+    private let logger: MetricKitLogging
 
-    init(metricManager: MetricKitManaging = MXMetricManager.shared) {
+    init(
+        metricManager: MetricKitManaging = MXMetricManager.shared,
+        logger: MetricKitLogging = LifecycleMetricKitLogger()
+    ) {
         self.metricManager = metricManager
+        self.logger = logger
         super.init()
     }
 
     /// Add this subscriber to `MXMetricManager`. Call once on app launch.
     func register() {
         metricManager.add(self)
-        Logger.lifecycle.info("MetricKit subscriber registered")
+        logger.info("MetricKit subscriber registered")
     }
 
     // MARK: - MXMetricManagerSubscriber
@@ -63,65 +88,65 @@ final class MetricKitSubscriber: NSObject, MXMetricManagerSubscriber {
     private func logMetricPayload(_ payload: MXMetricPayload) {
         let start = payload.timeStampBegin
         let end   = payload.timeStampEnd
-        Logger.lifecycle.info("MetricKit payload: \(start) – \(end)")
+        logger.info("MetricKit payload: \(start) – \(end)")
 
         if let memory = payload.memoryMetrics {
             let peakMB = memory.peakMemoryUsage.converted(to: .megabytes).value
-            Logger.lifecycle.info("MetricKit peak_memory_mb=\(peakMB, format: .fixed(precision: 1))")
+            logger.info("MetricKit peak_memory_mb=\(String(format: "%.1f", peakMB))")
         }
 
         if let cpu = payload.cpuMetrics {
             let cpuS = cpu.cumulativeCPUTime.converted(to: .seconds).value
-            Logger.lifecycle.info("MetricKit cpu_time_s=\(cpuS, format: .fixed(precision: 1))")
+            logger.info("MetricKit cpu_time_s=\(String(format: "%.1f", cpuS))")
         }
 
         if let launch = payload.applicationLaunchMetrics {
             let firstDraw = launch.histogrammedTimeToFirstDraw
-            Logger.lifecycle.info("MetricKit time_to_first_draw_histogram: \(firstDraw)")
+            logger.info("MetricKit time_to_first_draw_histogram: \(firstDraw)")
         }
 
         if let responsiveness = payload.applicationResponsivenessMetrics {
             let hangTime = responsiveness.histogrammedApplicationHangTime
-            Logger.lifecycle.info("MetricKit hang_time_histogram: \(hangTime)")
+            logger.info("MetricKit hang_time_histogram: \(hangTime)")
         }
     }
 
     private func logDiagnosticPayload(_ payload: MXDiagnosticPayload) {
         let start = payload.timeStampBegin
         let end   = payload.timeStampEnd
-        Logger.lifecycle.info("MetricKit diagnostic payload: \(start) – \(end)")
+        logger.info("MetricKit diagnostic payload: \(start) – \(end)")
 
         if let crashes = payload.crashDiagnostics, !crashes.isEmpty {
-            Logger.lifecycle.error(
+            logger.error(
                 "MetricKit crashes=\(crashes.count) in window \(start)–\(end)"
             )
             for crash in crashes {
                 let signal = crash.signal?.intValue ?? -1
                 let exceptionType = crash.exceptionType?.intValue ?? -1
-                Logger.lifecycle.error(
+                logger.error(
                     "MetricKit crash signal=\(signal) exception_type=\(exceptionType)"
                 )
             }
         }
 
         if let hangs = payload.hangDiagnostics, !hangs.isEmpty {
-            Logger.lifecycle.warning(
+            logger.warning(
                 "MetricKit hangs=\(hangs.count) in window \(start)–\(end)"
             )
             for hang in hangs {
                 let durationS = hang.hangDuration.converted(to: .seconds).value
-                Logger.lifecycle.warning("MetricKit hang duration_s=\(durationS, format: .fixed(precision: 2))")
+                logger.warning("MetricKit hang duration_s=\(String(format: "%.2f", durationS))")
             }
         }
 
         if let cpuExceptions = payload.cpuExceptionDiagnostics, !cpuExceptions.isEmpty {
-            Logger.lifecycle.warning(
+            logger.warning(
                 "MetricKit cpu_exceptions=\(cpuExceptions.count)"
             )
         }
 
         if let diskExceptions = payload.diskWriteExceptionDiagnostics, !diskExceptions.isEmpty {
-            Logger.lifecycle.warning(
+            logger.warning(
                 "MetricKit disk_write_exceptions=\(diskExceptions.count)"
             )
         }
