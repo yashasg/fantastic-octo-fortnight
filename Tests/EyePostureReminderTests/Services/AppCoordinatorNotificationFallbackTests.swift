@@ -11,6 +11,7 @@ final class AppCoordinatorNotificationFallbackTests: XCTestCase {
     private var tracker: MockScreenTimeTracker!
     private var deviceActivityMonitor: MockDeviceActivityMonitorProviding!
     private var ipcStore: MockAppGroupIPCRecorder!
+    private var trueInterruptNotificationCenter: NotificationCenter!
     private var coordinator: AppCoordinator!
 
     override func setUp() async throws {
@@ -22,6 +23,7 @@ final class AppCoordinatorNotificationFallbackTests: XCTestCase {
         tracker = MockScreenTimeTracker()
         deviceActivityMonitor = MockDeviceActivityMonitorProviding()
         ipcStore = MockAppGroupIPCRecorder()
+        trueInterruptNotificationCenter = NotificationCenter()
         coordinator = AppCoordinator(
             settings: settings,
             scheduler: ReminderScheduler(notificationCenter: notificationCenter),
@@ -30,13 +32,15 @@ final class AppCoordinatorNotificationFallbackTests: XCTestCase {
             screenTimeTracker: tracker,
             pauseConditionProvider: MockPauseConditionProvider(),
             deviceActivityMonitor: deviceActivityMonitor,
-            ipcStore: ipcStore
+            ipcStore: ipcStore,
+            lifecycleNotificationCenter: trueInterruptNotificationCenter
         )
     }
 
     override func tearDown() async throws {
         coordinator.stopFallbackTimers()
         coordinator = nil
+        trueInterruptNotificationCenter = nil
         ipcStore = nil
         deviceActivityMonitor = nil
         tracker = nil
@@ -156,7 +160,7 @@ final class AppCoordinatorNotificationFallbackTests: XCTestCase {
         notificationCenter.reset()
         let fallbackEventCountBeforePost = ipcStore.events.filter { $0.kind == .notificationFallbackScheduled }.count
 
-        NotificationCenter.default.post(
+        trueInterruptNotificationCenter.post(
             name: AppGroupIPCStore.trueInterruptEnabledDidChangeNotification,
             object: nil,
             userInfo: [AppGroupIPCStore.trueInterruptEnabledValueUserInfoKey: false]
@@ -180,7 +184,7 @@ final class AppCoordinatorNotificationFallbackTests: XCTestCase {
         deviceActivityMonitor.stubbedIsAvailable = true
         ipcStore.trueInterruptEnabled = true
         ipcStore.selectApps()
-        NotificationCenter.default.post(
+        trueInterruptNotificationCenter.post(
             name: AppGroupIPCStore.trueInterruptEnabledDidChangeNotification,
             object: nil,
             userInfo: [AppGroupIPCStore.trueInterruptEnabledValueUserInfoKey: true]
@@ -202,7 +206,7 @@ final class AppCoordinatorNotificationFallbackTests: XCTestCase {
         XCTAssertTrue(ipcStore.recordedKinds.contains(.shieldPathSelected))
 
         ipcStore.trueInterruptEnabled = false
-        NotificationCenter.default.post(
+        trueInterruptNotificationCenter.post(
             name: AppGroupIPCStore.trueInterruptEnabledDidChangeNotification,
             object: nil,
             userInfo: [AppGroupIPCStore.trueInterruptEnabledValueUserInfoKey: false]
@@ -215,6 +219,25 @@ final class AppCoordinatorNotificationFallbackTests: XCTestCase {
         XCTAssertEqual(notificationCenter.addedRequests.count, 2)
         let event = try XCTUnwrap(ipcStore.events.last { $0.kind == .notificationFallbackScheduled })
         XCTAssertEqual(event.detail, "true_interrupt_disabled")
+    }
+
+    func test_trueInterruptEnabledChangeNotification_ignoresDefaultCenterWhenInjectedCenterUsed() async {
+        deviceActivityMonitor.stubbedIsAvailable = false
+        ipcStore.trueInterruptEnabled = false
+        await coordinator.refreshAuthStatus()
+        notificationCenter.reset()
+        let fallbackEventCountBeforePost = ipcStore.events.filter { $0.kind == .notificationFallbackScheduled }.count
+
+        NotificationCenter.default.post(
+            name: AppGroupIPCStore.trueInterruptEnabledDidChangeNotification,
+            object: nil,
+            userInfo: [AppGroupIPCStore.trueInterruptEnabledValueUserInfoKey: false]
+        )
+        try? await Task.sleep(nanoseconds: 200_000_000)
+
+        let fallbackEventCountAfterPost = ipcStore.events.filter { $0.kind == .notificationFallbackScheduled }.count
+        XCTAssertEqual(notificationCenter.addedRequests.count, 0)
+        XCTAssertEqual(fallbackEventCountAfterPost, fallbackEventCountBeforePost)
     }
 
     func test_scheduleReminders_usesCapturedFallbackDetail_whenIPCMutatesDuringScheduling() async throws {

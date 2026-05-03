@@ -130,3 +130,4 @@
 - Architecture decision: preserve behavior by replacing only `Date()` reads in `AppCoordinator` foreground/session analytics paths and asserting a single focused latency seam test.
 - Validation: `./scripts/build.sh build` and `./scripts/build.sh test` passed after the change.
 - Key file paths: `EyePostureReminder/Services/AppCoordinator.swift`, `Tests/EyePostureReminderTests/Services/AppCoordinatorTests.swift`, `.squad/skills/date-provider-default-seam/SKILL.md`.
+- For AppCoordinator notification-driven rerouting, inject a dedicated `NotificationCenter` dependency for observer registration/removal instead of using `NotificationCenter.default`; this preserves production behavior while isolating tests from global observer cross-talk.
