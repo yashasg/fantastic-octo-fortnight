@@ -211,6 +211,18 @@ final class LiveCarPlayDetector: CarPlayDetecting {
     }
 }
 
+// MARK: - MotionActivityManaging
+
+/// Abstracts `CMMotionActivityManager` instance methods used by
+/// `LiveDrivingActivityDetector` so the detector can be unit-tested without
+/// invoking real CoreMotion hardware.
+protocol MotionActivityManaging {
+    func startActivityUpdates(to queue: OperationQueue, withHandler handler: @escaping CMMotionActivityHandler)
+    func stopActivityUpdates()
+}
+
+extension CMMotionActivityManager: MotionActivityManaging {}
+
 // MARK: - LiveDrivingActivityDetector
 
 /// Uses `CMMotionActivityManager` to detect automotive activity with high confidence.
@@ -219,10 +231,19 @@ final class LiveCarPlayDetector: CarPlayDetecting {
 @MainActor
 final class LiveDrivingActivityDetector: DrivingActivityDetecting {
 
+    typealias MotionManagerFactory = () -> MotionActivityManaging
+
     private(set) var isDriving: Bool = false
     var onDrivingChanged: ((Bool) -> Void)?
 
-    private let manager = CMMotionActivityManager()
+    private let manager: MotionActivityManaging
+
+    init(
+        motionManager: MotionActivityManaging? = nil,
+        makeMotionManager: @escaping MotionManagerFactory = { CMMotionActivityManager() }
+    ) {
+        self.manager = motionManager ?? makeMotionManager()
+    }
 
     func startMonitoring() {
         guard CMMotionActivityManager.isActivityAvailable() else {
