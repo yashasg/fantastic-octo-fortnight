@@ -30,6 +30,7 @@ Use this when service or coordinator logic branches on process launch context
 - `AppDelegate.init(..., makeSettingsStore: @escaping @MainActor () -> SettingsStore = { SettingsStore() })` with usage in `applyUITestLaunchArguments()` and seam coverage in `Tests/EyePostureReminderTests/Services/AppDelegateTests.swift`.
 - `AppDelegate.init(..., makeNotificationCenter: @escaping () -> UserNotificationCenterDelegating = { UNUserNotificationCenter.current() })` with fallback-path coverage in `test_didFinishLaunching_withNilNotificationCenter_usesInjectedFactory`.
 - `AppDelegate.init(..., launchArguments: [String]? = nil, launchArgumentsProvider: @escaping () -> [String] = { CommandLine.arguments })` with fallback/bypass coverage in `test_init_withoutLaunchArguments_usesInjectedLaunchArgumentsProvider` and `test_init_withExplicitLaunchArguments_doesNotCallInjectedLaunchArgumentsProvider`.
+- `AppCoordinator.scheduleReminders()` UI-test gates (`requestNotificationPermission`, tracker configuration guard) should branch on instance `isUITestModeEnabled`; coverage: `test_scheduleReminders_withInjectedUITestModeTrue_skipsPermissionPromptAndTrackerConfiguration` in `Tests/EyePostureReminderTests/Services/AppCoordinatorUITestModeResolverTests.swift`.
 
 ## Anti-Patterns
 - Reading launch context globals directly inside static resolvers.

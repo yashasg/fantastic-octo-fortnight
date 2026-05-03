@@ -104,4 +104,25 @@ final class AppCoordinatorUITestModeResolverTests: XCTestCase {
 
         XCTAssertEqual(coordinator.notificationAuthStatus, .denied)
     }
+
+    func test_scheduleReminders_withInjectedUITestModeTrue_skipsPermissionPromptAndTrackerConfiguration() async {
+        let mockNotif = MockNotificationCenter()
+        let tracker = MockScreenTimeTracker()
+        let coordinator = AppCoordinator(
+            settings: SettingsStore(store: MockSettingsPersisting()),
+            scheduler: ReminderScheduler(notificationCenter: mockNotif),
+            notificationCenter: mockNotif,
+            screenTimeTracker: tracker,
+            pauseConditionProvider: MockPauseConditionProvider(),
+            uiTestMode: true,
+            ipcStore: MockAppGroupIPCRecorder()
+        )
+        defer { coordinator.stopFallbackTimers() }
+
+        await coordinator.scheduleReminders()
+
+        XCTAssertEqual(mockNotif.authorizationRequestCount, 0)
+        XCTAssertTrue(tracker.setThresholdCalls.isEmpty)
+        XCTAssertTrue(tracker.disableTrackingCalls.isEmpty)
+    }
 }
