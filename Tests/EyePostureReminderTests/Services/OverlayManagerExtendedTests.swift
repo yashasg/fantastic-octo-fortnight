@@ -7,6 +7,37 @@ import XCTest
 @MainActor
 final class OverlayManagerExtendedTests: XCTestCase {
 
+    // MARK: - windowSceneProvider factory seam
+
+    func test_init_withoutWindowSceneProvider_usesInjectedFactory() {
+        var makeWindowSceneProviderCallCount = 0
+
+        _ = OverlayManager(
+            windowSceneProvider: nil,
+            makeWindowSceneProvider: {
+                makeWindowSceneProviderCallCount += 1
+                return { nil }
+            }
+        )
+
+        XCTAssertEqual(makeWindowSceneProviderCallCount, 1)
+    }
+
+    func test_init_withExplicitWindowSceneProvider_doesNotCallFactory() {
+        var makeWindowSceneProviderCallCount = 0
+
+        _ = OverlayManager(
+            windowSceneProvider: { nil },
+            makeWindowSceneProvider: {
+                makeWindowSceneProviderCallCount += 1
+                return { nil }
+            }
+        )
+
+        XCTAssertEqual(makeWindowSceneProviderCallCount, 0)
+    }
+
+
     // MARK: - clearQueue(for:) — per-type filtering
 
     func test_clearQueueForType_withNoQueuedItems_doesNotCrash() {

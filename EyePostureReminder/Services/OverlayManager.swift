@@ -100,11 +100,13 @@ final class OverlayManager: OverlayPresenting {
     typealias AccessibilityNotificationPosterFactory = () -> AccessibilityNotificationPosting
     typealias NotificationCenterFactory = () -> NotificationCenter
     typealias SettingsStoreFactory = () -> SettingsPersisting
+    typealias WindowSceneProvider = () -> UIWindowScene?
 
     private let audioManager: MediaControlling
     private let accessibilityNotificationPoster: AccessibilityNotificationPosting
     private let notificationCenter: NotificationCenter
     private let settingsStore: SettingsPersisting
+    private let windowSceneProvider: WindowSceneProvider
 
     // MARK: - State
 
@@ -138,17 +140,30 @@ final class OverlayManager: OverlayPresenting {
         accessibilityNotificationPoster: AccessibilityNotificationPosting? = nil,
         notificationCenter: NotificationCenter? = nil,
         settingsStore: SettingsPersisting? = nil,
+        windowSceneProvider: WindowSceneProvider? = nil,
         makeAudioManager: @escaping AudioManagerFactory = { AudioInterruptionManager() },
         makeAccessibilityNotificationPoster: @escaping AccessibilityNotificationPosterFactory = {
             LiveAccessibilityNotificationPoster()
         },
         makeNotificationCenter: @escaping NotificationCenterFactory = { .default },
-        makeSettingsStore: @escaping SettingsStoreFactory = { UserDefaults.standard }
+        makeSettingsStore: @escaping SettingsStoreFactory = { UserDefaults.standard },
+        makeWindowSceneProvider: (() -> WindowSceneProvider)? = nil
     ) {
         self.audioManager = audioManager ?? makeAudioManager()
         self.accessibilityNotificationPoster = accessibilityNotificationPoster ?? makeAccessibilityNotificationPoster()
         self.notificationCenter = notificationCenter ?? makeNotificationCenter()
         self.settingsStore = settingsStore ?? makeSettingsStore()
+        if let windowSceneProvider {
+            self.windowSceneProvider = windowSceneProvider
+        } else if let makeWindowSceneProvider {
+            self.windowSceneProvider = makeWindowSceneProvider()
+        } else {
+            self.windowSceneProvider = {
+                UIApplication.shared.connectedScenes
+                    .compactMap({ $0 as? UIWindowScene })
+                    .first(where: { $0.activationState == .foregroundActive })
+            }
+        }
         sceneActivationObserver = self.notificationCenter.addObserver(
             forName: UIScene.didActivateNotification,
             object: nil,
@@ -187,10 +202,7 @@ final class OverlayManager: OverlayPresenting {
             return
         }
 
-        guard let windowScene = UIApplication.shared.connectedScenes
-            .compactMap({ $0 as? UIWindowScene })
-            .first(where: { $0.activationState == .foregroundActive })
-        else {
+        guard let windowScene = windowSceneProvider() else {
             // Queue the request so it is shown once a scene becomes foreground-active.
             overlayQueue.append(QueuedOverlay(
                 type: type,
@@ -302,10 +314,7 @@ final class OverlayManager: OverlayPresenting {
         // the tail because isOverlayVisible is true), corrupting FIFO order. (#289)
         guard !isOverlayVisible else { return }
         guard !overlayQueue.isEmpty else { return }
-        guard UIApplication.shared.connectedScenes
-            .compactMap({ $0 as? UIWindowScene })
-            .contains(where: { $0.activationState == .foregroundActive })
-        else {
+        guard windowSceneProvider() != nil else {
             Logger.overlay.warning(
                 "presentNextQueuedOverlay: no active scene — item retained in queue for next attempt"
             )
