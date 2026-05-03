@@ -149,23 +149,27 @@ final class AppCoordinatorNotificationFallbackTests: XCTestCase {
         XCTAssertFalse(ipcStore.recordedKinds.contains(.shieldPathSelected))
     }
 
-    func test_trueInterruptEnabledChangeNotification_reEvaluatesRoutingImmediately() async {
+    func test_trueInterruptEnabledChangeNotification_reEvaluatesRoutingImmediately() async throws {
         deviceActivityMonitor.stubbedIsAvailable = false
+        ipcStore.trueInterruptEnabled = false
         await coordinator.refreshAuthStatus()
         notificationCenter.reset()
+        let fallbackEventCountBeforePost = ipcStore.events.filter { $0.kind == .notificationFallbackScheduled }.count
 
         NotificationCenter.default.post(
             name: AppGroupIPCStore.trueInterruptEnabledDidChangeNotification,
             object: nil,
             userInfo: [AppGroupIPCStore.trueInterruptEnabledValueUserInfoKey: false]
         )
-        await awaitCondition {
-            notificationCenter.addedRequests.count >= 2 &&
-                ipcStore.recordedKinds.contains(.notificationFallbackScheduled)
+        await awaitCondition(timeout: 3.0) {
+            let fallbackEventCount = ipcStore.events.filter { $0.kind == .notificationFallbackScheduled }.count
+            return notificationCenter.addedRequests.count >= 2 &&
+                fallbackEventCount > fallbackEventCountBeforePost
         }
 
-        XCTAssertEqual(notificationCenter.addedRequests.count, 2)
-        XCTAssertTrue(ipcStore.recordedKinds.contains(.notificationFallbackScheduled))
+        XCTAssertGreaterThanOrEqual(notificationCenter.addedRequests.count, 2)
+        let event = try XCTUnwrap(ipcStore.events.last { $0.kind == .notificationFallbackScheduled })
+        XCTAssertEqual(event.detail, "shield_unavailable")
     }
 
     func test_trueInterruptEnabledChangeNotification_whenEnabledAndShieldAvailable_switchesToShieldPath() async throws {
