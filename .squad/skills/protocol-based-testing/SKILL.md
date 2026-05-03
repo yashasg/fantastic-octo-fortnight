@@ -239,6 +239,7 @@ Use **capability suffix** (Swift API Design Guidelines):
 ### ⚠️ Singleton Default-Argument Hazard
 - Some Apple singletons can crash when resolved in test-host initializer paths.
 - Prefer optional injected dependencies (`dep: ProtocolType? = nil`) and lazily resolve the real singleton at runtime callback boundaries.
+- For deterministic tests of both paths, pair optional dependency injection with a fallback factory closure (`makeDep: () -> ProtocolType`), then assert fallback-used and injected-bypass behaviors separately.
 - Example: resolve `UNUserNotificationCenter.current()` inside `application(_:didFinishLaunchingWithOptions:)`, not in `init` default-argument evaluation.
 
 ---
@@ -304,7 +305,7 @@ When adding a new protocol-based abstraction:
 - [ ] Protocol name uses capability suffix (`-ing`)
 - [ ] Protocol only includes methods you actually use
 - [ ] System type conforms via `extension` (no implementation needed if signatures match)
-- [ ] Service has `init` parameter with default value: `= RealType.shared()` or `.current()`
+- [ ] Service has either an injected dependency with a safe default, or `dep: Protocol? = nil` + fallback factory closure when singleton resolution needs seam coverage
 - [ ] If singleton access is known to be crash-prone in tests, use optional injection and lazy runtime fallback instead of eager init-time default resolution
 - [ ] Mock records method calls in arrays/flags for test assertions
 - [ ] Unit tests inject mock, verify interactions (not system behavior)
