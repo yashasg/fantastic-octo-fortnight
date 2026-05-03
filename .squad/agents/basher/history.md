@@ -61,116 +61,33 @@
 - For AppDelegate lifecycle registration seams, inject a `makeMetricKitSubscriber` fallback factory and resolve it only when explicit `metricKitSubscriber` injection is absent; this removes direct `MetricKitSubscriber.shared` coupling and enables deterministic fallback-path tests.
 - For service lifecycle observers, inject a dedicated `NotificationCenter` dependency and route both registration/removal through it; add paired tests proving custom-center delivery and default-center isolation to avoid global observer cross-talk (`EyePostureReminder/Services/ScreenTimeTracker.swift`, `Tests/EyePostureReminderTests/Services/ScreenTimeTrackerTests.swift`).
 
-## 2026-05-03T10:08:22Z: #462 Phase A DI/SRP — DateProviding Seam Micro-Slice (COMPLETED)
 
-**Task:** Execute next smallest #462 Phase A DI/SRP micro-slice from origin/main, validate tests, open PR
+## Phase A DI/SRP Implementation Summary (2026-05-03)
 
-**Slice:** Inject DateProviding seam into AppCoordinator watchdog recovery path
+**Completed Micro-Slices:**
+- DateProviding seam for AppCoordinator recovery/watchdog paths
+- SettingsViewModel snooze date seam
+- handleNotification snooze guard date seam
+- scheduleReminders snooze guard date seam
+- Foreground session start clock seam
+- Foreground launch readiness clock seam
+- LiveCarPlayDetector notificationCenter seam
+- AppDelegate launch-argument provider seam
+- AppDelegate UI-test overlay consumer seam
+- AppCoordinator pause-condition manager factory seam
 
-**Branch:** basher/462-phasea-next-di-microslice  
-**Commit:** cab1807  
-**PR:** https://github.com/yashasg/fantastic-octo-fortnight/pull/516
+**Core Pattern Established:**
+Each Phase A micro-slice follows: optional inject protocol/factory → resolve once in init → fallback to production default → focused seam tests (fallback-used + explicit-bypass assertions) → full build/test validation.
 
-**Changes:**
-- AppCoordinator: Added `dateProvider: DateProviding` injection; routed `recoverStaleDeviceActivityWatchdogIfNeeded()` default path through `dateProvider.now`
-- AppCoordinatorWatchdogRecovery: Removed direct `Date()` dependency; now uses injected seam
-- AppCoordinatorWatchdogHeartbeatTests: New tests verify stale/missing detection with deterministic clock injection
-- SKILL: Created `.squad/skills/date-provider-default-seam/SKILL.md` for reusable DateProviding seam pattern
+**Key Architectural Decisions:**
+- Prefer `dependency: Protocol? = nil` + fallback factory over eager default arguments
+- UI-test guards (isUITestModeEnabled, NoopPauseConditionManager) placed *before* factory resolution to preserve XCUITest determinism
+- All instance-resolved state should be used in lifecycle methods (not static globals)
+- Seam tests are surgical: prove fallback-used path, prove explicit-injection bypass path, verify behavior through public method calls
+- Production behavior is never changed: factories default to original implementations
 
-**Validation:** ✅ Build clean, unit tests 100% passing, integration stable  
-**Status:** READY FOR NEXT PHASE A SLICE (SRP: AppCoordinator → Lifecycle + Watchdog handlers)
+**Validation Established:**
+- `./scripts/build.sh build` and `./scripts/build.sh test` pass cleanly after each micro-slice
+- No integration regressions detected
+- Phase A momentum maintained with surgical, focused slices
 
-**Orchestration Logs:**
-- `.squad/orchestration-log/2026-05-03T10-08-22Z-basher.md`
-- `.squad/log/2026-05-03T10-08-22Z-462-next-microslice.md`
-
-**Decision Filed:** `.squad/decisions/decisions.md` — DateProviding seam pattern and Phase A rationale
-
-## 2026-05-03T11:05:00Z: #462 Phase A DI/SRP — SettingsViewModel SnoozeOption Date Seam (COMPLETED)
-
-**Task:** Execute next smallest #462 Phase A DI/SRP micro-slice from latest origin/main, validate tests, open PR
-
-**Slice:** Route `snooze(option:)` end-date computation through injected `DateProviding`
-
-**Branch:** basher/462-phasea-settingsviewmodel-store-seam  
-**Commit:** 23a658a  
-**PR:** https://github.com/yashasg/fantastic-octo-fortnight/pull/518
-
-**Changes:**
-- SettingsViewModel: Added `SnoozeOption.endDate(referenceDate:)` and switched `snooze(option:)` to use `dateProvider.now`
-- SettingsViewModelExtendedTests: Added deterministic seam tests for `.oneHour` and `.restOfDay`
-- Skill: Updated `.squad/skills/date-provider-default-seam/SKILL.md` with enum helper seam pattern
-
-**Validation:** ✅ `./scripts/build.sh build` and `./scripts/build.sh test` passed  
-**Status:** READY FOR NEXT PHASE A SLICE
-
-## 2026-05-03T11:30:00Z: #462 Phase A DI/SRP — handleNotification Snooze Guard Date Seam (IN PROGRESS)
-
-- Learned pattern: notification-delivery snooze guards should compare against injected `dateProvider.now` instead of `Date()` so suppression behavior is deterministic in unit tests.
-- Architecture decision: keep behavior identical by changing only the guard expression in `AppCoordinator.handleNotification(for:)` and proving seam usage with wall-clock/injected-clock inversion tests.
-- User preference reinforced: keep micro-slices surgical (single DI seam + focused tests + full `./scripts/build.sh build` and `./scripts/build.sh test` validation).
-- Key file paths: `EyePostureReminder/Services/AppCoordinator.swift`, `Tests/EyePostureReminderTests/Services/AppCoordinatorTests.swift`, `.squad/skills/date-provider-default-seam/SKILL.md`.
-
-
-## 2026-05-03T11:52:28Z: #462 Phase A DI/SRP — scheduleReminders Snooze Guard Date Seam (COMPLETED)
-
-- Learned pattern: entrypoint snooze guards in `scheduleReminders()` should compare `snoozedUntil` against injected `dateProvider.now`, not `Date()`, to keep launch-time scheduling deterministic.
-- Architecture decision: preserve behavior by changing only the snooze guard expression and adding wall-clock/injected-clock inversion tests that assert both continue-scheduling and suppress-scheduling paths.
-- User preference reinforced: keep each #462 slice surgical (single DI seam + focused tests + full `./scripts/build.sh build` and `./scripts/build.sh test`).
-- Key file paths: `EyePostureReminder/Services/AppCoordinator.swift`, `Tests/EyePostureReminderTests/Services/AppCoordinatorTests.swift`, `.squad/skills/date-provider-default-seam/SKILL.md`.
-
-## 2026-05-03T12:32:00Z: #462 Phase A DI/SRP — Foreground SessionStart Clock Seam (COMPLETED)
-
-- Learned pattern: warm-foreground session telemetry must seed `sessionStartTime` from injected `dateProvider.now` (not `Date()`) to keep `appSessionEnd` durations deterministic.
-- Architecture decision: preserve behavior by changing only `handleForegroundTransition` session-start initialization and proving seam usage with a focused `appSessionEnd` duration assertion.
-- Validation: `./scripts/build.sh build` and `./scripts/build.sh test` passed after the change.
-- Key file paths: `EyePostureReminder/Services/AppCoordinator.swift`, `Tests/EyePostureReminderTests/Services/AppCoordinatorTests.swift`.
-
-## 2026-05-03T12:50:00Z: #462 Phase A DI/SRP — Foreground Launch Readiness Clock Seam (COMPLETED)
-
-- Learned pattern: for launch-readiness analytics, both foreground-entry capture and latency delta should use injected `dateProvider.now` so timing remains deterministic in tests.
-- Architecture decision: preserve behavior by replacing only `Date()` reads in `AppCoordinator` foreground/session analytics paths and asserting a single focused latency seam test.
-- Validation: `./scripts/build.sh build` and `./scripts/build.sh test` passed after the change.
-- Key file paths: `EyePostureReminder/Services/AppCoordinator.swift`, `Tests/EyePostureReminderTests/Services/AppCoordinatorTests.swift`, `.squad/skills/date-provider-default-seam/SKILL.md`.
-- For AppCoordinator notification-driven rerouting, inject a dedicated `NotificationCenter` dependency for observer registration/removal instead of using `NotificationCenter.default`; this preserves production behavior while isolating tests from global observer cross-talk.
-
-## Learnings
-
-- LiveCarPlayDetector Phase A seam: inject notificationCenter plus deterministic isCarPlayActiveProvider and verify injected-center route-change delivery plus default-center isolation to remove global observer coupling without changing runtime defaults.
-- For `@MainActor` detector callbacks driven by nonisolated `NotificationCenter` closures, inject a state-provider closure seam and mark it `nonisolated(unsafe)` so observer handlers stay compile-safe in Swift 6 while production behavior remains unchanged (`EyePostureReminder/Services/PauseConditionManager.swift`).
-- For NotificationCenter observer seams in services, keep one positive test on the injected center and one negative test on `NotificationCenter.default` to prove isolation from global callbacks (`Tests/EyePostureReminderTests/Services/LiveCarPlayDetectorTests.swift`).
-- Overlay lifecycle observers should inject `NotificationCenter` and remove observers on that same instance in `deinit`; this keeps `UIScene.didActivateNotification` handling deterministic in tests and avoids global observer coupling (`EyePostureReminder/Services/OverlayManager.swift`, `Tests/EyePostureReminderTests/Services/OverlayManagerExtendedTests.swift`).
-- For launch-context seams in app lifecycle delegates, prefer `launchArguments: [String]? = nil` plus an injected `launchArgumentsProvider` fallback closure so tests can assert fallback use and bypass behavior without touching `CommandLine.arguments` globals (`EyePostureReminder/App/AppDelegate.swift`, `Tests/EyePostureReminderTests/Services/AppDelegateTests.swift`).
-- For AppCoordinator launch-context seams, resolve `launchArguments` via `launchArguments ?? launchArgumentsProvider()` in `init` and reuse that single resolved value for both UI-test mode detection and authorization-stub resolution.
-- Keep launch-argument DI tests focused on fallback/bypass behavior: one test proves provider invocation when explicit args are absent, and one proves explicit args bypass provider.
-- User preference reinforced: Phase A slices stay surgical (single DI/SRP seam + focused tests + full `./scripts/build.sh build` and `./scripts/build.sh test`).
-- Key file paths: `EyePostureReminder/Services/AppCoordinator.swift`, `Tests/EyePostureReminderTests/Services/AppCoordinatorUITestLaunchContextTests.swift`, `.squad/skills/launch-context-di-seam/SKILL.md`.
-- For AppCoordinator UI-test guards, persist the resolved `uiTestMode` from init in an instance property and use it in lifecycle methods (e.g., `refreshAuthStatus`) instead of static `AppCoordinator.isUITestMode`; this keeps launch-context DI deterministic for each coordinator instance while preserving behavior.
-- For singleton-backed protocol defaults in service initializers, prefer `dependency: Protocol? = nil` plus an injected fallback factory closure; this keeps production defaults while enabling deterministic tests for both fallback and bypass paths (`EyePostureReminder/Services/MetricKitSubscriber.swift`, `Tests/EyePostureReminderTests/Services/MetricKitSubscriberTests.swift`).
-- For singleton-backed notification services, inject `notificationCenter: Protocol? = nil` with `makeNotificationCenter` fallback and resolve once in `init`; add paired tests for fallback-used and injected-bypass to remove eager singleton default-argument coupling (`EyePostureReminder/Services/ReminderScheduler.swift`, `Tests/EyePostureReminderTests/Services/ReminderSchedulerTests.swift`).
-- For singleton-backed persistent stores, use `store: Protocol? = nil` plus `makeStore` fallback factory and resolve once in `init`; add paired tests for fallback-used and explicit-store-bypass to remove eager `UserDefaults.standard` coupling while preserving behavior (`EyePostureReminder/Models/SettingsStore.swift`, `Tests/EyePostureReminderTests/Models/SettingsStoreTests.swift`).
-- For singleton-backed coordinator dependencies, prefer `dependency: Protocol? = nil` plus `makeDependency` fallback factory and resolve once in `init`; this removes eager singleton default arguments while preserving runtime behavior (`EyePostureReminder/Services/AppCoordinator.swift`).
-- Keep seam tests surgical: add one fallback-used assertion and one explicit-injection-bypass assertion, then verify through a public behavior call (`refreshAuthStatus`) instead of private state checks.
-- User preference reinforced: continue #462 with tiny DI/SRP slices only, each validated with `./scripts/build.sh build` and `./scripts/build.sh test`.
-- Key file paths: `EyePostureReminder/Services/AppCoordinator.swift`, `Tests/EyePostureReminderTests/Services/AppCoordinatorTests.swift`, `.squad/decisions/inbox/basher-appcoordinator-notificationcenter-factory-seam.md`.
-
-## Learnings
-- AppCoordinator launch-context seam: prefer `processEnvironment: [String: String]? = nil` plus `processEnvironmentProvider` fallback, resolve once in `init`, and thread the resolved value into `resolveScreenTimeAuthorization` so tests can assert fallback-used and explicit-bypass paths without touching `ProcessInfo.processInfo.environment` globals.
-- For notification-emitting shared stores, inject `NotificationCenter` and use it for `post` calls; add a seam test that observes on the injected center plus a negative assertion on `.default` to prove global isolation without behavior changes (`Extensions/Shared/AppGroupIPCStore.swift`, `Tests/EyePostureReminderTests/Services/AppGroupIPCStoreTests.swift`).
-- For AppDelegate UserDefaults seams, prefer `uiTestDefaults: UserDefaults? = nil` plus `makeUITestDefaults` fallback factory and resolve once in `init`; keep tests surgical with fallback-used and explicit-bypass assertions (`EyePostureReminder/App/AppDelegate.swift`, `Tests/EyePostureReminderTests/Services/AppDelegateTests.swift`).
-- For AppCoordinator UI-test status overrides, use `uiTestStatusStore: UserDefaults? = nil` plus `makeUITestStatusStore` fallback, resolve once in `init`, and add paired fallback-used/explicit-bypass tests to remove eager `UserDefaults.standard` coupling while preserving resolver behavior (`EyePostureReminder/Services/AppCoordinator.swift`, `Tests/EyePostureReminderTests/Services/AppCoordinatorUITestStatusStoreTests.swift`).
-- For singleton-backed media dependencies in overlay services, prefer `audioManager: MediaControlling? = nil` plus `makeAudioManager` fallback and resolve once in `init`; add paired fallback-used and explicit-bypass tests to remove eager `AudioInterruptionManager()` default-argument coupling while preserving runtime behavior (`EyePostureReminder/Services/OverlayManager.swift`, `Tests/EyePostureReminderTests/Services/OverlayManagerTests.swift`).
-- For AppCoordinator lifecycle observer defaults, use `lifecycleNotificationCenter: NotificationCenter? = nil` plus `makeLifecycleNotificationCenter` fallback and resolve once in `init`; add paired fallback-used and explicit-bypass tests to remove eager `NotificationCenter.default` coupling while preserving observer behavior.
-- For debug-only UI-test overlay requests, centralize `UserDefaults` reads in `AppDelegate` (which already owns injected `uiTestDefaults`) and expose a small consumer method; this removes `EyePostureReminderApp` direct `.standard` coupling while preserving one-shot consume-and-clear behavior (`EyePostureReminder/App/AppDelegate.swift`, `EyePostureReminder/App/EyePostureReminderApp.swift`, `Tests/EyePostureReminderTests/Services/AppDelegateTests.swift`).
-- For `AVAudioSession`-backed service seams, inject `audioSession: AudioSessionControlling? = nil` plus `makeAudioSession` fallback and resolve once in `init`; keep tests focused on one behavior assertion (`pause`/`resume`) plus fallback-used and injected-bypass checks (`EyePostureReminder/Services/AudioInterruptionManager.swift`, `Tests/EyePostureReminderTests/Services/AudioInterruptionManagerTests.swift`).
-- For AppCoordinator clock defaults, use `dateProvider: DateProviding? = nil` plus `makeDateProvider` fallback and resolve once in `init`; verify fallback-used and explicit-bypass with a public behavior call (`cancelAllReminders`) so snooze guards stay deterministic without eager `SystemDateProvider()` default arguments.
-- Architecture decision: keep this slice to a single constructor seam (no lifecycle logic edits) to preserve production behavior while still improving DI/SRP.
-- Key file paths: `EyePostureReminder/Services/AppCoordinator.swift`, `Tests/EyePostureReminderTests/Services/AppCoordinatorTests.swift`, `.squad/decisions/inbox/basher-appcoordinator-dateprovider-factory-seam.md`.
-- For non-singleton collaborator defaults in services, prefer `dependency: Protocol? = nil` plus `makeDependency` fallback factory and resolve once in `init`; add paired fallback-used and explicit-bypass tests to remove eager concrete construction while preserving behavior (`EyePostureReminder/Services/OverlayManager.swift`, `Tests/EyePostureReminderTests/Services/OverlayManagerExtendedTests.swift`).
-- For AppCoordinator scheduling guards, use the instance-resolved `isUITestModeEnabled` flag inside lifecycle methods (`scheduleReminders`) instead of static `AppCoordinator.isUITestMode`; this keeps injected UI-test mode deterministic and avoids mixed global/injected behavior.
-- For AppCoordinator pause-condition defaults, inject an optional `makePauseConditionManager` factory and keep the UI-test no-op guard ahead of factory resolution so XCUITest remains deterministic while removing eager live-detector construction.
-- Keep seam tests surgical for pause-condition DI: one test asserts factory-used when provider is nil, one test asserts explicit-provider bypasses factory (`EyePostureReminder/Services/AppCoordinator.swift`, `Tests/EyePostureReminderTests/Services/AppCoordinatorTests.swift`).
-- For AppDelegate UI-test overlay consumption, route `UserDefaults` reads through an injected `consumeUITestOverlayType()` helper (DEBUG-only) that reads from `uiTestDefaults` and clears the key; this prevents `EyePostureReminderApp` from directly accessing `UserDefaults.standard` while preserving one-shot consume-and-clear semantics (`EyePostureReminder/App/AppDelegate.swift`, `EyePostureReminder/App/EyePostureReminderApp.swift`).
-- For AppDelegate launch-argument resolution, use `launchArguments: [String]? = nil` plus `launchArgumentsProvider: () -> [String]` (defaulting to `{ CommandLine.arguments }`) and resolve once in `init` via `launchArguments ?? launchArgumentsProvider()`; add paired tests asserting fallback-used and explicit-bypass paths to remove hidden `CommandLine.arguments` coupling (`EyePostureReminder/App/AppDelegate.swift`, `Tests/EyePostureReminderTests/Services/AppDelegateTests.swift`).
-- For AppCoordinator pause-condition manager factory, the UI-test no-op guard returns `NoopPauseConditionManager` before factory evaluation; this preserves XCUITest determinism while still removing eager construction — inject `makePauseConditionManager: ((SettingsStore) -> PauseConditionProviding)?` and resolve via `resolvePauseConditionManager()` when nil (`EyePostureReminder/Services/AppCoordinator.swift`, `Tests/EyePostureReminderTests/Services/AppCoordinatorTests.swift`).
-- Micro-slice validation pattern confirmed: each #462 Phase A DI/SRP slice includes single constructor/resolution seam, focused unit tests (fallback-used + explicit-bypass assertions), and full `./scripts/build.sh build` + `./scripts/build.sh test` validation before PR submission.
