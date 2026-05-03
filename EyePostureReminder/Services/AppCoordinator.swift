@@ -195,7 +195,8 @@ final class AppCoordinator: ObservableObject {
         deviceActivityMonitor: DeviceActivityMonitorProviding? = nil,
         ipcStore: AppGroupIPCProviding? = nil,
         makeIPCStore: @escaping () -> AppGroupIPCProviding = { AppGroupIPCStore() },
-        lifecycleNotificationCenter: NotificationCenter = .default,
+        lifecycleNotificationCenter: NotificationCenter? = nil,
+        makeLifecycleNotificationCenter: @escaping () -> NotificationCenter = { .default },
         watchdogHeartbeatGraceInterval: TimeInterval = 10,
         dateProvider: DateProviding = SystemDateProvider()
     ) {
@@ -219,7 +220,7 @@ final class AppCoordinator: ObservableObject {
         self.deviceActivityMonitor = Self.resolveDeviceActivityMonitor(deviceActivityMonitor)
         self.ipcStore = ipcStore ?? makeIPCStore()
         self.dateProvider = dateProvider
-        self.lifecycleNotificationCenter = lifecycleNotificationCenter
+        self.lifecycleNotificationCenter = lifecycleNotificationCenter ?? makeLifecycleNotificationCenter()
         self.watchdogHeartbeatGraceInterval = watchdogHeartbeatGraceInterval
         let resolvedUITestMode = uiTestMode ?? Self.isUITestMode(launchArguments: resolvedLaunchArguments)
         self.isUITestModeEnabled = resolvedUITestMode
@@ -296,7 +297,7 @@ final class AppCoordinator: ObservableObject {
             }
         }
         self.pauseConditionManager.startMonitoring()
-        self.trueInterruptEnabledObserver = lifecycleNotificationCenter.addObserver(
+        self.trueInterruptEnabledObserver = self.lifecycleNotificationCenter.addObserver(
             forName: AppGroupIPCStore.trueInterruptEnabledDidChangeNotification,
             object: nil,
             queue: nil

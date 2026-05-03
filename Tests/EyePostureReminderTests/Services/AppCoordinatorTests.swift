@@ -153,6 +153,46 @@ final class AppCoordinatorTests: XCTestCase {
         XCTAssertEqual(coordinator.notificationAuthStatus, .denied)
     }
 
+    func test_init_withoutLifecycleNotificationCenter_usesInjectedLifecycleNotificationCenterFactory() {
+        var factoryCallCount = 0
+        let coordinator = AppCoordinator(
+            settings: SettingsStore(store: MockSettingsPersisting()),
+            scheduler: ReminderScheduler(notificationCenter: MockNotificationCenter()),
+            notificationCenter: MockNotificationCenter(),
+            screenTimeTracker: MockScreenTimeTracker(),
+            pauseConditionProvider: MockPauseConditionProvider(),
+            ipcStore: MockAppGroupIPCRecorder(),
+            lifecycleNotificationCenter: nil,
+            makeLifecycleNotificationCenter: {
+                factoryCallCount += 1
+                return NotificationCenter()
+            }
+        )
+        defer { coordinator.stopFallbackTimers() }
+
+        XCTAssertEqual(factoryCallCount, 1)
+    }
+
+    func test_init_withExplicitLifecycleNotificationCenter_doesNotCallLifecycleNotificationCenterFactory() {
+        var factoryCallCount = 0
+        let coordinator = AppCoordinator(
+            settings: SettingsStore(store: MockSettingsPersisting()),
+            scheduler: ReminderScheduler(notificationCenter: MockNotificationCenter()),
+            notificationCenter: MockNotificationCenter(),
+            screenTimeTracker: MockScreenTimeTracker(),
+            pauseConditionProvider: MockPauseConditionProvider(),
+            ipcStore: MockAppGroupIPCRecorder(),
+            lifecycleNotificationCenter: NotificationCenter(),
+            makeLifecycleNotificationCenter: {
+                factoryCallCount += 1
+                return NotificationCenter()
+            }
+        )
+        defer { coordinator.stopFallbackTimers() }
+
+        XCTAssertEqual(factoryCallCount, 0)
+    }
+
     func test_init_withoutIPCStore_usesInjectedIPCStoreFactory() async {
         struct FactoryReadEventsError: Error {}
         var factoryCallCount = 0
