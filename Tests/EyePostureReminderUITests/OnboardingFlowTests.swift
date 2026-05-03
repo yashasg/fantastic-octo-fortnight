@@ -296,11 +296,8 @@ final class OnboardingFlowTests: XCTestCase {
         getStartedButton.tap()
 
         let customizeButton = app.buttons["onboarding.interrupt.customizeButton"]
-        if !customizeButton.waitForExistence(timeout: 3) {
-            app.swipeUp()
-        }
         XCTAssertTrue(
-            customizeButton.waitForExistence(timeout: 3),
+            app.revealAndWaitForHittable(customizeButton, timeout: 5, maxSwipes: 4),
             "\"Customize Settings\" tertiary CTA must exist on the True Interrupt Mode screen. " +
             "Ensure onCustomize is non-nil in OnboardingView and " +
             ".accessibilityIdentifier(\"onboarding.interrupt.customizeButton\") is set."
@@ -325,10 +322,7 @@ final class OnboardingFlowTests: XCTestCase {
         getStartedButton.tap()
 
         let customizeButton = app.buttons["onboarding.interrupt.customizeButton"]
-        if !customizeButton.waitForExistence(timeout: 3) {
-            app.swipeUp()
-        }
-        XCTAssertTrue(customizeButton.waitForExistence(timeout: 3))
+        XCTAssertTrue(app.revealAndWaitForHittable(customizeButton, timeout: 5, maxSwipes: 4))
         customizeButton.tap()
 
         // After tapping Customize Settings, onboarding completes and HomeView opens Settings

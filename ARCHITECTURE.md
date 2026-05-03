@@ -165,7 +165,7 @@ Defined in `ScreenTimeTracker.swift`. Abstracts the continuous screen-on timer s
 
 ```swift
 protocol ScreenTimeTracking: AnyObject {
-    var onThresholdReached: ((ReminderType) -> Void)? { get set }
+    var onThresholdReached: (@MainActor (ReminderType) -> Void)? { get set }
     func setThreshold(_ interval: TimeInterval, for type: ReminderType)
     func disableTracking(for type: ReminderType)
     func pause(for type: ReminderType)
@@ -211,7 +211,7 @@ protocol DrivingActivityDetecting: AnyObject {
 
 protocol PauseConditionProviding: AnyObject {
     var isPaused: Bool { get }
-    var onPauseStateChanged: ((Bool) -> Void)? { get set }
+    var onPauseStateChanged: (@MainActor (Bool) -> Void)? { get set }
     func startMonitoring()
     func stopMonitoring()
 }

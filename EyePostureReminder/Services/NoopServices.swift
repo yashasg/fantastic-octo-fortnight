@@ -10,7 +10,7 @@ import Foundation
 
 @MainActor
 final class NoopScreenTimeTracker: ScreenTimeTracking {
-    var onThresholdReached: ((ReminderType) -> Void)?
+    var onThresholdReached: (@MainActor (ReminderType) -> Void)?
     func setThreshold(_ interval: TimeInterval, for type: ReminderType) {}
     func disableTracking(for type: ReminderType) {}
     func pause(for type: ReminderType) {}
@@ -30,7 +30,7 @@ final class NoopScreenTimeTracker: ScreenTimeTracking {
 @MainActor
 final class NoopPauseConditionManager: PauseConditionProviding {
     var isPaused: Bool { false }
-    var onPauseStateChanged: ((Bool) -> Void)?
+    var onPauseStateChanged: (@MainActor (Bool) -> Void)?
     func startMonitoring() {}
     func stopMonitoring() {}
 }

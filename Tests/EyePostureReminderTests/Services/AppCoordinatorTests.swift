@@ -315,31 +315,40 @@ final class AppCoordinatorTests: XCTestCase {
 
     // MARK: - handleNotification resets snoozeCount
 
-    func test_handleNotification_resetsSnoozeCount_toZero() {
-        settings.snoozeCount = 2
-        let (coordinator, _, _) = makeCoordinator(
-            overlay: MockOverlayPresenting(),
-            notifCenter: MockNotificationCenter())
-        defer { coordinator.stopFallbackTimers() }
+    func test_handleNotification_resetsSnoozeCount_whenReminderDelivers() {
+        for reminderType in [ReminderType.eyes, .posture] {
+            settings.snoozeCount = 2
+            let (coordinator, _, _) = makeCoordinator(
+                overlay: MockOverlayPresenting(),
+                notifCenter: MockNotificationCenter())
 
-        coordinator.handleNotification(for: .posture)
+            coordinator.handleNotification(for: reminderType)
 
-        XCTAssertEqual(
-            settings.snoozeCount,
-            0,
-            "handleNotification must reset snoozeCount=0 when a real reminder fires")
+            XCTAssertEqual(settings.snoozeCount, 0)
+            coordinator.stopFallbackTimers()
+        }
     }
 
-    func test_handleNotification_resetsSnoozeCount_regardlessOfType() {
-        settings.snoozeCount = 1
-        let (coordinator, _, _) = makeCoordinator(
+    func test_handleNotification_withActiveSnooze_preservesSnoozeAndSuppressesOverlay() {
+        let snoozeEnd = Date(timeIntervalSinceNow: 300)
+        settings.snoozedUntil = snoozeEnd
+        settings.snoozeCount = 2
+        let tracker = MockScreenTimeTracker()
+        let (coordinator, mockOverlay, _) = makeCoordinator(
             overlay: MockOverlayPresenting(),
-            notifCenter: MockNotificationCenter())
+            notifCenter: MockNotificationCenter(),
+            screenTimeTracker: tracker)
         defer { coordinator.stopFallbackTimers() }
 
         coordinator.handleNotification(for: .eyes)
+        coordinator.presentPendingOverlayIfNeeded()
 
-        XCTAssertEqual(settings.snoozeCount, 0)
+        XCTAssertEqual(settings.snoozedUntil, snoozeEnd)
+        XCTAssertEqual(settings.snoozeCount, 2)
+        XCTAssertEqual(mockOverlay.showCallCount, 0)
+        XCTAssertTrue(
+            tracker.resetCalls.isEmpty,
+            "Ignored notifications during active snooze must not reset tracker state")
     }
 
     // MARK: - cancelAllReminders with active snooze
@@ -758,37 +767,18 @@ final class AppCoordinatorTests: XCTestCase {
 
     // MARK: - handleNotification: ScreenTimeTracker reset
 
-    func test_handleNotification_eyes_resetsEyesCounter() {
-        let (coordinator, mockTracker) = makeTrackedCoordinator()
-        defer { coordinator.stopFallbackTimers() }
+    func test_handleNotification_resetsTrackerExactlyOnce_forDeliveredType() {
+        for reminderType in [ReminderType.eyes, .posture] {
+            let (coordinator, mockTracker) = makeTrackedCoordinator()
 
-        coordinator.handleNotification(for: .eyes)
+            coordinator.handleNotification(for: reminderType)
 
-        XCTAssertTrue(
-            mockTracker.resetCalls.contains(.eyes),
-            "handleNotification must reset the ScreenTimeTracker counter for the delivered type")
-    }
-
-    func test_handleNotification_posture_resetsPostureCounter() {
-        let (coordinator, mockTracker) = makeTrackedCoordinator()
-        defer { coordinator.stopFallbackTimers() }
-
-        coordinator.handleNotification(for: .posture)
-
-        XCTAssertTrue(
-            mockTracker.resetCalls.contains(.posture),
-            "handleNotification must reset the ScreenTimeTracker counter for the delivered type")
-    }
-
-    func test_handleNotification_eyes_doesNotResetPostureCounter() {
-        let (coordinator, mockTracker) = makeTrackedCoordinator()
-        defer { coordinator.stopFallbackTimers() }
-
-        coordinator.handleNotification(for: .eyes)
-
-        XCTAssertFalse(
-            mockTracker.resetCalls.contains(.posture),
-            "handleNotification for eyes must not reset the posture counter")
+            XCTAssertEqual(
+                mockTracker.resetCalls,
+                [reminderType],
+                "handleNotification must reset exactly once for the delivered reminder type")
+            coordinator.stopFallbackTimers()
+        }
     }
 
     // MARK: - Foreground threshold: reschedules background notification

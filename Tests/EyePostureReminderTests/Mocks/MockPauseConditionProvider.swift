@@ -7,7 +7,7 @@ import Foundation
 @MainActor
 final class MockPauseConditionProvider: PauseConditionProviding {
 
-    var onPauseStateChanged: ((Bool) -> Void)?
+    var onPauseStateChanged: (@MainActor (Bool) -> Void)?
 
     private(set) var isPaused: Bool = false
 

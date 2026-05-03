@@ -24,6 +24,21 @@ struct HomeView: View {
         }
     }
 
+    private var shouldShowTrueInterruptPrompts: Bool {
+        if coordinator.screenTimeAuthorization.authorizationStatus == .notDetermined {
+            return true
+        }
+#if DEBUG
+        if CommandLine.arguments.contains("--simulate-screen-time-not-determined") {
+            return true
+        }
+        if ProcessInfo.processInfo.environment["UITEST_SCREEN_TIME_STATUS"] == "notDetermined" {
+            return true
+        }
+#endif
+        return false
+    }
+
     var body: some View {
         VStack(spacing: AppSpacing.lg) {
             Spacer()
@@ -56,7 +71,7 @@ struct HomeView: View {
 
             // Post-onboarding True Interrupt discoverability banner (#258).
             // Shown only when setup was skipped (notDetermined) and not yet dismissed.
-            if coordinator.screenTimeAuthorization.authorizationStatus == .notDetermined,
+            if shouldShowTrueInterruptPrompts,
                !trueInterruptBannerDismissed {
                 TrueInterruptSkippedBanner(
                     onSetUp: {
@@ -71,7 +86,7 @@ struct HomeView: View {
 
             // Persistent low-noise rediscovery affordance (#280).
             // Shown after the banner is dismissed while setup is still pending.
-            if coordinator.screenTimeAuthorization.authorizationStatus == .notDetermined,
+            if shouldShowTrueInterruptPrompts,
                trueInterruptBannerDismissed {
                 TrueInterruptSetupPill(onTap: { showSettings = true })
             }

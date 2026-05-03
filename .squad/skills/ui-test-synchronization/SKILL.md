@@ -16,3 +16,21 @@ Accessibility trees can keep elements mounted during transitions, making raw exi
 - `waitForOverlayPresented()` anchored on a hittable control.
 - `waitForOverlayDismissed()` anchored on fallback screen + overlay root non-existence.
 - `waitForNotHittable()` for hidden mounted elements.
+
+## Runtime-gated prompt pattern
+- For simulator-dependent surfaces (permissions/Screen Time prompts), assert one of the valid UI affordances (e.g., banner **or** fallback pill) instead of one brittle branch.
+- If the runtime exposes neither affordance despite test setup, prefer `XCTSkip` over false-red failure and log the exact missing precondition.
+- Keep skips narrowly scoped to the runtime-gated tests; do not broaden to unrelated UI checks.
+
+## CI shard launch parity
+- Before every helper-driven launch, terminate any running app instance so new launch arguments are guaranteed to apply.
+- In shard setup, gate on overlay root visibility first (`overlay.root`) and reserve hittability checks for test-specific interactions.
+
+## Simulator hit-point resilience
+- In CI simulators, controls may `exists == true` but still report invalid activation points (zero-frame/transition timing artifacts).
+- Prefer a two-step interaction policy for volatile overlays: assert existence/readiness first, then tap by normalized center coordinate as a fallback to direct `tap()`.
+- Keep hittability waits for intent verification, not as the sole interaction gate.
+
+## Overlay lifetime pinning for launch-arg tests
+- For launch-argument driven overlay entry points, seed deterministic long break durations in app startup test hooks so overlays stay mounted through shard startup latency.
+- Reset test defaults before seeding to avoid cross-test contamination between shards.

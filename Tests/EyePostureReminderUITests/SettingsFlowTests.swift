@@ -13,15 +13,13 @@ final class SettingsFlowTests: XCTestCase {
         continueAfterFailure = false
         app = XCUIApplication()
         app.launchWithSkippedOnboarding()
-        XCTAssertTrue(app.waitForHomeScreenReady(timeout: 3), "Home screen should be ready before opening Settings.")
-        let settingsButton = app.buttons["home.settingsButton"]
-        XCTAssertTrue(
-            settingsButton.waitForExistence(timeout: 1),
-            "Settings toolbar button must exist on the Home screen before each test starts."
-        )
+        assertHomeReadyForSettings()
     }
 
     override func tearDownWithError() throws {
+        if app?.state != .notRunning {
+            app?.terminate()
+        }
         app = nil
     }
 
@@ -164,7 +162,7 @@ final class SettingsFlowTests: XCTestCase {
 
         let globalToggle = app.switches["settings.masterToggle"]
         XCTAssertTrue(
-            globalToggle.waitForExistence(timeout: 3),
+            app.waitForElementExists(globalToggle, timeout: 5),
             "The global toggle must be visible at the top of the Settings form. " +
             "AccessibleToggle must use .accessibilityIdentifier(\"settings.masterToggle\") in SettingsView."
         )
@@ -177,7 +175,7 @@ final class SettingsFlowTests: XCTestCase {
         openSettings()
 
         let globalToggle = app.switches["settings.masterToggle"]
-        XCTAssertTrue(globalToggle.waitForExistence(timeout: 3))
+        XCTAssertTrue(app.waitForElementHittable(globalToggle, timeout: 5))
 
         let initialValue = globalToggle.value as? String
         globalToggle.tap()
@@ -374,18 +372,22 @@ final class SettingsFlowTests: XCTestCase {
             eyesToggle.tap()
         }
 
-        let intervalPicker = app.descendants(matching: .any)
+        let intervalPicker = app.otherElements["settings.eyes.intervalPicker"]
+        let intervalPickerFallback = app.descendants(matching: .any)
             .matching(identifier: "settings.eyes.intervalPicker").firstMatch
         XCTAssertTrue(
-            intervalPicker.waitForExistence(timeout: 3),
+            app.waitForElementExists(intervalPicker, timeout: 5) ||
+                app.waitForElementExists(intervalPickerFallback, timeout: 2),
             "Eyes interval Picker must exist with identifier 'settings.eyes.intervalPicker' " +
             "when the eyes toggle is on (#427)."
         )
 
-        let durationPicker = app.descendants(matching: .any)
+        let durationPicker = app.otherElements["settings.eyes.durationPicker"]
+        let durationPickerFallback = app.descendants(matching: .any)
             .matching(identifier: "settings.eyes.durationPicker").firstMatch
         XCTAssertTrue(
-            durationPicker.waitForExistence(timeout: 3),
+            app.waitForElementExists(durationPicker, timeout: 5) ||
+                app.waitForElementExists(durationPickerFallback, timeout: 2),
             "Eyes duration Picker must exist with identifier 'settings.eyes.durationPicker' " +
             "when the eyes toggle is on (#427)."
         )
@@ -408,18 +410,22 @@ final class SettingsFlowTests: XCTestCase {
             postureToggle.tap()
         }
 
-        let intervalPicker = app.descendants(matching: .any)
+        let intervalPicker = app.otherElements["settings.posture.intervalPicker"]
+        let intervalPickerFallback = app.descendants(matching: .any)
             .matching(identifier: "settings.posture.intervalPicker").firstMatch
         XCTAssertTrue(
-            intervalPicker.waitForExistence(timeout: 3),
+            app.waitForElementExists(intervalPicker, timeout: 5) ||
+                app.waitForElementExists(intervalPickerFallback, timeout: 2),
             "Posture interval Picker must exist with identifier 'settings.posture.intervalPicker' " +
             "when the posture toggle is on (#427)."
         )
 
-        let durationPicker = app.descendants(matching: .any)
+        let durationPicker = app.otherElements["settings.posture.durationPicker"]
+        let durationPickerFallback = app.descendants(matching: .any)
             .matching(identifier: "settings.posture.durationPicker").firstMatch
         XCTAssertTrue(
-            durationPicker.waitForExistence(timeout: 3),
+            app.waitForElementExists(durationPicker, timeout: 5) ||
+                app.waitForElementExists(durationPickerFallback, timeout: 2),
             "Posture duration Picker must exist with identifier 'settings.posture.durationPicker' " +
             "when the posture toggle is on (#427)."
         )
@@ -588,6 +594,19 @@ final class SettingsFlowTests: XCTestCase {
 private extension SettingsFlowTests {
     // MARK: - Helpers
 
+    func assertHomeReadyForSettings() {
+        XCTAssertTrue(app.waitForHomeScreenReady(timeout: 5), "Home screen should be ready before opening Settings.")
+        let settingsButton = app.buttons["home.settingsButton"]
+        XCTAssertTrue(
+            app.waitForElementExists(settingsButton, timeout: 3),
+            "Settings toolbar button must exist on the Home screen before each test starts."
+        )
+        XCTAssertTrue(
+            app.waitForElementHittable(settingsButton, timeout: 3),
+            "Settings toolbar button should be hittable before each test starts."
+        )
+    }
+
     /// Opens the Settings sheet from the Home screen toolbar.
     func openSettings() {
         let settingsNav = app.navigationBars["Settings"]
@@ -595,13 +614,18 @@ private extension SettingsFlowTests {
             return
         }
 
+        XCTAssertTrue(
+            app.waitForHomeScreenReady(timeout: 5),
+            "Home screen anchor should exist before opening Settings."
+        )
+
         let settingsButton = app.buttons["home.settingsButton"]
         XCTAssertTrue(
-            settingsButton.waitForExistence(timeout: 1),
+            app.waitForElementExists(settingsButton, timeout: 3),
             "Settings toolbar button must exist on the Home screen. " +
             "Add .accessibilityIdentifier(\"home.settingsButton\") to the gear toolbar button in HomeView."
         )
-        if !waitUntilHittable(settingsButton, timeout: 1.0) {
+        if !app.waitForElementHittable(settingsButton, timeout: 3) {
             attachOpenSettingsDiagnostics()
             XCTFail(
                 "Settings toolbar button exists but is not hittable. " +
@@ -609,10 +633,18 @@ private extension SettingsFlowTests {
             )
             return
         }
-        settingsButton.tap()
         XCTAssertTrue(
-            settingsNav.waitForExistence(timeout: 3),
+            settingsButton.tapWhenHittable(timeout: 3),
+            "Settings toolbar button should be tappable before opening Settings."
+        )
+        XCTAssertTrue(
+            settingsNav.waitForExistence(timeout: 5),
             "Settings navigation bar should appear after opening Settings."
+        )
+        let doneButton = app.buttons["settings.doneButton"]
+        XCTAssertTrue(
+            app.waitForElementExists(doneButton, timeout: 5),
+            "Settings sheet should be fully presented with a Done button before assertions."
         )
     }
 
@@ -636,21 +668,6 @@ private extension SettingsFlowTests {
         doneButton.tap()
         let settingsNav = app.navigationBars["Settings"]
         _ = settingsNav.waitForNonExistence(timeout: 3)
-    }
-
-    /// Fast-path polling helper: tiny intervals, no fixed sleeps.
-    func waitUntilHittable(_ element: XCUIElement, timeout: TimeInterval) -> Bool {
-        if element.isHittable {
-            return true
-        }
-        let deadline = Date().addingTimeInterval(timeout)
-        while Date() < deadline {
-            if element.isHittable {
-                return true
-            }
-            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
-        }
-        return element.isHittable
     }
 
     /// Collect diagnostics only on failure path to avoid happy-path CI overhead.

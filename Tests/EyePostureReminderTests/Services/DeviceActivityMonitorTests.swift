@@ -331,7 +331,10 @@ final class DeviceActivityMonitorTests: XCTestCase {
 
         mockTracker.simulateThresholdReached(for: .posture)
         mockOverlay.simulateDismiss()
-        try await Task.sleep(nanoseconds: 100_000_000)
+        await awaitCondition(timeout: 2.0) {
+            mockMonitor.operationLog == ["schedule", "cancel"] &&
+            mockMonitor.activeSession == nil
+        }
 
         XCTAssertEqual(mockMonitor.operationLog, ["schedule", "cancel"],
             "Fast dismiss must serialize cancel after the in-flight schedule operation")
@@ -363,7 +366,9 @@ final class DeviceActivityMonitorTests: XCTestCase {
         try await Task.sleep(nanoseconds: 50_000_000)
         ipcStore.trueInterruptEnabled = false
         mockOverlay.simulateDismiss()
-        try await Task.sleep(nanoseconds: 100_000_000)
+        await awaitCondition(timeout: 2.0) {
+            mockMonitor.operationLog == ["schedule", "cancel"]
+        }
 
         XCTAssertEqual(
             mockMonitor.operationLog,

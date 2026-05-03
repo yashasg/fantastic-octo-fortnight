@@ -44,7 +44,7 @@ protocol DrivingActivityDetecting: AnyObject {
 @MainActor
 protocol PauseConditionProviding: ServiceLifecycle {
     var isPaused: Bool { get }
-    var onPauseStateChanged: ((Bool) -> Void)? { get set }
+    var onPauseStateChanged: (@MainActor (Bool) -> Void)? { get set }
 }
 
 // MARK: - LiveFocusStatusDetector
@@ -197,7 +197,9 @@ final class LiveDrivingActivityDetector: DrivingActivityDetecting {
 @MainActor
 final class PauseConditionManager: PauseConditionProviding {
 
-    var onPauseStateChanged: ((Bool) -> Void)?
+    typealias PauseStateChangedCallback = @MainActor (Bool) -> Void
+
+    var onPauseStateChanged: PauseStateChangedCallback?
 
     private(set) var isPaused: Bool = false {
         didSet {

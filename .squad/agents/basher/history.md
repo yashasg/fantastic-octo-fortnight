@@ -111,3 +111,8 @@ Orchestration log recorded at 2026-04-30T09:27:10Z. Fix approved and documented 
 - Fixed App Store/TestFlight capability drift by adding `com.apple.developer.focus-status = true` to `EyePostureReminder.Distribution.entitlements`.
 - Added regression coverage in `DistributionEntitlementsTests` to assert the distribution entitlement file keeps Focus status enabled.
 - Validation: `./scripts/build.sh all` passed after change (build + lint + tests).
+
+## Learnings
+
+- For service callbacks consumed by `@MainActor` coordinators, declare callback properties as `@MainActor` function types at the protocol boundary (e.g., `(@MainActor (ReminderType) -> Void)?`) to get compile-time isolation guarantees and remove `MainActor.assumeIsolated` crash traps.
+- Conforming mocks/no-op stubs must match the actor-annotated callback signatures; this keeps tests compile-safe while preserving behavior.

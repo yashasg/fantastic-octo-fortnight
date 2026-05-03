@@ -33,6 +33,12 @@ enum TestLaunchArguments {
 // MARK: - XCUIApplication + Test Helpers
 
 extension XCUIApplication {
+    private func launchFresh() {
+        if state != .notRunning {
+            terminate()
+        }
+    }
+
     private func appendDarkModeArgumentIfNeeded(_ darkMode: Bool) {
         guard darkMode else { return }
         launchArguments += [TestLaunchArguments.appleInterfaceStyle, TestLaunchArguments.darkAppearance]
@@ -41,6 +47,7 @@ extension XCUIApplication {
     /// Appends `--skip-onboarding` and launches the app.
     /// Use in `setUpWithError()` for tests that start from the Home screen.
     func launchWithSkippedOnboarding(darkMode: Bool = false) {
+        launchFresh()
         launchArguments += [TestLaunchArguments.skipOnboarding]
         appendDarkModeArgumentIfNeeded(darkMode)
         launch()
@@ -49,6 +56,7 @@ extension XCUIApplication {
     /// Appends `--reset-onboarding` and launches the app.
     /// Use in `setUpWithError()` for tests that verify the onboarding flow from scratch.
     func launchWithOnboarding(darkMode: Bool = false) {
+        launchFresh()
         launchArguments += [TestLaunchArguments.resetOnboarding]
         appendDarkModeArgumentIfNeeded(darkMode)
         launch()
@@ -57,6 +65,7 @@ extension XCUIApplication {
     /// Appends `--show-overlay-eyes` and launches the app.
     /// Use in tests that verify the eye break overlay UI.
     func launchWithEyeOverlay(darkMode: Bool = false) {
+        launchFresh()
         launchArguments += [TestLaunchArguments.showOverlayEyes]
         appendDarkModeArgumentIfNeeded(darkMode)
         launch()
@@ -65,6 +74,7 @@ extension XCUIApplication {
     /// Appends `--show-overlay-posture` and launches the app.
     /// Use in tests that verify the posture check overlay UI.
     func launchWithPostureOverlay(darkMode: Bool = false) {
+        launchFresh()
         launchArguments += [TestLaunchArguments.showOverlayPosture]
         appendDarkModeArgumentIfNeeded(darkMode)
         launch()
@@ -76,10 +86,12 @@ extension XCUIApplication {
     /// `TrueInterruptSetupPill` (banner dismissed). The simulator's real FamilyControls status
     /// is `.unavailable`, so this argument is required to reach either element (#399).
     func launchWithTrueInterruptPending(darkMode: Bool = false) {
+        launchFresh()
         launchArguments += [
             TestLaunchArguments.skipOnboarding,
             TestLaunchArguments.simulateScreenTimeNotDetermined
         ]
+        launchEnvironment["UITEST_SCREEN_TIME_STATUS"] = "notDetermined"
         appendDarkModeArgumentIfNeeded(darkMode)
         launch()
     }
@@ -106,8 +118,16 @@ extension XCUIApplication {
     /// Tests should call this once, then use shorter follow-up waits for
     /// secondary elements (dismiss button, supportive text, settings link).
     @discardableResult
-    func waitForOverlayPresented(timeout: TimeInterval = 4) -> Bool {
-        buttons["overlay.doneButton"].waitForHittable(timeout: timeout)
+    func waitForOverlayPresented(timeout: TimeInterval = 8) -> Bool {
+        guard waitForOverlayVisible(timeout: timeout) else { return false }
+        let doneButton = buttons["overlay.doneButton"]
+        return waitForElementExists(doneButton, timeout: timeout)
+    }
+
+    /// Waits until the overlay root exists, regardless of button hittability.
+    @discardableResult
+    func waitForOverlayVisible(timeout: TimeInterval = 8) -> Bool {
+        otherElements["overlay.root"].waitForExistence(timeout: timeout)
     }
 
     /// Waits for overlay dismissal using a positive fallback state and explicit
@@ -131,6 +151,53 @@ extension XCUIApplication {
     @discardableResult
     func waitForOverlayReady(timeout: TimeInterval = 4) -> Bool {
         waitForOverlayPresented(timeout: timeout)
+    }
+
+    /// Waits for an element to become hittable and retries once after activating the app.
+    @discardableResult
+    func waitForElementHittable(_ element: XCUIElement, timeout: TimeInterval = 8) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        if element.waitForHittable(timeout: max(0.1, deadline.timeIntervalSinceNow)) {
+            return true
+        }
+        activate()
+        return element.waitForHittable(timeout: max(0.1, deadline.timeIntervalSinceNow))
+    }
+
+    /// Waits for an element to exist and retries once after activating the app.
+    @discardableResult
+    func waitForElementExists(_ element: XCUIElement, timeout: TimeInterval = 8) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        if element.waitForExistence(timeout: max(0.1, deadline.timeIntervalSinceNow)) {
+            return true
+        }
+        activate()
+        return element.waitForExistence(timeout: max(0.1, deadline.timeIntervalSinceNow))
+    }
+
+    /// Taps the center of an element after waiting for it to exist.
+    @discardableResult
+    func tapElementCenter(_ element: XCUIElement, timeout: TimeInterval = 8) -> Bool {
+        guard waitForElementExists(element, timeout: timeout) else { return false }
+        element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        return true
+    }
+
+    /// Performs up to `maxSwipes` upward scrolls and waits for the element to become hittable.
+    @discardableResult
+    func revealAndWaitForHittable(
+        _ element: XCUIElement,
+        timeout: TimeInterval = 5,
+        maxSwipes: Int = 3
+    ) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        for _ in 0...maxSwipes {
+            if element.exists && element.isHittable { return true }
+            let remaining = max(0.1, deadline.timeIntervalSinceNow)
+            if element.waitForHittable(timeout: remaining) { return true }
+            swipeUp()
+        }
+        return element.exists && element.isHittable
     }
 }
 

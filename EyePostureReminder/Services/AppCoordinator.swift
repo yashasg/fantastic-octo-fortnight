@@ -211,32 +211,30 @@ final class AppCoordinator: ObservableObject {
         // Wire ScreenTimeTracker callback — fires on main thread when a type's
         // continuous screen-on threshold is reached.
         self.screenTimeTracker.onThresholdReached = { [weak self] type in
-            MainActor.assumeIsolated {
-                guard let self else { return }
-                // #407: Guard against the 300 ms per-type disable debounce window.
-                // If the user just toggled this type off, `disableTracking(for:)` is
-                // still in-flight; the tracker can still fire the callback before it
-                // is cancelled. Skip entirely so no overlay appears and snoozeCount
-                // is not reset for a reminder type the user disabled.
-                guard self.settings.isEnabled(for: type) else { return }
-                // New reminder cycle — reset consecutive snooze count so the user
-                // gets a fresh snooze budget on every threshold fire.
-                self.settings.snoozeCount = 0
-                let duration = self.settings.settings(for: type).breakDuration
-                let thresholdS = self.settings.settings(for: type).interval
-                self.showBreakOverlay(for: type, duration: duration)
-                AnalyticsLogger.log(.reminderTriggered(
-                    type: type, thresholdS: thresholdS, deliveryPath: .screenTimeThreshold
-                ))
-                Logger.scheduling.info("Reminder triggered by screen-time threshold: \(type.rawValue)")
-                // Reschedule the background notification from now so its interval restarts
-                // at the same moment the foreground overlay fires, preventing a near-
-                // simultaneous double-trigger when the user returns to another app.
-                if self.notificationAuthStatus == .authorized, self.shouldScheduleNotificationFallback {
-                    Task { [weak self] in
-                        guard let self else { return }
-                        await self.scheduler.rescheduleReminder(for: type, using: self.settings)
-                    }
+            guard let self else { return }
+            // #407: Guard against the 300 ms per-type disable debounce window.
+            // If the user just toggled this type off, `disableTracking(for:)` is
+            // still in-flight; the tracker can still fire the callback before it
+            // is cancelled. Skip entirely so no overlay appears and snoozeCount
+            // is not reset for a reminder type the user disabled.
+            guard self.settings.isEnabled(for: type) else { return }
+            // New reminder cycle — reset consecutive snooze count so the user
+            // gets a fresh snooze budget on every threshold fire.
+            self.settings.snoozeCount = 0
+            let duration = self.settings.settings(for: type).breakDuration
+            let thresholdS = self.settings.settings(for: type).interval
+            self.showBreakOverlay(for: type, duration: duration)
+            AnalyticsLogger.log(.reminderTriggered(
+                type: type, thresholdS: thresholdS, deliveryPath: .screenTimeThreshold
+            ))
+            Logger.scheduling.info("Reminder triggered by screen-time threshold: \(type.rawValue)")
+            // Reschedule the background notification from now so its interval restarts
+            // at the same moment the foreground overlay fires, preventing a near-
+            // simultaneous double-trigger when the user returns to another app.
+            if self.notificationAuthStatus == .authorized, self.shouldScheduleNotificationFallback {
+                Task { [weak self] in
+                    guard let self else { return }
+                    await self.scheduler.rescheduleReminder(for: type, using: self.settings)
                 }
             }
         }
@@ -245,27 +243,25 @@ final class AppCoordinator: ObservableObject {
         // Critical invariant: only call resumeAll() if BOTH snooze is clear AND no
         // pause conditions are active.
         self.pauseConditionManager.onPauseStateChanged = { [weak self] isPaused in
-            MainActor.assumeIsolated {
-                guard let self else { return }
-                if isPaused {
-                    self.screenTimeTracker.pauseAll()
-                    // Dismiss any overlay that is currently on screen and drop queued ones.
-                    // CarPlay/driving contexts should never show a break overlay.
-                    self.overlayManager.clearQueue()
-                    if self.overlayManager.isOverlayVisible {
-                        self.overlayManager.dismissOverlay()
-                    }
-                    self.pendingOverlay = nil
-                    Logger.scheduling.info("PauseConditionManager: pausing reminders (active condition)")
-                } else {
-                    guard (self.settings.snoozedUntil ?? .distantPast) <= Date() else {
-                        Logger.scheduling.debug(
-                            "PauseConditionManager: pause cleared but snooze still active — not resuming")
-                        return
-                    }
-                    self.screenTimeTracker.resumeAll()
-                    Logger.scheduling.info("PauseConditionManager: resuming reminders (no active conditions)")
+            guard let self else { return }
+            if isPaused {
+                self.screenTimeTracker.pauseAll()
+                // Dismiss any overlay that is currently on screen and drop queued ones.
+                // CarPlay/driving contexts should never show a break overlay.
+                self.overlayManager.clearQueue()
+                if self.overlayManager.isOverlayVisible {
+                    self.overlayManager.dismissOverlay()
                 }
+                self.pendingOverlay = nil
+                Logger.scheduling.info("PauseConditionManager: pausing reminders (active condition)")
+            } else {
+                guard (self.settings.snoozedUntil ?? .distantPast) <= Date() else {
+                    Logger.scheduling.debug(
+                        "PauseConditionManager: pause cleared but snooze still active — not resuming")
+                    return
+                }
+                self.screenTimeTracker.resumeAll()
+                Logger.scheduling.info("PauseConditionManager: resuming reminders (no active conditions)")
             }
         }
         self.pauseConditionManager.startMonitoring()
@@ -459,6 +455,11 @@ final class AppCoordinator: ObservableObject {
     /// If no window scene is active yet (notification-tap race), the overlay is
     /// queued and presented when `presentPendingOverlayIfNeeded()` is called.
     func handleNotification(for type: ReminderType) {
+        guard (settings.snoozedUntil ?? .distantPast) <= Date() else {
+            Logger.scheduling.info("Ignoring \(type.rawValue) notification while snooze is active")
+            return
+        }
+
         // A real reminder fired — reset consecutive snooze count.
         settings.snoozeCount = 0
         recordIPCEvent(.notificationFallbackDelivered, reasonRaw: type.shieldReason.rawValue)
@@ -606,6 +607,12 @@ private extension AppCoordinator {
     ) -> ScreenTimeAuthorizationProviding {
         guard let screenTimeAuthorization else {
             #if DEBUG
+            if ProcessInfo.processInfo.environment["UITEST_SCREEN_TIME_STATUS"] == "notDetermined" {
+                return ScreenTimeAuthorizationStub(status: .notDetermined)
+            }
+            if CommandLine.arguments.contains("--simulate-screen-time-not-determined") {
+                return ScreenTimeAuthorizationStub(status: .notDetermined)
+            }
             if let raw = UserDefaults.standard.string(forKey: AppStorageKey.uiTestScreenTimeStatus),
                let status = ScreenTimeAuthorizationStatus(rawValue: raw) {
                 return ScreenTimeAuthorizationStub(status: status)
