@@ -17,15 +17,18 @@ Use this when service or coordinator logic branches on process launch context
 - For `@MainActor` coordinators, use optional init params for actor-isolated defaults and resolve to static values inside `init` (avoids Swift 6 nonisolated default-argument errors).
 - When launch-arg branches need service mutation (e.g., reset defaults / short overlay durations), inject a tiny factory closure (`makeSettingsStore`) instead of constructing concrete services inline.
 - If multiple resolver branches depend on UI-test mode, compute `let resolvedUITestMode = uiTestMode ?? isUITestMode(launchArguments:)` once in `init` and pass that value into each resolver to prevent mixed global/injected behavior.
+- For singleton-backed callbacks (e.g., app launch wiring), inject a zero-arg factory (`makeNotificationCenter`) and use it only on the fallback path so tests can validate callback behavior without invoking fragile system singletons directly.
 
 ## Examples
 - `AppCoordinator.init(..., processEnvironment: [String: String] = ProcessInfo.processInfo.environment, launchArguments: [String] = CommandLine.arguments, ...)`
 - `resolveScreenTimeAuthorization(..., processEnvironment:, launchArguments:)` in `EyePostureReminder/Services/AppCoordinator.swift`.
 - Focused coverage in `Tests/EyePostureReminderTests/Services/AppCoordinatorUITestLaunchContextTests.swift`.
 - `AppDelegate.init(..., makeSettingsStore: @escaping @MainActor () -> SettingsStore = { SettingsStore() })` with usage in `applyUITestLaunchArguments()` and seam coverage in `Tests/EyePostureReminderTests/Services/AppDelegateTests.swift`.
+- `AppDelegate.init(..., makeNotificationCenter: @escaping () -> UserNotificationCenterDelegating = { UNUserNotificationCenter.current() })` with fallback-path coverage in `test_didFinishLaunching_withNilNotificationCenter_usesInjectedFactory`.
 
 ## Anti-Patterns
 - Reading launch context globals directly inside static resolvers.
 - Overriding global process state in tests instead of injecting explicit values.
 - Constructing concrete stores/services directly inside launch handlers (`SettingsStore()`) when a factory seam can preserve behavior and improve testability.
 - Mixing an injected UI-test mode for one resolver with a static global (`AppCoordinator.isUITestMode`) in another resolver.
+- Resolving singleton callbacks inline (`UNUserNotificationCenter.current()`) when a tiny fallback factory seam would make the same code deterministic in unit tests.
