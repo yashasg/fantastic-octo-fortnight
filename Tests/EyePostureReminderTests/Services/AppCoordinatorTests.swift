@@ -237,6 +237,60 @@ final class AppCoordinatorTests: XCTestCase {
         XCTAssertEqual(factoryCallCount, 0)
     }
 
+    func test_init_withoutHasActiveSceneProvider_usesInjectedFactory() {
+        var providerFactoryCallCount = 0
+        var providerCallCount = 0
+        let coordinator = AppCoordinator(
+            settings: SettingsStore(store: MockSettingsPersisting()),
+            scheduler: ReminderScheduler(notificationCenter: MockNotificationCenter()),
+            notificationCenter: MockNotificationCenter(),
+            screenTimeTracker: MockScreenTimeTracker(),
+            pauseConditionProvider: MockPauseConditionProvider(),
+            ipcStore: MockAppGroupIPCRecorder(),
+            hasActiveSceneProvider: nil,
+            makeHasActiveSceneProvider: {
+                providerFactoryCallCount += 1
+                return {
+                    providerCallCount += 1
+                    return false
+                }
+            }
+        )
+        defer { coordinator.stopFallbackTimers() }
+
+        coordinator.handleNotification(for: .eyes)
+
+        XCTAssertEqual(providerFactoryCallCount, 1)
+        XCTAssertEqual(providerCallCount, 1)
+    }
+
+    func test_init_withExplicitHasActiveSceneProvider_bypassesFactory() {
+        var providerFactoryCallCount = 0
+        var providerCallCount = 0
+        let coordinator = AppCoordinator(
+            settings: SettingsStore(store: MockSettingsPersisting()),
+            scheduler: ReminderScheduler(notificationCenter: MockNotificationCenter()),
+            notificationCenter: MockNotificationCenter(),
+            screenTimeTracker: MockScreenTimeTracker(),
+            pauseConditionProvider: MockPauseConditionProvider(),
+            ipcStore: MockAppGroupIPCRecorder(),
+            hasActiveSceneProvider: {
+                providerCallCount += 1
+                return false
+            },
+            makeHasActiveSceneProvider: {
+                providerFactoryCallCount += 1
+                return { true }
+            }
+        )
+        defer { coordinator.stopFallbackTimers() }
+
+        coordinator.handleNotification(for: .eyes)
+
+        XCTAssertEqual(providerFactoryCallCount, 0)
+        XCTAssertEqual(providerCallCount, 1)
+    }
+
     func test_init_withoutDateProvider_usesInjectedDateProviderFactory() {
         var factoryCallCount = 0
         let factoryDateProvider = MockDateProvider(now: Date(timeIntervalSince1970: 1_000))
