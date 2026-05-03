@@ -610,6 +610,48 @@ final class AppCoordinatorExtendedTests: XCTestCase {
             "startFallbackTimers must call startMonitoring() on the ScreenTimeTracker")
     }
 
+    func test_reschedule_withSnoozeActiveAccordingToDateProvider_skipsPerformReschedule() async throws {
+        let mockTracker = MockScreenTimeTracker()
+        let mockDateProvider = MockDateProvider(now: Date(timeIntervalSince1970: 1_000))
+        settings.eyesEnabled = true
+        settings.snoozedUntil = Date(timeIntervalSince1970: 2_000)
+        let (coordinator, _, _, _) = makeCoordinator(
+            screenTimeTracker: mockTracker,
+            dateProvider: mockDateProvider
+        )
+        defer { coordinator.stopFallbackTimers() }
+
+        await coordinator.reschedule(for: .eyes)
+        try await Task.sleep(nanoseconds: 500_000_000)
+
+        let setThresholdCount = mockTracker.setThresholdCalls.filter { $0.type == .eyes }.count
+        XCTAssertEqual(
+            setThresholdCount,
+            0,
+            "reschedule(for:) must honor injected DateProviding and skip performReschedule while snooze is active")
+    }
+
+    func test_reschedule_withExpiredSnoozeAccordingToDateProvider_runsPerformReschedule() async throws {
+        let mockTracker = MockScreenTimeTracker()
+        let mockDateProvider = MockDateProvider(now: Date(timeIntervalSince1970: 3_000))
+        settings.eyesEnabled = true
+        settings.snoozedUntil = Date(timeIntervalSince1970: 2_000)
+        let (coordinator, _, _, _) = makeCoordinator(
+            screenTimeTracker: mockTracker,
+            dateProvider: mockDateProvider
+        )
+        defer { coordinator.stopFallbackTimers() }
+
+        await coordinator.reschedule(for: .eyes)
+        try await Task.sleep(nanoseconds: 500_000_000)
+
+        let setThresholdCount = mockTracker.setThresholdCalls.filter { $0.type == .eyes }.count
+        XCTAssertEqual(
+            setThresholdCount,
+            1,
+            "reschedule(for:) must run performReschedule when injected DateProviding marks snooze expired")
+    }
+
     // MARK: - P0-3: reschedule debounce cancellation
 
     /// A rapid second `reschedule(for:)` must cancel the first debounced task so that
