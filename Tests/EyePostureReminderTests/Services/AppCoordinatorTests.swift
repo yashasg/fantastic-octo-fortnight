@@ -351,6 +351,62 @@ final class AppCoordinatorTests: XCTestCase {
             "Ignored notifications during active snooze must not reset tracker state")
     }
 
+    func test_handleNotification_usesInjectedDateProvider_whenWallClockFutureButInjectedExpired() {
+        let mockDateProvider = MockDateProvider(now: Date(timeIntervalSinceNow: 3_600))
+        let mockNotif = MockNotificationCenter()
+        let tracker = MockScreenTimeTracker()
+        let coordinator = AppCoordinator(
+            settings: settings,
+            scheduler: ReminderScheduler(notificationCenter: mockNotif),
+            notificationCenter: mockNotif,
+            overlayManager: MockOverlayPresenting(),
+            screenTimeTracker: tracker,
+            pauseConditionProvider: MockPauseConditionProvider(),
+            ipcStore: MockAppGroupIPCRecorder(),
+            dateProvider: mockDateProvider
+        )
+        defer { coordinator.stopFallbackTimers() }
+
+        settings.snoozedUntil = Date(timeIntervalSinceNow: 300)
+        settings.snoozeCount = 2
+
+        coordinator.handleNotification(for: .eyes)
+
+        XCTAssertEqual(settings.snoozeCount, 0)
+        XCTAssertEqual(
+            tracker.resetCalls,
+            [.eyes],
+            "handleNotification should evaluate snooze with injected DateProviding")
+    }
+
+    func test_handleNotification_usesInjectedDateProvider_whenWallClockPastButInjectedFuture() {
+        let mockDateProvider = MockDateProvider(now: Date(timeIntervalSinceNow: -3_600))
+        let mockNotif = MockNotificationCenter()
+        let tracker = MockScreenTimeTracker()
+        let coordinator = AppCoordinator(
+            settings: settings,
+            scheduler: ReminderScheduler(notificationCenter: mockNotif),
+            notificationCenter: mockNotif,
+            overlayManager: MockOverlayPresenting(),
+            screenTimeTracker: tracker,
+            pauseConditionProvider: MockPauseConditionProvider(),
+            ipcStore: MockAppGroupIPCRecorder(),
+            dateProvider: mockDateProvider
+        )
+        defer { coordinator.stopFallbackTimers() }
+
+        settings.snoozedUntil = Date(timeIntervalSinceNow: -60)
+        settings.snoozeCount = 2
+
+        coordinator.handleNotification(for: .eyes)
+
+        XCTAssertEqual(
+            settings.snoozeCount,
+            2,
+            "handleNotification should continue suppressing reminders when injected DateProviding reports active snooze")
+        XCTAssertTrue(tracker.resetCalls.isEmpty)
+    }
+
     // MARK: - cancelAllReminders with active snooze
 
     func test_cancelAllReminders_withActiveSnooze_clearQueueStillCalled() {
