@@ -1,6 +1,18 @@
 import os
 import UIKit
 
+// MARK: - AppStateProviding
+
+/// Abstracts `UIApplication.shared.applicationState` for testability.
+///
+/// Injected into `ScreenTimeTracker` so `startIfActive()` behavior can be
+/// exercised without depending on the real UIApplication singleton.
+protocol AppStateProviding {
+    var applicationState: UIApplication.State { get }
+}
+
+extension UIApplication: AppStateProviding {}
+
 /// Tracks continuous screen-on time per `ReminderType` and fires a callback
 /// when a type's threshold is reached.
 ///
@@ -74,6 +86,7 @@ final class ScreenTimeTracker: ScreenTimeTracking {
     /// Cancelled if the app returns to active before the grace period expires.
     private var resetTask: Task<Void, Never>?
     private let lifecycleNotificationCenter: NotificationCenter
+    private let appStateProvider: AppStateProviding
 
     // MARK: - Callback
 
@@ -89,9 +102,13 @@ final class ScreenTimeTracker: ScreenTimeTracking {
     ///     smaller value in tests to exercise grace-period behaviour without long sleeps.
     ///   - lifecycleNotificationCenter: Notification center used for app lifecycle observer
     ///     registration/removal. Defaults to `.default` for production behavior.
+    ///   - appStateProvider: Provides `UIApplication.applicationState` for `startIfActive()`.
+    ///     Defaults to `UIApplication.shared`. Inject a mock to drive active/background behavior
+    ///     in unit tests without depending on the real UIApplication singleton.
     init(
         resetGracePeriod: TimeInterval = 5.0,
-        lifecycleNotificationCenter: NotificationCenter = .default
+        lifecycleNotificationCenter: NotificationCenter = .default,
+        appStateProvider: AppStateProviding? = nil
     ) {
         if resetGracePeriod < 0 {
             Logger.scheduling.warning(
@@ -102,6 +119,7 @@ final class ScreenTimeTracker: ScreenTimeTracking {
             self.resetGracePeriod = resetGracePeriod
         }
         self.lifecycleNotificationCenter = lifecycleNotificationCenter
+        self.appStateProvider = appStateProvider ?? UIApplication.shared
         for type in ReminderType.allCases {
             elapsed[type] = 0
         }
@@ -182,7 +200,7 @@ final class ScreenTimeTracker: ScreenTimeTracking {
     /// foreground — `didBecomeActiveNotification` won't fire again until the
     /// next lifecycle cycle, so this ensures counting begins immediately.
     func startIfActive() {
-        if UIApplication.shared.applicationState == .active {
+        if appStateProvider.applicationState == .active {
             startTicking()
         }
     }
