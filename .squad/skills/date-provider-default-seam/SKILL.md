@@ -20,6 +20,7 @@ Use when a service method currently takes `now: Date = Date()` and production co
 - For notification-delivery snooze guards (`handleNotification`), evaluate suppression with `dateProvider.now` so reminder delivery respects injected time seams in deterministic tests.
 - For pause-condition resume guards (`onPauseStateChanged` resume path), evaluate snooze checks with `dateProvider.now` and assert inversion tests by simulating pause-clear callbacks.
 - For launch-time scheduler snooze guards (`scheduleReminders`), compare against `dateProvider.now` and add inversion tests for wall-clock future/injected expired and wall-clock past/injected active.
+- For foreground-transition snooze guards (`handleForegroundTransition`), compare expiry against `dateProvider.now` and assert inversion tests where wall-clock and injected clocks disagree.
 
 ## Benefits
 - Production path no longer depends on implicit `Date()` globals.
@@ -35,3 +36,4 @@ Use when a service method currently takes `now: Date = Date()` and production co
 - `Tests/EyePostureReminderTests/ViewModels/SettingsViewModelExtendedTests.swift`
 - `EyePostureReminder/Services/AppCoordinator.swift`
 - `Tests/EyePostureReminderTests/Services/AppCoordinatorTests.swift`
+- `Tests/EyePostureReminderTests/Services/AppCoordinatorExtendedTests.swift`

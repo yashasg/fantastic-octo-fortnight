@@ -545,7 +545,7 @@ final class AppCoordinator: ObservableObject {
 
         // P1-1: Handle snooze state on foreground.
         if let snoozeEnd = settings.snoozedUntil {
-            if snoozeEnd <= Date() {
+            if snoozeEnd <= dateProvider.now {
                 // Snooze expired while backgrounded — clear and reschedule.
                 settings.snoozedUntil = nil
                 settings.snoozeCount  = 0
