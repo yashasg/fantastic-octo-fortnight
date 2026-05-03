@@ -236,6 +236,11 @@ Use **capability suffix** (Swift API Design Guidelines):
 - **Team discipline:** Developers must remember to inject protocols, not use singletons directly
 - **Mock maintenance:** If Apple changes API signatures, mocks must update (rare, but happens on major iOS releases)
 
+### ⚠️ Singleton Default-Argument Hazard
+- Some Apple singletons can crash when resolved in test-host initializer paths.
+- Prefer optional injected dependencies (`dep: ProtocolType? = nil`) and lazily resolve the real singleton at runtime callback boundaries.
+- Example: resolve `UNUserNotificationCenter.current()` inside `application(_:didFinishLaunchingWithOptions:)`, not in `init` default-argument evaluation.
+
 ---
 
 ## Anti-Patterns to Avoid
@@ -300,6 +305,7 @@ When adding a new protocol-based abstraction:
 - [ ] Protocol only includes methods you actually use
 - [ ] System type conforms via `extension` (no implementation needed if signatures match)
 - [ ] Service has `init` parameter with default value: `= RealType.shared()` or `.current()`
+- [ ] If singleton access is known to be crash-prone in tests, use optional injection and lazy runtime fallback instead of eager init-time default resolution
 - [ ] Mock records method calls in arrays/flags for test assertions
 - [ ] Unit tests inject mock, verify interactions (not system behavior)
 
@@ -368,5 +374,5 @@ func testDeniedPermission_showsFallbackUI() async throws {
 ## Version
 
 - **Created:** 2026-04-24
-- **Last Updated:** 2026-04-24
+- **Last Updated:** 2026-05-03
 - **Verified With:** Xcode 15, Swift 5.9, iOS 16+

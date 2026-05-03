@@ -2,6 +2,10 @@
 import UIKit
 import XCTest
 
+private final class MockUserNotificationCenter: UserNotificationCenterDelegating {
+    weak var delegate: UNUserNotificationCenterDelegate?
+}
+
 /// Unit tests for `AppDelegate` notification routing logic.
 ///
 /// ## What is tested here
@@ -130,6 +134,28 @@ final class AppDelegateTests: XCTestCase {
         XCTAssertNotNil(
             NSGetUncaughtExceptionHandler(),
             "installUncaughtExceptionHandler must set a global exception handler"
+        )
+    }
+
+    func test_didFinishLaunching_registersDelegateAndMetricKitViaInjectedSeams() {
+        let mockCenter = MockUserNotificationCenter()
+        var metricKitRegisterCallCount = 0
+        let sut = AppDelegate(
+            notificationCenter: mockCenter,
+            registerMetricKitSubscriber: { metricKitRegisterCallCount += 1 }
+        )
+
+        let didFinish = sut.application(UIApplication.shared, didFinishLaunchingWithOptions: nil)
+
+        XCTAssertTrue(didFinish)
+        XCTAssertTrue(
+            mockCenter.delegate === sut,
+            "didFinishLaunching must register AppDelegate as notification center delegate"
+        )
+        XCTAssertEqual(
+            metricKitRegisterCallCount,
+            1,
+            "didFinishLaunching must register MetricKit exactly once"
         )
     }
 
