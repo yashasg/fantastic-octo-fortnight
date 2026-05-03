@@ -209,16 +209,19 @@ final class AppCoordinator: ObservableObject {
         self.ipcStore = ipcStore
         self.dateProvider = dateProvider
         self.watchdogHeartbeatGraceInterval = watchdogHeartbeatGraceInterval
+        let resolvedUITestMode = uiTestMode ?? Self.isUITestMode(launchArguments: launchArguments)
+
         // In UI test mode, use no-op stubs for services that register UIKit lifecycle
         // observers and start 1-second timers — they prevent XCUITest from settling
         // the accessibility tree between interactions, causing stale element reads.
         self.screenTimeTracker = Self.resolveScreenTimeTracker(
             screenTimeTracker,
-            uiTestMode: uiTestMode ?? AppCoordinator.isUITestMode
+            uiTestMode: resolvedUITestMode
         )
         self.pauseConditionManager = Self.resolvePauseConditionManager(
             pauseConditionProvider,
-            settings: self.settings
+            settings: self.settings,
+            uiTestMode: resolvedUITestMode
         )
         Logger.lifecycle.info("AppCoordinator initialised")
         recordWatchdogHeartbeat(.coordinatorInitialized)
@@ -659,10 +662,11 @@ private extension AppCoordinator {
 
     static func resolvePauseConditionManager(
         _ pauseConditionProvider: PauseConditionProviding?,
-        settings: SettingsStore
+        settings: SettingsStore,
+        uiTestMode: Bool
     ) -> PauseConditionProviding {
         guard let pauseConditionProvider else {
-            return AppCoordinator.isUITestMode
+            return uiTestMode
                 ? NoopPauseConditionManager()
                 : PauseConditionManager(
                     settings: settings,
