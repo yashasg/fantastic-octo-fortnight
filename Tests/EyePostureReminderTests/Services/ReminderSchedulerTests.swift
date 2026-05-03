@@ -27,6 +27,41 @@ final class ReminderSchedulerTests: XCTestCase {
         super.tearDown()
     }
 
+    // MARK: - Initializer DI seams
+
+    func test_init_withoutNotificationCenter_usesFactoryOnce() async {
+        var factoryCallCount = 0
+        let factoryCenter = MockNotificationCenter()
+        let scheduler = ReminderScheduler(
+            notificationCenter: nil,
+            makeNotificationCenter: {
+                factoryCallCount += 1
+                return factoryCenter
+            }
+        )
+        settings.globalEnabled = true
+        settings.eyesEnabled = true
+        settings.postureEnabled = false
+
+        await scheduler.scheduleReminders(using: settings)
+
+        XCTAssertEqual(factoryCallCount, 1)
+        XCTAssertEqual(factoryCenter.addedRequests.count, 1)
+    }
+
+    func test_init_withNotificationCenter_bypassesFactory() {
+        var factoryCalled = false
+        _ = ReminderScheduler(
+            notificationCenter: mockCenter,
+            makeNotificationCenter: {
+                factoryCalled = true
+                return MockNotificationCenter()
+            }
+        )
+
+        XCTAssertFalse(factoryCalled)
+    }
+
     // MARK: - scheduleReminders — request count
 
     func test_scheduleAll_bothEnabled_addsTwoRequests() async {

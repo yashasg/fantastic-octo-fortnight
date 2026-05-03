@@ -241,6 +241,7 @@ Use **capability suffix** (Swift API Design Guidelines):
 - Prefer optional injected dependencies (`dep: ProtocolType? = nil`) and lazily resolve the real singleton at runtime callback boundaries.
 - For deterministic tests of both paths, pair optional dependency injection with a fallback factory closure (`makeDep: () -> ProtocolType`), then assert fallback-used and injected-bypass behaviors separately.
 - Example: resolve `UNUserNotificationCenter.current()` inside `application(_:didFinishLaunchingWithOptions:)`, not in `init` default-argument evaluation.
+- Additional example: `ReminderScheduler` now resolves `notificationCenter ?? makeNotificationCenter()` in `init` and verifies both fallback and bypass with focused unit tests.
 
 ---
 

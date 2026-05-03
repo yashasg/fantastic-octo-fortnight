@@ -70,12 +70,14 @@ final class ReminderScheduler: ReminderScheduling {
     // MARK: - Dependencies
 
     typealias SchedulingFailureLogger = (ReminderType, Error) -> Void
+    typealias NotificationCenterFactory = () -> NotificationScheduling
 
     private let notificationCenter: NotificationScheduling
     private let logSchedulingFailure: SchedulingFailureLogger
 
     init(
-        notificationCenter: NotificationScheduling = UNUserNotificationCenter.current(),
+        notificationCenter: NotificationScheduling? = nil,
+        makeNotificationCenter: @escaping NotificationCenterFactory = { UNUserNotificationCenter.current() },
         logSchedulingFailure: @escaping SchedulingFailureLogger = { type, error in
             Logger.scheduling.error("""
                 Failed to schedule \(type.rawValue, privacy: .public): \
@@ -83,7 +85,7 @@ final class ReminderScheduler: ReminderScheduling {
                 """)
         }
     ) {
-        self.notificationCenter = notificationCenter
+        self.notificationCenter = notificationCenter ?? makeNotificationCenter()
         self.logSchedulingFailure = logSchedulingFailure
     }
 
