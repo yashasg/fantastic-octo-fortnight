@@ -5,6 +5,42 @@ import XCTest
 @MainActor
 final class LiveCarPlayDetectorTests: XCTestCase {
 
+    private final class StubAudioSession: AudioSessionRouting {
+        var currentRoute: AVAudioSessionRouteDescription
+
+        init(currentRoute: AVAudioSessionRouteDescription = AVAudioSession.sharedInstance().currentRoute) {
+            self.currentRoute = currentRoute
+        }
+    }
+
+    func test_init_withoutAudioSession_usesFactoryFallback() {
+        var factoryCallCount = 0
+        _ = LiveCarPlayDetector(
+            isCarPlayActiveProvider: { false },
+            makeAudioSession: {
+                factoryCallCount += 1
+                return StubAudioSession()
+            }
+        )
+
+        XCTAssertEqual(factoryCallCount, 1)
+    }
+
+    func test_init_withAudioSession_bypassesFactoryFallback() {
+        var factoryCallCount = 0
+        let injectedAudioSession = StubAudioSession()
+        _ = LiveCarPlayDetector(
+            audioSession: injectedAudioSession,
+            isCarPlayActiveProvider: { false },
+            makeAudioSession: {
+                factoryCallCount += 1
+                return StubAudioSession()
+            }
+        )
+
+        XCTAssertEqual(factoryCallCount, 0)
+    }
+
     func test_init_withoutNotificationCenter_usesFactoryFallback() {
         var factoryCallCount = 0
         _ = LiveCarPlayDetector(

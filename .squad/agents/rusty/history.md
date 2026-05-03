@@ -329,3 +329,9 @@ Result: **10/10 passed**
 
 **Final merge verdict at handoff:**
 - **REJECT FOR NOW** — residual risk remains in Settings shard stability despite remediation closure for #497/#498/#499 and overlay/dark-mode improvements.
+
+### 2026-05-03: #462 Phase A Micro-slice — LiveCarPlayDetector AudioSession seam
+
+- Added an `AudioSessionRouting` protocol seam in `PauseConditionManager.swift` and extended `AVAudioSession` to conform, removing direct `AVAudioSession.sharedInstance()` access from `LiveCarPlayDetector` static route logic.
+- `LiveCarPlayDetector` now resolves dependencies with optional injection + factory fallback (`audioSession ?? makeAudioSession()`), preserving existing behavior while improving DI clarity.
+- Added focused seam coverage in `LiveCarPlayDetectorTests` for factory fallback and injected bypass paths, alongside existing behavior tests.

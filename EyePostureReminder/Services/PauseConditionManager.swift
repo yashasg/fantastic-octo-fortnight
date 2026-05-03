@@ -33,6 +33,12 @@ protocol CarPlayDetecting: AnyObject {
     func stopMonitoring()
 }
 
+protocol AudioSessionRouting {
+    var currentRoute: AVAudioSessionRouteDescription { get }
+}
+
+extension AVAudioSession: AudioSessionRouting {}
+
 @MainActor
 protocol DrivingActivityDetecting: AnyObject {
     var isDriving: Bool { get }
@@ -106,6 +112,7 @@ final class LiveFocusStatusDetector: NSObject, FocusStatusDetecting {
 @MainActor
 final class LiveCarPlayDetector: CarPlayDetecting {
 
+    typealias AudioSessionFactory = () -> AudioSessionRouting
     typealias NotificationCenterFactory = () -> NotificationCenter
 
     private(set) var isCarPlayActive: Bool = false
@@ -116,12 +123,17 @@ final class LiveCarPlayDetector: CarPlayDetecting {
     private var observer: NSObjectProtocol?
 
     init(
+        audioSession: AudioSessionRouting? = nil,
         notificationCenter: NotificationCenter? = nil,
-        isCarPlayActiveProvider: @escaping () -> Bool = LiveCarPlayDetector.defaultIsCarPlayActive,
+        isCarPlayActiveProvider: (() -> Bool)? = nil,
+        makeAudioSession: @escaping AudioSessionFactory = { AVAudioSession.sharedInstance() },
         makeNotificationCenter: @escaping NotificationCenterFactory = { .default }
     ) {
+        let resolvedAudioSession = audioSession ?? makeAudioSession()
         self.notificationCenter = notificationCenter ?? makeNotificationCenter()
-        self.isCarPlayActiveProvider = isCarPlayActiveProvider
+        self.isCarPlayActiveProvider = isCarPlayActiveProvider ?? {
+            LiveCarPlayDetector.isCarPlayActive(from: resolvedAudioSession)
+        }
     }
 
     func startMonitoring() {
@@ -154,10 +166,10 @@ final class LiveCarPlayDetector: CarPlayDetecting {
 
     // nonisolated: required because NotificationCenter.addObserver(forName:queue:) closure
     // is not actor-isolated; the callback dispatches back to main for state mutation.
-    nonisolated private static func defaultIsCarPlayActive() -> Bool {
+    nonisolated private static func isCarPlayActive(from audioSession: AudioSessionRouting) -> Bool {
         // .carPlay port may not be exposed in all SDK configurations; match via raw value.
         let carPlayPort = AVAudioSession.Port(rawValue: "CarPlay")
-        let outputs = AVAudioSession.sharedInstance().currentRoute.outputs
+        let outputs = audioSession.currentRoute.outputs
         for output in outputs where output.portType == carPlayPort { return true }
         return false
     }
