@@ -183,3 +183,14 @@
 - Keep seam tests surgical in view-layer DI slices: one fallback-used assertion and one explicit-injection-bypass assertion are sufficient when body rendering already has coverage.
 - User preference reinforced: continue #462 with tiny DI/SRP micro-slices and always validate with `./scripts/build.sh build` and `./scripts/build.sh test`.
 - Key file paths: `EyePostureReminder/Views/Onboarding/OnboardingPermissionView.swift`, `Tests/EyePostureReminderTests/Views/OnboardingViewTests.swift`, `.squad/skills/notification-center-factory-seam/SKILL.md`.
+
+## 2026-05-03: #462 Phase A — MetricKitSubscriber Logger Factory Seam (COMPLETED)
+
+- Branch: `basher/462-phasea-metrickit-logger-factory-seam`
+- Slice: Replaced eager `LifecycleMetricKitLogger()` initializer default with optional logger + `makeLogger` fallback factory in `MetricKitSubscriber`.
+- Validation: `./scripts/build.sh build` ✅, `./scripts/build.sh test` ✅.
+- Scope: `EyePostureReminder/Services/MetricKitSubscriber.swift`, `Tests/EyePostureReminderTests/Services/MetricKitSubscriberTests.swift`.
+
+## Learnings
+
+- For singleton-backed logging collaborators, prefer `logger: Protocol? = nil` plus `makeLogger` fallback factory and resolve once in `init`; add fallback-used and explicit-bypass tests around a public behavior (`register`) to remove eager concrete logger coupling while preserving runtime output.
