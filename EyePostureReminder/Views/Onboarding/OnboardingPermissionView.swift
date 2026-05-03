@@ -16,10 +16,11 @@ struct OnboardingPermissionView: View {
     @Environment(\.accessibilityEnabled) private var accessibilityEnabled
 
     init(onNext: @escaping () -> Void,
-         notificationCenter: NotificationScheduling = UNUserNotificationCenter.current(),
+         notificationCenter: NotificationScheduling? = nil,
+         makeNotificationCenter: @escaping () -> NotificationScheduling = { UNUserNotificationCenter.current() },
          accessibilityEnabledOverride: Bool? = nil) {
         self.onNext = onNext
-        self.notificationCenter = notificationCenter
+        self.notificationCenter = notificationCenter ?? makeNotificationCenter()
         self.accessibilityEnabledOverride = accessibilityEnabledOverride
     }
 

@@ -135,6 +135,38 @@ final class OnboardingViewTests: XCTestCase {
         // If it compiles and runs, the DI seam works.
     }
 
+    /// When no notification center is injected, the fallback factory is used once.
+    func test_permissionView_notificationCenterFactory_usedWhenDependencyMissing() {
+        var factoryCallCount = 0
+        let view = OnboardingPermissionView(
+            onNext: {},
+            notificationCenter: nil,
+            makeNotificationCenter: {
+                factoryCallCount += 1
+                return MockNotificationCenter()
+            },
+            accessibilityEnabledOverride: false
+        )
+        _ = view.body
+        XCTAssertEqual(factoryCallCount, 1)
+    }
+
+    /// When a notification center is injected, the fallback factory is bypassed.
+    func test_permissionView_notificationCenterFactory_bypassedWhenDependencyProvided() {
+        var factoryCallCount = 0
+        let view = OnboardingPermissionView(
+            onNext: {},
+            notificationCenter: MockNotificationCenter(),
+            makeNotificationCenter: {
+                factoryCallCount += 1
+                return MockNotificationCenter()
+            },
+            accessibilityEnabledOverride: false
+        )
+        _ = view.body
+        XCTAssertEqual(factoryCallCount, 0)
+    }
+
     /// The skip button has a known accessibility identifier.
     func test_permissionView_skipButton_accessibilityIdentifier() {
         let mock = MockNotificationCenter()
