@@ -423,7 +423,7 @@ final class AppCoordinator: ObservableObject {
         // re-entry from snooze-cancel or snooze-wake paths that call scheduleReminders()
         // while a session is already in progress.
         if sessionStartTime == nil {
-            sessionStartTime = Date()
+            sessionStartTime = dateProvider.now
             let latency = foregroundEntryTime.map { Date().timeIntervalSince($0) } ?? 0
             AnalyticsLogger.log(.appLaunchReadiness(.init(
                 launchType: pendingLaunchType,
