@@ -27,6 +27,19 @@ protocol MediaControlling: AnyObject {
     func resumeExternalAudio()
 }
 
+protocol AudioSessionControlling: AnyObject {
+    func setCategory(
+        _ category: AVAudioSession.Category,
+        mode: AVAudioSession.Mode,
+        options: AVAudioSession.CategoryOptions
+    ) throws
+    func setActive(_ active: Bool, options: AVAudioSession.SetActiveOptions) throws
+}
+
+extension AVAudioSession: AudioSessionControlling {}
+
+typealias AudioSessionFactory = () -> AudioSessionControlling
+
 // MARK: - AudioInterruptionManager
 
 /// Concrete `MediaControlling` implementation.
@@ -37,14 +50,21 @@ protocol MediaControlling: AnyObject {
 /// no Control Center "now playing" entry and no `UIBackgroundModes: audio`
 /// entitlement is needed.
 final class AudioInterruptionManager: MediaControlling {
+    private let audioSession: AudioSessionControlling
+
+    init(
+        audioSession: AudioSessionControlling? = nil,
+        makeAudioSession: @escaping AudioSessionFactory = { AVAudioSession.sharedInstance() }
+    ) {
+        self.audioSession = audioSession ?? makeAudioSession()
+    }
 
     // MARK: - MediaControlling
 
     func pauseExternalAudio() {
-        let session = AVAudioSession.sharedInstance()
         do {
-            try session.setCategory(.soloAmbient)
-            try session.setActive(true)
+            try audioSession.setCategory(.soloAmbient, mode: .default, options: [])
+            try audioSession.setActive(true, options: [])
             Logger.overlay.debug("AudioInterruptionManager: external audio paused")
         } catch {
             // If `setActive(true)` throws (e.g., audio session stolen by a phone
@@ -61,10 +81,9 @@ final class AudioInterruptionManager: MediaControlling {
     }
 
     func resumeExternalAudio() {
-        let session = AVAudioSession.sharedInstance()
         do {
             // .notifyOthersOnDeactivation lets Spotify / Podcasts / etc. resume automatically.
-            try session.setActive(false, options: .notifyOthersOnDeactivation)
+            try audioSession.setActive(false, options: .notifyOthersOnDeactivation)
             Logger.overlay.debug("AudioInterruptionManager: external audio resumed")
         } catch {
             Logger.overlay.error("""

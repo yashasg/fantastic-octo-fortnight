@@ -1,80 +1,81 @@
 @testable import EyePostureReminder
+import AVFoundation
 import XCTest
 
-/// Unit tests for `AudioInterruptionManager`.
-///
-/// These tests verify protocol conformance and that the `AVAudioSession` calls
-/// do not crash in the headless test environment. In the simulator the session
-/// API is a no-op, so we validate the interface contract rather than actual
-/// audio interruption behaviour (which is exercised in the simulator suite).
 final class AudioInterruptionManagerTests: XCTestCase {
+    private final class MockAudioSession: AudioSessionControlling {
+        var setCategoryCalls: [(AVAudioSession.Category, AVAudioSession.Mode, AVAudioSession.CategoryOptions)] = []
+        var setActiveCalls: [(Bool, AVAudioSession.SetActiveOptions)] = []
 
-    var sut: AudioInterruptionManager!
-
-    override func setUp() {
-        super.setUp()
-        sut = AudioInterruptionManager()
-    }
-
-    override func tearDown() {
-        sut = nil
-        super.tearDown()
-    }
-
-    // MARK: - Protocol Conformance
-
-    func test_conformsToMediaControlling() {
-        let controlling: MediaControlling? = sut
-        XCTAssertNotNil(controlling, "AudioInterruptionManager must conform to MediaControlling")
-    }
-
-    func test_assignableAsMediaControlling() {
-        let controlling: MediaControlling = sut
-        XCTAssertNotNil(controlling)
-    }
-
-    // MARK: - pauseExternalAudio
-
-    func test_pauseExternalAudio_doesNotCrash() {
-        sut.pauseExternalAudio()
-    }
-
-    func test_pauseExternalAudio_calledMultipleTimes_doesNotCrash() {
-        sut.pauseExternalAudio()
-        sut.pauseExternalAudio()
-        sut.pauseExternalAudio()
-    }
-
-    // MARK: - resumeExternalAudio
-
-    func test_resumeExternalAudio_doesNotCrash() {
-        sut.resumeExternalAudio()
-    }
-
-    func test_resumeExternalAudio_calledMultipleTimes_doesNotCrash() {
-        sut.resumeExternalAudio()
-        sut.resumeExternalAudio()
-    }
-
-    // MARK: - Critical Invariant: resume without prior pause
-
-    /// Verifies `resumeExternalAudio` is safe to call even if
-    /// `pauseExternalAudio` was never invoked — e.g. crash-on-launch recovery.
-    func test_resumeWithoutPause_doesNotCrash() {
-        sut.resumeExternalAudio()
-    }
-
-    // MARK: - Paired Lifecycle
-
-    func test_pauseThenResume_doesNotCrash() {
-        sut.pauseExternalAudio()
-        sut.resumeExternalAudio()
-    }
-
-    func test_multiplePauseThenResumeCycles_doNotCrash() {
-        for _ in 0..<3 {
-            sut.pauseExternalAudio()
-            sut.resumeExternalAudio()
+        func setCategory(
+            _ category: AVAudioSession.Category,
+            mode: AVAudioSession.Mode,
+            options: AVAudioSession.CategoryOptions
+        ) throws {
+            setCategoryCalls.append((category, mode, options))
         }
+
+        func setActive(_ active: Bool, options: AVAudioSession.SetActiveOptions) throws {
+            setActiveCalls.append((active, options))
+        }
+    }
+
+    func test_pauseExternalAudio_setsSoloAmbientAndActivatesSession() {
+        let session = MockAudioSession()
+        let sut = AudioInterruptionManager(audioSession: session)
+
+        sut.pauseExternalAudio()
+
+        XCTAssertEqual(session.setCategoryCalls.count, 1)
+        XCTAssertEqual(session.setCategoryCalls.first?.0, .soloAmbient)
+        XCTAssertEqual(session.setCategoryCalls.first?.1, .default)
+        XCTAssertEqual(session.setCategoryCalls.first?.2, [])
+        XCTAssertEqual(session.setActiveCalls.count, 1)
+        XCTAssertEqual(session.setActiveCalls.first?.0, true)
+        XCTAssertEqual(session.setActiveCalls.first?.1, [])
+    }
+
+    func test_resumeExternalAudio_deactivatesWithNotifyOthersOption() {
+        let session = MockAudioSession()
+        let sut = AudioInterruptionManager(audioSession: session)
+
+        sut.resumeExternalAudio()
+
+        XCTAssertEqual(session.setActiveCalls.count, 1)
+        XCTAssertEqual(session.setActiveCalls.first?.0, false)
+        XCTAssertEqual(session.setActiveCalls.first?.1, .notifyOthersOnDeactivation)
+    }
+
+    func test_init_usesFactoryWhenSessionNotInjected() {
+        let session = MockAudioSession()
+        var makeSessionCallCount = 0
+        let sut = AudioInterruptionManager(
+            makeAudioSession: {
+                makeSessionCallCount += 1
+                return session
+            }
+        )
+
+        sut.pauseExternalAudio()
+
+        XCTAssertEqual(makeSessionCallCount, 1)
+        XCTAssertEqual(session.setCategoryCalls.count, 1)
+    }
+
+    func test_init_bypassesFactoryWhenSessionInjected() {
+        let injectedSession = MockAudioSession()
+        var makeSessionCallCount = 0
+        let sut = AudioInterruptionManager(
+            audioSession: injectedSession,
+            makeAudioSession: {
+                makeSessionCallCount += 1
+                return MockAudioSession()
+            }
+        )
+
+        sut.resumeExternalAudio()
+
+        XCTAssertEqual(makeSessionCallCount, 0)
+        XCTAssertEqual(injectedSession.setActiveCalls.count, 1)
     }
 }
