@@ -198,7 +198,8 @@ final class AppCoordinator: ObservableObject {
         lifecycleNotificationCenter: NotificationCenter? = nil,
         makeLifecycleNotificationCenter: @escaping () -> NotificationCenter = { .default },
         watchdogHeartbeatGraceInterval: TimeInterval = 10,
-        dateProvider: DateProviding = SystemDateProvider()
+        dateProvider: DateProviding? = nil,
+        makeDateProvider: @escaping () -> DateProviding = { SystemDateProvider() }
     ) {
         precondition(
             watchdogHeartbeatGraceInterval.isFinite && watchdogHeartbeatGraceInterval >= 0,
@@ -219,7 +220,7 @@ final class AppCoordinator: ObservableObject {
         )
         self.deviceActivityMonitor = Self.resolveDeviceActivityMonitor(deviceActivityMonitor)
         self.ipcStore = ipcStore ?? makeIPCStore()
-        self.dateProvider = dateProvider
+        self.dateProvider = dateProvider ?? makeDateProvider()
         self.lifecycleNotificationCenter = lifecycleNotificationCenter ?? makeLifecycleNotificationCenter()
         self.watchdogHeartbeatGraceInterval = watchdogHeartbeatGraceInterval
         let resolvedUITestMode = uiTestMode ?? Self.isUITestMode(launchArguments: resolvedLaunchArguments)

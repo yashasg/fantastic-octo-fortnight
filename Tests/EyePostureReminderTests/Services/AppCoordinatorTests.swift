@@ -193,6 +193,56 @@ final class AppCoordinatorTests: XCTestCase {
         XCTAssertEqual(factoryCallCount, 0)
     }
 
+    func test_init_withoutDateProvider_usesInjectedDateProviderFactory() {
+        var factoryCallCount = 0
+        let factoryDateProvider = MockDateProvider(now: Date(timeIntervalSince1970: 1_000))
+        settings.snoozedUntil = Date(timeIntervalSince1970: 2_000)
+        let coordinator = AppCoordinator(
+            settings: settings,
+            scheduler: ReminderScheduler(notificationCenter: MockNotificationCenter()),
+            notificationCenter: MockNotificationCenter(),
+            screenTimeTracker: MockScreenTimeTracker(),
+            pauseConditionProvider: MockPauseConditionProvider(),
+            ipcStore: MockAppGroupIPCRecorder(),
+            dateProvider: nil,
+            makeDateProvider: {
+                factoryCallCount += 1
+                return factoryDateProvider
+            }
+        )
+        defer { coordinator.stopFallbackTimers() }
+
+        coordinator.cancelAllReminders()
+
+        XCTAssertEqual(factoryCallCount, 1)
+        XCTAssertNotNil(coordinator.snoozeWakeTask)
+    }
+
+    func test_init_withExplicitDateProvider_doesNotCallDateProviderFactory() {
+        var factoryCallCount = 0
+        let injectedDateProvider = MockDateProvider(now: Date(timeIntervalSince1970: 3_000))
+        settings.snoozedUntil = Date(timeIntervalSince1970: 2_000)
+        let coordinator = AppCoordinator(
+            settings: settings,
+            scheduler: ReminderScheduler(notificationCenter: MockNotificationCenter()),
+            notificationCenter: MockNotificationCenter(),
+            screenTimeTracker: MockScreenTimeTracker(),
+            pauseConditionProvider: MockPauseConditionProvider(),
+            ipcStore: MockAppGroupIPCRecorder(),
+            dateProvider: injectedDateProvider,
+            makeDateProvider: {
+                factoryCallCount += 1
+                return MockDateProvider()
+            }
+        )
+        defer { coordinator.stopFallbackTimers() }
+
+        coordinator.cancelAllReminders()
+
+        XCTAssertEqual(factoryCallCount, 0)
+        XCTAssertNil(coordinator.snoozeWakeTask)
+    }
+
     func test_init_withoutIPCStore_usesInjectedIPCStoreFactory() async {
         struct FactoryReadEventsError: Error {}
         var factoryCallCount = 0
