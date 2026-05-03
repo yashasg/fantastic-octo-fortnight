@@ -23,6 +23,36 @@ final class OverlayManagerTests: XCTestCase {
         XCTAssertNotNil(manager)
     }
 
+    // MARK: - Initializer DI seams
+
+    func test_init_withoutNotificationCenter_usesFactoryOnce() {
+        var factoryCallCount = 0
+        let factoryCenter = NotificationCenter()
+        _ = OverlayManager(
+            notificationCenter: nil,
+            makeNotificationCenter: {
+                factoryCallCount += 1
+                return factoryCenter
+            }
+        )
+
+        XCTAssertEqual(factoryCallCount, 1)
+    }
+
+    func test_init_withNotificationCenter_bypassesFactory() {
+        var factoryCalled = false
+        let injectedCenter = NotificationCenter()
+        _ = OverlayManager(
+            notificationCenter: injectedCenter,
+            makeNotificationCenter: {
+                factoryCalled = true
+                return NotificationCenter()
+            }
+        )
+
+        XCTAssertFalse(factoryCalled)
+    }
+
     // MARK: - isOverlayVisible — initial state
 
     /// In a headless test environment there is no window scene, so no overlay
