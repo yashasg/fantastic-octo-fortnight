@@ -188,6 +188,31 @@ final class AppDelegateTests: XCTestCase {
 
         XCTAssertNil(defaults.string(forKey: AppStorageKey.uiTestScreenTimeStatus))
     }
+
+    func test_didFinishLaunching_showOverlayEyes_usesInjectedSettingsStoreFactory() throws {
+        let defaults = try makeIsolatedDefaults(suffix: #function)
+        let mockCenter = MockUserNotificationCenter()
+        let store = MockSettingsPersisting()
+        let settings = SettingsStore(store: store, config: .fallback)
+        var makeSettingsStoreCallCount = 0
+        let sut = AppDelegate(
+            notificationCenter: mockCenter,
+            registerMetricKitSubscriber: {},
+            launchArguments: ["--show-overlay-eyes"],
+            uiTestDefaults: defaults,
+            makeSettingsStore: {
+                makeSettingsStoreCallCount += 1
+                return settings
+            }
+        )
+
+        _ = sut.application(UIApplication.shared, didFinishLaunchingWithOptions: nil)
+
+        XCTAssertEqual(makeSettingsStoreCallCount, 1)
+        XCTAssertEqual(defaults.string(forKey: AppStorageKey.uiTestOverlayType), ReminderType.eyes.rawValue)
+        XCTAssertEqual(settings.eyesBreakDuration, 120)
+        XCTAssertEqual(settings.postureBreakDuration, 120)
+    }
 #endif
 
     // MARK: - Category-identifier routing logic (ReminderType parsing)
