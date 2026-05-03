@@ -182,6 +182,8 @@ final class AppCoordinator: ObservableObject {
         pauseConditionProvider: PauseConditionProviding? = nil,
         screenTimeAuthorization: ScreenTimeAuthorizationProviding? = nil,
         uiTestStatusStore: UserDefaults = .standard,
+        processEnvironment: [String: String] = ProcessInfo.processInfo.environment,
+        launchArguments: [String] = CommandLine.arguments,
         deviceActivityMonitor: DeviceActivityMonitorProviding? = nil,
         ipcStore: AppGroupIPCProviding = AppGroupIPCStore(),
         watchdogHeartbeatGraceInterval: TimeInterval = 10
@@ -196,7 +198,9 @@ final class AppCoordinator: ObservableObject {
         self.overlayManager = Self.resolveOverlayManager(overlayManager)
         self.screenTimeAuthorization = Self.resolveScreenTimeAuthorization(
             screenTimeAuthorization,
-            uiTestStatusStore: uiTestStatusStore
+            uiTestStatusStore: uiTestStatusStore,
+            processEnvironment: processEnvironment,
+            launchArguments: launchArguments
         )
         self.deviceActivityMonitor = Self.resolveDeviceActivityMonitor(deviceActivityMonitor)
         self.ipcStore = ipcStore
@@ -608,14 +612,16 @@ private extension AppCoordinator {
 
     static func resolveScreenTimeAuthorization(
         _ screenTimeAuthorization: ScreenTimeAuthorizationProviding?,
-        uiTestStatusStore: UserDefaults
+        uiTestStatusStore: UserDefaults,
+        processEnvironment: [String: String],
+        launchArguments: [String]
     ) -> ScreenTimeAuthorizationProviding {
         guard let screenTimeAuthorization else {
             #if DEBUG
-            if ProcessInfo.processInfo.environment["UITEST_SCREEN_TIME_STATUS"] == "notDetermined" {
+            if processEnvironment["UITEST_SCREEN_TIME_STATUS"] == "notDetermined" {
                 return ScreenTimeAuthorizationStub(status: .notDetermined)
             }
-            if CommandLine.arguments.contains("--simulate-screen-time-not-determined") {
+            if launchArguments.contains("--simulate-screen-time-not-determined") {
                 return ScreenTimeAuthorizationStub(status: .notDetermined)
             }
             if let raw = uiTestStatusStore.string(forKey: AppStorageKey.uiTestScreenTimeStatus),
