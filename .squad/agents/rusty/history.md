@@ -256,6 +256,7 @@ Result: **10/10 passed**
 - `ShieldTriggerReason.rawValue` stability matters: values are written to App Group UserDefaults and read by extension processes in a separate sandbox. The tests pin these as a regression gate.
 - FamilyControls does NOT work in Simulator at all. All real shield validation is device-only, post-#201.
 - For AppCoordinator DI seams, convert eager singleton/store defaults into `Dependency? = nil` + `makeDependency` factory closures, then test both fallback and bypass paths to keep behavior unchanged and testability explicit.
+- For SwiftUI views that still need DEBUG launch-context checks, avoid direct `CommandLine`/`ProcessInfo` reads in computed properties; inject optional launch-context values plus provider closures and unit-test fallback/bypass behavior via a static resolver.
 
 ### 2026-04-30: Post-#299 Architecture Audit — Clean
 
