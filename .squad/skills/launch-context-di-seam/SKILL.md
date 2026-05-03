@@ -14,6 +14,7 @@ Use this when service or coordinator logic branches on process launch context
 - Add injected initializer inputs for launch context with production-safe defaults.
 - Thread injected values through resolver helpers instead of reading globals in helper bodies.
 - Keep behavior unchanged by preserving the same default values used before extraction.
+- For `@MainActor` coordinators, use optional init params for actor-isolated defaults and resolve to static values inside `init` (avoids Swift 6 nonisolated default-argument errors).
 
 ## Examples
 - `AppCoordinator.init(..., processEnvironment: [String: String] = ProcessInfo.processInfo.environment, launchArguments: [String] = CommandLine.arguments, ...)`
