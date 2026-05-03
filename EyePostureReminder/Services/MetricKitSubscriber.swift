@@ -53,10 +53,11 @@ final class MetricKitSubscriber: NSObject, MXMetricManagerSubscriber {
     private let logger: MetricKitLogging
 
     init(
-        metricManager: MetricKitManaging = MXMetricManager.shared,
+        metricManager: MetricKitManaging? = nil,
+        makeMetricManager: @escaping () -> MetricKitManaging = { MXMetricManager.shared },
         logger: MetricKitLogging = LifecycleMetricKitLogger()
     ) {
-        self.metricManager = metricManager
+        self.metricManager = metricManager ?? makeMetricManager()
         self.logger = logger
         super.init()
     }
