@@ -209,6 +209,47 @@ final class AppDelegateTests: XCTestCase {
     }
 
 #if DEBUG
+    func test_init_withoutUITestDefaults_usesInjectedDefaultsFactory() throws {
+        let defaults = try makeIsolatedDefaults(suffix: #function)
+        var makeUITestDefaultsCallCount = 0
+
+        _ = AppDelegate(
+            launchArguments: ["--simulate-screen-time-not-determined"],
+            uiTestDefaults: nil,
+            makeUITestDefaults: {
+                makeUITestDefaultsCallCount += 1
+                return defaults
+            }
+        )
+
+        XCTAssertEqual(makeUITestDefaultsCallCount, 1)
+        XCTAssertEqual(
+            defaults.string(forKey: AppStorageKey.uiTestScreenTimeStatus),
+            ScreenTimeAuthorizationStatus.notDetermined.rawValue
+        )
+    }
+
+    func test_init_withExplicitUITestDefaults_doesNotCallInjectedDefaultsFactory() throws {
+        let explicitDefaults = try makeIsolatedDefaults(suffix: "\(#function).explicit")
+        let factoryDefaults = try makeIsolatedDefaults(suffix: "\(#function).factory")
+        var makeUITestDefaultsCallCount = 0
+
+        _ = AppDelegate(
+            launchArguments: ["--simulate-screen-time-not-determined"],
+            uiTestDefaults: explicitDefaults,
+            makeUITestDefaults: {
+                makeUITestDefaultsCallCount += 1
+                return factoryDefaults
+            }
+        )
+
+        XCTAssertEqual(makeUITestDefaultsCallCount, 0)
+        XCTAssertEqual(
+            explicitDefaults.string(forKey: AppStorageKey.uiTestScreenTimeStatus),
+            ScreenTimeAuthorizationStatus.notDetermined.rawValue
+        )
+    }
+
     func test_init_withoutLaunchArguments_usesInjectedLaunchArgumentsProvider() throws {
         let defaults = try makeIsolatedDefaults(suffix: #function)
         defaults.removeObject(forKey: AppStorageKey.uiTestScreenTimeStatus)

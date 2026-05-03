@@ -15,6 +15,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     private let launchArguments: [String]
     private let uiTestDefaults: UserDefaults
     private let launchArgumentsProvider: () -> [String]
+    private let makeUITestDefaults: () -> UserDefaults
     private let makeNotificationCenter: () -> UserNotificationCenterDelegating
     private let makeMetricKitSubscriber: () -> MetricKitSubscribing
     private let makeSettingsStore: @MainActor () -> SettingsStore
@@ -23,17 +24,19 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         notificationCenter: UserNotificationCenterDelegating? = nil,
         metricKitSubscriber: MetricKitSubscribing? = nil,
         launchArguments: [String]? = nil,
-        uiTestDefaults: UserDefaults = .standard,
+        uiTestDefaults: UserDefaults? = nil,
         launchArgumentsProvider: @escaping () -> [String] = { CommandLine.arguments },
+        makeUITestDefaults: @escaping () -> UserDefaults = { .standard },
         makeNotificationCenter: @escaping () -> UserNotificationCenterDelegating = { UNUserNotificationCenter.current() },
         makeMetricKitSubscriber: @escaping () -> MetricKitSubscribing = { MetricKitSubscriber.shared },
         makeSettingsStore: @escaping @MainActor () -> SettingsStore = { SettingsStore() }
     ) {
         self.notificationCenter = notificationCenter
         self.metricKitSubscriber = metricKitSubscriber
-        self.uiTestDefaults = uiTestDefaults
         self.launchArgumentsProvider = launchArgumentsProvider
         self.launchArguments = launchArguments ?? launchArgumentsProvider()
+        self.makeUITestDefaults = makeUITestDefaults
+        self.uiTestDefaults = uiTestDefaults ?? makeUITestDefaults()
         self.makeNotificationCenter = makeNotificationCenter
         self.makeMetricKitSubscriber = makeMetricKitSubscriber
         self.makeSettingsStore = makeSettingsStore
