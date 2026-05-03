@@ -473,7 +473,7 @@ final class AppCoordinator: ObservableObject {
     /// If no window scene is active yet (notification-tap race), the overlay is
     /// queued and presented when `presentPendingOverlayIfNeeded()` is called.
     func handleNotification(for type: ReminderType) {
-        guard (settings.snoozedUntil ?? .distantPast) <= Date() else {
+        guard (settings.snoozedUntil ?? .distantPast) <= dateProvider.now else {
             Logger.scheduling.info("Ignoring \(type.rawValue) notification while snooze is active")
             return
         }
