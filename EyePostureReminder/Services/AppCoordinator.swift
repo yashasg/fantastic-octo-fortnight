@@ -598,7 +598,7 @@ final class AppCoordinator: ObservableObject {
     func appWillResignActive() {
         // ScreenTimeTracker observes willResignActiveNotification directly and
         // resets all elapsed counters — no explicit action needed here.
-        let sessionDuration = sessionStartTime.map { Date().timeIntervalSince($0) } ?? 0
+        let sessionDuration = sessionStartTime.map { dateProvider.now.timeIntervalSince($0) } ?? 0
         AnalyticsLogger.log(.appSessionEnd(sessionDurationS: sessionDuration))
         sessionStartTime = nil
         recordWatchdogHeartbeat(.appBackground)
