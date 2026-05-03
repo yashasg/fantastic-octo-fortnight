@@ -21,6 +21,7 @@ Use when a service/coordinator registers observers via `NotificationCenter.defau
 - `EyePostureReminder/Services/AppCoordinator.swift` + `Tests/EyePostureReminderTests/Services/AppCoordinatorNotificationFallbackTests.swift`
 - `EyePostureReminder/Services/ScreenTimeTracker.swift` + `Tests/EyePostureReminderTests/Services/ScreenTimeTrackerTests.swift`
 - `EyePostureReminder/Services/PauseConditionManager.swift` (`LiveCarPlayDetector`) + `Tests/EyePostureReminderTests/Services/LiveCarPlayDetectorTests.swift`
+- `EyePostureReminder/Services/OverlayManager.swift` + `Tests/EyePostureReminderTests/Services/OverlayManagerExtendedTests.swift`
 
 ## Anti-Patterns
 - Registering on `NotificationCenter.default` and removing on a different center.

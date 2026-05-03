@@ -128,7 +128,8 @@ final class OverlayManagerExtendedTests: XCTestCase {
     /// the new `!isOverlayVisible` guard or the existing scene guard. The queue
     /// must be unchanged (neither dequeued nor reordered) after the notification.
     func test_sceneActivationWhileQueued_doesNotDequeueOrReorder() {
-        let manager = OverlayManager()
+        let notificationCenter = NotificationCenter()
+        let manager = OverlayManager(notificationCenter: notificationCenter)
 
         // Queue three overlays in FIFO order (no active scene → all queued).
         manager.showOverlay(for: .eyes, duration: 20, hapticsEnabled: true, pauseMediaEnabled: false) {}
@@ -136,7 +137,7 @@ final class OverlayManagerExtendedTests: XCTestCase {
         manager.showOverlay(for: .eyes, duration: 30, hapticsEnabled: false, pauseMediaEnabled: false) {}
 
         // Simulate scene activation — triggers presentNextQueuedOverlay internally.
-        NotificationCenter.default.post(name: UIScene.didActivateNotification, object: nil)
+        notificationCenter.post(name: UIScene.didActivateNotification, object: nil)
 
         // All three items must still be in the queue (scene guard kept them there).
         // Clearing the queue must not crash — confirms items were retained intact.
@@ -145,6 +146,17 @@ final class OverlayManagerExtendedTests: XCTestCase {
         // Overlay must not have appeared (no UIWindowScene in headless tests).
         XCTAssertFalse(manager.isOverlayVisible,
             "No overlay should be visible in a headless test environment")
+    }
+
+    func test_sceneActivationObserver_ignoresDefaultCenterWhenInjectedCenterUsed() {
+        let notificationCenter = NotificationCenter()
+        let manager = OverlayManager(notificationCenter: notificationCenter)
+
+        manager.showOverlay(for: .eyes, duration: 20, hapticsEnabled: true, pauseMediaEnabled: false) {}
+        NotificationCenter.default.post(name: UIScene.didActivateNotification, object: nil)
+
+        XCTAssertFalse(manager.isOverlayVisible)
+        manager.clearQueue()
     }
 
     /// Regression test for #289 using MockOverlayPresenting.
