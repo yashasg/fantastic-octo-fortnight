@@ -127,3 +127,28 @@ Orchestration log recorded at 2026-04-30T09:27:10Z. Fix approved and documented 
 - For app lifecycle wiring, prefer injecting a narrow `MetricKitSubscribing` dependency into `AppDelegate` and lazily fallback to `MetricKitSubscriber.shared` in `didFinishLaunching`; this removes closure indirection and keeps registration assertions simple in delegate seam tests.
 - For telemetry services that log heavily, inject a narrow logger protocol with a production `Logger.lifecycle` adapter; this keeps runtime behavior unchanged while letting unit tests assert side-effect logging without touching `os.Logger` globals (`EyePostureReminder/Services/MetricKitSubscriber.swift`, `Tests/EyePostureReminderTests/Services/MetricKitSubscriberTests.swift`).
 - For watchdog/lifecycle time checks, prefer a zero-arg production path that reads from injected `DateProviding`, then keep an explicit `now` overload for precise unit tests; this removes hidden `Date()` globals without losing targeted deterministic coverage (`EyePostureReminder/Services/AppCoordinatorWatchdogRecovery.swift`, `Tests/EyePostureReminderTests/Services/AppCoordinatorWatchdogHeartbeatTests.swift`).
+
+## 2026-05-03T10:08:22Z: #462 Phase A DI/SRP — DateProviding Seam Micro-Slice (COMPLETED)
+
+**Task:** Execute next smallest #462 Phase A DI/SRP micro-slice from origin/main, validate tests, open PR
+
+**Slice:** Inject DateProviding seam into AppCoordinator watchdog recovery path
+
+**Branch:** basher/462-phasea-next-di-microslice  
+**Commit:** cab1807  
+**PR:** https://github.com/yashasg/fantastic-octo-fortnight/pull/516
+
+**Changes:**
+- AppCoordinator: Added `dateProvider: DateProviding` injection; routed `recoverStaleDeviceActivityWatchdogIfNeeded()` default path through `dateProvider.now`
+- AppCoordinatorWatchdogRecovery: Removed direct `Date()` dependency; now uses injected seam
+- AppCoordinatorWatchdogHeartbeatTests: New tests verify stale/missing detection with deterministic clock injection
+- SKILL: Created `.squad/skills/date-provider-default-seam/SKILL.md` for reusable DateProviding seam pattern
+
+**Validation:** ✅ Build clean, unit tests 100% passing, integration stable  
+**Status:** READY FOR NEXT PHASE A SLICE (SRP: AppCoordinator → Lifecycle + Watchdog handlers)
+
+**Orchestration Logs:**
+- `.squad/orchestration-log/2026-05-03T10-08-22Z-basher.md`
+- `.squad/log/2026-05-03T10-08-22Z-462-next-microslice.md`
+
+**Decision Filed:** `.squad/decisions/decisions.md` — DateProviding seam pattern and Phase A rationale
