@@ -21,6 +21,7 @@ Use when a service method currently takes `now: Date = Date()` and production co
 - For pause-condition resume guards (`onPauseStateChanged` resume path), evaluate snooze checks with `dateProvider.now` and assert inversion tests by simulating pause-clear callbacks.
 - For launch-time scheduler snooze guards (`scheduleReminders`), compare against `dateProvider.now` and add inversion tests for wall-clock future/injected expired and wall-clock past/injected active.
 - For foreground-transition snooze guards (`handleForegroundTransition`), compare expiry against `dateProvider.now` and assert inversion tests where wall-clock and injected clocks disagree.
+- For lifecycle session metrics initialized during scheduling, seed `sessionStartTime` from `dateProvider.now` (not `Date()`) so `appSessionEnd` duration assertions stay deterministic under injected clocks.
 
 ## Benefits
 - Production path no longer depends on implicit `Date()` globals.

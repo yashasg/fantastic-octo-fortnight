@@ -56,6 +56,7 @@
 - For app-launch delegate wiring, inject a `makeNotificationCenter` fallback factory and resolve it only when explicit `notificationCenter` injection is absent; this keeps production singleton behavior while enabling deterministic fallback-path tests.
 - For pause-condition resume callbacks, evaluate snooze guards with injected `dateProvider.now` and assert inversion cases by firing `MockPauseConditionProvider.simulatePauseStateChange(false)` while wall-clock and injected clocks disagree.
 - For foreground lifecycle snooze handling (`handleForegroundTransition`), compare expiry against `dateProvider.now` (not `Date()`) and cover both wall-clock/injected-clock inversion cases to keep resume behavior deterministic.
+- For cold-launch session telemetry, set `sessionStartTime` from injected `dateProvider.now` in `scheduleReminders()` so downstream `appSessionEnd` duration remains deterministic even when tests pin the clock to non-wall time.
 
 ## 2026-05-03T10:08:22Z: #462 Phase A DI/SRP — DateProviding Seam Micro-Slice (COMPLETED)
 
