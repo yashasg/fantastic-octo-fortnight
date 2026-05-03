@@ -19,6 +19,7 @@ Use when a service method currently takes `now: Date = Date()` and production co
 - For lifecycle cleanup hooks (for example `clearExpiredSnoozeIfNeeded`), evaluate stale-state guards with `dateProvider.now` and add inversion tests where wall-clock and injected clock disagree.
 - For notification-delivery snooze guards (`handleNotification`), evaluate suppression with `dateProvider.now` so reminder delivery respects injected time seams in deterministic tests.
 - For pause-condition resume guards (`onPauseStateChanged` resume path), evaluate snooze checks with `dateProvider.now` and assert inversion tests by simulating pause-clear callbacks.
+- For launch-time scheduler snooze guards (`scheduleReminders`), compare against `dateProvider.now` and add inversion tests for wall-clock future/injected expired and wall-clock past/injected active.
 
 ## Benefits
 - Production path no longer depends on implicit `Date()` globals.

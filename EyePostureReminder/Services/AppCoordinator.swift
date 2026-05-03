@@ -362,7 +362,7 @@ final class AppCoordinator: ObservableObject {
 
         // P1-1: Snooze guard — check before doing anything else.
         if let snoozeEnd = settings.snoozedUntil {
-            if snoozeEnd > Date() {
+            if snoozeEnd > dateProvider.now {
                 // Snooze still active — pause screen-time tracking and arm wake.
                 screenTimeTracker.pauseAll()
                 scheduler.cancelAllReminders()
