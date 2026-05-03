@@ -209,6 +209,47 @@ final class AppDelegateTests: XCTestCase {
     }
 
 #if DEBUG
+    func test_init_withoutLaunchArguments_usesInjectedLaunchArgumentsProvider() throws {
+        let defaults = try makeIsolatedDefaults(suffix: #function)
+        defaults.removeObject(forKey: AppStorageKey.uiTestScreenTimeStatus)
+        defaults.set(true, forKey: AppStorageKey.trueInterruptSkippedBannerDismissed)
+        var launchArgumentsProviderCallCount = 0
+
+        _ = AppDelegate(
+            launchArguments: nil,
+            uiTestDefaults: defaults,
+            launchArgumentsProvider: {
+                launchArgumentsProviderCallCount += 1
+                return ["--simulate-screen-time-not-determined"]
+            }
+        )
+
+        XCTAssertEqual(launchArgumentsProviderCallCount, 1)
+        XCTAssertEqual(
+            defaults.string(forKey: AppStorageKey.uiTestScreenTimeStatus),
+            ScreenTimeAuthorizationStatus.notDetermined.rawValue
+        )
+        XCTAssertFalse(defaults.bool(forKey: AppStorageKey.trueInterruptSkippedBannerDismissed))
+    }
+
+    func test_init_withExplicitLaunchArguments_doesNotCallInjectedLaunchArgumentsProvider() throws {
+        let defaults = try makeIsolatedDefaults(suffix: #function)
+        defaults.set("stale", forKey: AppStorageKey.uiTestScreenTimeStatus)
+        var launchArgumentsProviderCallCount = 0
+
+        _ = AppDelegate(
+            launchArguments: ["--skip-onboarding"],
+            uiTestDefaults: defaults,
+            launchArgumentsProvider: {
+                launchArgumentsProviderCallCount += 1
+                return ["--simulate-screen-time-not-determined"]
+            }
+        )
+
+        XCTAssertEqual(launchArgumentsProviderCallCount, 0)
+        XCTAssertNil(defaults.string(forKey: AppStorageKey.uiTestScreenTimeStatus))
+    }
+
     func test_init_preSeedsScreenTimeStatus_usingInjectedLaunchArgumentsAndDefaults() throws {
         let defaults = try makeIsolatedDefaults(suffix: #function)
         defaults.removeObject(forKey: AppStorageKey.uiTestScreenTimeStatus)
