@@ -12,6 +12,7 @@ final class AppCoordinatorNotificationFallbackTests: XCTestCase {
     private var deviceActivityMonitor: MockDeviceActivityMonitorProviding!
     private var ipcStore: MockAppGroupIPCRecorder!
     private var trueInterruptNotificationCenter: NotificationCenter!
+    private var dateProvider: MockDateProvider!
     private var coordinator: AppCoordinator!
 
     override func setUp() async throws {
@@ -24,6 +25,7 @@ final class AppCoordinatorNotificationFallbackTests: XCTestCase {
         deviceActivityMonitor = MockDeviceActivityMonitorProviding()
         ipcStore = MockAppGroupIPCRecorder()
         trueInterruptNotificationCenter = NotificationCenter()
+        dateProvider = MockDateProvider()
         coordinator = AppCoordinator(
             settings: settings,
             scheduler: ReminderScheduler(notificationCenter: notificationCenter),
@@ -33,7 +35,8 @@ final class AppCoordinatorNotificationFallbackTests: XCTestCase {
             pauseConditionProvider: MockPauseConditionProvider(),
             deviceActivityMonitor: deviceActivityMonitor,
             ipcStore: ipcStore,
-            lifecycleNotificationCenter: trueInterruptNotificationCenter
+            lifecycleNotificationCenter: trueInterruptNotificationCenter,
+            dateProvider: dateProvider
         )
     }
 
@@ -43,6 +46,7 @@ final class AppCoordinatorNotificationFallbackTests: XCTestCase {
         trueInterruptNotificationCenter = nil
         ipcStore = nil
         deviceActivityMonitor = nil
+        dateProvider = nil
         tracker = nil
         overlay = nil
         notificationCenter = nil
@@ -356,6 +360,21 @@ final class AppCoordinatorNotificationFallbackTests: XCTestCase {
             notificationCenter.removedIdentifiers,
             [["com.yashasg.eyeposturereminder.eyes"]]
         )
+    }
+
+    func test_thresholdReached_whenShieldPathActive_usesDateProviderForSessionTimestamp() async throws {
+        deviceActivityMonitor.stubbedIsAvailable = true
+        ipcStore.trueInterruptEnabled = true
+        ipcStore.selectApps()
+        let injectedNow = Date(timeIntervalSince1970: 123_456)
+        dateProvider.now = injectedNow
+        await coordinator.refreshAuthStatus()
+
+        tracker.simulateThresholdReached(for: .eyes)
+        await awaitCondition { deviceActivityMonitor.scheduleCallCount >= 1 }
+
+        let scheduledSession = try XCTUnwrap(deviceActivityMonitor.scheduledSessions.first)
+        XCTAssertEqual(scheduledSession.triggeredAt, injectedNow)
     }
 
     func test_deviceActivityScheduleFailure_whenOverlayVisible_suppressesDuplicateFallback() async throws {
