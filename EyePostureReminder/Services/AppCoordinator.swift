@@ -404,7 +404,7 @@ final class AppCoordinator: ObservableObject {
         // Permission is still used for the snooze-wake silent notification.
         // Skip in UI test mode — the system alert would block the accessibility
         // hierarchy and cause all XCUITest element lookups to fail.
-        if notificationAuthStatus == .notDetermined && !AppCoordinator.isUITestMode {
+        if notificationAuthStatus == .notDetermined && !isUITestModeEnabled {
             await requestNotificationPermission()
         }
 
@@ -430,7 +430,7 @@ final class AppCoordinator: ObservableObject {
         // Skip the 1-second tick timer in UI test mode — continuous main-thread
         // activity prevents XCUITest from settling the accessibility tree between
         // interactions, causing stale value reads on Toggles and other controls.
-        guard !AppCoordinator.isUITestMode else { return }
+        guard !isUITestModeEnabled else { return }
 
         // Configure ScreenTimeTracker with current thresholds and start counting.
         configureScreenTimeTracker()
