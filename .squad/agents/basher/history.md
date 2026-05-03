@@ -168,3 +168,10 @@
 - Key file paths: `EyePostureReminder/Services/AppCoordinator.swift`, `Tests/EyePostureReminderTests/Services/AppCoordinatorTests.swift`, `.squad/decisions/inbox/basher-appcoordinator-dateprovider-factory-seam.md`.
 - For non-singleton collaborator defaults in services, prefer `dependency: Protocol? = nil` plus `makeDependency` fallback factory and resolve once in `init`; add paired fallback-used and explicit-bypass tests to remove eager concrete construction while preserving behavior (`EyePostureReminder/Services/OverlayManager.swift`, `Tests/EyePostureReminderTests/Services/OverlayManagerExtendedTests.swift`).
 - For AppCoordinator scheduling guards, use the instance-resolved `isUITestModeEnabled` flag inside lifecycle methods (`scheduleReminders`) instead of static `AppCoordinator.isUITestMode`; this keeps injected UI-test mode deterministic and avoids mixed global/injected behavior.
+
+## 2026-05-03T17:55:00Z: #462 Phase A — AppCoordinator ScreenTimeTracker Factory Seam (COMPLETED)
+
+- Learned pattern: when coordinators resolve non-singleton service defaults, inject an optional factory closure and resolve once in `init` to eliminate hidden concrete construction while preserving runtime behavior.
+- Architecture decision: `AppCoordinator.resolveScreenTimeTracker` now accepts `makeScreenTimeTracker` and only constructs `ScreenTimeTracker()` on the final production fallback path.
+- Validation: `./scripts/build.sh build` and `./scripts/build.sh test` passed after change.
+- Key file paths: `EyePostureReminder/Services/AppCoordinator.swift`, `Tests/EyePostureReminderTests/Services/AppCoordinatorTests.swift`.

@@ -153,6 +153,50 @@ final class AppCoordinatorTests: XCTestCase {
         XCTAssertEqual(coordinator.notificationAuthStatus, .denied)
     }
 
+    func test_init_withoutScreenTimeTracker_usesInjectedScreenTimeTrackerFactory() {
+        var factoryCallCount = 0
+        let factoryTracker = MockScreenTimeTracker()
+        let coordinator = AppCoordinator(
+            settings: SettingsStore(store: MockSettingsPersisting()),
+            scheduler: ReminderScheduler(notificationCenter: MockNotificationCenter()),
+            notificationCenter: MockNotificationCenter(),
+            screenTimeTracker: nil,
+            makeScreenTimeTracker: {
+                factoryCallCount += 1
+                return factoryTracker
+            },
+            pauseConditionProvider: MockPauseConditionProvider(),
+            uiTestMode: false,
+            ipcStore: MockAppGroupIPCRecorder()
+        )
+        defer { coordinator.stopFallbackTimers() }
+
+        XCTAssertEqual(factoryCallCount, 1)
+        XCTAssertTrue(coordinator.screenTimeTracker === factoryTracker)
+    }
+
+    func test_init_withExplicitScreenTimeTracker_doesNotCallScreenTimeTrackerFactory() {
+        var factoryCallCount = 0
+        let injectedTracker = MockScreenTimeTracker()
+        let coordinator = AppCoordinator(
+            settings: SettingsStore(store: MockSettingsPersisting()),
+            scheduler: ReminderScheduler(notificationCenter: MockNotificationCenter()),
+            notificationCenter: MockNotificationCenter(),
+            screenTimeTracker: injectedTracker,
+            makeScreenTimeTracker: {
+                factoryCallCount += 1
+                return MockScreenTimeTracker()
+            },
+            pauseConditionProvider: MockPauseConditionProvider(),
+            uiTestMode: false,
+            ipcStore: MockAppGroupIPCRecorder()
+        )
+        defer { coordinator.stopFallbackTimers() }
+
+        XCTAssertEqual(factoryCallCount, 0)
+        XCTAssertTrue(coordinator.screenTimeTracker === injectedTracker)
+    }
+
     func test_init_withoutLifecycleNotificationCenter_usesInjectedLifecycleNotificationCenterFactory() {
         var factoryCallCount = 0
         let coordinator = AppCoordinator(

@@ -183,6 +183,7 @@ final class AppCoordinator: ObservableObject {
         makeNotificationCenter: @escaping () -> NotificationScheduling = { UNUserNotificationCenter.current() },
         overlayManager: OverlayPresenting? = nil,
         screenTimeTracker: ScreenTimeTracking? = nil,
+        makeScreenTimeTracker: (() -> ScreenTimeTracking)? = nil,
         pauseConditionProvider: PauseConditionProviding? = nil,
         makePauseConditionManager: ((SettingsStore) -> PauseConditionProviding)? = nil,
         screenTimeAuthorization: ScreenTimeAuthorizationProviding? = nil,
@@ -232,7 +233,8 @@ final class AppCoordinator: ObservableObject {
         // the accessibility tree between interactions, causing stale element reads.
         self.screenTimeTracker = Self.resolveScreenTimeTracker(
             screenTimeTracker,
-            uiTestMode: resolvedUITestMode
+            uiTestMode: resolvedUITestMode,
+            makeScreenTimeTracker: makeScreenTimeTracker
         )
         self.pauseConditionManager = Self.resolvePauseConditionManager(
             pauseConditionProvider,
@@ -671,10 +673,17 @@ private extension AppCoordinator {
 
     static func resolveScreenTimeTracker(
         _ screenTimeTracker: ScreenTimeTracking?,
-        uiTestMode: Bool
+        uiTestMode: Bool,
+        makeScreenTimeTracker: (() -> ScreenTimeTracking)?
     ) -> ScreenTimeTracking {
         guard let screenTimeTracker else {
-            return uiTestMode ? NoopScreenTimeTracker() : ScreenTimeTracker()
+            guard uiTestMode == false else {
+                return NoopScreenTimeTracker()
+            }
+            if let makeScreenTimeTracker {
+                return makeScreenTimeTracker()
+            }
+            return ScreenTimeTracker()
         }
         return screenTimeTracker
     }
