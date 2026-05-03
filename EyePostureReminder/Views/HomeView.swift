@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct HomeView: View {
+    typealias LaunchArgumentsProvider = () -> [String]
+    typealias ProcessEnvironmentProvider = () -> [String: String]
 
     @EnvironmentObject var settings: SettingsStore
     @EnvironmentObject var coordinator: AppCoordinator
@@ -11,9 +13,23 @@ struct HomeView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private let accessibilityNotificationPoster: AccessibilityNotificationPosting
+    private let launchArguments: [String]?
+    private let launchArgumentsProvider: LaunchArgumentsProvider
+    private let processEnvironment: [String: String]?
+    private let processEnvironmentProvider: ProcessEnvironmentProvider
 
-    init(accessibilityNotificationPoster: AccessibilityNotificationPosting = LiveAccessibilityNotificationPoster()) {
+    init(
+        accessibilityNotificationPoster: AccessibilityNotificationPosting = LiveAccessibilityNotificationPoster(),
+        launchArguments: [String]? = nil,
+        launchArgumentsProvider: @escaping LaunchArgumentsProvider = { CommandLine.arguments },
+        processEnvironment: [String: String]? = nil,
+        processEnvironmentProvider: @escaping ProcessEnvironmentProvider = { ProcessInfo.processInfo.environment }
+    ) {
         self.accessibilityNotificationPoster = accessibilityNotificationPoster
+        self.launchArguments = launchArguments
+        self.launchArgumentsProvider = launchArgumentsProvider
+        self.processEnvironment = processEnvironment
+        self.processEnvironmentProvider = processEnvironmentProvider
     }
 
     private var statusLabel: String {
@@ -29,15 +45,33 @@ struct HomeView: View {
             return true
         }
 #if DEBUG
-        if CommandLine.arguments.contains("--simulate-screen-time-not-determined") {
-            return true
-        }
-        if ProcessInfo.processInfo.environment["UITEST_SCREEN_TIME_STATUS"] == "notDetermined" {
+        if Self.resolveShouldShowUITestScreenTimePrompt(
+            launchArguments: launchArguments,
+            launchArgumentsProvider: launchArgumentsProvider,
+            processEnvironment: processEnvironment,
+            processEnvironmentProvider: processEnvironmentProvider
+        ) {
             return true
         }
 #endif
         return false
     }
+
+#if DEBUG
+    static func resolveShouldShowUITestScreenTimePrompt(
+        launchArguments: [String]? = nil,
+        launchArgumentsProvider: LaunchArgumentsProvider = { CommandLine.arguments },
+        processEnvironment: [String: String]? = nil,
+        processEnvironmentProvider: ProcessEnvironmentProvider = { ProcessInfo.processInfo.environment }
+    ) -> Bool {
+        let resolvedLaunchArguments = launchArguments ?? launchArgumentsProvider()
+        if resolvedLaunchArguments.contains("--simulate-screen-time-not-determined") {
+            return true
+        }
+        let resolvedProcessEnvironment = processEnvironment ?? processEnvironmentProvider()
+        return resolvedProcessEnvironment["UITEST_SCREEN_TIME_STATUS"] == "notDetermined"
+    }
+#endif
 
     var body: some View {
         VStack(spacing: AppSpacing.lg) {
