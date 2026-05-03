@@ -102,6 +102,9 @@ final class ScreenTimeTracker: ScreenTimeTracking {
     ///     smaller value in tests to exercise grace-period behaviour without long sleeps.
     ///   - lifecycleNotificationCenter: Notification center used for app lifecycle observer
     ///     registration/removal. Defaults to `.default` for production behavior.
+    ///   - makeLifecycleNotificationCenter: Optional fallback factory used when
+    ///     `lifecycleNotificationCenter` is nil. Keeps production behavior (`.default`)
+    ///     while allowing deterministic fallback-path tests.
     ///   - appStateProvider: Provides `UIApplication.applicationState` for `startIfActive()`.
     ///     Defaults to `UIApplication.shared`. Inject a mock to drive active/background behavior
     ///     in unit tests without depending on the real UIApplication singleton.
@@ -110,7 +113,8 @@ final class ScreenTimeTracker: ScreenTimeTracking {
     ///     fallback-path tests.
     init(
         resetGracePeriod: TimeInterval = 5.0,
-        lifecycleNotificationCenter: NotificationCenter = .default,
+        lifecycleNotificationCenter: NotificationCenter? = nil,
+        makeLifecycleNotificationCenter: (() -> NotificationCenter)? = nil,
         appStateProvider: AppStateProviding? = nil,
         makeAppStateProvider: (() -> AppStateProviding)? = nil
     ) {
@@ -122,7 +126,8 @@ final class ScreenTimeTracker: ScreenTimeTracking {
         } else {
             self.resetGracePeriod = resetGracePeriod
         }
-        self.lifecycleNotificationCenter = lifecycleNotificationCenter
+        let resolvedLifecycleNotificationCenter = makeLifecycleNotificationCenter ?? { .default }
+        self.lifecycleNotificationCenter = lifecycleNotificationCenter ?? resolvedLifecycleNotificationCenter()
         let resolvedAppStateProvider = makeAppStateProvider ?? { UIApplication.shared }
         self.appStateProvider = appStateProvider ?? resolvedAppStateProvider()
         for type in ReminderType.allCases {

@@ -280,6 +280,60 @@ final class ScreenTimeTrackerTests: XCTestCase {
         XCTAssertEqual(factoryCallCount, 0)
     }
 
+    // MARK: - lifecycleNotificationCenter factory seam
+
+    func test_init_withNilLifecycleNotificationCenter_usesFactoryCenter() async {
+        let center = NotificationCenter()
+        var factoryCallCount = 0
+        let tracker = ScreenTimeTracker(
+            resetGracePeriod: 5.0,
+            lifecycleNotificationCenter: nil,
+            makeLifecycleNotificationCenter: {
+                factoryCallCount += 1
+                return center
+            },
+            appStateProvider: MockAppStateProvider(state: .background)
+        )
+        defer { tracker.stop() }
+
+        tracker.setThreshold(1.0, for: .eyes)
+        let exp = expectation(description: "threshold fires via factory lifecycle notification center")
+        tracker.onThresholdReached = { type in
+            if type == .eyes { exp.fulfill() }
+        }
+
+        center.post(name: UIApplication.didBecomeActiveNotification, object: nil)
+
+        await fulfillment(of: [exp], timeout: 4.0)
+        XCTAssertEqual(factoryCallCount, 1)
+    }
+
+    func test_init_withInjectedLifecycleNotificationCenter_bypassesFactory() async {
+        let center = NotificationCenter()
+        var factoryCallCount = 0
+        let tracker = ScreenTimeTracker(
+            resetGracePeriod: 5.0,
+            lifecycleNotificationCenter: center,
+            makeLifecycleNotificationCenter: {
+                factoryCallCount += 1
+                return NotificationCenter()
+            },
+            appStateProvider: MockAppStateProvider(state: .background)
+        )
+        defer { tracker.stop() }
+
+        tracker.setThreshold(1.0, for: .eyes)
+        let exp = expectation(description: "threshold fires via injected lifecycle notification center")
+        tracker.onThresholdReached = { type in
+            if type == .eyes { exp.fulfill() }
+        }
+
+        center.post(name: UIApplication.didBecomeActiveNotification, object: nil)
+
+        await fulfillment(of: [exp], timeout: 4.0)
+        XCTAssertEqual(factoryCallCount, 0)
+    }
+
     // MARK: - onThresholdReached callback
 
     func test_onThresholdReached_canBeAssigned() {
