@@ -12,13 +12,19 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
 
     private let notificationCenter: UserNotificationCenterDelegating?
     private let registerMetricKitSubscriber: () -> Void
+    private let launchArguments: [String]
+    private let uiTestDefaults: UserDefaults
 
     init(
         notificationCenter: UserNotificationCenterDelegating? = nil,
-        registerMetricKitSubscriber: @escaping () -> Void = { MetricKitSubscriber.shared.register() }
+        registerMetricKitSubscriber: @escaping () -> Void = { MetricKitSubscriber.shared.register() },
+        launchArguments: [String] = CommandLine.arguments,
+        uiTestDefaults: UserDefaults = .standard
     ) {
         self.notificationCenter = notificationCenter
         self.registerMetricKitSubscriber = registerMetricKitSubscriber
+        self.launchArguments = launchArguments
+        self.uiTestDefaults = uiTestDefaults
         super.init()
 #if DEBUG
         preSeedUITestDefaults()
@@ -37,18 +43,17 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     /// prevents `TrueInterruptSkippedBanner` from ever rendering on the first
     /// cold launch (#457).
     private func preSeedUITestDefaults() {
-        let args = CommandLine.arguments
-        if args.contains("--simulate-screen-time-not-determined") {
-            UserDefaults.standard.set(
+        if launchArguments.contains("--simulate-screen-time-not-determined") {
+            uiTestDefaults.set(
                 ScreenTimeAuthorizationStatus.notDetermined.rawValue,
                 forKey: AppStorageKey.uiTestScreenTimeStatus
             )
             // Ensure the banner-dismissed flag is clear so the banner renders.
-            UserDefaults.standard.set(false, forKey: AppStorageKey.trueInterruptSkippedBannerDismissed)
+            uiTestDefaults.set(false, forKey: AppStorageKey.trueInterruptSkippedBannerDismissed)
         } else {
             // Remove any stale stub key so non-True-Interrupt launches use the
             // real ScreenTimeAuthorizationNoop and don't accidentally show the banner.
-            UserDefaults.standard.removeObject(forKey: AppStorageKey.uiTestScreenTimeStatus)
+            uiTestDefaults.removeObject(forKey: AppStorageKey.uiTestScreenTimeStatus)
         }
     }
 #endif
@@ -97,8 +102,8 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     /// builds, closing the production-settings-reset vulnerability (re: #350/#405).
 #if DEBUG
     private func applyUITestLaunchArguments() {
-        let args = CommandLine.arguments
-        let defaults = UserDefaults.standard
+        let args = launchArguments
+        let defaults = uiTestDefaults
         defaults.removeObject(forKey: AppStorageKey.uiTestOverlayType)
         if args.contains("--skip-onboarding") {
             defaults.set(true, forKey: AppStorageKey.hasSeenOnboarding)

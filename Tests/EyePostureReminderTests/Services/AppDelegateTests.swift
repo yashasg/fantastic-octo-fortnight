@@ -159,6 +159,37 @@ final class AppDelegateTests: XCTestCase {
         )
     }
 
+#if DEBUG
+    func test_init_preSeedsScreenTimeStatus_usingInjectedLaunchArgumentsAndDefaults() throws {
+        let defaults = try makeIsolatedDefaults(suffix: #function)
+        defaults.removeObject(forKey: AppStorageKey.uiTestScreenTimeStatus)
+        defaults.set(true, forKey: AppStorageKey.trueInterruptSkippedBannerDismissed)
+
+        _ = AppDelegate(
+            launchArguments: ["--simulate-screen-time-not-determined"],
+            uiTestDefaults: defaults
+        )
+
+        XCTAssertEqual(
+            defaults.string(forKey: AppStorageKey.uiTestScreenTimeStatus),
+            ScreenTimeAuthorizationStatus.notDetermined.rawValue
+        )
+        XCTAssertFalse(defaults.bool(forKey: AppStorageKey.trueInterruptSkippedBannerDismissed))
+    }
+
+    func test_init_withoutSimulateFlag_clearsInjectedScreenTimeStatusKey() throws {
+        let defaults = try makeIsolatedDefaults(suffix: #function)
+        defaults.set("stale", forKey: AppStorageKey.uiTestScreenTimeStatus)
+
+        _ = AppDelegate(
+            launchArguments: ["--skip-onboarding"],
+            uiTestDefaults: defaults
+        )
+
+        XCTAssertNil(defaults.string(forKey: AppStorageKey.uiTestScreenTimeStatus))
+    }
+#endif
+
     // MARK: - Category-identifier routing logic (ReminderType parsing)
 
     /// The two valid reminder category identifiers must parse to the correct types.
@@ -254,5 +285,17 @@ final class AppDelegateTests: XCTestCase {
         // but `scheduleReminders` must complete without crashing.
         // The coordinator operates in screen-time mode so no UNNotification is scheduled.
         XCTAssertNil(settings.snoozedUntil, "scheduleReminders must not set a snooze when none was active")
+    }
+
+    private func makeIsolatedDefaults(suffix: String) throws -> UserDefaults {
+        let suiteName = "AppDelegateTests.\(suffix).\(UUID().uuidString)"
+        guard let defaults = UserDefaults(suiteName: suiteName) else {
+            throw XCTSkip("Failed to create isolated UserDefaults suite")
+        }
+        defaults.removePersistentDomain(forName: suiteName)
+        addTeardownBlock {
+            defaults.removePersistentDomain(forName: suiteName)
+        }
+        return defaults
     }
 }
