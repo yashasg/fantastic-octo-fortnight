@@ -25,6 +25,34 @@ final class OverlayManagerTests: XCTestCase {
 
     // MARK: - Initializer DI seams
 
+    func test_init_withoutAudioManager_usesFactoryOnce() {
+        var factoryCallCount = 0
+        let mockAudio = MockMediaControlling()
+        _ = OverlayManager(
+            audioManager: nil,
+            makeAudioManager: {
+                factoryCallCount += 1
+                return mockAudio
+            }
+        )
+
+        XCTAssertEqual(factoryCallCount, 1)
+    }
+
+    func test_init_withAudioManager_bypassesFactory() {
+        var factoryCalled = false
+        let injectedAudio = MockMediaControlling()
+        _ = OverlayManager(
+            audioManager: injectedAudio,
+            makeAudioManager: {
+                factoryCalled = true
+                return MockMediaControlling()
+            }
+        )
+
+        XCTAssertFalse(factoryCalled)
+    }
+
     func test_init_withoutNotificationCenter_usesFactoryOnce() {
         var factoryCallCount = 0
         let factoryCenter = NotificationCenter()
