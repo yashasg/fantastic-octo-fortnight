@@ -39,6 +39,20 @@ final class SettingsViewModelExtendedTests: XCTestCase {
         )
     }
 
+    private func makeSUT(
+        maxSnoozeCount: Int = 2,
+        dateProvider: DateProviding? = nil,
+        makeDateProvider: @escaping SettingsViewModel.DateProviderFactory
+    ) -> SettingsViewModel {
+        SettingsViewModel(
+            settings: settings,
+            scheduler: mockScheduler,
+            maxSnoozeCount: maxSnoozeCount,
+            dateProvider: dateProvider,
+            makeDateProvider: makeDateProvider
+        )
+    }
+
     // MARK: - SnoozeOption.allCases
 
     func test_snoozeOptions_countIsThree() {
@@ -379,6 +393,54 @@ final class SettingsViewModelExtendedTests: XCTestCase {
     }
 
     // MARK: - DateProviding seam (deterministic snooze tests)
+
+    @available(*, deprecated, message: "Tests legacy snooze(for:) date-provider seam")
+    func test_init_withoutDateProvider_usesFactoryDateProviderForSnoozeComputation() throws {
+        let fixedNow = Date(timeIntervalSince1970: 2_000_000)
+        let fallbackProvider = MockDateProvider(now: fixedNow)
+        var factoryCallCount = 0
+        let sut = makeSUT(
+            dateProvider: nil,
+            makeDateProvider: {
+                factoryCallCount += 1
+                return fallbackProvider
+            }
+        )
+
+        sut.snooze(for: 5)
+
+        XCTAssertEqual(factoryCallCount, 1, "Factory must be used when explicit dateProvider is absent")
+        let snoozedUntil = try XCTUnwrap(settings.snoozedUntil)
+        XCTAssertEqual(
+            snoozedUntil.timeIntervalSince1970,
+            fixedNow.addingTimeInterval(5 * 60).timeIntervalSince1970,
+            accuracy: 0.001
+        )
+    }
+
+    @available(*, deprecated, message: "Tests legacy snooze(for:) date-provider seam")
+    func test_init_withExplicitDateProvider_bypassesFactory() throws {
+        let explicitNow = Date(timeIntervalSince1970: 3_000_000)
+        let explicitProvider = MockDateProvider(now: explicitNow)
+        var factoryCallCount = 0
+        let sut = makeSUT(
+            dateProvider: explicitProvider,
+            makeDateProvider: {
+                factoryCallCount += 1
+                return MockDateProvider(now: .distantPast)
+            }
+        )
+
+        sut.snooze(for: 5)
+
+        XCTAssertEqual(factoryCallCount, 0, "Factory must not run when explicit dateProvider is provided")
+        let snoozedUntil = try XCTUnwrap(settings.snoozedUntil)
+        XCTAssertEqual(
+            snoozedUntil.timeIntervalSince1970,
+            explicitNow.addingTimeInterval(5 * 60).timeIntervalSince1970,
+            accuracy: 0.001
+        )
+    }
 
     func test_isSnoozeActive_withMockedNow_exactlyAtExpiry_returnsFalse() {
         let fixedNow = Date(timeIntervalSince1970: 1_000_000)

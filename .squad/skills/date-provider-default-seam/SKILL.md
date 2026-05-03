@@ -37,6 +37,8 @@ Use when a service method currently takes `now: Date = Date()` and production co
 - `Tests/EyePostureReminderTests/Services/AppCoordinatorExtendedTests.swift`
 - `EyePostureReminder/ViewModels/SettingsViewModel.swift`
 - `Tests/EyePostureReminderTests/ViewModels/SettingsViewModelExtendedTests.swift`
+- `EyePostureReminder/ViewModels/SettingsViewModel.swift` (`makeDateProvider` constructor seam)
+- `Tests/EyePostureReminderTests/ViewModels/SettingsViewModelExtendedTests.swift` (`snooze(for:)` fallback-used/explicit-bypass assertions)
 - `EyePostureReminder/Services/AppCoordinator.swift`
 - `Tests/EyePostureReminderTests/Services/AppCoordinatorTests.swift`
 - `Tests/EyePostureReminderTests/Services/AppCoordinatorExtendedTests.swift`
