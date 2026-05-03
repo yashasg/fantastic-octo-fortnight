@@ -179,3 +179,7 @@
 ## Learnings
 
 - For view-model constructor clocks, prefer `dateProvider: DateProviding? = nil` plus `makeDateProvider` fallback and resolve once in `init`; add fallback-used and explicit-bypass tests through `snooze(for:)` to remove eager `SystemDateProvider()` coupling while preserving behavior (`EyePostureReminder/ViewModels/SettingsViewModel.swift`, `Tests/EyePostureReminderTests/ViewModels/SettingsViewModelExtendedTests.swift`).
+- For singleton-backed dependencies inside onboarding permission flow, prefer `notificationCenter: NotificationScheduling? = nil` plus `makeNotificationCenter` fallback and resolve once in `init`; this removes eager `UNUserNotificationCenter.current()` default-argument coupling while preserving runtime behavior.
+- Keep seam tests surgical in view-layer DI slices: one fallback-used assertion and one explicit-injection-bypass assertion are sufficient when body rendering already has coverage.
+- User preference reinforced: continue #462 with tiny DI/SRP micro-slices and always validate with `./scripts/build.sh build` and `./scripts/build.sh test`.
+- Key file paths: `EyePostureReminder/Views/Onboarding/OnboardingPermissionView.swift`, `Tests/EyePostureReminderTests/Views/OnboardingViewTests.swift`, `.squad/skills/notification-center-factory-seam/SKILL.md`.

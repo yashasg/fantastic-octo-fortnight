@@ -18,6 +18,8 @@ Use when a coordinator/service initializer defaults a notification dependency di
 ## Examples
 - `EyePostureReminder/Services/AppCoordinator.swift`
 - `Tests/EyePostureReminderTests/Services/AppCoordinatorTests.swift`
+- `EyePostureReminder/Views/Onboarding/OnboardingPermissionView.swift`
+- `Tests/EyePostureReminderTests/Views/OnboardingViewTests.swift`
 
 ## Anti-Patterns
 - `notificationCenter: NotificationScheduling = UNUserNotificationCenter.current()` in initializer signatures.
