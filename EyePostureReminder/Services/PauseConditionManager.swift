@@ -109,18 +109,28 @@ final class LiveCarPlayDetector: CarPlayDetecting {
     private(set) var isCarPlayActive: Bool = false
     var onCarPlayChanged: ((Bool) -> Void)?
 
+    private let notificationCenter: NotificationCenter
+    nonisolated(unsafe) private let isCarPlayActiveProvider: () -> Bool
     private var observer: NSObjectProtocol?
 
-    func startMonitoring() {
-        isCarPlayActive = checkCarPlay()
+    init(
+        notificationCenter: NotificationCenter = .default,
+        isCarPlayActiveProvider: @escaping () -> Bool = LiveCarPlayDetector.defaultIsCarPlayActive
+    ) {
+        self.notificationCenter = notificationCenter
+        self.isCarPlayActiveProvider = isCarPlayActiveProvider
+    }
 
-        observer = NotificationCenter.default.addObserver(
+    func startMonitoring() {
+        isCarPlayActive = isCarPlayActiveProvider()
+
+        observer = notificationCenter.addObserver(
             forName: AVAudioSession.routeChangeNotification,
             object: nil,
             queue: nil
         ) { [weak self] _ in
             guard let self else { return }
-            let active = self.checkCarPlay()
+            let active = self.isCarPlayActiveProvider()
             // Use [weak self] on the inner dispatch to prevent a stale-write race:
             // if stopMonitoring() + startMonitoring() run while this block is queued,
             // the freshly-initialised isCarPlayActive must not be overwritten. Fixes #492.
@@ -134,14 +144,14 @@ final class LiveCarPlayDetector: CarPlayDetecting {
 
     func stopMonitoring() {
         if let observer {
-            NotificationCenter.default.removeObserver(observer)
+            notificationCenter.removeObserver(observer)
         }
         observer = nil
     }
 
     // nonisolated: required because NotificationCenter.addObserver(forName:queue:) closure
     // is not actor-isolated; the callback dispatches back to main for state mutation.
-    nonisolated private func checkCarPlay() -> Bool {
+    nonisolated private static func defaultIsCarPlayActive() -> Bool {
         // .carPlay port may not be exposed in all SDK configurations; match via raw value.
         let carPlayPort = AVAudioSession.Port(rawValue: "CarPlay")
         let outputs = AVAudioSession.sharedInstance().currentRoute.outputs
