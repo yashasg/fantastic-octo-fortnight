@@ -1,6 +1,12 @@
 import MetricKit
 import os
 
+protocol MetricKitManaging {
+    func add(_ subscriber: MXMetricManagerSubscriber)
+}
+
+extension MXMetricManager: MetricKitManaging {}
+
 /// Subscribes to `MXMetricManager` to receive daily metric and diagnostic payloads.
 ///
 /// Registered once in `AppDelegate.application(_:didFinishLaunchingWithOptions:)`.
@@ -19,11 +25,16 @@ final class MetricKitSubscriber: NSObject, MXMetricManagerSubscriber {
 
     static let shared = MetricKitSubscriber()
 
-    private override init() { super.init() }
+    private let metricManager: MetricKitManaging
+
+    init(metricManager: MetricKitManaging = MXMetricManager.shared) {
+        self.metricManager = metricManager
+        super.init()
+    }
 
     /// Add this subscriber to `MXMetricManager`. Call once on app launch.
     func register() {
-        MXMetricManager.shared.add(self)
+        metricManager.add(self)
         Logger.lifecycle.info("MetricKit subscriber registered")
     }
 
