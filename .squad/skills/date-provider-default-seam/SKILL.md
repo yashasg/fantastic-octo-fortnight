@@ -13,6 +13,7 @@ Use when a service method currently takes `now: Date = Date()` and production co
 - Inject `DateProviding` at the owning service/coordinator.
 - Add a zero-argument method that calls the explicit overload with `dateProvider.now`.
 - Keep `func method(now: Date)` for deterministic test control.
+- For guard logic without overloads (e.g., snooze-active checks), route comparisons through `dateProvider.now` and assert both injected-now inversion cases in tests.
 
 ## Benefits
 - Production path no longer depends on implicit `Date()` globals.
@@ -22,3 +23,5 @@ Use when a service method currently takes `now: Date = Date()` and production co
 ## Example
 - `EyePostureReminder/Services/AppCoordinatorWatchdogRecovery.swift`
 - `Tests/EyePostureReminderTests/Services/AppCoordinatorWatchdogHeartbeatTests.swift`
+- `EyePostureReminder/Services/AppCoordinator+ReminderScheduling.swift`
+- `Tests/EyePostureReminderTests/Services/AppCoordinatorExtendedTests.swift`

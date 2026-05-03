@@ -37,7 +37,8 @@ final class AppCoordinatorExtendedTests: XCTestCase {
         notifCenter: MockNotificationCenter = MockNotificationCenter(),
         screenTimeTracker screenTimeTrackerArg: MockScreenTimeTracker? = nil,
         pauseConditionProvider pauseArg: PauseConditionProviding? = nil,
-        ipcStore ipcStoreArg: MockAppGroupIPCRecorder? = nil
+        ipcStore ipcStoreArg: MockAppGroupIPCRecorder? = nil,
+        dateProvider: DateProviding = SystemDateProvider()
     ) -> (
         coordinator: AppCoordinator,
         overlay: MockOverlayPresenting,
@@ -55,7 +56,8 @@ final class AppCoordinatorExtendedTests: XCTestCase {
             overlayManager: overlay,
             screenTimeTracker: tracker,
             pauseConditionProvider: pause,
-            ipcStore: ipcStore
+            ipcStore: ipcStore,
+            dateProvider: dateProvider
         )
         return (coordinator, overlay, tracker, notifCenter)
     }
@@ -461,6 +463,32 @@ final class AppCoordinatorExtendedTests: XCTestCase {
         defer { coordinator.stopFallbackTimers() }
 
         coordinator.cancelAllReminders()
+    }
+
+    func test_cancelAllReminders_withFutureSnoozeAccordingToDateProvider_armsSnoozeWakeTask() {
+        let mockDateProvider = MockDateProvider(now: Date(timeIntervalSinceNow: -3600))
+        settings.snoozedUntil = Date(timeIntervalSinceNow: -10)
+        let (coordinator, _, _, _) = makeCoordinator(dateProvider: mockDateProvider)
+        defer { coordinator.stopFallbackTimers() }
+
+        coordinator.cancelAllReminders()
+
+        XCTAssertNotNil(
+            coordinator.snoozeWakeTask,
+            "cancelAllReminders should evaluate snooze activity using injected DateProviding")
+    }
+
+    func test_cancelAllReminders_withExpiredSnoozeAccordingToDateProvider_doesNotArmSnoozeWakeTask() {
+        let mockDateProvider = MockDateProvider(now: Date(timeIntervalSinceNow: 3600))
+        settings.snoozedUntil = Date(timeIntervalSinceNow: 10)
+        let (coordinator, _, _, _) = makeCoordinator(dateProvider: mockDateProvider)
+        defer { coordinator.stopFallbackTimers() }
+
+        coordinator.cancelAllReminders()
+
+        XCTAssertNil(
+            coordinator.snoozeWakeTask,
+            "cancelAllReminders should skip snooze wake when injected DateProviding marks snooze expired")
     }
 
     /// Regression test for #267: `cancelAllReminders()` must clear the overlay
