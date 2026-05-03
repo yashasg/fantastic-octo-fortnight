@@ -82,6 +82,37 @@ final class DeviceActivityMonitorTests: XCTestCase {
         XCTAssertEqual(session.triggeredAt, fixedDate)
     }
 
+    func test_shieldSession_fromType_whenTriggeredAtMissing_usesFactory() {
+        var factoryCallCount = 0
+        let expectedDate = Date(timeIntervalSince1970: 1_234_567)
+        let session = ShieldSession(
+            type: .eyes,
+            durationSeconds: 20,
+            makeTriggeredAt: {
+                factoryCallCount += 1
+                return expectedDate
+            }
+        )
+        XCTAssertEqual(session.triggeredAt, expectedDate)
+        XCTAssertEqual(factoryCallCount, 1)
+    }
+
+    func test_shieldSession_fromType_whenTriggeredAtProvided_bypassesFactory() {
+        var factoryCallCount = 0
+        let providedDate = Date(timeIntervalSince1970: 2_468_000)
+        let session = ShieldSession(
+            type: .posture,
+            durationSeconds: 20,
+            triggeredAt: providedDate,
+            makeTriggeredAt: {
+                factoryCallCount += 1
+                return Date(timeIntervalSince1970: 0)
+            }
+        )
+        XCTAssertEqual(session.triggeredAt, providedDate)
+        XCTAssertEqual(factoryCallCount, 0)
+    }
+
     func test_shieldSession_fromType_defaultsTriggeredAtToNow() {
         let before = Date()
         let session = ShieldSession(type: .eyes, durationSeconds: 20)

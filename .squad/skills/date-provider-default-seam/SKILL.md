@@ -24,6 +24,7 @@ Use when a service method currently takes `now: Date = Date()` and production co
 - For lifecycle session metrics initialized during scheduling, seed `sessionStartTime` from `dateProvider.now` (not `Date()`) so `appSessionEnd` duration assertions stay deterministic under injected clocks.
 - For launch-readiness latency metrics, capture foreground-entry timestamps and latency deltas from the same injected `dateProvider.now` seam; in tests, advance `MockDateProvider.now` during an awaited dependency callback to prove wall-clock time is not used.
 - For constructor-level clock defaults, prefer `dateProvider: DateProviding? = nil` plus `makeDateProvider` fallback and resolve once in `init`; add paired fallback-used and explicit-bypass tests that assert behavior through a public method.
+- For value-type convenience initializers that expose `Date()` defaults, switch to `timestamp: Date? = nil` plus `makeTimestamp` fallback factory and resolve in-body (`timestamp ?? makeTimestamp()`); add fallback-used and explicit-date-bypass tests.
 
 ## Benefits
 - Production path no longer depends on implicit `Date()` globals.
@@ -44,3 +45,5 @@ Use when a service method currently takes `now: Date = Date()` and production co
 - `Tests/EyePostureReminderTests/Services/AppCoordinatorExtendedTests.swift`
 - `EyePostureReminder/Services/AppCoordinator.swift` (`makeDateProvider` seam)
 - `Tests/EyePostureReminderTests/Services/AppCoordinatorTests.swift` (`cancelAllReminders` fallback/bypass assertions)
+- `EyePostureReminder/Services/ScreenTimeShieldTypes.swift` (`makeTriggeredAt` convenience-init seam)
+- `Tests/EyePostureReminderTests/Services/DeviceActivityMonitorTests.swift` (`ShieldSession` fallback/bypass assertions)
