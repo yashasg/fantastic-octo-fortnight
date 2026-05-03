@@ -167,6 +167,27 @@ final class AppDelegateTests: XCTestCase {
         )
     }
 
+    func test_didFinishLaunching_withNilNotificationCenter_usesInjectedFactory() {
+        let factoryCenter = MockUserNotificationCenter()
+        let mockMetricKitSubscriber = MockMetricKitSubscriber()
+        var makeNotificationCenterCallCount = 0
+        let sut = AppDelegate(
+            notificationCenter: nil,
+            metricKitSubscriber: mockMetricKitSubscriber,
+            makeNotificationCenter: {
+                makeNotificationCenterCallCount += 1
+                return factoryCenter
+            }
+        )
+
+        let didFinish = sut.application(UIApplication.shared, didFinishLaunchingWithOptions: nil)
+
+        XCTAssertTrue(didFinish)
+        XCTAssertEqual(makeNotificationCenterCallCount, 1)
+        XCTAssertTrue(factoryCenter.delegate === sut)
+        XCTAssertEqual(mockMetricKitSubscriber.registerCallCount, 1)
+    }
+
 #if DEBUG
     func test_init_preSeedsScreenTimeStatus_usingInjectedLaunchArgumentsAndDefaults() throws {
         let defaults = try makeIsolatedDefaults(suffix: #function)
