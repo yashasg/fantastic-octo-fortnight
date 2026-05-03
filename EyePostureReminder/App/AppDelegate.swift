@@ -19,6 +19,10 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     private let makeNotificationCenter: () -> UserNotificationCenterDelegating
     private let makeMetricKitSubscriber: () -> MetricKitSubscribing
     private let makeSettingsStore: @MainActor () -> SettingsStore
+    private lazy var resolvedNotificationCenter: UserNotificationCenterDelegating =
+        notificationCenter ?? makeNotificationCenter()
+    private lazy var resolvedMetricKitSubscriber: MetricKitSubscribing =
+        metricKitSubscriber ?? makeMetricKitSubscriber()
 
     init(
         notificationCenter: UserNotificationCenterDelegating? = nil,
@@ -79,10 +83,9 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
-        let notificationCenter = notificationCenter ?? makeNotificationCenter()
-        notificationCenter.delegate = self
+        resolvedNotificationCenter.delegate = self
         installUncaughtExceptionHandler()
-        (metricKitSubscriber ?? makeMetricKitSubscriber()).register()
+        resolvedMetricKitSubscriber.register()
 #if DEBUG
         applyUITestLaunchArguments()
 #endif
