@@ -23,3 +23,7 @@ When a service needs to read a test-only override from `UserDefaults`, inject th
 - Removes hidden global coupling.
 - Prevents cross-test contamination.
 - Keeps behavior unchanged in production by preserving `.standard` as the default.
+
+## Examples
+- `EyePostureReminder/App/AppDelegate.swift` + `Tests/EyePostureReminderTests/Services/AppDelegateTests.swift`
+- `EyePostureReminder/Services/AppCoordinator.swift` + `Tests/EyePostureReminderTests/Services/AppCoordinatorUITestStatusStoreTests.swift`
