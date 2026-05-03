@@ -731,6 +731,72 @@ final class AppCoordinatorTests: XCTestCase {
             "Snooze-wake notification must have no sound (silent)")
     }
 
+    func test_scheduleReminders_usesInjectedDateProvider_whenWallClockFutureButInjectedExpired() async {
+        let mockDateProvider = MockDateProvider(now: Date(timeIntervalSinceNow: 3_600))
+        let mockNotif = MockNotificationCenter()
+        mockNotif.authorizationGranted = true
+        let coordinator = AppCoordinator(
+            settings: settings,
+            scheduler: ReminderScheduler(notificationCenter: mockNotif),
+            notificationCenter: mockNotif,
+            overlayManager: MockOverlayPresenting(),
+            screenTimeTracker: MockScreenTimeTracker(),
+            pauseConditionProvider: MockPauseConditionProvider(),
+            ipcStore: MockAppGroupIPCRecorder(),
+            dateProvider: mockDateProvider
+        )
+        defer { coordinator.stopFallbackTimers() }
+
+        settings.globalEnabled = true
+        settings.eyesEnabled = true
+        settings.postureEnabled = false
+        settings.snoozedUntil = Date(timeIntervalSinceNow: 300)
+        settings.snoozeCount = 2
+
+        await coordinator.scheduleReminders()
+
+        XCTAssertNil(settings.snoozedUntil)
+        XCTAssertEqual(settings.snoozeCount, 0)
+        XCTAssertEqual(
+            reminderRequests(from: mockNotif).count,
+            1,
+            "scheduleReminders should clear stale snooze and continue scheduling when injected DateProviding marks it expired")
+    }
+
+    func test_scheduleReminders_usesInjectedDateProvider_whenWallClockPastButInjectedFuture() async {
+        let mockDateProvider = MockDateProvider(now: Date(timeIntervalSinceNow: -3_600))
+        let mockNotif = MockNotificationCenter()
+        mockNotif.authorizationGranted = true
+        let tracker = MockScreenTimeTracker()
+        let coordinator = AppCoordinator(
+            settings: settings,
+            scheduler: ReminderScheduler(notificationCenter: mockNotif),
+            notificationCenter: mockNotif,
+            overlayManager: MockOverlayPresenting(),
+            screenTimeTracker: tracker,
+            pauseConditionProvider: MockPauseConditionProvider(),
+            ipcStore: MockAppGroupIPCRecorder(),
+            dateProvider: mockDateProvider
+        )
+        defer { coordinator.stopFallbackTimers() }
+
+        let wallClockPast = Date(timeIntervalSinceNow: -60)
+        settings.globalEnabled = true
+        settings.eyesEnabled = true
+        settings.postureEnabled = false
+        settings.snoozedUntil = wallClockPast
+        settings.snoozeCount = 2
+
+        await coordinator.scheduleReminders()
+
+        XCTAssertEqual(settings.snoozedUntil, wallClockPast)
+        XCTAssertEqual(settings.snoozeCount, 2)
+        XCTAssertEqual(tracker.pauseAllCallCount, 1)
+        XCTAssertTrue(
+            reminderRequests(from: mockNotif).isEmpty,
+            "scheduleReminders should suppress periodic requests when injected DateProviding marks snooze active")
+    }
+
     // MARK: - Background Scheduling Regression (P0)
     //
     // P0: background reminders were disabled — the app only reminded users while foregrounded
