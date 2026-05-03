@@ -89,16 +89,19 @@ public final class AppGroupIPCStore {
 
     private let defaults: UserDefaults?
     private let maxEventCount: Int
+    private let notificationCenter: NotificationCenter
     private let lock = NSLock()
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
 
     public init(
         defaults: UserDefaults? = AppGroupDefaults.resolve(consumer: "AppGroupIPCStore"),
-        maxEventCount: Int = 100
+        maxEventCount: Int = 100,
+        notificationCenter: NotificationCenter = .default
     ) {
         self.defaults = defaults
         self.maxEventCount = max(1, maxEventCount)
+        self.notificationCenter = notificationCenter
     }
 
     public var isAvailable: Bool {
@@ -133,7 +136,7 @@ public final class AppGroupIPCStore {
             return true
         }
         if let changedValue {
-            NotificationCenter.default.post(
+            notificationCenter.post(
                 name: Self.trueInterruptEnabledDidChangeNotification,
                 object: self,
                 userInfo: [Self.trueInterruptEnabledValueUserInfoKey: changedValue]

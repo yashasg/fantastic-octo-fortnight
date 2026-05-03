@@ -11,7 +11,7 @@ Use when a service/coordinator registers observers via `NotificationCenter.defau
 
 ## Patterns
 - Add a `NotificationCenter` dependency with default `.default` in the initializer.
-- Store it on the type and use it for both `addObserver` and `removeObserver`.
+- Store it on the type and use it for all notification interactions (`addObserver`, `removeObserver`, and `post`).
 - For observer callbacks that read runtime state, inject a tiny state-provider closure (or protocol) so tests can drive callback outcomes deterministically.
 - In `@MainActor` types where callback closures are nonisolated/sendable, keep provider seams compile-safe (for example with `nonisolated(unsafe)` immutable closure storage) and dispatch UI-state mutations back to main.
 - In tests, inject a fresh `NotificationCenter()` and post notifications there.
@@ -22,6 +22,7 @@ Use when a service/coordinator registers observers via `NotificationCenter.defau
 - `EyePostureReminder/Services/ScreenTimeTracker.swift` + `Tests/EyePostureReminderTests/Services/ScreenTimeTrackerTests.swift`
 - `EyePostureReminder/Services/PauseConditionManager.swift` (`LiveCarPlayDetector`) + `Tests/EyePostureReminderTests/Services/LiveCarPlayDetectorTests.swift`
 - `EyePostureReminder/Services/OverlayManager.swift` + `Tests/EyePostureReminderTests/Services/OverlayManagerExtendedTests.swift`
+- `Extensions/Shared/AppGroupIPCStore.swift` + `Tests/EyePostureReminderTests/Services/AppGroupIPCStoreTests.swift`
 
 ## Anti-Patterns
 - Registering on `NotificationCenter.default` and removing on a different center.

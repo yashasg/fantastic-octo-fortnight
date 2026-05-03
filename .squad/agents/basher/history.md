@@ -156,3 +156,4 @@
 
 ## Learnings
 - AppCoordinator launch-context seam: prefer `processEnvironment: [String: String]? = nil` plus `processEnvironmentProvider` fallback, resolve once in `init`, and thread the resolved value into `resolveScreenTimeAuthorization` so tests can assert fallback-used and explicit-bypass paths without touching `ProcessInfo.processInfo.environment` globals.
+- For notification-emitting shared stores, inject `NotificationCenter` and use it for `post` calls; add a seam test that observes on the injected center plus a negative assertion on `.default` to prove global isolation without behavior changes (`Extensions/Shared/AppGroupIPCStore.swift`, `Tests/EyePostureReminderTests/Services/AppGroupIPCStoreTests.swift`).
