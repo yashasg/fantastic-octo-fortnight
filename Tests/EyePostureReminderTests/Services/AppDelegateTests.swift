@@ -6,6 +6,14 @@ private final class MockUserNotificationCenter: UserNotificationCenterDelegating
     weak var delegate: UNUserNotificationCenterDelegate?
 }
 
+private final class MockMetricKitSubscriber: MetricKitSubscribing {
+    private(set) var registerCallCount = 0
+
+    func register() {
+        registerCallCount += 1
+    }
+}
+
 /// Unit tests for `AppDelegate` notification routing logic.
 ///
 /// ## What is tested here
@@ -139,10 +147,10 @@ final class AppDelegateTests: XCTestCase {
 
     func test_didFinishLaunching_registersDelegateAndMetricKitViaInjectedSeams() {
         let mockCenter = MockUserNotificationCenter()
-        var metricKitRegisterCallCount = 0
+        let mockMetricKitSubscriber = MockMetricKitSubscriber()
         let sut = AppDelegate(
             notificationCenter: mockCenter,
-            registerMetricKitSubscriber: { metricKitRegisterCallCount += 1 }
+            metricKitSubscriber: mockMetricKitSubscriber
         )
 
         let didFinish = sut.application(UIApplication.shared, didFinishLaunchingWithOptions: nil)
@@ -153,7 +161,7 @@ final class AppDelegateTests: XCTestCase {
             "didFinishLaunching must register AppDelegate as notification center delegate"
         )
         XCTAssertEqual(
-            metricKitRegisterCallCount,
+            mockMetricKitSubscriber.registerCallCount,
             1,
             "didFinishLaunching must register MetricKit exactly once"
         )
@@ -197,7 +205,7 @@ final class AppDelegateTests: XCTestCase {
         var makeSettingsStoreCallCount = 0
         let sut = AppDelegate(
             notificationCenter: mockCenter,
-            registerMetricKitSubscriber: {},
+            metricKitSubscriber: MockMetricKitSubscriber(),
             launchArguments: ["--show-overlay-eyes"],
             uiTestDefaults: defaults,
             makeSettingsStore: {
