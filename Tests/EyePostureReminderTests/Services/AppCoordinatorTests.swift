@@ -153,6 +153,58 @@ final class AppCoordinatorTests: XCTestCase {
         XCTAssertEqual(coordinator.notificationAuthStatus, .denied)
     }
 
+    func test_init_withoutIPCStore_usesInjectedIPCStoreFactory() async {
+        struct FactoryReadEventsError: Error {}
+        var factoryCallCount = 0
+        let factoryStore = MockAppGroupIPCRecorder()
+        factoryStore.readEventsError = FactoryReadEventsError()
+        let coordinator = AppCoordinator(
+            settings: SettingsStore(store: MockSettingsPersisting()),
+            scheduler: ReminderScheduler(notificationCenter: MockNotificationCenter()),
+            notificationCenter: MockNotificationCenter(),
+            screenTimeTracker: MockScreenTimeTracker(),
+            pauseConditionProvider: MockPauseConditionProvider(),
+            ipcStore: nil,
+            makeIPCStore: {
+                factoryCallCount += 1
+                return factoryStore
+            }
+        )
+        defer { coordinator.stopFallbackTimers() }
+
+        XCTAssertThrowsError(try coordinator.ipcStore.readEvents()) { error in
+            XCTAssertTrue(error is FactoryReadEventsError)
+        }
+
+        XCTAssertEqual(factoryCallCount, 1)
+    }
+
+    func test_init_withExplicitIPCStore_doesNotCallIPCStoreFactory() async {
+        struct InjectedReadEventsError: Error {}
+        var factoryCallCount = 0
+        let injectedStore = MockAppGroupIPCRecorder()
+        injectedStore.readEventsError = InjectedReadEventsError()
+        let coordinator = AppCoordinator(
+            settings: SettingsStore(store: MockSettingsPersisting()),
+            scheduler: ReminderScheduler(notificationCenter: MockNotificationCenter()),
+            notificationCenter: MockNotificationCenter(),
+            screenTimeTracker: MockScreenTimeTracker(),
+            pauseConditionProvider: MockPauseConditionProvider(),
+            ipcStore: injectedStore,
+            makeIPCStore: {
+                factoryCallCount += 1
+                return MockAppGroupIPCRecorder()
+            }
+        )
+        defer { coordinator.stopFallbackTimers() }
+
+        XCTAssertThrowsError(try coordinator.ipcStore.readEvents()) { error in
+            XCTAssertTrue(error is InjectedReadEventsError)
+        }
+
+        XCTAssertEqual(factoryCallCount, 0)
+    }
+
     func test_init_withUITestScreenTimeStatus_keepsStatusForRelaunches() {
         UserDefaults.standard.set(
             ScreenTimeAuthorizationStatus.notDetermined.rawValue,

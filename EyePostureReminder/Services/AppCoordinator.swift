@@ -191,7 +191,8 @@ final class AppCoordinator: ObservableObject {
         launchArgumentsProvider: @escaping () -> [String] = { CommandLine.arguments },
         uiTestMode: Bool? = nil,
         deviceActivityMonitor: DeviceActivityMonitorProviding? = nil,
-        ipcStore: AppGroupIPCProviding = AppGroupIPCStore(),
+        ipcStore: AppGroupIPCProviding? = nil,
+        makeIPCStore: @escaping () -> AppGroupIPCProviding = { AppGroupIPCStore() },
         lifecycleNotificationCenter: NotificationCenter = .default,
         watchdogHeartbeatGraceInterval: TimeInterval = 10,
         dateProvider: DateProviding = SystemDateProvider()
@@ -212,7 +213,7 @@ final class AppCoordinator: ObservableObject {
             launchArguments: resolvedLaunchArguments
         )
         self.deviceActivityMonitor = Self.resolveDeviceActivityMonitor(deviceActivityMonitor)
-        self.ipcStore = ipcStore
+        self.ipcStore = ipcStore ?? makeIPCStore()
         self.dateProvider = dateProvider
         self.lifecycleNotificationCenter = lifecycleNotificationCenter
         self.watchdogHeartbeatGraceInterval = watchdogHeartbeatGraceInterval
