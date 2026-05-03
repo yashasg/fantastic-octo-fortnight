@@ -185,7 +185,8 @@ final class AppCoordinator: ObservableObject {
         screenTimeTracker: ScreenTimeTracking? = nil,
         pauseConditionProvider: PauseConditionProviding? = nil,
         screenTimeAuthorization: ScreenTimeAuthorizationProviding? = nil,
-        uiTestStatusStore: UserDefaults = .standard,
+        uiTestStatusStore: UserDefaults? = nil,
+        makeUITestStatusStore: @escaping () -> UserDefaults = { .standard },
         processEnvironment: [String: String]? = nil,
         processEnvironmentProvider: @escaping () -> [String: String] = { ProcessInfo.processInfo.environment },
         launchArguments: [String]? = nil,
@@ -208,9 +209,10 @@ final class AppCoordinator: ObservableObject {
         self.overlayManager = Self.resolveOverlayManager(overlayManager)
         let resolvedLaunchArguments = launchArguments ?? launchArgumentsProvider()
         let resolvedProcessEnvironment = processEnvironment ?? processEnvironmentProvider()
+        let resolvedUITestStatusStore = uiTestStatusStore ?? makeUITestStatusStore()
         self.screenTimeAuthorization = Self.resolveScreenTimeAuthorization(
             screenTimeAuthorization,
-            uiTestStatusStore: uiTestStatusStore,
+            uiTestStatusStore: resolvedUITestStatusStore,
             processEnvironment: resolvedProcessEnvironment,
             launchArguments: resolvedLaunchArguments
         )
