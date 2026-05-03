@@ -19,11 +19,12 @@ Use this when service or coordinator logic branches on process launch context
 - If multiple resolver branches depend on UI-test mode, compute `let resolvedUITestMode = uiTestMode ?? isUITestMode(launchArguments:)` once in `init` and pass that value into each resolver to prevent mixed global/injected behavior.
 - For singleton-backed callbacks (e.g., app launch wiring), inject a zero-arg factory (`makeNotificationCenter`) and use it only on the fallback path so tests can validate callback behavior without invoking fragile system singletons directly.
 - For launch-argument consumers in delegates/services, use `launchArguments: [String]? = nil` with an injected `launchArgumentsProvider` fallback closure so tests can verify both fallback and explicit-argument bypass paths deterministically.
+- For coordinators that consume launch arguments in multiple places, resolve once (`let resolvedLaunchArguments = launchArguments ?? launchArgumentsProvider()`) and thread the resolved value through each branch to avoid mixed injected/global behavior.
 
 ## Examples
-- `AppCoordinator.init(..., processEnvironment: [String: String] = ProcessInfo.processInfo.environment, launchArguments: [String] = CommandLine.arguments, ...)`
+- `AppCoordinator.init(..., processEnvironment: [String: String] = ProcessInfo.processInfo.environment, launchArguments: [String]? = nil, launchArgumentsProvider: @escaping () -> [String] = { CommandLine.arguments }, ...)`
 - `resolveScreenTimeAuthorization(..., processEnvironment:, launchArguments:)` in `EyePostureReminder/Services/AppCoordinator.swift`.
-- Focused coverage in `Tests/EyePostureReminderTests/Services/AppCoordinatorUITestLaunchContextTests.swift`.
+- Focused coverage in `Tests/EyePostureReminderTests/Services/AppCoordinatorUITestLaunchContextTests.swift` (`test_init_withoutLaunchArguments_usesInjectedLaunchArgumentsProvider`, `test_init_withExplicitLaunchArguments_doesNotCallInjectedLaunchArgumentsProvider`).
 - `AppDelegate.init(..., makeSettingsStore: @escaping @MainActor () -> SettingsStore = { SettingsStore() })` with usage in `applyUITestLaunchArguments()` and seam coverage in `Tests/EyePostureReminderTests/Services/AppDelegateTests.swift`.
 - `AppDelegate.init(..., makeNotificationCenter: @escaping () -> UserNotificationCenterDelegating = { UNUserNotificationCenter.current() })` with fallback-path coverage in `test_didFinishLaunching_withNilNotificationCenter_usesInjectedFactory`.
 - `AppDelegate.init(..., launchArguments: [String]? = nil, launchArgumentsProvider: @escaping () -> [String] = { CommandLine.arguments })` with fallback/bypass coverage in `test_init_withoutLaunchArguments_usesInjectedLaunchArgumentsProvider` and `test_init_withExplicitLaunchArguments_doesNotCallInjectedLaunchArgumentsProvider`.

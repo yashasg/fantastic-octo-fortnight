@@ -185,7 +185,8 @@ final class AppCoordinator: ObservableObject {
         screenTimeAuthorization: ScreenTimeAuthorizationProviding? = nil,
         uiTestStatusStore: UserDefaults = .standard,
         processEnvironment: [String: String] = ProcessInfo.processInfo.environment,
-        launchArguments: [String] = CommandLine.arguments,
+        launchArguments: [String]? = nil,
+        launchArgumentsProvider: @escaping () -> [String] = { CommandLine.arguments },
         uiTestMode: Bool? = nil,
         deviceActivityMonitor: DeviceActivityMonitorProviding? = nil,
         ipcStore: AppGroupIPCProviding = AppGroupIPCStore(),
@@ -201,18 +202,19 @@ final class AppCoordinator: ObservableObject {
         self.scheduler = Self.resolveScheduler(scheduler)
         self.notificationCenter = notificationCenter
         self.overlayManager = Self.resolveOverlayManager(overlayManager)
+        let resolvedLaunchArguments = launchArguments ?? launchArgumentsProvider()
         self.screenTimeAuthorization = Self.resolveScreenTimeAuthorization(
             screenTimeAuthorization,
             uiTestStatusStore: uiTestStatusStore,
             processEnvironment: processEnvironment,
-            launchArguments: launchArguments
+            launchArguments: resolvedLaunchArguments
         )
         self.deviceActivityMonitor = Self.resolveDeviceActivityMonitor(deviceActivityMonitor)
         self.ipcStore = ipcStore
         self.dateProvider = dateProvider
         self.lifecycleNotificationCenter = lifecycleNotificationCenter
         self.watchdogHeartbeatGraceInterval = watchdogHeartbeatGraceInterval
-        let resolvedUITestMode = uiTestMode ?? Self.isUITestMode(launchArguments: launchArguments)
+        let resolvedUITestMode = uiTestMode ?? Self.isUITestMode(launchArguments: resolvedLaunchArguments)
 
         // In UI test mode, use no-op stubs for services that register UIKit lifecycle
         // observers and start 1-second timers — they prevent XCUITest from settling
