@@ -155,6 +155,17 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
             )
         }
     }
+
+    /// Returns and clears a pending UI-test overlay request if present.
+    /// Used by `EyePostureReminderApp` after the coordinator is active.
+    func consumeUITestOverlayType() -> ReminderType? {
+        guard let rawType = uiTestDefaults.string(forKey: AppStorageKey.uiTestOverlayType),
+              let type = ReminderType(rawValue: rawType) else {
+            return nil
+        }
+        uiTestDefaults.removeObject(forKey: AppStorageKey.uiTestOverlayType)
+        return type
+    }
 #endif
 
     func applicationDidBecomeActive(_ application: UIApplication) {

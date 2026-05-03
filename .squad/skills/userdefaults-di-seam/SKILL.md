@@ -27,3 +27,4 @@ When a service needs to read a test-only override from `UserDefaults`, inject th
 ## Examples
 - `EyePostureReminder/App/AppDelegate.swift` + `Tests/EyePostureReminderTests/Services/AppDelegateTests.swift`
 - `EyePostureReminder/Services/AppCoordinator.swift` + `Tests/EyePostureReminderTests/Services/AppCoordinatorUITestStatusStoreTests.swift`
+- `EyePostureReminder/App/EyePostureReminderApp.swift` consuming `AppDelegate.consumeUITestOverlayType()` to avoid direct `UserDefaults.standard` usage in app lifecycle UI-test glue

@@ -344,6 +344,34 @@ final class AppDelegateTests: XCTestCase {
         XCTAssertEqual(settings.eyesBreakDuration, 120)
         XCTAssertEqual(settings.postureBreakDuration, 120)
     }
+
+    func test_consumeUITestOverlayType_withValidValue_returnsTypeAndClearsKey() throws {
+        let defaults = try makeIsolatedDefaults(suffix: #function)
+        defaults.set(ReminderType.posture.rawValue, forKey: AppStorageKey.uiTestOverlayType)
+        let sut = AppDelegate(
+            launchArguments: [],
+            uiTestDefaults: defaults
+        )
+
+        let consumedType = sut.consumeUITestOverlayType()
+
+        XCTAssertEqual(consumedType, .posture)
+        XCTAssertNil(defaults.string(forKey: AppStorageKey.uiTestOverlayType))
+    }
+
+    func test_consumeUITestOverlayType_withInvalidValue_returnsNilAndLeavesKey() throws {
+        let defaults = try makeIsolatedDefaults(suffix: #function)
+        defaults.set("invalid-reminder-type", forKey: AppStorageKey.uiTestOverlayType)
+        let sut = AppDelegate(
+            launchArguments: [],
+            uiTestDefaults: defaults
+        )
+
+        let consumedType = sut.consumeUITestOverlayType()
+
+        XCTAssertNil(consumedType)
+        XCTAssertEqual(defaults.string(forKey: AppStorageKey.uiTestOverlayType), "invalid-reminder-type")
+    }
 #endif
 
     // MARK: - Category-identifier routing logic (ReminderType parsing)

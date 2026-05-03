@@ -28,9 +28,7 @@ struct EyePostureReminderApp: App {
                     // `#if DEBUG` ensures this backdoor is compiled out of Release builds
                     // (re: #350/#405).
 #if DEBUG
-                    if let rawType = UserDefaults.standard.string(forKey: AppStorageKey.uiTestOverlayType),
-                       let type = ReminderType(rawValue: rawType) {
-                        UserDefaults.standard.removeObject(forKey: AppStorageKey.uiTestOverlayType)
+                    if let type = appDelegate.consumeUITestOverlayType() {
                         coordinator.handleNotification(for: type)
                     }
 #endif
