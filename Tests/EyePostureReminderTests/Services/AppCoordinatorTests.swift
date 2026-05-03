@@ -253,6 +253,46 @@ final class AppCoordinatorTests: XCTestCase {
             "scheduleReminders should source session start from injected DateProviding")
     }
 
+    func test_handleForegroundTransition_usesInjectedDateProvider_forSessionStartTimestamp() async {
+        let sessionStart = Date(timeIntervalSince1970: 946_684_800)
+        let mockDateProvider = MockDateProvider(now: sessionStart)
+        let mockNotif = MockNotificationCenter()
+        mockNotif.authorizationGranted = true
+        let coordinator = AppCoordinator(
+            settings: settings,
+            scheduler: ReminderScheduler(notificationCenter: mockNotif),
+            notificationCenter: mockNotif,
+            overlayManager: MockOverlayPresenting(),
+            screenTimeTracker: MockScreenTimeTracker(),
+            pauseConditionProvider: MockPauseConditionProvider(),
+            ipcStore: MockAppGroupIPCRecorder(),
+            dateProvider: mockDateProvider
+        )
+        defer { coordinator.stopFallbackTimers() }
+
+        var captured: [AnalyticsEvent] = []
+        AnalyticsLogger.testEventHandler = { captured.append($0) }
+        defer { AnalyticsLogger.testEventHandler = nil }
+
+        await coordinator.handleForegroundTransition()
+        mockDateProvider.now = sessionStart.addingTimeInterval(10)
+
+        coordinator.appWillResignActive()
+
+        let sessionDurations = captured.compactMap { event -> TimeInterval? in
+            if case let .appSessionEnd(sessionDurationS) = event {
+                return sessionDurationS
+            }
+            return nil
+        }
+        XCTAssertEqual(sessionDurations.count, 1)
+        XCTAssertEqual(
+            sessionDurations[0],
+            10,
+            accuracy: 0.001,
+            "handleForegroundTransition should source session start from injected DateProviding")
+    }
+
     // MARK: - ReminderScheduling conformance (crash-safety)
 
     func test_cancelAllReminders_doesNotCrash() {

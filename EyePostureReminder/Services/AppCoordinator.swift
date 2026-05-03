@@ -569,7 +569,7 @@ final class AppCoordinator: ObservableObject {
         // #65: Record session start so appSessionEnd can compute duration correctly
         // on subsequent foreground returns (scheduleReminders is not re-called here).
         if sessionStartTime == nil {
-            sessionStartTime = Date()
+            sessionStartTime = dateProvider.now
             let latency = foregroundEntryTime.map { Date().timeIntervalSince($0) } ?? 0
             AnalyticsLogger.log(.appLaunchReadiness(.init(
                 launchType: pendingLaunchType,
