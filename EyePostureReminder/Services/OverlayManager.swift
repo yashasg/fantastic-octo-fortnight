@@ -97,6 +97,7 @@ final class OverlayManager: OverlayPresenting {
     // MARK: - Dependencies
 
     typealias AudioManagerFactory = () -> MediaControlling
+    typealias AccessibilityNotificationPosterFactory = () -> AccessibilityNotificationPosting
     typealias NotificationCenterFactory = () -> NotificationCenter
     typealias SettingsStoreFactory = () -> SettingsPersisting
 
@@ -134,15 +135,18 @@ final class OverlayManager: OverlayPresenting {
 
     init(
         audioManager: MediaControlling? = nil,
-        accessibilityNotificationPoster: AccessibilityNotificationPosting = LiveAccessibilityNotificationPoster(),
+        accessibilityNotificationPoster: AccessibilityNotificationPosting? = nil,
         notificationCenter: NotificationCenter? = nil,
         settingsStore: SettingsPersisting? = nil,
         makeAudioManager: @escaping AudioManagerFactory = { AudioInterruptionManager() },
+        makeAccessibilityNotificationPoster: @escaping AccessibilityNotificationPosterFactory = {
+            LiveAccessibilityNotificationPoster()
+        },
         makeNotificationCenter: @escaping NotificationCenterFactory = { .default },
         makeSettingsStore: @escaping SettingsStoreFactory = { UserDefaults.standard }
     ) {
         self.audioManager = audioManager ?? makeAudioManager()
-        self.accessibilityNotificationPoster = accessibilityNotificationPoster
+        self.accessibilityNotificationPoster = accessibilityNotificationPoster ?? makeAccessibilityNotificationPoster()
         self.notificationCenter = notificationCenter ?? makeNotificationCenter()
         self.settingsStore = settingsStore ?? makeSettingsStore()
         sceneActivationObserver = self.notificationCenter.addObserver(
