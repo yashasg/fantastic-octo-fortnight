@@ -58,6 +58,7 @@ struct SettingsView: View {
 
     @Binding var isPresented: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.openURL) private var openURL
 
     @State private var showTerms = false
     @State private var showPrivacy = false
@@ -75,6 +76,7 @@ struct SettingsView: View {
     @State private var savedBannerTask: Task<Void, Never>?
 
     private let accessibilityNotificationPoster: AccessibilityNotificationPosting
+    private let hostedPrivacyPolicyURL = URL(string: "https://github.com/yashasg/fantastic-octo-fortnight/blob/main/docs/legal/PRIVACY.md")!
 
     init(
         isPresented: Binding<Bool>,
@@ -261,6 +263,18 @@ struct SettingsView: View {
                 .foregroundStyle(AppColor.primaryRest)
                 .accessibilityHint(Text("settings.legal.privacy.hint", bundle: .module))
                 .accessibilityIdentifier("settings.legal.privacy")
+                .listRowBackground(AppColor.surface)
+                .listRowSeparatorTint(AppColor.separatorSoft)
+
+                Button {
+                    openURL(hostedPrivacyPolicyURL)
+                } label: {
+                    Text("Hosted Privacy Policy (Web)")
+                }
+                .font(AppFont.body)
+                .foregroundStyle(AppColor.primaryRest)
+                .accessibilityHint(Text("Opens the public privacy policy URL in your browser."))
+                .accessibilityIdentifier("settings.legal.privacyHosted")
                 .listRowBackground(AppColor.surface)
                 .listRowSeparatorTint(AppColor.separatorSoft)
 
