@@ -223,3 +223,11 @@
 - Checkpoint 2 (PR alignment): Confirmed PR `#579` is open from `basher/462-phasea-notificationdelegate-factory-seam` to `main` with title `#462 Phase A: AppDelegate settings store resolution seam`.
 - Checkpoint 3 (validation): Ran `./scripts/build.sh build` and `./scripts/build.sh test` successfully (exit code 0) after confirming the seam + focused tests.
 - Checkpoint 4 (branch state): Confirmed branch is in sync with `origin/basher/462-phasea-notificationdelegate-factory-seam` (no ahead/behind commits) and ready for review/merge.
+
+## 2026-05-03T22:40:00Z: #462 Phase A — SettingsViewModel Calendar Factory Seam (COMPLETED)
+
+- Branch: `basher/462-phasea-appdelegate-exceptionhandler-seam`
+- Slice: Added `calendar: Calendar?` + `makeCalendar` init seam in `SettingsViewModel`, resolved once in init, and routed `snooze(option:)` rest-of-day computation through injected calendar.
+- Validation: `./scripts/build.sh build` ✅, `./scripts/build.sh test` ✅.
+- Scope: `EyePostureReminder/ViewModels/SettingsViewModel.swift`, `Tests/EyePostureReminderTests/ViewModels/SettingsViewModelExtendedTests.swift`.
+- Learned pattern: for time-zone-sensitive day-boundary logic, inject `Calendar` as optional + factory and add fallback-used/explicit-bypass tests to avoid hidden `Calendar.current` coupling while preserving production defaults.
