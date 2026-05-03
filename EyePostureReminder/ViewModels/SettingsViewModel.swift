@@ -42,12 +42,18 @@ final class SettingsViewModel: ObservableObject {
         }
 
         /// The absolute `Date` at which this snooze should expire.
+        /// Uses wall-clock `Date()` for convenience call sites.
         var endDate: Date {
+            endDate(referenceDate: Date())
+        }
+
+        /// Computes the absolute snooze expiry date from an injected reference date.
+        func endDate(referenceDate: Date) -> Date {
             switch self {
             case .fiveMinutes:
-                return Date().addingTimeInterval(5 * 60)
+                return referenceDate.addingTimeInterval(5 * 60)
             case .oneHour:
-                return Date().addingTimeInterval(60 * 60)
+                return referenceDate.addingTimeInterval(60 * 60)
             case .restOfDay:
                 // End of the current calendar day (midnight tonight).
                 // `calendar.date(byAdding:)` never returns nil for valid inputs,
@@ -57,17 +63,17 @@ final class SettingsViewModel: ObservableObject {
                 return calendar.date(
                     byAdding: .day,
                     value: 1,
-                    to: calendar.startOfDay(for: Date())
+                    to: calendar.startOfDay(for: referenceDate)
                 ) ?? {
                     // Unreachable in practice; guard against unexpected nil with a
                     // warning rather than silently computing the wrong end time.
                     Logger.settings.warning(
                         "SnoozeOption.restOfDay: calendar.date returned nil — falling back to DateComponents midnight"
                     )
-                    var comps = calendar.dateComponents([.year, .month, .day], from: Date())
+                    var comps = calendar.dateComponents([.year, .month, .day], from: referenceDate)
                     comps.day = (comps.day ?? 0) + 1
                     comps.hour = 0; comps.minute = 0; comps.second = 0
-                    return calendar.date(from: comps) ?? Date().addingTimeInterval(86400)
+                    return calendar.date(from: comps) ?? referenceDate.addingTimeInterval(86400)
                 }()
             }
         }
@@ -344,7 +350,7 @@ final class SettingsViewModel: ObservableObject {
             Logger.settings.info("Snooze limit reached — ignoring snooze request")
             return
         }
-        let endDate = option.endDate
+        let endDate = option.endDate(referenceDate: dateProvider.now)
         guard endDate > dateProvider.now else {
             // Guard against clock skew or NTP drift producing a past end date;
             // applying a past snoozedUntil would be cleared immediately by
