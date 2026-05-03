@@ -106,6 +106,8 @@ final class LiveFocusStatusDetector: NSObject, FocusStatusDetecting {
 @MainActor
 final class LiveCarPlayDetector: CarPlayDetecting {
 
+    typealias NotificationCenterFactory = () -> NotificationCenter
+
     private(set) var isCarPlayActive: Bool = false
     var onCarPlayChanged: ((Bool) -> Void)?
 
@@ -114,10 +116,11 @@ final class LiveCarPlayDetector: CarPlayDetecting {
     private var observer: NSObjectProtocol?
 
     init(
-        notificationCenter: NotificationCenter = .default,
-        isCarPlayActiveProvider: @escaping () -> Bool = LiveCarPlayDetector.defaultIsCarPlayActive
+        notificationCenter: NotificationCenter? = nil,
+        isCarPlayActiveProvider: @escaping () -> Bool = LiveCarPlayDetector.defaultIsCarPlayActive,
+        makeNotificationCenter: @escaping NotificationCenterFactory = { .default }
     ) {
-        self.notificationCenter = notificationCenter
+        self.notificationCenter = notificationCenter ?? makeNotificationCenter()
         self.isCarPlayActiveProvider = isCarPlayActiveProvider
     }
 

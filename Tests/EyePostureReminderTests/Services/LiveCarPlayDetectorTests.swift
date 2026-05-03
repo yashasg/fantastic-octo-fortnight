@@ -5,6 +5,34 @@ import XCTest
 @MainActor
 final class LiveCarPlayDetectorTests: XCTestCase {
 
+    func test_init_withoutNotificationCenter_usesFactoryFallback() {
+        var factoryCallCount = 0
+        _ = LiveCarPlayDetector(
+            isCarPlayActiveProvider: { false },
+            makeNotificationCenter: {
+                factoryCallCount += 1
+                return NotificationCenter()
+            }
+        )
+
+        XCTAssertEqual(factoryCallCount, 1)
+    }
+
+    func test_init_withNotificationCenter_bypassesFactoryFallback() {
+        var factoryCallCount = 0
+        let injectedCenter = NotificationCenter()
+        _ = LiveCarPlayDetector(
+            notificationCenter: injectedCenter,
+            isCarPlayActiveProvider: { false },
+            makeNotificationCenter: {
+                factoryCallCount += 1
+                return NotificationCenter()
+            }
+        )
+
+        XCTAssertEqual(factoryCallCount, 0)
+    }
+
     func test_startMonitoring_seedsInitialStateFromInjectedProvider() {
         let notificationCenter = NotificationCenter()
         let detector = LiveCarPlayDetector(
