@@ -293,6 +293,45 @@ final class AppCoordinatorTests: XCTestCase {
             "handleForegroundTransition should source session start from injected DateProviding")
     }
 
+    func test_handleForegroundTransition_usesInjectedDateProvider_forLaunchReadinessLatency() async {
+        let foregroundStart = Date(timeIntervalSince1970: 1_000)
+        let mockDateProvider = MockDateProvider(now: foregroundStart)
+        let notificationCenter = HookedAuthorizationNotificationCenter {
+            mockDateProvider.now = foregroundStart.addingTimeInterval(42)
+        }
+        let coordinator = AppCoordinator(
+            settings: settings,
+            scheduler: ReminderScheduler(notificationCenter: notificationCenter),
+            notificationCenter: notificationCenter,
+            overlayManager: MockOverlayPresenting(),
+            screenTimeTracker: MockScreenTimeTracker(),
+            pauseConditionProvider: MockPauseConditionProvider(),
+            ipcStore: MockAppGroupIPCRecorder(),
+            dateProvider: mockDateProvider
+        )
+        defer { coordinator.stopFallbackTimers() }
+
+        var captured: [AnalyticsEvent] = []
+        AnalyticsLogger.testEventHandler = { captured.append($0) }
+        defer { AnalyticsLogger.testEventHandler = nil }
+
+        await coordinator.handleForegroundTransition()
+
+        let latencies = captured.compactMap { event -> TimeInterval? in
+            if case let .appLaunchReadiness(payload) = event {
+                return payload.latencyS
+            }
+            return nil
+        }
+
+        XCTAssertEqual(latencies.count, 1)
+        XCTAssertEqual(
+            latencies[0],
+            42,
+            accuracy: 0.001,
+            "handleForegroundTransition should derive readiness latency from injected DateProviding")
+    }
+
     // MARK: - ReminderScheduling conformance (crash-safety)
 
     func test_cancelAllReminders_doesNotCrash() {
@@ -1165,5 +1204,28 @@ final class AppCoordinatorTests: XCTestCase {
             eyesCount,
             countAfterSchedule,
             "Foreground threshold fire must reschedule the background notification to reset its interval from now")
+    }
+}
+
+private final class HookedAuthorizationNotificationCenter: NotificationScheduling {
+    private let onGetAuthorizationStatus: () -> Void
+
+    init(onGetAuthorizationStatus: @escaping () -> Void) {
+        self.onGetAuthorizationStatus = onGetAuthorizationStatus
+    }
+
+    func requestAuthorization(options: UNAuthorizationOptions) async throws -> Bool { true }
+
+    func add(_ request: UNNotificationRequest) async throws {}
+
+    func removePendingNotificationRequests(withIdentifiers identifiers: [String]) {}
+
+    func removeAllPendingNotificationRequests() {}
+
+    func getPendingNotificationRequests() async -> [UNNotificationRequest] { [] }
+
+    func getAuthorizationStatus() async -> UNAuthorizationStatus {
+        onGetAuthorizationStatus()
+        return .authorized
     }
 }

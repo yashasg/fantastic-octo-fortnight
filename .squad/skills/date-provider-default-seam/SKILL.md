@@ -22,6 +22,7 @@ Use when a service method currently takes `now: Date = Date()` and production co
 - For launch-time scheduler snooze guards (`scheduleReminders`), compare against `dateProvider.now` and add inversion tests for wall-clock future/injected expired and wall-clock past/injected active.
 - For foreground-transition snooze guards (`handleForegroundTransition`), compare expiry against `dateProvider.now` and assert inversion tests where wall-clock and injected clocks disagree.
 - For lifecycle session metrics initialized during scheduling, seed `sessionStartTime` from `dateProvider.now` (not `Date()`) so `appSessionEnd` duration assertions stay deterministic under injected clocks.
+- For launch-readiness latency metrics, capture foreground-entry timestamps and latency deltas from the same injected `dateProvider.now` seam; in tests, advance `MockDateProvider.now` during an awaited dependency callback to prove wall-clock time is not used.
 
 ## Benefits
 - Production path no longer depends on implicit `Date()` globals.

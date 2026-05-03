@@ -357,7 +357,7 @@ final class AppCoordinator: ObservableObject {
         // Cold-launch proxy: handleForegroundTransition() sets this for warm paths.
         // For true cold launch (EyePostureReminderApp .task), capture the time here.
         if foregroundEntryTime == nil {
-            foregroundEntryTime = Date()
+            foregroundEntryTime = dateProvider.now
         }
 
         // P1-1: Snooze guard — check before doing anything else.
@@ -424,7 +424,8 @@ final class AppCoordinator: ObservableObject {
         // while a session is already in progress.
         if sessionStartTime == nil {
             sessionStartTime = dateProvider.now
-            let latency = foregroundEntryTime.map { Date().timeIntervalSince($0) } ?? 0
+            let now = dateProvider.now
+            let latency = foregroundEntryTime.map { now.timeIntervalSince($0) } ?? 0
             AnalyticsLogger.log(.appLaunchReadiness(.init(
                 launchType: pendingLaunchType,
                 notificationAuth: notificationAuthCode(from: notificationAuthStatus),
@@ -435,7 +436,7 @@ final class AppCoordinator: ObservableObject {
             AnalyticsLogger.log(.appSessionStart(
                 eyeEnabled: settings.isEnabled(for: .eyes),
                 postureEnabled: settings.isEnabled(for: .posture),
-                snoozeActive: settings.snoozedUntil.map { $0 > Date() } ?? false
+                snoozeActive: settings.snoozedUntil.map { $0 > now } ?? false
             ))
             foregroundEntryTime = nil
             pendingLaunchType = .cold
@@ -536,7 +537,7 @@ final class AppCoordinator: ObservableObject {
     /// `UIApplication.didBecomeActiveNotification` — no explicit timer
     /// restart is required here.
     func handleForegroundTransition() async {
-        foregroundEntryTime = Date()
+        foregroundEntryTime = dateProvider.now
         pendingLaunchType = .warm
         await refreshAuthStatus()
         let recoveryNeeded = await recoverStaleDeviceActivityWatchdogIfNeeded()
@@ -570,7 +571,8 @@ final class AppCoordinator: ObservableObject {
         // on subsequent foreground returns (scheduleReminders is not re-called here).
         if sessionStartTime == nil {
             sessionStartTime = dateProvider.now
-            let latency = foregroundEntryTime.map { Date().timeIntervalSince($0) } ?? 0
+            let now = dateProvider.now
+            let latency = foregroundEntryTime.map { now.timeIntervalSince($0) } ?? 0
             AnalyticsLogger.log(.appLaunchReadiness(.init(
                 launchType: pendingLaunchType,
                 notificationAuth: notificationAuthCode(from: notificationAuthStatus),
@@ -581,7 +583,7 @@ final class AppCoordinator: ObservableObject {
             AnalyticsLogger.log(.appSessionStart(
                 eyeEnabled: settings.isEnabled(for: .eyes),
                 postureEnabled: settings.isEnabled(for: .posture),
-                snoozeActive: settings.snoozedUntil.map { $0 > Date() } ?? false
+                snoozeActive: settings.snoozedUntil.map { $0 > now } ?? false
             ))
             foregroundEntryTime = nil
             pendingLaunchType = .cold
