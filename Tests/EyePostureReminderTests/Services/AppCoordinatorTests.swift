@@ -237,6 +237,25 @@ final class AppCoordinatorTests: XCTestCase {
         XCTAssertEqual(coordinator.notificationAuthStatus, .denied)
     }
 
+    func test_init_withExplicitNotificationCenter_andNilNotificationCenterFactory_keepsInjectedCenter() async {
+        let injectedCenter = MockNotificationCenter()
+        injectedCenter.authorizationGranted = false
+        let coordinator = AppCoordinator(
+            settings: SettingsStore(store: MockSettingsPersisting()),
+            scheduler: ReminderScheduler(notificationCenter: injectedCenter),
+            notificationCenter: injectedCenter,
+            makeNotificationCenter: nil,
+            screenTimeTracker: MockScreenTimeTracker(),
+            pauseConditionProvider: MockPauseConditionProvider(),
+            ipcStore: MockAppGroupIPCRecorder()
+        )
+        defer { coordinator.stopFallbackTimers() }
+
+        await coordinator.refreshAuthStatus()
+
+        XCTAssertEqual(coordinator.notificationAuthStatus, .denied)
+    }
+
     func test_init_withoutScreenTimeTracker_usesInjectedScreenTimeTrackerFactory() {
         var factoryCallCount = 0
         let factoryTracker = MockScreenTimeTracker()
