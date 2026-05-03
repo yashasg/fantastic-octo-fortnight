@@ -61,6 +61,42 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertTrue(sut.notificationFallbackEnabled)
     }
 
+    func test_init_withoutStore_usesInjectedStoreFactory() {
+        let injectedStore = MockSettingsPersisting()
+        injectedStore.set(false, forKey: "kshana.globalEnabled")
+        var factoryCallCount = 0
+
+        let reloaded = SettingsStore(
+            store: nil,
+            makeStore: {
+                factoryCallCount += 1
+                return injectedStore
+            },
+            config: .fallback
+        )
+
+        XCTAssertEqual(factoryCallCount, 1)
+        XCTAssertFalse(reloaded.globalEnabled)
+    }
+
+    func test_init_withExplicitStore_doesNotCallInjectedStoreFactory() {
+        let explicitStore = MockSettingsPersisting()
+        explicitStore.set(false, forKey: "kshana.globalEnabled")
+        var didCallFactory = false
+
+        let reloaded = SettingsStore(
+            store: explicitStore,
+            makeStore: {
+                didCallFactory = true
+                return MockSettingsPersisting()
+            },
+            config: .fallback
+        )
+
+        XCTAssertFalse(didCallFactory)
+        XCTAssertFalse(reloaded.globalEnabled)
+    }
+
     // MARK: - Persistence: Booleans
 
     func test_setGlobalEnabled_false_persistsAndLoads() {

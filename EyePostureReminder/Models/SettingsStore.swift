@@ -164,8 +164,15 @@ final class SettingsStore: ObservableObject {
 
     private let store: SettingsPersisting
 
-    init(store: SettingsPersisting = UserDefaults.standard, config: AppConfig = AppConfig.load()) {
-        self.store = store
+    typealias SettingsStoreFactory = () -> SettingsPersisting
+
+    init(
+        store: SettingsPersisting? = nil,
+        makeStore: @escaping SettingsStoreFactory = { UserDefaults.standard },
+        config: AppConfig = AppConfig.load()
+    ) {
+        let resolvedStore = store ?? makeStore()
+        self.store = resolvedStore
         let defaultEyesBreakDuration = Self.sanitizedBreakDuration(
             config.defaults.eyeBreakDuration,
             defaultValue: AppConfig.fallback.defaults.eyeBreakDuration,
@@ -177,33 +184,33 @@ final class SettingsStore: ObservableObject {
             key: Keys.postureBreakDuration
         )
 
-        globalEnabled = store.bool(forKey: Keys.globalEnabled, defaultValue: config.features.globalEnabledDefault)
-        eyesEnabled = store.bool(forKey: Keys.eyesEnabled, defaultValue: true)
-        postureEnabled = store.bool(forKey: Keys.postureEnabled, defaultValue: true)
+        globalEnabled = resolvedStore.bool(forKey: Keys.globalEnabled, defaultValue: config.features.globalEnabledDefault)
+        eyesEnabled = resolvedStore.bool(forKey: Keys.eyesEnabled, defaultValue: true)
+        postureEnabled = resolvedStore.bool(forKey: Keys.postureEnabled, defaultValue: true)
 
-        eyesInterval = store.double(forKey: Keys.eyesInterval, defaultValue: config.defaults.eyeInterval)
+        eyesInterval = resolvedStore.double(forKey: Keys.eyesInterval, defaultValue: config.defaults.eyeInterval)
         eyesBreakDurationStorage = Self.sanitizedBreakDuration(
-            store.double(forKey: Keys.eyesBreakDuration, defaultValue: defaultEyesBreakDuration),
+            resolvedStore.double(forKey: Keys.eyesBreakDuration, defaultValue: defaultEyesBreakDuration),
             defaultValue: defaultEyesBreakDuration,
             key: Keys.eyesBreakDuration
         )
-        postureInterval = store.double(forKey: Keys.postureInterval, defaultValue: config.defaults.postureInterval)
+        postureInterval = resolvedStore.double(forKey: Keys.postureInterval, defaultValue: config.defaults.postureInterval)
         postureBreakDurationStorage = Self.sanitizedBreakDuration(
-            store.double(forKey: Keys.postureBreakDuration, defaultValue: defaultPostureBreakDuration),
+            resolvedStore.double(forKey: Keys.postureBreakDuration, defaultValue: defaultPostureBreakDuration),
             defaultValue: defaultPostureBreakDuration,
             key: Keys.postureBreakDuration
         )
 
-        let rawSnooze = store.double(forKey: Keys.snoozedUntil, defaultValue: 0)
+        let rawSnooze = resolvedStore.double(forKey: Keys.snoozedUntil, defaultValue: 0)
         snoozedUntil = rawSnooze > 0 ? Date(timeIntervalSince1970: rawSnooze) : nil
 
-        snoozeCount = store.integer(forKey: Keys.snoozeCount, defaultValue: 0)
+        snoozeCount = resolvedStore.integer(forKey: Keys.snoozeCount, defaultValue: 0)
 
-        pauseMediaDuringBreaks = store.bool(forKey: Keys.pauseMediaDuringBreaks, defaultValue: false)
-        hapticsEnabled = store.bool(forKey: Keys.hapticsEnabled, defaultValue: true)
-        pauseDuringFocus = store.bool(forKey: Keys.pauseDuringFocus, defaultValue: true)
-        pauseWhileDriving = store.bool(forKey: Keys.pauseWhileDriving, defaultValue: true)
-        notificationFallbackEnabled = store.bool(
+        pauseMediaDuringBreaks = resolvedStore.bool(forKey: Keys.pauseMediaDuringBreaks, defaultValue: false)
+        hapticsEnabled = resolvedStore.bool(forKey: Keys.hapticsEnabled, defaultValue: true)
+        pauseDuringFocus = resolvedStore.bool(forKey: Keys.pauseDuringFocus, defaultValue: true)
+        pauseWhileDriving = resolvedStore.bool(forKey: Keys.pauseWhileDriving, defaultValue: true)
+        notificationFallbackEnabled = resolvedStore.bool(
             forKey: Keys.notificationFallbackEnabled,
             defaultValue: true
         )
