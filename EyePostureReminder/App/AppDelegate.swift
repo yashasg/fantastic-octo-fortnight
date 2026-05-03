@@ -95,12 +95,18 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         }
         if args.contains("--show-overlay-eyes") {
             defaults.set(true, forKey: AppStorageKey.hasSeenOnboarding)
-            SettingsStore().resetToDefaults()
+            let settings = SettingsStore()
+            settings.resetToDefaults()
+            settings.eyesBreakDuration = 120
+            settings.postureBreakDuration = 120
             defaults.set(ReminderType.eyes.rawValue, forKey: AppStorageKey.uiTestOverlayType)
         }
         if args.contains("--show-overlay-posture") {
             defaults.set(true, forKey: AppStorageKey.hasSeenOnboarding)
-            SettingsStore().resetToDefaults()
+            let settings = SettingsStore()
+            settings.resetToDefaults()
+            settings.eyesBreakDuration = 120
+            settings.postureBreakDuration = 120
             defaults.set(ReminderType.posture.rawValue, forKey: AppStorageKey.uiTestOverlayType)
         }
         if args.contains("--simulate-screen-time-not-determined") {
