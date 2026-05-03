@@ -43,6 +43,7 @@ extension AppGroupIPCStore: SelectedAppsIPCStoring {}
 /// Observable store for the True Interrupt Mode app/category selection.
 @MainActor
 final class SelectedAppsState: ObservableObject {
+    typealias IPCStoreFactory = (UserDefaults?) -> any SelectedAppsIPCStoring
 
     // MARK: App Group + Persistence Keys
 
@@ -71,9 +72,11 @@ final class SelectedAppsState: ObservableObject {
     ///   leaves extension-critical persistence unavailable instead of falling
     ///   back to standard defaults.
     convenience init(
-        defaults: UserDefaults? = AppGroupDefaults.resolve(consumer: "SelectedAppsState")
+        defaults: UserDefaults? = AppGroupDefaults.resolve(consumer: "SelectedAppsState"),
+        ipcStore: (any SelectedAppsIPCStoring)? = nil,
+        makeIPCStore: @escaping IPCStoreFactory = { AppGroupIPCStore(defaults: $0) }
     ) {
-        self.init(ipcStore: AppGroupIPCStore(defaults: defaults))
+        self.init(ipcStore: ipcStore ?? makeIPCStore(defaults))
     }
 
     /// Create a state object backed by an explicit IPC store (for testing).

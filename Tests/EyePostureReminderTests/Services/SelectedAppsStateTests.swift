@@ -104,6 +104,51 @@ final class SelectedAppsStateTests: XCTestCase {
         XCTAssertFalse(sut.isTrueInterruptEnabled)
     }
 
+    func test_init_defaultsFactory_usesFactoryWhenIPCStoreNotProvided() {
+        let expectedMetadata = SelectedAppsMetadata(
+            categoryCount: 1,
+            appCount: 2,
+            lastUpdated: Date(timeIntervalSince1970: 6_000_000)
+        )
+        let fallbackStore = MockSelectedAppsIPCStore()
+        fallbackStore.storedSnapshot = expectedMetadata
+
+        var capturedDefaults: UserDefaults?
+        let sut = SelectedAppsState(
+            defaults: testDefaults,
+            makeIPCStore: { defaults in
+                capturedDefaults = defaults
+                return fallbackStore
+            }
+        )
+
+        XCTAssertTrue(capturedDefaults === testDefaults)
+        XCTAssertEqual(sut.selectionMetadata, expectedMetadata)
+    }
+
+    func test_init_defaultsFactory_bypassesFactoryWhenIPCStoreProvided() {
+        let expectedMetadata = SelectedAppsMetadata(
+            categoryCount: 2,
+            appCount: 1,
+            lastUpdated: Date(timeIntervalSince1970: 7_000_000)
+        )
+        let injectedStore = MockSelectedAppsIPCStore()
+        injectedStore.storedSnapshot = expectedMetadata
+        var factoryCalled = false
+
+        let sut = SelectedAppsState(
+            defaults: testDefaults,
+            ipcStore: injectedStore,
+            makeIPCStore: { _ in
+                factoryCalled = true
+                return MockSelectedAppsIPCStore()
+            }
+        )
+
+        XCTAssertFalse(factoryCalled)
+        XCTAssertEqual(sut.selectionMetadata, expectedMetadata)
+    }
+
     // MARK: - setEnabled
 
     func test_setEnabled_trueWithSelection_persistsToDefaults() {
