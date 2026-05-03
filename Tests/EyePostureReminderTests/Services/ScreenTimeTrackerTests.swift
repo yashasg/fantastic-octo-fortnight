@@ -716,3 +716,34 @@ extension ScreenTimeTrackerTests {
         XCTAssertEqual(callCount, 1, "After reset-to-zero, callback should require full threshold accumulation")
     }
 }
+
+// MARK: - Lifecycle Notification Center DI Seam
+
+extension ScreenTimeTrackerTests {
+    func test_customLifecycleNotificationCenter_drivesObserverCallbacks() async {
+        let lifecycleCenter = NotificationCenter()
+        let tracker = ScreenTimeTracker(lifecycleNotificationCenter: lifecycleCenter)
+        defer { tracker.stop() }
+
+        let fired = expectation(description: "threshold reached via injected lifecycle center")
+        tracker.setThreshold(2, for: .eyes)
+        tracker.onThresholdReached = { type in
+            if type == .eyes { fired.fulfill() }
+        }
+
+        lifecycleCenter.post(name: UIApplication.didBecomeActiveNotification, object: nil)
+        await fulfillment(of: [fired], timeout: 3.0)
+    }
+
+    func test_customLifecycleNotificationCenter_ignoresDefaultCenterPosts() async {
+        let lifecycleCenter = NotificationCenter()
+        let tracker = ScreenTimeTracker(lifecycleNotificationCenter: lifecycleCenter)
+        defer { tracker.stop() }
+
+        tracker.setThreshold(2, for: .eyes)
+        tracker.onThresholdReached = { _ in XCTFail("Default notification center should not trigger tracker callbacks") }
+
+        NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
+        try? await Task.sleep(nanoseconds: 2_500_000_000)
+    }
+}

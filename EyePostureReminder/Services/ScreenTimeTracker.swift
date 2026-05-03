@@ -73,6 +73,7 @@ final class ScreenTimeTracker: ScreenTimeTracking {
     /// Non-nil while we are within the grace period after `willResignActive`.
     /// Cancelled if the app returns to active before the grace period expires.
     private var resetTask: Task<Void, Never>?
+    private let lifecycleNotificationCenter: NotificationCenter
 
     // MARK: - Callback
 
@@ -82,10 +83,16 @@ final class ScreenTimeTracker: ScreenTimeTracking {
 
     // MARK: - Init
 
-    /// - Parameter resetGracePeriod: Seconds to wait after `willResignActive` before
-    ///   clearing counters. Must be ≥ 0. Defaults to 5.0 s for production use; pass a
-    ///   smaller value in tests to exercise grace-period behaviour without long sleeps.
-    init(resetGracePeriod: TimeInterval = 5.0) {
+    /// - Parameters:
+    ///   - resetGracePeriod: Seconds to wait after `willResignActive` before
+    ///     clearing counters. Must be ≥ 0. Defaults to 5.0 s for production use; pass a
+    ///     smaller value in tests to exercise grace-period behaviour without long sleeps.
+    ///   - lifecycleNotificationCenter: Notification center used for app lifecycle observer
+    ///     registration/removal. Defaults to `.default` for production behavior.
+    init(
+        resetGracePeriod: TimeInterval = 5.0,
+        lifecycleNotificationCenter: NotificationCenter = .default
+    ) {
         if resetGracePeriod < 0 {
             Logger.scheduling.warning(
                 "ScreenTimeTracker: ignoring negative resetGracePeriod (\(resetGracePeriod)) — using 0"
@@ -94,6 +101,7 @@ final class ScreenTimeTracker: ScreenTimeTracking {
         } else {
             self.resetGracePeriod = resetGracePeriod
         }
+        self.lifecycleNotificationCenter = lifecycleNotificationCenter
         for type in ReminderType.allCases {
             elapsed[type] = 0
         }
@@ -101,7 +109,7 @@ final class ScreenTimeTracker: ScreenTimeTracking {
     }
 
     deinit {
-        NotificationCenter.default.removeObserver(self)
+        lifecycleNotificationCenter.removeObserver(self)
         tickTimer?.invalidate()
         resetTask?.cancel()
     }
@@ -205,13 +213,13 @@ final class ScreenTimeTracker: ScreenTimeTracking {
     // MARK: - Private: Lifecycle Observers
 
     private func registerLifecycleObservers() {
-        NotificationCenter.default.addObserver(
+        lifecycleNotificationCenter.addObserver(
             self,
             selector: #selector(handleDidBecomeActive),
             name: UIApplication.didBecomeActiveNotification,
             object: nil
         )
-        NotificationCenter.default.addObserver(
+        lifecycleNotificationCenter.addObserver(
             self,
             selector: #selector(handleWillResignActive),
             name: UIApplication.willResignActiveNotification,
