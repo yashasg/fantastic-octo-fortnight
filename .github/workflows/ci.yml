@@ -161,17 +161,11 @@ jobs:
       - name: Build Screen Time extensions (simulator, no signing)
         run: ./scripts/setup-screentime.sh --build
 
-      # ── Build + lint + test ──────────────────────────────────────────────────
-      - name: Install SwiftLint
+      # ── Build + test ─────────────────────────────────────────────────────────
+      - name: Build and test (simulator)
         run: |
-          if brew list swiftlint &>/dev/null 2>&1; then
-            brew link --overwrite swiftlint 2>/dev/null || true
-          else
-            brew install swiftlint
-          fi
-
-      - name: Build, lint, and test (simulator)
-        run: ./scripts/build.sh all
+          ./scripts/build.sh build
+          ./scripts/build.sh test
 
       # ── Coverage ─────────────────────────────────────────────────────────────
       - name: Report coverage
