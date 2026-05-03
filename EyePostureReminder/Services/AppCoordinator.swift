@@ -186,7 +186,8 @@ final class AppCoordinator: ObservableObject {
         pauseConditionProvider: PauseConditionProviding? = nil,
         screenTimeAuthorization: ScreenTimeAuthorizationProviding? = nil,
         uiTestStatusStore: UserDefaults = .standard,
-        processEnvironment: [String: String] = ProcessInfo.processInfo.environment,
+        processEnvironment: [String: String]? = nil,
+        processEnvironmentProvider: @escaping () -> [String: String] = { ProcessInfo.processInfo.environment },
         launchArguments: [String]? = nil,
         launchArgumentsProvider: @escaping () -> [String] = { CommandLine.arguments },
         uiTestMode: Bool? = nil,
@@ -206,10 +207,11 @@ final class AppCoordinator: ObservableObject {
         self.notificationCenter = notificationCenter ?? makeNotificationCenter()
         self.overlayManager = Self.resolveOverlayManager(overlayManager)
         let resolvedLaunchArguments = launchArguments ?? launchArgumentsProvider()
+        let resolvedProcessEnvironment = processEnvironment ?? processEnvironmentProvider()
         self.screenTimeAuthorization = Self.resolveScreenTimeAuthorization(
             screenTimeAuthorization,
             uiTestStatusStore: uiTestStatusStore,
-            processEnvironment: processEnvironment,
+            processEnvironment: resolvedProcessEnvironment,
             launchArguments: resolvedLaunchArguments
         )
         self.deviceActivityMonitor = Self.resolveDeviceActivityMonitor(deviceActivityMonitor)
