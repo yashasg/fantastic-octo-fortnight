@@ -105,6 +105,36 @@ final class OverlayManagerExtendedTests: XCTestCase {
         _ = manager
     }
 
+    func test_init_withoutAccessibilityPoster_usesInjectedFactory() {
+        let factoryPoster = MockAccessibilityNotificationPoster()
+        var makeAccessibilityPosterCallCount = 0
+
+        _ = OverlayManager(
+            accessibilityNotificationPoster: nil,
+            makeAccessibilityNotificationPoster: {
+                makeAccessibilityPosterCallCount += 1
+                return factoryPoster
+            }
+        )
+
+        XCTAssertEqual(makeAccessibilityPosterCallCount, 1)
+    }
+
+    func test_init_withExplicitAccessibilityPoster_doesNotCallInjectedFactory() {
+        let explicitPoster = MockAccessibilityNotificationPoster()
+        var makeAccessibilityPosterCallCount = 0
+
+        _ = OverlayManager(
+            accessibilityNotificationPoster: explicitPoster,
+            makeAccessibilityNotificationPoster: {
+                makeAccessibilityPosterCallCount += 1
+                return MockAccessibilityNotificationPoster()
+            }
+        )
+
+        XCTAssertEqual(makeAccessibilityPosterCallCount, 0)
+    }
+
     func test_clearQueue_thenDismiss_doesNotCrash() {
         let manager = OverlayManager()
         manager.clearQueue()
