@@ -235,3 +235,24 @@
 ## Learnings
 
 - For lifecycle observer dependencies in services, prefer `notificationCenter: NotificationCenter? = nil` plus `makeNotificationCenter` fallback resolved once in `init`; add fallback-used and explicit-bypass tests by posting lifecycle notifications through the resolved center to remove hidden `.default` coupling while preserving runtime behavior (`EyePostureReminder/Services/ScreenTimeTracker.swift`, `Tests/EyePostureReminderTests/Services/ScreenTimeTrackerTests.swift`).
+
+## 2026-05-03T14:40:00Z: #462 Phase A DI/SRP — LiveFocusStatusDetector FocusStatusCenter DI Seam (COMPLETED)
+
+**Task:** Execute next smallest #462 Phase A DI/SRP micro-slice from origin/main (after PR #581 merged)
+
+**Slice:** Inject FocusStatusCenterProviding seam into LiveFocusStatusDetector, removing all INFocusStatusCenter.default hard references
+
+**Branch:** basher/462-phasea-livefocusdetector-center-seam  
+**Commit:** 3ef099f  
+**PR:** https://github.com/yashasg/fantastic-octo-fortnight/pull/582
+
+**Changes:**
+- PauseConditionManager: Added FocusStatusCenterProviding protocol with requestFocusAuthorization(_:), currentIsFocused, and observeFocusChanges(_:); INFocusStatusCenter extension satisfies protocol; LiveFocusStatusDetector now accepts focusCenter/makeFocusCenter injection
+- LiveFocusStatusDetectorTests: 5 new tests covering factory seam, auth requested, auth denied (fail-open), and auth-granted focus state seeding
+
+**Validation:** ✅ Build clean, 2036 tests, 0 failures
+
+**Learnings:**
+- For protocols mirroring SDK singleton methods, avoid reusing the exact SDK method name/signature (e.g., INFocusStatusCenter.requestAuthorization has a different label and type than what a generic protocol would expect); use a distinct wrapper method name (requestFocusAuthorization) that converts to a simpler Bool to sidestep ambiguity.
+- KVO observation tokens can be typed as AnyObject in protocol return positions; NSKeyValueObservation deinit calls invalidate() automatically so setting token = nil safely cancels observation.
+- AnyObject token pattern (observeFocusChanges returning AnyObject) lets mocks return NSObject() as a no-op token without needing to subclass NSKeyValueObservation.
