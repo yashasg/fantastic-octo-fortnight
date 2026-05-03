@@ -243,6 +243,54 @@ final class AppCoordinatorTests: XCTestCase {
         XCTAssertNil(coordinator.snoozeWakeTask)
     }
 
+    func test_init_withoutPauseConditionProvider_usesInjectedPauseConditionManagerFactory() {
+        var factoryCallCount = 0
+        let factoryPauseConditionProvider = MockPauseConditionProvider()
+        let coordinator = AppCoordinator(
+            settings: SettingsStore(store: MockSettingsPersisting()),
+            scheduler: ReminderScheduler(notificationCenter: MockNotificationCenter()),
+            notificationCenter: MockNotificationCenter(),
+            screenTimeTracker: MockScreenTimeTracker(),
+            pauseConditionProvider: nil,
+            makePauseConditionManager: { _ in
+                factoryCallCount += 1
+                return factoryPauseConditionProvider
+            },
+            uiTestMode: false,
+            ipcStore: MockAppGroupIPCRecorder()
+        )
+        defer { coordinator.stopFallbackTimers() }
+
+        XCTAssertEqual(factoryCallCount, 1)
+        XCTAssertTrue(
+            coordinator.pauseConditionManager === factoryPauseConditionProvider
+        )
+    }
+
+    func test_init_withExplicitPauseConditionProvider_doesNotCallPauseConditionManagerFactory() {
+        var factoryCallCount = 0
+        let injectedPauseConditionProvider = MockPauseConditionProvider()
+        let coordinator = AppCoordinator(
+            settings: SettingsStore(store: MockSettingsPersisting()),
+            scheduler: ReminderScheduler(notificationCenter: MockNotificationCenter()),
+            notificationCenter: MockNotificationCenter(),
+            screenTimeTracker: MockScreenTimeTracker(),
+            pauseConditionProvider: injectedPauseConditionProvider,
+            makePauseConditionManager: { _ in
+                factoryCallCount += 1
+                return MockPauseConditionProvider()
+            },
+            uiTestMode: false,
+            ipcStore: MockAppGroupIPCRecorder()
+        )
+        defer { coordinator.stopFallbackTimers() }
+
+        XCTAssertEqual(factoryCallCount, 0)
+        XCTAssertTrue(
+            coordinator.pauseConditionManager === injectedPauseConditionProvider
+        )
+    }
+
     func test_init_withoutIPCStore_usesInjectedIPCStoreFactory() async {
         struct FactoryReadEventsError: Error {}
         var factoryCallCount = 0
