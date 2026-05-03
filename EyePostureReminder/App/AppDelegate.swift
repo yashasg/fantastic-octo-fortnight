@@ -11,20 +11,20 @@ extension UNUserNotificationCenter: UserNotificationCenterDelegating {}
 final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
 
     private let notificationCenter: UserNotificationCenterDelegating?
-    private let registerMetricKitSubscriber: () -> Void
+    private let metricKitSubscriber: MetricKitSubscribing?
     private let launchArguments: [String]
     private let uiTestDefaults: UserDefaults
     private let makeSettingsStore: @MainActor () -> SettingsStore
 
     init(
         notificationCenter: UserNotificationCenterDelegating? = nil,
-        registerMetricKitSubscriber: @escaping () -> Void = { MetricKitSubscriber.shared.register() },
+        metricKitSubscriber: MetricKitSubscribing? = nil,
         launchArguments: [String] = CommandLine.arguments,
         uiTestDefaults: UserDefaults = .standard,
         makeSettingsStore: @escaping @MainActor () -> SettingsStore = { SettingsStore() }
     ) {
         self.notificationCenter = notificationCenter
-        self.registerMetricKitSubscriber = registerMetricKitSubscriber
+        self.metricKitSubscriber = metricKitSubscriber
         self.launchArguments = launchArguments
         self.uiTestDefaults = uiTestDefaults
         self.makeSettingsStore = makeSettingsStore
@@ -70,7 +70,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         let notificationCenter = notificationCenter ?? UNUserNotificationCenter.current()
         notificationCenter.delegate = self
         installUncaughtExceptionHandler()
-        registerMetricKitSubscriber()
+        (metricKitSubscriber ?? MetricKitSubscriber.shared).register()
 #if DEBUG
         applyUITestLaunchArguments()
 #endif

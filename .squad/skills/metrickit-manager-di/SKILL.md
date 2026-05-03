@@ -14,10 +14,13 @@ Use this when a service calls `MXMetricManager.shared` directly, but the behavio
 - Conform `MXMetricManager` to the protocol.
 - Inject the protocol into the service initializer with `MXMetricManager.shared` as the default.
 - Keep singleton entrypoints (like `static let shared`) for production wiring.
+- If app lifecycle code triggers registration, inject a `MetricKitSubscribing` seam at the delegate boundary and lazily fallback to `MetricKitSubscriber.shared` at callback time.
 
 ## Examples
 - `EyePostureReminder/Services/MetricKitSubscriber.swift`
 - `Tests/EyePostureReminderTests/Services/MetricKitSubscriberTests.swift`
+- `EyePostureReminder/App/AppDelegate.swift`
+- `Tests/EyePostureReminderTests/Services/AppDelegateTests.swift`
 
 ## Anti-Patterns
 - Calling `MXMetricManager.shared` directly from service methods when interaction testing is required.

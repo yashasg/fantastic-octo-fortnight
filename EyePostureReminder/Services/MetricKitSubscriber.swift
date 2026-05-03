@@ -7,6 +7,10 @@ protocol MetricKitManaging {
 
 extension MXMetricManager: MetricKitManaging {}
 
+protocol MetricKitSubscribing {
+    func register()
+}
+
 /// Subscribes to `MXMetricManager` to receive daily metric and diagnostic payloads.
 ///
 /// Registered once in `AppDelegate.application(_:didFinishLaunchingWithOptions:)`.
@@ -123,3 +127,5 @@ final class MetricKitSubscriber: NSObject, MXMetricManagerSubscriber {
         }
     }
 }
+
+extension MetricKitSubscriber: MetricKitSubscribing {}
