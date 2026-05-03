@@ -385,6 +385,59 @@ final class AppDelegateTests: XCTestCase {
         XCTAssertEqual(settings.postureBreakDuration, 120)
     }
 
+    func test_didFinishLaunching_withNilSettingsStore_usesInjectedFactoryOnce() throws {
+        let defaults = try makeIsolatedDefaults(suffix: #function)
+        let mockCenter = MockUserNotificationCenter()
+        let store = MockSettingsPersisting()
+        let settings = SettingsStore(store: store, config: .fallback)
+        var makeSettingsStoreCallCount = 0
+        let sut = AppDelegate(
+            notificationCenter: mockCenter,
+            metricKitSubscriber: MockMetricKitSubscriber(),
+            settingsStore: nil,
+            launchArguments: ["--skip-onboarding", "--simulate-screen-time-not-determined"],
+            uiTestDefaults: defaults,
+            makeSettingsStore: {
+                makeSettingsStoreCallCount += 1
+                return settings
+            }
+        )
+
+        _ = sut.application(UIApplication.shared, didFinishLaunchingWithOptions: nil)
+
+        XCTAssertEqual(makeSettingsStoreCallCount, 1)
+        XCTAssertEqual(
+            defaults.string(forKey: AppStorageKey.uiTestScreenTimeStatus),
+            ScreenTimeAuthorizationStatus.notDetermined.rawValue
+        )
+    }
+
+    func test_didFinishLaunching_withExplicitSettingsStore_doesNotCallInjectedFactory() throws {
+        let defaults = try makeIsolatedDefaults(suffix: #function)
+        let mockCenter = MockUserNotificationCenter()
+        let explicitStore = MockSettingsPersisting()
+        let explicitSettings = SettingsStore(store: explicitStore, config: .fallback)
+        var makeSettingsStoreCallCount = 0
+        let sut = AppDelegate(
+            notificationCenter: mockCenter,
+            metricKitSubscriber: MockMetricKitSubscriber(),
+            settingsStore: explicitSettings,
+            launchArguments: ["--show-overlay-eyes"],
+            uiTestDefaults: defaults,
+            makeSettingsStore: {
+                makeSettingsStoreCallCount += 1
+                return SettingsStore(store: MockSettingsPersisting(), config: .fallback)
+            }
+        )
+
+        _ = sut.application(UIApplication.shared, didFinishLaunchingWithOptions: nil)
+
+        XCTAssertEqual(makeSettingsStoreCallCount, 0)
+        XCTAssertEqual(defaults.string(forKey: AppStorageKey.uiTestOverlayType), ReminderType.eyes.rawValue)
+        XCTAssertEqual(explicitSettings.eyesBreakDuration, 120)
+        XCTAssertEqual(explicitSettings.postureBreakDuration, 120)
+    }
+
     func test_consumeUITestOverlayType_withValidValue_returnsTypeAndClearsKey() throws {
         let defaults = try makeIsolatedDefaults(suffix: #function)
         defaults.set(ReminderType.posture.rawValue, forKey: AppStorageKey.uiTestOverlayType)
