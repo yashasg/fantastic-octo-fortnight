@@ -98,7 +98,7 @@ Legend: ✅ Done · ⚠️ In progress / partial · ❌ Not started · 🔒 Bloc
 
 ## Recommended Next Actions
 
-1. **Unblock #185** — host `docs/legal/PRIVACY.md` at a public HTTPS URL (GitHub Pages is sufficient).
+1. **Close #185 follow-through** — hosted privacy URL is now available at `https://github.com/yashasg/fantastic-octo-fortnight/blob/main/docs/legal/PRIVACY.md`; remaining manual step is adding this URL in App Store Connect metadata.
 2. **Unblock #196** — upload `docs/legal/TERMS.md` content to App Store Connect License Agreement field.
 3. **Capture screenshots** — 5 screens on iPhone 15 Pro + Pro Max.
 4. **Export app icon** — 1024×1024 PNG, no alpha.
