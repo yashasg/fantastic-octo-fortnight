@@ -153,3 +153,6 @@
 - Keep seam tests surgical: add one fallback-used assertion and one explicit-injection-bypass assertion, then verify through a public behavior call (`refreshAuthStatus`) instead of private state checks.
 - User preference reinforced: continue #462 with tiny DI/SRP slices only, each validated with `./scripts/build.sh build` and `./scripts/build.sh test`.
 - Key file paths: `EyePostureReminder/Services/AppCoordinator.swift`, `Tests/EyePostureReminderTests/Services/AppCoordinatorTests.swift`, `.squad/decisions/inbox/basher-appcoordinator-notificationcenter-factory-seam.md`.
+
+## Learnings
+- AppCoordinator launch-context seam: prefer `processEnvironment: [String: String]? = nil` plus `processEnvironmentProvider` fallback, resolve once in `init`, and thread the resolved value into `resolveScreenTimeAuthorization` so tests can assert fallback-used and explicit-bypass paths without touching `ProcessInfo.processInfo.environment` globals.

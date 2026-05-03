@@ -92,6 +92,56 @@ final class AppCoordinatorUITestLaunchContextTests: XCTestCase {
         XCTAssertEqual(stub?.authorizationStatus, .notDetermined)
     }
 
+    func test_init_withoutProcessEnvironment_usesInjectedProcessEnvironmentProvider() {
+        let mockNotif = MockNotificationCenter()
+        var providerCallCount = 0
+        let coordinator = AppCoordinator(
+            settings: SettingsStore(store: MockSettingsPersisting()),
+            scheduler: ReminderScheduler(notificationCenter: mockNotif),
+            notificationCenter: mockNotif,
+            screenTimeTracker: MockScreenTimeTracker(),
+            pauseConditionProvider: MockPauseConditionProvider(),
+            uiTestStatusStore: isolatedDefaults(for: #function),
+            processEnvironment: nil,
+            processEnvironmentProvider: {
+                providerCallCount += 1
+                return ["UITEST_SCREEN_TIME_STATUS": "notDetermined"]
+            },
+            launchArguments: ["EyePostureReminderTests"],
+            ipcStore: MockAppGroupIPCRecorder()
+        )
+        defer { coordinator.stopFallbackTimers() }
+
+        let stub = coordinator.screenTimeAuthorization as? ScreenTimeAuthorizationStub
+        XCTAssertEqual(providerCallCount, 1)
+        XCTAssertEqual(stub?.authorizationStatus, .notDetermined)
+    }
+
+    func test_init_withExplicitProcessEnvironment_doesNotCallInjectedProcessEnvironmentProvider() {
+        let mockNotif = MockNotificationCenter()
+        var providerCallCount = 0
+        let coordinator = AppCoordinator(
+            settings: SettingsStore(store: MockSettingsPersisting()),
+            scheduler: ReminderScheduler(notificationCenter: mockNotif),
+            notificationCenter: mockNotif,
+            screenTimeTracker: MockScreenTimeTracker(),
+            pauseConditionProvider: MockPauseConditionProvider(),
+            uiTestStatusStore: isolatedDefaults(for: #function),
+            processEnvironment: ["UITEST_SCREEN_TIME_STATUS": "notDetermined"],
+            processEnvironmentProvider: {
+                providerCallCount += 1
+                return [:]
+            },
+            launchArguments: ["EyePostureReminderTests"],
+            ipcStore: MockAppGroupIPCRecorder()
+        )
+        defer { coordinator.stopFallbackTimers() }
+
+        let stub = coordinator.screenTimeAuthorization as? ScreenTimeAuthorizationStub
+        XCTAssertEqual(providerCallCount, 0)
+        XCTAssertEqual(stub?.authorizationStatus, .notDetermined)
+    }
+
     private func isolatedDefaults(for function: StaticString) -> UserDefaults {
         let suiteName = "AppCoordinatorUITestLaunchContextTests.\(function)"
         guard let defaults = UserDefaults(suiteName: suiteName) else {
