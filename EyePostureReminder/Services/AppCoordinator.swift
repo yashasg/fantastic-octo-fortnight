@@ -181,6 +181,7 @@ final class AppCoordinator: ObservableObject {
     init(
         settings: SettingsStore? = nil,
         scheduler: ReminderScheduling? = nil,
+        makeScheduler: (() -> ReminderScheduling)? = nil,
         notificationCenter: NotificationScheduling? = nil,
         makeNotificationCenter: @escaping () -> NotificationScheduling = { UNUserNotificationCenter.current() },
         overlayManager: OverlayPresenting? = nil,
@@ -213,7 +214,7 @@ final class AppCoordinator: ObservableObject {
             "Watchdog heartbeat grace interval must be finite and non-negative"
         )
         self.settings = Self.resolveSettings(settings)
-        self.scheduler = Self.resolveScheduler(scheduler)
+        self.scheduler = Self.resolveScheduler(scheduler, makeScheduler: makeScheduler)
         self.notificationCenter = notificationCenter ?? makeNotificationCenter()
         self.overlayManager = Self.resolveOverlayManager(
             overlayManager,
@@ -650,8 +651,17 @@ private extension AppCoordinator {
         settings ?? SettingsStore()
     }
 
-    static func resolveScheduler(_ scheduler: ReminderScheduling?) -> ReminderScheduling {
-        scheduler ?? ReminderScheduler()
+    static func resolveScheduler(
+        _ scheduler: ReminderScheduling?,
+        makeScheduler: (() -> ReminderScheduling)?
+    ) -> ReminderScheduling {
+        if let scheduler {
+            return scheduler
+        }
+        if let makeScheduler {
+            return makeScheduler()
+        }
+        return ReminderScheduler()
     }
 
     static func resolveOverlayManager(
