@@ -53,6 +53,18 @@ final class SettingsViewModelExtendedTests: XCTestCase {
         )
     }
 
+    private func makeSUT(
+        maxSnoozeCount: Int? = nil,
+        makeMaxSnoozeCount: @escaping SettingsViewModel.MaxSnoozeCountFactory
+    ) -> SettingsViewModel {
+        SettingsViewModel(
+            settings: settings,
+            scheduler: mockScheduler,
+            maxSnoozeCount: maxSnoozeCount,
+            makeMaxSnoozeCount: makeMaxSnoozeCount
+        )
+    }
+
     // MARK: - SnoozeOption.allCases
 
     func test_snoozeOptions_countIsThree() {
@@ -193,6 +205,34 @@ final class SettingsViewModelExtendedTests: XCTestCase {
     func test_maxConsecutiveSnoozes_defaultUsesAppConfig() {
         let sut = SettingsViewModel(settings: settings, scheduler: mockScheduler)
         XCTAssertEqual(sut.maxConsecutiveSnoozes, AppConfig.load().features.maxSnoozeCount)
+    }
+
+    func test_maxConsecutiveSnoozes_withoutExplicitValue_usesFactory() {
+        var factoryCallCount = 0
+        let sut = makeSUT(
+            maxSnoozeCount: nil,
+            makeMaxSnoozeCount: {
+                factoryCallCount += 1
+                return 7
+            }
+        )
+
+        XCTAssertEqual(factoryCallCount, 1, "Factory must run when explicit maxSnoozeCount is absent")
+        XCTAssertEqual(sut.maxConsecutiveSnoozes, 7)
+    }
+
+    func test_maxConsecutiveSnoozes_withExplicitValue_bypassesFactory() {
+        var factoryCallCount = 0
+        let sut = makeSUT(
+            maxSnoozeCount: 5,
+            makeMaxSnoozeCount: {
+                factoryCallCount += 1
+                return 9
+            }
+        )
+
+        XCTAssertEqual(factoryCallCount, 0, "Factory must not run when explicit maxSnoozeCount is provided")
+        XCTAssertEqual(sut.maxConsecutiveSnoozes, 5)
     }
 
     // MARK: - isSnoozeActive

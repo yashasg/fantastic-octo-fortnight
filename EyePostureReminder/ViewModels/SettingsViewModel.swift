@@ -14,6 +14,7 @@ import os
 @MainActor
 final class SettingsViewModel: ObservableObject {
     typealias DateProviderFactory = () -> DateProviding
+    typealias MaxSnoozeCountFactory = () -> Int
 
     // MARK: - Snooze Options (M2.3)
 
@@ -302,14 +303,16 @@ final class SettingsViewModel: ObservableObject {
     init(
         settings: SettingsStore,
         scheduler: ReminderScheduling,
-        maxSnoozeCount: Int = AppConfig.load().features.maxSnoozeCount,
+        maxSnoozeCount: Int? = nil,
+        makeMaxSnoozeCount: @escaping MaxSnoozeCountFactory = { AppConfig.load().features.maxSnoozeCount },
         dateProvider: DateProviding? = nil,
         makeDateProvider: @escaping DateProviderFactory = { SystemDateProvider() }
     ) {
+        let resolvedMaxSnoozeCount = maxSnoozeCount ?? makeMaxSnoozeCount()
         let resolvedDateProvider = dateProvider ?? makeDateProvider()
         self.settings  = settings
         self.scheduler = scheduler
-        self.maxConsecutiveSnoozes = maxSnoozeCount
+        self.maxConsecutiveSnoozes = resolvedMaxSnoozeCount
         self.dateProvider = resolvedDateProvider
         settings.objectWillChange
             .sink { [weak self] in self?.objectWillChange.send() }
