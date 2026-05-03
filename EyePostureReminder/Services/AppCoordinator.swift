@@ -184,6 +184,7 @@ final class AppCoordinator: ObservableObject {
         overlayManager: OverlayPresenting? = nil,
         screenTimeTracker: ScreenTimeTracking? = nil,
         pauseConditionProvider: PauseConditionProviding? = nil,
+        makePauseConditionManager: ((SettingsStore) -> PauseConditionProviding)? = nil,
         screenTimeAuthorization: ScreenTimeAuthorizationProviding? = nil,
         uiTestStatusStore: UserDefaults? = nil,
         makeUITestStatusStore: @escaping () -> UserDefaults = { .standard },
@@ -236,7 +237,8 @@ final class AppCoordinator: ObservableObject {
         self.pauseConditionManager = Self.resolvePauseConditionManager(
             pauseConditionProvider,
             settings: self.settings,
-            uiTestMode: resolvedUITestMode
+            uiTestMode: resolvedUITestMode,
+            makePauseConditionManager: makePauseConditionManager
         )
         Logger.lifecycle.info("AppCoordinator initialised")
         recordWatchdogHeartbeat(.coordinatorInitialized)
@@ -680,17 +682,22 @@ private extension AppCoordinator {
     static func resolvePauseConditionManager(
         _ pauseConditionProvider: PauseConditionProviding?,
         settings: SettingsStore,
-        uiTestMode: Bool
+        uiTestMode: Bool,
+        makePauseConditionManager: ((SettingsStore) -> PauseConditionProviding)?
     ) -> PauseConditionProviding {
         guard let pauseConditionProvider else {
-            return uiTestMode
-                ? NoopPauseConditionManager()
-                : PauseConditionManager(
-                    settings: settings,
-                    focusDetector: LiveFocusStatusDetector(),
-                    carPlayDetector: LiveCarPlayDetector(),
-                    drivingDetector: LiveDrivingActivityDetector()
-                )
+            guard uiTestMode == false else {
+                return NoopPauseConditionManager()
+            }
+            if let makePauseConditionManager {
+                return makePauseConditionManager(settings)
+            }
+            return PauseConditionManager(
+                settings: settings,
+                focusDetector: LiveFocusStatusDetector(),
+                carPlayDetector: LiveCarPlayDetector(),
+                drivingDetector: LiveDrivingActivityDetector()
+            )
         }
         return pauseConditionProvider
     }
