@@ -273,7 +273,7 @@ final class AppCoordinator: ObservableObject {
                 self.pendingOverlay = nil
                 Logger.scheduling.info("PauseConditionManager: pausing reminders (active condition)")
             } else {
-                guard (self.settings.snoozedUntil ?? .distantPast) <= Date() else {
+                guard (self.settings.snoozedUntil ?? .distantPast) <= self.dateProvider.now else {
                     Logger.scheduling.debug(
                         "PauseConditionManager: pause cleared but snooze still active — not resuming")
                     return
