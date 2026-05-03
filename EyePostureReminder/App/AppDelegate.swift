@@ -2,7 +2,28 @@ import os
 import UIKit
 import UserNotifications
 
+protocol UserNotificationCenterDelegating: AnyObject {
+    var delegate: UNUserNotificationCenterDelegate? { get set }
+}
+
+extension UNUserNotificationCenter: UserNotificationCenterDelegating {}
+
 final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
+
+    private let notificationCenter: UserNotificationCenterDelegating?
+    private let registerMetricKitSubscriber: () -> Void
+
+    init(
+        notificationCenter: UserNotificationCenterDelegating? = nil,
+        registerMetricKitSubscriber: @escaping () -> Void = { MetricKitSubscriber.shared.register() }
+    ) {
+        self.notificationCenter = notificationCenter
+        self.registerMetricKitSubscriber = registerMetricKitSubscriber
+        super.init()
+#if DEBUG
+        preSeedUITestDefaults()
+#endif
+    }
 
     /// Set by `EyePostureReminderApp.onAppear` — bridges UIKit delegate
     /// callbacks into the SwiftUI-owned coordinator.
@@ -15,11 +36,6 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     /// and falls back to `ScreenTimeAuthorizationNoop(.unavailable)`, which
     /// prevents `TrueInterruptSkippedBanner` from ever rendering on the first
     /// cold launch (#457).
-    override init() {
-        super.init()
-        preSeedUITestDefaults()
-    }
-
     private func preSeedUITestDefaults() {
         let args = CommandLine.arguments
         if args.contains("--simulate-screen-time-not-determined") {
@@ -43,9 +59,10 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
-        UNUserNotificationCenter.current().delegate = self
+        let notificationCenter = notificationCenter ?? UNUserNotificationCenter.current()
+        notificationCenter.delegate = self
         installUncaughtExceptionHandler()
-        MetricKitSubscriber.shared.register()
+        registerMetricKitSubscriber()
 #if DEBUG
         applyUITestLaunchArguments()
 #endif
