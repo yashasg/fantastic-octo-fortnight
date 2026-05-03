@@ -231,3 +231,7 @@
 - Validation: `./scripts/build.sh build` ✅, `./scripts/build.sh test` ✅.
 - Scope: `EyePostureReminder/ViewModels/SettingsViewModel.swift`, `Tests/EyePostureReminderTests/ViewModels/SettingsViewModelExtendedTests.swift`.
 - Learned pattern: for time-zone-sensitive day-boundary logic, inject `Calendar` as optional + factory and add fallback-used/explicit-bypass tests to avoid hidden `Calendar.current` coupling while preserving production defaults.
+
+## Learnings
+
+- For lifecycle observer dependencies in services, prefer `notificationCenter: NotificationCenter? = nil` plus `makeNotificationCenter` fallback resolved once in `init`; add fallback-used and explicit-bypass tests by posting lifecycle notifications through the resolved center to remove hidden `.default` coupling while preserving runtime behavior (`EyePostureReminder/Services/ScreenTimeTracker.swift`, `Tests/EyePostureReminderTests/Services/ScreenTimeTrackerTests.swift`).
