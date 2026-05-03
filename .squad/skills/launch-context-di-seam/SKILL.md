@@ -22,6 +22,7 @@ Use this when service or coordinator logic branches on process launch context
 - For coordinators that consume launch arguments in multiple places, resolve once (`let resolvedLaunchArguments = launchArguments ?? launchArgumentsProvider()`) and thread the resolved value through each branch to avoid mixed injected/global behavior.
 - Apply the same optional+provider pattern to process environment reads (`processEnvironment: [String: String]? = nil`, `processEnvironmentProvider`) and resolve once in `init` before passing to resolver helpers.
 - For coordinator lifecycle methods that branch on UI-test mode after init (for example `refreshAuthStatus`), persist the resolved init value in an instance property and guard on that property instead of static globals.
+- For static launch-mode booleans used by views, expose a computed property backed by a seamable resolver (`launchArguments` optional + provider closure) so tests can cover fallback and explicit-bypass behavior without mutating `CommandLine.arguments`.
 
 ## Examples
 - `AppCoordinator.init(..., processEnvironment: [String: String]? = nil, processEnvironmentProvider: @escaping () -> [String: String] = { ProcessInfo.processInfo.environment }, launchArguments: [String]? = nil, launchArgumentsProvider: @escaping () -> [String] = { CommandLine.arguments }, ...)`
@@ -31,6 +32,7 @@ Use this when service or coordinator logic branches on process launch context
 - `AppDelegate.init(..., makeNotificationCenter: @escaping () -> UserNotificationCenterDelegating = { UNUserNotificationCenter.current() })` with fallback-path coverage in `test_didFinishLaunching_withNilNotificationCenter_usesInjectedFactory`.
 - `AppDelegate.init(..., launchArguments: [String]? = nil, launchArgumentsProvider: @escaping () -> [String] = { CommandLine.arguments })` with fallback/bypass coverage in `test_init_withoutLaunchArguments_usesInjectedLaunchArgumentsProvider` and `test_init_withExplicitLaunchArguments_doesNotCallInjectedLaunchArgumentsProvider`.
 - `AppCoordinator.scheduleReminders()` UI-test gates (`requestNotificationPermission`, tracker configuration guard) should branch on instance `isUITestModeEnabled`; coverage: `test_scheduleReminders_withInjectedUITestModeTrue_skipsPermissionPromptAndTrackerConfiguration` in `Tests/EyePostureReminderTests/Services/AppCoordinatorUITestModeResolverTests.swift`.
+- `AppCoordinator+UITestMode.resolveIsUITestMode(launchArguments:launchArgumentsProvider:)` feeding computed `AppCoordinator.isUITestMode`; seam coverage: `test_resolveIsUITestMode_withoutLaunchArguments_usesInjectedProvider` and `test_resolveIsUITestMode_withExplicitLaunchArguments_bypassesProvider`.
 
 ## Anti-Patterns
 - Reading launch context globals directly inside static resolvers.
