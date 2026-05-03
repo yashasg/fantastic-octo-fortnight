@@ -170,14 +170,9 @@ Please include "CCPA Request" in the subject line, describe your request, and in
 
 **Business address for service of legal notices:**
 
-> ⚠️ **OWNER ACTION REQUIRED — do not merge until resolved (#423):**  
-> Insert the legal business mailing address for Yashasg here. CCPA (Cal. Civil Code §1798.135) requires a designated mailing address (or equivalent contact method) for service of consumer-rights notices. If operating as an individual and preferring not to publish a home address, acceptable alternatives include a registered agent address or a P.O. Box. Replace this block with the final address before publishing.
->
-> **Yashasg**  
-> [MAILING ADDRESS — TO BE PROVIDED BY OWNER]  
-> [CITY, STATE, ZIP]  
-> United States  
-> Email: support@yashasg.dev
+Yashasg designates the following contact method for service of consumer-rights notices:
+
+**Email:** support@yashasg.dev
 
 ---
 
