@@ -15,6 +15,7 @@ import os
 final class SettingsViewModel: ObservableObject {
     typealias DateProviderFactory = () -> DateProviding
     typealias MaxSnoozeCountFactory = () -> Int
+    typealias CalendarFactory = () -> Calendar
 
     // MARK: - Snooze Options (M2.3)
 
@@ -51,6 +52,11 @@ final class SettingsViewModel: ObservableObject {
 
         /// Computes the absolute snooze expiry date from an injected reference date.
         func endDate(referenceDate: Date) -> Date {
+            endDate(referenceDate: referenceDate, calendar: .current)
+        }
+
+        /// Computes the absolute snooze expiry date from injected date + calendar.
+        func endDate(referenceDate: Date, calendar: Calendar) -> Date {
             switch self {
             case .fiveMinutes:
                 return referenceDate.addingTimeInterval(5 * 60)
@@ -61,7 +67,6 @@ final class SettingsViewModel: ObservableObject {
                 // `calendar.date(byAdding:)` never returns nil for valid inputs,
                 // so no fallback is needed — a fallback of `+24h` would be wrong
                 // on DST transition days (23 or 25 hours, not midnight).
-                let calendar = Calendar.current
                 return calendar.date(
                     byAdding: .day,
                     value: 1,
@@ -123,6 +128,7 @@ final class SettingsViewModel: ObservableObject {
     let settings: SettingsStore
     private let scheduler: ReminderScheduling
     private let dateProvider: DateProviding
+    private let calendar: Calendar
     private var cancellables: Set<AnyCancellable> = []
 
     // MARK: - Computed State (M2.3)
@@ -306,14 +312,18 @@ final class SettingsViewModel: ObservableObject {
         maxSnoozeCount: Int? = nil,
         makeMaxSnoozeCount: @escaping MaxSnoozeCountFactory = { AppConfig.load().features.maxSnoozeCount },
         dateProvider: DateProviding? = nil,
-        makeDateProvider: @escaping DateProviderFactory = { SystemDateProvider() }
+        makeDateProvider: @escaping DateProviderFactory = { SystemDateProvider() },
+        calendar: Calendar? = nil,
+        makeCalendar: @escaping CalendarFactory = { .current }
     ) {
         let resolvedMaxSnoozeCount = maxSnoozeCount ?? makeMaxSnoozeCount()
         let resolvedDateProvider = dateProvider ?? makeDateProvider()
+        let resolvedCalendar = calendar ?? makeCalendar()
         self.settings  = settings
         self.scheduler = scheduler
         self.maxConsecutiveSnoozes = resolvedMaxSnoozeCount
         self.dateProvider = resolvedDateProvider
+        self.calendar = resolvedCalendar
         settings.objectWillChange
             .sink { [weak self] in self?.objectWillChange.send() }
             .store(in: &cancellables)
@@ -356,7 +366,7 @@ final class SettingsViewModel: ObservableObject {
             Logger.settings.info("Snooze limit reached — ignoring snooze request")
             return
         }
-        let endDate = option.endDate(referenceDate: dateProvider.now)
+        let endDate = option.endDate(referenceDate: dateProvider.now, calendar: calendar)
         guard endDate > dateProvider.now else {
             // Guard against clock skew or NTP drift producing a past end date;
             // applying a past snoozedUntil would be cleared immediately by

@@ -42,14 +42,18 @@ final class SettingsViewModelExtendedTests: XCTestCase {
     private func makeSUT(
         maxSnoozeCount: Int = 2,
         dateProvider: DateProviding? = nil,
-        makeDateProvider: @escaping SettingsViewModel.DateProviderFactory
+        makeDateProvider: @escaping SettingsViewModel.DateProviderFactory,
+        calendar: Calendar? = nil,
+        makeCalendar: @escaping SettingsViewModel.CalendarFactory = { .current }
     ) -> SettingsViewModel {
         SettingsViewModel(
             settings: settings,
             scheduler: mockScheduler,
             maxSnoozeCount: maxSnoozeCount,
             dateProvider: dateProvider,
-            makeDateProvider: makeDateProvider
+            makeDateProvider: makeDateProvider,
+            calendar: calendar,
+            makeCalendar: makeCalendar
         )
     }
 
@@ -233,6 +237,56 @@ final class SettingsViewModelExtendedTests: XCTestCase {
 
         XCTAssertEqual(factoryCallCount, 0, "Factory must not run when explicit maxSnoozeCount is provided")
         XCTAssertEqual(sut.maxConsecutiveSnoozes, 5)
+    }
+
+    func test_init_withoutCalendar_usesFactoryCalendarForRestOfDaySnoozeComputation() throws {
+        let fixedNow = Date(timeIntervalSince1970: 1_700_000_000)
+        let dateProvider = MockDateProvider(now: fixedNow)
+        var fallbackCalendar = Calendar(identifier: .gregorian)
+        fallbackCalendar.timeZone = try XCTUnwrap(TimeZone(secondsFromGMT: 14 * 3600))
+        var factoryCallCount = 0
+        let sut = makeSUT(
+            dateProvider: dateProvider,
+            makeDateProvider: { dateProvider },
+            calendar: nil,
+            makeCalendar: {
+                factoryCallCount += 1
+                return fallbackCalendar
+            }
+        )
+
+        sut.snooze(option: .restOfDay)
+
+        XCTAssertEqual(factoryCallCount, 1, "Factory must run when explicit calendar is absent")
+        let expected = try XCTUnwrap(
+            fallbackCalendar.date(byAdding: .day, value: 1, to: fallbackCalendar.startOfDay(for: fixedNow))
+        )
+        XCTAssertEqual(settings.snoozedUntil, expected)
+    }
+
+    func test_init_withExplicitCalendar_bypassesFactoryForRestOfDaySnoozeComputation() throws {
+        let fixedNow = Date(timeIntervalSince1970: 1_700_000_000)
+        let dateProvider = MockDateProvider(now: fixedNow)
+        var explicitCalendar = Calendar(identifier: .gregorian)
+        explicitCalendar.timeZone = try XCTUnwrap(TimeZone(secondsFromGMT: -12 * 3600))
+        var factoryCallCount = 0
+        let sut = makeSUT(
+            dateProvider: dateProvider,
+            makeDateProvider: { dateProvider },
+            calendar: explicitCalendar,
+            makeCalendar: {
+                factoryCallCount += 1
+                return .current
+            }
+        )
+
+        sut.snooze(option: .restOfDay)
+
+        XCTAssertEqual(factoryCallCount, 0, "Factory must not run when explicit calendar is provided")
+        let expected = try XCTUnwrap(
+            explicitCalendar.date(byAdding: .day, value: 1, to: explicitCalendar.startOfDay(for: fixedNow))
+        )
+        XCTAssertEqual(settings.snoozedUntil, expected)
     }
 
     // MARK: - isSnoozeActive
