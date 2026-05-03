@@ -25,7 +25,7 @@ concurrency:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-  XCODE_VERSION: "26.4"
+  XCODE_VERSION: "16.4"
   SCHEME: "EyePostureReminder"
   # No .xcodeproj — project uses Swift Package Manager.
   # xcodebuild resolves the package directly from Package.swift.
