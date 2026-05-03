@@ -10,10 +10,9 @@ import XCTest
 /// 2. **Timer-driven** — async tests that post lifecycle notifications so the
 ///    real 1-second `Timer` fires and asserts threshold-callback behavior.
 ///
-/// Note: `startIfActive()` checks `UIApplication.shared.applicationState`. In the
-/// test runner the state is `.background`, so it does **not** start the timer.
-/// Instead these tests post `UIApplication.didBecomeActiveNotification` directly
-/// to drive `handleDidBecomeActive` → `startTicking()`.
+/// `startIfActive()` now uses the injected `appStateProvider` seam; tests below
+/// exercise both `.active` (timer starts → threshold fires) and `.background`
+/// (no-op) paths deterministically without depending on the real UIApplication.
 ///
 /// The class is `@MainActor` so that `NotificationCenter.default.post` calls are
 /// made from the main thread, ensuring `Timer.scheduledTimer` is scheduled on
@@ -183,6 +182,50 @@ final class ScreenTimeTrackerTests: XCTestCase {
     func test_startIfActive_calledTwice_doesNotCrash() {
         sut.startIfActive()
         sut.startIfActive()
+    }
+
+    // MARK: - startIfActive — AppStateProviding seam
+
+    /// Injecting `.active` state triggers `startTicking()`: threshold fires within 2 s.
+    func test_startIfActive_withActiveState_startsTimer() async {
+        let center = NotificationCenter()
+        let tracker = ScreenTimeTracker(
+            resetGracePeriod: 5.0,
+            lifecycleNotificationCenter: center,
+            appStateProvider: MockAppStateProvider(state: .active)
+        )
+        defer { tracker.stop() }
+
+        tracker.setThreshold(1.0, for: .eyes)
+        let exp = expectation(description: "threshold fires via startIfActive with .active state")
+        tracker.onThresholdReached = { type in
+            if type == .eyes { exp.fulfill() }
+        }
+
+        tracker.startIfActive()
+
+        await fulfillment(of: [exp], timeout: 4.0)
+    }
+
+    /// Injecting `.background` state keeps timer stopped: threshold must NOT fire.
+    func test_startIfActive_withBackgroundState_doesNotStartTimer() async {
+        let center = NotificationCenter()
+        let tracker = ScreenTimeTracker(
+            resetGracePeriod: 5.0,
+            lifecycleNotificationCenter: center,
+            appStateProvider: MockAppStateProvider(state: .background)
+        )
+        defer { tracker.stop() }
+
+        tracker.setThreshold(1.0, for: .eyes)
+        var fired = false
+        tracker.onThresholdReached = { _ in fired = true }
+
+        tracker.startIfActive()
+
+        // Allow 2.5 s — timer must NOT have fired because state is .background.
+        try? await Task.sleep(nanoseconds: 2_500_000_000)
+        XCTAssertFalse(fired, "startIfActive must be a no-op when appStateProvider returns .background")
     }
 
     // MARK: - onThresholdReached callback
