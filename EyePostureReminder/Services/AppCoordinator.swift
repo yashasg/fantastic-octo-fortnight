@@ -184,6 +184,7 @@ final class AppCoordinator: ObservableObject {
         notificationCenter: NotificationScheduling? = nil,
         makeNotificationCenter: @escaping () -> NotificationScheduling = { UNUserNotificationCenter.current() },
         overlayManager: OverlayPresenting? = nil,
+        makeOverlayManager: (() -> OverlayPresenting)? = nil,
         screenTimeTracker: ScreenTimeTracking? = nil,
         makeScreenTimeTracker: (() -> ScreenTimeTracking)? = nil,
         pauseConditionProvider: PauseConditionProviding? = nil,
@@ -214,7 +215,10 @@ final class AppCoordinator: ObservableObject {
         self.settings = Self.resolveSettings(settings)
         self.scheduler = Self.resolveScheduler(scheduler)
         self.notificationCenter = notificationCenter ?? makeNotificationCenter()
-        self.overlayManager = Self.resolveOverlayManager(overlayManager)
+        self.overlayManager = Self.resolveOverlayManager(
+            overlayManager,
+            makeOverlayManager: makeOverlayManager
+        )
         let resolvedLaunchArguments = launchArguments ?? launchArgumentsProvider()
         let resolvedProcessEnvironment = processEnvironment ?? processEnvironmentProvider()
         let resolvedUITestStatusStore = uiTestStatusStore ?? makeUITestStatusStore()
@@ -650,8 +654,17 @@ private extension AppCoordinator {
         scheduler ?? ReminderScheduler()
     }
 
-    static func resolveOverlayManager(_ overlayManager: OverlayPresenting?) -> OverlayPresenting {
-        overlayManager ?? OverlayManager()
+    static func resolveOverlayManager(
+        _ overlayManager: OverlayPresenting?,
+        makeOverlayManager: (() -> OverlayPresenting)?
+    ) -> OverlayPresenting {
+        if let overlayManager {
+            return overlayManager
+        }
+        if let makeOverlayManager {
+            return makeOverlayManager()
+        }
+        return OverlayManager()
     }
 
     static func resolveScreenTimeAuthorization(
