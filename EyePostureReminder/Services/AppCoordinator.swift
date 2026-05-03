@@ -83,6 +83,7 @@ final class AppCoordinator: ObservableObject {
     /// app extensions and watchdog diagnostics can observe the selected path.
     let ipcStore: AppGroupIPCProviding
     let dateProvider: DateProviding
+    private let lifecycleNotificationCenter: NotificationCenter
     private var trueInterruptEnabledObserver: NSObjectProtocol?
     let watchdogHeartbeatGraceInterval: TimeInterval
 
@@ -188,6 +189,7 @@ final class AppCoordinator: ObservableObject {
         uiTestMode: Bool? = nil,
         deviceActivityMonitor: DeviceActivityMonitorProviding? = nil,
         ipcStore: AppGroupIPCProviding = AppGroupIPCStore(),
+        lifecycleNotificationCenter: NotificationCenter = .default,
         watchdogHeartbeatGraceInterval: TimeInterval = 10,
         dateProvider: DateProviding = SystemDateProvider()
     ) {
@@ -208,6 +210,7 @@ final class AppCoordinator: ObservableObject {
         self.deviceActivityMonitor = Self.resolveDeviceActivityMonitor(deviceActivityMonitor)
         self.ipcStore = ipcStore
         self.dateProvider = dateProvider
+        self.lifecycleNotificationCenter = lifecycleNotificationCenter
         self.watchdogHeartbeatGraceInterval = watchdogHeartbeatGraceInterval
         let resolvedUITestMode = uiTestMode ?? Self.isUITestMode(launchArguments: launchArguments)
 
@@ -283,7 +286,7 @@ final class AppCoordinator: ObservableObject {
             }
         }
         self.pauseConditionManager.startMonitoring()
-        self.trueInterruptEnabledObserver = NotificationCenter.default.addObserver(
+        self.trueInterruptEnabledObserver = lifecycleNotificationCenter.addObserver(
             forName: AppGroupIPCStore.trueInterruptEnabledDidChangeNotification,
             object: nil,
             queue: nil
@@ -299,7 +302,7 @@ final class AppCoordinator: ObservableObject {
         snoozeWakeTask?.cancel()
         deviceActivityMonitorTask?.cancel()
         if let trueInterruptEnabledObserver {
-            NotificationCenter.default.removeObserver(trueInterruptEnabledObserver)
+            lifecycleNotificationCenter.removeObserver(trueInterruptEnabledObserver)
         }
     }
 
