@@ -201,3 +201,9 @@
 - For AppCoordinator scene-activation checks in notification handling, inject `hasActiveSceneProvider: (() -> Bool)?` plus optional `makeHasActiveSceneProvider` and resolve once in `init`; default to `UIApplication.shared.connectedScenes` inside `init` (not default args) to stay Swift 6 actor-safe while removing hidden global UIKit reads (`EyePostureReminder/Services/AppCoordinator.swift`, `Tests/EyePostureReminderTests/Services/AppCoordinatorTests.swift`).
 - For view-model scalar config defaults, prefer `value: Int? = nil` plus `makeValue` fallback factory resolved once in `init`; add fallback-used and explicit-bypass tests to remove eager `AppConfig.load()` default-argument coupling while preserving behavior (`EyePostureReminder/ViewModels/SettingsViewModel.swift`, `Tests/EyePostureReminderTests/ViewModels/SettingsViewModelExtendedTests.swift`).
 - For config-heavy stores, prefer `config: AppConfig? = nil` plus `makeConfig` fallback resolved once in `init`; add fallback-used and explicit-bypass tests to remove eager `AppConfig.load()` default-argument coupling while preserving defaults behavior (`EyePostureReminder/Models/SettingsStore.swift`, `Tests/EyePostureReminderTests/Models/SettingsStoreTests.swift`).
+
+## Learnings
+
+### 2026-05-03T20:10:00Z: #462 Phase A resetToDefaults config seam
+- `SettingsStore.resetToDefaults()` now resolves config via the init-injected `makeConfig` seam when no explicit config is passed, removing eager `AppConfig.load()` from the method signature while keeping production defaults behavior.
+- Added focused unit tests covering factory-path reset and explicit-config reset bypass.

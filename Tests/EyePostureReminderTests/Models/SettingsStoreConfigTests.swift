@@ -7,8 +7,8 @@ import XCTest
 ///
 /// ## Expected SettingsStore API (per decisions.md):
 /// ```swift
-/// init(store: SettingsPersisting = UserDefaults.standard, config: AppConfig = .load())
-/// func resetToDefaults(config: AppConfig = .load())
+/// init(store: SettingsPersisting? = nil, makeStore: () -> SettingsPersisting, config: AppConfig? = nil, makeConfig: () -> AppConfig)
+/// func resetToDefaults(config: AppConfig? = nil)
 /// ```
 @MainActor
 final class SettingsStoreConfigTests: XCTestCase {

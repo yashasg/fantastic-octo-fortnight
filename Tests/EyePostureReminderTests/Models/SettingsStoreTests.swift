@@ -149,6 +149,71 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertTrue(reloaded.globalEnabled)
     }
 
+    func test_resetToDefaults_withoutConfig_usesInjectedConfigFactory() {
+        let injectedConfig = AppConfig(
+            defaults: AppConfig.Defaults(
+                eyeInterval: 777,
+                eyeBreakDuration: 20,
+                postureInterval: 888,
+                postureBreakDuration: 10
+            ),
+            features: AppConfig.Features(globalEnabledDefault: false, maxSnoozeCount: 3)
+        )
+        var factoryCallCount = 0
+        let reloaded = SettingsStore(
+            store: MockSettingsPersisting(),
+            config: nil,
+            makeConfig: {
+                factoryCallCount += 1
+                return injectedConfig
+            }
+        )
+        reloaded.eyesInterval = 1200
+
+        reloaded.resetToDefaults()
+
+        XCTAssertEqual(factoryCallCount, 2)
+        XCTAssertEqual(reloaded.eyesInterval, 777)
+        XCTAssertFalse(reloaded.globalEnabled)
+    }
+
+    func test_resetToDefaults_withExplicitConfig_doesNotCallInjectedConfigFactory() {
+        let seededConfig = AppConfig(
+            defaults: AppConfig.Defaults(
+                eyeInterval: 1200,
+                eyeBreakDuration: 20,
+                postureInterval: 1800,
+                postureBreakDuration: 10
+            ),
+            features: AppConfig.Features(globalEnabledDefault: true, maxSnoozeCount: 3)
+        )
+        let resetConfig = AppConfig(
+            defaults: AppConfig.Defaults(
+                eyeInterval: 600,
+                eyeBreakDuration: 20,
+                postureInterval: 900,
+                postureBreakDuration: 10
+            ),
+            features: AppConfig.Features(globalEnabledDefault: false, maxSnoozeCount: 3)
+        )
+        var didCallFactory = false
+        let reloaded = SettingsStore(
+            store: MockSettingsPersisting(),
+            config: seededConfig,
+            makeConfig: {
+                didCallFactory = true
+                return .fallback
+            }
+        )
+
+        reloaded.resetToDefaults(config: resetConfig)
+
+        XCTAssertFalse(didCallFactory)
+        XCTAssertEqual(reloaded.eyesInterval, 600)
+        XCTAssertEqual(reloaded.postureInterval, 900)
+        XCTAssertFalse(reloaded.globalEnabled)
+    }
+
     // MARK: - Persistence: Booleans
 
     func test_setGlobalEnabled_false_persistsAndLoads() {

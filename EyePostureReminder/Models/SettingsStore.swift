@@ -163,6 +163,7 @@ final class SettingsStore: ObservableObject {
     // MARK: - Init
 
     private let store: SettingsPersisting
+    private let makeConfig: AppConfigFactory
 
     typealias SettingsStoreFactory = () -> SettingsPersisting
     typealias AppConfigFactory = () -> AppConfig
@@ -174,8 +175,15 @@ final class SettingsStore: ObservableObject {
         makeConfig: @escaping AppConfigFactory = { AppConfig.load() }
     ) {
         let resolvedStore = store ?? makeStore()
-        let resolvedConfig = config ?? makeConfig()
+        let resolvedConfigFactory: AppConfigFactory = {
+            if let config {
+                return config
+            }
+            return makeConfig()
+        }
+        let resolvedConfig = resolvedConfigFactory()
         self.store = resolvedStore
+        self.makeConfig = resolvedConfigFactory
         let defaultEyesBreakDuration = Self.sanitizedBreakDuration(
             resolvedConfig.defaults.eyeBreakDuration,
             defaultValue: AppConfig.fallback.defaults.eyeBreakDuration,
@@ -230,19 +238,20 @@ final class SettingsStore: ObservableObject {
     // MARK: - Reset to Defaults
 
     /// Restores all user-configurable settings to the values specified in `defaults.json`.
-    func resetToDefaults(config: AppConfig = AppConfig.load()) {
-        globalEnabled = config.features.globalEnabledDefault
+    func resetToDefaults(config: AppConfig? = nil) {
+        let resolvedConfig = config ?? makeConfig()
+        globalEnabled = resolvedConfig.features.globalEnabledDefault
         eyesEnabled = true
         postureEnabled = true
-        eyesInterval = config.defaults.eyeInterval
+        eyesInterval = resolvedConfig.defaults.eyeInterval
         eyesBreakDuration = Self.sanitizedBreakDuration(
-            config.defaults.eyeBreakDuration,
+            resolvedConfig.defaults.eyeBreakDuration,
             defaultValue: AppConfig.fallback.defaults.eyeBreakDuration,
             key: Keys.eyesBreakDuration
         )
-        postureInterval = config.defaults.postureInterval
+        postureInterval = resolvedConfig.defaults.postureInterval
         postureBreakDuration = Self.sanitizedBreakDuration(
-            config.defaults.postureBreakDuration,
+            resolvedConfig.defaults.postureBreakDuration,
             defaultValue: AppConfig.fallback.defaults.postureBreakDuration,
             key: Keys.postureBreakDuration
         )
