@@ -132,7 +132,10 @@ extension AppCoordinator {
     ) {
         guard shouldUseShieldPath else { return }
         enqueueDeviceActivityMonitorOperation(
-            .schedule(ShieldSession(type: type, durationSeconds: duration), presentationID: presentationID)
+            .schedule(
+                ShieldSession(type: type, durationSeconds: duration, triggeredAt: dateProvider.now),
+                presentationID: presentationID
+            )
         )
     }
 
