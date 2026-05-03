@@ -167,6 +167,48 @@ final class AppCoordinatorTests: XCTestCase {
         sut.appWillResignActive()
     }
 
+    func test_appWillResignActive_usesInjectedDateProvider_forSessionDuration() async {
+        let mockDateProvider = MockDateProvider(now: Date())
+        let mockNotif = MockNotificationCenter()
+        mockNotif.authorizationGranted = true
+        let coordinator = AppCoordinator(
+            settings: settings,
+            scheduler: ReminderScheduler(notificationCenter: mockNotif),
+            notificationCenter: mockNotif,
+            overlayManager: MockOverlayPresenting(),
+            screenTimeTracker: MockScreenTimeTracker(),
+            pauseConditionProvider: MockPauseConditionProvider(),
+            ipcStore: MockAppGroupIPCRecorder(),
+            dateProvider: mockDateProvider
+        )
+        defer { coordinator.stopFallbackTimers() }
+
+        settings.globalEnabled = true
+        settings.eyesEnabled = true
+        settings.postureEnabled = false
+
+        var captured: [AnalyticsEvent] = []
+        AnalyticsLogger.testEventHandler = { captured.append($0) }
+        defer { AnalyticsLogger.testEventHandler = nil }
+
+        await coordinator.scheduleReminders()
+        mockDateProvider.now = Date(timeIntervalSinceNow: -3_600)
+
+        coordinator.appWillResignActive()
+
+        let sessionDurations = captured.compactMap { event -> TimeInterval? in
+            if case let .appSessionEnd(sessionDurationS) = event {
+                return sessionDurationS
+            }
+            return nil
+        }
+        XCTAssertEqual(sessionDurations.count, 1)
+        XCTAssertLessThan(
+            sessionDurations[0],
+            -3_000,
+            "appWillResignActive should source session duration from injected DateProviding")
+    }
+
     // MARK: - ReminderScheduling conformance (crash-safety)
 
     func test_cancelAllReminders_doesNotCrash() {
