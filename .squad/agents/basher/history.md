@@ -337,3 +337,16 @@
 - Focus route tests on category-ID → route mapping (`.reminder`, `.snoozeWake`, `.ignore`) so callback coverage does not depend on constructing system-only `UNNotification` objects.
 - User preference reinforced: keep #462 Phase A slices surgical (one DI/SRP production seam + focused tests + required `./scripts/build.sh build` and `./scripts/build.sh test`).
 - Key file paths: `EyePostureReminder/App/AppDelegate.swift`, `Tests/EyePostureReminderTests/Services/AppDelegateTests.swift`.
+
+## 2026-05-04T00:20:00Z: #462 Phase A — AppDelegate Optional Notification Factory Seam (COMPLETED)
+
+- Slice: updated `AppDelegate` to use an optional `makeNotificationCenter` factory seam resolved in `init`, preserving default `UNUserNotificationCenter.current()` behavior while removing eager concrete default-argument coupling.
+- Validation: `./scripts/build.sh build` ✅ and `./scripts/build.sh test` ✅ (2053 tests, 0 failures).
+- Scope: `EyePostureReminder/App/AppDelegate.swift`, `Tests/EyePostureReminderTests/Services/AppDelegateTests.swift`.
+
+## Learnings
+
+- For AppDelegate notification delegate wiring, prefer `makeNotificationCenter: (() -> UserNotificationCenterDelegating)? = nil` and resolve fallback once in `init`; this keeps production singleton behavior while enabling explicit nil-factory seams and bypass assertions in tests.
+- Keep AppDelegate seam tests surgical: one test for factory-used when `notificationCenter` is nil, and one test for explicit-center-bypasses-factory.
+- User preference reinforced: continue #462 with tiny DI/SRP micro-slices only, each validated with full `./scripts/build.sh build` and `./scripts/build.sh test`.
+- Key file paths: `EyePostureReminder/App/AppDelegate.swift`, `Tests/EyePostureReminderTests/Services/AppDelegateTests.swift`, `.squad/skills/notification-center-factory-seam/SKILL.md`.

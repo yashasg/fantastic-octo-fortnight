@@ -203,6 +203,27 @@ final class AppDelegateTests: XCTestCase {
         XCTAssertEqual(mockMetricKitSubscriber.registerCallCount, 1)
     }
 
+    func test_didFinishLaunching_withExplicitNotificationCenter_doesNotCallInjectedFactory() {
+        let explicitCenter = MockUserNotificationCenter()
+        let mockMetricKitSubscriber = MockMetricKitSubscriber()
+        var makeNotificationCenterCallCount = 0
+        let sut = AppDelegate(
+            notificationCenter: explicitCenter,
+            metricKitSubscriber: mockMetricKitSubscriber,
+            makeNotificationCenter: {
+                makeNotificationCenterCallCount += 1
+                return MockUserNotificationCenter()
+            }
+        )
+
+        let didFinish = sut.application(UIApplication.shared, didFinishLaunchingWithOptions: nil)
+
+        XCTAssertTrue(didFinish)
+        XCTAssertEqual(makeNotificationCenterCallCount, 0)
+        XCTAssertTrue(explicitCenter.delegate === sut)
+        XCTAssertEqual(mockMetricKitSubscriber.registerCallCount, 1)
+    }
+
     func test_didFinishLaunching_withNilMetricKitSubscriber_usesInjectedFactory() {
         let mockCenter = MockUserNotificationCenter()
         let factoryMetricKitSubscriber = MockMetricKitSubscriber()
