@@ -331,18 +331,22 @@ final class ScreenTimeTrackerRegressionTests: XCTestCase {
     /// Regression guard: if the counter is not reset, callbacks would stop after the first fire.
     func test_thresholdReached_resetsCounter_enablingSecondCycle() {
         var callCount = 0
-        let secondCallbackFired = expectation(description: "second callback after counter reset")
 
         sut.setThreshold(2, for: .eyes)
         sut.onThresholdReached = { type in
             if type == .eyes {
                 callCount += 1
-                if callCount >= 2 { secondCallbackFired.fulfill() }
             }
         }
 
-        NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
-        wait(for: [secondCallbackFired], timeout: 7.0)
+        sut.tick(now: 100)
+        XCTAssertEqual(callCount, 0)
+        sut.tick(now: 101)
+        XCTAssertEqual(callCount, 1)
+        sut.tick(now: 102)
+        XCTAssertEqual(callCount, 1)
+        sut.tick(now: 103)
+        XCTAssertEqual(callCount, 2)
     }
 
     // MARK: Lifecycle: willResignActive Pauses Accumulation
