@@ -1,4 +1,6 @@
 import SwiftUI
+import UIKit
+import UserNotifications
 
 struct HomeView: View {
     typealias LaunchArgumentsProvider = () -> [String]
@@ -33,11 +35,30 @@ struct HomeView: View {
     }
 
     private var statusLabel: String {
-        if settings.globalEnabled {
-            return String(localized: "home.status.active", bundle: .module)
-        } else {
+        if !settings.globalEnabled {
             return String(localized: "home.status.paused", bundle: .module)
         }
+        if Self.shouldShowNotificationRecovery(
+            globalEnabled: settings.globalEnabled,
+            notificationAuthStatus: coordinator.notificationAuthStatus
+        ) {
+            return String(localized: "home.status.notificationsOff", bundle: .module)
+        }
+        return String(localized: "home.status.active", bundle: .module)
+    }
+
+    private var shouldShowNotificationRecovery: Bool {
+        Self.shouldShowNotificationRecovery(
+            globalEnabled: settings.globalEnabled,
+            notificationAuthStatus: coordinator.notificationAuthStatus
+        )
+    }
+
+    static func shouldShowNotificationRecovery(
+        globalEnabled: Bool,
+        notificationAuthStatus: UNAuthorizationStatus
+    ) -> Bool {
+        globalEnabled && notificationAuthStatus == .denied
     }
 
     private var shouldShowTrueInterruptPrompts: Bool {
@@ -124,6 +145,10 @@ struct HomeView: View {
                trueInterruptBannerDismissed {
                 TrueInterruptSetupPill(onTap: { showSettings = true })
             }
+
+            if shouldShowNotificationRecovery {
+                HomeNotificationWarningBanner(onOpenSettings: openApplicationSettings)
+            }
         }
         .padding(.horizontal, AppSpacing.xl)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -158,6 +183,9 @@ struct HomeView: View {
                 showSettings = true
             }
         }
+        .task {
+            await coordinator.refreshAuthStatus()
+        }
         .onChangeCompat(of: openSettingsOnLaunch) { newValue in
             if newValue {
                 openSettingsOnLaunch = false
@@ -170,6 +198,56 @@ struct HomeView: View {
             guard !showSettings else { return }
             accessibilityNotificationPoster.postAnnouncement(message: statusLabel)
         }
+    }
+
+    private func openApplicationSettings() {
+        if let url = URL(string: UIApplication.openSettingsURLString) {
+            UIApplication.shared.open(url)
+        }
+    }
+}
+
+// MARK: - Notification Warning Banner
+
+struct HomeNotificationWarningBanner: View {
+    let onOpenSettings: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.sm) {
+            HStack(alignment: .top, spacing: AppSpacing.sm) {
+                IconContainer(icon: AppSymbol.warning, color: AppColor.accentWarm, size: 36)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: AppSpacing.xs) {
+                    Text("home.notifications.disabledTitle", bundle: .module)
+                        .font(AppFont.bodyEmphasized)
+                        .foregroundStyle(AppColor.textPrimary)
+                    Text("home.notifications.disabledBody", bundle: .module)
+                        .font(AppFont.caption)
+                        .foregroundStyle(AppColor.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
+            Button(action: onOpenSettings) {
+                Text("settings.notifications.openSettings", bundle: .module)
+                    .font(AppFont.captionEmphasized)
+            }
+            .frame(minHeight: AppLayout.minTapTarget)
+            .contentShape(Rectangle())
+            .foregroundStyle(AppColor.accentWarm)
+            .accessibilityHint(Text("settings.notifications.openSettings.hint", bundle: .module))
+            .accessibilityIdentifier("home.notifications.openSettings")
+        }
+        .padding(AppSpacing.sm)
+        .background(AppColor.accentWarm.opacity(AppOpacity.warningBackground),
+                    in: RoundedRectangle(cornerRadius: AppLayout.radiusSmall))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppLayout.radiusSmall)
+                .strokeBorder(AppColor.accentWarm.opacity(AppOpacity.warningSeparator),
+                              lineWidth: AppLayout.borderHair)
+        )
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("home.notifications.disabledBanner")
     }
 }
 
