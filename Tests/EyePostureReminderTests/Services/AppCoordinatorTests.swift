@@ -639,6 +639,28 @@ final class AppCoordinatorTests: XCTestCase {
         await sut.handleForegroundTransition()
     }
 
+    func test_handleForegroundTransition_deniedToAuthorized_reschedulesReminders() async {
+        let mockNotif = MockNotificationCenter()
+        mockNotif.authorizationStatus = .denied
+        settings.globalEnabled = true
+        settings.eyesEnabled = true
+        settings.postureEnabled = true
+        let (coordinator, _, _) = makeCoordinator(
+            overlay: MockOverlayPresenting(),
+            notifCenter: mockNotif)
+        defer { coordinator.stopFallbackTimers() }
+
+        await coordinator.scheduleReminders()
+        mockNotif.authorizationStatus = .authorized
+
+        await coordinator.handleForegroundTransition()
+
+        XCTAssertEqual(
+            reminderRequests(from: mockNotif).count,
+            2,
+            "Foreground return must schedule reminder notifications after permission changes to authorized")
+    }
+
     // MARK: - appWillResignActive
 
     func test_appWillResignActive_withNoTimers_doesNotCrash() {
