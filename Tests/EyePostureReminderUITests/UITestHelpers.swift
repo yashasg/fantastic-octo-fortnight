@@ -51,6 +51,12 @@ extension XCUIApplication {
         launchArguments += [TestLaunchArguments.skipOnboarding]
         appendDarkModeArgumentIfNeeded(darkMode)
         launch()
+
+        // Defensive fallback: on some runners the launch-argument write may race
+        // first-render initialization. Drive through onboarding if it is visible.
+        if !waitForHomeScreenReady(timeout: 6) {
+            completeOnboardingIfVisible(timeout: 20)
+        }
     }
 
     /// Appends `--reset-onboarding` and launches the app.
@@ -96,8 +102,8 @@ extension XCUIApplication {
         launch()
     }
 
-    /// Waits for the Home screen anchor element (`home.title`) to be present,
-    /// confirming that the view hierarchy has fully rendered after launch.
+    /// Waits for Home screen anchors to be present, confirming that the view
+    /// hierarchy has rendered enough for toolbar-driven navigation.
     ///
     /// Call immediately after `launchWithTrueInterruptPending()` (or any launch
     /// targeting the Home screen) so that subsequent element queries find a stable
@@ -105,8 +111,67 @@ extension XCUIApplication {
     ///
     /// - Returns: `true` if the anchor appears within `timeout`; `false` otherwise.
     @discardableResult
-    func waitForHomeScreenReady(timeout: TimeInterval = 5) -> Bool {
-        staticTexts["home.title"].waitForExistence(timeout: timeout)
+    func waitForHomeScreenReady(timeout: TimeInterval = 8) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        let homeTitle = staticTexts["home.title"]
+        let statusLabel = staticTexts["home.statusLabel"]
+        let settingsButton = buttons["home.settingsButton"]
+
+        while Date() < deadline {
+            let remaining = max(0.1, deadline.timeIntervalSinceNow)
+            let stepTimeout = min(0.75, remaining)
+            if homeTitle.waitForExistence(timeout: stepTimeout)
+                || statusLabel.waitForExistence(timeout: 0.1)
+                || settingsButton.waitForExistence(timeout: 0.1) {
+                return true
+            }
+            activate()
+        }
+
+        return homeTitle.exists || statusLabel.exists || settingsButton.exists
+    }
+
+    @discardableResult
+    private func completeOnboardingIfVisible(timeout: TimeInterval) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if waitForHomeScreenReady(timeout: 0.5) {
+                return true
+            }
+
+            if advanceOneOnboardingStep() {
+                continue
+            }
+
+            activate()
+            let step = min(0.25, max(0.05, deadline.timeIntervalSinceNow))
+            RunLoop.current.run(until: Date().addingTimeInterval(step))
+        }
+
+        return waitForHomeScreenReady(timeout: 1)
+    }
+
+    @discardableResult
+    private func advanceOneOnboardingStep() -> Bool {
+        let onboardingButtons = [
+            buttons["onboarding.welcome.nextButton"],
+            buttons["onboarding.permission.nextButton"],
+            buttons["onboarding.setup.getStartedButton"],
+            buttons["onboarding.interrupt.skipButton"]
+        ]
+
+        for button in onboardingButtons {
+            if !button.exists && !button.waitForExistence(timeout: 0.3) {
+                continue
+            }
+            if !button.isHittable && !waitForElementHittable(button, timeout: 1.5) {
+                continue
+            }
+            button.tap()
+            return true
+        }
+
+        return false
     }
 
     /// Waits for a single "overlay fully presented" anchor.

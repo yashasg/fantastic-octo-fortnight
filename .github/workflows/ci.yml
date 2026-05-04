@@ -338,12 +338,18 @@ jobs:
 
       - name: Boot Simulator
         run: |
+          SIMULATOR_NAME="$(echo "${SIMULATOR}" | sed -E 's/.*name=([^,]+).*/\1/')"
+          if [[ -z "${SIMULATOR_NAME}" || "${SIMULATOR_NAME}" == "${SIMULATOR}" ]]; then
+            echo "::error::Failed to parse simulator name from SIMULATOR=${SIMULATOR}"
+            exit 1
+          fi
+          echo "Using simulator: ${SIMULATOR_NAME}"
           # Erase to ensure a clean state (avoids stale SpringBoard caches)
-          xcrun simctl shutdown "iPhone 16" 2>/dev/null || true
-          xcrun simctl erase "iPhone 16" 2>/dev/null || true
-          xcrun simctl boot "iPhone 16" 2>/dev/null || true
+          xcrun simctl shutdown "${SIMULATOR_NAME}" 2>/dev/null || true
+          xcrun simctl erase "${SIMULATOR_NAME}" 2>/dev/null || true
+          xcrun simctl boot "${SIMULATOR_NAME}" 2>/dev/null || true
           # Wait for simulator to finish booting
-          xcrun simctl bootstatus "iPhone 16" -b 2>/dev/null || sleep 10
+          xcrun simctl bootstatus "${SIMULATOR_NAME}" -b 2>/dev/null || sleep 10
           # Wait for SpringBoard to be fully initialized (critical for UI tests)
           echo "Waiting for SpringBoard to finish launching…"
           for i in $(seq 1 30); do

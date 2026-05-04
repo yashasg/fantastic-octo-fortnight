@@ -4,6 +4,7 @@
 # ── Excluded paths ────────────────────────────────────────────────────────────
 excluded:
   - .build
+  - .worktrees
   - DerivedData
   - EyePostureReminder/DerivedData
   - EyePostureReminder/.build
