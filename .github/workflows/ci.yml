@@ -473,7 +473,15 @@ jobs:
     name: UI Tests
     runs-on: macos-15
     needs: uitest-shard
+    if: always()
     timeout-minutes: 10
     steps:
       - name: UI test shards passed
+        if: ${{ needs.uitest-shard.result == 'success' }}
         run: echo "All UI test shards passed."
+
+      - name: Report UI shard failure
+        if: ${{ needs.uitest-shard.result != 'success' }}
+        run: |
+          echo "::error::UI test shards did not all pass (result: ${{ needs.uitest-shard.result }})."
+          exit 1
