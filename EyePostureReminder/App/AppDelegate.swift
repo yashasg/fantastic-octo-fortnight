@@ -36,6 +36,10 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     private lazy var resolvedSettingsStore: SettingsStore =
         settingsStore ?? makeSettingsStore()
 
+    override convenience init() {
+        self.init(notificationCenter: nil)
+    }
+
     init(
         notificationCenter: UserNotificationCenterDelegating? = nil,
         metricKitSubscriber: MetricKitSubscribing? = nil,

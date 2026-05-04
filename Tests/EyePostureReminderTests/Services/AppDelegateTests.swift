@@ -69,6 +69,12 @@ final class AppDelegateTests: XCTestCase {
 
     // MARK: - applicationDidBecomeActive: clearExpiredSnoozeIfNeeded
 
+    func test_objectiveCInit_createsDelegateForUIApplicationDelegateAdaptor() {
+        let delegate = (AppDelegate.self as NSObject.Type).init()
+
+        XCTAssertTrue(delegate is AppDelegate)
+    }
+
     /// When `snoozedUntil` is in the past, `applicationDidBecomeActive` must clear it.
     func test_applicationDidBecomeActive_withExpiredSnooze_clearsSnoozeFields() async throws {
         settings.snoozedUntil = Date(timeIntervalSinceNow: -60) // 1 minute ago
