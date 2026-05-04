@@ -77,7 +77,15 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
 
     /// Set by `EyePostureReminderApp.onAppear` — bridges UIKit delegate
     /// callbacks into the SwiftUI-owned coordinator.
-    var coordinator: AppCoordinator?
+    var coordinator: AppCoordinator? {
+        didSet {
+            guard coordinator != nil else { return }
+            Task { @MainActor [weak self] in
+                self?.flushPendingNotificationRoutes()
+            }
+        }
+    }
+    private var pendingNotificationRoutes: [NotificationRoute] = []
 
 #if DEBUG
     /// Pre-seeds UI-test UserDefaults keys in `init()` — before `@StateObject
@@ -228,19 +236,42 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         return .ignore
     }
 
-    private func dispatchNotificationRoute(_ route: NotificationRoute) {
+    func dispatchNotificationRoute(_ route: NotificationRoute) {
+        Task { @MainActor [weak self] in
+            self?.dispatchNotificationRouteOnMainActor(route)
+        }
+    }
+
+    @MainActor
+    private func dispatchNotificationRouteOnMainActor(_ route: NotificationRoute) {
+        guard let coordinator else {
+            if route != .ignore {
+                pendingNotificationRoutes.append(route)
+            }
+            return
+        }
+
         switch route {
         case .reminder(let type):
-            Task { @MainActor [weak self] in
-                self?.coordinator?.handleNotification(for: type)
-            }
+            coordinator.handleNotification(for: type)
         case .snoozeWake:
-            Task { @MainActor [weak self] in
-                self?.coordinator?.cancelSnoozeWakeTaskIfNeeded()
-                await self?.coordinator?.scheduleReminders()
+            coordinator.cancelSnoozeWakeTaskIfNeeded()
+            Task { @MainActor in
+                await coordinator.scheduleReminders()
             }
         case .ignore:
             break
+        }
+    }
+
+    @MainActor
+    private func flushPendingNotificationRoutes() {
+        guard coordinator != nil, !pendingNotificationRoutes.isEmpty else { return }
+
+        let routes = pendingNotificationRoutes
+        pendingNotificationRoutes.removeAll()
+        for route in routes {
+            dispatchNotificationRouteOnMainActor(route)
         }
     }
 
