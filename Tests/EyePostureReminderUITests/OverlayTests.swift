@@ -212,44 +212,28 @@ final class OverlayPostureTests: XCTestCase {
         app = nil
     }
 
-    // MARK: - test_overlay_postureVariant_dismissButtonVisible
+    // MARK: - test_overlay_postureVariant_visibleAndDismissible
 
-    /// Verifies the × dismiss button appears on the posture check overlay.
-    func test_overlay_postureVariant_dismissButtonVisible() throws {
+    /// Verifies the posture check overlay renders with its essential controls and dismisses.
+    func test_overlay_postureVariant_visibleAndDismissible() throws {
         let dismissButton = app.buttons["overlay.dismissButton"]
         XCTAssertTrue(
             app.waitForElementExists(dismissButton),
             "Overlay dismiss button must be visible when --show-overlay-posture is used."
         )
-    }
 
-    // MARK: - test_overlay_postureVariant_doneButtonVisible
-
-    /// Verifies the Done CTA button is visible on the posture check overlay.
-    func test_overlay_postureVariant_doneButtonVisible() throws {
         let doneButton = app.buttons["overlay.doneButton"]
         XCTAssertTrue(
             app.waitForElementExists(doneButton),
             "Done button must be visible on the posture overlay."
         )
-    }
 
-    // MARK: - test_overlay_postureVariant_supportiveTextVisible
-
-    /// Verifies the supportive text is visible on the posture check overlay.
-    func test_overlay_postureVariant_supportiveTextVisible() throws {
         let supportiveText = app.staticTexts["overlay.supportiveText"]
         XCTAssertTrue(
             app.waitForElementExists(supportiveText),
             "Supportive text must be visible on the posture overlay."
         )
-    }
 
-    // MARK: - test_overlay_postureVariant_doneButtonDismissesOverlay
-
-    /// Taps Done on the posture overlay and verifies it dismisses.
-    func test_overlay_postureVariant_doneButtonDismissesOverlay() throws {
-        let doneButton = app.buttons["overlay.doneButton"]
         XCTAssertTrue(app.tapElementCenter(doneButton))
 
         XCTAssertTrue(

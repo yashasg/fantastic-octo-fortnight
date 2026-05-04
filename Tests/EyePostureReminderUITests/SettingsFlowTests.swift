@@ -85,12 +85,12 @@ final class SettingsFlowTests: XCTestCase {
 
         let termsButton = app.buttons["settings.legal.terms"]
         scrollToElement(termsButton)
-        XCTAssertTrue(termsButton.waitForExistence(timeout: 3))
-        termsButton.tap()
+        XCTAssertTrue(app.revealAndWaitForHittable(termsButton, timeout: 5, maxSwipes: 4))
+        XCTAssertTrue(app.tapElementCenter(termsButton))
 
         let termsNav = app.navigationBars["Terms & Conditions"]
         XCTAssertTrue(
-            termsNav.waitForExistence(timeout: 3),
+            termsNav.waitForExistence(timeout: 5),
             "Terms & Conditions sheet should open with the correct navigation title."
         )
 
@@ -215,8 +215,8 @@ final class SettingsFlowTests: XCTestCase {
 
         let termsButton = app.buttons["settings.legal.terms"]
         scrollToElement(termsButton)
-        XCTAssertTrue(termsButton.waitForExistence(timeout: 3))
-        termsButton.tap()
+        XCTAssertTrue(app.revealAndWaitForHittable(termsButton, timeout: 5, maxSwipes: 4))
+        XCTAssertTrue(app.tapElementCenter(termsButton))
 
         let dismissButton = app.buttons["legal.dismissButton"]
         XCTAssertTrue(dismissButton.waitForExistence(timeout: 3))
@@ -237,8 +237,8 @@ final class SettingsFlowTests: XCTestCase {
 
         let privacyButton = app.buttons["settings.legal.privacy"]
         scrollToElement(privacyButton)
-        XCTAssertTrue(privacyButton.waitForExistence(timeout: 3))
-        privacyButton.tap()
+        XCTAssertTrue(app.revealAndWaitForHittable(privacyButton, timeout: 5, maxSwipes: 4))
+        XCTAssertTrue(app.tapElementCenter(privacyButton))
 
         let dismissButton = app.buttons["legal.dismissButton"]
         XCTAssertTrue(dismissButton.waitForExistence(timeout: 3))
