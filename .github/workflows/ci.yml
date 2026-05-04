@@ -344,16 +344,40 @@ jobs:
             exit 1
           fi
           echo "Using simulator: ${SIMULATOR_NAME}"
+          # Start from a single-simulator baseline to avoid cross-runner bleed.
+          xcrun simctl shutdown all 2>/dev/null || true
           # Erase to ensure a clean state (avoids stale SpringBoard caches)
           xcrun simctl shutdown "${SIMULATOR_NAME}" 2>/dev/null || true
           xcrun simctl erase "${SIMULATOR_NAME}" 2>/dev/null || true
           xcrun simctl boot "${SIMULATOR_NAME}" 2>/dev/null || true
           # Wait for simulator to finish booting
           xcrun simctl bootstatus "${SIMULATOR_NAME}" -b 2>/dev/null || sleep 10
+          SIMULATOR_UDID="$(xcrun simctl list devices -j | python3 - "${SIMULATOR_NAME}" <<'PY'
+          import json
+          import sys
+
+          target = sys.argv[1]
+          data = json.load(sys.stdin)
+          for runtime_devices in data.get("devices", {}).values():
+            for device in runtime_devices:
+              if device.get("name") == target and device.get("state") == "Booted":
+                print(device.get("udid", ""))
+                raise SystemExit(0)
+          raise SystemExit(1)
+          PY
+          )"
+          if [[ -z "${SIMULATOR_UDID}" ]]; then
+            echo "::error::Could not resolve a booted UDID for simulator '${SIMULATOR_NAME}'"
+            xcrun simctl list devices booted
+            exit 1
+          fi
+          echo "Resolved simulator UDID: ${SIMULATOR_UDID}"
+          echo "SIMULATOR_UDID=${SIMULATOR_UDID}" >> "$GITHUB_ENV"
+          echo "SIMULATOR=platform=iOS Simulator,id=${SIMULATOR_UDID}" >> "$GITHUB_ENV"
           # Wait for SpringBoard to be fully initialized (critical for UI tests)
           echo "Waiting for SpringBoard to finish launching…"
           for i in $(seq 1 30); do
-            if xcrun simctl spawn booted launchctl print system 2>/dev/null | grep -q "com.apple.SpringBoard"; then
+            if xcrun simctl spawn "${SIMULATOR_UDID}" launchctl print system 2>/dev/null | grep -q "com.apple.SpringBoard"; then
               echo "SpringBoard is ready (after ${i}s)"
               break
             fi
@@ -388,6 +412,7 @@ jobs:
 
           timeout_seconds = int(os.environ.get("UITEST_SHARD_TIMEOUT_SECONDS", "1800"))
           heartbeat_seconds = int(os.environ.get("UITEST_HEARTBEAT_SECONDS", "60"))
+          simulator_udid = os.environ.get("SIMULATOR_UDID", "booted")
           command = sys.argv[1:]
 
           print(f"Running shard command: {' '.join(command)}", flush=True)
@@ -413,7 +438,10 @@ jobs:
                       flush=True,
                   )
                   subprocess.run(["xcrun", "simctl", "list", "devices", "booted"], check=False)
-                  subprocess.run(["xcrun", "simctl", "spawn", "booted", "launchctl", "print", "system"], check=False)
+                  subprocess.run(
+                      ["xcrun", "simctl", "spawn", simulator_udid, "launchctl", "print", "system"],
+                      check=False,
+                  )
                   process.terminate()
                   try:
                       process.wait(timeout=20)
