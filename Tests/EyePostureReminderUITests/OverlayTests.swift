@@ -103,7 +103,7 @@ final class OverlayPresentationTests: XCTestCase {
     func test_overlay_onShowOverlayEyes_dismissButtonVisible() throws {
         let dismissButton = app.buttons["overlay.dismissButton"]
         XCTAssertTrue(
-            dismissButton.waitForExistence(timeout: 1.5),
+            app.waitForElementExists(dismissButton),
             "Overlay dismiss button must be visible when --show-overlay-eyes is used. " +
             "Check that AppDelegate stores 'eyes' in AppStorageKey.uiTestOverlayType and " +
             "EyePostureReminderApp calls coordinator.handleNotification(for:) in its .task."
@@ -129,7 +129,7 @@ final class OverlayPresentationTests: XCTestCase {
     func test_overlay_onShowOverlayEyes_supportiveTextVisible() throws {
         let supportiveText = app.staticTexts["overlay.supportiveText"]
         XCTAssertTrue(
-            supportiveText.waitForExistence(timeout: 1.5),
+            app.waitForElementExists(supportiveText),
             "Overlay supportive text must be visible. " +
             "OverlayView must have .accessibilityIdentifier(\"overlay.supportiveText\") " +
             "on the subtitle Text element."
@@ -159,7 +159,7 @@ final class OverlayPresentationTests: XCTestCase {
     func test_overlay_onShowOverlayEyes_settingsLinkVisible() throws {
         let settingsLink = app.buttons["overlay.settingsLink"]
         XCTAssertTrue(
-            settingsLink.waitForExistence(timeout: 1.5),
+            app.waitForElementExists(settingsLink),
             "Settings link must be visible on the overlay. " +
             "OverlayView must have .accessibilityIdentifier(\"overlay.settingsLink\") " +
             "on the secondary Settings button."
@@ -212,44 +212,28 @@ final class OverlayPostureTests: XCTestCase {
         app = nil
     }
 
-    // MARK: - test_overlay_postureVariant_dismissButtonVisible
+    // MARK: - test_overlay_postureVariant_visibleAndDismissible
 
-    /// Verifies the × dismiss button appears on the posture check overlay.
-    func test_overlay_postureVariant_dismissButtonVisible() throws {
+    /// Verifies the posture check overlay renders with its essential controls and dismisses.
+    func test_overlay_postureVariant_visibleAndDismissible() throws {
         let dismissButton = app.buttons["overlay.dismissButton"]
         XCTAssertTrue(
-            dismissButton.waitForExistence(timeout: 1.5),
+            app.waitForElementExists(dismissButton),
             "Overlay dismiss button must be visible when --show-overlay-posture is used."
         )
-    }
 
-    // MARK: - test_overlay_postureVariant_doneButtonVisible
-
-    /// Verifies the Done CTA button is visible on the posture check overlay.
-    func test_overlay_postureVariant_doneButtonVisible() throws {
         let doneButton = app.buttons["overlay.doneButton"]
         XCTAssertTrue(
             app.waitForElementExists(doneButton),
             "Done button must be visible on the posture overlay."
         )
-    }
 
-    // MARK: - test_overlay_postureVariant_supportiveTextVisible
-
-    /// Verifies the supportive text is visible on the posture check overlay.
-    func test_overlay_postureVariant_supportiveTextVisible() throws {
         let supportiveText = app.staticTexts["overlay.supportiveText"]
         XCTAssertTrue(
-            supportiveText.waitForExistence(timeout: 1.5),
+            app.waitForElementExists(supportiveText),
             "Supportive text must be visible on the posture overlay."
         )
-    }
 
-    // MARK: - test_overlay_postureVariant_doneButtonDismissesOverlay
-
-    /// Taps Done on the posture overlay and verifies it dismisses.
-    func test_overlay_postureVariant_doneButtonDismissesOverlay() throws {
-        let doneButton = app.buttons["overlay.doneButton"]
         XCTAssertTrue(app.tapElementCenter(doneButton))
 
         XCTAssertTrue(

@@ -35,6 +35,9 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         metricKitSubscriber ?? makeMetricKitSubscriber()
     private lazy var resolvedSettingsStore: SettingsStore =
         settingsStore ?? makeSettingsStore()
+#if DEBUG
+    static let uiTestOverlayBreakDuration: TimeInterval = 600
+#endif
 
     override convenience init() {
         self.init(notificationCenter: nil)
@@ -163,16 +166,16 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
             defaults.set(true, forKey: AppStorageKey.hasSeenOnboarding)
             let settings = resolvedSettingsStore
             settings.resetToDefaults()
-            settings.eyesBreakDuration = 120
-            settings.postureBreakDuration = 120
+            settings.eyesBreakDuration = Self.uiTestOverlayBreakDuration
+            settings.postureBreakDuration = Self.uiTestOverlayBreakDuration
             defaults.set(ReminderType.eyes.rawValue, forKey: AppStorageKey.uiTestOverlayType)
         }
         if args.contains("--show-overlay-posture") {
             defaults.set(true, forKey: AppStorageKey.hasSeenOnboarding)
             let settings = resolvedSettingsStore
             settings.resetToDefaults()
-            settings.eyesBreakDuration = 120
-            settings.postureBreakDuration = 120
+            settings.eyesBreakDuration = Self.uiTestOverlayBreakDuration
+            settings.postureBreakDuration = Self.uiTestOverlayBreakDuration
             defaults.set(ReminderType.posture.rawValue, forKey: AppStorageKey.uiTestOverlayType)
         }
         if args.contains("--simulate-screen-time-not-determined") {

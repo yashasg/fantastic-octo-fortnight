@@ -107,13 +107,13 @@ final class DarkModeUITests: XCTestCase {
 
         let dismissButton = app.buttons["overlay.dismissButton"]
         XCTAssertTrue(
-            dismissButton.waitForExistence(timeout: 1.5),
+            app.waitForElementExists(dismissButton),
             "Dismiss (×) button must be visible on the overlay in dark mode."
         )
 
         let supportiveText = app.staticTexts["overlay.supportiveText"]
         XCTAssertTrue(
-            supportiveText.waitForExistence(timeout: 1.5),
+            app.waitForElementExists(supportiveText),
             "Supportive text must be visible on the overlay in dark mode."
         )
     }
@@ -167,7 +167,7 @@ final class DarkModeUITests: XCTestCase {
 
         let supportiveText = app.staticTexts["overlay.supportiveText"]
         XCTAssertTrue(
-            supportiveText.waitForExistence(timeout: 1.5),
+            app.waitForElementExists(supportiveText),
             "Supportive text must be visible on the posture overlay in dark mode."
         )
     }

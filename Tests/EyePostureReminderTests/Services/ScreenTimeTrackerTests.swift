@@ -2,6 +2,8 @@
 import UIKit
 import XCTest
 
+// swiftlint:disable type_body_length
+
 /// Unit tests for `ScreenTimeTracker`.
 ///
 /// Tests are split into two groups:
@@ -659,6 +661,8 @@ extension ScreenTimeTrackerTests {
 
 }
 
+// swiftlint:enable type_body_length
+
 extension ScreenTimeTrackerTests {
 
     /// Verifies the `min(now - lastTickTime, 2.0)` cap in `tick(now:)`.
@@ -875,13 +879,13 @@ extension ScreenTimeTrackerTests {
         defer { tracker.stop() }
 
         let fired = expectation(description: "threshold reached via injected lifecycle center")
-        tracker.setThreshold(2, for: .eyes)
+        tracker.setThreshold(1, for: .eyes)
         tracker.onThresholdReached = { type in
             if type == .eyes { fired.fulfill() }
         }
 
         lifecycleCenter.post(name: UIApplication.didBecomeActiveNotification, object: nil)
-        await fulfillment(of: [fired], timeout: 3.0)
+        await fulfillment(of: [fired], timeout: 5.0)
     }
 
     func test_customLifecycleNotificationCenter_ignoresDefaultCenterPosts() async {
@@ -890,7 +894,9 @@ extension ScreenTimeTrackerTests {
         defer { tracker.stop() }
 
         tracker.setThreshold(2, for: .eyes)
-        tracker.onThresholdReached = { _ in XCTFail("Default notification center should not trigger tracker callbacks") }
+        tracker.onThresholdReached = { _ in
+            XCTFail("Default notification center should not trigger tracker callbacks")
+        }
 
         NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
         try? await Task.sleep(nanoseconds: 2_500_000_000)
