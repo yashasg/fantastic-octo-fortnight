@@ -556,9 +556,10 @@ cmd_uitest() {
 
   info "Step 2/2 — running UI tests…"
 
-  # Keep retries inside a single xcodebuild invocation so the simulator session
-  # remains warm; process relaunch isolates each repeated run for better stability.
-  local test_iterations="${UITEST_XCODEBUILD_TEST_ITERATIONS:-3}"
+  # Keep optional retries inside a single xcodebuild invocation so the simulator
+  # session remains warm. The default is one deterministic pass; set
+  # UITEST_XCODEBUILD_TEST_ITERATIONS > 1 to opt into XCTest-level retry.
+  local test_iterations="${UITEST_XCODEBUILD_TEST_ITERATIONS:-1}"
   local max_test_execution_time="${UITEST_XCODEBUILD_MAX_TEST_SECONDS:-180}"
   if ! [[ "$test_iterations" =~ ^[1-9][0-9]*$ ]]; then
     fail "UITEST_XCODEBUILD_TEST_ITERATIONS must be a positive integer (got: $test_iterations)"
@@ -568,20 +569,27 @@ cmd_uitest() {
     fail "UITEST_XCODEBUILD_MAX_TEST_SECONDS must be a positive integer (got: $max_test_execution_time)"
     exit 1
   fi
-
   rm -rf "$result_bundle_path"
-  if ! run_xcodebuild test-without-building \
+  local -a xcodebuild_test_args=(
+    test-without-building \
     -xctestrun "$xctestrun" \
     -destination "$dest" \
     -derivedDataPath "$DERIVED_DATA_PATH" \
     -resultBundlePath "$result_bundle_path" \
     -disable-concurrent-destination-testing \
     -parallel-testing-enabled NO \
-    -maximum-test-execution-time-allowance "$max_test_execution_time" \
-    -test-iterations "$test_iterations" \
-    -retry-tests-on-failure \
-    -test-repetition-relaunch-enabled YES \
-    "${only_testing_args[@]}"; then
+    -maximum-test-execution-time-allowance "$max_test_execution_time"
+  )
+  if (( test_iterations > 1 )); then
+    xcodebuild_test_args+=(
+      -test-iterations "$test_iterations"
+      -retry-tests-on-failure
+      -test-repetition-relaunch-enabled YES
+    )
+  fi
+  xcodebuild_test_args+=("${only_testing_args[@]}")
+
+  if ! run_xcodebuild "${xcodebuild_test_args[@]}"; then
     fail "UI tests failed"
     summarize_xcresult_failures "$result_bundle_path"
     exit 1
