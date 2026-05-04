@@ -18,3 +18,10 @@ Use when a service initializer eagerly constructs `LiveAccessibilityNotification
 ## Anti-Patterns
 - Eager concrete construction in initializer defaults.
 - Mixed usage of injected dependency and newly constructed concrete instances.
+
+## Examples
+- `EyePostureReminder/Services/OverlayManager.swift`
+- `Tests/EyePostureReminderTests/Services/OverlayManagerExtendedTests.swift`
+- `EyePostureReminder/Views/Onboarding/OnboardingView.swift`
+- `Tests/EyePostureReminderTests/Views/OnboardingViewTests.swift`
+

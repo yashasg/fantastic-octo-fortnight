@@ -370,6 +370,34 @@ final class OnboardingViewTests: XCTestCase {
         _ = view
     }
 
+    /// When no poster is injected, the fallback factory is used once.
+    func test_onboardingView_accessibilityPosterFactory_usedWhenDependencyMissing() {
+        var factoryCallCount = 0
+        let view = OnboardingView(
+            accessibilityNotificationPoster: nil,
+            makeAccessibilityNotificationPoster: {
+                factoryCallCount += 1
+                return MockAccessibilityNotificationPoster()
+            }
+        )
+        _ = view
+        XCTAssertEqual(factoryCallCount, 1)
+    }
+
+    /// When a poster is injected, the fallback factory is bypassed.
+    func test_onboardingView_accessibilityPosterFactory_bypassedWhenDependencyProvided() {
+        var factoryCallCount = 0
+        let view = OnboardingView(
+            accessibilityNotificationPoster: MockAccessibilityNotificationPoster(),
+            makeAccessibilityNotificationPoster: {
+                factoryCallCount += 1
+                return MockAccessibilityNotificationPoster()
+            }
+        )
+        _ = view
+        XCTAssertEqual(factoryCallCount, 0)
+    }
+
     // MARK: - Onboarding completion screen-changed notification (#402)
 
     /// `finishOnboarding()` must post a `.screenChanged` notification so VoiceOver

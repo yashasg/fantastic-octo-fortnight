@@ -336,3 +336,13 @@ Result: **10/10 passed**
 - Added an `AudioSessionRouting` protocol seam in `PauseConditionManager.swift` and extended `AVAudioSession` to conform, removing direct `AVAudioSession.sharedInstance()` access from `LiveCarPlayDetector` static route logic.
 - `LiveCarPlayDetector` now resolves dependencies with optional injection + factory fallback (`audioSession ?? makeAudioSession()`), preserving existing behavior while improving DI clarity.
 - Added focused seam coverage in `LiveCarPlayDetectorTests` for factory fallback and injected bypass paths, alongside existing behavior tests.
+
+
+## Learnings
+
+### 2026-05-04: #462 Phase A Micro-slice — OnboardingView Accessibility Poster Factory Seam
+
+- **Architecture decision:** Removed eager concrete construction from `OnboardingView` by resolving `AccessibilityNotificationPosting` via optional injection plus fallback factory.
+- **Pattern:** For DI/SRP micro-slices, keep API behavior stable with `Dependency? = nil` + `makeDependency` factory and verify fallback/bypass in focused unit tests.
+- **User preference captured:** Continue Ralph loop in tiny, surgical slices with behavior preservation and explicit build/test validation.
+- **Key file paths:** `EyePostureReminder/Views/Onboarding/OnboardingView.swift`, `Tests/EyePostureReminderTests/Views/OnboardingViewTests.swift`, `.squad/decisions/inbox/rusty-onboarding-poster-factory-seam.md`.
