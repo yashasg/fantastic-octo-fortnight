@@ -245,18 +245,20 @@ PY
 
 xcresult_attempt_passed() {
   local bundle_path="$1"
+  local allow_historical_failures="${2:-false}"
 
   if [[ ! -d "$bundle_path" ]]; then
     warn "Result bundle not found at: $bundle_path"
     return 1
   fi
 
-  python3 - "$bundle_path" <<'PY'
+  python3 - "$bundle_path" "$allow_historical_failures" <<'PY'
 import json
 import subprocess
 import sys
 
 bundle_path = sys.argv[1]
+allow_historical_failures = sys.argv[2] == "true"
 
 def get_root(path: str):
     commands = [
@@ -287,7 +289,7 @@ failures = (
     .get("_values", [])
 )
 
-if failures:
+if failures and not allow_historical_failures:
     print(f"⚠ xcresult contains {len(failures)} testFailureSummaries despite successful command exit")
     sys.exit(1)
 
@@ -298,6 +300,12 @@ if not status:
 if status not in {"succeeded", "success"}:
     print(f"⚠ xcresult action status is '{status}' (expected succeeded)")
     sys.exit(1)
+
+if failures:
+    print(
+        f"⚠ xcresult contains {len(failures)} historical testFailureSummaries "
+        "from retried UI tests; final action status succeeded"
+    )
 
 sys.exit(0)
 PY
@@ -595,7 +603,12 @@ cmd_uitest() {
     exit 1
   fi
 
-  if ! xcresult_attempt_passed "$result_bundle_path"; then
+  local allow_historical_failures="false"
+  if (( test_iterations > 1 )); then
+    allow_historical_failures="true"
+  fi
+
+  if ! xcresult_attempt_passed "$result_bundle_path" "$allow_historical_failures"; then
     fail "UI tests failed"
     summarize_xcresult_failures "$result_bundle_path"
     exit 1
