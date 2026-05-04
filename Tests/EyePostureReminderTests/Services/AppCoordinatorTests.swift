@@ -1639,6 +1639,29 @@ final class AppCoordinatorTests: XCTestCase {
             "scheduleReminders() with auth=denied must not schedule any reminder notifications")
     }
 
+    func test_scheduleReminders_notDetermined_doesNotRequestNotificationPermission() async {
+        let mockNotif = MockNotificationCenter()
+        mockNotif.authorizationGranted = true
+        mockNotif.authorizationStatus = .notDetermined
+        settings.globalEnabled = true
+        settings.eyesEnabled = true
+        settings.postureEnabled = true
+        let (coordinator, _, _) = makeCoordinator(
+            overlay: MockOverlayPresenting(),
+            notifCenter: mockNotif)
+        defer { coordinator.stopFallbackTimers() }
+
+        await coordinator.scheduleReminders()
+
+        XCTAssertEqual(
+            mockNotif.authorizationRequestCount,
+            0,
+            "scheduleReminders() must not show the system notification prompt before explicit context")
+        XCTAssertTrue(
+            reminderRequests(from: mockNotif).isEmpty,
+            "Notification reminders must not be scheduled until permission is explicitly granted")
+    }
+
     // MARK: - handleNotification: ScreenTimeTracker reset
 
     func test_handleNotification_resetsTrackerExactlyOnce_forDeliveredType() {

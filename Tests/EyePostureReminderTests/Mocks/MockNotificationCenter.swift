@@ -21,6 +21,7 @@ final class MockNotificationCenter: NotificationScheduling {
     // MARK: - Configuration
 
     var authorizationGranted = true
+    var authorizationStatus: UNAuthorizationStatus?
     var authorizationError: Error?
     var addError: Error?
 
@@ -32,6 +33,7 @@ final class MockNotificationCenter: NotificationScheduling {
         removedIdentifiers = []
         removeAllCallCount = 0
         authorizationRequestCount = 0
+        authorizationStatus = nil
         authorizationError = nil
         addError = nil
     }
@@ -41,6 +43,7 @@ final class MockNotificationCenter: NotificationScheduling {
     func requestAuthorization(options: UNAuthorizationOptions) async throws -> Bool {
         authorizationRequestCount += 1
         if let error = authorizationError { throw error }
+        authorizationStatus = authorizationGranted ? .authorized : .denied
         return authorizationGranted
     }
 
@@ -65,6 +68,7 @@ final class MockNotificationCenter: NotificationScheduling {
     }
 
     func getAuthorizationStatus() async -> UNAuthorizationStatus {
+        if let authorizationStatus { return authorizationStatus }
         return authorizationGranted ? .authorized : .denied
     }
 }
