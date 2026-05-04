@@ -678,7 +678,7 @@ name: ${APP_TARGET}Signed
 options:
   deploymentTarget:
     iOS: "16.0"
-  xcodeVersion: "26.4"
+  xcodeVersion: "16.4"
   minimumXcodeGenVersion: "2.40.0"
   generateEmptyDirectories: false
 
@@ -877,7 +877,7 @@ cmd_doctor() {
     echo "         EyePostureReminder/EyePostureReminder.Distribution.entitlements" >&2
     echo "         Extensions/ShieldConfigurationExtension/*.entitlements (both variants)" >&2
     echo "         Extensions/DeviceActivityMonitorExtension/*.entitlements (both variants)" >&2
-    echo "    3. Regenerate App Store Connect provisioning profiles for all five bundle IDs" >&2
+    echo "    3. Regenerate App Store Connect provisioning profiles for all three bundle IDs" >&2
     echo "    4. Download profiles; verify via this doctor command with EXTENSION_PROFILES_AVAILABLE=YES" >&2
     echo "    5. Add repo secrets: SHIELD_CONFIG_PROVISION_PROFILE_BASE64," >&2
     echo "         DEVICE_ACTIVITY_PROVISION_PROFILE_BASE64, SHIELD_CONFIG_PROFILE_SPECIFIER," >&2
