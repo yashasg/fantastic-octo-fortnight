@@ -584,6 +584,38 @@ final class AppDelegateTests: XCTestCase {
         coordinator.handleNotification(for: .posture)
     }
 
+    func test_dispatchNotificationRoute_beforeCoordinatorWiring_replaysReminderWhenCoordinatorIsSet() async {
+        delegate.coordinator = nil
+        settings.snoozeCount = 4
+
+        delegate.dispatchNotificationRoute(.reminder(.eyes))
+        for _ in 0..<3 { await Task.yield() }
+
+        XCTAssertEqual(
+            settings.snoozeCount,
+            4,
+            "Reminder route should wait for coordinator wiring instead of being dropped."
+        )
+
+        delegate.coordinator = coordinator
+
+        await awaitCondition { self.settings.snoozeCount == 0 }
+        XCTAssertEqual(settings.snoozeCount, 0)
+    }
+
+    func test_dispatchNotificationRoute_ignoreBeforeCoordinatorWiring_isNotReplayed() async {
+        delegate.coordinator = nil
+        settings.snoozeCount = 4
+
+        delegate.dispatchNotificationRoute(.ignore)
+        for _ in 0..<3 { await Task.yield() }
+
+        delegate.coordinator = coordinator
+        for _ in 0..<3 { await Task.yield() }
+
+        XCTAssertEqual(settings.snoozeCount, 4)
+    }
+
     // MARK: - Snooze-wake routing (scheduleReminders path exercised by delegate)
 
     /// The snooze-wake path calls `scheduleReminders()`, which (when auth is granted)
