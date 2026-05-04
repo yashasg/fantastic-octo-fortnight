@@ -46,6 +46,17 @@
         }
       }
     },
+    "home.status.notificationsOff": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notifications are off"
+          }
+        }
+      }
+    },
     "home.status.paused": {
       "extractionState": "manual",
       "localizations": {
@@ -64,6 +75,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "kshana"
+          }
+        }
+      }
+    },
+    "home.notifications.disabledBody": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turn notifications back on in iOS Settings so kshana can deliver reminder alerts outside the app."
+          }
+        }
+      }
+    },
+    "home.notifications.disabledTitle": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notifications are off"
           }
         }
       }

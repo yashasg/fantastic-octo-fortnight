@@ -838,8 +838,7 @@ private struct SettingsNotificationWarningSection: View {
     @EnvironmentObject private var coordinator: AppCoordinator
 
     var body: some View {
-        if coordinator.notificationAuthStatus == .denied,
-           coordinator.settings.notificationFallbackEnabled {
+        if coordinator.notificationAuthStatus == .denied {
             Section {
                 HStack(spacing: AppSpacing.sm) {
                     IconContainer(icon: AppSymbol.warning, color: AppColor.accentWarm, size: 36)

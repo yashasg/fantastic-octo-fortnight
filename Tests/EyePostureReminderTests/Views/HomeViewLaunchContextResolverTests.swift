@@ -1,4 +1,5 @@
 @testable import EyePostureReminder
+import UserNotifications
 import XCTest
 
 #if DEBUG
@@ -71,6 +72,27 @@ final class HomeViewLaunchContextResolverTests: XCTestCase {
         )
 
         XCTAssertFalse(result)
+    }
+
+    func test_notificationRecovery_whenGlobalEnabledAndNotificationsDenied_returnsTrue() {
+        XCTAssertTrue(HomeView.shouldShowNotificationRecovery(
+            globalEnabled: true,
+            notificationAuthStatus: .denied
+        ))
+    }
+
+    func test_notificationRecovery_whenGlobalDisabledAndNotificationsDenied_returnsFalse() {
+        XCTAssertFalse(HomeView.shouldShowNotificationRecovery(
+            globalEnabled: false,
+            notificationAuthStatus: .denied
+        ))
+    }
+
+    func test_notificationRecovery_whenNotificationsAuthorized_returnsFalse() {
+        XCTAssertFalse(HomeView.shouldShowNotificationRecovery(
+            globalEnabled: true,
+            notificationAuthStatus: .authorized
+        ))
     }
 }
 #endif
