@@ -20,19 +20,6 @@ final class SettingsFlowTests: XCTestCase {
         app = nil
     }
 
-    // MARK: - test_settings_openFromHome_sheetAppears
-
-    /// Taps the settings gear on the Home screen and verifies the Settings sheet appears.
-    func test_settings_openFromHome_sheetAppears() throws {
-        openSettings()
-
-        let settingsNav = app.navigationBars["Settings"]
-        XCTAssertTrue(
-            settingsNav.waitForExistence(timeout: 3),
-            "Settings navigation bar should appear after tapping the settings button."
-        )
-    }
-
     // MARK: - test_settings_doneButton_dismissesSheet
 
     /// Opens Settings, taps Done, and verifies the sheet is dismissed (Home screen returns).
@@ -54,33 +41,10 @@ final class SettingsFlowTests: XCTestCase {
         )
     }
 
-    // MARK: - test_settings_legalSection_termsAndPrivacyExist
+    // MARK: - test_settings_legalSheets_openAndDismiss
 
-    /// Scrolls to the bottom of Settings and verifies both Terms and Privacy rows are present.
-    func test_settings_legalSection_termsAndPrivacyExist() throws {
-        openSettings()
-
-        let termsButton = app.buttons["settings.legal.terms"]
-        let privacyButton = app.buttons["settings.legal.privacy"]
-        scrollToElement(termsButton)
-        scrollToElement(privacyButton)
-
-        XCTAssertTrue(
-            termsButton.waitForExistence(timeout: 3),
-            "Terms row must exist in the Legal section of Settings. " +
-            "Add .accessibilityIdentifier(\"settings.legal.terms\") to the Terms button in SettingsView."
-        )
-        XCTAssertTrue(
-            privacyButton.waitForExistence(timeout: 3),
-            "Privacy row must exist in the Legal section of Settings. " +
-            "Add .accessibilityIdentifier(\"settings.legal.privacy\") to the Privacy button in SettingsView."
-        )
-    }
-
-    // MARK: - test_settings_termsRow_opensSheet
-
-    /// Taps the Terms row and verifies the Terms & Conditions sheet appears with content.
-    func test_settings_termsRow_opensSheet() throws {
+    /// Verifies both legal rows open their sheets and return to Settings when dismissed.
+    func test_settings_legalSheets_openAndDismiss() throws {
         openSettings()
 
         let termsButton = app.buttons["settings.legal.terms"]
@@ -100,36 +64,42 @@ final class SettingsFlowTests: XCTestCase {
             "Dismiss button must exist in the legal sheet. " +
             "Add .accessibilityIdentifier(\"legal.dismissButton\") to the dismiss button in LegalDocumentView."
         )
-    }
+        dismissButton.tap()
 
-    // MARK: - test_settings_privacyRow_opensSheet
-
-    /// Taps the Privacy row and verifies the Privacy Policy sheet appears with content.
-    func test_settings_privacyRow_opensSheet() throws {
-        openSettings()
+        let settingsNav = app.navigationBars["Settings"]
+        XCTAssertTrue(
+            settingsNav.waitForExistence(timeout: 3),
+            "Settings navigation bar should reappear after dismissing the Terms sheet."
+        )
 
         let privacyButton = app.buttons["settings.legal.privacy"]
         scrollToElement(privacyButton)
-        XCTAssertTrue(privacyButton.waitForExistence(timeout: 3))
-        privacyButton.tap()
+        XCTAssertTrue(app.revealAndWaitForHittable(privacyButton, timeout: 5, maxSwipes: 4))
+        XCTAssertTrue(app.tapElementCenter(privacyButton))
 
         let privacyNav = app.navigationBars["Privacy Policy"]
         XCTAssertTrue(
-            privacyNav.waitForExistence(timeout: 3),
+            privacyNav.waitForExistence(timeout: 5),
             "Privacy Policy sheet should open with the correct navigation title."
         )
 
-        let dismissButton = app.buttons["legal.dismissButton"]
+        let privacyDismissButton = app.buttons["legal.dismissButton"]
         XCTAssertTrue(
-            dismissButton.waitForExistence(timeout: 3),
+            privacyDismissButton.waitForExistence(timeout: 3),
             "Dismiss button must exist in the privacy sheet."
+        )
+        privacyDismissButton.tap()
+
+        XCTAssertTrue(
+            settingsNav.waitForExistence(timeout: 3),
+            "Settings navigation bar should reappear after dismissing the Privacy sheet."
         )
     }
 
-    // MARK: - test_settings_smartPause_bothTogglesExist
+    // MARK: - test_settings_smartPauseControls_toggleAndShowFooter
 
-    /// Verifies both Smart Pause toggles (Focus Mode and Driving) are present in Settings.
-    func test_settings_smartPause_bothTogglesExist() throws {
+    /// Verifies Smart Pause controls are present, documented, and toggleable.
+    func test_settings_smartPauseControls_toggleAndShowFooter() throws {
         openSettings()
 
         let focusToggle = app.switches["settings.smartPause.pauseDuringFocus"]
@@ -149,20 +119,23 @@ final class SettingsFlowTests: XCTestCase {
             "Add .accessibilityIdentifier(\"settings.smartPause.pauseWhileDriving\") " +
             "to the Driving toggle in SettingsView."
         )
-    }
 
-    // MARK: - test_settings_globalToggle_isVisible
-
-    /// Verifies the global enable/disable toggle is visible at the top of Settings.
-    func test_settings_globalToggle_isVisible() throws {
-        openSettings()
-
-        let globalToggle = app.switches["settings.masterToggle"]
+        let footerText = app.staticTexts.matching(
+            NSPredicate(format: "label CONTAINS[c] 'smart pause' OR label CONTAINS[c] 'focus mode'")
+        ).firstMatch
         XCTAssertTrue(
-            app.waitForElementExists(globalToggle, timeout: 5),
-            "The global toggle must be visible at the top of the Settings form. " +
-            "AccessibleToggle must use .accessibilityIdentifier(\"settings.masterToggle\") in SettingsView."
+            footerText.waitForExistence(timeout: 2),
+            "Smart Pause section must display a footer explaining the feature (#433)."
         )
+
+        let initialFocusValue = focusToggle.value as? String
+        focusToggle.tap()
+        XCTAssertNotEqual(initialFocusValue, focusToggle.value as? String, "Focus pause toggle should change state.")
+
+        scrollToElement(drivingToggle)
+        let initialDrivingValue = drivingToggle.value as? String
+        drivingToggle.tap()
+        XCTAssertNotEqual(initialDrivingValue, drivingToggle.value as? String, "Driving pause toggle should change.")
     }
 
     // MARK: - test_settings_globalToggle_changesStateOnTap
@@ -181,23 +154,18 @@ final class SettingsFlowTests: XCTestCase {
         XCTAssertNotEqual(initialValue, newValue, "Global toggle should change state after being tapped.")
     }
 
-    // MARK: - test_settings_preferences_atLeastOneToggleExists
+    // MARK: - test_settings_secondaryControls_exist
 
-    /// Verifies at least one toggle is present in the Preferences section.
-    func test_settings_preferences_atLeastOneToggleExists() throws {
+    /// Verifies secondary Settings controls that do not need separate launch cycles.
+    func test_settings_secondaryControls_exist() throws {
         openSettings()
 
-        scrollToElement(app.switches["settings.notificationFallback"])
-
-        let allSwitches = app.switches.allElementsBoundByIndex
-        XCTAssertGreaterThan(allSwitches.count, 0, "At least one toggle must be visible in Settings.")
-    }
-
-    // MARK: - test_settings_notificationFallbackToggle_exists
-
-    /// Verifies the backup-alert toggle for notification fallback is present in Settings.
-    func test_settings_notificationFallbackToggle_exists() throws {
-        openSettings()
+        let hapticToggle = app.switches["settings.hapticFeedback"]
+        scrollToElement(hapticToggle)
+        XCTAssertTrue(
+            hapticToggle.waitForExistence(timeout: 3),
+            "Haptic Feedback toggle must exist in Settings."
+        )
 
         let fallbackToggle = app.switches["settings.notificationFallback"]
         scrollToElement(fallbackToggle)
@@ -205,157 +173,40 @@ final class SettingsFlowTests: XCTestCase {
             fallbackToggle.waitForExistence(timeout: 3),
             "Notification fallback toggle must exist in the Preferences section."
         )
-    }
 
-    // MARK: - test_settings_termsSheet_dismissReturnsToSettings
+        let snooze5min = app.buttons["settings.snooze.5min"]
+        scrollToElement(snooze5min)
+        XCTAssertTrue(snooze5min.waitForExistence(timeout: 3), "Snooze 5 min button must exist in Settings.")
 
-    /// Opens the Terms sheet, taps Done, and verifies the Settings sheet is restored.
-    func test_settings_termsSheet_dismissReturnsToSettings() throws {
-        openSettings()
+        let snooze1hour = app.buttons["settings.snooze.1hour"]
+        XCTAssertTrue(snooze1hour.waitForExistence(timeout: 3), "Snooze 1 hour button must exist in Settings.")
 
-        let termsButton = app.buttons["settings.legal.terms"]
-        scrollToElement(termsButton)
-        XCTAssertTrue(app.revealAndWaitForHittable(termsButton, timeout: 5, maxSwipes: 4))
-        XCTAssertTrue(app.tapElementCenter(termsButton))
-
-        let dismissButton = app.buttons["legal.dismissButton"]
-        XCTAssertTrue(dismissButton.waitForExistence(timeout: 3))
-        dismissButton.tap()
-
-        let settingsNav = app.navigationBars["Settings"]
+        let snoozeRestOfDay = app.buttons["settings.snooze.restOfDay"]
+        scrollToElement(snoozeRestOfDay)
         XCTAssertTrue(
-            settingsNav.waitForExistence(timeout: 3),
-            "Settings navigation bar should reappear after dismissing the Terms sheet."
+            snoozeRestOfDay.waitForExistence(timeout: 3),
+            "Snooze Rest of Day button must exist in Settings."
         )
-    }
-
-    // MARK: - test_settings_privacySheet_dismissReturnsToSettings
-
-    /// Opens the Privacy sheet, taps Done, and verifies the Settings sheet is restored.
-    func test_settings_privacySheet_dismissReturnsToSettings() throws {
-        openSettings()
-
-        let privacyButton = app.buttons["settings.legal.privacy"]
-        scrollToElement(privacyButton)
-        XCTAssertTrue(app.revealAndWaitForHittable(privacyButton, timeout: 5, maxSwipes: 4))
-        XCTAssertTrue(app.tapElementCenter(privacyButton))
-
-        let dismissButton = app.buttons["legal.dismissButton"]
-        XCTAssertTrue(dismissButton.waitForExistence(timeout: 3))
-        dismissButton.tap()
-
-        let settingsNav = app.navigationBars["Settings"]
-        XCTAssertTrue(
-            settingsNav.waitForExistence(timeout: 3),
-            "Settings navigation bar should reappear after dismissing the Privacy sheet."
-        )
-    }
-
-    // MARK: - test_settings_focusToggle_changesStateOnTap
-
-    /// Taps the Focus Mode pause toggle and verifies it changes state.
-    func test_settings_focusToggle_changesStateOnTap() throws {
-        openSettings()
-
-        let focusToggle = app.switches["settings.smartPause.pauseDuringFocus"]
-        scrollToElement(focusToggle)
-        XCTAssertTrue(focusToggle.waitForExistence(timeout: 3))
-
-        let initialValue = focusToggle.value as? String
-        focusToggle.tap()
-
-        let newValue = focusToggle.value as? String
-        XCTAssertNotEqual(initialValue, newValue, "Focus pause toggle should change state after being tapped.")
-    }
-
-    // MARK: - test_settings_drivingToggle_changesStateOnTap
-
-    /// Taps the Driving pause toggle and verifies it changes state.
-    func test_settings_drivingToggle_changesStateOnTap() throws {
-        openSettings()
-
-        let drivingToggle = app.switches["settings.smartPause.pauseWhileDriving"]
-        scrollToElement(drivingToggle)
-        XCTAssertTrue(drivingToggle.waitForExistence(timeout: 3))
-
-        let initialValue = drivingToggle.value as? String
-        drivingToggle.tap()
-
-        let newValue = drivingToggle.value as? String
-        XCTAssertNotEqual(initialValue, newValue, "Driving pause toggle should change state after being tapped.")
-    }
-
-    // MARK: - test_settings_hapticFeedbackToggle_exists
-
-    /// Verifies the Haptic Feedback toggle is visible in Settings.
-    func test_settings_hapticFeedbackToggle_exists() throws {
-        openSettings()
-
-        let hapticToggle = app.switches["settings.hapticFeedback"]
-        scrollToElement(hapticToggle)
-        XCTAssertTrue(
-            hapticToggle.waitForExistence(timeout: 3),
-            "Haptic Feedback toggle must exist in Settings. " +
-            "Add .accessibilityIdentifier(\"settings.hapticFeedback\") to the haptics toggle in SettingsView."
-        )
-    }
-
-    // MARK: - test_settings_resetToDefaults_exists
-
-    /// Verifies the Reset to Defaults button is visible at the bottom of Settings.
-    func test_settings_resetToDefaults_exists() throws {
-        openSettings()
 
         let resetButton = app.buttons["settings.resetToDefaults"]
         scrollToElement(resetButton)
         XCTAssertTrue(
             resetButton.waitForExistence(timeout: 3),
-            "Reset to Defaults button must exist in Settings. " +
-            "Add .accessibilityIdentifier(\"settings.resetToDefaults\") to the reset button in SettingsView."
+            "Reset to Defaults button must exist in Settings."
         )
-    }
-
-    // MARK: - test_settings_sendFeedback_exists
-
-    /// Verifies the Send Feedback button is visible in Settings.
-    func test_settings_sendFeedback_exists() throws {
-        openSettings()
 
         let feedbackButton = app.buttons["settings.feedback.sendFeedback"]
         scrollToElement(feedbackButton)
         XCTAssertTrue(
             feedbackButton.waitForExistence(timeout: 3),
-            "Send Feedback button must exist in Settings. " +
-            "Add .accessibilityIdentifier(\"settings.feedback.sendFeedback\") to the feedback button in SettingsView."
+            "Send Feedback button must exist in Settings."
         )
     }
 
-    // MARK: - test_settings_reminderToggles_eyesAndPostureExist
+    // MARK: - test_settings_reminderControls_exposeTogglesAndPickers
 
-    /// Verifies both the eye break and posture check toggles are present in Settings.
-    func test_settings_reminderToggles_eyesAndPostureExist() throws {
-        openSettings()
-
-        let eyesToggle = app.switches["settings.eyes.toggle"]
-        let postureToggle = app.switches["settings.posture.toggle"]
-
-        XCTAssertTrue(
-            eyesToggle.waitForExistence(timeout: 3),
-            "Eye break toggle must exist in Settings. " +
-            "ReminderRowView must set .accessibilityIdentifier(\"settings.eyes.toggle\")."
-        )
-        XCTAssertTrue(
-            postureToggle.waitForExistence(timeout: 3),
-            "Posture check toggle must exist in Settings. " +
-            "ReminderRowView must set .accessibilityIdentifier(\"settings.posture.toggle\")."
-        )
-    }
-
-    // MARK: - test_settings_eyesPickers_existWhenToggleEnabled (#427)
-
-    /// Enables the eyes-reminder toggle and verifies both the interval and duration
-    /// Pickers are exposed with their expected accessibilityIdentifiers (#427).
-    func test_settings_eyesPickers_existWhenToggleEnabled() throws {
+    /// Verifies reminder toggles and their interval/duration pickers are exposed (#427).
+    func test_settings_reminderControls_exposeTogglesAndPickers() throws {
         openSettings()
 
         let eyesToggle = app.switches["settings.eyes.toggle"]
@@ -369,27 +220,19 @@ final class SettingsFlowTests: XCTestCase {
             eyesToggle.tap()
         }
 
-        let intervalPicker = pickerElement(identifier: "settings.eyes.intervalPicker")
+        let eyesIntervalPicker = pickerElement(identifier: "settings.eyes.intervalPicker")
         XCTAssertTrue(
-            app.waitForElementExists(intervalPicker, timeout: 5),
+            app.waitForElementExists(eyesIntervalPicker, timeout: 5),
             "Eyes interval Picker must exist with identifier 'settings.eyes.intervalPicker' " +
             "when the eyes toggle is on (#427)."
         )
 
-        let durationPicker = pickerElement(identifier: "settings.eyes.durationPicker")
+        let eyesDurationPicker = pickerElement(identifier: "settings.eyes.durationPicker")
         XCTAssertTrue(
-            app.waitForElementExists(durationPicker, timeout: 5),
+            app.waitForElementExists(eyesDurationPicker, timeout: 5),
             "Eyes duration Picker must exist with identifier 'settings.eyes.durationPicker' " +
             "when the eyes toggle is on (#427)."
         )
-    }
-
-    // MARK: - test_settings_posturePickers_existWhenToggleEnabled (#427)
-
-    /// Enables the posture-reminder toggle and verifies both the interval and duration
-    /// Pickers are exposed with their expected accessibilityIdentifiers (#427).
-    func test_settings_posturePickers_existWhenToggleEnabled() throws {
-        openSettings()
 
         let postureToggle = app.switches["settings.posture.toggle"]
         XCTAssertTrue(
@@ -401,18 +244,18 @@ final class SettingsFlowTests: XCTestCase {
             postureToggle.tap()
         }
 
-        let intervalPicker = pickerElement(identifier: "settings.posture.intervalPicker")
-        scrollToElement(intervalPicker, maxSwipes: 2)
+        let postureIntervalPicker = pickerElement(identifier: "settings.posture.intervalPicker")
+        scrollToElement(postureIntervalPicker, maxSwipes: 2)
         XCTAssertTrue(
-            app.waitForElementExists(intervalPicker, timeout: 5),
+            app.waitForElementExists(postureIntervalPicker, timeout: 5),
             "Posture interval Picker must exist with identifier 'settings.posture.intervalPicker' " +
             "when the posture toggle is on (#427)."
         )
 
-        let durationPicker = pickerElement(identifier: "settings.posture.durationPicker")
-        scrollToElement(durationPicker, maxSwipes: 2)
+        let postureDurationPicker = pickerElement(identifier: "settings.posture.durationPicker")
+        scrollToElement(postureDurationPicker, maxSwipes: 2)
         XCTAssertTrue(
-            app.waitForElementExists(durationPicker, timeout: 5),
+            app.waitForElementExists(postureDurationPicker, timeout: 5),
             "Posture duration Picker must exist with identifier 'settings.posture.durationPicker' " +
             "when the posture toggle is on (#427)."
         )
@@ -488,56 +331,6 @@ final class SettingsFlowTests: XCTestCase {
         // 5. Restore to initial state so the test is non-destructive.
         persistedToggle.tap()
         dismissSettings()
-    }
-
-    // MARK: - test_settings_snoozeButtons_allThreeExist
-
-    /// Verifies all three snooze duration buttons are visible in Settings.
-    func test_settings_snoozeButtons_allThreeExist() throws {
-        openSettings()
-
-        let snooze5min = app.buttons["settings.snooze.5min"]
-        XCTAssertTrue(
-            snooze5min.waitForExistence(timeout: 3),
-            "Snooze 5 min button must exist in Settings."
-        )
-
-        let snooze1hour = app.buttons["settings.snooze.1hour"]
-        XCTAssertTrue(
-            snooze1hour.waitForExistence(timeout: 3),
-            "Snooze 1 hour button must exist in Settings."
-        )
-
-        let snoozeRestOfDay = app.buttons["settings.snooze.restOfDay"]
-        scrollToElement(snoozeRestOfDay)
-        XCTAssertTrue(
-            snoozeRestOfDay.waitForExistence(timeout: 3),
-            "Snooze Rest of Day button must exist in Settings."
-        )
-    }
-
-    // MARK: - test_settings_smartPause_footerVisible (#433)
-
-    /// Verifies the Smart Pause section footer text is present, confirming the feature is documented (#433).
-    func test_settings_smartPause_footerVisible() throws {
-        openSettings()
-
-        let focusToggle = app.switches["settings.smartPause.pauseDuringFocus"]
-        scrollToElement(focusToggle)
-        XCTAssertTrue(
-            focusToggle.waitForExistence(timeout: 3),
-            "Smart Pause > Pause During Focus toggle must exist to verify section is visible (#433)."
-        )
-
-        // Footer text contains "Smart Pause" explanation. Check by searching for expected keyword.
-        let footerText = app.staticTexts.matching(
-            NSPredicate(format: "label CONTAINS[c] 'smart pause' OR label CONTAINS[c] 'focus mode'")
-        ).firstMatch
-        XCTAssertTrue(
-            footerText.waitForExistence(timeout: 2),
-            "Smart Pause section must display a footer explaining the feature (#433). " +
-            "Add footer text to SettingsSmartPauseSection describing auto-pause behavior."
-        )
     }
 
     // MARK: - test_settings_savedBanner_appearsOnToggle (#434)
