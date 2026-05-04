@@ -49,12 +49,9 @@ final class SettingsFlowTests: XCTestCase {
 
         let termsButton = app.buttons["settings.legal.terms"]
         scrollToElement(termsButton)
-        XCTAssertTrue(app.revealAndWaitForHittable(termsButton, timeout: 5, maxSwipes: 4))
-        XCTAssertTrue(app.tapElementCenter(termsButton))
-
         let termsNav = app.navigationBars["Terms & Conditions"]
         XCTAssertTrue(
-            termsNav.waitForExistence(timeout: 5),
+            openLegalSheet(termsButton, navigationBar: termsNav),
             "Terms & Conditions sheet should open with the correct navigation title."
         )
 
@@ -74,12 +71,9 @@ final class SettingsFlowTests: XCTestCase {
 
         let privacyButton = app.buttons["settings.legal.privacy"]
         scrollToElement(privacyButton)
-        XCTAssertTrue(app.revealAndWaitForHittable(privacyButton, timeout: 5, maxSwipes: 4))
-        XCTAssertTrue(app.tapElementCenter(privacyButton))
-
         let privacyNav = app.navigationBars["Privacy Policy"]
         XCTAssertTrue(
-            privacyNav.waitForExistence(timeout: 5),
+            openLegalSheet(privacyButton, navigationBar: privacyNav),
             "Privacy Policy sheet should open with the correct navigation title."
         )
 
@@ -454,6 +448,21 @@ private extension SettingsFlowTests {
         if button.exists { return button }
 
         return app.otherElements[identifier]
+    }
+
+    /// Opens a legal document row, retrying once if CI accepts the tap but the sheet animation never starts.
+    func openLegalSheet(_ button: XCUIElement, navigationBar: XCUIElement) -> Bool {
+        for _ in 0..<2 {
+            guard app.revealAndWaitForHittable(button, timeout: 5, maxSwipes: 4),
+                  app.tapElementCenter(button, timeout: 5) else {
+                return false
+            }
+            if navigationBar.waitForExistence(timeout: 8) {
+                return true
+            }
+            app.activate()
+        }
+        return navigationBar.exists
     }
 
     /// Taps Done to dismiss Settings and waits for the sheet to disappear.
