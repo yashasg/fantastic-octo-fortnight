@@ -10,7 +10,7 @@ import UserNotifications
 
 struct OnboardingPermissionView: View {
     let onNext: () -> Void
-    private let notificationCenter: NotificationScheduling
+    private let requestPermission: () async -> Void
     private let accessibilityEnabledOverride: Bool?
 
     @Environment(\.accessibilityEnabled) private var accessibilityEnabled
@@ -18,9 +18,17 @@ struct OnboardingPermissionView: View {
     init(onNext: @escaping () -> Void,
          notificationCenter: NotificationScheduling? = nil,
          makeNotificationCenter: @escaping () -> NotificationScheduling = { UNUserNotificationCenter.current() },
+         requestPermission: (() async -> Void)? = nil,
          accessibilityEnabledOverride: Bool? = nil) {
         self.onNext = onNext
-        self.notificationCenter = notificationCenter ?? makeNotificationCenter()
+        let resolvedNotificationCenter = notificationCenter ?? makeNotificationCenter()
+        self.requestPermission = requestPermission ?? {
+            do {
+                _ = try await resolvedNotificationCenter.requestAuthorization(options: [.alert, .sound, .badge])
+            } catch {
+                Logger.scheduling.error("Notification permission request failed: \(error)")
+            }
+        }
         self.accessibilityEnabledOverride = accessibilityEnabledOverride
     }
 
@@ -95,11 +103,7 @@ struct OnboardingPermissionView: View {
 
     private func requestNotificationPermission() {
         Task {
-            do {
-                _ = try await notificationCenter.requestAuthorization(options: [.alert, .sound, .badge])
-            } catch {
-                Logger.scheduling.error("Notification permission request failed: \(error)")
-            }
+            await requestPermission()
             await MainActor.run { onNext() }
         }
     }

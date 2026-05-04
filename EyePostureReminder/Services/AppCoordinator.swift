@@ -426,14 +426,6 @@ final class AppCoordinator: ObservableObject {
         // No active snooze — cancel any pending wake artifacts.
         cancelSnoozeWake()
 
-        // First launch: prompt the user for notification permission.
-        // Permission is still used for the snooze-wake silent notification.
-        // Skip in UI test mode — the system alert would block the accessibility
-        // hierarchy and cause all XCUITest element lookups to fail.
-        if notificationAuthStatus == .notDetermined && !isUITestModeEnabled {
-            await requestNotificationPermission()
-        }
-
         // Schedule periodic background UNNotifications only as the fallback path
         // while Screen Time shielding is unavailable.
         if notificationAuthStatus == .authorized, shouldScheduleNotificationFallback {

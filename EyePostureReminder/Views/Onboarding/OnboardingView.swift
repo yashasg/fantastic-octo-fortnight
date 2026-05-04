@@ -39,7 +39,8 @@ struct OnboardingView: View {
             // request can be driven by a mock in UI tests without swizzling.
             OnboardingPermissionView(
                 onNext: { currentPage = 2 },
-                notificationCenter: coordinator.notificationCenter
+                notificationCenter: coordinator.notificationCenter,
+                requestPermission: { await coordinator.requestNotificationPermission() }
             )
                 .tag(1)
             // Settings store is forwarded so picker bindings write directly to
