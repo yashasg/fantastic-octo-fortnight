@@ -7,6 +7,8 @@ import SwiftUI
 import UIKit
 
 struct OnboardingView: View {
+    typealias AccessibilityNotificationPosterFactory = () -> AccessibilityNotificationPosting
+
     @EnvironmentObject private var coordinator: AppCoordinator
     @EnvironmentObject private var settings: SettingsStore
     @StateObject private var selectedAppsState = SelectedAppsState()
@@ -15,8 +17,13 @@ struct OnboardingView: View {
 
     private let accessibilityNotificationPoster: AccessibilityNotificationPosting
 
-    init(accessibilityNotificationPoster: AccessibilityNotificationPosting = LiveAccessibilityNotificationPoster()) {
-        self.accessibilityNotificationPoster = accessibilityNotificationPoster
+    init(
+        accessibilityNotificationPoster: AccessibilityNotificationPosting? = nil,
+        makeAccessibilityNotificationPoster: @escaping AccessibilityNotificationPosterFactory = {
+            LiveAccessibilityNotificationPoster()
+        }
+    ) {
+        self.accessibilityNotificationPoster = accessibilityNotificationPoster ?? makeAccessibilityNotificationPoster()
     }
 
     private static let configurePageControl: Void = {
