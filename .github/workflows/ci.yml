@@ -396,6 +396,7 @@ jobs:
         env:
           UITEST_SHARD_TIMEOUT_SECONDS: "1800"
           UITEST_HEARTBEAT_SECONDS: "60"
+          UITEST_XCODEBUILD_TEST_ITERATIONS: "2"
         run: |
           XCTESTRUN_PATH=$(find "${{ env.DERIVED_DATA_PATH }}/Build/Products" \
             -name "EyePostureReminderUITests_*.xctestrun" -maxdepth 1 -print | sort | tail -1)
