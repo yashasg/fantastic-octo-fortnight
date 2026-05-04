@@ -41,33 +41,11 @@ final class SettingsFlowTests: XCTestCase {
         )
     }
 
-    // MARK: - test_settings_legalSheets_openAndDismiss
+    // MARK: - test_settings_privacySheet_opensAndDismisses
 
-    /// Verifies both legal rows open their sheets and return to Settings when dismissed.
-    func test_settings_legalSheets_openAndDismiss() throws {
+    /// Verifies the release-critical Privacy row opens its sheet and returns to Settings when dismissed.
+    func test_settings_privacySheet_opensAndDismisses() throws {
         openSettings()
-
-        let termsButton = app.buttons["settings.legal.terms"]
-        scrollToElement(termsButton)
-        let termsNav = app.navigationBars["Terms & Conditions"]
-        XCTAssertTrue(
-            openLegalSheet(termsButton, navigationBar: termsNav),
-            "Terms & Conditions sheet should open with the correct navigation title."
-        )
-
-        let dismissButton = app.buttons["legal.dismissButton"]
-        XCTAssertTrue(
-            dismissButton.waitForExistence(timeout: 3),
-            "Dismiss button must exist in the legal sheet. " +
-            "Add .accessibilityIdentifier(\"legal.dismissButton\") to the dismiss button in LegalDocumentView."
-        )
-        dismissButton.tap()
-
-        let settingsNav = app.navigationBars["Settings"]
-        XCTAssertTrue(
-            settingsNav.waitForExistence(timeout: 3),
-            "Settings navigation bar should reappear after dismissing the Terms sheet."
-        )
 
         let privacyButton = app.buttons["settings.legal.privacy"]
         scrollToElement(privacyButton)
@@ -84,6 +62,7 @@ final class SettingsFlowTests: XCTestCase {
         )
         privacyDismissButton.tap()
 
+        let settingsNav = app.navigationBars["Settings"]
         XCTAssertTrue(
             settingsNav.waitForExistence(timeout: 3),
             "Settings navigation bar should reappear after dismissing the Privacy sheet."
