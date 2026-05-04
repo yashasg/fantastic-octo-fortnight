@@ -82,148 +82,17 @@ final class OnboardingFlowTests: XCTestCase {
         )
     }
 
-    // MARK: - test_onboarding_welcomeScreen_titleIsVisible
+    // MARK: - test_onboarding_permissionScreen_controlsExist
 
-    /// Verifies the main title text is present on the Welcome screen.
-    func test_onboarding_welcomeScreen_titleIsVisible() throws {
-        let welcomeTitle = app.staticTexts.firstMatch
+    /// Verifies the permission screen exposes both continue and notification CTAs.
+    func test_onboarding_permissionScreen_controlsExist() throws {
+        navigateToPermission()
+
+        let continueButton = app.buttons["onboarding.permission.nextButton"]
         XCTAssertTrue(
-            welcomeTitle.waitForExistence(timeout: 3),
-            "Welcome screen should contain at least one visible text element."
+            continueButton.waitForExistence(timeout: 3),
+            "After tapping Next on the Welcome screen, the Permission screen's continue button should appear."
         )
-    }
-
-    // MARK: - test_onboarding_welcomeNextButton_navigatesToPermissionScreen
-
-    /// Taps the Next button on the Welcome screen and confirms the Permission screen appears.
-    func test_onboarding_welcomeNextButton_navigatesToPermissionScreen() throws {
-        let nextButton = app.buttons["onboarding.welcome.nextButton"]
-        XCTAssertTrue(nextButton.waitForExistence(timeout: 3))
-        nextButton.tap()
-
-        let skipButton = app.buttons["onboarding.permission.nextButton"]
-        XCTAssertTrue(
-            skipButton.waitForExistence(timeout: 3),
-            "After tapping Next on the Welcome screen, the Permission screen's skip button should appear."
-        )
-    }
-
-    // MARK: - test_onboarding_skipPermission_reachesSetupScreen
-
-    /// Skips notification permission and verifies the Setup screen is reached.
-    func test_onboarding_skipPermission_reachesSetupScreen() throws {
-        let nextButton = app.buttons["onboarding.welcome.nextButton"]
-        XCTAssertTrue(nextButton.waitForExistence(timeout: 3))
-        nextButton.tap()
-
-        let skipButton = app.buttons["onboarding.permission.nextButton"]
-        XCTAssertTrue(skipButton.waitForExistence(timeout: 3))
-        skipButton.tap()
-
-        let getStartedButton = app.buttons["onboarding.setup.getStartedButton"]
-        XCTAssertTrue(
-            getStartedButton.waitForExistence(timeout: 3),
-            "After skipping permission, the Setup screen's Get Started button should be visible."
-        )
-    }
-
-    // MARK: - test_onboarding_setupScreen_primaryControlsExist
-
-    /// Verifies the current setup screen exposes the primary CTA and reminder pickers.
-    func test_onboarding_setupScreen_primaryControlsExist() throws {
-        let nextButton = app.buttons["onboarding.welcome.nextButton"]
-        XCTAssertTrue(nextButton.waitForExistence(timeout: 3))
-        nextButton.tap()
-
-        let skipButton = app.buttons["onboarding.permission.nextButton"]
-        XCTAssertTrue(skipButton.waitForExistence(timeout: 3))
-        skipButton.tap()
-
-        let getStartedButton = app.buttons["onboarding.setup.getStartedButton"]
-        XCTAssertTrue(getStartedButton.waitForExistence(timeout: 3))
-
-        let eyeIntervalPicker = app.descendants(matching: .any)
-            .matching(identifier: "onboarding.eyes.intervalPicker").firstMatch
-        XCTAssertTrue(
-            eyeIntervalPicker.waitForExistence(timeout: 3),
-            "Setup screen should expose the eye-break interval picker."
-        )
-
-        let postureIntervalPicker = app.descendants(matching: .any)
-            .matching(identifier: "onboarding.posture.intervalPicker").firstMatch
-        XCTAssertTrue(
-            postureIntervalPicker.waitForExistence(timeout: 3),
-            "Setup screen should expose the posture-check interval picker."
-        )
-    }
-
-    // MARK: - test_onboarding_setupScreen_getStartedReachesInterruptMode
-
-    /// Tapping Get Started on the setup screen reaches the True Interrupt Mode education screen.
-    func test_onboarding_setupScreen_getStartedReachesInterruptMode() throws {
-        let nextButton = app.buttons["onboarding.welcome.nextButton"]
-        XCTAssertTrue(nextButton.waitForExistence(timeout: 3))
-        nextButton.tap()
-
-        let skipButton = app.buttons["onboarding.permission.nextButton"]
-        XCTAssertTrue(skipButton.waitForExistence(timeout: 3))
-        skipButton.tap()
-
-        let getStartedButton = app.buttons["onboarding.setup.getStartedButton"]
-        XCTAssertTrue(getStartedButton.waitForExistence(timeout: 3))
-        getStartedButton.tap()
-
-        let interruptSkipButton = app.buttons["onboarding.interrupt.skipButton"]
-        XCTAssertTrue(
-            interruptSkipButton.waitForExistence(timeout: 3),
-            "After tapping Get Started, the app should show the True Interrupt Mode screen."
-        )
-    }
-
-    // MARK: - test_onboarding_interruptMode_setupPreviewOpensAppPicker
-
-    /// The True Interrupt onboarding screen must expose the app/category setup
-    /// surface before the first break, even while Screen Time entitlement approval is pending.
-    func test_onboarding_interruptMode_setupPreviewOpensAppPicker() throws {
-        let nextButton = app.buttons["onboarding.welcome.nextButton"]
-        XCTAssertTrue(nextButton.waitForExistence(timeout: 3))
-        nextButton.tap()
-
-        let skipButton = app.buttons["onboarding.permission.nextButton"]
-        XCTAssertTrue(skipButton.waitForExistence(timeout: 3))
-        skipButton.tap()
-
-        let getStartedButton = app.buttons["onboarding.setup.getStartedButton"]
-        XCTAssertTrue(getStartedButton.waitForExistence(timeout: 3))
-        getStartedButton.tap()
-
-        let setupPreviewButton = app.buttons["onboarding.interrupt.enableButton"]
-        XCTAssertTrue(
-            setupPreviewButton.waitForExistence(timeout: 3),
-            "True Interrupt screen must expose the setup preview button."
-        )
-        if !setupPreviewButton.isHittable {
-            app.swipeUp()
-        }
-        XCTAssertTrue(setupPreviewButton.isHittable, "Setup preview button must be tappable during onboarding.")
-        setupPreviewButton.tap()
-
-        let unavailableBanner = app.descendants(matching: .any)
-            .matching(identifier: "appCategoryPicker.unavailableBanner")
-            .firstMatch
-        XCTAssertTrue(
-            unavailableBanner.waitForExistence(timeout: 3),
-            "App/category setup preview must open and explain the current Screen Time availability state."
-        )
-    }
-
-    // MARK: - test_onboarding_permissionScreen_allowReminderAlertsButtonExists
-
-    /// Verifies the backup-alert primary CTA button is visible on the Permission screen.
-    func test_onboarding_permissionScreen_allowReminderAlertsButtonExists() throws {
-        let nextButton = app.buttons["onboarding.welcome.nextButton"]
-        XCTAssertTrue(nextButton.waitForExistence(timeout: 3))
-        nextButton.tap()
 
         let enableButton = app.buttons["onboarding.enableNotifications"]
         XCTAssertTrue(
@@ -234,42 +103,32 @@ final class OnboardingFlowTests: XCTestCase {
         XCTAssertTrue(enableButton.isHittable, "Allow Reminder Alerts button must be tappable.")
     }
 
-    // MARK: - test_onboarding_setupScreen_breakDurationPickerIdentifierExists
+    // MARK: - test_onboarding_setupScreen_controlsExist
 
-    /// Verifies the setup screen exposes break-duration picker identifiers.
-    func test_onboarding_setupScreen_breakDurationPickerIdentifierExists() throws {
-        let nextButton = app.buttons["onboarding.welcome.nextButton"]
-        XCTAssertTrue(nextButton.waitForExistence(timeout: 3))
-        nextButton.tap()
+    /// Verifies the setup screen exposes its primary CTA, picker identifiers, and reassurance copy.
+    func test_onboarding_setupScreen_controlsExist() throws {
+        navigateToSetup()
 
-        let skipButton = app.buttons["onboarding.permission.nextButton"]
-        XCTAssertTrue(skipButton.waitForExistence(timeout: 3))
-        skipButton.tap()
+        let getStartedButton = app.buttons["onboarding.setup.getStartedButton"]
+        XCTAssertTrue(getStartedButton.waitForExistence(timeout: 3))
 
-        let durationPicker = app.descendants(matching: .any)
-            .matching(identifier: "onboarding.eyes.durationPicker").firstMatch
+        let eyeIntervalPicker = onboardingElement(identifier: "onboarding.eyes.intervalPicker")
+        XCTAssertTrue(
+            eyeIntervalPicker.waitForExistence(timeout: 3),
+            "Setup screen should expose the eye-break interval picker."
+        )
+
+        let postureIntervalPicker = onboardingElement(identifier: "onboarding.posture.intervalPicker")
+        XCTAssertTrue(
+            postureIntervalPicker.waitForExistence(timeout: 3),
+            "Setup screen should expose the posture-check interval picker."
+        )
+
+        let durationPicker = onboardingElement(identifier: "onboarding.eyes.durationPicker")
         XCTAssertTrue(
             durationPicker.waitForExistence(timeout: 3),
             "Eye break duration picker must exist on the Setup screen with identifier 'onboarding.eyes.durationPicker'."
         )
-    }
-
-    // MARK: - test_onboarding_setupScreen_showsChangeInSettingsReassurance
-
-    /// Verifies the Setup screen contains copy that tells users they can change their
-    /// reminder schedule in Settings later.
-    func test_onboarding_setupScreen_showsChangeInSettingsReassurance() throws {
-        let nextButton = app.buttons["onboarding.welcome.nextButton"]
-        XCTAssertTrue(nextButton.waitForExistence(timeout: 3))
-        nextButton.tap()
-
-        let skipButton = app.buttons["onboarding.permission.nextButton"]
-        XCTAssertTrue(skipButton.waitForExistence(timeout: 3))
-        skipButton.tap()
-
-        let getStartedButton = app.buttons["onboarding.setup.getStartedButton"]
-        XCTAssertTrue(getStartedButton.waitForExistence(timeout: 3),
-                      "Must reach the setup screen first")
 
         let reassuranceText = app.staticTexts["onboarding.setup.changeInSettings"]
         XCTAssertTrue(
@@ -279,21 +138,27 @@ final class OnboardingFlowTests: XCTestCase {
         )
     }
 
-    // MARK: - test_onboarding_setupScreen_customizeButtonExists
+    // MARK: - test_onboarding_interruptMode_actionsExistAndSetupPreviewOpensAppPicker
 
-    /// Verifies the "Customize Settings" tertiary CTA is present on the True Interrupt Mode screen.
-    func test_onboarding_setupScreen_customizeButtonExists() throws {
-        let nextButton = app.buttons["onboarding.welcome.nextButton"]
-        XCTAssertTrue(nextButton.waitForExistence(timeout: 3))
-        nextButton.tap()
+    /// Verifies True Interrupt Mode exposes skip, customize, and setup-preview actions.
+    func test_onboarding_interruptMode_actionsExistAndSetupPreviewOpensAppPicker() throws {
+        navigateToInterruptMode()
 
-        let skipButton = app.buttons["onboarding.permission.nextButton"]
-        XCTAssertTrue(skipButton.waitForExistence(timeout: 3))
-        skipButton.tap()
+        let interruptSkipButton = app.buttons["onboarding.interrupt.skipButton"]
+        XCTAssertTrue(
+            interruptSkipButton.waitForExistence(timeout: 3),
+            "After tapping Get Started, the app should show the True Interrupt Mode screen."
+        )
 
-        let getStartedButton = app.buttons["onboarding.setup.getStartedButton"]
-        XCTAssertTrue(getStartedButton.waitForExistence(timeout: 3))
-        getStartedButton.tap()
+        let setupPreviewButton = app.buttons["onboarding.interrupt.enableButton"]
+        XCTAssertTrue(
+            setupPreviewButton.waitForExistence(timeout: 3),
+            "True Interrupt screen must expose the setup preview button."
+        )
+
+        if !setupPreviewButton.isHittable {
+            app.swipeUp()
+        }
 
         let customizeButton = app.buttons["onboarding.interrupt.customizeButton"]
         XCTAssertTrue(
@@ -303,23 +168,22 @@ final class OnboardingFlowTests: XCTestCase {
             ".accessibilityIdentifier(\"onboarding.interrupt.customizeButton\") is set."
         )
         XCTAssertTrue(customizeButton.isHittable, "\"Customize Settings\" button must be tappable.")
+
+        XCTAssertTrue(setupPreviewButton.isHittable, "Setup preview button must be tappable during onboarding.")
+        setupPreviewButton.tap()
+
+        let unavailableBanner = onboardingElement(identifier: "appCategoryPicker.unavailableBanner")
+        XCTAssertTrue(
+            unavailableBanner.waitForExistence(timeout: 3),
+            "App/category setup preview must open and explain the current Screen Time availability state."
+        )
     }
 
     // MARK: - test_onboarding_customizeButton_opensSettingsAfterCompletion
 
     /// Tapping "Customize Settings" completes onboarding and opens the Settings sheet.
     func test_onboarding_customizeButton_opensSettingsAfterCompletion() throws {
-        let nextButton = app.buttons["onboarding.welcome.nextButton"]
-        XCTAssertTrue(nextButton.waitForExistence(timeout: 3))
-        nextButton.tap()
-
-        let skipButton = app.buttons["onboarding.permission.nextButton"]
-        XCTAssertTrue(skipButton.waitForExistence(timeout: 3))
-        skipButton.tap()
-
-        let getStartedButton = app.buttons["onboarding.setup.getStartedButton"]
-        XCTAssertTrue(getStartedButton.waitForExistence(timeout: 3))
-        getStartedButton.tap()
+        navigateToInterruptMode()
 
         let customizeButton = app.buttons["onboarding.interrupt.customizeButton"]
         XCTAssertTrue(app.revealAndWaitForHittable(customizeButton, timeout: 5, maxSwipes: 4))
@@ -334,30 +198,41 @@ final class OnboardingFlowTests: XCTestCase {
             "HomeView reads openSettingsOnLaunch and presents SettingsView on appear."
         )
     }
+}
 
-    // MARK: - test_onboarding_setupScreen_pickerAccessibilityIdentifiers
-
-    /// Verifies interval and duration pickers on the Setup screen expose the expected
-    /// accessibility identifiers.
-    func test_onboarding_setupScreen_pickerAccessibilityIdentifiers() throws {
+private extension OnboardingFlowTests {
+    func navigateToPermission() {
         let nextButton = app.buttons["onboarding.welcome.nextButton"]
         XCTAssertTrue(nextButton.waitForExistence(timeout: 3))
         nextButton.tap()
+    }
 
-        let skipButton = app.buttons["onboarding.permission.nextButton"]
-        XCTAssertTrue(skipButton.waitForExistence(timeout: 3))
-        skipButton.tap()
+    func navigateToSetup() {
+        navigateToPermission()
 
-        XCTAssertTrue(
-            app.buttons["onboarding.setup.getStartedButton"].waitForExistence(timeout: 3),
-            "Must reach the setup screen first")
+        let continueButton = app.buttons["onboarding.permission.nextButton"]
+        XCTAssertTrue(continueButton.waitForExistence(timeout: 3))
+        continueButton.tap()
+    }
 
-        // Pickers may require scrolling; verify at least one is present.
-        let eyeIntervalPicker = app.descendants(matching: .any)
-            .matching(identifier: "onboarding.eyes.intervalPicker").firstMatch
-        XCTAssertTrue(
-            eyeIntervalPicker.waitForExistence(timeout: 3),
-            "Eye interval picker must be present with identifier 'onboarding.eyes.intervalPicker'."
-        )
+    func navigateToInterruptMode() {
+        navigateToSetup()
+
+        let getStartedButton = app.buttons["onboarding.setup.getStartedButton"]
+        XCTAssertTrue(getStartedButton.waitForExistence(timeout: 3))
+        getStartedButton.tap()
+    }
+
+    func onboardingElement(identifier: String) -> XCUIElement {
+        let picker = app.pickers[identifier]
+        if picker.exists { return picker }
+
+        let button = app.buttons[identifier]
+        if button.exists { return button }
+
+        let staticText = app.staticTexts[identifier]
+        if staticText.exists { return staticText }
+
+        return app.otherElements[identifier]
     }
 }

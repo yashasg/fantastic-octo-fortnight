@@ -125,6 +125,9 @@ final class SettingsFlowTests: XCTestCase {
 
         let newValue = globalToggle.value as? String
         XCTAssertNotEqual(initialValue, newValue, "Global toggle should change state after being tapped.")
+
+        globalToggle.tap()
+        XCTAssertEqual(initialValue, globalToggle.value as? String, "Global toggle should be restored after assertion.")
     }
 
     // MARK: - test_settings_secondaryControls_exist
@@ -132,20 +135,7 @@ final class SettingsFlowTests: XCTestCase {
     /// Verifies secondary Settings controls that do not need separate launch cycles.
     func test_settings_secondaryControls_exist() throws {
         openSettings()
-
-        let hapticToggle = app.switches["settings.hapticFeedback"]
-        scrollToElement(hapticToggle)
-        XCTAssertTrue(
-            hapticToggle.waitForExistence(timeout: 3),
-            "Haptic Feedback toggle must exist in Settings."
-        )
-
-        let fallbackToggle = app.switches["settings.notificationFallback"]
-        scrollToElement(fallbackToggle)
-        XCTAssertTrue(
-            fallbackToggle.waitForExistence(timeout: 3),
-            "Notification fallback toggle must exist in the Preferences section."
-        )
+        ensureGlobalToggleEnabled()
 
         let snooze5min = app.buttons["settings.snooze.5min"]
         scrollToElement(snooze5min)
@@ -159,6 +149,20 @@ final class SettingsFlowTests: XCTestCase {
         XCTAssertTrue(
             snoozeRestOfDay.waitForExistence(timeout: 3),
             "Snooze Rest of Day button must exist in Settings."
+        )
+
+        let hapticToggle = app.switches["settings.hapticFeedback"]
+        scrollToElement(hapticToggle)
+        XCTAssertTrue(
+            hapticToggle.waitForExistence(timeout: 3),
+            "Haptic Feedback toggle must exist in Settings."
+        )
+
+        let fallbackToggle = app.switches["settings.notificationFallback"]
+        scrollToElement(fallbackToggle)
+        XCTAssertTrue(
+            fallbackToggle.waitForExistence(timeout: 3),
+            "Notification fallback toggle must exist in the Preferences section."
         )
 
         let resetButton = app.buttons["settings.resetToDefaults"]
@@ -402,6 +406,14 @@ private extension SettingsFlowTests {
             app.waitForElementExists(doneButton, timeout: 5),
             "Settings sheet should be fully presented with a Done button before assertions."
         )
+    }
+
+    func ensureGlobalToggleEnabled() {
+        let globalToggle = app.switches["settings.masterToggle"]
+        XCTAssertTrue(globalToggle.waitForExistence(timeout: 3), "Master toggle must exist in Settings.")
+        if globalToggle.value as? String == "0" {
+            globalToggle.tap()
+        }
     }
 
     /// Scrolls up until the requested element exists (or max swipes are exhausted).
