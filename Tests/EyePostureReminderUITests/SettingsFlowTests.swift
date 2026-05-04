@@ -17,8 +17,11 @@ final class SettingsFlowTests: XCTestCase {
     }
 
     override func tearDownWithError() throws {
-        if app?.state != .notRunning {
+        switch app?.state {
+        case .runningForeground, .runningBackground, .runningBackgroundSuspended:
             app?.terminate()
+        default:
+            break
         }
         app = nil
     }

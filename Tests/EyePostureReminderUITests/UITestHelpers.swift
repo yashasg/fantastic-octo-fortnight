@@ -34,8 +34,13 @@ enum TestLaunchArguments {
 
 extension XCUIApplication {
     private func launchFresh() {
-        if state != .notRunning {
+        switch state {
+        case .runningForeground, .runningBackground, .runningBackgroundSuspended:
             terminate()
+        case .notRunning, .unknown:
+            break
+        @unknown default:
+            break
         }
     }
 
@@ -244,7 +249,7 @@ extension XCUIApplication {
     @discardableResult
     func tapElementCenter(_ element: XCUIElement, timeout: TimeInterval = 8) -> Bool {
         guard waitForElementHittable(element, timeout: timeout) else { return false }
-        element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        element.tap()
         return true
     }
 
