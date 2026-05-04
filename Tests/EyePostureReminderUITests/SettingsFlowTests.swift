@@ -369,22 +369,16 @@ final class SettingsFlowTests: XCTestCase {
             eyesToggle.tap()
         }
 
-        let intervalPicker = app.otherElements["settings.eyes.intervalPicker"]
-        let intervalPickerFallback = app.descendants(matching: .any)
-            .matching(identifier: "settings.eyes.intervalPicker").firstMatch
+        let intervalPicker = pickerElement(identifier: "settings.eyes.intervalPicker")
         XCTAssertTrue(
-            app.waitForElementExists(intervalPicker, timeout: 5) ||
-                app.waitForElementExists(intervalPickerFallback, timeout: 2),
+            app.waitForElementExists(intervalPicker, timeout: 5),
             "Eyes interval Picker must exist with identifier 'settings.eyes.intervalPicker' " +
             "when the eyes toggle is on (#427)."
         )
 
-        let durationPicker = app.otherElements["settings.eyes.durationPicker"]
-        let durationPickerFallback = app.descendants(matching: .any)
-            .matching(identifier: "settings.eyes.durationPicker").firstMatch
+        let durationPicker = pickerElement(identifier: "settings.eyes.durationPicker")
         XCTAssertTrue(
-            app.waitForElementExists(durationPicker, timeout: 5) ||
-                app.waitForElementExists(durationPickerFallback, timeout: 2),
+            app.waitForElementExists(durationPicker, timeout: 5),
             "Eyes duration Picker must exist with identifier 'settings.eyes.durationPicker' " +
             "when the eyes toggle is on (#427)."
         )
@@ -407,22 +401,18 @@ final class SettingsFlowTests: XCTestCase {
             postureToggle.tap()
         }
 
-        let intervalPicker = app.otherElements["settings.posture.intervalPicker"]
-        let intervalPickerFallback = app.descendants(matching: .any)
-            .matching(identifier: "settings.posture.intervalPicker").firstMatch
+        let intervalPicker = pickerElement(identifier: "settings.posture.intervalPicker")
+        scrollToElement(intervalPicker, maxSwipes: 2)
         XCTAssertTrue(
-            app.waitForElementExists(intervalPicker, timeout: 5) ||
-                app.waitForElementExists(intervalPickerFallback, timeout: 2),
+            app.waitForElementExists(intervalPicker, timeout: 5),
             "Posture interval Picker must exist with identifier 'settings.posture.intervalPicker' " +
             "when the posture toggle is on (#427)."
         )
 
-        let durationPicker = app.otherElements["settings.posture.durationPicker"]
-        let durationPickerFallback = app.descendants(matching: .any)
-            .matching(identifier: "settings.posture.durationPicker").firstMatch
+        let durationPicker = pickerElement(identifier: "settings.posture.durationPicker")
+        scrollToElement(durationPicker, maxSwipes: 2)
         XCTAssertTrue(
-            app.waitForElementExists(durationPicker, timeout: 5) ||
-                app.waitForElementExists(durationPickerFallback, timeout: 2),
+            app.waitForElementExists(durationPicker, timeout: 5),
             "Posture duration Picker must exist with identifier 'settings.posture.durationPicker' " +
             "when the posture toggle is on (#427)."
         )
@@ -659,6 +649,18 @@ private extension SettingsFlowTests {
                 return
             }
         }
+    }
+
+    /// SwiftUI Picker identifiers can surface as picker, button, or otherElement depending on style/SDK.
+    /// Check narrow element classes only; avoid broad `.any` descendant scans on the long Settings form.
+    func pickerElement(identifier: String) -> XCUIElement {
+        let picker = app.pickers[identifier]
+        if picker.exists { return picker }
+
+        let button = app.buttons[identifier]
+        if button.exists { return button }
+
+        return app.otherElements[identifier]
     }
 
     /// Taps Done to dismiss Settings and waits for the sheet to disappear.
