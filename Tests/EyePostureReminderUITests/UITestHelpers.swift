@@ -277,13 +277,19 @@ extension XCUIElement {
     @discardableResult
     func waitForHittable(timeout: TimeInterval = 3) -> Bool {
         let deadline = Date().addingTimeInterval(timeout)
-        if !exists {
-            let remainingToExist = max(0.1, deadline.timeIntervalSinceNow)
-            guard waitForExistence(timeout: remainingToExist) else { return false }
+        while Date() < deadline {
+            if !exists {
+                let remaining = max(0.1, deadline.timeIntervalSinceNow)
+                _ = waitForExistence(timeout: min(0.5, remaining))
+            }
+            if exists && isHittable {
+                return true
+            }
+            let step = min(0.2, max(0.05, deadline.timeIntervalSinceNow))
+            RunLoop.current.run(until: Date().addingTimeInterval(step))
         }
 
-        let remainingToHittable = max(0.1, deadline.timeIntervalSinceNow)
-        return waitFor(predicate: NSPredicate(format: "hittable == true"), timeout: remainingToHittable)
+        return exists && isHittable
     }
 
     /// Waits until the element no longer exists in the accessibility tree.
