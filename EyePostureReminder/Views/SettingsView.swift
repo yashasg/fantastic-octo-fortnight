@@ -77,8 +77,6 @@ struct SettingsView: View {
     @State private var savedBannerTask: Task<Void, Never>?
 
     private let accessibilityNotificationPoster: AccessibilityNotificationPosting
-    private let hostedPrivacyPolicyURL = URL(string: "https://github.com/yashasg/fantastic-octo-fortnight/blob/main/docs/legal/PRIVACY.md")
-
     init(
         isPresented: Binding<Bool>,
         accessibilityNotificationPoster: AccessibilityNotificationPosting = LiveAccessibilityNotificationPoster()
@@ -268,7 +266,7 @@ struct SettingsView: View {
                 .listRowSeparatorTint(AppColor.separatorSoft)
 
                 Button {
-                    guard let hostedPrivacyPolicyURL else { return }
+                    guard let hostedPrivacyPolicyURL = LegalLinks.hostedPrivacyPolicyURL else { return }
                     openURL(hostedPrivacyPolicyURL)
                 } label: {
                     Text("Hosted Privacy Policy (Web)")
