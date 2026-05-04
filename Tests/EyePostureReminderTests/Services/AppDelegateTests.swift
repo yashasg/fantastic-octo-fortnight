@@ -14,6 +14,7 @@ private final class MockMetricKitSubscriber: MetricKitSubscribing {
     }
 }
 
+// swiftlint:disable type_body_length
 /// Unit tests for `AppDelegate` notification routing logic.
 ///
 /// ## What is tested here
@@ -423,8 +424,8 @@ final class AppDelegateTests: XCTestCase {
 
         XCTAssertEqual(makeSettingsStoreCallCount, 1)
         XCTAssertEqual(defaults.string(forKey: AppStorageKey.uiTestOverlayType), ReminderType.eyes.rawValue)
-        XCTAssertEqual(settings.eyesBreakDuration, 120)
-        XCTAssertEqual(settings.postureBreakDuration, 120)
+        XCTAssertEqual(settings.eyesBreakDuration, AppDelegate.uiTestOverlayBreakDuration)
+        XCTAssertEqual(settings.postureBreakDuration, AppDelegate.uiTestOverlayBreakDuration)
     }
 
     func test_didFinishLaunching_withNilSettingsStore_usesInjectedFactoryOnce() throws {
@@ -476,8 +477,8 @@ final class AppDelegateTests: XCTestCase {
 
         XCTAssertEqual(makeSettingsStoreCallCount, 0)
         XCTAssertEqual(defaults.string(forKey: AppStorageKey.uiTestOverlayType), ReminderType.eyes.rawValue)
-        XCTAssertEqual(explicitSettings.eyesBreakDuration, 120)
-        XCTAssertEqual(explicitSettings.postureBreakDuration, 120)
+        XCTAssertEqual(explicitSettings.eyesBreakDuration, AppDelegate.uiTestOverlayBreakDuration)
+        XCTAssertEqual(explicitSettings.postureBreakDuration, AppDelegate.uiTestOverlayBreakDuration)
     }
 
     func test_consumeUITestOverlayType_withValidValue_returnsTypeAndClearsKey() throws {
@@ -615,3 +616,4 @@ final class AppDelegateTests: XCTestCase {
         return defaults
     }
 }
+// swiftlint:enable type_body_length
