@@ -439,6 +439,8 @@ final class AppCoordinatorNotificationFallbackTests: XCTestCase {
         await coordinator.refreshAuthStatus()
 
         tracker.simulateThresholdReached(for: .eyes)
+        await awaitCondition { overlay.showCallCount >= 1 }
+        await awaitCondition { deviceActivityMonitor.scheduleCallCount >= 1 }
         overlay.simulateDismiss()
         await awaitCondition {
             deviceActivityMonitor.cancelCallCount >= 1 &&

@@ -556,66 +556,50 @@ cmd_uitest() {
 
   info "Step 2/2 — running UI tests…"
 
-  # Retry logic: simulator app launch can fail transiently in CI when
-  # SpringBoard hasn't fully settled. Retry up to 3 times with increasing
-  # delays to handle FBSOpenApplicationServiceErrorDomain / RequestDenied.
-  local max_attempts=3
-  local attempt=1
-  local retry_delay=0
-  local -a current_only_testing_args=("${only_testing_args[@]}")
-  local -a failed_test_filters=()
-  local attempt_failed=0
-  while true; do
-    info "Attempt $attempt/$max_attempts..."
-    rm -rf "$result_bundle_path"
-    attempt_failed=0
-    if ! run_xcodebuild test-without-building \
-      -xctestrun "$xctestrun" \
-      -destination "$dest" \
-      -derivedDataPath "$DERIVED_DATA_PATH" \
-      -resultBundlePath "$result_bundle_path" \
-      -disable-concurrent-destination-testing \
-      -parallel-testing-enabled NO \
-      "${current_only_testing_args[@]}"; then
-      attempt_failed=1
-    fi
+  # Keep optional retries inside a single xcodebuild invocation so the simulator
+  # session remains warm. The default is one deterministic pass; set
+  # UITEST_XCODEBUILD_TEST_ITERATIONS > 1 to opt into XCTest-level retry.
+  local test_iterations="${UITEST_XCODEBUILD_TEST_ITERATIONS:-1}"
+  local max_test_execution_time="${UITEST_XCODEBUILD_MAX_TEST_SECONDS:-180}"
+  if ! [[ "$test_iterations" =~ ^[1-9][0-9]*$ ]]; then
+    fail "UITEST_XCODEBUILD_TEST_ITERATIONS must be a positive integer (got: $test_iterations)"
+    exit 1
+  fi
+  if ! [[ "$max_test_execution_time" =~ ^[1-9][0-9]*$ ]]; then
+    fail "UITEST_XCODEBUILD_MAX_TEST_SECONDS must be a positive integer (got: $max_test_execution_time)"
+    exit 1
+  fi
+  rm -rf "$result_bundle_path"
+  local -a xcodebuild_test_args=(
+    test-without-building \
+    -xctestrun "$xctestrun" \
+    -destination "$dest" \
+    -derivedDataPath "$DERIVED_DATA_PATH" \
+    -resultBundlePath "$result_bundle_path" \
+    -disable-concurrent-destination-testing \
+    -parallel-testing-enabled NO \
+    -maximum-test-execution-time-allowance "$max_test_execution_time"
+  )
+  if (( test_iterations > 1 )); then
+    xcodebuild_test_args+=(
+      -test-iterations "$test_iterations"
+      -retry-tests-on-failure
+      -test-repetition-relaunch-enabled YES
+    )
+  fi
+  xcodebuild_test_args+=("${only_testing_args[@]}")
 
-    if (( attempt_failed == 0 )) && ! xcresult_attempt_passed "$result_bundle_path"; then
-      warn "Attempt $attempt exited 0, but xcresult indicates failure. Treating as failed attempt."
-      attempt_failed=1
-    fi
+  if ! run_xcodebuild "${xcodebuild_test_args[@]}"; then
+    fail "UI tests failed"
+    summarize_xcresult_failures "$result_bundle_path"
+    exit 1
+  fi
 
-    if (( attempt_failed == 0 )); then
-      break
-    fi
-
-    if (( attempt >= max_attempts )); then
-      fail "UI tests failed after $max_attempts attempts"
-      summarize_xcresult_failures "$result_bundle_path"
-      exit 1
-    fi
-
-    failed_test_filters=()
-    while IFS= read -r only_testing_filter; do
-      [[ -n "$only_testing_filter" ]] && failed_test_filters+=("$only_testing_filter")
-    done < <(extract_failed_test_identifiers "$result_bundle_path" "$UI_TEST_SCHEME")
-    if (( ${#failed_test_filters[@]} > 0 )); then
-      current_only_testing_args=()
-      for only_testing_filter in "${failed_test_filters[@]}"; do
-        current_only_testing_args+=(-only-testing "$only_testing_filter")
-      done
-      retry_delay=5
-      warn "Attempt $attempt failed -- retrying only ${#failed_test_filters[@]} failed test(s)"
-    else
-      current_only_testing_args=("${only_testing_args[@]}")
-      retry_delay=$((attempt * 15))
-      warn "Attempt $attempt failed -- failed tests could not be parsed, retrying full selection"
-    fi
-
-    warn "Attempt $attempt failed -- retrying in ${retry_delay}s..."
-    sleep "$retry_delay"
-    attempt=$((attempt + 1))
-  done
+  if ! xcresult_attempt_passed "$result_bundle_path"; then
+    fail "UI tests failed"
+    summarize_xcresult_failures "$result_bundle_path"
+    exit 1
+  fi
 
   pass "UI tests passed"
 }

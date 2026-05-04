@@ -69,6 +69,12 @@ final class AppDelegateTests: XCTestCase {
 
     // MARK: - applicationDidBecomeActive: clearExpiredSnoozeIfNeeded
 
+    func test_objectiveCInit_createsDelegateForUIApplicationDelegateAdaptor() {
+        let delegate = (AppDelegate.self as NSObject.Type).init()
+
+        XCTAssertTrue(delegate is AppDelegate)
+    }
+
     /// When `snoozedUntil` is in the past, `applicationDidBecomeActive` must clear it.
     func test_applicationDidBecomeActive_withExpiredSnooze_clearsSnoozeFields() async throws {
         settings.snoozedUntil = Date(timeIntervalSinceNow: -60) // 1 minute ago
@@ -200,6 +206,27 @@ final class AppDelegateTests: XCTestCase {
         XCTAssertTrue(didFinish)
         XCTAssertEqual(makeNotificationCenterCallCount, 1)
         XCTAssertTrue(factoryCenter.delegate === sut)
+        XCTAssertEqual(mockMetricKitSubscriber.registerCallCount, 1)
+    }
+
+    func test_didFinishLaunching_withExplicitNotificationCenter_doesNotCallInjectedFactory() {
+        let explicitCenter = MockUserNotificationCenter()
+        let mockMetricKitSubscriber = MockMetricKitSubscriber()
+        var makeNotificationCenterCallCount = 0
+        let sut = AppDelegate(
+            notificationCenter: explicitCenter,
+            metricKitSubscriber: mockMetricKitSubscriber,
+            makeNotificationCenter: {
+                makeNotificationCenterCallCount += 1
+                return MockUserNotificationCenter()
+            }
+        )
+
+        let didFinish = sut.application(UIApplication.shared, didFinishLaunchingWithOptions: nil)
+
+        XCTAssertTrue(didFinish)
+        XCTAssertEqual(makeNotificationCenterCallCount, 0)
+        XCTAssertTrue(explicitCenter.delegate === sut)
         XCTAssertEqual(mockMetricKitSubscriber.registerCallCount, 1)
     }
 

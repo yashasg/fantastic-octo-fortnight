@@ -287,7 +287,7 @@ jobs:
     name: UI Tests / ${{ matrix.shard.name }}
     runs-on: macos-15
     needs: uitest-prepare
-    timeout-minutes: 45
+    timeout-minutes: 35
     strategy:
       fail-fast: false
       matrix:
@@ -301,9 +301,12 @@ jobs:
           - id: settings
             name: Settings
             only_testing_csv: EyePostureReminderUITests/SettingsFlowTests
-          - id: overlays-darkmode
-            name: Overlays + Dark Mode
-            only_testing_csv: EyePostureReminderUITests/OverlayTests,EyePostureReminderUITests/OverlayPresentationTests,EyePostureReminderUITests/OverlayPostureTests,EyePostureReminderUITests/DarkModeUITests
+          - id: overlays
+            name: Overlays
+            only_testing_csv: EyePostureReminderUITests/OverlayTests,EyePostureReminderUITests/OverlayPresentationTests,EyePostureReminderUITests/OverlayPostureTests
+          - id: darkmode
+            name: Dark Mode
+            only_testing_csv: EyePostureReminderUITests/DarkModeUITests
 
     steps:
       - name: Checkout
@@ -335,16 +338,52 @@ jobs:
 
       - name: Boot Simulator
         run: |
+          SIMULATOR_NAME="$(echo "${SIMULATOR}" | sed -E 's/.*name=([^,]+).*/\1/')"
+          if [[ -z "${SIMULATOR_NAME}" || "${SIMULATOR_NAME}" == "${SIMULATOR}" ]]; then
+            echo "::error::Failed to parse simulator name from SIMULATOR=${SIMULATOR}"
+            exit 1
+          fi
+          echo "Using simulator: ${SIMULATOR_NAME}"
+          # Start from a single-simulator baseline to avoid cross-runner bleed.
+          xcrun simctl shutdown all 2>/dev/null || true
           # Erase to ensure a clean state (avoids stale SpringBoard caches)
-          xcrun simctl shutdown "iPhone 16" 2>/dev/null || true
-          xcrun simctl erase "iPhone 16" 2>/dev/null || true
-          xcrun simctl boot "iPhone 16" 2>/dev/null || true
+          xcrun simctl shutdown "${SIMULATOR_NAME}" 2>/dev/null || true
+          xcrun simctl erase "${SIMULATOR_NAME}" 2>/dev/null || true
+          xcrun simctl boot "${SIMULATOR_NAME}" 2>/dev/null || true
           # Wait for simulator to finish booting
-          xcrun simctl bootstatus "iPhone 16" -b 2>/dev/null || sleep 10
+          xcrun simctl bootstatus "${SIMULATOR_NAME}" -b 2>/dev/null || sleep 10
+          SIMULATOR_UDID="$(python3 - "${SIMULATOR_NAME}" <<'PY'
+          import json
+          import subprocess
+          import sys
+          
+          target = sys.argv[1]
+          data = json.loads(
+            subprocess.check_output(
+              ["xcrun", "simctl", "list", "devices", "-j"],
+              text=True,
+            )
+          )
+          for runtime_devices in data.get("devices", {}).values():
+            for device in runtime_devices:
+              if device.get("name") == target and device.get("state") == "Booted":
+                print(device.get("udid", ""))
+                raise SystemExit(0)
+          raise SystemExit(1)
+          PY
+          )"
+          if [[ -z "${SIMULATOR_UDID}" ]]; then
+            echo "::error::Could not resolve a booted UDID for simulator '${SIMULATOR_NAME}'"
+            xcrun simctl list devices booted
+            exit 1
+          fi
+          echo "Resolved simulator UDID: ${SIMULATOR_UDID}"
+          echo "SIMULATOR_UDID=${SIMULATOR_UDID}" >> "$GITHUB_ENV"
+          echo "SIMULATOR=platform=iOS Simulator,id=${SIMULATOR_UDID}" >> "$GITHUB_ENV"
           # Wait for SpringBoard to be fully initialized (critical for UI tests)
           echo "Waiting for SpringBoard to finish launching…"
           for i in $(seq 1 30); do
-            if xcrun simctl spawn booted launchctl print system 2>/dev/null | grep -q "com.apple.SpringBoard"; then
+            if xcrun simctl spawn "${SIMULATOR_UDID}" launchctl print system 2>/dev/null | grep -q "com.apple.SpringBoard"; then
               echo "SpringBoard is ready (after ${i}s)"
               break
             fi
@@ -354,6 +393,9 @@ jobs:
           sleep 5
 
       - name: Run UI Tests (shard ${{ matrix.shard.id }})
+        env:
+          UITEST_SHARD_TIMEOUT_SECONDS: "1800"
+          UITEST_HEARTBEAT_SECONDS: "60"
         run: |
           XCTESTRUN_PATH=$(find "${{ env.DERIVED_DATA_PATH }}/Build/Products" \
             -name "EyePostureReminderUITests_*.xctestrun" -maxdepth 1 -print | sort | tail -1)
@@ -368,7 +410,54 @@ jobs:
             FILTER="$(echo "$FILTER" | xargs)"
             [[ -n "$FILTER" ]] && CMD+=(--only-testing "$FILTER")
           done
-          "${CMD[@]}"
+          python3 - "${CMD[@]}" <<'PY'
+          import os
+          import subprocess
+          import sys
+          import time
+
+          timeout_seconds = int(os.environ.get("UITEST_SHARD_TIMEOUT_SECONDS", "1800"))
+          heartbeat_seconds = int(os.environ.get("UITEST_HEARTBEAT_SECONDS", "60"))
+          simulator_udid = os.environ.get("SIMULATOR_UDID", "booted")
+          command = sys.argv[1:]
+
+          print(f"Running shard command: {' '.join(command)}", flush=True)
+
+          process = subprocess.Popen(command)
+          start = time.monotonic()
+          next_heartbeat = heartbeat_seconds
+
+          while True:
+              return_code = process.poll()
+              elapsed = int(time.monotonic() - start)
+
+              if return_code is not None:
+                  sys.exit(return_code)
+
+              if elapsed >= next_heartbeat:
+                  print(f"::notice::UI shard still running ({elapsed}s elapsed)", flush=True)
+                  next_heartbeat += heartbeat_seconds
+
+              if elapsed >= timeout_seconds:
+                  print(
+                      f"::error::UI shard exceeded watchdog timeout ({timeout_seconds}s); collecting simulator diagnostics",
+                      flush=True,
+                  )
+                  subprocess.run(["xcrun", "simctl", "list", "devices", "booted"], check=False)
+                  subprocess.run(
+                      ["xcrun", "simctl", "spawn", simulator_udid, "launchctl", "print", "system"],
+                      check=False,
+                  )
+                  process.terminate()
+                  try:
+                      process.wait(timeout=20)
+                  except subprocess.TimeoutExpired:
+                      process.kill()
+                      process.wait()
+                  sys.exit(124)
+
+              time.sleep(1)
+          PY
 
       - name: Upload UI test results
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2

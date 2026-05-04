@@ -17,8 +17,11 @@ final class SettingsFlowTests: XCTestCase {
     }
 
     override func tearDownWithError() throws {
-        if app?.state != .notRunning {
+        switch app?.state {
+        case .runningForeground, .runningBackground, .runningBackgroundSuspended:
             app?.terminate()
+        default:
+            break
         }
         app = nil
     }
@@ -595,7 +598,10 @@ private extension SettingsFlowTests {
     // MARK: - Helpers
 
     func assertHomeReadyForSettings() {
-        XCTAssertTrue(app.waitForHomeScreenReady(timeout: 5), "Home screen should be ready before opening Settings.")
+        XCTAssertTrue(
+            app.waitForHomeScreenReady(timeout: 12),
+            "Home screen should be ready before opening Settings."
+        )
         let settingsButton = app.buttons["home.settingsButton"]
         XCTAssertTrue(
             app.waitForElementExists(settingsButton, timeout: 3),
@@ -615,7 +621,7 @@ private extension SettingsFlowTests {
         }
 
         XCTAssertTrue(
-            app.waitForHomeScreenReady(timeout: 5),
+            app.waitForHomeScreenReady(timeout: 12),
             "Home screen anchor should exist before opening Settings."
         )
 

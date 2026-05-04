@@ -23,19 +23,11 @@ struct EyePostureReminderApp: App {
                 .environmentObject(coordinator)
                 .task {
                     await coordinator.scheduleReminders()
-                    // UI test mode: if a specific overlay type was requested via launch
-                    // arguments, trigger it now that the coordinator is active.
-                    // `#if DEBUG` ensures this backdoor is compiled out of Release builds
-                    // (re: #350/#405).
-#if DEBUG
-                    if let type = appDelegate.consumeUITestOverlayType() {
-                        coordinator.handleNotification(for: type)
-                    }
-#endif
                 }
                 .onChange(of: scenePhase) { phase in
                     switch phase {
                     case .active:
+                        presentUITestOverlayIfNeeded()
                         coordinator.presentPendingOverlayIfNeeded()
                         if wasInBackground {
                             wasInBackground = false
@@ -50,7 +42,25 @@ struct EyePostureReminderApp: App {
                 }
                 .onAppear {
                     appDelegate.coordinator = coordinator
+                    presentUITestOverlayIfNeeded()
                 }
         }
     }
+
+#if DEBUG
+    /// UI test mode: if a specific overlay type was requested via launch
+    /// arguments, trigger it after SwiftUI has attached/activated the window.
+    /// `#if DEBUG` ensures this backdoor is compiled out of Release builds
+    /// (re: #350/#405).
+    private func presentUITestOverlayIfNeeded() {
+        Task { @MainActor in
+            await Task.yield()
+            if let type = appDelegate.consumeUITestOverlayType() {
+                coordinator.handleNotification(for: type)
+            }
+        }
+    }
+#else
+    private func presentUITestOverlayIfNeeded() {}
+#endif
 }

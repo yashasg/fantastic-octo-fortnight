@@ -20,7 +20,14 @@ final class HomeScreenTests: XCTestCase {
     }
 
     private func relaunchWithTrueInterruptPending() {
-        app.terminate()
+        switch app.state {
+        case .runningForeground, .runningBackground, .runningBackgroundSuspended:
+            app.terminate()
+        case .notRunning, .unknown:
+            break
+        @unknown default:
+            break
+        }
         app = XCUIApplication()
         app.launchWithTrueInterruptPending()
         XCTAssertTrue(

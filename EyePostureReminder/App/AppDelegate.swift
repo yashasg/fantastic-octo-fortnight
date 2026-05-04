@@ -36,6 +36,10 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     private lazy var resolvedSettingsStore: SettingsStore =
         settingsStore ?? makeSettingsStore()
 
+    override convenience init() {
+        self.init(notificationCenter: nil)
+    }
+
     init(
         notificationCenter: UserNotificationCenterDelegating? = nil,
         metricKitSubscriber: MetricKitSubscribing? = nil,
@@ -45,7 +49,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         uiTestDefaults: UserDefaults? = nil,
         launchArgumentsProvider: @escaping () -> [String] = { CommandLine.arguments },
         makeUITestDefaults: @escaping () -> UserDefaults = { .standard },
-        makeNotificationCenter: @escaping () -> UserNotificationCenterDelegating = { UNUserNotificationCenter.current() },
+        makeNotificationCenter: (() -> UserNotificationCenterDelegating)? = nil,
         makeMetricKitSubscriber: @escaping () -> MetricKitSubscribing = { MetricKitSubscriber.shared },
         makeSettingsStore: @escaping @MainActor () -> SettingsStore = { SettingsStore() }
     ) {
@@ -58,7 +62,8 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         self.launchArguments = launchArguments ?? launchArgumentsProvider()
         self.makeUITestDefaults = makeUITestDefaults
         self.uiTestDefaults = uiTestDefaults ?? makeUITestDefaults()
-        self.makeNotificationCenter = makeNotificationCenter
+        let resolvedMakeNotificationCenter = makeNotificationCenter ?? { UNUserNotificationCenter.current() }
+        self.makeNotificationCenter = resolvedMakeNotificationCenter
         self.makeMetricKitSubscriber = makeMetricKitSubscriber
         self.makeSettingsStore = makeSettingsStore
         super.init()
