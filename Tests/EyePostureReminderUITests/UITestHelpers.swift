@@ -34,14 +34,9 @@ enum TestLaunchArguments {
 
 extension XCUIApplication {
     private func launchFresh() {
-        switch state {
-        case .runningForeground, .runningBackground, .runningBackgroundSuspended:
-            terminate()
-        case .notRunning, .unknown:
-            break
-        @unknown default:
-            break
-        }
+        // `launch()` already relaunches the target app for a new XCUIApplication
+        // session. Avoid explicit `terminate()` here: on loaded CI simulators it
+        // can fail before XCTest has acquired a stable process assertion.
     }
 
     private func appendDarkModeArgumentIfNeeded(_ darkMode: Bool) {
@@ -205,10 +200,18 @@ extension XCUIApplication {
     @discardableResult
     func waitForOverlayDismissed(timeout: TimeInterval = 3) -> Bool {
         let overlayRoot = otherElements["overlay.root"]
-        let dismissalDeadline = Date().addingTimeInterval(timeout)
-        guard waitForHomeScreenReady(timeout: timeout) else { return false }
-        let remaining = max(0.1, dismissalDeadline.timeIntervalSinceNow)
-        return overlayRoot.waitForNonExistence(timeout: remaining)
+        let deadline = Date().addingTimeInterval(timeout)
+
+        while Date() < deadline {
+            if !overlayRoot.exists && waitForHomeScreenReady(timeout: 0.5) {
+                return true
+            }
+            activate()
+            let step = min(0.2, max(0.05, deadline.timeIntervalSinceNow))
+            RunLoop.current.run(until: Date().addingTimeInterval(step))
+        }
+
+        return !overlayRoot.exists && waitForHomeScreenReady(timeout: 1)
     }
 
     /// Verifies that `overlay.root` never appears throughout the full observation window.
