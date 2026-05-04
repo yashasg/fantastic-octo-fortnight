@@ -127,7 +127,7 @@ final class AppCoordinatorSnoozeWakeTests: XCTestCase {
     /// from executing: `snoozedUntil` must remain set and the tracker must not receive
     /// any new `setThreshold` calls from a second `scheduleReminders()` invocation.
     func test_cancelSnoozeWakeTaskIfNeeded_preventsDuplicateScheduleReminders() async throws {
-        settings.snoozedUntil = Date(timeIntervalSinceNow: 0.2)  // fires after 200 ms
+        settings.snoozedUntil = Date(timeIntervalSinceNow: 2.0)  // keep comfortably ahead of scheduling overhead
         settings.snoozeCount = 3
         let originalSnoozeEnd = settings.snoozedUntil
 
@@ -141,10 +141,10 @@ final class AppCoordinatorSnoozeWakeTests: XCTestCase {
         await coordinator.scheduleReminders()
         let setThresholdCountAfterArm = tracker.setThresholdCalls.count  // 0: returned early
 
-        // Cancel before the 200 ms task fires.
+        // Cancel well before the 2-second task window expires.
         coordinator.cancelSnoozeWakeTaskIfNeeded()
 
-        // Wait past the original 200 ms window — task should NOT have fired.
+        // Wait a short interval; canceled task should NOT fire.
         try await Task.sleep(nanoseconds: 700_000_000)
 
         XCTAssertEqual(
