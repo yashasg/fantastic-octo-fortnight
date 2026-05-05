@@ -461,6 +461,15 @@ jobs:
           retention-days: 30
           if-no-files-found: error
 
+      - name: Upload UI retry failure report
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
+        if: always()
+        with:
+          name: ui-retry-failures-${{ matrix.shard.id }}-build${{ github.run_number }}
+          path: UITestResults-${{ matrix.shard.id }}-retry-failures.md
+          retention-days: 30
+          if-no-files-found: warn
+
   uitest:
     name: UI Tests
     runs-on: macos-15

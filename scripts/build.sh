@@ -328,6 +328,101 @@ sys.exit(0)
 PY
 }
 
+report_xcresult_retry_failures() {
+  local bundle_path="$1"
+  local report_path="$2"
+
+  if [[ ! -d "$bundle_path" ]]; then
+    warn "Result bundle not found at: $bundle_path"
+    return
+  fi
+
+  python3 - "$bundle_path" "$report_path" <<'PY'
+import json
+import os
+import subprocess
+import sys
+
+bundle_path = sys.argv[1]
+report_path = sys.argv[2]
+
+def get_root(path: str):
+    commands = [
+        ["xcrun", "xcresulttool", "get", "object", "--legacy", "--path", path, "--format", "json"],
+        ["xcrun", "xcresulttool", "get", "object", "--path", path, "--format", "json"],
+    ]
+    for command in commands:
+        try:
+            return json.loads(subprocess.check_output(command, stderr=subprocess.DEVNULL))
+        except Exception:
+            continue
+    return None
+
+def annotation_escape(value: str) -> str:
+    return (
+        value.replace("%", "%25")
+        .replace("\r", "%0D")
+        .replace("\n", "%0A")
+        .replace(":", "%3A")
+        .replace(",", "%2C")
+    )
+
+root = get_root(bundle_path)
+if not root:
+    print("⚠ Unable to parse xcresult bundle for retry-failure reporting")
+    sys.exit(0)
+
+action_result = (
+    root.get("actions", {})
+    .get("_values", [{}])[0]
+    .get("actionResult", {})
+)
+failures = (
+    action_result.get("issues", {})
+    .get("testFailureSummaries", {})
+    .get("_values", [])
+)
+
+lines = ["# UI retry failure report", ""]
+if not failures:
+    lines.append("No first-attempt UI test failures were recorded before retry success.")
+    print("✓ No retried UI test failures recorded")
+else:
+    lines.append(
+        f"{len(failures)} first-attempt UI test failure(s) were recorded before the final retry pass."
+    )
+    lines.append("")
+    print(
+        f"⚠ UI retry report: {len(failures)} first-attempt failure(s) "
+        "were hidden by retry success"
+    )
+    for item in failures:
+        test_name = item.get("testCaseName", {}).get("_value", "<unknown test>")
+        message = item.get("message", {}).get("_value", "").splitlines()[0]
+        document = item.get("documentLocationInCreatingWorkspace", {}).get("url", {}).get("_value", "")
+        lines.append(f"- `{test_name}`: {message or '<no message>'}")
+        annotation = f"{test_name}: {message or 'first-attempt failure before retry success'}"
+        if os.environ.get("GITHUB_ACTIONS") == "true":
+            print(
+                "::warning title=Retried UI test failure::"
+                + annotation_escape(annotation)
+            )
+        elif document:
+            print(f"  - {test_name}: {message} ({document})")
+        else:
+            print(f"  - {test_name}: {message}")
+
+os.makedirs(os.path.dirname(report_path) or ".", exist_ok=True)
+with open(report_path, "w", encoding="utf-8") as report:
+    report.write("\n".join(lines) + "\n")
+
+summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
+if summary_path:
+    with open(summary_path, "a", encoding="utf-8") as summary:
+        summary.write("\n".join(lines) + "\n\n")
+PY
+}
+
 # ── Subcommands ───────────────────────────────────────────────────────────────
 
 cmd_build() {
@@ -595,6 +690,8 @@ cmd_uitest() {
     exit 1
   fi
   rm -rf "$result_bundle_path"
+  local retry_report_path="${result_bundle_path%.xcresult}-retry-failures.md"
+  rm -f "$retry_report_path"
   local -a xcodebuild_test_args=(
     test-without-building \
     -xctestrun "$xctestrun" \
@@ -629,6 +726,10 @@ cmd_uitest() {
     fail "UI tests failed"
     summarize_xcresult_failures "$result_bundle_path"
     exit 1
+  fi
+
+  if (( test_iterations > 1 )); then
+    report_xcresult_retry_failures "$result_bundle_path" "$retry_report_path"
   fi
 
   pass "UI tests passed"
