@@ -137,7 +137,13 @@ For questions about this privacy policy, contact the developer via the App Store
 
 ## 7. Screenshot Descriptions
 
-Five screenshots required for App Store listing. Capture on iPhone 15 Pro (6.1") and iPhone 15 Pro Max (6.7") for required asset sizes.
+Five screenshots are prepared for App Store listing. Current captured sets live in
+`docs/app-store-screenshots/iPhone 17 Pro/` (1206×2622) and
+`docs/app-store-screenshots/iPhone 17 Pro Max/` (1320×2868). Regenerate them with:
+
+```sh
+./scripts/capture-app-store-screenshots.sh
+```
 
 | # | Screen | What to show | Key callout text |
 |---|--------|-------------|-----------------|

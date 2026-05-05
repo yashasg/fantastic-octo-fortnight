@@ -52,7 +52,7 @@ Legend: ✅ Done · ⚠️ In progress / partial · ❌ Not started · 🔒 Bloc
 
 | # | Item | Status | Notes |
 |---|------|--------|-------|
-| S1 | Screenshots prepared for iPhone 15 Pro (6.1") and iPhone 15 Pro Max (6.7") | ❌ Not started | 5 shots required; descriptions in `APP_STORE_LISTING.md` Section 7 |
+| S1 | Screenshots prepared for iPhone Pro and Pro Max sizes | ✅ Done | 5-shot sets captured in `docs/app-store-screenshots/iPhone 17 Pro/` and `docs/app-store-screenshots/iPhone 17 Pro Max/`; regenerate with `scripts/capture-app-store-screenshots.sh` — #610 |
 | S2 | App icon uploaded (1024×1024, no alpha, no rounded corners) | ❌ Not started | Yin-yang logo asset needs export at 1024pt |
 | S3 | "What's New" text finalized for v1.0 | ✅ Done | v1.0 launch notes are authored in `docs/TESTFLIGHT_METADATA.md` and mirrored in `APP_STORE_LISTING.md` |
 
@@ -88,12 +88,12 @@ Legend: ✅ Done · ⚠️ In progress / partial · ❌ Not started · 🔒 Bloc
 | Legal & Privacy | 1 | 2 | 1 | 2 (ext) |
 | Entitlements | 2 | 1 | 0 | 0 |
 | ASC Configuration | 2 | 2 | 5 | 0 |
-| Assets | 1 | 0 | 2 | 0 |
+| Assets | 2 | 0 | 1 | 0 |
 | Name Search | 3 | 0 | 1 | 0 |
 | Final Checks | 0 | 2 | 2 | 0 |
-| **Total (27 items)** | **9** | **7** | **11** | **2 ext** |
+| **Total (27 items)** | **10** | **7** | **10** | **2 ext** |
 
-**Overall:** ~33% complete. Two external blockers (#185, #196) gate the ASC configuration phase. Name search is complete. Entitlements are buildable today.
+**Overall:** ~37% complete. Two external blockers (#185, #196) gate the ASC configuration phase. Name search is complete. Entitlements are buildable today.
 
 ---
 
