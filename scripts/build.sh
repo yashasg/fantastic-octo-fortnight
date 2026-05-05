@@ -9,7 +9,7 @@
 #   ./scripts/build.sh all             # build + lint + test
 #   ./scripts/build.sh check           # Quick syntax check (compile only, no tests)
 #   ./scripts/build.sh version         # Show current marketing version
-#   ./scripts/build.sh version 0.2.0   # Set marketing version in Info.plist
+#   ./scripts/build.sh version 0.2.0   # Set marketing version in project.yml
 
 set -euo pipefail
 
@@ -33,8 +33,25 @@ TEST_SCHEME="EyePostureReminderTests"
 UI_TEST_SCHEME="EyePostureReminderUITests"
 PACKAGE_PATH="$(cd "$(dirname "$0")/.." && pwd)"
 DERIVED_DATA_PATH="${PACKAGE_PATH}/DerivedData"
+PROJECT_SPEC_PATH="${PACKAGE_PATH}/project.yml"
+
+project_setting_value() {
+  local key="$1"
+  local value
+  value="$(awk -v key="$key" '$1 == key ":" { gsub(/"/, "", $2); print $2; exit }' "$PROJECT_SPEC_PATH")"
+  if [[ -z "$value" ]]; then
+    fail "Missing ${key} in project.yml"
+    exit 1
+  fi
+  echo "$value"
+}
+
+DEFAULT_MARKETING_VERSION="$(project_setting_value MARKETING_VERSION)"
+DEFAULT_CURRENT_PROJECT_VERSION="$(project_setting_value CURRENT_PROJECT_VERSION)"
 
 XCODE_FLAGS=(
+  MARKETING_VERSION="${MARKETING_VERSION:-$DEFAULT_MARKETING_VERSION}"
+  CURRENT_PROJECT_VERSION="${CURRENT_PROJECT_VERSION:-$DEFAULT_CURRENT_PROJECT_VERSION}"
   CODE_SIGN_IDENTITY=""
   CODE_SIGNING_REQUIRED=NO
   CODE_SIGNING_ALLOWED=NO
@@ -630,8 +647,8 @@ cmd_all() {
 }
 
 # ── Version management ────────────────────────────────────────────────────────
-# Marketing version lives in EyePostureReminder/Info.plist (CFBundleShortVersionString).
-# Build number (CFBundleVersion) is auto-incremented by CI via github.run_number.
+# Marketing version lives in project.yml (MARKETING_VERSION).
+# Build number (CFBundleVersion) defaults to project.yml and is overridden by CI via CURRENT_PROJECT_VERSION.
 # To bump manually: ./scripts/build.sh version <new-version>
 PLIST="${PACKAGE_PATH}/EyePostureReminder/Info.plist"
 
@@ -639,30 +656,54 @@ cmd_version() {
   local new_version="${1:-}"
 
   if [[ -z "$new_version" ]]; then
-    # Show current version
-    if [[ ! -f "$PLIST" ]]; then
-      fail "Info.plist not found at: $PLIST"
+    if [[ ! -f "$PROJECT_SPEC_PATH" ]]; then
+      fail "project.yml not found at: $PROJECT_SPEC_PATH"
       exit 1
     fi
     local current
-    current=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$PLIST" 2>/dev/null)
+    current="$(project_setting_value MARKETING_VERSION)"
     local build
-    build=$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$PLIST" 2>/dev/null)
+    build="$(project_setting_value CURRENT_PROJECT_VERSION)"
     echo -e "${BOLD}Marketing version:${RESET} ${current}"
-    echo -e "${BOLD}Build number:${RESET}     ${build} (overwritten by CI with github.run_number)"
+    echo -e "${BOLD}Build number:${RESET}     ${build} (overridden by CI with github.run_number)"
   else
     # Validate semver format (digits only — Apple requires numeric segments)
     if ! [[ "$new_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
       fail "Version must be numeric semver, e.g. 0.2.0 (no pre-release labels)"
       exit 1
     fi
-    if [[ ! -f "$PLIST" ]]; then
-      fail "Info.plist not found at: $PLIST"
+    if [[ ! -f "$PROJECT_SPEC_PATH" ]]; then
+      fail "project.yml not found at: $PROJECT_SPEC_PATH"
       exit 1
     fi
-    /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $new_version" "$PLIST"
-    pass "Marketing version set to ${new_version}"
-    info "Remember to commit Info.plist and tag: git tag -a v${new_version} -m 'Release ${new_version}'"
+    local update_count
+    update_count="$(python3 - "$PROJECT_SPEC_PATH" "$new_version" <<'PY'
+import re
+import sys
+
+path, version = sys.argv[1], sys.argv[2]
+with open(path, encoding="utf-8") as handle:
+    contents = handle.read()
+
+updated, count = re.subn(
+    r'(^\s*MARKETING_VERSION:\s*)"[0-9]+\.[0-9]+\.[0-9]+"',
+    rf'\1"{version}"',
+    contents,
+    flags=re.MULTILINE,
+)
+
+if count == 0:
+    print("0")
+    sys.exit(1)
+
+with open(path, "w", encoding="utf-8") as handle:
+    handle.write(updated)
+
+print(count)
+PY
+)"
+    pass "Marketing version set to ${new_version} in project.yml (${update_count} target settings)"
+    info "Remember to commit project.yml and tag: git tag -a v${new_version} -m 'Release ${new_version}'"
   fi
 }
 
@@ -682,7 +723,7 @@ usage() {
   echo "  all                build + lint + test"
   echo "  check              Alias for build (xcodebuild has no syntax-only mode)"
   echo "  version            Show current marketing version"
-  echo "  version <x.y.z>   Set marketing version in Info.plist"
+  echo "  version <x.y.z>   Set marketing version in project.yml"
 }
 
 # ── Entry point ───────────────────────────────────────────────────────────────
