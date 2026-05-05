@@ -99,7 +99,7 @@ Download kshana on the App Store and start building healthier break habits today
 ### kshana — Privacy Policy
 
 **Effective date:** 2026-04-24  
-**Last updated:** 2026-04-26
+**Last updated:** 2026-05-05
 
 #### What we collect
 
@@ -110,14 +110,14 @@ The app uses Apple's built-in diagnostics and analytics tools, including **Metri
 #### How the app works
 
 - All your settings (reminder intervals, break durations, preferences) are stored locally on your device using iOS UserDefaults.
-- Motion activity and Focus status are accessed transiently in memory to pause reminders — they are never stored or transmitted.
+- Motion activity, Focus status, and CarPlay/audio-route status are accessed transiently in memory to pause reminders — they are never stored or transmitted.
 - Current builds use local reminder alerts as the primary reminder mechanism. True Interrupt Mode (app-level shielding) is not available in v0.2.0 and will arrive in a future update when Apple's entitlement approval is complete.
 - The app uses Apple's `os.Logger` framework for on-device diagnostic logging. These logs remain on your device. In release builds, values that could be sensitive are marked private/redacted. If you choose to share diagnostics with Apple or a TestFlight developer, some diagnostic logs may be included according to Apple's diagnostic-sharing settings.
 - No third-party SDKs or frameworks are used — the app is built exclusively with Apple's native iOS libraries (SwiftUI, UIKit, UserNotifications, MetricKit).
 
 #### Permissions
 
-The app requests **notification permission** to deliver reminder alerts when in the background. It requests **motion activity permission** to detect driving and pause reminders. No other permissions are requested beyond what is declared in the app's Info.plist.
+The app requests **notification permission** to deliver reminder alerts when in the background, **motion activity permission** to detect driving and pause reminders, and **Focus Status permission** to pause reminders during active Focus modes. It also reads the current audio output route to detect CarPlay so reminders can pause while you are driving; it does not record audio, access microphone input, store route history, or transmit route status. No other permissions are requested beyond what is declared in the app's Info.plist.
 
 #### Data sharing
 

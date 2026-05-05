@@ -1,14 +1,14 @@
 # Privacy Policy
 
 **App:** kshana  
-**Last Updated:** April 26, 2026  
+**Last Updated:** May 5, 2026
 **Publisher:** Yashasg
 
 ---
 
 ## Overview
 
-Your privacy matters. kshana is designed to be privacy-preserving: your app settings stay on your device, motion and Focus information are used only transiently for reminder pause logic, and the App does not use advertising, tracking, user accounts, or third-party analytics SDKs.
+Your privacy matters. kshana is designed to be privacy-preserving: your app settings stay on your device, motion, Focus, and CarPlay/audio-route information are used only transiently for reminder pause logic, and the App does not use advertising, tracking, user accounts, or third-party analytics SDKs.
 
 The App does use Apple's built-in diagnostics and analytics tools, including MetricKit and App Store Connect analytics, to understand aggregate app performance, reliability, crashes, hangs, launch times, memory use, and similar technical metrics. These reports are processed through Apple's systems and are provided to the developer in aggregated or diagnostic form. They are not used to identify you, track you across apps or websites, build advertising profiles, or sell data.
 
@@ -37,7 +37,8 @@ This data exists solely to remember your preferences and coordinate local remind
 The App also accesses the following device data **in memory only** — this data is never stored or transmitted by the App:
 
 - **Motion activity data** — the App reads your device's motion activity state (via `CMMotionActivityManager`) to detect when you are driving, so that reminders are automatically paused. This data is read in memory for the sole purpose of pause logic and is discarded immediately; it is never written to disk, sent to any server, or associated with your identity.
-- **Focus mode status** — the App reads your device's Focus mode state (e.g., Do Not Disturb, Work, Personal) to pause reminders during active Focus sessions. This information is read in memory and is never stored or transmitted by the App.
+- **Focus mode status** — the App requests Focus Status authorization and reads your device's Focus mode state (e.g., Do Not Disturb, Work, Personal) to pause reminders during active Focus sessions. This information is read in memory and is never stored or transmitted by the App.
+- **CarPlay / audio-route status** — the App reads the current `AVAudioSession` output route to detect whether CarPlay is connected, so reminders can pause while you are driving. The App checks only the route/port status needed for pause logic; it does not record audio, access microphone content, inspect media content, store route history, or transmit this information.
 - **Device activity and screen time data (if authorized)** — If you authorize kshana to access Screen Time information via the FamilyControls framework, the App reads aggregate data about your total continuous screen-on time and any user-authorized app/category selections you have configured. This data is used locally to schedule and deliver wellness breaks at your configured intervals. When Screen Time features are configured, kshana stores the local coordination metadata listed above, but it does not transmit Screen Time data or coordination metadata to external servers or share it with third parties. **As of April 2026, Screen Time integration is pending Apple approval (case ID 102881605113) and is not yet available to users.**
 
 The App uses Apple's built-in diagnostics and analytics systems:
@@ -54,7 +55,7 @@ To be explicit about what does **not** happen:
 - **No personal information** — we do not collect your name, email address, phone number, date of birth, or other directly identifying information
 - **No health or biometric data** — we do not collect eye strain data, posture measurements, or any health-related metrics; physical activity (motion) data is accessed transiently in memory to pause reminders while driving and is never stored or transmitted by the App
 - **No location data** — we do not access your GPS or location services
-- **No camera or microphone access** — the App does not request access to camera or microphone
+- **No camera or microphone access** — the App does not request access to camera or microphone. CarPlay detection uses audio-route status only, not audio recording or microphone input
 - **No device identifiers for tracking** — we do not collect the advertising identifier (IDFA) or use persistent identifiers to track you across apps or websites
 - **No user accounts** — the App does not require registration, login, or account creation
 - **No third-party advertising or analytics SDKs** — there are no Firebase, Mixpanel, advertising SDK, data broker, or third-party data collection libraries in this App
@@ -140,7 +141,7 @@ If you are a parent or guardian and believe your child has somehow provided pers
 
 Because the App stores only local preferences and operational coordination metadata on your device, the primary security protection is your device's own security (passcode, Face ID, Touch ID). We encourage you to keep your device secure and up to date.
 
-The App does not transmit local preferences, motion activity data, or Focus status to a developer server. Apple-native diagnostics and analytics are processed through Apple's systems and are subject to Apple's security and privacy practices.
+The App does not transmit local preferences, motion activity data, Focus status, or CarPlay/audio-route status to a developer server. Apple-native diagnostics and analytics are processed through Apple's systems and are subject to Apple's security and privacy practices.
 
 ---
 

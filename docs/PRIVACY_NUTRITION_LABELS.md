@@ -130,7 +130,8 @@ These data types are accessed or stored locally for App Functionality and are no
 |---|---|---|
 | App preferences / settings | `UserDefaults` | Stored locally in app sandbox. Never transmitted. |
 | Motion activity state | `CMMotionActivityManager` | Transient, in-memory only. Used to pause reminders while driving. Never stored or sent. |
-| Focus status | `INFocusStatusCenter` | Transient, in-memory only. Used to pause reminders during Focus modes. Never stored or sent. |
+| Focus status | `INFocusStatusCenter` | User-authorized and transient, in-memory only. Used to pause reminders during Focus modes. Never stored or sent. |
+| CarPlay / audio-route status | `AVAudioSession.currentRoute` | Transient, in-memory only. Used to detect CarPlay and pause reminders while driving. The app does not record audio, access microphone input, store route history, or transmit route status. |
 | Screen Time / Device activity data (if authorized) | `FamilyControls` / `DeviceActivity` (pending approval) | User-authorized data is used locally for interval scheduling and selected-app shielding. Current builds keep backup alerts active while entitlement-gated shielding is pending Apple approval (case ID 102881605113). |
 | App Group IPC metadata | `UserDefaults(suiteName:)` | Local-only enabled/disabled intent, aggregate app/category selection counts, shield-session timestamps, last access-request timestamp, and capped shield/fallback/watchdog event log. Used so the main app and Screen Time extensions coordinate without a backend. Never transmitted by kshana. |
 | Diagnostic logs | `os.Logger` | On-device only in release builds. Sensitive values redacted with `.private`. |
@@ -230,6 +231,7 @@ If a future release transmits Screen Time, Device Activity, selected-app metadat
 | App Group IPC metadata | ❌ Not Collected | — | — | — |
 | Motion activity | ❌ Not Collected | — | — | — |
 | Focus status | ❌ Not Collected | — | — | — |
+| CarPlay / audio-route status | ❌ Not Collected | — | — | — |
 | Screen Time (if approved*) | ❌ Not Collected | — | — | — |
 | os.Logger logs | ❌ Not Collected | — | — | — |
 | MetricKit crash data | ✅ Collected | Not Linked | Not Tracking | App Functionality |
