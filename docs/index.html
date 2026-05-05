@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>kshana - Eye & Posture Wellness</title>
+  <meta name="description" content="kshana gently reminds you to take healthier eye and posture breaks without accounts, ads, or tracking.">
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f8f4ec;
+      --surface: #fffdf8;
+      --text: #22352d;
+      --muted: #5f6f67;
+      --primary: #2f6f5e;
+      --border: #d8e4dc;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #101714;
+        --surface: #18221e;
+        --text: #eef7f1;
+        --muted: #b9c8bf;
+        --primary: #8ed2b1;
+        --border: #314039;
+      }
+    }
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.6;
+    }
+    main {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 56px 20px;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 28px;
+      padding: 32px;
+      box-shadow: 0 14px 40px rgb(34 53 45 / 12%);
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: clamp(2.4rem, 9vw, 4rem);
+      line-height: 1;
+      letter-spacing: -0.05em;
+    }
+    h2 {
+      margin-top: 32px;
+    }
+    p {
+      margin: 0 0 16px;
+    }
+    .subtitle {
+      color: var(--muted);
+      font-size: 1.25rem;
+      margin-bottom: 24px;
+    }
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 28px;
+    }
+    a {
+      color: var(--primary);
+      font-weight: 650;
+    }
+    .button {
+      border: 1px solid var(--primary);
+      border-radius: 999px;
+      padding: 10px 16px;
+      text-decoration: none;
+    }
+    ul {
+      padding-left: 1.25rem;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="card" aria-labelledby="title">
+      <h1 id="title">kshana</h1>
+      <p class="subtitle">Eye &amp; Posture Wellness</p>
+      <p>
+        kshana helps you build healthier screen habits with gentle eye-break and posture reminders.
+        It is privacy-first: no accounts, no ads, no tracking, and no custom analytics backend.
+      </p>
+      <h2>What kshana does</h2>
+      <ul>
+        <li>Custom eye-break and posture-check intervals</li>
+        <li>Calm full-screen break guidance with snooze options</li>
+        <li>Smart Pause during Focus, CarPlay, and driving</li>
+        <li>True Interrupt Mode planned after Apple's Screen Time entitlement approval</li>
+      </ul>
+      <div class="actions" aria-label="Helpful links">
+        <a class="button" href="support.html">Support</a>
+        <a class="button" href="privacy.html">Privacy Policy</a>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

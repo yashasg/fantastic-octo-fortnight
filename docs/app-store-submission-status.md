@@ -39,11 +39,12 @@ Legend: ✅ Done · ⚠️ In progress / partial · ❌ Not started · 🔒 Bloc
 | A1 | Bundle ID finalized: `com.yashasg.eyeposturereminder` | ✅ Done | Set in `project.yml` |
 | A2 | App Group `group.com.yashasg.kshana` registered and associated with all three bundle IDs | ❌ Not started | Requires Apple Developer Portal — screen time extensions depend on this |
 | A3 | SKU set: `kshana` | ❌ Not started | Must be set in ASC before first build upload |
-| A4 | Support URL set: `https://github.com/yashasg/fantastic-octo-fortnight` | ❌ Not started | Enter in App Store Connect |
-| A5 | App name, subtitle, keywords, description finalized | ✅ Done | See `APP_STORE_LISTING.md` Sections 1–4 |
-| A6 | Age rating questionnaire completed | ❌ Not started | All answers "No" / "None" → 4+ |
-| A7 | Primary category: Health & Fitness; Secondary: Productivity | ❌ Not started | Enter in App Store Connect |
-| A8 | Price: Free, all territories | ❌ Not started | Enter in App Store Connect |
+| A4 | Support URL set: `https://yashasg.github.io/fantastic-octo-fortnight/support.html` | ⚠️ Partial | Branded static page exists in `docs/support.html`; enter final hosted URL in App Store Connect |
+| A5 | Marketing URL set: `https://yashasg.github.io/fantastic-octo-fortnight/` | ⚠️ Partial | Branded static page exists in `docs/index.html`; enter final hosted URL in App Store Connect |
+| A6 | App name, subtitle, keywords, description finalized | ✅ Done | See `APP_STORE_LISTING.md` Sections 1–4 |
+| A7 | Age rating questionnaire completed | ❌ Not started | All answers "No" / "None" → 4+ |
+| A8 | Primary category: Health & Fitness; Secondary: Productivity | ❌ Not started | Enter in App Store Connect |
+| A9 | Price: Free, all territories | ❌ Not started | Enter in App Store Connect |
 
 ---
 
@@ -86,19 +87,19 @@ Legend: ✅ Done · ⚠️ In progress / partial · ❌ Not started · 🔒 Bloc
 |----------|------|---------|-------------|---------|
 | Legal & Privacy | 1 | 1 | 2 | 2 (ext) |
 | Entitlements | 2 | 1 | 0 | 0 |
-| ASC Configuration | 2 | 0 | 6 | 0 |
+| ASC Configuration | 2 | 2 | 5 | 0 |
 | Assets | 0 | 1 | 2 | 0 |
 | Name Search | 3 | 0 | 1 | 0 |
 | Final Checks | 0 | 2 | 2 | 0 |
-| **Total (18 items)** | **8** | **5** | **13** | **2 ext** |
+| **Total (27 items)** | **8** | **7** | **12** | **2 ext** |
 
-**Overall:** ~44% complete. Two external blockers (#185, #196) gate the ASC configuration phase. Name search is complete. Entitlements are buildable today.
+**Overall:** ~30% complete. Two external blockers (#185, #196) gate the ASC configuration phase. Name search is complete. Entitlements are buildable today.
 
 ---
 
 ## Recommended Next Actions
 
-1. **Close #185 follow-through** — hosted privacy URL is now available at `https://github.com/yashasg/fantastic-octo-fortnight/blob/main/docs/legal/PRIVACY.md`; remaining manual step is adding this URL in App Store Connect metadata.
+1. **Close #185 follow-through** — privacy URL content is staged at `docs/privacy.html` for `https://yashasg.github.io/fantastic-octo-fortnight/privacy.html`; remaining manual step is confirming GitHub Pages is enabled and adding this URL in App Store Connect metadata.
 2. **Unblock #196** — upload `docs/legal/TERMS.md` content to App Store Connect License Agreement field.
 3. **Capture screenshots** — 5 screens on iPhone 15 Pro + Pro Max.
 4. **Export app icon** — 1024×1024 PNG, no alpha.
