@@ -55,6 +55,10 @@ final class StringCatalogTests: XCTestCase {
         XCTAssertTrue(isTranslated("home.status.paused"))
     }
 
+    func test_homeStatusNoReminders_resolvesToEnglish() {
+        XCTAssertTrue(isTranslated("home.status.noReminders"))
+    }
+
     func test_settingsNavTitle_resolvesToEnglish() {
         XCTAssertTrue(isTranslated("settings.navTitle"))
     }
@@ -136,6 +140,7 @@ final class StringCatalogTests: XCTestCase {
     func test_allExpectedKeys_resolveToNonEmptyStrings() {
         let expectedKeys = [
             "home.navTitle", "home.title", "home.status.active", "home.status.paused",
+            "home.status.noReminders",
             "home.settingsButton",
             "settings.navTitle", "settings.doneButton", "settings.masterToggle",
             "settings.pausedBanner", "settings.section.eyes", "settings.section.posture",
@@ -234,7 +239,13 @@ final class StringCatalogTests: XCTestCase {
             "appCategoryPicker.doneButton.hint",
             // home.trueInterrupt.setupPill.* — rediscovery affordance keys (#280)
             "home.trueInterrupt.setupPill",
-            "home.trueInterrupt.setupPill.hint"
+            "home.trueInterrupt.setupPill.hint",
+            // home.noReminders.* — zero-reminder recovery banner (#612)
+            "home.status.noReminders",
+            "home.noReminders.title",
+            "home.noReminders.body",
+            "home.noReminders.openSettings",
+            "home.noReminders.openSettings.hint"
         ]
         for key in expectedKeys {
             XCTAssertFalse(str(key).isEmpty, "Key '\(key)' must resolve to a non-empty string")
@@ -244,7 +255,9 @@ final class StringCatalogTests: XCTestCase {
     func test_noDuplicateKeys_homeScreen() {
         let keys = [
             "home.navTitle", "home.title", "home.status.active",
-            "home.status.paused", "home.settingsButton"
+            "home.status.paused", "home.status.noReminders", "home.settingsButton",
+            "home.noReminders.title", "home.noReminders.body",
+            "home.noReminders.openSettings", "home.noReminders.openSettings.hint"
         ]
         XCTAssertEqual(Set(keys).count, keys.count, "Home screen keys must be unique")
     }
@@ -445,6 +458,7 @@ final class StringCatalogTests: XCTestCase {
     func test_keyConvention_noEmptyKeys() {
         let allKeys = [
             "home.navTitle", "home.title",
+            "home.status.noReminders",
             "settings.navTitle", "settings.masterToggle",
             "overlay.dismissButton", "onboarding.welcome.title"
         ]
@@ -459,6 +473,7 @@ final class StringCatalogTests: XCTestCase {
     func test_keyConvention_allKeysHaveAtLeastTwoComponents() {
         let allKeys = [
             "home.navTitle", "home.title", "home.status.active",
+            "home.status.noReminders",
             "settings.doneButton", "settings.section.eyes",
             "overlay.dismissButton", "overlay.countdown.label",
             "onboarding.welcome.title", "onboarding.setup.getStartedButton"

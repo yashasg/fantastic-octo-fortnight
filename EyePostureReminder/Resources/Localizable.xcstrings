@@ -68,6 +68,61 @@
         }
       }
     },
+    "home.status.noReminders": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No reminders configured"
+          }
+        }
+      }
+    },
+    "home.noReminders.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No reminders are enabled"
+          }
+        }
+      }
+    },
+    "home.noReminders.body": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turn on eye or posture reminders in Settings so kshana can help when it is time to pause."
+          }
+        }
+      }
+    },
+    "home.noReminders.openSettings": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Settings"
+          }
+        }
+      }
+    },
+    "home.noReminders.openSettings.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opens Settings to turn eye or posture reminders back on"
+          }
+        }
+      }
+    },
     "home.title": {
       "extractionState": "manual",
       "localizations": {
