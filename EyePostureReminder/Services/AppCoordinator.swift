@@ -110,6 +110,9 @@ final class AppCoordinator: ObservableObject {
     /// `scheduleReminders()` call and after explicit permission requests.
     @Published var notificationAuthStatus: UNAuthorizationStatus = .notDetermined
 
+    /// Authorization status used during the last full reminder scheduling pass.
+    private var lastReminderSchedulingAuthStatus: UNAuthorizationStatus?
+
     // MARK: - Pending Overlay
 
     /// A stashed overlay request awaiting an active scene.
@@ -393,6 +396,7 @@ final class AppCoordinator: ObservableObject {
     /// Call on launch (`.task`) and whenever settings change.
     func scheduleReminders() async {
         await refreshAuthStatus()
+        lastReminderSchedulingAuthStatus = notificationAuthStatus
         recordWatchdogHeartbeat(.scheduleReminders)
 
         // Cold-launch proxy: handleForegroundTransition() sets this for warm paths.
@@ -570,7 +574,11 @@ final class AppCoordinator: ObservableObject {
     func handleForegroundTransition() async {
         foregroundEntryTime = dateProvider.now
         pendingLaunchType = .warm
+        let lastScheduledNotificationAuthStatus = lastReminderSchedulingAuthStatus
         await refreshAuthStatus()
+        let notificationAuthStatusChanged = lastScheduledNotificationAuthStatus.map {
+            $0 != notificationAuthStatus
+        } ?? false
         let recoveryNeeded = await recoverStaleDeviceActivityWatchdogIfNeeded()
         watchdogRecoveryNeededAtForeground = recoveryNeeded
         recordWatchdogHeartbeat(.appForeground)
@@ -594,6 +602,12 @@ final class AppCoordinator: ObservableObject {
                 // swiftlint:disable:next line_length
                 Logger.scheduling.info("Foreground transition: snooze still active; expires in \(snoozeEnd.timeIntervalSinceNow, format: .fixed(precision: 0), privacy: .public)s")
             }
+            return
+        }
+
+        if notificationAuthStatusChanged {
+            Logger.scheduling.info("Foreground transition: notification authorization changed; resyncing reminders")
+            await scheduleReminders()
             return
         }
 
