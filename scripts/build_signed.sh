@@ -49,6 +49,7 @@ DERIVED_DATA_PATH="${PACKAGE_PATH}/DerivedData"
 SIGNED_BUILD_PATH="${DERIVED_DATA_PATH}/SignedBuild"
 PROJECT_DIR="${SIGNED_BUILD_PATH}/Project"
 PROJECT_SPEC="${PROJECT_DIR}/project.yml"
+PROJECT_SOURCE_SPEC="${PACKAGE_PATH}/project.yml"
 PROJECT_PATH="${PROJECT_DIR}/${APP_TARGET}Signed.xcodeproj"
 ARCHIVE_DIR="${SIGNED_BUILD_PATH}/Archives"
 ARCHIVE_PATH="${ARCHIVE_DIR}/${APP_TARGET}.xcarchive"
@@ -66,6 +67,7 @@ ALLOW_PROVISIONING_UPDATES="${ALLOW_PROVISIONING_UPDATES:-YES}"
 EXPORT_METHOD="${EXPORT_METHOD:-app-store-connect}"
 TESTFLIGHT_INTERNAL_ONLY="${TESTFLIGHT_INTERNAL_ONLY:-NO}"
 UPLOAD_SYMBOLS="${UPLOAD_SYMBOLS:-YES}"
+RESOLVED_BUILD_NUMBER=""
 
 # Extension target support (future-safe; set YES only when extension provisioning
 # profiles are available — requires FamilyControls entitlement approval, issue #201).
@@ -363,6 +365,38 @@ count_lines() {
   fi
 }
 
+project_setting_value() {
+  local key="$1"
+  local value
+  value="$(awk -v key="$key" '$1 == key ":" { gsub(/"/, "", $2); print $2; exit }' "$PROJECT_SOURCE_SPEC")"
+  if [[ -z "$value" ]]; then
+    fail "Missing ${key} in project.yml"
+    exit 1
+  fi
+  echo "$value"
+}
+
+archive_marketing_version() {
+  if [[ -n "${MARKETING_VERSION:-}" ]]; then
+    echo "$MARKETING_VERSION"
+  else
+    project_setting_value MARKETING_VERSION
+  fi
+}
+
+archive_build_number() {
+  if [[ -z "$RESOLVED_BUILD_NUMBER" ]]; then
+    if [[ -n "${BUILD_NUMBER:-}" ]]; then
+      RESOLVED_BUILD_NUMBER="$BUILD_NUMBER"
+    else
+      RESOLVED_BUILD_NUMBER="$(date +%Y%m%d%H%M)"
+      info "BUILD_NUMBER not set — using timestamp fallback: $RESOLVED_BUILD_NUMBER" >&2
+    fi
+  fi
+
+  echo "$RESOLVED_BUILD_NUMBER"
+}
+
 ensure_manual_distribution_profile() {
   [[ "$SIGNING_STYLE" == "manual" ]] || return 0
 
@@ -440,12 +474,7 @@ inject_build_number() {
   fi
 
   local build_num
-  if [[ -n "${BUILD_NUMBER:-}" ]]; then
-    build_num="$BUILD_NUMBER"
-  else
-    build_num="$(date +%Y%m%d%H%M)"
-    info "BUILD_NUMBER not set — using timestamp fallback: $build_num"
-  fi
+  build_num="$(archive_build_number)"
 
   /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $build_num" "$archive_plist"
   pass "CFBundleVersion set to $build_num in main app archive (source Info.plist unchanged)"
@@ -463,6 +492,36 @@ inject_build_number() {
       fi
     done
   fi
+}
+
+verify_archived_version() {
+  local archive_plist="${ARCHIVE_PATH}/Products/Applications/${APP_TARGET}.app/Info.plist"
+
+  if [[ ! -f "$archive_plist" ]]; then
+    fail "Archive Info.plist not found at: $archive_plist"
+    return 1
+  fi
+
+  local expected_marketing
+  local expected_build
+  local actual_marketing
+  local actual_build
+  expected_marketing="$(archive_marketing_version)"
+  expected_build="$(archive_build_number)"
+  actual_marketing=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$archive_plist" 2>/dev/null || true)
+  actual_build=$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$archive_plist" 2>/dev/null || true)
+
+  if [[ "$actual_marketing" != "$expected_marketing" ]]; then
+    fail "Archive marketing version mismatch: expected ${expected_marketing}, got ${actual_marketing:-<missing>}"
+    return 1
+  fi
+
+  if [[ "$actual_build" != "$expected_build" ]]; then
+    fail "Archive build number mismatch: expected ${expected_build}, got ${actual_build:-<missing>}"
+    return 1
+  fi
+
+  pass "Archive version verified: ${actual_marketing} (${actual_build})"
 }
 
 verify_archived_extensions() {
@@ -557,8 +616,12 @@ generate_project() {
   mkdir -p "$PROJECT_DIR"
 
   local style_value
+  local marketing_version
+  local build_number
   local manual_signing_settings=""
   style_value="$(code_sign_style_value)"
+  marketing_version="$(archive_marketing_version)"
+  build_number="$(archive_build_number)"
 
   # Scope manual signing only to the generated app-wrapper target. Passing these
   # as command-line build settings makes Xcode apply them to Swift Package
@@ -630,6 +693,8 @@ generate_project() {
         ENABLE_BITCODE: \"NO\"
         ENABLE_APP_INTENTS_METADATA_EXTRACTION: \"NO\"
         ENABLE_APPINTENTS_METADATA_EXTRACTION: \"NO\"
+        MARKETING_VERSION: $(yaml_quote "$marketing_version")
+        CURRENT_PROJECT_VERSION: $(yaml_quote "$build_number")
 ${sc_manual_signing_settings}
 ${sc_profile_line}
 
@@ -660,6 +725,8 @@ ${sc_profile_line}
         ENABLE_BITCODE: \"NO\"
         ENABLE_APP_INTENTS_METADATA_EXTRACTION: \"NO\"
         ENABLE_APPINTENTS_METADATA_EXTRACTION: \"NO\"
+        MARKETING_VERSION: $(yaml_quote "$marketing_version")
+        CURRENT_PROJECT_VERSION: $(yaml_quote "$build_number")
 ${da_manual_signing_settings}
 ${da_profile_line}"
   else
@@ -710,6 +777,8 @@ ${ext_app_deps}
         ENABLE_BITCODE: "NO"
         ENABLE_APP_INTENTS_METADATA_EXTRACTION: "NO"
         ENABLE_APPINTENTS_METADATA_EXTRACTION: "NO"
+        MARKETING_VERSION: $(yaml_quote "$marketing_version")
+        CURRENT_PROJECT_VERSION: $(yaml_quote "$build_number")
 ${manual_signing_settings}
     postBuildScripts:
       - name: "Assemble App Bundle"
@@ -958,6 +1027,7 @@ cmd_archive() {
   fi
 
   inject_build_number
+  verify_archived_version
   verify_archived_extensions
   pass "Archive created: $ARCHIVE_PATH"
 }

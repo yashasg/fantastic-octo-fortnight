@@ -61,32 +61,24 @@ jobs:
           xcrun simctl list devices available | grep -i iphone | head -5
 
       # ── Versioning ──────────────────────────────────────────────────────────
-      # CFBundleShortVersionString is managed via: ./scripts/build.sh version <x.y.z>
-      # CFBundleVersion is auto-incremented here from github.run_number (guaranteed unique + increasing).
-      # EPRCommitHash is a custom key for traceability (not used by Apple — informational only).
-      #
-      # NOTE: agvtool requires an .xcodeproj. Once the Xcode project is created,
-      # replace the PlistBuddy calls below with:
-      #   agvtool new-version -all ${{ github.run_number }}
-      - name: Set build number + inject commit hash
+      # MARKETING_VERSION is managed via: ./scripts/build.sh version <x.y.z>
+      # CURRENT_PROJECT_VERSION is overridden here from github.run_number (guaranteed unique + increasing).
+      # GIT_COMMIT_HASH is exported for traceability in build logs/artifacts.
+      - name: Set version build settings
         run: |
           COMMIT_HASH=$(git rev-parse --short HEAD)
           BUILD_NUMBER=${{ github.run_number }}
           echo "BUILD_NUMBER=$BUILD_NUMBER" >> $GITHUB_ENV
           echo "GIT_COMMIT_HASH=$COMMIT_HASH" >> $GITHUB_ENV
 
-          PLIST="EyePostureReminder/Info.plist"
-          if [[ -f "$PLIST" ]]; then
-            /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" "$PLIST" 2>/dev/null || true
-            /usr/libexec/PlistBuddy -c "Add :EPRCommitHash string $COMMIT_HASH" "$PLIST" 2>/dev/null || \
-            /usr/libexec/PlistBuddy -c "Set :EPRCommitHash $COMMIT_HASH" "$PLIST"
-            MARKETING_VER=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$PLIST" 2>/dev/null || echo "unknown")
-            echo "MARKETING_VERSION=$MARKETING_VER" >> $GITHUB_ENV
-            echo "Injected build=$BUILD_NUMBER commit=$COMMIT_HASH marketing=$MARKETING_VER into $PLIST"
-          else
-            echo "MARKETING_VERSION=unknown" >> $GITHUB_ENV
-            echo "note: Info.plist not found — versioning will be applied when .xcodeproj is created"
+          MARKETING_VER=$(awk '$1 == "MARKETING_VERSION:" { gsub(/"/, "", $2); print $2; exit }' project.yml)
+          if [[ -z "$MARKETING_VER" ]]; then
+            echo "::error file=project.yml::MARKETING_VERSION is missing."
+            exit 1
           fi
+          echo "MARKETING_VERSION=$MARKETING_VER" >> $GITHUB_ENV
+          echo "CURRENT_PROJECT_VERSION=$BUILD_NUMBER" >> $GITHUB_ENV
+          echo "Version settings: marketing=$MARKETING_VER build=$BUILD_NUMBER commit=$COMMIT_HASH"
 
       # ── Dependency cache ─────────────────────────────────────────────────────
       - name: Cache DerivedData
