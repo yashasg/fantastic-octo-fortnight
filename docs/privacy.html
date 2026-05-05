@@ -67,12 +67,12 @@
   <main>
     <article aria-labelledby="title">
       <h1 id="title">kshana Privacy Policy</h1>
-      <p class="muted">Last updated: April 26, 2026</p>
+      <p class="muted">Last updated: May 5, 2026</p>
       <p>
         kshana is designed to be privacy-preserving. Your app settings stay on your
-        device, motion and Focus information are used only transiently for reminder
-        pause logic, and the app does not use advertising, tracking, user accounts,
-        third-party analytics SDKs, or a custom analytics backend.
+        device, motion, Focus, and CarPlay/audio-route information are used only
+        transiently for reminder pause logic, and the app does not use advertising,
+        tracking, user accounts, third-party analytics SDKs, or a custom analytics backend.
       </p>
 
       <h2>What kshana stores locally</h2>
@@ -85,9 +85,11 @@
 
       <h2>What kshana accesses in memory</h2>
       <p>
-        kshana may read motion activity and Focus status transiently to pause reminders
-        while you are driving, using CarPlay, or in Focus. This information is not sent
-        to a developer server.
+        kshana may read motion activity, user-authorized Focus status, and current
+        audio output route status transiently to pause reminders while you are driving,
+        using CarPlay, or in Focus. CarPlay detection uses route/port status only:
+        kshana does not record audio, access microphone input, store route history,
+        or send this information to a developer server.
       </p>
 
       <h2>Diagnostics</h2>
