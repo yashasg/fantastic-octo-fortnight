@@ -53,6 +53,23 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+        with:
+          fetch-depth: 0
+
+      - name: Verify deploy ref is main
+        run: |
+          if [[ "${{ github.ref_name }}" != "main" ]]; then
+            echo "::error::TestFlight deploys must be dispatched from main (got '${{ github.ref_name }}')."
+            exit 1
+          fi
+
+          git fetch --no-tags origin main
+          if ! git merge-base --is-ancestor "${{ github.sha }}" origin/main; then
+            echo "::error::Commit ${{ github.sha }} is not reachable from origin/main. Aborting TestFlight deploy."
+            exit 1
+          fi
+
+          echo "Deploy ref verified: ${{ github.ref_name }} @ ${{ github.sha }} is reachable from origin/main."
 
       # ── CI gate ───────────────────────────────────────────────────────────
       - name: Verify CI passed on this commit
