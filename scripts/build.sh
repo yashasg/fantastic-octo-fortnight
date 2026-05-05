@@ -680,7 +680,9 @@ cmd_uitest() {
   # session remains warm. The default is one deterministic pass; set
   # UITEST_XCODEBUILD_TEST_ITERATIONS > 1 to opt into XCTest-level retry.
   local test_iterations="${UITEST_XCODEBUILD_TEST_ITERATIONS:-1}"
-  local max_test_execution_time="${UITEST_XCODEBUILD_MAX_TEST_SECONDS:-180}"
+  # Keep xcodebuild's per-test allowance below the shard watchdog, but high
+  # enough that slow CI shards fail only on real hangs instead of false timeouts.
+  local max_test_execution_time="${UITEST_XCODEBUILD_MAX_TEST_SECONDS:-600}"
   if ! [[ "$test_iterations" =~ ^[1-9][0-9]*$ ]]; then
     fail "UITEST_XCODEBUILD_TEST_ITERATIONS must be a positive integer (got: $test_iterations)"
     exit 1
