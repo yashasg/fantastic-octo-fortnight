@@ -53,7 +53,7 @@ struct OnboardingView: View {
             // is pending. Users can skip without losing core reminder functionality.
             OnboardingInterruptModeView(
                 onGetStarted: finishOnboarding,
-                onSetUp: { showAppCategoryPicker = true },
+                onSetUp: onboardingSetUpAction,
                 onCustomize: finishOnboardingAndCustomize,
                 authorizationStatus: coordinator.screenTimeAuthorization.authorizationStatus
             )
@@ -74,9 +74,16 @@ struct OnboardingView: View {
                     Task { _ = await coordinator.screenTimeAuthorization.requestAuthorization() }
                 },
                 onOpenSettings: openApplicationSettings,
+                onSelectApps: {},
                 onDone: { showAppCategoryPicker = false }
             )
         }
+    }
+
+    private var onboardingSetUpAction: (() -> Void)? {
+        coordinator.screenTimeAuthorization.authorizationStatus == .unavailable
+            ? nil
+            : { showAppCategoryPicker = true }
     }
 
     func finishOnboarding() {

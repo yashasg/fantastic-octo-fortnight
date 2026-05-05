@@ -2497,7 +2497,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "No apps selected yet. Tap 'Select Apps' to choose which apps to shield during breaks."
+            "value": "No apps selected yet. App selection will be available in an upcoming update."
           }
         }
       }
@@ -2552,7 +2552,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Opens the app and category picker for True Interrupt Mode."
+            "value": "Shows the app and category selection surface for True Interrupt Mode."
           }
         }
       }

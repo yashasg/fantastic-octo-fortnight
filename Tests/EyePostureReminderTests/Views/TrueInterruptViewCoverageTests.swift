@@ -229,38 +229,44 @@ final class TrueInterruptViewCoverageTests: XCTestCase {
         XCTAssertFalse(settingsOpened)
     }
 
-    func test_appCategoryPickerView_approvedPrimaryAction_requestsAuthorizationOnly() {
+    func test_appCategoryPickerView_approvedPrimaryAction_selectsAppsOnly() {
         var authorizationRequested = false
         var settingsOpened = false
+        var selectAppsCalled = false
         let view = AppCategoryPickerView(
             appsState: makeSelectedAppsState(),
             authorizationStatus: .approved,
             onRequestAuthorization: { authorizationRequested = true },
             onOpenSettings: { settingsOpened = true },
+            onSelectApps: { selectAppsCalled = true },
             onDone: {}
         )
 
         view.performPrimaryAction()
 
-        XCTAssertTrue(authorizationRequested)
+        XCTAssertFalse(authorizationRequested)
         XCTAssertFalse(settingsOpened)
+        XCTAssertTrue(selectAppsCalled)
     }
 
-    func test_appCategoryPickerView_unavailablePrimaryAction_requestsAuthorizationOnly() {
+    func test_appCategoryPickerView_unavailablePrimaryAction_isNoOp() {
         var authorizationRequested = false
         var settingsOpened = false
+        var selectAppsCalled = false
         let view = AppCategoryPickerView(
             appsState: makeSelectedAppsState(),
             authorizationStatus: .unavailable,
             onRequestAuthorization: { authorizationRequested = true },
             onOpenSettings: { settingsOpened = true },
+            onSelectApps: { selectAppsCalled = true },
             onDone: {}
         )
 
         view.performPrimaryAction()
 
-        XCTAssertTrue(authorizationRequested)
+        XCTAssertFalse(authorizationRequested)
         XCTAssertFalse(settingsOpened)
+        XCTAssertFalse(selectAppsCalled)
     }
 
     // MARK: - Accessibility Hint Body Tests

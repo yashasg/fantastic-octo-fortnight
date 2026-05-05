@@ -138,10 +138,10 @@ final class OnboardingFlowTests: XCTestCase {
         )
     }
 
-    // MARK: - test_onboarding_interruptMode_actionsExistAndSetupPreviewOpensAppPicker
+    // MARK: - test_onboarding_interruptMode_actionsExistAndComingSoonIsDisabled
 
-    /// Verifies True Interrupt Mode exposes skip, customize, and setup-preview actions.
-    func test_onboarding_interruptMode_actionsExistAndSetupPreviewOpensAppPicker() throws {
+    /// Verifies True Interrupt Mode exposes skip/customize actions and keeps pre-entitlement setup disabled.
+    func test_onboarding_interruptMode_actionsExistAndComingSoonIsDisabled() throws {
         navigateToInterruptMode()
 
         let interruptSkipButton = app.buttons["onboarding.interrupt.skipButton"]
@@ -156,10 +156,6 @@ final class OnboardingFlowTests: XCTestCase {
             "True Interrupt screen must expose the setup preview button."
         )
 
-        if !setupPreviewButton.isHittable {
-            app.swipeUp()
-        }
-
         let customizeButton = app.buttons["onboarding.interrupt.customizeButton"]
         XCTAssertTrue(
             app.revealAndWaitForHittable(customizeButton, timeout: 5, maxSwipes: 4),
@@ -168,14 +164,9 @@ final class OnboardingFlowTests: XCTestCase {
             ".accessibilityIdentifier(\"onboarding.interrupt.customizeButton\") is set."
         )
         XCTAssertTrue(customizeButton.isHittable, "\"Customize Settings\" button must be tappable.")
-
-        XCTAssertTrue(setupPreviewButton.isHittable, "Setup preview button must be tappable during onboarding.")
-        setupPreviewButton.tap()
-
-        let unavailableBanner = onboardingElement(identifier: "appCategoryPicker.unavailableBanner")
-        XCTAssertTrue(
-            unavailableBanner.waitForExistence(timeout: 3),
-            "App/category setup preview must open and explain the current Screen Time availability state."
+        XCTAssertFalse(
+            setupPreviewButton.isEnabled,
+            "Pre-entitlement setup preview must remain disabled instead of opening a locked picker flow."
         )
     }
 
