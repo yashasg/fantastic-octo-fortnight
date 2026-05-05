@@ -100,12 +100,19 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
                 ScreenTimeAuthorizationStatus.notDetermined.rawValue,
                 forKey: AppStorageKey.uiTestScreenTimeStatus
             )
-            // Ensure the banner-dismissed flag is clear so the banner renders.
-            uiTestDefaults.set(false, forKey: AppStorageKey.trueInterruptSkippedBannerDismissed)
+            uiTestDefaults.set(
+                launchArguments.contains("--dismiss-true-interrupt-banner") &&
+                    !launchArguments.contains("--show-true-interrupt-banner"),
+                forKey: AppStorageKey.trueInterruptSkippedBannerDismissed
+            )
         } else {
             // Remove any stale stub key so non-True-Interrupt launches use the
             // real ScreenTimeAuthorizationNoop and don't accidentally show the banner.
             uiTestDefaults.removeObject(forKey: AppStorageKey.uiTestScreenTimeStatus)
+            if launchArguments.contains("--skip-onboarding"),
+               !launchArguments.contains("--dismiss-true-interrupt-banner") {
+                uiTestDefaults.set(false, forKey: AppStorageKey.trueInterruptSkippedBannerDismissed)
+            }
         }
     }
 #endif
@@ -192,6 +199,11 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
             defaults.set(
                 ScreenTimeAuthorizationStatus.notDetermined.rawValue,
                 forKey: AppStorageKey.uiTestScreenTimeStatus
+            )
+            defaults.set(
+                args.contains("--dismiss-true-interrupt-banner") &&
+                    !args.contains("--show-true-interrupt-banner"),
+                forKey: AppStorageKey.trueInterruptSkippedBannerDismissed
             )
         }
     }
