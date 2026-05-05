@@ -2,11 +2,11 @@
 import XCTest
 
 final class LegalLinksTests: XCTestCase {
-    func test_hostedPrivacyPolicyURL_pointsToPublicRepoPolicy() throws {
+    func test_hostedPrivacyPolicyURL_pointsToPublicHostedPolicy() throws {
         let url = try XCTUnwrap(LegalLinks.hostedPrivacyPolicyURL)
 
         XCTAssertEqual(url.scheme, "https")
-        XCTAssertEqual(url.host, "github.com")
-        XCTAssertEqual(url.path, "/yashasg/fantastic-octo-fortnight/blob/main/docs/legal/PRIVACY.md")
+        XCTAssertEqual(url.host, "yashasg.github.io")
+        XCTAssertEqual(url.path, "/fantastic-octo-fortnight/privacy.html")
     }
 }
