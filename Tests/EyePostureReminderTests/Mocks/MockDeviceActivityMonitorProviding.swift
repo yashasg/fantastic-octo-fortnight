@@ -26,6 +26,7 @@ final class MockDeviceActivityMonitorProviding: DeviceActivityMonitorProviding {
     /// When non-nil, `scheduleBreakMonitoring(for:)` throws this error.
     var stubbedScheduleError: Error?
     var scheduleDelayNanoseconds: UInt64 = 0
+    var scheduleSuspension: (() async -> Void)?
     /// When non-nil, `cancelBreakMonitoring()` throws this error.
     var stubbedCancelError: Error?
 
@@ -48,6 +49,9 @@ final class MockDeviceActivityMonitorProviding: DeviceActivityMonitorProviding {
         scheduledSessions.append(session)
         if scheduleDelayNanoseconds > 0 {
             try await Task.sleep(nanoseconds: scheduleDelayNanoseconds)
+        }
+        if let scheduleSuspension {
+            await scheduleSuspension()
         }
         if let error = stubbedScheduleError { throw error }
         activeSession = session
@@ -76,6 +80,7 @@ final class MockDeviceActivityMonitorProviding: DeviceActivityMonitorProviding {
         stubbedIsAvailable = false
         stubbedScheduleError = nil
         scheduleDelayNanoseconds = 0
+        scheduleSuspension = nil
         stubbedCancelError = nil
         activeSession = nil
         scheduleCallCount = 0
