@@ -186,8 +186,8 @@ All App Store age rating questionnaire answers are "No" / "None".
 | **Bundle ID** | com.yashasg.eyeposturereminder |
 | **SKU** | kshana |
 | **Copyright** | © 2026 Yashasg |
-| **Support URL** | https://github.com/yashasg/fantastic-octo-fortnight |
-| **Marketing URL** | https://github.com/yashasg/fantastic-octo-fortnight |
+| **Support URL** | https://yashasg.github.io/fantastic-octo-fortnight/support.html |
+| **Marketing URL** | https://yashasg.github.io/fantastic-octo-fortnight/ |
 | **Version** | 0.2.0 |
 | **Build** | (CI-assigned via `github.run_number`) |
 | **Availability** | All territories |
@@ -202,7 +202,7 @@ Complete every item before submitting for App Review.
 
 ### Legal & Privacy
 
-- [ ] Privacy Policy hosted at a public HTTPS URL (link it in App Store Connect and in-app)
+- [ ] Privacy Policy hosted at a public HTTPS URL: `https://yashasg.github.io/fantastic-octo-fortnight/privacy.html` (link it in App Store Connect and in-app)
 - [ ] EULA supplement with Apple's 7 required clauses added to TERMS.md
 - [ ] Privacy Nutrition Labels filled in App Store Connect (see [`docs/PRIVACY_NUTRITION_LABELS.md`](PRIVACY_NUTRITION_LABELS.md))
 - [ ] Health/wellness disclaimers included in app description ("not medical advice")
@@ -221,7 +221,8 @@ Complete every item before submitting for App Review.
   - `com.yashasg.eyeposturereminder.shieldconfiguration`
   - `com.yashasg.eyeposturereminder.deviceactivitymonitor`
 - [ ] SKU set in App Store Connect: `kshana` (must be unique; cannot be changed after creation)
-- [ ] Support URL set: `https://github.com/yashasg/fantastic-octo-fortnight`
+- [ ] Support URL set: `https://yashasg.github.io/fantastic-octo-fortnight/support.html`
+- [ ] Marketing URL set: `https://yashasg.github.io/fantastic-octo-fortnight/`
 - [ ] App name, subtitle, keywords, and description finalized (Sections 1–4 above)
 - [ ] Age rating questionnaire completed (all answers "No" / "None" → 4+)
 - [ ] Primary category: Health & Fitness; Secondary: Productivity
