@@ -34,6 +34,21 @@ final class SettingsAccessibilityTests: XCTestCase {
         )
     }
 
+    func test_hostedPrivacyLink_usesLocalizedUserFacingCopy() throws {
+        let source = try String(contentsOf: settingsViewSourceURL, encoding: .utf8)
+        let hostedPrivacySource = try XCTUnwrap(
+            source.slice(
+                from: "guard let hostedPrivacyPolicyURL = LegalLinks.hostedPrivacyPolicyURL",
+                to: ".accessibilityIdentifier(\"settings.legal.privacyHosted\")"
+            ),
+            "Hosted privacy policy row should be present in SettingsView.swift."
+        )
+
+        XCTAssertTrue(hostedPrivacySource.contains("Text(\"settings.legal.privacyHosted\", bundle: .module)"))
+        XCTAssertTrue(hostedPrivacySource.contains("Text(\"settings.legal.privacyHosted.hint\", bundle: .module)"))
+        XCTAssertFalse(hostedPrivacySource.contains("Hosted Privacy Policy (Web)"))
+    }
+
     private var settingsViewSourceURL: URL {
         repositoryRoot
             .appendingPathComponent("EyePostureReminder")

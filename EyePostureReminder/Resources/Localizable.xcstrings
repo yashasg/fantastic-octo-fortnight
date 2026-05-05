@@ -1345,6 +1345,28 @@
         }
       }
     },
+    "settings.legal.privacyHosted": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Privacy Policy on the Web"
+          }
+        }
+      }
+    },
+    "settings.legal.privacyHosted.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opens the public privacy policy in your browser"
+          }
+        }
+      }
+    },
     "legal.dismissButton": {
       "extractionState": "manual",
       "localizations": {

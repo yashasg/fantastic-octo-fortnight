@@ -269,11 +269,11 @@ struct SettingsView: View {
                     guard let hostedPrivacyPolicyURL = LegalLinks.hostedPrivacyPolicyURL else { return }
                     openURL(hostedPrivacyPolicyURL)
                 } label: {
-                    Text("Hosted Privacy Policy (Web)")
+                    Text("settings.legal.privacyHosted", bundle: .module)
                 }
                 .font(AppFont.body)
                 .foregroundStyle(AppColor.primaryRest)
-                .accessibilityHint(Text("Opens the public privacy policy URL in your browser."))
+                .accessibilityHint(Text("settings.legal.privacyHosted.hint", bundle: .module))
                 .accessibilityIdentifier("settings.legal.privacyHosted")
                 .listRowBackground(AppColor.surface)
                 .listRowSeparatorTint(AppColor.separatorSoft)
