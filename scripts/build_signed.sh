@@ -522,6 +522,36 @@ verify_archived_version() {
   fi
 
   pass "Archive version verified: ${actual_marketing} (${actual_build})"
+
+  if [[ "$EXTENSION_PROFILES_AVAILABLE" == "YES" ]]; then
+    local plugins_dir="${ARCHIVE_PATH}/Products/Applications/${APP_TARGET}.app/PlugIns"
+    local extension_plists=(
+      "${plugins_dir}/ShieldConfigurationExtension.appex/Info.plist"
+      "${plugins_dir}/DeviceActivityMonitorExtension.appex/Info.plist"
+    )
+    local extension_plist
+    for extension_plist in "${extension_plists[@]}"; do
+      if [[ ! -f "$extension_plist" ]]; then
+        fail "Extension Info.plist not found at: $extension_plist"
+        return 1
+      fi
+
+      actual_marketing=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$extension_plist" 2>/dev/null || true)
+      actual_build=$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$extension_plist" 2>/dev/null || true)
+
+      if [[ "$actual_marketing" != "$expected_marketing" ]]; then
+        fail "$(basename "$(dirname "$extension_plist")") marketing version mismatch: expected ${expected_marketing}, got ${actual_marketing:-<missing>}"
+        return 1
+      fi
+
+      if [[ "$actual_build" != "$expected_build" ]]; then
+        fail "$(basename "$(dirname "$extension_plist")") build number mismatch: expected ${expected_build}, got ${actual_build:-<missing>}"
+        return 1
+      fi
+    done
+
+    pass "Extension archive versions match containing app"
+  fi
 }
 
 verify_archived_extensions() {
@@ -549,6 +579,21 @@ verify_archived_extensions() {
 
   if [[ "$missing" -ne 0 ]]; then
     fail "Extension archive validation failed. Check extension target embedding/signing settings."
+    return 1
+  fi
+
+  if [[ ! -f "${shield_appex}/PrivacyInfo.xcprivacy" ]]; then
+    fail "ShieldConfiguration extension is missing PrivacyInfo.xcprivacy."
+    missing=1
+  fi
+
+  if [[ ! -f "${monitor_appex}/PrivacyInfo.xcprivacy" ]]; then
+    fail "DeviceActivityMonitor extension is missing PrivacyInfo.xcprivacy."
+    missing=1
+  fi
+
+  if [[ "$missing" -ne 0 ]]; then
+    fail "Extension archive privacy manifest validation failed."
     return 1
   fi
 

@@ -166,7 +166,7 @@ These data types are accessed or stored locally for App Functionality and are no
 
 ## Privacy Manifest (PrivacyInfo.xcprivacy) Consistency
 
-`EyePostureReminder/PrivacyInfo.xcprivacy` must be kept in sync with the App Store Connect answers above.
+`EyePostureReminder/PrivacyInfo.xcprivacy` must be kept in sync with the App Store Connect answers above. Each Screen Time extension target also has its own `PrivacyInfo.xcprivacy` so extension bundles declare their App Group `UserDefaults` access independently when extension-included TestFlight uploads are enabled.
 
 As of the fix for issue #315, the manifest declares the following under `NSPrivacyCollectedDataTypes`:
 
@@ -178,6 +178,13 @@ As of the fix for issue #315, the manifest declares the following under `NSPriva
 **Rationale:** Apple's App Store review guidance confirms that first-party apps using MetricKit must declare diagnostics data in the privacy manifest when that data is surfaced to the developer through Apple's systems (App Store Connect crash/performance reports). The developer registers `MXMetricManager.shared.add(self)` and receives `MXCrashDiagnostic` and `MXMetricPayload` objects, which constitute access to the data. The privacy manifest and App Store Connect labels must be consistent. Sources: [Apple App Privacy Details](https://developer.apple.com/app-store/app-privacy-details/) · [Apple Privacy Manifest Files](https://developer.apple.com/documentation/bundleresources/privacy_manifest_files).
 
 If MetricKit or any other diagnostics source is removed from the app, remove the corresponding entry from `PrivacyInfo.xcprivacy` and update this guide before the next App Store submission.
+
+The extension manifests at `Extensions/ShieldConfigurationExtension/PrivacyInfo.xcprivacy` and `Extensions/DeviceActivityMonitorExtension/PrivacyInfo.xcprivacy` declare:
+
+| Extension Manifest | Collected Data | Accessed API |
+|---|---|---|
+| ShieldConfigurationExtension | None | `NSPrivacyAccessedAPICategoryUserDefaults` (`CA92.1`) |
+| DeviceActivityMonitorExtension | None | `NSPrivacyAccessedAPICategoryUserDefaults` (`CA92.1`) |
 
 ---
 
