@@ -39,7 +39,7 @@ Legend: ✅ Done · ⚠️ In progress / partial · ❌ Not started · 🔒 Bloc
 | A1 | Bundle ID finalized: `com.yashasg.eyeposturereminder` | ✅ Done | Set in `project.yml` |
 | A2 | App Group `group.com.yashasg.kshana` registered and associated with all three bundle IDs | ❌ Not started | Requires Apple Developer Portal — screen time extensions depend on this |
 | A3 | SKU set: `kshana` | ❌ Not started | Must be set in ASC before first build upload |
-| A4 | Support URL set: `https://yashasg.github.io/fantastic-octo-fortnight/support.html` | ⚠️ Partial | Branded static page exists in `docs/support.html`; enter final hosted URL in App Store Connect |
+| A4 | Support URL set: `https://yashasg.github.io/fantastic-octo-fortnight/support.html` | ⚠️ Partial | Branded static page exists in `docs/support.html` and routes contact requests through the public GitHub issue tracker; enter final hosted URL in App Store Connect |
 | A5 | Marketing URL set: `https://yashasg.github.io/fantastic-octo-fortnight/` | ⚠️ Partial | Branded static page exists in `docs/index.html`; enter final hosted URL in App Store Connect |
 | A6 | App name, subtitle, keywords, description finalized | ✅ Done | See `APP_STORE_LISTING.md` Sections 1–4 |
 | A7 | Age rating questionnaire completed | ❌ Not started | All answers "No" / "None" → 4+ |

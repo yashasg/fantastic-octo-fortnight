@@ -133,7 +133,7 @@ The App is distributed through the Apple App Store. Apple may collect certain da
 
 kshana does not knowingly collect personal information from children under the age of 13 (or the applicable age of digital consent in your jurisdiction). The App does not require accounts, direct identifiers, advertising identifiers, or third-party tracking.
 
-If you are a parent or guardian and believe your child has somehow provided personal information through this App, please contact us at support@yashasg.dev. We will promptly address the concern.
+If you are a parent or guardian and believe your child has somehow provided personal information through this App, contact us through the [kshana GitHub issue tracker](https://github.com/yashasg/fantastic-octo-fortnight/issues). We will promptly address the concern.
 
 ---
 
@@ -165,15 +165,13 @@ California residents have the following rights under the California Consumer Pri
 
 **How to submit a CCPA request:**
 
-Email: **support@yashasg.dev**
-
-Please include "CCPA Request" in the subject line, describe your request, and include sufficient information for us to verify your identity.
+Use the [kshana GitHub issue tracker](https://github.com/yashasg/fantastic-octo-fortnight/issues) and include "CCPA Request" in your request. Do not include sensitive personal, medical, or financial information in public support requests. Because the App does not maintain user accounts or a developer-hosted user database, we will explain what local data the App stores and how to remove it from your device.
 
 **Business address for service of legal notices:**
 
 Yashasg designates the following contact method for service of consumer-rights notices:
 
-**Email:** support@yashasg.dev
+**Support channel:** https://github.com/yashasg/fantastic-octo-fortnight/issues
 
 ---
 
@@ -188,7 +186,7 @@ Yashasg may update this Privacy Policy from time to time. When changes are made,
 If you have questions or concerns about this Privacy Policy, contact:
 
 **Yashasg**  
-**Email:** support@yashasg.dev
+**Support channel:** https://github.com/yashasg/fantastic-octo-fortnight/issues
 
 ---
 

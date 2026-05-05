@@ -166,7 +166,7 @@ Yashasg may update these Terms at any time. When changes are made, the "Last Upd
 If you have questions about these Terms, contact:
 
 **Yashasg**  
-**Email:** support@yashasg.dev
+**Support channel:** https://github.com/yashasg/fantastic-octo-fortnight/issues
 
 ---
 
