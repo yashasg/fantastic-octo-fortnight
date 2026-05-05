@@ -33,7 +33,9 @@ extension AppCoordinator {
             launchArguments.contains("--reset-onboarding") ||
             launchArguments.contains("--show-overlay-eyes") ||
             launchArguments.contains("--show-overlay-posture") ||
-            launchArguments.contains("--simulate-screen-time-not-determined")
+            launchArguments.contains("--simulate-screen-time-not-determined") ||
+            launchArguments.contains("--dismiss-true-interrupt-banner") ||
+            launchArguments.contains("--show-true-interrupt-banner")
     }
 #else
     static var isUITestMode: Bool { false }

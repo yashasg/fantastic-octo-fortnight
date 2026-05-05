@@ -12,6 +12,9 @@ struct HomeView: View {
     @State private var showSettings = false
     @AppStorage(AppStorageKey.openSettingsOnLaunch) private var openSettingsOnLaunch = false
     @AppStorage(AppStorageKey.trueInterruptSkippedBannerDismissed) private var trueInterruptBannerDismissed = false
+#if DEBUG
+    @AppStorage(AppStorageKey.uiTestScreenTimeStatus) private var uiTestScreenTimeStatusRaw = ""
+#endif
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private let accessibilityNotificationPoster: AccessibilityNotificationPosting
@@ -66,6 +69,9 @@ struct HomeView: View {
             return true
         }
 #if DEBUG
+        if uiTestScreenTimeStatusRaw == ScreenTimeAuthorizationStatus.notDetermined.rawValue {
+            return true
+        }
         if Self.resolveShouldShowUITestScreenTimePrompt(
             launchArguments: launchArguments,
             launchArgumentsProvider: launchArgumentsProvider,
@@ -78,7 +84,44 @@ struct HomeView: View {
         return false
     }
 
+    private var effectiveTrueInterruptBannerDismissed: Bool {
 #if DEBUG
+        if let uiTestDismissed = Self.resolveUITestTrueInterruptBannerDismissed(
+            processEnvironment: processEnvironment,
+            processEnvironmentProvider: processEnvironmentProvider
+        ) {
+            return uiTestDismissed
+        }
+#endif
+        return trueInterruptBannerDismissed
+    }
+
+#if DEBUG
+    static func resolveUITestTrueInterruptBannerDismissed(
+        launchArguments: [String]? = nil,
+        launchArgumentsProvider: LaunchArgumentsProvider = { CommandLine.arguments },
+        processEnvironment: [String: String]? = nil,
+        processEnvironmentProvider: ProcessEnvironmentProvider = { ProcessInfo.processInfo.environment }
+    ) -> Bool? {
+        let resolvedLaunchArguments = launchArguments ?? launchArgumentsProvider()
+        if resolvedLaunchArguments.contains("--show-true-interrupt-banner") {
+            return false
+        }
+        if resolvedLaunchArguments.contains("--dismiss-true-interrupt-banner") {
+            return true
+        }
+
+        let resolvedProcessEnvironment = processEnvironment ?? processEnvironmentProvider()
+        switch resolvedProcessEnvironment["UITEST_TRUE_INTERRUPT_BANNER_DISMISSED"] {
+        case "true":
+            return true
+        case "false":
+            return false
+        default:
+            return nil
+        }
+    }
+
     static func resolveShouldShowUITestScreenTimePrompt(
         launchArguments: [String]? = nil,
         launchArgumentsProvider: LaunchArgumentsProvider = { CommandLine.arguments },
@@ -127,7 +170,7 @@ struct HomeView: View {
             // Post-onboarding True Interrupt discoverability banner (#258).
             // Shown only when setup was skipped (notDetermined) and not yet dismissed.
             if shouldShowTrueInterruptPrompts,
-               !trueInterruptBannerDismissed {
+               !effectiveTrueInterruptBannerDismissed {
                 TrueInterruptSkippedBanner(
                     onSetUp: {
                         trueInterruptBannerDismissed = true
@@ -142,7 +185,7 @@ struct HomeView: View {
             // Persistent low-noise rediscovery affordance (#280).
             // Shown after the banner is dismissed while setup is still pending.
             if shouldShowTrueInterruptPrompts,
-               trueInterruptBannerDismissed {
+               effectiveTrueInterruptBannerDismissed {
                 TrueInterruptSetupPill(onTap: { showSettings = true })
             }
 
@@ -345,7 +388,6 @@ struct TrueInterruptSkippedBanner: View {
             RoundedRectangle(cornerRadius: AppLayout.radiusSmall)
                 .strokeBorder(AppColor.separatorSoft, lineWidth: AppLayout.borderHair)
         )
-        .accessibilityIdentifier("home.trueInterrupt.skippedBanner")
     }
 }
 

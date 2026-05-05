@@ -19,7 +19,7 @@ final class HomeScreenTests: XCTestCase {
         app = nil
     }
 
-    private func relaunchWithTrueInterruptPending() {
+    private func relaunchWithTrueInterruptPending(bannerDismissed: Bool = false) {
         switch app.state {
         case .runningForeground, .runningBackground, .runningBackgroundSuspended:
             app.terminate()
@@ -29,7 +29,7 @@ final class HomeScreenTests: XCTestCase {
             break
         }
         app = XCUIApplication()
-        app.launchWithTrueInterruptPending()
+        app.launchWithTrueInterruptPending(bannerDismissed: bannerDismissed)
         XCTAssertTrue(
             app.waitForHomeScreenReady(timeout: 5),
             "Home screen should be ready before True Interrupt assertions."
@@ -204,58 +204,32 @@ final class HomeScreenTests: XCTestCase {
     func test_homeScreen_trueInterruptBanner_exists() throws {
         relaunchWithTrueInterruptPending()
 
-        let banner = app.otherElements["home.trueInterrupt.skippedBanner"]
-        let setupPill = app.buttons["home.trueInterrupt.setupPill"]
-        if !banner.waitForExistence(timeout: 2) {
-            app.swipeUp()
-        }
-        if banner.waitForExistence(timeout: 5) {
-            let setUpButton = app.buttons["home.trueInterrupt.skippedBanner.setUp"]
-            XCTAssertTrue(
-                setUpButton.waitForExistence(timeout: 3),
-                "Set Up CTA must be present in TrueInterruptSkippedBanner."
-            )
-            XCTAssertTrue(setUpButton.isHittable, "Set Up CTA must be hittable.")
+        let setUpButton = app.buttons["home.trueInterrupt.skippedBanner.setUp"]
+        XCTAssertTrue(
+            app.waitForElementHittable(setUpButton, timeout: 5),
+            "Set Up CTA must render and be hittable when TrueInterruptSkippedBanner is visible."
+        )
 
-            let dismissButton = app.buttons["home.trueInterrupt.skippedBanner.dismiss"]
-            XCTAssertTrue(
-                dismissButton.waitForExistence(timeout: 3),
-                "Dismiss CTA must be present in TrueInterruptSkippedBanner."
-            )
-            XCTAssertTrue(dismissButton.isHittable, "Dismiss CTA must be hittable.")
-            XCTAssertTrue(
-                banner.isHittable,
-                "TrueInterruptSkippedBanner should be reachable in the accessibility tree."
-            )
-            return
-        }
-        if setupPill.waitForExistence(timeout: 2) {
-            XCTAssertTrue(setupPill.isHittable, "If banner is already dismissed, setup pill must be tappable.")
-            return
-        }
-        throw XCTSkip("True Interrupt prompt did not render on this simulator run.")
+        let dismissButton = app.buttons["home.trueInterrupt.skippedBanner.dismiss"]
+        XCTAssertTrue(
+            app.waitForElementHittable(dismissButton, timeout: 3),
+            "Dismiss CTA must render and be hittable when TrueInterruptSkippedBanner is visible."
+        )
     }
 
     // MARK: - test_homeScreen_trueInterruptSetupPill_exists
 
-    /// Verifies that tapping the Dismiss CTA on TrueInterruptSkippedBanner removes the
-    /// banner and reveals TrueInterruptSetupPill in its place.
+    /// Verifies the TrueInterruptSetupPill renders after the skipped-banner
+    /// dismissed state is pre-seeded by the UI test launch arguments.
     ///
-    /// Flow: launch with `.notDetermined` state → dismiss banner → pill visible.
+    /// Flow: launch with `.notDetermined` state + dismissed banner → pill visible.
     func test_homeScreen_trueInterruptSetupPill_exists() throws {
-        relaunchWithTrueInterruptPending()
+        relaunchWithTrueInterruptPending(bannerDismissed: true)
 
-        let dismissButton = app.buttons["home.trueInterrupt.skippedBanner.dismiss"]
         let pill = app.buttons["home.trueInterrupt.setupPill"]
-        if app.revealAndWaitForHittable(dismissButton, timeout: 5, maxSwipes: 4) {
-            dismissButton.tap()
-        } else if !pill.waitForExistence(timeout: 2) {
-            throw XCTSkip("True Interrupt banner/pill unavailable on this simulator run.")
-        }
         XCTAssertTrue(
-            pill.waitForExistence(timeout: 5),
-            "TrueInterruptSetupPill must appear after the banner is dismissed."
+            app.waitForElementHittable(pill, timeout: 5),
+            "TrueInterruptSetupPill must appear and be hittable when the banner is dismissed."
         )
-        XCTAssertTrue(pill.isHittable, "TrueInterruptSetupPill must be hittable.")
     }
 }

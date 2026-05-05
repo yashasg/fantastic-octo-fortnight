@@ -24,6 +24,12 @@ enum TestLaunchArguments {
     /// The simulator's real FamilyControls status is `.unavailable`; without this arg
     /// neither element would ever appear (#399).
     static let simulateScreenTimeNotDetermined = "--simulate-screen-time-not-determined"
+    /// Pre-seeds the True Interrupt skipped-banner dismissed flag so UITests can
+    /// assert the setup pill directly without depending on an earlier banner tap.
+    static let dismissTrueInterruptBanner = "--dismiss-true-interrupt-banner"
+    /// Forces the non-dismissed True Interrupt banner state for deterministic
+    /// UITest coverage, even if a prior run persisted the dismissed flag.
+    static let showTrueInterruptBanner = "--show-true-interrupt-banner"
     /// System-provided launch argument key for interface style override.
     static let appleInterfaceStyle = "-AppleInterfaceStyle"
     /// System-provided dark appearance value for `-AppleInterfaceStyle`.
@@ -91,13 +97,23 @@ extension XCUIApplication {
     /// Use in tests that verify `TrueInterruptSkippedBanner` (banner not yet dismissed) and
     /// `TrueInterruptSetupPill` (banner dismissed). The simulator's real FamilyControls status
     /// is `.unavailable`, so this argument is required to reach either element (#399).
-    func launchWithTrueInterruptPending(darkMode: Bool = false) {
+    func launchWithTrueInterruptPending(darkMode: Bool = false, bannerDismissed: Bool = false) {
         launchFresh()
         launchArguments += [
             TestLaunchArguments.skipOnboarding,
-            TestLaunchArguments.simulateScreenTimeNotDetermined
+            TestLaunchArguments.simulateScreenTimeNotDetermined,
+            "-kshana.ui-test.screenTimeStatus",
+            "notDetermined",
+            "-kshana.trueInterruptSkippedBannerDismissed",
+            bannerDismissed ? "true" : "false"
         ]
+        if bannerDismissed {
+            launchArguments += [TestLaunchArguments.dismissTrueInterruptBanner]
+        } else {
+            launchArguments += [TestLaunchArguments.showTrueInterruptBanner]
+        }
         launchEnvironment["UITEST_SCREEN_TIME_STATUS"] = "notDetermined"
+        launchEnvironment["UITEST_TRUE_INTERRUPT_BANNER_DISMISSED"] = bannerDismissed ? "true" : "false"
         appendDarkModeArgumentIfNeeded(darkMode)
         launch()
     }
