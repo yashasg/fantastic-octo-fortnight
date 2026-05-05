@@ -13,8 +13,8 @@ Legend: ✅ Done · ⚠️ In progress / partial · ❌ Not started · 🔒 Bloc
 
 | # | Item | Status | Blocker / Notes |
 |---|------|--------|-----------------|
-| L1 | Privacy Policy hosted at public HTTPS URL | ⚠️ Partial | Branded page exists at `docs/privacy.html` and in-app Settings points to the GitHub Pages URL; final Pages reachability and ASC metadata verification remain — #185 |
-| L2 | EULA supplement with Apple's 7 required clauses added to TERMS.md | ⚠️ Partial | `docs/legal/TERMS.md` exists; Apple clause review pending — #196 |
+| L1 | Privacy Policy hosted at public HTTPS URL | ⚠️ Partial | GitHub Pages URL is live and in-app Settings points to it; App Store Connect metadata verification remains — #185 |
+| L2 | EULA supplement with Apple's 7 required clauses added to TERMS.md | ⚠️ Partial | `docs/legal/TERMS.md` exists and ASC-ready plain text is staged at `docs/legal/APP_STORE_CUSTOM_EULA.txt`; upload/verify in ASC remains — #196 |
 | L3 | Privacy Nutrition Labels filled in App Store Connect | ❌ Not started | Answers documented in `docs/PRIVACY_NUTRITION_LABELS.md`; not yet entered in ASC |
 | L4 | Health/wellness disclaimers included in app description | ✅ Done | "Not medical advice" copy finalized in `APP_STORE_LISTING.md` Section 3 |
 
@@ -99,8 +99,8 @@ Legend: ✅ Done · ⚠️ In progress / partial · ❌ Not started · 🔒 Bloc
 
 ## Recommended Next Actions
 
-1. **Close #185 follow-through** — privacy URL content is staged at `docs/privacy.html` for `https://yashasg.github.io/fantastic-octo-fortnight/privacy.html`; remaining manual step is confirming GitHub Pages is enabled and adding this URL in App Store Connect metadata.
-2. **Unblock #196** — upload `docs/legal/TERMS.md` content to App Store Connect License Agreement field.
+1. **Close #185 follow-through** — privacy URL is live at `https://yashasg.github.io/fantastic-octo-fortnight/privacy.html`; remaining manual step is adding this URL in App Store Connect metadata.
+2. **Unblock #196** — upload `docs/legal/APP_STORE_CUSTOM_EULA.txt` content to App Store Connect License Agreement field.
 3. **Capture screenshots** — 5 screens on iPhone 15 Pro + Pro Max.
 4. **Export app icon** — 1024×1024 PNG, no alpha.
 5. **Register App Group** in Apple Developer Portal for all three bundle IDs.

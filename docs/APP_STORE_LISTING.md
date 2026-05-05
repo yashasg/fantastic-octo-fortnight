@@ -274,7 +274,7 @@ Follow this sequence to avoid mid-submission blockers. The two Legal & Privacy b
 2. **[WEEKS BEFORE]** Upload Custom EULA to App Store Connect (#196)
    - Verify `docs/legal/TERMS.md` includes Apple's 7 required clauses
    - Log into App Store Connect → My Apps → kshana → App Information
-   - Paste TERMS.md content into "License Agreement" field
+   - Paste `docs/legal/APP_STORE_CUSTOM_EULA.txt` into the "License Agreement" field
    - Save and verify it displays correctly
 
 3. **[1 WEEK BEFORE]** Run comprehensive pre-submission checks
