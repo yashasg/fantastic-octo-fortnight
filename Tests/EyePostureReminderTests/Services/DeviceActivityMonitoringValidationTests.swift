@@ -80,6 +80,35 @@ final class DeviceActivityMonitoringValidationTests: XCTestCase {
         XCTAssertEqual(snapshot, .empty)
     }
 
+    func test_intervalEndCleanupPolicy_validSession_clearsRestrictions() throws {
+        try writeShieldSession(makeEyesSession(), to: testDefaults)
+        let snapshot = ShieldSessionSnapshot.read(from: testDefaults)
+
+        let decision = ShieldIntervalEndCleanupPolicy.decision(for: snapshot)
+
+        XCTAssertTrue(decision.shouldClearRestrictions)
+        XCTAssertEqual(decision.sessionState, .valid)
+    }
+
+    func test_intervalEndCleanupPolicy_missingPayload_clearsRestrictions() {
+        let snapshot = ShieldSessionSnapshot.read(from: testDefaults)
+
+        let decision = ShieldIntervalEndCleanupPolicy.decision(for: snapshot)
+
+        XCTAssertTrue(decision.shouldClearRestrictions)
+        XCTAssertEqual(decision.sessionState, .missingOrCorrupt)
+    }
+
+    func test_intervalEndCleanupPolicy_corruptPayload_clearsRestrictions() {
+        testDefaults.set(Data("not-json".utf8), forKey: ShieldSession.sessionDataKey)
+        let snapshot = ShieldSessionSnapshot.read(from: testDefaults)
+
+        let decision = ShieldIntervalEndCleanupPolicy.decision(for: snapshot)
+
+        XCTAssertTrue(decision.shouldClearRestrictions)
+        XCTAssertEqual(decision.sessionState, .missingOrCorrupt)
+    }
+
     /// Clearing the shield must remove the payload and legacy keys so a stale extension read
     /// doesn't re-apply an old break session.
     func test_shieldSession_appGroupClear_removesAllKeys() throws {
