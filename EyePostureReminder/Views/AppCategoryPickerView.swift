@@ -33,6 +33,8 @@ struct AppCategoryPickerView: View {
     let onRequestAuthorization: () -> Void
     /// Called when authorization is denied and iOS Settings is the recovery path.
     var onOpenSettings: () -> Void = {}
+    /// Called when authorization is approved and the app/category picker is available.
+    var onSelectApps: () -> Void = {}
     let onDone: () -> Void
 
     var body: some View {
@@ -103,10 +105,14 @@ struct AppCategoryPickerView: View {
 
     func performPrimaryAction() {
         switch authorizationStatus {
+        case .unavailable:
+            return
+        case .notDetermined:
+            onRequestAuthorization()
         case .denied:
             onOpenSettings()
-        case .unavailable, .notDetermined, .approved:
-            onRequestAuthorization()
+        case .approved:
+            onSelectApps()
         }
     }
 

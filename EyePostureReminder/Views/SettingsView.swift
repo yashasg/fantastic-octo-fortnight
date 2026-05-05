@@ -826,6 +826,7 @@ private struct SettingsTrueInterruptSection: View {
                     Task { _ = await coordinator.screenTimeAuthorization.requestAuthorization() }
                 },
                 onOpenSettings: openApplicationSettings,
+                onSelectApps: {},
                 onDone: { showPicker = false }
             )
         }
