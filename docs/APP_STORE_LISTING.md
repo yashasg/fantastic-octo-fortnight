@@ -74,22 +74,20 @@ eye health,20-20-20,screen break,reminder,posture check,eye strain,ergonomic,scr
 
 ---
 
-## 5. What's New (v0.2.0 — Restful Grove)
+## 5. What's New (v1.0 — App Store Launch)
 
 ```
-kshana v0.2.0 — Restful Grove
+Welcome to kshana, a calm reminder app for healthier screen habits.
 
-• New visual identity: Sage & Mint color palette with Restful Grove design tokens
-• Yin-yang logo animation with Reduce Motion support
-• Smart Pause: auto-silence reminders during Focus Mode, CarPlay, and driving
-• Screen-time-aware reminders: breaks fire after continuous screen-on time
-• Snooze options: 5 min, 1 hour, or rest of day
-• 4-screen onboarding flow with app break explanation
-• In-app legal documents (Terms, Privacy, Disclaimer)
-• Accessibility: WCAG AA contrast, VoiceOver live regions, 44pt tap targets
-• Improved stability and reliability
+• Custom eye break and posture check reminders
+• Eye breaks inspired by the 20-20-20 rule
+• Full-screen break guidance with countdowns, gentle haptics, and clear dismiss controls
+• Smart Pause for Focus Mode, CarPlay, and driving so reminders stay out of the way
+• Snooze options for 5 minutes, 1 hour, or the rest of the day
+• Privacy-first design with no accounts, ads, tracking, third-party SDKs, or custom backend
+• Accessibility support including VoiceOver labels, Dynamic Type, Reduce Motion, and high-contrast UI
 
-Download kshana on the App Store and start building healthier break habits today.
+True Interrupt Mode is still in development and will arrive in a future update after Apple's Family Controls entitlement approval is complete. The launch version uses local reminders and foreground break screens.
 ```
 
 ---

@@ -17,6 +17,22 @@ kshana (क्षण, "a moment") is a lightweight iOS wellness app that helps y
 9. **Accessibility:** Enable VoiceOver and navigate the entire app. Verify all controls are labeled, the countdown is announced as a live region, and Dynamic Type scales correctly.
 10. **Visual identity:** Check the yin-yang logo animation on HomeView (spin → breathing pulse). Enable Reduce Motion in iOS Settings and confirm the logo is static.
 
+## Release Notes (v1.0)
+
+**v1.0 — App Store Launch**
+
+Welcome to kshana, a calm reminder app for healthier screen habits.
+
+- Custom eye break and posture check reminders
+- Eye breaks inspired by the 20-20-20 rule
+- Full-screen break guidance with countdowns, gentle haptics, and clear dismiss controls
+- Smart Pause for Focus Mode, CarPlay, and driving so reminders stay out of the way
+- Snooze options for 5 minutes, 1 hour, or the rest of the day
+- Privacy-first design with no accounts, ads, tracking, third-party SDKs, or custom backend
+- Accessibility support including VoiceOver labels, Dynamic Type, Reduce Motion, and high-contrast UI
+
+True Interrupt Mode is still in development and will arrive in a future update after Apple's Family Controls entitlement approval is complete. The launch version uses local reminders and foreground break screens.
+
 ## Release Notes (v0.2.0)
 
 **v0.2.0 — Restful Grove**
