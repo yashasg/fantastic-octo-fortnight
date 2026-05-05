@@ -444,14 +444,12 @@ final class AppCoordinatorNotificationFallbackTests: XCTestCase {
         await coordinator.refreshAuthStatus()
 
         tracker.simulateThresholdReached(for: .eyes)
-        await awaitCondition { overlay.showCallCount >= 1 }
+        await awaitCondition { overlay.onDismissCalls.count >= 1 }
         await awaitCondition { scheduleContinuation != nil }
         overlay.simulateDismiss()
+        let dismissalMonitorTask = coordinator.deviceActivityMonitorTask
         scheduleContinuation?.resume()
-        await awaitCondition(timeout: 3.0) {
-            deviceActivityMonitor.cancelCallCount >= 1 &&
-            ipcStore.events.contains { $0.kind == .notificationFallbackSuppressed }
-        }
+        _ = await dismissalMonitorTask?.result
 
         XCTAssertEqual(deviceActivityMonitor.scheduleCallCount, 1)
         XCTAssertEqual(deviceActivityMonitor.cancelCallCount, 1)
