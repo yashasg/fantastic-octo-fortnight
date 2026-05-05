@@ -511,12 +511,15 @@ struct SettingsView: View {
 // MARK: - Saved Banner (#434)
 
 /// Pill-shaped transient confirmation shown for 1.5 s after any setting change.
-private struct SettingsSavedBanner: View {
+struct SettingsSavedBanner: View {
     var body: some View {
-        Label(
-            String(localized: "settings.savedBanner", bundle: .module),
-            systemImage: "checkmark.circle.fill"
-        )
+        HStack(spacing: AppSpacing.xs) {
+            Image(systemName: "checkmark.circle.fill")
+                .foregroundStyle(AppColor.primaryRest)
+                .accessibilityHidden(true)
+
+            Text(String(localized: "settings.savedBanner", bundle: .module))
+        }
         .font(AppFont.bodyEmphasized)
         .foregroundStyle(AppColor.textPrimary)
         .accessibilityIdentifier("settings.savedBanner")
