@@ -94,5 +94,57 @@ final class HomeViewLaunchContextResolverTests: XCTestCase {
             notificationAuthStatus: .authorized
         ))
     }
+
+    func test_noRemindersConfigured_whenGlobalEnabledAndBothReminderTypesDisabled_returnsTrue() {
+        XCTAssertTrue(HomeView.shouldShowNoRemindersConfigured(
+            globalEnabled: true,
+            eyesEnabled: false,
+            postureEnabled: false
+        ))
+    }
+
+    func test_noRemindersConfigured_whenGlobalDisabled_returnsFalse() {
+        XCTAssertFalse(HomeView.shouldShowNoRemindersConfigured(
+            globalEnabled: false,
+            eyesEnabled: false,
+            postureEnabled: false
+        ))
+    }
+
+    func test_statusLocalizationKey_whenNoReminderTypesEnabled_returnsNoReminders() {
+        XCTAssertEqual(
+            HomeView.statusLocalizationKey(
+                globalEnabled: true,
+                eyesEnabled: false,
+                postureEnabled: false,
+                notificationAuthStatus: .authorized
+            ),
+            "home.status.noReminders"
+        )
+    }
+
+    func test_statusLocalizationKey_whenNoRemindersAndNotificationsDenied_prefersNoReminders() {
+        XCTAssertEqual(
+            HomeView.statusLocalizationKey(
+                globalEnabled: true,
+                eyesEnabled: false,
+                postureEnabled: false,
+                notificationAuthStatus: .denied
+            ),
+            "home.status.noReminders"
+        )
+    }
+
+    func test_statusLocalizationKey_whenOneReminderEnabledAndNotificationsDenied_returnsNotificationsOff() {
+        XCTAssertEqual(
+            HomeView.statusLocalizationKey(
+                globalEnabled: true,
+                eyesEnabled: true,
+                postureEnabled: false,
+                notificationAuthStatus: .denied
+            ),
+            "home.status.notificationsOff"
+        )
+    }
 }
 #endif

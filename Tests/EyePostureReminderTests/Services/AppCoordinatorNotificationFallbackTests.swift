@@ -431,18 +431,24 @@ final class AppCoordinatorNotificationFallbackTests: XCTestCase {
 
     func test_deviceActivityScheduleFailure_afterOverlayDismiss_suppressesFallbackNotification() async throws {
         struct ScheduleFailure: Error {}
+        var scheduleContinuation: CheckedContinuation<Void, Never>?
         deviceActivityMonitor.stubbedIsAvailable = true
         deviceActivityMonitor.stubbedScheduleError = ScheduleFailure()
-        deviceActivityMonitor.scheduleDelayNanoseconds = 100_000_000
+        deviceActivityMonitor.scheduleSuspension = {
+            await withCheckedContinuation { continuation in
+                scheduleContinuation = continuation
+            }
+        }
         ipcStore.trueInterruptEnabled = true
         ipcStore.selectApps()
         await coordinator.refreshAuthStatus()
 
         tracker.simulateThresholdReached(for: .eyes)
         await awaitCondition { overlay.showCallCount >= 1 }
-        await awaitCondition { deviceActivityMonitor.scheduleCallCount >= 1 }
+        await awaitCondition { scheduleContinuation != nil }
         overlay.simulateDismiss()
-        await awaitCondition {
+        scheduleContinuation?.resume()
+        await awaitCondition(timeout: 3.0) {
             deviceActivityMonitor.cancelCallCount >= 1 &&
             ipcStore.events.contains { $0.kind == .notificationFallbackSuppressed }
         }
