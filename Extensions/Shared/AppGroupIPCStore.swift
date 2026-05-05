@@ -311,7 +311,7 @@ public final class AppGroupIPCStore {
 
         // Remove corrupt keys first — they are unreadable and must not drift indefinitely.
         for key in corruptKeys {
-            Self.log.warning("pruneEventSlots: removing corrupt slot key '\(key, privacy: .public)'")
+            Self.log.warning("pruneEventSlots: removing corrupt slot key '\(key, privacy: .private)'")
             defaults.removeObject(forKey: key)
         }
 

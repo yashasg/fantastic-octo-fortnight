@@ -1,5 +1,6 @@
 @testable import EyePostureReminder
 @testable import ScreenTimeExtensionShared
+import Foundation
 import XCTest
 
 @MainActor
@@ -563,6 +564,27 @@ final class AppGroupIPCStoreTests: XCTestCase {
         XCTAssertTrue(events.contains(e4))
     }
 
+    func test_pruneEventSlots_corruptSlotKeyLog_usesPrivatePrivacy() throws {
+        let source = try String(contentsOf: appGroupIPCStoreSourceURL, encoding: .utf8)
+        let pruneSource = try XCTUnwrap(
+            source.slice(from: "private func pruneEventSlots", to: "private func readSelectionLocked"),
+            "pruneEventSlots source should be present in AppGroupIPCStore.swift."
+        )
+
+        XCTAssertTrue(
+            pruneSource.contains("removing corrupt slot key"),
+            "Regression must inspect the corrupt slot-key log."
+        )
+        XCTAssertTrue(
+            pruneSource.contains("\\(key, privacy: .private)"),
+            "Corrupt per-event slot keys contain UUIDs and must be logged with private privacy."
+        )
+        XCTAssertFalse(
+            pruneSource.contains("\\(key, privacy: .public)"),
+            "Corrupt per-event slot keys must not be publicly logged."
+        )
+    }
+
     private func preservingStandardDefaults(for keys: [String], _ action: () throws -> Void) rethrows {
         let oldValues = Dictionary(uniqueKeysWithValues: keys.map { ($0, UserDefaults.standard.object(forKey: $0)) })
         keys.forEach { UserDefaults.standard.removeObject(forKey: $0) }
@@ -576,5 +598,36 @@ final class AppGroupIPCStoreTests: XCTestCase {
             }
         }
         try action()
+    }
+
+    private var appGroupIPCStoreSourceURL: URL {
+        repositoryRoot
+            .appendingPathComponent("Extensions")
+            .appendingPathComponent("Shared")
+            .appendingPathComponent("AppGroupIPCStore.swift")
+    }
+
+    private var repositoryRoot: URL {
+        var url = URL(fileURLWithPath: #filePath)
+        while url.path != "/" {
+            url = url.deletingLastPathComponent()
+            if FileManager.default.fileExists(
+                atPath: url.appendingPathComponent("Package.swift").path
+            ) {
+                return url
+            }
+        }
+        preconditionFailure("Cannot locate repo root from \(#filePath)")
+    }
+}
+
+private extension String {
+    func slice(from start: String, to end: String) -> String? {
+        guard let startRange = range(of: start) else { return nil }
+        let searchRange = startRange.upperBound..<endIndex
+        guard let endRange = range(of: end, range: searchRange) else {
+            return String(self[startRange.lowerBound...])
+        }
+        return String(self[startRange.lowerBound..<endRange.lowerBound])
     }
 }
