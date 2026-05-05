@@ -361,6 +361,7 @@ final class DeviceActivityMonitorTests: XCTestCase {
         defer { coordinator.stopFallbackTimers() }
 
         mockTracker.simulateThresholdReached(for: .posture)
+        await awaitCondition { mockOverlay.showCallCount >= 1 }
         mockOverlay.simulateDismiss()
         await awaitCondition(timeout: 2.0) {
             mockMonitor.operationLog == ["schedule", "cancel"] &&
