@@ -23376,3 +23376,19 @@ Inject `DateProviding` seam into `AppCoordinator` and route the default watchdog
 - **Basher:** Ready for Phase A next micro-slice (SRP: AppCoordinator → Lifecycle + Watchdog handlers)
 - **Livingston:** Clock injection pattern now available for test coverage in downstream services
 - **Future:** DateProviding seam documented as reusable SKILL for any service requiring wall-clock injection
+
+---
+
+# Decision: Block PR creation when `build.sh all` fails on lint gate
+
+**Date:** 2026-05-06  
+**Owner:** Virgil (CI/CD)
+
+## Context
+Requested flow was to run `./scripts/build.sh all`, then create/push PR if validation passed. On branch `ralph/app-store-version-guard`, the command failed in SwiftLint strict mode with multiple `error:` violations.
+
+## Decision
+Do **not** create or push a PR from this state. Treat branch as blocked until `./scripts/build.sh all` returns success locally.
+
+## Why
+`build.sh all` is the parity gate used by CI and enforces lint/test/build policy. Opening a PR while this gate is red creates avoidable CI churn and weakens the build-before-merge rule.

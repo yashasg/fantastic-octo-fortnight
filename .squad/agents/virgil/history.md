@@ -193,3 +193,23 @@ Orchestration log recorded at 2026-04-30T09:27:10Z. Enhanced CI diagnostics docu
 - `Build & Test` in `.github/workflows/ci.yml` enforces SwiftLint strictly via `./scripts/build.sh all`; lint warnings are treated as CI blockers.
 - PR #516 failed solely on SwiftLint violations in `Tests/EyePostureReminderTests/Mocks/MockDateProvider.swift` (sorted imports) and `EyePostureReminder/Views/SettingsView.swift` (force unwrap + type body length over warning threshold).
 - Surgical CI unblock pattern: keep behavior intact by replacing force unwraps with guarded optionals, fixing import ordering, and scoping any unavoidable lint suppression to the specific type.
+
+## 2026-05-06 — Branch status + local validation gate (`ralph/app-store-version-guard`)
+
+- Checked branch state before validation:
+  - Current branch: `ralph/app-store-version-guard` at `5346eee`
+  - No upstream tracking ref configured yet
+  - Working tree is dirty with tracked edits across app/services/tests/docs/scripts plus untracked `.worktrees/` (must stay uncommitted)
+- Ran required gate from repo root: `./scripts/build.sh all`
+- Result: ❌ failed at lint stage (`SwiftLint --strict`) before tests, so PR/push flow should be blocked until lint debt is cleared.
+
+### Learnings
+- `./scripts/build.sh all` remains the correct pre-PR parity command; when it fails, the first actionable output is the SwiftLint `error:` list rather than xcodebuild output.
+- For this branch snapshot, lint failures include both branch-touched files (for example `AppCoordinator+Helpers.swift` and `OverlayManagerTests.swift`) and pre-existing larger test-suite debt; CI gate status should be reported as blocked, not partially passed.
+
+## 2026-05-06 — Scribe orchestration: Virgil branch validation blocked
+
+- Orchestration log written: `.squad/orchestration-log/2026-05-06T00-35-56Z-virgil.md`
+- Session log written: `.squad/log/2026-05-06T00-35-56Z-branch-validation.md`
+- Decision merged from inbox to `.squad/decisions.md`
+- Team updated via this history entry
