@@ -1,5 +1,5 @@
-@testable import EyePostureReminder
 import AVFoundation
+@testable import EyePostureReminder
 import XCTest
 
 final class AudioInterruptionManagerTests: XCTestCase {

@@ -58,3 +58,13 @@
 - Session log written: `.squad/log/2026-05-06T00-35-56Z-branch-validation.md`
 - Decision merged from inbox to `.squad/decisions.md`
 - Team updated via this history entry
+
+## 2026-05-06 — Full gate pass + release automation handoff (`ralph/app-store-version-guard`)
+
+- Ran the required parity gate from repo root: `./scripts/build.sh all`.
+- Result: ✅ build, lint, and tests all passed (2075 tests, 0 failures).
+- Prepared branch for push/PR while keeping `.worktrees/` untracked and out of stage.
+
+### Learnings
+- `./scripts/build.sh all` is now green on this branch snapshot, so merge gating can move to remote CI checks.
+- Preserve reproducibility by excluding generated local result artifacts (for example `TestResults.xcresult/Info.plist`) from commits.

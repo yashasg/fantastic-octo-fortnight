@@ -8,13 +8,19 @@ import UIKit
 struct OverlayLifecycleCallbacks {
     let onPresent: () -> Void
     let onDismiss: () -> Void
+    /// Called when the user taps the "Settings" shortcut inside the overlay.
+    /// Ownership of the side effect (e.g., writing a UserDefaults flag) belongs
+    /// at the call site, keeping `OverlayManager` free of settings-persistence knowledge.
+    let onSettingsTap: () -> Void
 
     init(
         onPresent: @escaping () -> Void = {},
-        onDismiss: @escaping () -> Void = {}
+        onDismiss: @escaping () -> Void = {},
+        onSettingsTap: @escaping () -> Void = {}
     ) {
         self.onPresent = onPresent
         self.onDismiss = onDismiss
+        self.onSettingsTap = onSettingsTap
     }
 }
 
@@ -99,13 +105,11 @@ final class OverlayManager: OverlayPresenting {
     typealias AudioManagerFactory = () -> MediaControlling
     typealias AccessibilityNotificationPosterFactory = () -> AccessibilityNotificationPosting
     typealias NotificationCenterFactory = () -> NotificationCenter
-    typealias SettingsStoreFactory = () -> SettingsPersisting
     typealias WindowSceneProvider = () -> UIWindowScene?
 
     private let audioManager: MediaControlling
     private let accessibilityNotificationPoster: AccessibilityNotificationPosting
     private let notificationCenter: NotificationCenter
-    private let settingsStore: SettingsPersisting
     private let windowSceneProvider: WindowSceneProvider
 
     // MARK: - State
@@ -139,20 +143,17 @@ final class OverlayManager: OverlayPresenting {
         audioManager: MediaControlling? = nil,
         accessibilityNotificationPoster: AccessibilityNotificationPosting? = nil,
         notificationCenter: NotificationCenter? = nil,
-        settingsStore: SettingsPersisting? = nil,
         windowSceneProvider: WindowSceneProvider? = nil,
         makeAudioManager: @escaping AudioManagerFactory = { AudioInterruptionManager() },
         makeAccessibilityNotificationPoster: @escaping AccessibilityNotificationPosterFactory = {
             LiveAccessibilityNotificationPoster()
         },
         makeNotificationCenter: @escaping NotificationCenterFactory = { .default },
-        makeSettingsStore: @escaping SettingsStoreFactory = { UserDefaults.standard },
         makeWindowSceneProvider: (() -> WindowSceneProvider)? = nil
     ) {
         self.audioManager = audioManager ?? makeAudioManager()
         self.accessibilityNotificationPoster = accessibilityNotificationPoster ?? makeAccessibilityNotificationPoster()
         self.notificationCenter = notificationCenter ?? makeNotificationCenter()
-        self.settingsStore = settingsStore ?? makeSettingsStore()
         if let windowSceneProvider {
             self.windowSceneProvider = windowSceneProvider
         } else if let makeWindowSceneProvider {
@@ -234,9 +235,7 @@ final class OverlayManager: OverlayPresenting {
                 duration: duration,
                 hapticsEnabled: hapticsEnabled,
                 onAnalyticsEvent: AnalyticsLogger.log,
-                onSettingsTap: { [settingsStore = self.settingsStore] in
-                    settingsStore.set(true, forKey: AppStorageKey.openSettingsOnLaunch)
-                },
+                onSettingsTap: callbacks.onSettingsTap,
                 onDismiss: { [weak self] in
                     Task { @MainActor in self?.dismissOverlay() }
                 }

@@ -202,7 +202,10 @@ final class SettingsStore: ObservableObject {
         eyesEnabled = resolvedStore.bool(forKey: Keys.eyesEnabled, defaultValue: true)
         postureEnabled = resolvedStore.bool(forKey: Keys.postureEnabled, defaultValue: true)
 
-        eyesInterval = resolvedStore.double(forKey: Keys.eyesInterval, defaultValue: resolvedConfig.defaults.eyeInterval)
+        eyesInterval = resolvedStore.double(
+            forKey: Keys.eyesInterval,
+            defaultValue: resolvedConfig.defaults.eyeInterval
+        )
         eyesBreakDurationStorage = Self.sanitizedBreakDuration(
             resolvedStore.double(forKey: Keys.eyesBreakDuration, defaultValue: defaultEyesBreakDuration),
             defaultValue: defaultEyesBreakDuration,

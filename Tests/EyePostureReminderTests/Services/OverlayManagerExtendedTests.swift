@@ -37,7 +37,6 @@ final class OverlayManagerExtendedTests: XCTestCase {
         XCTAssertEqual(makeWindowSceneProviderCallCount, 0)
     }
 
-
     // MARK: - clearQueue(for:) — per-type filtering
 
     func test_clearQueueForType_withNoQueuedItems_doesNotCrash() {

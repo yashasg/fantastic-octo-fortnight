@@ -1,5 +1,5 @@
-@testable import EyePostureReminder
 import CoreMotion
+@testable import EyePostureReminder
 import XCTest
 
 // MARK: - LiveDrivingActivityDetectorTests

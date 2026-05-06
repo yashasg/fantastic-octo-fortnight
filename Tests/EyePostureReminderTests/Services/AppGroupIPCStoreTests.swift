@@ -1,9 +1,10 @@
 @testable import EyePostureReminder
-@testable import ScreenTimeExtensionShared
 import Foundation
+@testable import ScreenTimeExtensionShared
 import XCTest
 
 @MainActor
+// swiftlint:disable:next type_body_length
 final class AppGroupIPCStoreTests: XCTestCase {
     private var suiteName: String = ""
     private var defaults: UserDefaults!

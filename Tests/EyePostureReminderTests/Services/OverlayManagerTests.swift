@@ -81,34 +81,6 @@ final class OverlayManagerTests: XCTestCase {
         XCTAssertFalse(factoryCalled)
     }
 
-    func test_init_withoutSettingsStore_usesFactoryOnce() {
-        var factoryCallCount = 0
-        let mockStore = MockSettingsPersisting()
-        _ = OverlayManager(
-            settingsStore: nil,
-            makeSettingsStore: {
-                factoryCallCount += 1
-                return mockStore
-            }
-        )
-
-        XCTAssertEqual(factoryCallCount, 1)
-    }
-
-    func test_init_withSettingsStore_bypassesFactory() {
-        var factoryCalled = false
-        let injectedStore = MockSettingsPersisting()
-        _ = OverlayManager(
-            settingsStore: injectedStore,
-            makeSettingsStore: {
-                factoryCalled = true
-                return MockSettingsPersisting()
-            }
-        )
-
-        XCTAssertFalse(factoryCalled)
-    }
-
     // MARK: - isOverlayVisible — initial state
 
     /// In a headless test environment there is no window scene, so no overlay
@@ -231,5 +203,23 @@ final class OverlayManagerTests: XCTestCase {
         XCTAssertEqual(mock.clearQueueCallCount, 0)
         XCTAssertTrue(mock.showCallOrder.isEmpty)
         XCTAssertFalse(mock.isOverlayVisible)
+    }
+
+    // MARK: - OverlayLifecycleCallbacks.onSettingsTap
+
+    /// `OverlayLifecycleCallbacks` must default `onSettingsTap` to a no-op
+    /// so all existing call sites that omit the parameter compile unmodified.
+    func test_overlayLifecycleCallbacks_defaultOnSettingsTap_isNoOp() {
+        let callbacks = OverlayLifecycleCallbacks()
+        // Must not crash when called with the default.
+        callbacks.onSettingsTap()
+    }
+
+    /// When `onSettingsTap` is provided it must be stored and invokable.
+    func test_overlayLifecycleCallbacks_customOnSettingsTap_isCalled() {
+        var tapped = false
+        let callbacks = OverlayLifecycleCallbacks(onSettingsTap: { tapped = true })
+        callbacks.onSettingsTap()
+        XCTAssertTrue(tapped, "onSettingsTap closure must be called when invoked")
     }
 }

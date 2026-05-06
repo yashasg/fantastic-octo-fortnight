@@ -45,6 +45,8 @@
 - Keep AppDelegate seam tests surgical: one test for factory-used when `notificationCenter` is nil, and one test for explicit-center-bypasses-factory.
 - User preference reinforced: continue #462 with tiny DI/SRP micro-slices only, each validated with full `./scripts/build.sh build` and `./scripts/build.sh test`.
 - Key file paths: `EyePostureReminder/App/AppDelegate.swift`, `Tests/EyePostureReminderTests/Services/AppDelegateTests.swift`, `.squad/skills/notification-center-factory-seam/SKILL.md`.
+- Lint unblock (services-only): wrapped `SettingsStore` init assignment in multiline call to clear `line_length` at `EyePostureReminder/Models/SettingsStore.swift:205` with no behavior change.
+- Lint unblock (services-only): replaced `line_length` suppression in `AppCoordinator+Helpers` with multiline debug string formatting, removing `superfluous_disable_command` and keeping identical log output.
 
 ## 2026-05-04T00:17:02Z: #462 Phase A — Micro-slice Orchestration (COMPLETED)
 

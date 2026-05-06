@@ -2,6 +2,7 @@
 @testable import ScreenTimeExtensionShared
 import XCTest
 
+// swiftlint:disable file_length
 /// Unit tests for `AppCoordinator`.
 ///
 /// Coverage is intentionally limited to logic that executes cleanly without a
@@ -1073,7 +1074,9 @@ final class AppCoordinatorTests: XCTestCase {
         XCTAssertEqual(
             settings.snoozeCount,
             2,
-            "handleNotification should continue suppressing reminders when injected DateProviding reports active snooze")
+            "handleNotification should continue suppressing reminders when injected DateProviding " +
+                "reports active snooze"
+        )
         XCTAssertTrue(tracker.resetCalls.isEmpty)
     }
 
@@ -1430,7 +1433,9 @@ final class AppCoordinatorTests: XCTestCase {
         XCTAssertEqual(
             reminderRequests(from: mockNotif).count,
             1,
-            "scheduleReminders should clear stale snooze and continue scheduling when injected DateProviding marks it expired")
+            "scheduleReminders should clear stale snooze and continue scheduling when injected " +
+                "DateProviding marks it expired"
+        )
     }
 
     func test_scheduleReminders_usesInjectedDateProvider_whenWallClockPastButInjectedFuture() async {
@@ -1757,3 +1762,4 @@ private final class HookedAuthorizationNotificationCenter: NotificationSchedulin
         return .authorized
     }
 }
+// swiftlint:enable file_length

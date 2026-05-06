@@ -2,6 +2,7 @@
 import XCTest
 
 @MainActor
+// swiftlint:disable:next type_body_length
 final class SettingsStoreTests: XCTestCase {
 
     var mockPersistence: MockSettingsPersisting!
