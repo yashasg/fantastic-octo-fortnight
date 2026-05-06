@@ -36,9 +36,12 @@ extension AppCoordinator {
             guard !Task.isCancelled else { return }
             await self.handleSnoozeWake()
         }
-        // swiftlint:disable:next line_length
         Logger.scheduling.debug(
-            "Snooze wake task armed; fires in \(date.timeIntervalSince(self.dateProvider.now), format: .fixed(precision: 0), privacy: .public)s")
+            """
+            Snooze wake task armed; fires in \
+            \(date.timeIntervalSince(self.dateProvider.now), format: .fixed(precision: 0), privacy: .public)s
+            """
+        )
     }
 
     /// Cancel the in-process snooze wake task without removing the pending
@@ -122,6 +125,9 @@ extension AppCoordinator {
                 },
                 onDismiss: { [weak self] in
                     self?.cancelDeviceActivityMonitoring(presentationID: presentationID)
+                },
+                onSettingsTap: {
+                    UserDefaults.standard.set(true, forKey: AppStorageKey.openSettingsOnLaunch)
                 }
             )
         )

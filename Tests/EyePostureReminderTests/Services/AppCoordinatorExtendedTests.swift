@@ -1,6 +1,7 @@
 @preconcurrency @testable import EyePostureReminder
 import XCTest
 
+// swiftlint:disable file_length
 /// Extended unit tests for `AppCoordinator` focusing on the three highest-impact
 /// coverage gaps: the `ScreenTimeTracker` threshold callback path, the
 /// `PauseConditionManager` callback path, and the `scheduleReminders` flow.
@@ -905,3 +906,4 @@ private final class AlwaysPausedProvider: PauseConditionProviding {
     func startMonitoring() {}
     func stopMonitoring() {}
 }
+// swiftlint:enable file_length

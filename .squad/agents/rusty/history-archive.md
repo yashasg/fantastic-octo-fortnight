@@ -624,3 +624,76 @@ Provided step-by-step guide for Certificates, Identifiers & Profiles setup. Bund
 ---
 
 
+## 2026-04-29: Issue #202 — Screen Time Shield Spike (Compile-Safe Scaffolding)
+
+**Branch:** `squad/m3-true-interrupt-mode`
+
+**What I did:**
+- Spiked Screen Time APIs end-to-end (FamilyControls, ManagedSettings, ManagedSettingsUI, DeviceActivity)
+- Identified hard blocker: extension targets (ShieldConfiguration, DeviceActivityMonitor) cannot be expressed in SPM `Package.swift` alone — requires Xcode project migration
+- Identified hard blocker: FamilyControls entitlement (#201) required for all runtime validation; simulator does not support these frameworks
+- Added compile-safe protocol abstractions and no-op stub — integration boundary locked in pre-entitlement
+- Published spike document (`docs/SPIKE_SCREEN_TIME_APIS.md`) with full API survey, extension architecture, app group strategy, validation matrix, and recommended M3.3 scope
+- All 10 new unit tests pass
+
+**Files changed:**
+
+| File | Purpose |
+|---|---|
+| `docs/SPIKE_SCREEN_TIME_APIS.md` | Full spike findings |
+| `EyePostureReminder/Services/ScreenTimeShieldTypes.swift` | `ShieldTriggerReason` enum, `ShieldSession` struct |
+| `EyePostureReminder/Services/ScreenTimeShieldProtocols.swift` | `ScreenTimeShieldProviding` protocol |
+| `EyePostureReminder/Services/ScreenTimeShieldNoop.swift` | Pre-entitlement no-op |
+| `Tests/.../Services/ScreenTimeShieldTests.swift` | 10 unit tests (all pass) |
+| `Tests/.../Mocks/MockScreenTimeShieldProviding.swift` | Mock for M3.3 coordinator tests |
+| `.squad/decisions/inbox/rusty-issue-202.md` | 5 architecture decisions |
+
+**Validation command:**
+```
+xcodebuild test -scheme EyePostureReminder \
+  -destination 'platform=iOS Simulator,name=iPhone 17,OS=26.4' \
+  -only-testing:EyePostureReminderTests/ScreenTimeShieldTests \
+  -resultBundlePath TestResults6.xcresult CODE_SIGNING_ALLOWED=NO
+```
+Result: **10/10 passed**
+
+
+## Learnings
+
+- `ScreenTimeShieldProviding` protocol and `ScreenTimeShieldNoop` are the correct pre-entitlement pattern. `AppCoordinator` should not be wired to the shield until M3.3 (Xcode project migration issue).
+- App Group identifier locked: `group.com.yashasgujjar.kshana`. Shared UserDefaults keys pinned as `static let` constants on `ShieldSession` and tested — prevents silent key drift between main app and extensions.
+- Shield as opt-in "Hard Mode" overlay on existing reminder system is the right product framing. Avoids coupling the health intervention core loop to an entitlement-gated API.
+- `ShieldTriggerReason.rawValue` stability matters: values are written to App Group UserDefaults and read by extension processes in a separate sandbox. The tests pin these as a regression gate.
+- FamilyControls does NOT work in Simulator at all. All real shield validation is device-only, post-#201.
+- For AppCoordinator DI seams, convert eager singleton/store defaults into `Dependency? = nil` + `makeDependency` factory closures, then test both fallback and bypass paths to keep behavior unchanged and testability explicit.
+- For SwiftUI views that still need DEBUG launch-context checks, avoid direct `CommandLine`/`ProcessInfo` reads in computed properties; inject optional launch-context values plus provider closures and unit-test fallback/bypass behavior via a static resolver.
+
+### 2026-04-30: Post-#299 Architecture Audit — Clean
+
+**Scope:** Full read-only audit after IPC fix (a520be3) and True Interrupt issue marathon.
+
+**Areas audited:**
+1. Swift concurrency (actor reentrancy, Task cancellation, Sendable, @MainActor isolation)
+2. App-extension IPC (App Group, UserDefaults cross-process safety, entitlement guards)
+3. Lifecycle management (timers, notification observers, scene phase, deinit cleanup)
+4. Battery efficiency (timer tolerance, audio session deactivation, overlay window release)
+5. Persistence (SettingsStore didSet patterns, key namespacing, atomic writes)
+
+**Findings — no material issues:**
+- All timers properly invalidated in deinit/disappear paths.
+- Audio session correctly deactivated with `.notifyOthersOnDeactivation` in all dismiss paths.
+- OverlayManager UIWindow lifecycle is exemplary — created on demand, nil'd after dismissal.
+- Notification observers all use stored tokens or are removed in deinit.
+- IPC per-slot event keys (#299) eliminated cross-process read-modify-write races.
+- AppGroupIPCStore guards nil defaults internally (`guard let defaults`), making extension IPC fail-safe.
+- WatchdogHeartbeat.precondition is protected by caller's guard in AppCoordinatorWatchdogRecovery (line 24).
+- SettingsStore break-duration didSet self-assignment is Swift-safe (no recursive didSet in same call frame).
+- Device activity monitor error handler reads current (not stale) @MainActor state, which is correct for fallback decisions.
+- FamilyControls entitlement gap is tracked by #201; no new developer-actionable subtask needed.
+
+**Minor observations (not issue-worthy):**
+- SettingsStore didSet writes synchronously to UserDefaults on main thread — acceptable for scalar values.
+- NSLock in AppGroupIPCStore is in-process only; cross-process safety relies on per-slot key design, not the lock.
+- `try?` on Task.sleep for cancellation is idiomatic but non-obvious; consistent pattern across codebase.
+
+

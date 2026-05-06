@@ -6,6 +6,7 @@ import XCTest
 /// arrays, pauseDuringFocus/pauseWhileDriving proxy properties, and canSnooze
 /// boundary conditions.
 @MainActor
+// swiftlint:disable:next type_body_length
 final class SettingsViewModelExtendedTests: XCTestCase {
 
     var mockPersistence: MockSettingsPersisting!

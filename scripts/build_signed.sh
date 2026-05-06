@@ -397,6 +397,19 @@ archive_build_number() {
   echo "$RESOLVED_BUILD_NUMBER"
 }
 
+validate_app_store_upload_version() {
+  [[ "$EXPORT_METHOD" == "app-store-connect" ]] || return 0
+
+  local marketing_version
+  marketing_version="$(archive_marketing_version)"
+
+  if [[ "$marketing_version" != "1.0" ]]; then
+    fail "App Store uploads must use MARKETING_VERSION 1.0; current value is ${marketing_version}."
+    fail "Run './scripts/build.sh version 1.0' and commit the version bump before uploading."
+    exit 1
+  fi
+}
+
 ensure_manual_distribution_profile() {
   [[ "$SIGNING_STYLE" == "manual" ]] || return 0
 
@@ -1108,6 +1121,7 @@ cmd_export() {
 }
 
 cmd_upload() {
+  validate_app_store_upload_version
   cmd_archive
 
   header "UPLOAD TO APP STORE CONNECT"

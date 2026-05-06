@@ -770,9 +770,9 @@ cmd_version() {
     echo -e "${BOLD}Marketing version:${RESET} ${current}"
     echo -e "${BOLD}Build number:${RESET}     ${build} (overridden by CI with github.run_number)"
   else
-    # Validate semver format (digits only — Apple requires numeric segments)
-    if ! [[ "$new_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-      fail "Version must be numeric semver, e.g. 0.2.0 (no pre-release labels)"
+    # Validate Apple marketing-version format (numeric two- or three-segment version).
+    if ! [[ "$new_version" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ]]; then
+      fail "Version must be numeric, e.g. 1.0 or 0.2.0 (no pre-release labels)"
       exit 1
     fi
     if [[ ! -f "$PROJECT_SPEC_PATH" ]]; then
@@ -789,7 +789,7 @@ with open(path, encoding="utf-8") as handle:
     contents = handle.read()
 
 updated, count = re.subn(
-    r'(^\s*MARKETING_VERSION:\s*)"[0-9]+\.[0-9]+\.[0-9]+"',
+    r'(^\s*MARKETING_VERSION:\s*)"[0-9]+\.[0-9]+(?:\.[0-9]+)?"',
     rf'\1"{version}"',
     contents,
     flags=re.MULTILINE,

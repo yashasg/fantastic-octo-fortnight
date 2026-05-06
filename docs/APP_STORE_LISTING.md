@@ -304,12 +304,17 @@ Follow this sequence to avoid mid-submission blockers. The two Legal & Privacy b
 
 ### Phase 3: Build Upload & Submission (Day 4–5)
 
-7. **Create and upload signed build**
+7. **Verify App Store marketing version**
+   - `./scripts/build.sh version 1.0`
+   - `./scripts/build.sh version`
+   - Confirm the output shows `Marketing version: 1.0`
+
+8. **Create and upload signed build**
    - `APPLE_TEAM_ID=<team-id> ./scripts/build_signed.sh archive`
    - `APPLE_TEAM_ID=<team-id> ./scripts/build_signed.sh export`
    - `APPLE_TEAM_ID=<team-id> ./scripts/build_signed.sh upload`
 
-8. **Verify build in App Store Connect**
+9. **Verify build in App Store Connect**
    - Navigate to TestFlight → Internal Testing → Builds
    - Wait for build processing (5–10 min)
    - Verify it shows as "Ready to Submit"
