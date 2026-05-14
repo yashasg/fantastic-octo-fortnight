@@ -1,3 +1,4 @@
+import ComposableArchitecture
 import SwiftUI
 
 @main
@@ -12,17 +13,28 @@ struct EyePostureReminderApp: App {
     /// switcher, control centre).
     @State private var wasInBackground = false
 
+    /// Single TCA `Store` driving the app, introduced by `p0-tca-11` (#674).
+    /// `AppCoordinator` is intentionally kept alongside the store so legacy
+    /// MVVM surfaces (Settings/Home views consuming `@EnvironmentObject`)
+    /// keep working until `p0-tca-14` (#677) decommissions them.
+    private let store: StoreOf<AppFeature>
+
     init() {
         AppTypography.registerFonts()
+        var initialState = AppFeature.State()
+        initialState.hasSeenOnboarding = UserDefaults.standard.bool(
+            forKey: AppStorageKey.hasSeenOnboarding
+        )
+        self.store = Store(initialState: initialState) { AppFeature() }
     }
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ContentView(store: store)
                 .environmentObject(coordinator.settings)
                 .environmentObject(coordinator)
                 .task {
-                    await coordinator.scheduleReminders()
+                    await store.send(.scheduling(.start)).finish()
                 }
                 .onChange(of: scenePhase) { phase in
                     switch phase {
