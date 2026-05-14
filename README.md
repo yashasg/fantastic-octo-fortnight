@@ -32,6 +32,8 @@ This philosophy drives every product decision: reminders are gentle, not nagging
 ## Building & Testing
 
 All build, test, and lint commands are standardised through `scripts/build.sh`.
+For the full development workflow — coding-style requirements, lint enforcement,
+and pull-request expectations — see [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ```bash
 # Compile the project (auto-detects iOS Simulator or Mac Catalyst)
