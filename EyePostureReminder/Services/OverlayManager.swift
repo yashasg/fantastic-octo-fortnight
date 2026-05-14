@@ -113,6 +113,16 @@ final class OverlayManager: OverlayPresenting {
     private let windowSceneProvider: WindowSceneProvider
 
     // MARK: - State
+    //
+    // All mutable references below are declared as regular `Optional` (not
+    // implicitly unwrapped optionals). Per Google Swift Style §Implicitly
+    // Unwrapped Optionals, IUOs are inherently unsafe and must be avoided
+    // outside the narrow exceptions for `@IBOutlet`-style late-bound UIKit
+    // properties and unit-test fixtures. Each value here is genuinely
+    // optional during the manager's lifetime: the overlay window only exists
+    // while a reminder is on screen, the dismiss callback is set per
+    // presentation, and the scene-activation observer is only registered
+    // while we need to react to scene resume events.
 
     private var overlayWindow: UIWindow?
     private var dismissCallback: (() -> Void)?
