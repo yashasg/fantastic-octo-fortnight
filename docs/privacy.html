@@ -67,7 +67,7 @@
   <main>
     <article aria-labelledby="title">
       <h1 id="title">kshana Privacy Policy</h1>
-      <p class="muted">Last updated: May 5, 2026</p>
+      <p class="muted">Last updated: May 14, 2026</p>
       <p>
         kshana is designed to be privacy-preserving. Your app settings stay on your
         device, motion, Focus, and CarPlay/audio-route information are used only
@@ -75,15 +75,20 @@
         tracking, user accounts, third-party analytics SDKs, or a custom analytics backend.
       </p>
 
-      <h2>What kshana stores locally</h2>
+      <p class="muted">
+        This page is a hosted summary of the canonical
+        <a href="https://github.com/yashasg/fantastic-octo-fortnight/blob/main/docs/legal/PRIVACY.md">kshana Privacy Policy (PRIVACY.md)</a>
+        and is kept materially synchronized with it. If anything on this page conflicts
+        with the canonical policy, the canonical policy controls.
+      </p>
+
+      <h2>1. What we collect or access</h2>
       <p>
         kshana stores app settings, reminder preferences, and app state locally using
         Apple's UserDefaults storage. If Screen Time features become available after
         Apple entitlement approval, local App Group coordination metadata may also be
         stored so the main app and extensions can coordinate reminders and shielding.
       </p>
-
-      <h2>What kshana accesses in memory</h2>
       <p>
         kshana may read motion activity, user-authorized Focus status, and current
         audio output route status transiently to pause reminders while you are driving,
@@ -91,23 +96,131 @@
         kshana does not record audio, access microphone input, store route history,
         or send this information to a developer server.
       </p>
-
-      <h2>Diagnostics</h2>
       <p>
-        Apple may provide aggregated App Store Connect analytics, crash diagnostics, and
-        performance data to the developer. kshana also uses Apple's os.Logger framework
-        for on-device diagnostics; sensitive values are marked private/redacted in
-        release logging.
+        If you authorize Screen Time access via Apple's FamilyControls framework,
+        kshana reads aggregate screen-on time and your authorized app/category
+        selections to schedule wellness breaks. As of April 2026, Screen Time
+        integration is pending Apple approval (case ID 102881605113) and is not
+        yet active in shipped builds.
       </p>
 
-      <h2>What kshana does not do</h2>
+      <h2>2. What we do NOT collect or do</h2>
       <ul>
-        <li>No accounts or login</li>
-        <li>No ads or tracking</li>
-        <li>No sale of data</li>
-        <li>No third-party analytics SDKs</li>
+        <li>No personal information (name, email, phone, date of birth)</li>
+        <li>No health, biometric, or location data</li>
+        <li>No camera or microphone access</li>
+        <li>No advertising identifier (IDFA) or cross-app tracking identifiers</li>
+        <li>No user accounts, registration, or login</li>
+        <li>No third-party advertising or analytics SDKs</li>
         <li>No custom analytics backend</li>
+        <li>No sale, rental, or sharing of data with data brokers or advertisers</li>
+        <li>No app content monitoring (no message, browser, or social-media content)</li>
       </ul>
+
+      <h2>3. Local storage</h2>
+      <p>
+        Preference and coordination data lives in Apple's UserDefaults inside the
+        app's sandbox or App Group container on your device. The data is not
+        intentionally uploaded to a developer server, may be included in your
+        general device backup if your iOS backup settings allow it, and is removed
+        when you delete the app.
+      </p>
+
+      <h2>4. App Store Privacy Manifest</h2>
+      <p>
+        kshana ships an App Store Privacy Manifest
+        (<code>EyePostureReminder/PrivacyInfo.xcprivacy</code>) embedded in the
+        app bundle. It declares <strong>NSPrivacyTracking = false</strong>, no
+        tracking domains, crash and performance data collected for App Functionality
+        and Analytics (not linked to identity, not used for tracking), and
+        UserDefaults access with reason code <code>CA92.1</code> (storing user-set
+        preferences). The manifest is the authoritative machine-readable disclosure
+        used by Apple to generate the App Privacy nutrition label.
+      </p>
+
+      <h2>4a. Apple diagnostics and analytics</h2>
+      <p>
+        Apple may process aggregated MetricKit and App Store Connect analytics,
+        crash diagnostics, hang diagnostics, launch times, memory, CPU, energy,
+        and disk metrics. The developer receives these reports through Apple's
+        systems in aggregated or diagnostic form only. They are not used to
+        identify you, track you across apps or websites, build advertising
+        profiles, sell data, or support targeted advertising.
+      </p>
+
+      <h2>5. Local logging</h2>
+      <p>
+        kshana uses Apple's <code>os.Logger</code> framework for on-device
+        diagnostic logging. These logs normally remain on your device. Categorical
+        labels (reminder type, dismiss method, pause condition, setting key names)
+        may be marked public; values that could be sensitive (old/new setting
+        values) are marked private/redacted in exported logs.
+      </p>
+
+      <h2>6. No third-party data sharing</h2>
+      <p>
+        We do not sell, rent, trade, or share your data with third-party
+        advertisers, analytics vendors, data brokers, or similar third parties.
+        There are no advertising partners, data brokers, or third-party
+        analytics vendors associated with this app. Apple may process App Store,
+        diagnostics, crash, and performance information through its own systems
+        per <a href="https://www.apple.com/legal/privacy/">Apple's Privacy Policy</a>.
+      </p>
+
+      <h2>7. Apple App Store</h2>
+      <p>
+        kshana is distributed through the Apple App Store. Apple may collect
+        certain data as part of the download, installation, diagnostics, crash
+        reporting, analytics, and App Store operation process, governed by
+        <a href="https://www.apple.com/legal/privacy/">Apple's Privacy Policy</a>.
+        Yashasg does not control Apple's data practices.
+      </p>
+
+      <h2>8. Children's privacy (COPPA)</h2>
+      <p>
+        kshana does not knowingly collect personal information from children
+        under 13 (or the applicable age of digital consent in your jurisdiction).
+        The app does not require accounts, direct identifiers, advertising
+        identifiers, or third-party tracking. If you are a parent or guardian
+        and believe your child has provided personal information through the
+        app, contact us using the channel listed in the Contact section below.
+      </p>
+
+      <h2>9. Data security</h2>
+      <p>
+        Because kshana stores only local preferences and coordination metadata
+        on your device, the primary security protection is your device's own
+        security (passcode, Face ID, Touch ID). Keep your device secure and up
+        to date. The app does not transmit local preferences, motion activity,
+        Focus status, or CarPlay/audio-route status to a developer server.
+      </p>
+
+      <h2>10. Your rights (GDPR &amp; CCPA)</h2>
+      <p>
+        We do not maintain user accounts or a user-level database about you.
+        Deleting kshana from your device removes locally stored preferences.
+      </p>
+      <p>
+        <strong>GDPR (EU/EEA):</strong> Yashasg does not maintain a user-level
+        profile or account database for access, deletion, or portability requests.
+        Apple-native diagnostics and App Store data are handled through Apple's
+        systems and your Apple privacy settings.
+      </p>
+      <p>
+        <strong>CCPA (California):</strong> California residents have the rights
+        to Know, Delete, Opt-Out of Sale/Sharing, Correct, and Non-Discrimination
+        under Cal. Civil Code §1798.100 et seq. (as amended by CPRA). We do not
+        sell or share personal information for cross-context behavioral advertising.
+        To submit a CCPA request, contact us using the Contact channel below and
+        include "CCPA Request" in the subject line.
+      </p>
+
+      <h2>11. Changes to this privacy policy</h2>
+      <p>
+        Yashasg may update this policy from time to time. When changes are made,
+        the "Last updated" date at the top will be revised. Continued use of the
+        app after changes are posted constitutes acceptance of the revised policy.
+      </p>
 
       <h2>Contact</h2>
       <p>

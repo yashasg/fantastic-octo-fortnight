@@ -499,6 +499,9 @@ cmd_lint() {
     fail "swiftlint not found. Install with: brew install swiftlint"
     exit 1
   fi
+
+  info "Running privacy-sync release check…"
+  "${PACKAGE_PATH}/scripts/check_privacy_sync.sh"
 }
 
 cmd_clean() {
