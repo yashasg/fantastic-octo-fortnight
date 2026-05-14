@@ -167,6 +167,14 @@ Yashas
 
 ## Notes
 
-**Confidence: Low.** This pattern was observed from a single user feedback session (Yashasg rejected v1 Apple reply for "sounding AI-generated"). First instance of applying this to external correspondence. If multiple future instances confirm the pattern, increase confidence to Medium.
+**Confidence: Medium.** Pattern validated end-to-end on 2026-05-14:
+- Drafted v2 per skill guidelines (plain prose, no markdown, conversational voice)
+- User (Yashasg) accepted v2 with no formatting complaints or reverts
+- User sent with only minor warmth/specificity edits (focus-mode detail, "Once every 20 minutes" clarity)
+- Zero complaints about structure, formatting, or tone on sent copy
 
-**Future work:** If team generates more external correspondence (customer support emails, App Store appeals, TestFlight feedback replies), validate that plain-prose style works consistently and update this skill accordingly.
+This is the first real-world validation of the pattern applied to an actual external email (Apple Developer Support case 102881605113). Future external correspondence should follow this model.
+
+**Next validation:** Apply pattern to 2–3 more external emails (customer support, App Store appeals, etc.). If pattern holds consistently, increase confidence to High.
+
+**Validated:** 2026-05-14 — Drafted v2, user sent with only minor warmth/specificity edits — no formatting reverts.

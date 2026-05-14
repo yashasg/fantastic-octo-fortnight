@@ -23569,3 +23569,63 @@ Yashas
 
 **Confidence:** Low (first observation). Reusable for future Apple correspondence, TestFlight review replies, App Store appeals.
 
+
+---
+
+# Decision: Apple Developer Support Reply — Sent (Case 102881605113)
+
+**Date Sent:** 2026-05-14  
+**Case Number:** 102881605113  
+**Recipient:** Johnny, Apple Developer Support  
+**Owner:** Yashasg (sent by user; based on v2 send-ready draft by Danny)  
+**Status:** ✅ SENT  
+
+## Summary
+
+User (Yashasg) took the v2 send-ready draft, edited it lightly for warmth and specificity, and sent it to Apple Developer Support.
+
+**Key edits by user before sending:**
+1. Warmer opener: "Thanks for getting back to me. I can share the business need..." (vs. v2's "Thanks for following up on case 102881605113. I wanted to clarify...")
+2. **NEW product detail:** Added "Unless the phone is in focus mode or driving mode" — reveals that kshana respects iOS system DND signals
+3. **Added specificity:** "Once every 20 minutes the app triggers a visual, eye-resting, wellness break for the user by shielding..." — clearer break timing and nature
+4. Streamlined closing: Removed redundant "reference case 102881605113 in any follow-up" suggestion; kept it conversational
+
+## Previous Decision Context
+
+- **v1 (2026-05-14):** Markdown-heavy, marked for revision by user as "sounds AI-generated"
+- **v2 (2026-05-14):** Plain-prose rewrite by Danny; substance identical to v1; formatted per `external-correspondence-style` skill
+- **Cross-link:** See `.squad/decisions.md` entry "Apple Developer Support Reply v2 — Plain-Prose Rewrite" for v1→v2 revision notes
+
+## Product Behavior Captured
+
+**NEW fact:** kshana suppresses break shielding when phone is in Focus Mode or Driving Mode. This shows the app respects user-defined system DND contexts.
+
+- **Where captured:** `.squad/identity/now.md` → "## Product Behaviors" section
+- **Reuse:** Future App Review correspondence, marketing copy, architecture decisions, product roadmap
+- **Sourced from:** User's sent reply to Apple, 2026-05-14
+
+## Follow-Up SLA
+
+- **Expected response:** 5–14 business days (per Frank's estimate for entitlement requests)
+- **Check-in date if silent:** ~2026-05-28 (if no reply by end of business)
+- **Next action:** If no response by May 28, send brief follow-up referencing case 102881605113
+
+## Sent Archive
+
+- **File:** `.squad/log/apple-case-102881605113-sent-2026-05-14.md`
+- **Contents:** Full verbatim sent body, diff from v2 draft, follow-up SLA tracking
+
+## Skill Validation
+
+- **Skill:** `external-correspondence-style` (plain-prose, no-markdown pattern for external email)
+- **Confidence bump:** `low` → `medium`
+- **Rationale:** Pattern drafted → user accepted → user sent with only minor warmth/specificity edits. No formatting reverts. End-to-end validation successful.
+- **Update:** See `.squad/skills/external-correspondence-style/SKILL.md` for confidence bump note
+
+## Related Updates
+
+- **Frank's history:** Apple reply sent; follow-up window 5–14 business days; recommend check-in if silent by May 28
+- **Rusty's history:** Noted focus-mode / driving-mode exception as active product constraint for future architecture/triage decisions
+- **Danny's history:** v2 draft accepted by user; plain-prose pattern validated; user sent with only minor edits
+
+---
