@@ -136,8 +136,17 @@ struct AppCategoryPickerView: View {
         }
     }
 
-    var primaryButtonHintKey: LocalizedStringKey {
-        switch authorizationStatus {
+    private var primaryButtonHintKey: LocalizedStringKey {
+        Self.primaryButtonHintKey(for: authorizationStatus)
+    }
+
+    /// Maps `authorizationStatus` to the localized accessibility hint key for the primary CTA.
+    ///
+    /// Exposed at type-level so unit tests can verify the mapping without instantiating the view.
+    static func primaryButtonHintKey(
+        for status: ScreenTimeAuthorizationStatus
+    ) -> LocalizedStringKey {
+        switch status {
         case .unavailable:   return "appCategoryPicker.button.pendingApproval.hint"
         case .notDetermined: return "appCategoryPicker.button.enableAccess.hint"
         case .denied:        return "appCategoryPicker.button.openSettings.hint"
