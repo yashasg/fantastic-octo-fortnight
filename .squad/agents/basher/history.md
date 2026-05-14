@@ -110,3 +110,7 @@
 - Phase A optional-factory pattern now cohesive across seams: `AppDelegate` notification center, launch provider, and UI-test overlay all follow precedence-ordered resolution with fallback closure semantics.
 - DI/SRP seams cluster well: AppDelegate initialization, production singleton defaults, and test-seam boundaries remain clean and surgical.
 - Multi-seam PR orchestration: Basher successfully executed Phase A micro-slice scope including three tightly-coupled DI refactors with unified validation before PR submission.
+
+## 2026-05-15 — #646 fan-out
+
+Three child issues now assigned from Google Swift audit: #647 (import ordering, MEDIUM), #648 (IUO review, MEDIUM), #649 (doc comments on Services public API, HIGH). Also joint owner on #652 (access control with Linus, HIGH). Ready to parallelize remediation work.

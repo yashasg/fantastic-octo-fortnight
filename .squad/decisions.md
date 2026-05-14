@@ -23965,3 +23965,103 @@ Trailing closures, numeric literals, parentheses — all already compliant or co
 
 ---
 
+
+# Decision: Issue #646 Decomposition — 6 Child Remediation Issues
+
+**Date:** 2026-05-15  
+**Author:** Saul (Code Reviewer)  
+**Issue:** #646 → decomposed into #647, #648, #649, #650, #651, #652  
+**Status:** IMPLEMENTED
+
+## Rationale
+
+Issue #646 (Google Swift Style adherence audit) identified 49+ findings across 53 files. To enable parallel team execution and clear PR review boundaries, the audit was decomposed from a single 4000+ line issue into 6 focused child issues, each representing one PR's natural scope.
+
+### Decomposition Principle
+
+**Group by TECHNICAL CATEGORY**, not by file or auditor:
+
+1. **Access Control** (#652) — AppCategoryPickerView, AppCoordinator, PauseConditionManager
+   - All about same rule: §Naming Conventions Are Not Access Control, §Extensions
+   - Single PR scope; reviewable as one concern
+
+2. **Doc Comments** (#649) — MetricKitSubscriber, OverlayManager, NoopServices, AudioInterruptionManager, ReminderRowView
+   - All missing public API documentation
+   - Single rule: §"Where to Document"
+
+3. **Column-Limit Wrapping** (#650) — Components, DesignSystem, HomeView, OverlayView, ReminderRowView, OnboardingPermissionView, OnboardingSetupView, OnboardingView, OnboardingWelcomeView
+   - 25 violations of same rule: §Column Limit (100 chars)
+   - Mechanically uniform fix (line-wrapping per §Line-Wrapping)
+   - Bundled despite multi-file scope (single pattern, single fix strategy)
+
+4. **Import Ordering** (#647) — OverlayManager, other Services/Utilities files
+   - Single rule: §Import Statements (lexicographic ordering)
+   - Small scope (4 files, mechanical fix)
+
+5. **IUO Review** (#648) — OverlayManager
+   - Requires code-review judgment, not mechanical fix
+   - Separated for focused discussion
+
+6. **Tooling Integration** (#651) — CI/CD, SwiftLint, swift-format
+   - Affects entire team and CI/CD pipeline
+   - Requires cross-team coordination (Virgil, CI/CD lead)
+
+## What We Rejected
+
+- **One issue per file** — Too granular; spawns 25 issues for column-limit violations alone
+- **One issue per auditor** — Conflates unrelated concerns; Basher's doc comments + imports would mix
+- **One issue per finding** — Unmanageable; 49 separate issues
+
+## What We Chose
+
+**One issue per CATEGORY** — 6 issues total, each clear, focused, and assignable to one owner.
+
+## Outcomes
+
+✅ **All 6 remediation issues created and linked to #646**
+
+| # | Title | Owner | Priority | URL |
+|---|-------|-------|----------|-----|
+| 652 | Tighten access control | squad:linus / squad:basher | HIGH | https://github.com/yashasg/fantastic-octo-fortnight/issues/652 |
+| 649 | Doc comments on Services API | squad:basher | HIGH | https://github.com/yashasg/fantastic-octo-fortnight/issues/649 |
+| 650 | Fix column-limit wrapping | squad:linus | MEDIUM | https://github.com/yashasg/fantastic-octo-fortnight/issues/650 |
+| 647 | Fix import ordering | squad:basher | MEDIUM | https://github.com/yashasg/fantastic-octo-fortnight/issues/647 |
+| 648 | IUO review & refactoring | squad:basher | MEDIUM | https://github.com/yashasg/fantastic-octo-fortnight/issues/648 |
+| 651 | Integrate SwiftLint into CI | squad:virgil | TOOLING | https://github.com/yashasg/fantastic-octo-fortnight/issues/651 |
+
+✅ **Issue #646 updated** — "Child Issues" section added at end of body with checklist; team can now parallel-execute remediation work.
+
+## Team Learnings
+
+### For Future Audits
+
+When decomposing audit findings into child issues:
+
+1. **Group by TECHNICAL CATEGORY**, not by file or auditor
+2. **Assign one owner per category** — enables clear PR ownership and review
+3. **Ensure each issue represents ONE PR's natural scope** — avoids fragmentation and maintains reviewer focus
+4. **Separate tooling/infra work** — it affects the entire team and often requires different skills
+
+### Pattern Recognition
+
+This pattern is reusable for:
+- Linting audits (e.g., SwiftLint, Clippy, lint)
+- Security audits (group by vulnerability type, not by file)
+- Performance audits (group by optimization technique, not by hotspot file)
+- API design reviews (group by concern type: naming, documentation, discoverability)
+
+The key insight: **Categorize by concern, not by location.**
+
+## Implementation Notes
+
+- All issues labeled with `squad` + `squad:{owner}` for proper triage routing
+- Each issue body includes parent reference (#646), scope (file list), acceptance criteria, and references to Google Swift Style guide
+- Low-priority items (13 stylistic) left in #646 as a reference; if needed later, can promote to separate issue
+- Tooling issue (#651) depends on all remediation PRs merging first (enforcement gate should activate after codebase passes lint)
+
+## Next Steps
+
+1. Assignees tackle child issues in parallel (recommend order: HIGH → MEDIUM → TOOLING)
+2. Upon merge of each child issue, corresponding checkbox in #646 is ticked
+3. Close #646 after all child issues merged and CI tooling integrated
+

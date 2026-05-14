@@ -150,3 +150,7 @@ Orchestration log recorded at 2026-04-30T09:27:10Z. Confirmed AppCoordinator tes
 - **Best practices observed:** Private helper types (LegalSection, UIKitSwitchView, SettingsSectionHeader) properly scoped; MARK comments used consistently; no trailing closures with multiple arguments; clean separation of concerns in AccessibleToggle and OverlayView.
 
 **For future work:** When initializer parameters total >80 chars, wrap each onto its own line. This is the main pattern improvement needed. Audit report filed in `.squad/decisions/inbox/linus-google-swift-audit.md`.
+
+## 2026-05-15 — #646 fan-out
+
+Two child issues now assigned from Google Swift audit: #650 (column-limit line-wrapping, MEDIUM) and #652 (access control, HIGH, joint with Basher). Ready to parallelize remediation work across Views layer.

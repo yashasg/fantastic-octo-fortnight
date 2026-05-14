@@ -222,3 +222,32 @@ Orchestration log recorded at 2026-04-30T09:27:10Z. Code review approved; decisi
 **Remediation Effort Estimate:** 1–2 hours for full remediation (extension access control fix, doc comments, column-limit wrapping).
 
 **Team Learning:** Google Swift adoption is operationalized. SwiftLint integration into CI is the next critical step to prevent future drift. App layer sets the tone for the codebase — Saul's perfect audit on App/Models establishes the standard; Views/Services need formatting polish to achieve parity.
+
+### 2026-05-15: Audit Decomposition into Remediation Issues
+
+**Task:** Decompose Issue #646 (Google Swift Style adherence audit) into focused, actionable child issues — one per fix CATEGORY (not one per file:line). Each child issue is the natural unit of one PR's worth of work.
+
+**Decomposition Strategy:**
+- **HIGH-priority items:** 2 child issues
+  - #652: Access control (AppCategoryPickerView, AppCoordinator, PauseConditionManager) — owner: Linus + Basher
+  - #649: Doc comments on Services public API — owner: Basher
+- **MEDIUM-priority items:** 3 child issues
+  - #650: Line-wrapping for 100-char column limit (Views/ViewModels, 25 violations) — owner: Linus
+  - #647: Import ordering (Services/Utilities) — owner: Basher
+  - #648: IUO review & refactoring (OverlayManager) — owner: Basher
+- **TOOLING:** 1 child issue
+  - #651: Integrate swift-format & SwiftLint into CI — owner: Virgil
+
+**Rationale:**
+- Grouped by **technical category** (access control, documentation, formatting, imports, tooling), not by file or auditor
+- Each category represents a distinct area of concern with a natural boundary for PR review
+- Column-limit violations (25 instances) bundled as one issue because they follow a single pattern (§Line-Wrapping rule)
+- IUO review separated because it requires code-review judgment, not mechanical fix
+- Tooling issue isolated because it affects CI/CD and requires cross-team coordination
+
+**Outcomes:**
+- All 6 remediation issues created: #647, #648, #649, #650, #651, #652
+- Issue #646 updated with child-issues checklist at end of body
+- Team has clear, independent PRs to parallelize remediation work
+
+**Pattern for Future Audits:** When decomposing audit findings into child issues, group by technical CATEGORY (not per file/line), assign each category to a single owner, and ensure each issue represents one PR's natural scope. This pattern enables parallel team execution and clean PR review boundaries.
