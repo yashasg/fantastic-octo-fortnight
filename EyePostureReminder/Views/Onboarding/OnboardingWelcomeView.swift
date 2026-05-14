@@ -15,7 +15,9 @@ struct OnboardingWelcomeView: View {
 
                     YinYangEyeView()
                         .accessibilityElement(children: .ignore)
-                        .accessibilityLabel(Text("onboarding.welcome.illustrationLabel", bundle: .module))
+                        .accessibilityLabel(
+                            Text("onboarding.welcome.illustrationLabel", bundle: .module)
+                        )
 
                     // Headline + Subheadline
                     VStack(spacing: AppSpacing.sm) {
@@ -46,7 +48,10 @@ struct OnboardingWelcomeView: View {
                         .padding(.vertical, AppSpacing.sm)
                         .background(
                             AppColor.surfaceTint,
-                            in: RoundedRectangle(cornerRadius: AppLayout.radiusCard, style: .continuous)
+                            in: RoundedRectangle(
+                                cornerRadius: AppLayout.radiusCard,
+                                style: .continuous
+                            )
                         )
                         .accessibilityIdentifier("onboarding.welcome.disclaimer")
 

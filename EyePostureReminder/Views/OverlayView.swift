@@ -107,7 +107,8 @@ struct OverlayView: View {
         .accessibilityIdentifier("overlay.dismissButton")
     }
 
-    /// Vertically-centered content stack containing the icon, headline, countdown, and action buttons.
+    /// Vertically-centered content stack containing the icon, headline, countdown, and action
+    /// buttons.
     private var centerContent: some View {
         VStack(spacing: AppSpacing.lg) {
             Spacer()
@@ -314,7 +315,8 @@ struct OverlayView: View {
         reduceMotionOverride ?? reduceMotion
     }
 
-    /// Starts a one-second repeating timer that decrements `secondsRemaining` and triggers auto-dismiss at zero.
+    /// Starts a one-second repeating timer that decrements `secondsRemaining` and triggers
+    /// auto-dismiss at zero.
     private func startTimer() {
         guard timer == nil else { return }
         let newTimer = Timer(timeInterval: 1, repeats: true) { _ in

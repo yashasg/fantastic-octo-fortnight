@@ -55,13 +55,17 @@ struct PrimaryButtonStyle: ButtonStyle {
                 .background(AppColor.primaryRest)
                 .clipShape(RoundedRectangle(cornerRadius: AppLayout.radiusPill, style: .continuous))
                 .scaleEffect((!reduceMotion && configuration.isPressed) ? 0.98 : 1.0)
-                .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: configuration.isPressed)
+                .animation(
+                    reduceMotion ? nil : .easeOut(duration: 0.12),
+                    value: configuration.isPressed
+                )
         }
     }
 }
 
 extension ButtonStyle where Self == PrimaryButtonStyle {
-    /// Pill-shaped primary button: `primaryRest` fill, adaptive high-contrast text, subtle press scale.
+    /// Pill-shaped primary button: `primaryRest` fill, adaptive high-contrast text, subtle press
+    /// scale.
     static var primary: PrimaryButtonStyle { PrimaryButtonStyle() }
 }
 
@@ -155,7 +159,11 @@ struct SecondaryButtonStyle: ButtonStyle {
             .foregroundStyle(AppColor.textSecondary)
             .frame(minHeight: AppLayout.minTapTarget)
             .padding(.horizontal, AppSpacing.md)
-            .opacity(configuration.isPressed ? AppOpacity.pressedButton : (isEnabled ? 1 : AppOpacity.disabledButton))
+            .opacity(
+                configuration.isPressed
+                    ? AppOpacity.pressedButton
+                    : (isEnabled ? 1 : AppOpacity.disabledButton)
+            )
     }
 }
 

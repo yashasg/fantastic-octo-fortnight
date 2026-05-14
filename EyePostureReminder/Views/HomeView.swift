@@ -11,7 +11,8 @@ struct HomeView: View {
 
     @State private var showSettings = false
     @AppStorage(AppStorageKey.openSettingsOnLaunch) private var openSettingsOnLaunch = false
-    @AppStorage(AppStorageKey.trueInterruptSkippedBannerDismissed) private var trueInterruptBannerDismissed = false
+    @AppStorage(AppStorageKey.trueInterruptSkippedBannerDismissed)
+    private var trueInterruptBannerDismissed = false
 #if DEBUG
     @AppStorage(AppStorageKey.uiTestScreenTimeStatus) private var uiTestScreenTimeStatusRaw = ""
 #endif
@@ -24,11 +25,13 @@ struct HomeView: View {
     private let processEnvironmentProvider: ProcessEnvironmentProvider
 
     init(
-        accessibilityNotificationPoster: AccessibilityNotificationPosting = LiveAccessibilityNotificationPoster(),
+        accessibilityNotificationPoster: AccessibilityNotificationPosting
+            = LiveAccessibilityNotificationPoster(),
         launchArguments: [String]? = nil,
         launchArgumentsProvider: @escaping LaunchArgumentsProvider = { CommandLine.arguments },
         processEnvironment: [String: String]? = nil,
-        processEnvironmentProvider: @escaping ProcessEnvironmentProvider = { ProcessInfo.processInfo.environment }
+        processEnvironmentProvider: @escaping ProcessEnvironmentProvider
+            = { ProcessInfo.processInfo.environment }
     ) {
         self.accessibilityNotificationPoster = accessibilityNotificationPoster
         self.launchArguments = launchArguments
@@ -139,7 +142,8 @@ struct HomeView: View {
         launchArguments: [String]? = nil,
         launchArgumentsProvider: LaunchArgumentsProvider = { CommandLine.arguments },
         processEnvironment: [String: String]? = nil,
-        processEnvironmentProvider: ProcessEnvironmentProvider = { ProcessInfo.processInfo.environment }
+        processEnvironmentProvider: ProcessEnvironmentProvider
+            = { ProcessInfo.processInfo.environment }
     ) -> Bool? {
         let resolvedLaunchArguments = launchArguments ?? launchArgumentsProvider()
         if resolvedLaunchArguments.contains("--show-true-interrupt-banner") {
@@ -164,7 +168,8 @@ struct HomeView: View {
         launchArguments: [String]? = nil,
         launchArgumentsProvider: LaunchArgumentsProvider = { CommandLine.arguments },
         processEnvironment: [String: String]? = nil,
-        processEnvironmentProvider: ProcessEnvironmentProvider = { ProcessInfo.processInfo.environment }
+        processEnvironmentProvider: ProcessEnvironmentProvider
+            = { ProcessInfo.processInfo.environment }
     ) -> Bool {
         let resolvedLaunchArguments = launchArguments ?? launchArgumentsProvider()
         if resolvedLaunchArguments.contains("--simulate-screen-time-not-determined") {
@@ -200,7 +205,10 @@ struct HomeView: View {
                     .id(settings.globalEnabled)
                     .transition(.opacity)
                 }
-                .animation(reduceMotion ? nil : AppAnimation.statusCrossfadeCurve, value: settings.globalEnabled)
+                .animation(
+                    reduceMotion ? nil : AppAnimation.statusCrossfadeCurve,
+                    value: settings.globalEnabled
+                )
             }
 
             Spacer()
@@ -406,7 +414,9 @@ struct TrueInterruptSetupPill: View {
             .padding(.horizontal, AppSpacing.sm)
             .padding(.vertical, AppSpacing.xs)
             .background(AppColor.surface, in: Capsule())
-            .overlay(Capsule().strokeBorder(AppColor.separatorSoft, lineWidth: AppLayout.borderHair))
+            .overlay(
+                Capsule().strokeBorder(AppColor.separatorSoft, lineWidth: AppLayout.borderHair)
+            )
         }
         .frame(minHeight: AppLayout.minTapTarget)
         .contentShape(Rectangle())
@@ -453,7 +463,9 @@ struct TrueInterruptSkippedBanner: View {
                     .frame(minHeight: AppLayout.minTapTarget)
                     .contentShape(Rectangle())
                     .foregroundStyle(AppColor.primaryRest)
-                    .accessibilityHint(Text("home.trueInterrupt.skippedBanner.setUp.hint", bundle: .module))
+                    .accessibilityHint(
+                        Text("home.trueInterrupt.skippedBanner.setUp.hint", bundle: .module)
+                    )
                     .accessibilityIdentifier("home.trueInterrupt.skippedBanner.setUp")
 
                     Button(action: onDismiss) {
@@ -463,7 +475,9 @@ struct TrueInterruptSkippedBanner: View {
                     .frame(minHeight: AppLayout.minTapTarget)
                     .contentShape(Rectangle())
                     .foregroundStyle(AppColor.textSecondary)
-                    .accessibilityHint(Text("home.trueInterrupt.skippedBanner.dismiss.hint", bundle: .module))
+                    .accessibilityHint(
+                        Text("home.trueInterrupt.skippedBanner.dismiss.hint", bundle: .module)
+                    )
                     .accessibilityIdentifier("home.trueInterrupt.skippedBanner.dismiss")
                 }
             }
