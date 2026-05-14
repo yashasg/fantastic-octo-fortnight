@@ -97,6 +97,11 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     /// and falls back to `ScreenTimeAuthorizationNoop(.unavailable)`, which
     /// prevents `TrueInterruptSkippedBanner` from ever rendering on the first
     /// cold launch (#457).
+    ///
+    /// `hasSeenOnboarding` is pre-seeded earlier — directly in
+    /// `EyePostureReminderApp.init()` — because `@UIApplicationDelegateAdaptor`
+    /// only instantiates this delegate as part of `UIApplicationMain`, which
+    /// runs *after* the App struct's `init()` body returns. See #707.
     private func preSeedUITestDefaults() {
         if launchArguments.contains("--simulate-screen-time-not-determined") {
             uiTestDefaults.set(

@@ -95,11 +95,20 @@ final class AppDelegateTests: XCTestCase {
         settings: SettingsStore,
         snoozeCountWrites: LockIsolated<[Int]>
     ) -> StoreOf<AppFeature> {
-        Store(initialState: AppFeature.State()) {
+        // The `snapshot` closure on `SettingsClient` is `@Sendable` and therefore
+        // cannot synchronously call `@MainActor`-isolated methods on
+        // `SettingsStore`. Capture the eyes snapshot once on the main actor (this
+        // function is invoked from a `@MainActor` test setUp) and return the
+        // captured value. The `SchedulingFeature` paths under test never re-read
+        // `snapshot`, so a stable initial value is sufficient.
+        let initialEyesSnapshot = MainActor.assumeIsolated {
+            settings.settings(for: .eyes)
+        }
+        return Store(initialState: AppFeature.State()) {
             AppFeature()
         } withDependencies: {
             $0.settingsClient = SettingsClient(
-                snapshot: { settings.settings(for: .eyes) },
+                snapshot: { initialEyesSnapshot },
                 stream: { .finished },
                 updateGlobalEnabled: { _ in },
                 updateEyesEnabled: { _ in },

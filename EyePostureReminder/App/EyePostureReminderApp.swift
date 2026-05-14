@@ -15,12 +15,52 @@ struct EyePostureReminderApp: App {
 
     init() {
         AppTypography.registerFonts()
+#if DEBUG
+        // Mirror onboarding-affecting launch args into UserDefaults BEFORE the
+        // initial state seed below reads them. `AppDelegate.init()` runs too
+        // late under `@UIApplicationDelegateAdaptor` (UIKit only instantiates
+        // the delegate as part of `UIApplicationMain`, after this `App.init`
+        // returns), so deferring the sync to `AppDelegate` left the store on
+        // the stale `true` value left in UserDefaults from the previous test
+        // launch and onboarding tests landed on Home (#707).
+        Self.preSeedHasSeenOnboardingFromLaunchArgsIfNeeded()
+#endif
         var initialState = AppFeature.State()
         initialState.hasSeenOnboarding = UserDefaults.standard.bool(
             forKey: AppStorageKey.hasSeenOnboarding
         )
         self.store = Store(initialState: initialState) { AppFeature() }
     }
+
+#if DEBUG
+    /// Synchronizes the `hasSeenOnboarding` UserDefaults key with the
+    /// onboarding-affecting launch arguments before `init()` reads it to seed
+    /// `AppFeature.State` (#707).
+    ///
+    /// `--reset-onboarding` clears the key; the four "skip past onboarding"
+    /// launch arguments (used by tests that need to start on Home/overlay
+    /// screens) set it to `true`. The full `AppDelegate.applyUITestLaunch
+    /// Arguments()` pass still runs from `didFinishLaunchingWithOptions` and
+    /// handles `SettingsStore` resets and overlay-type seeding — this hook
+    /// only mirrors the onboarding gate so the TCA root state starts on the
+    /// correct branch. `#if DEBUG` keeps the launch-arg backdoor out of
+    /// Release/TestFlight builds (re: #350/#405).
+    private static func preSeedHasSeenOnboardingFromLaunchArgsIfNeeded() {
+        let args = CommandLine.arguments
+        if args.contains("--reset-onboarding") {
+            UserDefaults.standard.removeObject(forKey: AppStorageKey.hasSeenOnboarding)
+            return
+        }
+        let skipsOnboarding =
+            args.contains("--skip-onboarding") ||
+            args.contains("--show-overlay-eyes") ||
+            args.contains("--show-overlay-posture") ||
+            args.contains("--simulate-screen-time-not-determined")
+        if skipsOnboarding {
+            UserDefaults.standard.set(true, forKey: AppStorageKey.hasSeenOnboarding)
+        }
+    }
+#endif
 
     var body: some Scene {
         WindowGroup {
