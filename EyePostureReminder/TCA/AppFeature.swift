@@ -61,8 +61,14 @@ struct AppFeature {
             switch action {
             case .onAppear:
                 return .send(.scheduling(.start))
+            case .scenePhaseChanged(.active):
+                return .merge(
+                    .send(.scheduling(.foregroundTransition)),
+                    .send(.scheduling(.clearExpiredSnoozeIfNeeded))
+                )
+            case .scenePhaseChanged(.background):
+                return .send(.scheduling(.backgroundTransition))
             case .scenePhaseChanged:
-                // Phase-2 issue p0-tca-13 (#676) fills this in.
                 return .none
             case .hasSeenOnboardingChanged(let value):
                 state.hasSeenOnboarding = value

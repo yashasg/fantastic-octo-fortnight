@@ -157,20 +157,40 @@ final class AppFeatureTests: XCTestCase {
         await store.send(.hasSeenOnboardingChanged(true))
     }
 
-    // MARK: - scenePhaseChanged (Phase-2 deferred to #676)
+    // MARK: - scenePhaseChanged (Phase-2 #676 wiring)
 
-    /// `.scenePhaseChanged` must remain a pure no-op until `p0-tca-13`
-    /// (#676) wires scenePhase observation through the store.
-    func test_scenePhaseChanged_active_isNoOp() async {
+    /// `.scenePhaseChanged(.active)` forwards to `SchedulingFeature` as a
+    /// merged `.foregroundTransition` + `.clearExpiredSnoozeIfNeeded` so the
+    /// reducer owns the legacy `coordinator.handleForegroundTransition()` /
+    /// snooze-clearing path that previously lived in `EyePostureReminderApp`.
+    /// Use non-exhaustive matching because deep `SchedulingFeature` parity
+    /// is owned by `p0-tca-17` (#680).
+    func test_scenePhaseChanged_active_forwardsForegroundAndSnoozeClear() async {
         let store = makeStore()
+        store.exhaustivity = .off
+
         await store.send(.scenePhaseChanged(.active))
+
+        await store.receive(\.scheduling.foregroundTransition)
+        await store.receive(\.scheduling.clearExpiredSnoozeIfNeeded)
     }
 
-    func test_scenePhaseChanged_background_isNoOp() async {
+    /// `.scenePhaseChanged(.background)` forwards to
+    /// `SchedulingFeature.backgroundTransition` so analytics + cleanup happen
+    /// inside the reducer, replacing `coordinator.appWillResignActive()`.
+    func test_scenePhaseChanged_background_forwardsBackgroundTransition() async {
         let store = makeStore()
+        store.exhaustivity = .off
+
         await store.send(.scenePhaseChanged(.background))
+
+        await store.receive(\.scheduling.backgroundTransition)
     }
 
+    /// `.scenePhaseChanged(.inactive)` (and any non-active/background phase)
+    /// must remain a pure no-op: SwiftUI fires `.inactive` on every brief
+    /// interruption (control center, task switcher) and the reducer must not
+    /// run foreground/background side-effects on those.
     func test_scenePhaseChanged_inactive_isNoOp() async {
         let store = makeStore()
         await store.send(.scenePhaseChanged(.inactive))
