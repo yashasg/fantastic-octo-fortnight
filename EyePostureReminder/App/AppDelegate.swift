@@ -1,3 +1,4 @@
+import ComposableArchitecture
 import os
 import UIKit
 import UserNotifications
@@ -76,10 +77,12 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     }
 
     /// Set by `EyePostureReminderApp.onAppear` — bridges UIKit delegate
-    /// callbacks into the SwiftUI-owned coordinator.
-    var coordinator: AppCoordinator? {
+    /// callbacks into the TCA root `Store`. Held weakly so the store's
+    /// lifetime is owned exclusively by `EyePostureReminderApp` (`p0-tca-12`
+    /// / #675).
+    weak var store: StoreOf<AppFeature>? {
         didSet {
-            guard coordinator != nil else { return }
+            guard store != nil else { return }
             Task { @MainActor [weak self] in
                 self?.flushPendingNotificationRoutes()
             }
@@ -227,12 +230,13 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         // clean slate. handleForegroundTransition() handles the background→foreground
         // path; this covers cold-launch after a dismissed snooze-wake notification.
         //
-        // ⚠️ On the very first cold launch, `coordinator` is nil here because
+        // ⚠️ On the very first cold launch, `store` is nil here because
         // SwiftUI's `.onAppear` (which sets it) has not fired yet. The optional-
-        // chain silently exits — this is safe because `scheduleReminders()` in
-        // `.task` also checks for and clears expired snooze state.
+        // chain silently exits — this is safe because the `.scheduling(.start)`
+        // task in `EyePostureReminderApp` also checks for and clears expired
+        // snooze state via `scheduleRemindersEffect`.
         Task { @MainActor [weak self] in
-            await self?.coordinator?.clearExpiredSnoozeIfNeeded()
+            self?.store?.send(.scheduling(.clearExpiredSnoozeIfNeeded))
         }
     }
 
@@ -256,7 +260,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
 
     @MainActor
     private func dispatchNotificationRouteOnMainActor(_ route: NotificationRoute) {
-        guard let coordinator else {
+        guard let store else {
             if route != .ignore {
                 pendingNotificationRoutes.append(route)
             }
@@ -264,13 +268,8 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         }
 
         switch route {
-        case .reminder(let type):
-            coordinator.handleNotification(for: type)
-        case .snoozeWake:
-            coordinator.cancelSnoozeWakeTaskIfNeeded()
-            Task { @MainActor in
-                await coordinator.scheduleReminders()
-            }
+        case .reminder, .snoozeWake:
+            store.send(.notificationRouted(route))
         case .ignore:
             break
         }
@@ -278,7 +277,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
 
     @MainActor
     private func flushPendingNotificationRoutes() {
-        guard coordinator != nil, !pendingNotificationRoutes.isEmpty else { return }
+        guard store != nil, !pendingNotificationRoutes.isEmpty else { return }
 
         let routes = pendingNotificationRoutes
         pendingNotificationRoutes.removeAll()
