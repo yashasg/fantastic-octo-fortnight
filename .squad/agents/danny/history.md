@@ -134,3 +134,37 @@
 
 **Follow-up:** Yashas to edit and send; coordinate copy archival to `.squad/log/apple-case-102881605113-sent-{date}.md` post-send.
 
+## Learnings
+
+- **External correspondence must be plain prose, no markdown.** Markdown syntax (e.g., `**bold**`, `- bullets`, numbered lists) renders as literal characters in most email clients and web forms (Apple Developer Support, customer email platforms). Labeled section headers ("What X is:") read as obviously LLM-generated. Solo indie developer voice uses natural paragraphs with varying sentence length and rhythm, contractions, and conversational phrasing ("I can send that over" beats "I would be delighted to provide"). This applies to all future Apple Developer Support replies, customer emails, marketing correspondence, or any human-facing written communication outside the codebase. Substance stays the same; formatting and tone shift to sound authentic and human-readable.
+
+
+---
+
+## 2026-05-14 — Apple Developer Support Reply v2: Plain-Prose Rewrite (Case 102881605113)
+
+**Task:** User-driven revision of v1 send-ready draft. Yashasg rejected v1 for sounding "AI-generated" due to markdown formatting.
+
+**Feedback:** "Sounds like an AI wrote it because you used markdown."
+
+**Revision scope:** Rewrite v1 with identical substance and factual claims, but plain prose with natural paragraphs, no markdown, varied sentence length, contractions, and conversational phrasing. Formatting/voice change only; Frank's legal review remains valid.
+
+**Changes from v1 to v2:**
+- Removed markdown formatting (no `**bold**`, no section headers)
+- Replaced four labeled sections with natural flowing paragraphs
+- Opening: "I'm happy to clarify..." → "Thanks for following up... I wanted to clarify..."
+- "I'm happy to provide" → "I can send that over"
+- Added contractions (`can't`, `it's`)
+- Varied sentence length (short + long mix)
+- Tightened body from ~230 to 165 words
+- All factual claims identical to v1
+
+**Deliverable:** `.squad/decisions/inbox/danny-apple-reply-v2.md` (merged to decisions.md as new send-ready draft; v1 marked SUPERSEDED).
+
+**Status:** ✅ Complete. v2 is send-ready. Frank's legal review of v1 remains valid — substance unchanged.
+
+**Learnings:**
+- **Rewrite pattern:** When substance/accuracy is correct but tone/format read as AI-generated, rewrite in natural voice without markdown. Preserve factual accuracy; shift only formatting and rhythm.
+- **External correspondence style:** No markdown for email/web forms (renders as literal characters). Labeled sections read as LLM-generated. Use conversational paragraphs with varied length, contractions, authentic phrasing.
+- **Indie dev voice markers:** "I can send that over" (not "I would be delighted"), contractions (`can't`, `it's`), varied sentence rhythm, natural opening ("Thanks for the follow-up" not "Dear Sir, Thank you for the follow-up").
+

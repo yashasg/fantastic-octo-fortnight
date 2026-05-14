@@ -286,3 +286,14 @@ All model, protocol, and service skeletons in `EyePostureReminder/`:
 
 **Reusable pattern documented:** Apple correspondence approach (product narrative + distribution impact + sanctioned-only signaling + offer to escalate) now in decisions for TestFlight/App Store appeals, future entitlements.
 
+
+## 2026-05-14 — Apple Reply v2 Current Send-Ready Draft (case 102881605113)
+
+**Update:** v1 apple reply draft approved by Frank has been superseded by v2 (plain-prose rewrite) per user feedback.
+
+**Status:** v2 is now current send-ready draft. Substance identical to v1; formatting/voice only changed from markdown-heavy structure to natural plain prose (no labeled sections, no markdown syntax).
+
+**Why:** Yashasg rejected v1 for sounding "AI-generated" due to markdown formatting and labeled section headers. v2 preserves all factual claims and legal review; only the writing style changed to sound authentically human.
+
+**Next step:** Awaiting Yashas to review v2 and send to Apple (case 102881605113).
+

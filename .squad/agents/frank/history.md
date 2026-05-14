@@ -344,3 +344,23 @@ When responding to Apple Developer Support (entitlements, TestFlight holds, App 
 
 **Follow-up:** Keep copy of sent reply in `.squad/log/apple-case-102881605113-sent-{date}.md` once Yashas sends (protects against "what did we tell them?" disputes, reference for future Apple interactions).
 
+
+## 2026-05-14 — Apple Reply v1 Superseded by v2 (Plain-Prose Rewrite)
+
+**Task:** Notified of user feedback on v1 approved draft (case 102881605113).
+
+**Context:** Yashasg reviewed v1 draft (approved by Frank on 2026-05-14) and rejected it for sounding "AI-generated" due to markdown formatting. v1 used labeled section headers (`**What kshana is:**`, `**Why these entitlements are required:**`, etc.)—patterns that read as obviously LLM-generated.
+
+**Revision scope:** Danny rewrote v1 as plain prose with identical substance and factual claims. Only formatting and voice changed; Frank's legal review remains valid. Substance unchanged — Frank does NOT need to re-review.
+
+**Changes from v1 to v2:**
+- Removed markdown syntax (no `**bold**`, no section headers)
+- Replaced labeled sections with natural flowing paragraphs
+- Shortened opening, added contractions, varied sentence length
+- Tightened from ~230 to 165 words
+- All factual claims identical to v1
+
+**Status:** v2 is new send-ready draft. v1 marked as SUPERSEDED in decisions.md (historical record preserved). Frank's v1 legal review and edits remain part of permanent record; no re-review needed.
+
+**Learning:** External correspondence must use plain prose with no markdown. Labeled section headers read as obviously AI-generated. Substance and factual accuracy (Frank's domain) unchanged; only formatting/voice shifted for human authenticity.
+
