@@ -216,7 +216,10 @@ final class AppCoordinatorNotificationFallbackTests: XCTestCase {
             object: nil,
             userInfo: [AppGroupIPCStore.trueInterruptEnabledValueUserInfoKey: false]
         )
-        await awaitCondition {
+        // The notification → refreshAuthStatus → scheduleReminders → addRequest×2
+        // pipeline routinely exceeds the 1 s default on loaded CI runners (#712).
+        // Use the same 3 s budget as the sibling shieldPathSelected wait at line 173.
+        await awaitCondition(timeout: 3.0) {
             notificationCenter.addedRequests.count >= 2 &&
                 ipcStore.events.contains { $0.kind == .notificationFallbackScheduled }
         }
