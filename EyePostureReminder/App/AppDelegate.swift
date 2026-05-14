@@ -98,13 +98,11 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     /// prevents `TrueInterruptSkippedBanner` from ever rendering on the first
     /// cold launch (#457).
     ///
-    /// Also pre-seeds `hasSeenOnboarding` so the TCA root state seeded in
-    /// `EyePostureReminderApp.init()` (`p0-tca-11` / #674) sees the correct
-    /// value. Without this, `--reset-onboarding` and `--skip-onboarding` are
-    /// applied too late (in `didFinishLaunching`) and the store keeps the
-    /// stale value left over from the previous test launch (#707).
+    /// `hasSeenOnboarding` is pre-seeded earlier — directly in
+    /// `EyePostureReminderApp.init()` — because `@UIApplicationDelegateAdaptor`
+    /// only instantiates this delegate as part of `UIApplicationMain`, which
+    /// runs *after* the App struct's `init()` body returns. See #707.
     private func preSeedUITestDefaults() {
-        preSeedHasSeenOnboardingIfNeeded()
         if launchArguments.contains("--simulate-screen-time-not-determined") {
             uiTestDefaults.set(
                 ScreenTimeAuthorizationStatus.notDetermined.rawValue,
@@ -123,31 +121,6 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
                !launchArguments.contains("--dismiss-true-interrupt-banner") {
                 uiTestDefaults.set(false, forKey: AppStorageKey.trueInterruptSkippedBannerDismissed)
             }
-        }
-    }
-
-    /// Synchronizes the `hasSeenOnboarding` UserDefaults key with the
-    /// onboarding-affecting launch args before `EyePostureReminderApp.init()`
-    /// reads it to seed `AppFeature.State.hasSeenOnboarding` (#707).
-    ///
-    /// `--reset-onboarding` removes the key; the four "skip past onboarding"
-    /// launch args (used by tests that need to start on Home/overlay screens)
-    /// set it to `true`. The full `applyUITestLaunchArguments()` pass still
-    /// runs from `didFinishLaunching` and handles `SettingsStore` resets and
-    /// overlay-type seeding — this hook only mirrors the onboarding gate so
-    /// the TCA store starts on the correct branch.
-    private func preSeedHasSeenOnboardingIfNeeded() {
-        if launchArguments.contains("--reset-onboarding") {
-            uiTestDefaults.removeObject(forKey: AppStorageKey.hasSeenOnboarding)
-            return
-        }
-        let skipsOnboarding =
-            launchArguments.contains("--skip-onboarding") ||
-            launchArguments.contains("--show-overlay-eyes") ||
-            launchArguments.contains("--show-overlay-posture") ||
-            launchArguments.contains("--simulate-screen-time-not-determined")
-        if skipsOnboarding {
-            uiTestDefaults.set(true, forKey: AppStorageKey.hasSeenOnboarding)
         }
     }
 #endif
