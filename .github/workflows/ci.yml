@@ -259,20 +259,35 @@ jobs:
           ./scripts/setup-uitests.sh
 
       - name: Build UI tests for testing (once)
+        # -skipMacroValidation suppresses Xcode's interactive trust prompt for
+        # the Swift macro plugins introduced by the swift-composable-architecture
+        # 1.25.5 dependency (#664). Even though the UI test target does not
+        # import TCA, building the local SwiftPM package resolves the full
+        # macro graph (ComposableArchitectureMacros, CasePathsMacros,
+        # DependenciesMacrosPlugin, PerceptionMacros), which fails headless
+        # validation otherwise.
+        #
+        # SWIFT_TREAT_WARNINGS_AS_ERRORS / GCC_TREAT_WARNINGS_AS_ERRORS are
+        # NOT passed as xcodebuild command-line overrides because they
+        # propagate to every target — including the TCA dependency targets
+        # that pass `-suppress-warnings` in their own package configs — and
+        # the two flags conflict (`error: conflicting options
+        # '-warnings-as-errors' and '-suppress-warnings'`). The no-warning
+        # contract on first-party UI test targets is enforced per-target via
+        # SWIFT_TREAT_WARNINGS_AS_ERRORS = YES in UITests/project.yml.
         run: |
           xcodebuild build-for-testing \
             -project UITests/EyePostureReminderUITests.xcodeproj \
             -scheme EyePostureReminderUITests \
             -destination "${{ env.SIMULATOR }}" \
             -derivedDataPath "${{ env.DERIVED_DATA_PATH }}" \
+            -skipMacroValidation \
             CODE_SIGN_IDENTITY= \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
             ENABLE_BITCODE=NO \
             ENABLE_APP_INTENTS_METADATA_EXTRACTION=NO \
-            ENABLE_APPINTENTS_METADATA_EXTRACTION=NO \
-            SWIFT_TREAT_WARNINGS_AS_ERRORS=YES \
-            GCC_TREAT_WARNINGS_AS_ERRORS=YES
+            ENABLE_APPINTENTS_METADATA_EXTRACTION=NO
 
       - name: Verify prebuilt xctestrun
         run: |

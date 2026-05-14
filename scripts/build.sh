@@ -58,8 +58,13 @@ XCODE_FLAGS=(
   ENABLE_BITCODE=NO
   ENABLE_APP_INTENTS_METADATA_EXTRACTION=NO
   ENABLE_APPINTENTS_METADATA_EXTRACTION=NO
-  SWIFT_TREAT_WARNINGS_AS_ERRORS=YES
-  GCC_TREAT_WARNINGS_AS_ERRORS=YES
+  # SWIFT_TREAT_WARNINGS_AS_ERRORS / GCC_TREAT_WARNINGS_AS_ERRORS are NOT set
+  # here — passing them as xcodebuild build settings would propagate to every
+  # SwiftPM dependency (e.g. swift-collections, swift-concurrency-extras), and
+  # those packages set `-suppress-warnings` themselves, which conflicts with
+  # `-warnings-as-errors`, breaking the build (#664). Both values are already
+  # enforced on every first-party target via project.yml lines 75/130/165 and
+  # UITests/project.yml lines 47/102, so app coverage is unchanged.
 )
 
 # ── Guards ───────────────────────────────────────────────────────────────────
@@ -109,6 +114,10 @@ elapsed() {
 }
 
 # ── xcodebuild runner (xcpretty fallback) ─────────────────────────────────────
+# Note: -skipMacroValidation suppresses the interactive "trust" prompt
+# Xcode otherwise requires for Swift macros (e.g. ComposableArchitecture's
+# `@Reducer`, `@DependencyClient`). Required for headless / CI builds — added
+# in #664 alongside the swift-composable-architecture 1.25.5 dependency.
 run_xcodebuild() {
   local start rc
   start=$(date +%s)
@@ -120,11 +129,11 @@ run_xcodebuild() {
     # still holds xcodebuild's real exit code.  Using `|| true` instead would
     # reset PIPESTATUS to (0) before we can read it — that was the false-green bug.
     set +o pipefail
-    xcodebuild "$@" "${XCODE_FLAGS[@]}" | xcpretty
+    xcodebuild -skipMacroValidation "$@" "${XCODE_FLAGS[@]}" | xcpretty
     rc=${PIPESTATUS[0]}
     set -o pipefail
   else
-    xcodebuild "$@" "${XCODE_FLAGS[@]}" || rc=$?
+    xcodebuild -skipMacroValidation "$@" "${XCODE_FLAGS[@]}" || rc=$?
   fi
 
   echo "  (took $(elapsed "$start"))"
@@ -511,7 +520,7 @@ cmd_clean() {
   dest=$(detect_destination)
 
   info "Cleaning DerivedData and build products…"
-  xcodebuild clean \
+  xcodebuild clean -skipMacroValidation \
     -scheme "$SCHEME" \
     -destination "$dest" \
     -derivedDataPath "$DERIVED_DATA_PATH" \

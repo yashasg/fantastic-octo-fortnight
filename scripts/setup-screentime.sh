@@ -107,9 +107,17 @@ if [[ "${1:-}" == "--build" ]]; then
   # avoid "extension CFBundleVersion must match containing app" warnings.
   # CI sets BUILD_NUMBER (= github.run_number) before calling this script;
   # locally it defaults to "1" which matches the project.yml baseline.
+  # -skipMacroValidation suppresses Xcode's interactive "trust" prompt for
+  # Swift macros (e.g. ComposableArchitecture's @Reducer, @DependencyClient).
+  # Even though the extension targets do not import TCA, the local SwiftPM
+  # package resolves the full dependency graph (including macro plugins) when
+  # generating the dependency graph for any xcodebuild invocation, so the
+  # validation gate trips here too. Required for headless / CI builds — added
+  # in #664 alongside the swift-composable-architecture 1.25.5 dependency.
   BUILD_NUMBER="${BUILD_NUMBER:-1}"
   set +e
   xcodebuild build \
+    -skipMacroValidation \
     -project "$XCODEPROJ" \
     -scheme "$SCHEME" \
     -destination "$DEST" \
