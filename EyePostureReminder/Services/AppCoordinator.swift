@@ -654,8 +654,8 @@ final class AppCoordinator: ObservableObject {
 
 }
 
-private extension AppCoordinator {
-    static func resolveSettings(
+extension AppCoordinator {
+    private static func resolveSettings(
         _ settings: SettingsStore?,
         makeSettings: (() -> SettingsStore)?
     ) -> SettingsStore {
@@ -668,7 +668,7 @@ private extension AppCoordinator {
         return SettingsStore()
     }
 
-    static func resolveScheduler(
+    private static func resolveScheduler(
         _ scheduler: ReminderScheduling?,
         makeScheduler: (() -> ReminderScheduling)?
     ) -> ReminderScheduling {
@@ -681,7 +681,7 @@ private extension AppCoordinator {
         return ReminderScheduler()
     }
 
-    static func resolveOverlayManager(
+    private static func resolveOverlayManager(
         _ overlayManager: OverlayPresenting?,
         makeOverlayManager: (() -> OverlayPresenting)?
     ) -> OverlayPresenting {
@@ -694,7 +694,7 @@ private extension AppCoordinator {
         return OverlayManager()
     }
 
-    static func resolveScreenTimeAuthorization(
+    private static func resolveScreenTimeAuthorization(
         _ screenTimeAuthorization: ScreenTimeAuthorizationProviding?,
         uiTestStatusStore: UserDefaults,
         processEnvironment: [String: String],
@@ -718,13 +718,13 @@ private extension AppCoordinator {
         return screenTimeAuthorization
     }
 
-    static func resolveDeviceActivityMonitor(
+    private static func resolveDeviceActivityMonitor(
         _ deviceActivityMonitor: DeviceActivityMonitorProviding?
     ) -> DeviceActivityMonitorProviding {
         deviceActivityMonitor ?? DeviceActivityMonitorNoop()
     }
 
-    static func resolveScreenTimeTracker(
+    private static func resolveScreenTimeTracker(
         _ screenTimeTracker: ScreenTimeTracking?,
         uiTestMode: Bool,
         makeScreenTimeTracker: (() -> ScreenTimeTracking)?
@@ -741,7 +741,7 @@ private extension AppCoordinator {
         return screenTimeTracker
     }
 
-    static func resolvePauseConditionManager(
+    private static func resolvePauseConditionManager(
         _ pauseConditionProvider: PauseConditionProviding?,
         settings: SettingsStore,
         uiTestMode: Bool,

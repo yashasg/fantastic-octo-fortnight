@@ -273,53 +273,29 @@ final class TrueInterruptViewCoverageTests: XCTestCase {
     // MARK: - Accessibility Hint Body Tests
 
     func test_appCategoryPickerView_unavailable_bodyContainsPrimaryButtonHint() {
-        let view = AppCategoryPickerView(
-            appsState: makeSelectedAppsState(),
-            authorizationStatus: .unavailable,
-            onRequestAuthorization: {},
-            onDone: {}
-        )
         XCTAssertEqual(
-            view.primaryButtonHintKey,
+            AppCategoryPickerView.primaryButtonHintKey(for: .unavailable),
             "appCategoryPicker.button.pendingApproval.hint",
             "Unavailable state must use pending-approval hint key")
     }
 
     func test_appCategoryPickerView_notDetermined_bodyContainsPrimaryButtonHint() {
-        let view = AppCategoryPickerView(
-            appsState: makeSelectedAppsState(),
-            authorizationStatus: .notDetermined,
-            onRequestAuthorization: {},
-            onDone: {}
-        )
         XCTAssertEqual(
-            view.primaryButtonHintKey,
+            AppCategoryPickerView.primaryButtonHintKey(for: .notDetermined),
             "appCategoryPicker.button.enableAccess.hint",
             "Not-determined state must use enable-access hint key")
     }
 
     func test_appCategoryPickerView_denied_bodyContainsPrimaryButtonHint() {
-        let view = AppCategoryPickerView(
-            appsState: makeSelectedAppsState(),
-            authorizationStatus: .denied,
-            onRequestAuthorization: {},
-            onDone: {}
-        )
         XCTAssertEqual(
-            view.primaryButtonHintKey,
+            AppCategoryPickerView.primaryButtonHintKey(for: .denied),
             "appCategoryPicker.button.openSettings.hint",
             "Denied state must use open-settings hint key")
     }
 
     func test_appCategoryPickerView_approved_bodyContainsPrimaryButtonHint() {
-        let view = AppCategoryPickerView(
-            appsState: makeSelectedAppsState(),
-            authorizationStatus: .approved,
-            onRequestAuthorization: {},
-            onDone: {}
-        )
         XCTAssertEqual(
-            view.primaryButtonHintKey,
+            AppCategoryPickerView.primaryButtonHintKey(for: .approved),
             "appCategoryPicker.button.selectApps.hint",
             "Approved state must use select-apps hint key")
     }
