@@ -52,6 +52,12 @@ typealias AudioSessionFactory = () -> AudioSessionControlling
 final class AudioInterruptionManager: MediaControlling {
     private let audioSession: AudioSessionControlling
 
+    /// Creates an audio-interruption manager bound to a specific audio session.
+    ///
+    /// - Parameters:
+    ///   - audioSession: Pre-built session used directly when supplied (test seam).
+    ///   - makeAudioSession: Factory invoked only when `audioSession` is `nil`;
+    ///     defaults to `AVAudioSession.sharedInstance()` for production use.
     init(
         audioSession: AudioSessionControlling? = nil,
         makeAudioSession: @escaping AudioSessionFactory = { AVAudioSession.sharedInstance() }
@@ -61,6 +67,11 @@ final class AudioInterruptionManager: MediaControlling {
 
     // MARK: - MediaControlling
 
+    /// Activates `AVAudioSession` with the `.soloAmbient` category to interrupt other apps' audio.
+    ///
+    /// Called immediately before an overlay appears. Failures are logged but
+    /// non-fatal — the overlay still presents, and `resumeExternalAudio()` remains
+    /// safe to call on dismissal because deactivating an inactive session is a no-op.
     func pauseExternalAudio() {
         do {
             try audioSession.setCategory(.soloAmbient, mode: .default, options: [])
@@ -80,6 +91,12 @@ final class AudioInterruptionManager: MediaControlling {
         }
     }
 
+    /// Deactivates `AVAudioSession` and notifies other apps to resume playback.
+    ///
+    /// Must be called from every overlay dismiss path to release the audio
+    /// interruption. Uses `.notifyOthersOnDeactivation` so apps such as
+    /// Spotify or Podcasts resume automatically. Failures are logged and
+    /// otherwise ignored.
     func resumeExternalAudio() {
         do {
             // .notifyOthersOnDeactivation lets Spotify / Podcasts / etc. resume automatically.

@@ -1,5 +1,13 @@
 import SwiftUI
 
+/// Settings list row that toggles a single `ReminderType` and exposes its
+/// interval and break-duration pickers when enabled.
+///
+/// Used inside `SettingsView` to render one row per reminder kind. Calls
+/// `onChanged` after every binding mutation so the parent view-model can
+/// persist updated `ReminderSettings`. VoiceOver announcements are posted
+/// via the injected `AccessibilityNotificationPosting` whenever the row
+/// expands or collapses, satisfying the accessibility requirement in #432.
 struct ReminderRowView: View {
 
     let type: ReminderType

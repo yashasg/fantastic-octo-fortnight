@@ -8,6 +8,11 @@ import Foundation
 
 // MARK: - NoopScreenTimeTracker
 
+/// Inert `ScreenTimeTracking` used only when the app is launched in UI-test mode.
+///
+/// Replaces the live tracker so XCUITest runs do not spin up the per-second
+/// timers and lifecycle observers used by `ScreenTimeTracker`, which would
+/// otherwise prevent the accessibility tree from settling between interactions.
 @MainActor
 final class NoopScreenTimeTracker: ScreenTimeTracking {
     var onThresholdReached: (@MainActor (ReminderType) -> Void)?
@@ -27,6 +32,11 @@ final class NoopScreenTimeTracker: ScreenTimeTracking {
 
 // MARK: - NoopPauseConditionManager
 
+/// Inert `PauseConditionProviding` used only when the app is launched in UI-test mode.
+///
+/// Always reports `isPaused == false` and never invokes `onPauseStateChanged`,
+/// so UI tests observe a deterministic, never-paused state regardless of
+/// device focus modes, CarPlay, or other live pause sources.
 @MainActor
 final class NoopPauseConditionManager: PauseConditionProviding {
     var isPaused: Bool { false }

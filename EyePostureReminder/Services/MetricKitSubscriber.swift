@@ -47,6 +47,10 @@ protocol MetricKitSubscribing {
 /// in the Xcode Organizer log stream. No third-party crash SDK is needed for the beta.
 final class MetricKitSubscriber: NSObject, MXMetricManagerSubscriber {
 
+    /// Process-wide singleton used by `AppDelegate` to register the subscriber once at launch.
+    ///
+    /// Tests that need to inject mocks must construct their own instance via `init(...)`
+    /// rather than mutate this shared value.
     static let shared = MetricKitSubscriber()
 
     private let metricManager: MetricKitManaging
