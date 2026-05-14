@@ -56,3 +56,12 @@ Orchestration log recorded at 2026-04-30T09:27:10Z. Root cause diagnosis documen
 - 2026-05-02: Overlay UI-test flakiness was primarily synchronization drift, not animation duration. Using deterministic anchors (`home.title`, `overlay.doneButton` hittable, `overlay.root` disappearance) removed false negatives from hidden-but-mounted overlay elements and cut focused overlay/dark-mode shard time from 278s (5 failures) to 144s (0 failures) on identical filtered selection.
 - 2026-05-02: #497/#498 closeout — replaced three AppCoordinator line-hit tests with state assertions, then added active-snooze notification coverage. `handleNotification` now ignores reminder delivery while `snoozedUntil` is in the future, preserving snooze state and preventing queued overlay leaks; targeted and full suites stayed green.
 - 2026-05-06: Cleared SwiftLint test blockers by removing extra blank lines in `OverlayManagerTests`/`OverlayManagerExtendedTests`, sorting imports in detector/audio/AppGroup test files, and adding targeted test-only lint suppressions for oversized legacy test bodies/files (`AppCoordinator*`, `SettingsStoreTests`, `SettingsViewModelExtendedTests`, `AppGroupIPCStoreTests`) without changing assertions.
+
+## 2026-05-14: Google Swift Style Audit Completed (Issue #646)
+
+**Event:** Full-codebase audit (53 files, 9,164 LOC) completed against docs/google_swift_coding_style.md. Google Swift Style now canonical for kshana.
+
+**Note for Livingston:** Test code was explicitly excluded from this audit pass. If the team decides to bring test code into compliance with Google Swift Style (e.g., doc comments on test fixtures, line-wrapping in large test helpers), that will be a separate audit and remediation effort. Flag for future request if needed.
+
+**Related:** GitHub Issue #646 contains audit findings across production code only (Views/ViewModels, Services/Utilities, App/Models). Branch: chore/coding-standards-audit.
+

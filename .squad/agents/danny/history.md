@@ -204,3 +204,14 @@ The plain-prose, no-markdown pattern for external correspondence was successfull
 
 This is the first real-world validation of the pattern. Future external correspondence (customer support, App Store appeals, etc.) should follow the same model. **Next validation:** Apply to 2–3 more external emails. If pattern holds, bump confidence to high.
 
+
+## 2026-05-14: Google Swift Style Guide Adopted (Audit #646)
+
+**Event:** Full-codebase audit completed against docs/google_swift_coding_style.md. Results: 53 files audited, 7 HIGH violations, 29+ MEDIUM, 13 LOW. App + Models scope (danny's product layer) achieved perfect compliance (0 violations).
+
+**Key for Danny:** Google Swift Style is now the canonical coding standard for kshana. Future product/spec work should reference this when discussing engineering quality bar (e.g., "let's ensure this feature adheres to Google Swift Style"). Replaces the previously aspirational status.
+
+**Related:** GitHub Issue #646 contains full audit findings, violation tracker, and remediation roadmap. Branch: chore/coding-standards-audit.
+
+**Reuse:** When scoping product features, mention Google Swift Style as a quality gate. Example: "This feature must land with full documentation per Google Swift Style §5" (a requirement most developers will now recognize).
+

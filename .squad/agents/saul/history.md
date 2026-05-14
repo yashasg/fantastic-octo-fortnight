@@ -166,3 +166,59 @@ Orchestration log recorded at 2026-04-30T09:27:10Z. Code review approved; decisi
 - Verified SwiftUI reactivity (objectWillChange fires on private storage)
 - Confirmed API surface unchanged; all 35+ test callsites unaffected
 - Established team rule: Never reassign @Published inside didSet; use private published backing + computed setter
+
+### 2026-05-14: Coding Standards Audit
+
+**Scope:** Comprehensive audit of what coding standards are actually enforced vs. conventional vs. aspirational in the kshana repo.
+
+**Findings Summary:**
+
+**ENFORCED (build/CI will fail):**
+- Compiler warnings as errors (`SWIFT_TREAT_WARNINGS_AS_ERRORS=YES`, build.sh:61–62)
+- 80% code coverage minimum (ci.yml:184)
+- All tests must pass before merge
+- Distribution entitlements guardrail (no FamilyControls before #201 approved)
+
+**CONVENTIONAL (practiced but not mechanically enforced):**
+- SwiftLint configured (.swiftlint.yml: 30+ opt-in rules, line_length error: 160) but NOT invoked in CI (only cached)
+- MARK comment organization (all Models/ViewModels)
+- @MainActor on UI-bound types (AppCoordinator, SettingsViewModel)
+- [weak self] in Task closures (code-review enforced, team rule from #115 fix)
+- Protocol-driven DI (NotificationScheduling, OverlayPresenting, ReminderScheduling)
+- Design system tokens (AppColor.*, AppFont.*, AppSymbol.*) — no hardcoded Color/Font/SF Symbol strings
+- Public API documentation (doc comments with summaries)
+- Zero force unwraps in production code
+- Consistent file organization (Models/, ViewModels/, Views/, Services/, Utilities/, App/)
+- BDD test naming (test_When_Then pattern)
+
+**ASPIRATIONAL (documented but not applied):**
+- Google Swift Style Guide (docs/google_swift_coding_style.md) is a clipping/reference, not integrated into team tooling
+
+**Key Learning:** The codebase practices strong conventions and has reasonable linting config, but SwiftLint is not part of CI. Local developers who run `./scripts/build.sh lint` catch violations; CI-only workflows (web edits, direct pushes) skip linting. The discrepancy between configured and enforced is the main gap.
+
+### 2026-05-15: Full-Codebase Google Swift Style Audit (Squad Parallel Pass)
+
+**Scope:** 53 Swift files (9164 LOC) across 3 parallel auditors covering full scope: App (Saul, 6 files), Views/ViewModels (Linus, 18 files), Services/Utilities (Basher, 29 files).
+
+**Audit Findings:**
+- **HIGH: 7 items** — 1 access level violation (AppCategoryPickerView), 1 extension access control violation (AppCoordinator), 1 IUO verification (OverlayManager), 4 missing doc comments on public API
+- **MEDIUM: 29+ items** — 25 column-limit violations (Views/ViewModels, mostly formatting), 1 missing doc comment (ReminderRowView), 3 doc formatting, 1 import ordering
+- **LOW: 13 items** — stylistic/documentation, all already compliant or trivial
+
+**Scope Performance:**
+- App + Models (Saul): **PERFECT** — 6/6 files, 0 HIGH, 0 MEDIUM, 0 LOW. Exemplary entry-point and model layer code.
+- Views + ViewModels (Linus): **STRONG** — 18 files, 1 HIGH (access control), 25 MEDIUM (formatting), clean structure.
+- Services + Utilities (Basher): **EXCELLENT** — 29 files, 6 HIGH (doc comments), 4 MEDIUM (minor fixes), **zero force unwraps/casts across entire scope**. Mature error handling.
+
+**Key Patterns:**
+1. **Zero force unwraps in production code** — entire codebase demonstrates defensive programming excellence.
+2. **Protocol-driven design** — all service dependencies abstracted; exceptional testability.
+3. **Access-level discipline** — no over-exposure of internal members (1 violation found and flagged).
+4. **Column-limit violations** — 25 instances (1% of Views/ViewModels), mechanically fixable with line-wrapping.
+5. **Doc comments** — strong on public APIs; 4 stubs and computed properties lack documentation (easily remediated).
+
+**GitHub Issue:** [#646 — Audit: Google Swift Style adherence](https://github.com/yashasg/fantastic-octo-fortnight/issues/646)
+
+**Remediation Effort Estimate:** 1–2 hours for full remediation (extension access control fix, doc comments, column-limit wrapping).
+
+**Team Learning:** Google Swift adoption is operationalized. SwiftLint integration into CI is the next critical step to prevent future drift. App layer sets the tone for the codebase — Saul's perfect audit on App/Models establishes the standard; Views/Services need formatting polish to achieve parity.

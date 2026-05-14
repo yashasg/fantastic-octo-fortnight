@@ -322,3 +322,17 @@ The app respects user-defined system DND contexts. Wellness breaks are *offered*
 
 **Related Decision:** See `.squad/decisions.md` → "Apple Developer Support Reply — Sent" entry for full context.
 
+
+## 2026-05-14: Google Swift Style Guide Adopted (Audit #646)
+
+**Event:** Full-codebase audit completed. Google Swift Style is now canonical for all new work. Baseline: 53 files, 9,164 LOC audited across Views/ViewModels (Linus), Services/Utilities (Basher), App/Models (Saul).
+
+**Key for Rusty:** Future architecture decisions should respect Google Swift Style, particularly in these high-impact rule areas per the audit:
+1. **Doc comments on public API:** Services audit found 6 missing doc comments on public singletons and methods. Set this as expectation for any new service layer work.
+2. **Access-control discipline:** One file-level extension access control violation (AppCoordinator.swift:657) and one access-level leak (AppCategoryPickerView:139). Emphasize: Use explicit member-level access modifiers; never file-level on extensions. Verify public computed properties are truly public.
+3. **Column-limit / line-wrapping:** 25 violations in Views. When reviewing PRs, flag lines >100 chars and require wrapping per Google's line-wrapping rules (Section 5.4).
+
+**Related:** GitHub Issue #646 contains full audit findings, violation tracker, and remediation roadmap. Branch: chore/coding-standards-audit.
+
+**Reuse:** When making architecture decisions (DI protocols, service abstractions, API boundaries), mention Google Swift Style conformance as a design criterion.
+
