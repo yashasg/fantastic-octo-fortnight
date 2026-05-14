@@ -35,6 +35,7 @@ struct AppFeature {
     enum Action {
         case onAppear
         case scenePhaseChanged(ScenePhase)
+        case hasSeenOnboardingChanged(Bool)
         case home(HomeFeature.Action)
         case settings(SettingsFeature.Action)
         case onboarding(OnboardingFeature.Action)
@@ -56,12 +57,15 @@ struct AppFeature {
         Scope(state: \.onboarding, action: \.onboarding) { OnboardingFeature() }
         Scope(state: \.scheduling, action: \.scheduling) { SchedulingFeature() }
 
-        Reduce { _, action in
+        Reduce { state, action in
             switch action {
             case .onAppear:
                 return .send(.scheduling(.start))
             case .scenePhaseChanged:
                 // Phase-2 issue p0-tca-13 (#676) fills this in.
+                return .none
+            case .hasSeenOnboardingChanged(let value):
+                state.hasSeenOnboarding = value
                 return .none
             case .notificationRouted:
                 // Phase-2 issue p0-tca-12 (#675) fills this in.
