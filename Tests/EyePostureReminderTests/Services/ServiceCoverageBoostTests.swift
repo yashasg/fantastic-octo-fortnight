@@ -1,3 +1,4 @@
+import ComposableArchitecture
 import MetricKit
 import XCTest
 
@@ -226,35 +227,39 @@ final class ServiceCoverageBoostTests: XCTestCase {
 
     // MARK: - AppDelegate
 
-    func test_appDelegate_initAndSetCoordinator() {
+    func test_appDelegate_initAndSetStore() {
         let delegate = AppDelegate()
-        let coordinator = AppCoordinator(
-            scheduler: MockReminderScheduler(),
-            notificationCenter: MockNotificationCenter(),
-            overlayManager: MockOverlayPresenting(),
-            screenTimeTracker: MockScreenTimeTracker(),
-            pauseConditionProvider: MockPauseConditionProvider(),
-            ipcStore: MockAppGroupIPCRecorder())
-        delegate.coordinator = coordinator
-        XCTAssertNotNil(delegate.coordinator)
+        let store = Store(initialState: AppFeature.State()) {
+            AppFeature()
+        } withDependencies: {
+            $0.notificationClient = NotificationClient(
+                requestAuthorization: { _ in false },
+                authorizationStatus: { .notDetermined },
+                add: { _ in },
+                removePending: { _ in },
+                removeAllPending: {},
+                pendingRequests: { [] },
+                deliveredNotifications: { [] }
+            )
+        }
+        delegate.store = store
+        XCTAssertNotNil(delegate.store)
     }
 
-    func test_appDelegate_applicationDidBecomeActive_withNilCoordinator() {
+    func test_appDelegate_applicationDidBecomeActive_withNilStore() {
         let delegate = AppDelegate()
-        delegate.coordinator = nil
+        delegate.store = nil
         delegate.applicationDidBecomeActive(UIApplication.shared)
-        // Should not crash — coordinator?.clearExpiredSnoozeIfNeeded() silently exits
+        // Should not crash — store?.send(...) silently exits when store is nil.
     }
 
-    func test_appDelegate_applicationDidBecomeActive_withCoordinator() {
+    func test_appDelegate_applicationDidBecomeActive_withStore() {
         let delegate = AppDelegate()
-        delegate.coordinator = AppCoordinator(
-            scheduler: MockReminderScheduler(),
-            notificationCenter: MockNotificationCenter(),
-            overlayManager: MockOverlayPresenting(),
-            screenTimeTracker: MockScreenTimeTracker(),
-            pauseConditionProvider: MockPauseConditionProvider(),
-            ipcStore: MockAppGroupIPCRecorder())
+        delegate.store = Store(initialState: AppFeature.State()) {
+            AppFeature()
+        } withDependencies: {
+            $0.analyticsClient = AnalyticsClient(log: { _ in })
+        }
         delegate.applicationDidBecomeActive(UIApplication.shared)
     }
 

@@ -53,7 +53,7 @@ struct EyePostureReminderApp: App {
                     }
                 }
                 .onAppear {
-                    appDelegate.coordinator = coordinator
+                    appDelegate.store = store
                     presentUITestOverlayIfNeeded()
                 }
         }

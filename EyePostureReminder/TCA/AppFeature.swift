@@ -67,9 +67,8 @@ struct AppFeature {
             case .hasSeenOnboardingChanged(let value):
                 state.hasSeenOnboarding = value
                 return .none
-            case .notificationRouted:
-                // Phase-2 issue p0-tca-12 (#675) fills this in.
-                return .none
+            case let .notificationRouted(route):
+                return .send(.scheduling(.notificationRouted(route)))
             case .home, .settings, .onboarding, .scheduling, .overlay, .destination:
                 return .none
             }
