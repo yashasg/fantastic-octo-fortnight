@@ -23,7 +23,8 @@ struct OnboardingView: View {
             LiveAccessibilityNotificationPoster()
         }
     ) {
-        self.accessibilityNotificationPoster = accessibilityNotificationPoster ?? makeAccessibilityNotificationPoster()
+        self.accessibilityNotificationPoster =
+            accessibilityNotificationPoster ?? makeAccessibilityNotificationPoster()
     }
 
     private static let configurePageControl: Void = {

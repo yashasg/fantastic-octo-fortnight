@@ -27,7 +27,8 @@ struct ReminderRowView: View {
         breakDuration: Binding<TimeInterval>,
         onChanged: @escaping () -> Void,
         reduceMotionOverride: Bool? = nil,
-        accessibilityNotificationPoster: AccessibilityNotificationPosting = LiveAccessibilityNotificationPoster()
+        accessibilityNotificationPoster: AccessibilityNotificationPosting
+            = LiveAccessibilityNotificationPoster()
     ) {
         self.type = type
         _isEnabled = isEnabled
@@ -47,10 +48,16 @@ struct ReminderRowView: View {
                 accessibilityHint: Text(
                     isEnabled
                         ? String(
-                            format: String(localized: "settings.reminder.toggle.enabled.hint", bundle: .module),
+                            format: String(
+                                localized: "settings.reminder.toggle.enabled.hint",
+                                bundle: .module
+                            ),
                             type.title)
                         : String(
-                            format: String(localized: "settings.reminder.toggle.disabled.hint", bundle: .module),
+                            format: String(
+                                localized: "settings.reminder.toggle.disabled.hint",
+                                bundle: .module
+                            ),
                             type.title)
                 ),
                 onChange: { _ in onChanged() },
@@ -60,7 +67,10 @@ struct ReminderRowView: View {
             )
 
             if isEnabled {
-                Picker(String(localized: "settings.reminder.intervalPicker", bundle: .module), selection: $interval) {
+                Picker(
+                    String(localized: "settings.reminder.intervalPicker", bundle: .module),
+                    selection: $interval
+                ) {
                     ForEach(SettingsViewModel.intervalOptions, id: \.self) { seconds in
                         Text(formatInterval(seconds)).tag(seconds)
                     }
@@ -68,7 +78,10 @@ struct ReminderRowView: View {
                 .onChangeCompat(of: interval) { _ in onChanged() }
                 .accessibilityHint(
                     String(
-                        format: String(localized: "settings.reminder.intervalPicker.hint", bundle: .module),
+                        format: String(
+                            localized: "settings.reminder.intervalPicker.hint",
+                            bundle: .module
+                        ),
                         type.title
                     )
                 )
@@ -85,7 +98,10 @@ struct ReminderRowView: View {
                 .onChangeCompat(of: breakDuration) { _ in onChanged() }
                 .accessibilityHint(
                     String(
-                        format: String(localized: "settings.reminder.durationPicker.hint", bundle: .module),
+                        format: String(
+                            localized: "settings.reminder.durationPicker.hint",
+                            bundle: .module
+                        ),
                         type.title
                     )
                 )
@@ -96,8 +112,14 @@ struct ReminderRowView: View {
         // Announce picker visibility change to VoiceOver when the reminder is toggled (#432).
         .onChangeCompat(of: isEnabled) { newValue in
             let message = newValue
-                ? String(localized: "settings.reminder.pickers.visible.announcement", bundle: .module)
-                : String(localized: "settings.reminder.pickers.hidden.announcement", bundle: .module)
+                ? String(
+                    localized: "settings.reminder.pickers.visible.announcement",
+                    bundle: .module
+                )
+                : String(
+                    localized: "settings.reminder.pickers.hidden.announcement",
+                    bundle: .module
+                )
             accessibilityNotificationPoster.postAnnouncement(message: message)
         }
     }

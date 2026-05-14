@@ -34,7 +34,10 @@ struct OnboardingSetupView: View {
                     OnboardingReminderPickerCard(
                         icon: AppSymbol.eyeBreak,
                         color: AppColor.primaryRest,
-                        title: String(localized: "onboarding.setup.eyeBreaks.title", bundle: .module),
+                        title: String(
+                            localized: "onboarding.setup.eyeBreaks.title",
+                            bundle: .module
+                        ),
                         typeID: "eyes",
                         intervalKey: .eyesInterval,
                         durationKey: .eyesBreakDuration,
@@ -44,7 +47,10 @@ struct OnboardingSetupView: View {
                     OnboardingReminderPickerCard(
                         icon: AppSymbol.postureCheck,
                         color: AppColor.secondaryCalm,
-                        title: String(localized: "onboarding.setup.postureChecks.title", bundle: .module),
+                        title: String(
+                            localized: "onboarding.setup.postureChecks.title",
+                            bundle: .module
+                        ),
                         typeID: "posture",
                         intervalKey: .postureInterval,
                         durationKey: .postureBreakDuration,
@@ -92,7 +98,8 @@ private struct OnboardingReminderPickerCard: View {
     let icon: String
     let color: Color
     let title: String
-    /// Stable, localisation-safe identifier used for accessibility identifiers (e.g. "eyes", "posture").
+    /// Stable, localisation-safe identifier used for accessibility identifiers (e.g. "eyes",
+    /// "posture").
     let typeID: String
     let intervalKey: AnalyticsEvent.SettingKey
     let durationKey: AnalyticsEvent.SettingKey
@@ -110,7 +117,10 @@ private struct OnboardingReminderPickerCard: View {
                     .symbolRenderingMode(.hierarchical)
                     .font(AppFont.reminderCardIcon)
                     .foregroundStyle(color)
-                    .frame(width: AppLayout.decorativeIconFrame, height: AppLayout.decorativeIconFrame)
+                    .frame(
+                        width: AppLayout.decorativeIconFrame,
+                        height: AppLayout.decorativeIconFrame
+                    )
                     .background(
                         RoundedRectangle(cornerRadius: AppLayout.radiusSmall, style: .continuous)
                             .fill(AppColor.surfaceTint)
@@ -125,7 +135,10 @@ private struct OnboardingReminderPickerCard: View {
             Divider()
 
             // Interval picker — how often the reminder fires
-            Picker(String(localized: "onboarding.setup.picker.every", bundle: .module), selection: $interval) {
+            Picker(
+                String(localized: "onboarding.setup.picker.every", bundle: .module),
+                selection: $interval
+            ) {
                 ForEach(SettingsViewModel.intervalOptions, id: \.self) { seconds in
                     Text(SettingsViewModel.labelForInterval(seconds)).tag(seconds)
                 }
@@ -133,7 +146,10 @@ private struct OnboardingReminderPickerCard: View {
             .accessibilityIdentifier("onboarding.\(typeID).intervalPicker")
             .accessibilityHint(
                 String(
-                    format: String(localized: "settings.reminder.intervalPicker.hint", bundle: .module),
+                    format: String(
+                        localized: "settings.reminder.intervalPicker.hint",
+                        bundle: .module
+                    ),
                     title
                 )
             )
@@ -147,7 +163,10 @@ private struct OnboardingReminderPickerCard: View {
             }
 
             // Break duration picker — how long each break lasts
-            Picker(String(localized: "onboarding.setup.picker.breakFor", bundle: .module), selection: $breakDuration) {
+            Picker(
+                String(localized: "onboarding.setup.picker.breakFor", bundle: .module),
+                selection: $breakDuration
+            ) {
                 ForEach(SettingsViewModel.breakDurationOptions, id: \.self) { seconds in
                     Text(SettingsViewModel.labelForBreakDuration(seconds)).tag(seconds)
                 }
@@ -155,7 +174,10 @@ private struct OnboardingReminderPickerCard: View {
             .accessibilityIdentifier("onboarding.\(typeID).durationPicker")
             .accessibilityHint(
                 String(
-                    format: String(localized: "settings.reminder.durationPicker.hint", bundle: .module),
+                    format: String(
+                        localized: "settings.reminder.durationPicker.hint",
+                        bundle: .module
+                    ),
                     title
                 )
             )

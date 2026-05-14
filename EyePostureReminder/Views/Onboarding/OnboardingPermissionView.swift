@@ -17,14 +17,17 @@ struct OnboardingPermissionView: View {
 
     init(onNext: @escaping () -> Void,
          notificationCenter: NotificationScheduling? = nil,
-         makeNotificationCenter: @escaping () -> NotificationScheduling = { UNUserNotificationCenter.current() },
+         makeNotificationCenter: @escaping () -> NotificationScheduling
+            = { UNUserNotificationCenter.current() },
          requestPermission: (() async -> Void)? = nil,
          accessibilityEnabledOverride: Bool? = nil) {
         self.onNext = onNext
         let resolvedNotificationCenter = notificationCenter ?? makeNotificationCenter()
         self.requestPermission = requestPermission ?? {
             do {
-                _ = try await resolvedNotificationCenter.requestAuthorization(options: [.alert, .sound, .badge])
+                _ = try await resolvedNotificationCenter.requestAuthorization(
+                    options: [.alert, .sound, .badge]
+                )
             } catch {
                 Logger.scheduling.error("Notification permission request failed: \(error)")
             }
@@ -70,7 +73,9 @@ struct OnboardingPermissionView: View {
                     .buttonStyle(.primary)
                     .padding(.horizontal, AppSpacing.xl)
                     .accessibilityLabel(Text("onboarding.permission.enableButton", bundle: .module))
-                    .accessibilityHint(Text("onboarding.permission.enableButton.hint", bundle: .module))
+                    .accessibilityHint(
+                        Text("onboarding.permission.enableButton.hint", bundle: .module)
+                    )
                     .accessibilityIdentifier("onboarding.enableNotifications")
 
                     // Secondary option — no system prompt, just advance
@@ -78,8 +83,12 @@ struct OnboardingPermissionView: View {
                         Text("onboarding.permission.skipButton", bundle: .module)
                     }
                         .buttonStyle(.secondary)
-                        .accessibilityLabel(Text("onboarding.permission.skipButton", bundle: .module))
-                        .accessibilityHint(Text("onboarding.permission.skipButton.hint", bundle: .module))
+                        .accessibilityLabel(
+                            Text("onboarding.permission.skipButton", bundle: .module)
+                        )
+                        .accessibilityHint(
+                            Text("onboarding.permission.skipButton.hint", bundle: .module)
+                        )
                         .accessibilityIdentifier("onboarding.permission.nextButton")
                 }
                 .padding(AppSpacing.md)
@@ -120,7 +129,10 @@ private struct NotificationPreviewCard: View {
                     .symbolRenderingMode(.hierarchical)
                     .font(AppFont.caption)
                     .foregroundStyle(AppColor.primaryRest)
-                    .frame(width: AppLayout.decorativeIconFrame, height: AppLayout.decorativeIconFrame)
+                    .frame(
+                        width: AppLayout.decorativeIconFrame,
+                        height: AppLayout.decorativeIconFrame
+                    )
                     .background(
                         RoundedRectangle(cornerRadius: AppLayout.radiusSmall, style: .continuous)
                             .fill(AppColor.surfaceTint)

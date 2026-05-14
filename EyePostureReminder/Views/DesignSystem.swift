@@ -90,7 +90,11 @@ enum AppTypography {
     static func registerFonts() {
         for fileName in fontFileNames {
             guard
-                let url = Bundle.module.url(forResource: fileName, withExtension: "ttf", subdirectory: "Fonts"),
+                let url = Bundle.module.url(
+                    forResource: fileName,
+                    withExtension: "ttf",
+                    subdirectory: "Fonts"
+                ),
                 let dataProvider = CGDataProvider(url: url as CFURL),
                 let font = CGFont(dataProvider)
             else {
@@ -119,7 +123,8 @@ enum AppTypography {
     /// Caption emphasized — custom font scales with Dynamic Type (base: 13pt).
     static let captionEmphasized: Font = .custom(fontFamilyName, size: 13, relativeTo: .footnote)
 
-    /// Secondary action buttons (onboarding, secondary CTAs) — custom font scales with Dynamic Type (base: 15pt regular).
+    /// Secondary action buttons (onboarding, secondary CTAs) — custom font scales with Dynamic
+    /// Type (base: 15pt regular).
     static let secondaryAction: Font = .custom(fontFamilyName, size: 15, relativeTo: .subheadline)
 
     /// Overlay dismiss button — custom font scales with Dynamic Type (base: 28pt).
@@ -129,10 +134,12 @@ enum AppTypography {
     /// VoiceOver exposes a labelled accessibility element instead of reading this text directly.
     static let countdown: Font = .system(size: 64, weight: .bold, design: .monospaced)
 
-    /// Settings row icon — SF Symbol inside a 32 pt tinted circle (decorative, accessibility-hidden).
+    /// Settings row icon — SF Symbol inside a 32 pt tinted circle (decorative,
+    /// accessibility-hidden).
     static let settingsRowIcon: Font = .system(size: 15, weight: .semibold)
 
-    /// Warning icon — SF Symbol inside a 36 pt warning banner circle (decorative, accessibility-hidden).
+    /// Warning icon — SF Symbol inside a 36 pt warning banner circle (decorative,
+    /// accessibility-hidden).
     static let warningIcon: Font = .system(size: 16, weight: .semibold)
 
     /// Reminder card icon — SF Symbol in an onboarding reminder card; scales with Dynamic Type.
@@ -213,7 +220,8 @@ enum AppAnimation {
     /// Onboarding transition used in ContentView (hasSeenOnboarding toggle)
     static let onboardingTransition: Animation = .easeInOut(duration: onboardingFadeIn)
     /// Onboarding screen fade-in entrance animation (easeOut + delay)
-    static let onboardingFadeInCurve: Animation = .easeOut(duration: onboardingFadeIn).delay(onboardingFadeInDelay)
+    static let onboardingFadeInCurve: Animation =
+        .easeOut(duration: onboardingFadeIn).delay(onboardingFadeInDelay)
     /// Calming entrance — slower ease-out for fade + gentle slide. No bounce.
     /// Adopt in OverlayView for a softer, less utilitarian entrance.
     static let calmingEntranceCurve: Animation = .easeOut(duration: calmingEntranceDuration)
@@ -346,11 +354,15 @@ extension AppTypography {
     /// Overlay / home-screen status icon — SF Symbol sized to `overlayIconSize` (decorative).
     static let overlayIcon: Font = .system(size: AppLayout.overlayIconSize)
     /// Home yin-yang logo symbol — sized relative to the home hero icon frame.
-    static let homeLogoIcon: Font = .system(size: AppLayout.overlayIconSize * 0.42, weight: .semibold)
-    /// Onboarding hero illustration icon — SF Symbol sized to `onboardingIllustrationSize` (decorative).
-    static let illustrationIcon: Font = .system(size: AppLayout.onboardingIllustrationSize, weight: .semibold)
+    static let homeLogoIcon: Font =
+        .system(size: AppLayout.overlayIconSize * 0.42, weight: .semibold)
+    /// Onboarding hero illustration icon — SF Symbol sized to `onboardingIllustrationSize`
+    /// (decorative).
+    static let illustrationIcon: Font =
+        .system(size: AppLayout.onboardingIllustrationSize, weight: .semibold)
     /// True Interrupt Mode shield icon — SF Symbol sized for onboarding/configuration hero cards.
-    static let trueInterruptIcon: Font = .system(size: AppLayout.onboardingIllustrationSize * 0.55, weight: .semibold)
+    static let trueInterruptIcon: Font =
+        .system(size: AppLayout.onboardingIllustrationSize * 0.55, weight: .semibold)
 }
 
 extension AppFont {
