@@ -23392,3 +23392,97 @@ Do **not** create or push a PR from this state. Treat branch as blocked until `.
 
 ## Why
 `build.sh all` is the parity gate used by CI and enforces lint/test/build policy. Opening a PR while this gate is red creates avoidable CI churn and weakens the build-before-merge rule.
+
+---
+
+# Decision: Apple Developer Support Reply on FamilyControls/DeviceActivity/ManagedSettings Entitlement Request
+
+**Date:** 2026-05-14  
+**Case:** 102881605113  
+**Owner:** Danny (Product Manager), reviewed by Frank (Legal)  
+**Status:** ✅ APPROVE WITH EDITS — Send-Ready
+
+## Context
+
+Apple Developer Support asked for "business need" justification (deadline or significant distribution impact) to approve FamilyControls, DeviceActivity, and ManagedSettings entitlements for kshana. This is the first substantive Apple correspondence requiring product narrative + distribution impact framing.
+
+## Decision
+
+Send strategically framed reply emphasizing:
+1. **Product narrative:** kshana is privacy-first iOS wellness app (no tracking, no ads, no account), aligned with Apple's Digital Wellbeing positioning
+2. **Core product feature:** Entitlements enable "enforceable break-time boundaries" — without them, app degrades to dismissible notifications (core feature, not optional)
+3. **Sanctioned-only approach:** These entitlements are the *only* Apple-sanctioned path to true app shielding; private APIs/workarounds explicitly disallowed (signals compliance, builds reviewer trust)
+4. **Distribution impact:** TestFlight → App Store gating; entitlement delay directly impacts App Store submission timeline and go-to-market window, affecting user acquisition and credibility positioning
+5. **Professional escalation:** Offer to provide technical architecture, app privacy summary, demo video, design specifications
+
+## Why
+
+- **Framing completeness over features:** "Core product promise" > "nice-to-have feature" with Apple. Completeness and alignment matter.
+- **Brevity wins:** Apple reviewers process dozens of cases; short scannable paragraphs (4 focused sections: what/why/impact/offer) outperform longer justifications.
+- **Compliance signal:** Emphasizing "only sanctioned path" and rejection of workarounds builds trust — we respect their policy, not trying to circumvent restrictions.
+- **Business justification without hard commitment:** Impact is stated as fact ("entitlement delay would impact timeline"), not a demand or threat.
+
+## Factual Verification
+
+All claims verified before sending:
+- ✅ "No tracking, no ads, no account required" — confirmed in decisions.md (no IDFA, no ads, no analytics SDK, no accounts)
+- ✅ "TestFlight signed iPhone build" — confirmed in now.md (DerivedData/SignedBuild/Export/kshana.ipa, iPhone-only)
+- ✅ "FamilyControls/DeviceActivity/ManagedSettings are only sanctioned path" — confirmed in decisions.md (restricted entitlement, no workarounds)
+- ✅ Wellness positioning compliant with FTC guidelines (not claiming medical benefits, no "medical advice" disclaimer needed in this reply, only in app/App Store listing)
+
+## Edits Applied
+
+### Edit 1: Soften Timeline Language (Commitment Risk)
+- **Original:** "Every week of entitlement delay delays the App Store submission and extends the go-to-market window."
+- **Final:** "Any entitlement delay would directly impact our App Store submission timeline and go-to-market window."
+- **Reason:** Removes hard link between Apple's review speed and Yashas's public commitment; describes impact without implying we've locked Yashas to a specific date Apple should race against.
+
+### Edit 2: Trim Redundant Compliance Phrasing
+- **Original:** "These entitlements are the *only* Apple-sanctioned path to true app shielding; private APIs and workarounds are explicitly disallowed."
+- **Final:** "These entitlements are the only Apple-sanctioned path to true app shielding on iOS."
+- **Reason:** Removes redundant "explicitly disallowed" clause (if they're the only path, nothing else is allowed by definition) and avoids preachy tone; equally clear and more respectful.
+
+## Send-Ready Final Draft
+
+```
+Subject: RE: Family Controls / Device Activity / Managed Settings Entitlement Request — Business Need
+
+Dear Johnny,
+
+Thank you for the follow-up on case 102881605113. I'm happy to clarify the business need for the FamilyControls, DeviceActivity, and ManagedSettings entitlements for kshana.
+
+**What kshana is:**
+kshana is a privacy-first iOS wellness app that delivers gentle, configurable reminders for healthy screen breaks (e.g., the 20-20-20 eye-rest rule). It aligns with Apple's Digital Wellbeing positioning — no tracking, no ads, no account required.
+
+**Why these entitlements are required:**
+The core product promise is "enforceable break-time boundaries." With FamilyControls, DeviceActivity, and ManagedSettings, kshana shields selected apps during user-initiated breaks — the app cannot be opened until the break completes. Without these APIs, kshana degrades to local notifications and an in-app overlay, which users can dismiss instantly. These entitlements are the only Apple-sanctioned path to true app shielding on iOS. The feature is not optional — it is the primary value proposition.
+
+**Distribution impact:**
+kshana is currently in TestFlight validation with a signed iPhone build. App Store launch is gated on True Interrupt Mode. Any entitlement delay would directly impact our App Store submission timeline and go-to-market window. This affects user acquisition, credibility positioning as a Digital Wellbeing tool, and team resource allocation.
+
+If you need any additional information — technical architecture, app privacy summary, demo video, or design specifications — I'm happy to provide it. Please reference case 102881605113 in any follow-up.
+
+Thank you for your time and consideration.
+
+Best regards,
+Yashas
+```
+
+## Follow-Up Actions
+
+1. **Yashas to edit and send** this reply to Johnny at Apple (case 102881605113)
+2. **Archive sent reply** in `.squad/log/apple-case-102881605113-sent-{date}.md` for reference (protects against "what did we tell them?" disputes, reusable pattern for future Apple correspondence)
+3. **Expect response within 5–14 business days** (typical SLA for entitlement requests); if no response by May 28, Yashas should follow up with brief "checking in" email
+
+## Team Pattern (Reusable for Future Apple Correspondence)
+
+**When responding to Apple Developer Support (entitlements, TestFlight review holds, App Store appeals):**
+1. Product narrative (what, core use case, alignment with Apple policy/frameworks)
+2. Why this specific API/entitlement (the only sanctioned path; core feature, not optional)
+3. Distribution impact (how gating affects shipping; avoid hard timelines)
+4. Sanctioned-only positioning (builds trust: "we respect your policy, no workarounds")
+5. Offer to escalate (technical specs, architecture, design, video — shows you're serious and prepared)
+6. Short, scannable structure (Apple reviewers process dozens of requests daily; respect their time)
+
+**Applicable to:** FamilyControls approvals, TestFlight hold appeals, App Store review rejections, privacy/compliance queries.
+

@@ -1,5 +1,28 @@
 # Danny — History
 
+## 2026-05-01 — Apple Developer Support Reply: Entitlement Business Need (Case 102881605113)
+
+**Task:** Draft reply to Apple Developer Support request for business need justification for FamilyControls/DeviceActivity/ManagedSettings entitlement approval.
+
+**Context:** Apple support asked for "business need" (deadline or significant impact on distribution) to justify entitlement grant. This is the first substantive Apple correspondence requiring product narrative + distribution impact framing.
+
+**Approach:**
+- Reframe request from "feature flag" to "core product promise" (enforceable break-time boundaries without entitlements is incomplete)
+- Lead with *what* (privacy-first wellness app, Digital Wellbeing aligned)
+- Explain *why* (only Apple-sanctioned path, private APIs explicitly disallowed)
+- State *impact* (TestFlight → App Store gating, every week = delayed go-to-market)
+- Offer escalation (technical detail, demo video, architecture specs)
+- Tone: professional, human (solo indie dev authenticity), no desperation or pleading
+
+**Deliverable:** Draft + notes in `.squad/decisions/inbox/danny-apple-entitlement-reply.md` for Frank (Legal) review before sending.
+
+**Learnings:**
+- **Apple Developer Support correspondence pattern:** Product narrative + distribution gating + sanctioned-path-only + offer to escalate with technical/design detail. Reusable for TestFlight review feedback, App Store review appeals, and future entitlement follow-ups.
+- **Business-need framing:** "Core product promise" > "nice-to-have feature" with Apple. Completeness and alignment matter. Privacy/compliance positioning builds reviewer trust.
+- **Concision wins:** Apple reviewers process dozens of cases. Short paragraphs (what/why/impact) outperform longer justifications. Four focused paragraphs hit all beats.
+
+---
+
 ## 2026-04-30 — Post-#299 Release Readiness Audit
 
 **Task:** Read-only product/release readiness audit after True Interrupt issue marathon and #299 fix.
@@ -86,3 +109,28 @@
 **Outcome:** All issues remain BLOCKED/PENDING external action. Status verified, checklists active, dependency chain is clear.
 
 **Issues closed:** #312
+
+---
+
+## 2026-05-14 — Apple Developer Support Reply: Entitlement Business Need (Case 102881605113) — APPROVED & MERGED
+
+**Task:** Draft reply to Apple Developer Support request for business need justification for FamilyControls/DeviceActivity/ManagedSettings entitlement approval. Work reviewed by Frank (Legal), approved with 2 surgical edits, merged into decisions.md.
+
+**Strategic approach:**
+- Reframe request from "feature flag" to "core product promise" (enforceable break-time boundaries; without entitlements, incomplete)
+- Lead with *what* (privacy-first wellness app, Digital Wellbeing aligned, no tracking/ads/accounts)
+- Explain *why* (only Apple-sanctioned path; private APIs explicitly disallowed)
+- State *impact* (TestFlight → App Store gating; every week = delayed go-to-market, user acquisition friction, credibility positioning)
+- Offer escalation (technical architecture, demo video, design specs)
+- Tone: professional, human (solo indie dev authenticity), no desperation or pleading
+
+**Key learnings:**
+- Apple correspondence pattern: Product narrative + Distribution gating + Sanctioned-only approach + Offer to escalate. Reusable for TestFlight review, App Store appeals, future entitlements.
+- Business-need framing: "Core product promise" > "nice-to-have feature" with Apple. Completeness and alignment matter.
+- Concision wins: 4 focused paragraphs outperform longer justifications. Apple reviewers process dozens of cases.
+- Privacy/compliance positioning early builds reviewer trust (no tracking/ads/accounts signals responsible Screen Time API use, not ad-tech or surveillance)
+
+**Deliverable:** Decision merged to `.squad/decisions.md` (section: "Apple Developer Support Reply on FamilyControls/DeviceActivity/ManagedSettings Entitlement Request"). Inbox files deleted post-merge. Frank's review approval + edits now part of permanent record.
+
+**Follow-up:** Yashas to edit and send; coordinate copy archival to `.squad/log/apple-case-102881605113-sent-{date}.md` post-send.
+

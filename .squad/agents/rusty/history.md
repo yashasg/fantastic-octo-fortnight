@@ -275,3 +275,14 @@ All model, protocol, and service skeletons in `EyePostureReminder/`:
 - **Pattern:** For DI/SRP micro-slices, keep API behavior stable with `Dependency? = nil` + `makeDependency` factory and verify fallback/bypass in focused unit tests.
 - **User preference captured:** Continue Ralph loop in tiny, surgical slices with behavior preservation and explicit build/test validation.
 - **Key file paths:** `EyePostureReminder/Views/Onboarding/OnboardingView.swift`, `Tests/EyePostureReminderTests/Views/OnboardingViewTests.swift`, `.squad/decisions/inbox/rusty-onboarding-poster-factory-seam.md`.
+
+---
+
+## 2026-05-14 — Apple Developer Support Reply: Reviewer-Approved, Pending Send
+
+**Status note:** Danny (PM) drafted, Frank (Legal) reviewed and approved with minor edits. Final send-ready reply merged to `.squad/decisions.md`. Yashas will send to Johnny at Apple (case 102881605113).
+
+**Key decision:** Reply frames FamilyControls/DeviceActivity/ManagedSettings entitlements as *only* sanctioned path to core product feature (enforceable break-time boundaries), not optional add-on. Business justification: TestFlight → App Store gating; delay impacts user acquisition, credibility positioning as Digital Wellbeing tool, team resource allocation.
+
+**Reusable pattern documented:** Apple correspondence approach (product narrative + distribution impact + sanctioned-only signaling + offer to escalate) now in decisions for TestFlight/App Store appeals, future entitlements.
+

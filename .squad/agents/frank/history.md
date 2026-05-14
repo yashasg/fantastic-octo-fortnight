@@ -285,3 +285,62 @@
 - Monitor Apple FamilyControls approval (case 102881605113)
 - Upon approval: Update App Store Connect privacy labels, update PrivacyInfo.xcprivacy, update release notes, submit to App Store
 - Upon denial: Remove Screen Time sections, resubmit with Phase 2 features
+
+## Learnings: Apple Developer Support Correspondence Pattern
+
+**Session 2026-04-28: Review of Apple Entitlement Reply (Case 102881605113)**
+
+When responding to Apple Developer Support (entitlements, TestFlight holds, App Store appeals), follow this reusable pattern:
+
+1. **Product Narrative** — What the app does, core use case, alignment with Apple policy/frameworks (e.g., Digital Wellbeing positioning). Keep it concrete, not aspirational.
+
+2. **Sanctioned-Only Positioning** — Explain why the specific API/entitlement is required and why it's the *only* Apple-sanctioned path. This signals compliance and trust. Avoid saying "private APIs are forbidden" — that's lecturing Apple on their own policy. Instead, emphasize that you're using the official, permitted path.
+
+3. **Why It Matters (Core Feature, Not Nice-to-Have)** — Reframe the ask from "would be nice" to "core functionality." Apple values apps that use their frameworks meaningfully.
+
+4. **Distribution Impact (Without Hard Commits)** — Explain how entitlement gating affects shipping, but **avoid public timelines or hard submission dates** unless explicitly confirmed with Yashas. Use soft language: "would impact" not "will delay by X weeks."
+
+5. **Privacy Positioning** — For wellness apps, lead with "no tracking, no ads, no accounts" early. This signals responsible framework usage, not surveillance or ad-tech.
+
+6. **Offer to Escalate** — End by offering technical details (architecture, demo, design specs, privacy summary). Shows you're prepared and serious.
+
+7. **Structure & Tone** — Short, scannable paragraphs (Apple reviewers process dozens daily). Respectful, factual, professional. No pleading, no entitlement, no emotion. Thank them and reference the case number.
+
+**Critical Review Points for Apple Correspondence:**
+- Overpromising/timeline risk (soften hard commitments)
+- Factual claim verification (check against decisions.md)
+- Tone calibration (respect, not pleading or entitled)
+- Compliance positioning (we respect Apple policy, sanctioned-only)
+- Health/wellness claims (no medical claims, wellness positioning only)
+- Case number and signature (reference correctly, sign appropriately)
+
+**Outcome:** Danny's draft was strategically sound. Two surgical edits tightened commitment language and removed redundant compliance statements. Approved with edits.
+
+**Reuse:** This pattern applies to TestFlight review feedback, App Store review appeals, entitlement follow-ups, privacy/compliance queries. Keep a copy of sent replies in `.squad/log/` for future reference.
+
+---
+
+## 2026-05-14 — Apple Developer Support Reply: Legal Review & Approval (Case 102881605113)
+
+**Task:** Review Danny's draft reply per Reviewer Rejection Protocol. Verify factual claims, assess legal/compliance risk, flag tone/commitment concerns. Goal: approve for send or propose edits.
+
+**Review verdict:** ✅ APPROVE WITH EDITS (2 surgical edits)
+
+**Factual verification:**
+- ✅ "No tracking, no ads, no account required" — confirmed in decisions.md (no IDFA, no ads, no analytics SDK, no accounts)
+- ✅ "TestFlight signed iPhone build" — confirmed in now.md (DerivedData/SignedBuild/Export/kshana.ipa, iPhone-only)
+- ✅ "FamilyControls/DeviceActivity/ManagedSettings are only sanctioned path" — confirmed in decisions.md (restricted entitlement, no workarounds)
+- ✅ Wellness positioning compliant (not claiming medical benefits; "medical advice" disclaimer is for in-app/App Store, not this correspondence)
+
+**Edits applied:**
+1. **Soften "Every week of entitlement delay" → "Any entitlement delay would directly impact"** — Removes hard commitment linking Apple's review speed to Yashas's submission date; avoids false-promise risk if Apple reviews slowly or other blockers arise.
+2. **Trim "explicitly disallowed" from sanctioned-path clause** — Removes redundant/preachy language; simpler version more respectful and equally clear.
+
+**Tone calibration:** ✅ Professional, factual, compliant signal (emphasizes "Apple-sanctioned" + rejection of workarounds).
+
+**Send-ready draft:** Merged to `.squad/decisions.md` with edits applied. Ready for Yashas to send.
+
+**Pattern documented:** Apple correspondence best practices (product narrative, distribution gating, sanctioned-only approach, offer to escalate, concision) logged in decisions entry for team reuse in future TestFlight/App Store correspondence.
+
+**Follow-up:** Keep copy of sent reply in `.squad/log/apple-case-102881605113-sent-{date}.md` once Yashas sends (protects against "what did we tell them?" disputes, reference for future Apple interactions).
+
