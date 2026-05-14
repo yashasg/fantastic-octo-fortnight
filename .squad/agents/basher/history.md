@@ -48,6 +48,35 @@
 - Lint unblock (services-only): wrapped `SettingsStore` init assignment in multiline call to clear `line_length` at `EyePostureReminder/Models/SettingsStore.swift:205` with no behavior change.
 - Lint unblock (services-only): replaced `line_length` suppression in `AppCoordinator+Helpers` with multiline debug string formatting, removing `superfluous_disable_command` and keeping identical log output.
 
+## 2026-05-13T22:00:00Z: Google Swift Style Audit (Services + Utilities) — READ-ONLY
+
+**Audit Scope:** Services/ (24 files, 3654 LOC) + Utilities/ (5 files, 376 LOC). Standard: `docs/google_swift_coding_style.md`.
+
+**Overall Verdict:** Exceptional compliance. Zero force unwraps, zero force casts, zero force-try outside test code. Protocol-driven design throughout enables deterministic testing. 
+
+**Key Google Swift Style Findings:**
+
+1. **HIGH-Priority Violations (Minor):**
+   - 4 public API items missing doc comments (MetricKitSubscriber singleton, AudioInterruptionManager methods, NoopServices stubs, OverlayManager.isOverlayVisible)
+   - 1 extension using file-level `private` access control (AppCoordinator.swift:657 — Google forbids this; should move to member level)
+   - 1 import ordering anomaly (OverlayManager.swift comments between imports; should be contiguous alphabetical block)
+
+2. **Best Practices Observed:**
+   - **Guard for early exits:** Uniformly used across PauseConditionManager, AppCoordinator; guards focus on invariant validation, not happy-path nesting.
+   - **Error handling:** 100% protocol-injected `do-catch` usage; no error suppression except where intentional (`try?` with explicit nil handling).
+   - **Access levels:** No over-restriction (everything defaulted to internal correctly); private/fileprivate used appropriately.
+   - **Naming:** Delegate method naming adheres to Google's patterns (indicative verb phrases for Void returns, prepositions for data sources).
+   - **No implicitly unwrapped optionals** outside UIKit lifecycle exceptions (none found).
+
+3. **Which Google Swift Sections Cause Most Violations in Service Code (Baseline for Future Work):**
+   - **Documentation Comments (Section: "Where to Document")** — Most frequently missed: public computed properties, singleton accessors, public initializers.
+   - **Access Levels (Section: "Access Levels")** — Extension file-level access control is the trap; individual member access works fine.
+   - **Import Ordering (Section: "Import Statements")** — Comments between imports break lexicographic grouping; rare but notable.
+   - **Force Unwrapping (Section: "Force Unwrapping and Force Casts")** — **NOT a problem here** — this codebase is defensively written. No violations.
+   - **Implicitly Unwrapped Optionals (Section: "Implicitly Unwrapped Optionals")** — **NOT a problem** — reserved for UIKit lifecycle only, correctly applied.
+
+**Deliverable:** `.squad/decisions/inbox/basher-google-swift-audit.md` — 10KB report with 6 HIGH-priority items, 4 MEDIUM, 3 LOW; ~1–2 hours remediation effort.
+
 ## 2026-05-04T00:17:02Z: #462 Phase A — Micro-slice Orchestration (COMPLETED)
 
 **Phase A Micro-slice Delivery:**
@@ -81,3 +110,7 @@
 - Phase A optional-factory pattern now cohesive across seams: `AppDelegate` notification center, launch provider, and UI-test overlay all follow precedence-ordered resolution with fallback closure semantics.
 - DI/SRP seams cluster well: AppDelegate initialization, production singleton defaults, and test-seam boundaries remain clean and surgical.
 - Multi-seam PR orchestration: Basher successfully executed Phase A micro-slice scope including three tightly-coupled DI refactors with unified validation before PR submission.
+
+## 2026-05-15 — #646 fan-out
+
+Three child issues now assigned from Google Swift audit: #647 (import ordering, MEDIUM), #648 (IUO review, MEDIUM), #649 (doc comments on Services public API, HIGH). Also joint owner on #652 (access control with Linus, HIGH). Ready to parallelize remediation work.

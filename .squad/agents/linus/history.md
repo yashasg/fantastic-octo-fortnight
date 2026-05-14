@@ -128,3 +128,29 @@ Orchestration log recorded at 2026-04-30T09:27:10Z. Confirmed AppCoordinator tes
 - Home true-interrupt checks were unstable on simulator runs where the FamilyControls-backed prompt did not materialize. Stabilized by making tests tolerate either banner or setup-pill state and `XCTSkip` when the runtime never exposes either prompt.
 - Onboarding "Customize Settings" CTA flake came from off-screen/non-hittable timing; fixed with a reusable `revealAndWaitForHittable` helper that combines bounded swipe-up retries with a single timeout budget.
 - `--reset-onboarding` now also resets settings defaults in UI-test launch handling, improving dark-mode/onboarding state isolation across test methods.
+
+### 2026-05-13 — Google Swift Style Audit (Views + ViewModels)
+
+**Key findings from google_swift_coding_style.md audit (18 files, 4,176 LOC):**
+
+- **Column limit (100 chars):** 43 lines exceed limit (1.0% of codebase). Main offenders: DesignSystem.swift (12 lines, mostly doc comments), HomeView.swift (7 lines, mostly init params), Components.swift (3 lines). Fixable via line-wrapping rules §5.4. No architectural changes needed.
+
+- **Access control:** One violation — `AppCategoryPickerView.swift:139` has public `var primaryButtonHintKey` that should be private. All other helper properties correctly marked private or internal.
+
+- **Doc comments:** 166 doc comment lines across codebase (12.1% coverage). Well-documented on public APIs (SettingsViewModel, OverlayView, AccessibleToggle). Gap: ReminderRowView public struct lacks doc comment. Recommendation: Ensure all public struct/class/enum get single-sentence summary.
+
+- **Force unwraps/casts:** Zero unsafe force unwraps or force casts detected. Excellent safety practices.
+
+- **Guard vs if-let:** All conditional binding follows Google style (guards for early exits, if-let for valid outcomes).
+
+- **Naming conventions:** Excellent — lowerCamelCase consistent, no Hungarian notation, access levels enforce via modifiers not naming.
+
+- **Line-wrapping patterns:** Function declarations and modifier chains sometimes build up >100 chars inline. Should break arguments individually (indented +2) per §5.4 when any single line would exceed 100.
+
+- **Best practices observed:** Private helper types (LegalSection, UIKitSwitchView, SettingsSectionHeader) properly scoped; MARK comments used consistently; no trailing closures with multiple arguments; clean separation of concerns in AccessibleToggle and OverlayView.
+
+**For future work:** When initializer parameters total >80 chars, wrap each onto its own line. This is the main pattern improvement needed. Audit report filed in `.squad/decisions/inbox/linus-google-swift-audit.md`.
+
+## 2026-05-15 — #646 fan-out
+
+Two child issues now assigned from Google Swift audit: #650 (column-limit line-wrapping, MEDIUM) and #652 (access control, HIGH, joint with Basher). Ready to parallelize remediation work across Views layer.

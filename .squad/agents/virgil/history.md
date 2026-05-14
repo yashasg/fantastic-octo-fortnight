@@ -68,3 +68,7 @@
 ### Learnings
 - `./scripts/build.sh all` is now green on this branch snapshot, so merge gating can move to remote CI checks.
 - Preserve reproducibility by excluding generated local result artifacts (for example `TestResults.xcresult/Info.plist`) from commits.
+
+## 2026-05-15 — #646 fan-out
+
+Issue #651 assigned: integrate swift-format + SwiftLint into CI pipeline. This makes Google Swift Style mechanically enforceable rather than aspirational. Depends on all remediation PRs (#647-652) merging first; enforcement gate should activate after codebase passes lint.

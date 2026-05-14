@@ -365,3 +365,17 @@
 - #310 — A11y: OverlayView ZStack — VoiceOver initial focus lands on × dismiss button (top-trailing) instead of break headline on overlay appear. Owner: `squad:linus`.
 
 **Key insight:** The #298 fix correctly added `postScreenChanged` on overlay *appear* but the symmetrical *dismiss* call was overlooked. The dismiss case is especially important for auto-dismiss (countdown expiry) where there is no user-initiated physical cue that the overlay has gone. Issue #310 is a geometric ZStack traversal trap — SwiftUI VoiceOver traverses ZStack children by screen position, not declaration order, so the visually top-trailing × button wins focus over the center-screen headline.
+
+## 2026-05-14: Google Swift Style Guide Adopted (Audit #646)
+
+**Event:** Full-codebase audit completed. Google Swift Style is now the canonical standard for kshana. All code, new and existing, should conform.
+
+**Key for Tess (UI Work):** Any UI components you design or scope should respect Google Swift Style — particularly:
+- **Doc comments on public view types:** Every public struct/view should have a brief `///` doc comment describing its purpose.
+- **Line wrapping in UI modifiers:** When modifier chains exceed ~90 chars, break each modifier onto its own line for readability.
+- **Access control:** Mark internal helper properties/computed vars as `private` explicitly; don't rely on default `internal` visibility.
+
+**Related:** GitHub Issue #646 contains full audit findings. Branch: chore/coding-standards-audit. Views/ViewModels scope (audited by Linus) identified 1 HIGH access-level issue and 25 column-limit violations — reference these as patterns to avoid in new UI work.
+
+**Reuse:** When scoping new UI components, mention Google Swift Style as a requirement. Developers will recognize it.
+

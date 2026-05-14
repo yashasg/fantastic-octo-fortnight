@@ -275,3 +275,64 @@ All model, protocol, and service skeletons in `EyePostureReminder/`:
 - **Pattern:** For DI/SRP micro-slices, keep API behavior stable with `Dependency? = nil` + `makeDependency` factory and verify fallback/bypass in focused unit tests.
 - **User preference captured:** Continue Ralph loop in tiny, surgical slices with behavior preservation and explicit build/test validation.
 - **Key file paths:** `EyePostureReminder/Views/Onboarding/OnboardingView.swift`, `Tests/EyePostureReminderTests/Views/OnboardingViewTests.swift`, `.squad/decisions/inbox/rusty-onboarding-poster-factory-seam.md`.
+
+---
+
+## 2026-05-14 — Apple Developer Support Reply: Reviewer-Approved, Pending Send
+
+**Status note:** Danny (PM) drafted, Frank (Legal) reviewed and approved with minor edits. Final send-ready reply merged to `.squad/decisions.md`. Yashas will send to Johnny at Apple (case 102881605113).
+
+**Key decision:** Reply frames FamilyControls/DeviceActivity/ManagedSettings entitlements as *only* sanctioned path to core product feature (enforceable break-time boundaries), not optional add-on. Business justification: TestFlight → App Store gating; delay impacts user acquisition, credibility positioning as Digital Wellbeing tool, team resource allocation.
+
+**Reusable pattern documented:** Apple correspondence approach (product narrative + distribution impact + sanctioned-only signaling + offer to escalate) now in decisions for TestFlight/App Store appeals, future entitlements.
+
+
+## 2026-05-14 — Apple Reply v2 Current Send-Ready Draft (case 102881605113)
+
+**Update:** v1 apple reply draft approved by Frank has been superseded by v2 (plain-prose rewrite) per user feedback.
+
+**Status:** v2 is now current send-ready draft. Substance identical to v1; formatting/voice only changed from markdown-heavy structure to natural plain prose (no labeled sections, no markdown syntax).
+
+**Why:** Yashasg rejected v1 for sounding "AI-generated" due to markdown formatting and labeled section headers. v2 preserves all factual claims and legal review; only the writing style changed to sound authentically human.
+
+**Next step:** Awaiting Yashas to review v2 and send to Apple (case 102881605113).
+
+---
+
+## 2026-05-14 — Product Behavior: Break Shielding Focus/Driving Mode Suppression
+
+**Date:** 2026-05-14  
+**Source:** Apple Developer Support reply (case 102881605113) sent to Johnny  
+**Captured Behavior:** kshana suppresses break shielding when iOS device is in Focus Mode or Driving Mode  
+
+**Product Implication:**
+The app respects user-defined system DND contexts. Wellness breaks are *offered*, never forced during user-signaled quiet time.
+
+**Architecture Constraint (for future decisions):**
+- The app MUST NOT shield apps when the device is in Focus Mode or Driving Mode
+- This is an active product behavior, not a bug or edge case to ignore
+- Any future architecture changes (e.g., new timer logic, new entitlement usage) must preserve this constraint
+- Triage and feature decisions should factor in: "Does this break the focus/driving mode suppression?"
+
+**Reuse Cases:**
+- Product roadmap: Focus-mode awareness is a core differentiator vs. generic break reminders
+- Future App Review appeals: "kshana respects user-defined iOS system signals — not invasive"
+- Marketing: "Digital Wellbeing alignment — respects Focus Mode and Driving Mode"
+- Testing & validation: Test scenarios must include focus/driving mode toggles
+
+**Related Decision:** See `.squad/decisions.md` → "Apple Developer Support Reply — Sent" entry for full context.
+
+
+## 2026-05-14: Google Swift Style Guide Adopted (Audit #646)
+
+**Event:** Full-codebase audit completed. Google Swift Style is now canonical for all new work. Baseline: 53 files, 9,164 LOC audited across Views/ViewModels (Linus), Services/Utilities (Basher), App/Models (Saul).
+
+**Key for Rusty:** Future architecture decisions should respect Google Swift Style, particularly in these high-impact rule areas per the audit:
+1. **Doc comments on public API:** Services audit found 6 missing doc comments on public singletons and methods. Set this as expectation for any new service layer work.
+2. **Access-control discipline:** One file-level extension access control violation (AppCoordinator.swift:657) and one access-level leak (AppCategoryPickerView:139). Emphasize: Use explicit member-level access modifiers; never file-level on extensions. Verify public computed properties are truly public.
+3. **Column-limit / line-wrapping:** 25 violations in Views. When reviewing PRs, flag lines >100 chars and require wrapping per Google's line-wrapping rules (Section 5.4).
+
+**Related:** GitHub Issue #646 contains full audit findings, violation tracker, and remediation roadmap. Branch: chore/coding-standards-audit.
+
+**Reuse:** When making architecture decisions (DI protocols, service abstractions, API boundaries), mention Google Swift Style conformance as a design criterion.
+
