@@ -1,0 +1,1 @@
+squad loop --execute --self-pull --two-pass --wave-dispatch --decision-hygiene --board https://github.com/users/yashasg/projects/7 --health --copilot-flags "--yolo" --state-backend git-notes
