@@ -1,5 +1,6 @@
-@testable import EyePostureReminder
 import XCTest
+
+@testable import EyePostureReminder
 
 // Tests for AccessibilityNotificationPosting announcement support (#287).
 //

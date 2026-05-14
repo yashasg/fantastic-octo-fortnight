@@ -1,6 +1,7 @@
-@testable import EyePostureReminder
 import SwiftUI
 import XCTest
+
+@testable import EyePostureReminder
 
 /// Tests for `YinYangEyeView` — the yin-yang status icon used in
 /// HomeView and OnboardingView.

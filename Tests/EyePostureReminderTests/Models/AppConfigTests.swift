@@ -1,5 +1,6 @@
-@testable import EyePostureReminder
 import XCTest
+
+@testable import EyePostureReminder
 
 // Tests for `AppConfig` — the data-driven default configuration loaded from `defaults.json`.
 //

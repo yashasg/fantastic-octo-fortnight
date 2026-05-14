@@ -1,6 +1,7 @@
-@testable import EyePostureReminder
 import MetricKit
 import XCTest
+
+@testable import EyePostureReminder
 
 private final class MockMetricKitManager: MetricKitManaging {
     private(set) var addCallCount = 0

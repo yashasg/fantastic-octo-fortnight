@@ -1,5 +1,6 @@
-@testable import EyePostureReminder
 import XCTest
+
+@testable import EyePostureReminder
 
 /// Regression tests for issue #407:
 /// `AppCoordinator.onThresholdReached` must guard on `settings.isEnabled(for:)`

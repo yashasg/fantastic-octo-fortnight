@@ -1,6 +1,7 @@
-@testable import EyePostureReminder
 import UIKit
 import XCTest
+
+@testable import EyePostureReminder
 
 /// Extended tests for `OverlayManager` — clearQueue(for:) per-type filtering,
 /// additional queue management, and MockOverlayPresenting edge cases.

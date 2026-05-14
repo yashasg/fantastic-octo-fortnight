@@ -1,6 +1,7 @@
-@testable import EyePostureReminder
 import UIKit
 import XCTest
+
+@testable import EyePostureReminder
 
 private final class MockUserNotificationCenter: UserNotificationCenterDelegating {
     weak var delegate: UNUserNotificationCenterDelegate?

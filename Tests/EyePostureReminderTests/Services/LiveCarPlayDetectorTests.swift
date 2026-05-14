@@ -1,6 +1,7 @@
 import AVFoundation
-@testable import EyePostureReminder
 import XCTest
+
+@testable import EyePostureReminder
 
 @MainActor
 final class LiveCarPlayDetectorTests: XCTestCase {

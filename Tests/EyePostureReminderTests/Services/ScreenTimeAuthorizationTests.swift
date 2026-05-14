@@ -1,5 +1,6 @@
-@testable import EyePostureReminder
 import XCTest
+
+@testable import EyePostureReminder
 
 /// Unit tests for the Screen Time authorization abstraction added in #204.
 ///

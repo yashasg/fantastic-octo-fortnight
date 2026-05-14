@@ -1,5 +1,6 @@
-@testable import EyePostureReminder
 import XCTest
+
+@testable import EyePostureReminder
 
 /// Tests for `MockMediaControlling` — verifies the mock itself behaves correctly
 /// so that tests relying on it have a trustworthy foundation.

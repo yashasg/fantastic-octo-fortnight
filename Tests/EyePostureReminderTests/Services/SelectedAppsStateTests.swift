@@ -1,6 +1,7 @@
+import XCTest
+
 @testable import EyePostureReminder
 @testable import ScreenTimeExtensionShared
-import XCTest
 
 /// Unit tests for `SelectedAppsState` and shared App Group selection metadata.
 ///

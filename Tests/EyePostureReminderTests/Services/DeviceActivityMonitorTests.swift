@@ -1,5 +1,6 @@
-@testable import EyePostureReminder
 import XCTest
+
+@testable import EyePostureReminder
 
 /// Unit tests for the DeviceActivity monitoring service layer added in #205.
 ///

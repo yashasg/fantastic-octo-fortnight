@@ -1,6 +1,7 @@
-@testable import EyePostureReminder
 import UserNotifications
 import XCTest
+
+@testable import EyePostureReminder
 
 #if DEBUG
 @MainActor

@@ -1,5 +1,6 @@
-@testable import EyePostureReminder
 import XCTest
+
+@testable import EyePostureReminder
 // swiftlint:disable file_length
 
 // Tests for the String Catalog (`Localizable.xcstrings`) shipped by Linus.

@@ -1,5 +1,6 @@
-@testable import EyePostureReminder
 import Foundation
+
+@testable import EyePostureReminder
 
 /// Mock implementation of `PauseConditionProviding` for use in `AppCoordinatorTests`
 /// and any test that needs to control pause-condition state without real Focus mode,

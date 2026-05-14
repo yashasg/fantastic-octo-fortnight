@@ -1,5 +1,6 @@
-@testable import EyePostureReminder
 import XCTest
+
+@testable import EyePostureReminder
 
 /// Tests for the `hasSeenOnboarding` UserDefaults flag that gates
 /// the first-launch vs. returning-user flow in `ContentView`.

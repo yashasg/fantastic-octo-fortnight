@@ -1,6 +1,7 @@
+import XCTest
+
 @testable import EyePostureReminder
 @testable import ScreenTimeExtensionShared
-import XCTest
 
 @MainActor
 final class AppCoordinatorNotificationFallbackTests: XCTestCase {

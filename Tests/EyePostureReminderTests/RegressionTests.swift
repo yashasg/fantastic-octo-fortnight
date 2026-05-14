@@ -13,10 +13,11 @@
 // Bug #118: ScreenTimeTracker double-resign — second willResignActive must cancel first reset Task (one reset, not two)
 // Bug #117: OverlayManager queue-on-no-scene — showOverlay with no UIWindowScene must queue, not drop
 
-@testable import EyePostureReminder
 import SwiftUI
 import UIKit
 import XCTest
+
+@testable import EyePostureReminder
 
 // MARK: ─── Bug 1: SettingsView Done Button ───────────────────────────────────
 

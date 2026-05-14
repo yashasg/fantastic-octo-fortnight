@@ -1,7 +1,8 @@
-@testable import EyePostureReminder
 import SwiftUI
 import UIKit
 import XCTest
+
+@testable import EyePostureReminder
 
 /// Smoke tests that instantiate every view the way its `#Preview` block does,
 /// then force body evaluation via `UIHostingController.loadViewIfNeeded()`.

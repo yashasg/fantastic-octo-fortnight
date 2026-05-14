@@ -1,6 +1,7 @@
-@testable import EyePostureReminder
 import Foundation
 import UIKit
+
+@testable import EyePostureReminder
 
 /// Resolves the EyePostureReminder module's resource bundle for use in tests.
 ///

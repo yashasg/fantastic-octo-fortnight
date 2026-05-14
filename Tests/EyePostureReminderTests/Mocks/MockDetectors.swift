@@ -1,5 +1,6 @@
-@testable import EyePostureReminder
 import Foundation
+
+@testable import EyePostureReminder
 
 /// Mock implementations of the detector protocols used by `PauseConditionManager`.
 ///

@@ -1,6 +1,7 @@
-@testable import EyePostureReminder
 import UIKit
 import XCTest
+
+@testable import EyePostureReminder
 
 /// Tests that all color tokens in the `Colors.xcassets` Asset Catalog resolve correctly.
 ///

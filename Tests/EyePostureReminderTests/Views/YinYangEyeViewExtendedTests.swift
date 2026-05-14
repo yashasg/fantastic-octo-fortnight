@@ -1,6 +1,7 @@
-@testable import EyePostureReminder
 import SwiftUI
 import XCTest
+
+@testable import EyePostureReminder
 
 /// Extended tests for `YinYangEyeView` — covers RightHalf shape path geometry
 /// and animation state properties.

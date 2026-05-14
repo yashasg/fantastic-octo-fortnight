@@ -1,5 +1,6 @@
-@testable import EyePostureReminder
 import XCTest
+
+@testable import EyePostureReminder
 
 /// Tests for `ReminderSettings` — the immutable value type carrying schedule parameters.
 final class ReminderSettingsTests: XCTestCase {

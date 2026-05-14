@@ -1,6 +1,7 @@
-@testable import EyePostureReminder
 import SwiftUI
 import XCTest
+
+@testable import EyePostureReminder
 
 /// Tests for `Components.swift` — reusable Restful Grove SwiftUI components.
 ///

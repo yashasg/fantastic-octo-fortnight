@@ -1,6 +1,7 @@
-@testable import EyePostureReminder
 import ScreenTimeExtensionShared
 import XCTest
+
+@testable import EyePostureReminder
 
 /// Tests for `AnalyticsEvent` enum — validates associated values, exhaustiveness,
 /// and the `DismissMethod` nested enum.
