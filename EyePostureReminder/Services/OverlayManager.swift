@@ -133,6 +133,11 @@ final class OverlayManager: OverlayPresenting {
     /// Tracks whether external audio was paused by this overlay so we only resume when needed.
     private var isAudioPaused = false
 
+    /// Whether a break overlay window is currently on screen and visible to the user.
+    ///
+    /// `true` while a `UIWindow` is installed and not hidden, `false` after dismissal
+    /// or before the first overlay is shown. Read by `AppCoordinator` to decide
+    /// whether to suppress duplicate threshold-triggered presentations.
     var isOverlayVisible: Bool {
         overlayWindow != nil && overlayWindow?.isHidden == false
     }
