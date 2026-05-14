@@ -150,6 +150,23 @@ jobs:
             brew install xcodegen
           fi
 
+      # ── Lint ─────────────────────────────────────────────────────────────────
+      # Run SwiftLint before any compilation so style violations fail fast and
+      # don't waste a full build/test cycle. SwiftLint is configured in
+      # .swiftlint.yml against the Google Swift Style guide
+      # (docs/google_swift_coding_style.md). See CONTRIBUTING.md.
+      - name: Install SwiftLint
+        run: |
+          if brew list swiftlint &>/dev/null 2>&1; then
+            brew link --overwrite swiftlint 2>/dev/null || true
+          else
+            brew install swiftlint
+          fi
+          swiftlint --version
+
+      - name: Lint (SwiftLint --strict)
+        run: ./scripts/build.sh lint
+
       - name: Build Screen Time extensions (simulator, no signing)
         run: ./scripts/setup-screentime.sh --build
 

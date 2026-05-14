@@ -1,5 +1,19 @@
 # SwiftLint Configuration — kshana
 # https://github.com/realm/SwiftLint
+#
+# Canonical Swift style: docs/google_swift_coding_style.md (Google Swift Style).
+# SwiftLint enforces the machine-checkable subset of that guide; team-process
+# items (doc comments, naming intent) are reviewed in PRs.
+#
+# Known deviations from Google Swift Style enforced here:
+#   • line_length warning is 120 (Google §Column Limit specifies 100). Tightening
+#     to 100 is tracked in #650 and will land alongside the wrapping cleanup so
+#     CI does not regress on legacy long lines that already passed review.
+#   • function_body_length and large_tuple are disabled to accommodate SwiftUI
+#     view bodies and preview signatures, which Google's guide does not address.
+#
+# Run locally with: ./scripts/build.sh lint   (uses --strict).
+# CI runs the same command in .github/workflows/ci.yml before build/test.
 
 # ── Excluded paths ────────────────────────────────────────────────────────────
 excluded:
