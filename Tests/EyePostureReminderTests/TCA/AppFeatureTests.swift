@@ -176,26 +176,34 @@ final class AppFeatureTests: XCTestCase {
         await store.send(.scenePhaseChanged(.inactive))
     }
 
-    // MARK: - notificationRouted (Phase-2 deferred to #675)
+    // MARK: - notificationRouted (Phase-2 bridge in #675)
 
-    /// `.notificationRouted` must remain a pure no-op at the AppFeature level
-    /// until `p0-tca-12` (#675) bridges AppDelegate routes to the
-    /// `SchedulingFeature` reducer. The forwarding reducer change happens in
-    /// the #675 PR; here we only assert the Phase-1 contract that the action
-    /// is accepted without state mutation or effect.
-    func test_notificationRouted_reminder_isNoOpAtAppLevel() async {
+    /// `.notificationRouted` is forwarded to `.scheduling(.notificationRouted)`
+    /// so `SchedulingFeature.notificationRoutedEffect` runs the reminder /
+    /// snoozeWake / ignore paths. Behavioural parity for the inner reducer
+    /// effects is owned by `p0-tca-17` (#680) — these tests only assert the
+    /// AppFeature → SchedulingFeature wiring contract using non-exhaustive
+    /// matching so deep effect chains in `SchedulingFeature` don't have to be
+    /// duplicated here.
+    func test_notificationRouted_reminder_forwardsToScheduling() async {
         let store = makeStore()
+        store.exhaustivity = .off
         await store.send(.notificationRouted(.reminder(.eyes)))
+        await store.receive(\.scheduling.notificationRouted)
     }
 
-    func test_notificationRouted_snoozeWake_isNoOpAtAppLevel() async {
+    func test_notificationRouted_snoozeWake_forwardsToScheduling() async {
         let store = makeStore()
+        store.exhaustivity = .off
         await store.send(.notificationRouted(.snoozeWake))
+        await store.receive(\.scheduling.notificationRouted)
     }
 
-    func test_notificationRouted_ignore_isNoOpAtAppLevel() async {
+    func test_notificationRouted_ignore_forwardsToScheduling() async {
         let store = makeStore()
+        store.exhaustivity = .off
         await store.send(.notificationRouted(.ignore))
+        await store.receive(\.scheduling.notificationRouted)
     }
 
     // MARK: - Destination state Equatable conformance
