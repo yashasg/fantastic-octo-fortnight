@@ -7,12 +7,6 @@ struct EyePostureReminderApp: App {
     @StateObject private var coordinator = AppCoordinator()
     @Environment(\.scenePhase) private var scenePhase
 
-    /// Tracks whether the previous `scenePhase` was `.background` so we only
-    /// call `handleForegroundTransition()` on true background → foreground
-    /// transitions, not on every brief `.inactive` interruption (e.g. task
-    /// switcher, control centre).
-    @State private var wasInBackground = false
-
     /// Single TCA `Store` driving the app, introduced by `p0-tca-11` (#674).
     /// `AppCoordinator` is intentionally kept alongside the store so legacy
     /// MVVM surfaces (Settings/Home views consuming `@EnvironmentObject`)
@@ -37,20 +31,10 @@ struct EyePostureReminderApp: App {
                     await store.send(.scheduling(.start)).finish()
                 }
                 .onChange(of: scenePhase) { phase in
-                    switch phase {
-                    case .active:
+                    if phase == .active {
                         presentUITestOverlayIfNeeded()
-                        coordinator.presentPendingOverlayIfNeeded()
-                        if wasInBackground {
-                            wasInBackground = false
-                            Task { await coordinator.handleForegroundTransition() }
-                        }
-                    case .background:
-                        wasInBackground = true
-                        coordinator.appWillResignActive()
-                    default:
-                        break
                     }
+                    store.send(.scenePhaseChanged(phase))
                 }
                 .onAppear {
                     appDelegate.coordinator = coordinator
