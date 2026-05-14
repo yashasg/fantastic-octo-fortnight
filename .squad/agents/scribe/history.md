@@ -17,6 +17,30 @@ Initial setup complete.
 
 ---
 
+## 2026-05-14 — File-Path Drift Cleanup (Commit 54bf555)
+
+**Event:** Discovered file-path drift in cross-agent history files written by previous spawn (commit 54bf555).
+
+**Problem:** Three cross-agent history updates were written to the wrong location:
+- `.squad/history/danny-product.md` (WRONG)
+- `.squad/history/frank-legal.md` (WRONG)
+- `.squad/history/rusty-architecture.md` (WRONG)
+
+**Canonical location:** `.squad/agents/{name}/history.md`
+- `.squad/agents/danny/history.md` (CORRECT)
+- `.squad/agents/frank/history.md` (CORRECT)
+- `.squad/agents/rusty/history.md` (CORRECT)
+
+**Action taken:**
+1. Read all three drift files
+2. Extracted meaningful content and appended to respective canonical files (skipped boilerplate already present in canonical files, preserved dated entries and learnings)
+3. Deleted the three drift files from `.squad/history/`
+4. Left `.squad/history/issue-203-extension-scaffold.md` untouched (unrelated one-off log from April 30)
+
+**Key learning:** The `.squad/history/` directory is NOT a canonical location for agent histories. It contains only unrelated one-off log files like issue tracking logs. Agent histories MUST be written to `.squad/agents/{name}/history.md`. When resolving cross-agent history paths, always use `.squad/agents/{name}/history.md` — never `.squad/history/{name}-{role}.md`.
+
+---
+
 ## Wave 4 Completion Summary — 2026-04-24T10:05:00Z
 
 ### Team Achievements

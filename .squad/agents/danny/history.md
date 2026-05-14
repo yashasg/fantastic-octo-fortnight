@@ -168,3 +168,39 @@
 - **External correspondence style:** No markdown for email/web forms (renders as literal characters). Labeled sections read as LLM-generated. Use conversational paragraphs with varied length, contractions, authentic phrasing.
 - **Indie dev voice markers:** "I can send that over" (not "I would be delighted"), contractions (`can't`, `it's`), varied sentence rhythm, natural opening ("Thanks for the follow-up" not "Dear Sir, Thank you for the follow-up").
 
+---
+
+## 2026-05-14 — Apple Developer Support Reply: Final Send-Ready Edition (Case 102881605113)
+
+**Status:** ✅ User sent with minor edits
+
+**Revision:** v2 plain-prose rewrite approved and sent. Legal review by Frank remains valid (substance unchanged).
+
+### User Edits (v2 → Sent)
+
+Yashasg took the v2 draft and made three targeted edits before sending:
+
+1. **Warmer opener:** "Thanks for getting back to me. I can share the business need..." (vs. v2's "Thanks for following up...")
+2. **NEW product detail:** "Unless the phone is in focus mode or driving mode" — reveals app respects iOS DND signals
+3. **Specificity:** "Once every 20 minutes the app triggers a visual, eye-resting, wellness break for the user by shielding..." — clearer timing and nature
+4. **Streamlined closing:** Removed redundant check-in instructions; kept conversational
+
+**Validation:** Plain-prose pattern drafted → user accepted → user sent with only minor warmth/specificity edits. **Zero formatting reverts. End-to-end pattern successful.**
+
+### Follow-Up
+
+- Expect response 5–14 business days
+- Check-in ~May 28 if silent
+- Archive: `.squad/log/apple-case-102881605113-sent-2026-05-14.md`
+
+### Skill Confidence Bump
+
+**external-correspondence-style:** `low` → `medium`
+
+The plain-prose, no-markdown pattern for external correspondence was successfully applied end-to-end:
+- Drafted v2 per skill guidelines
+- User accepted (no formatting complaints in v2)
+- User sent with only warmth/specificity edits (no markdown reverts, no structure complaints)
+
+This is the first real-world validation of the pattern. Future external correspondence (customer support, App Store appeals, etc.) should follow the same model. **Next validation:** Apply to 2–3 more external emails. If pattern holds, bump confidence to high.
+
