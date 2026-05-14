@@ -41,12 +41,9 @@ struct ContentView: View {
 }
 
 #Preview {
-    let coordinator = AppCoordinator()
     ContentView(
         store: Store(initialState: AppFeature.State()) {
             AppFeature()
         }
     )
-    .environmentObject(coordinator.settings)
-    .environmentObject(coordinator)
 }
