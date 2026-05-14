@@ -567,6 +567,19 @@ verify_archived_version() {
   fi
 }
 
+verify_archived_main_app_privacy_manifest() {
+  local privacy_manifest="${ARCHIVE_PATH}/Products/Applications/${APP_TARGET}.app/PrivacyInfo.xcprivacy"
+
+  if [[ ! -f "$privacy_manifest" ]]; then
+    fail "Main app archive is missing PrivacyInfo.xcprivacy at: ${privacy_manifest}"
+    fail "App Store privacy manifest acceptance requires the archived .app to bundle PrivacyInfo.xcprivacy."
+    fail "Confirm EyePostureReminder/PrivacyInfo.xcprivacy is copied into the bundle by the archive build."
+    return 1
+  fi
+
+  pass "Main app archive includes PrivacyInfo.xcprivacy"
+}
+
 verify_archived_extensions() {
   [[ "$EXTENSION_PROFILES_AVAILABLE" == "YES" ]] || return 0
 
@@ -1086,6 +1099,7 @@ cmd_archive() {
 
   inject_build_number
   verify_archived_version
+  verify_archived_main_app_privacy_manifest
   verify_archived_extensions
   pass "Archive created: $ARCHIVE_PATH"
 }
