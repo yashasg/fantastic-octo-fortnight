@@ -1,7 +1,7 @@
 # Privacy Policy
 
 **App:** kshana  
-**Last Updated:** May 5, 2026
+**Last Updated:** May 14, 2026
 **Publisher:** Yashasg
 
 ---
@@ -133,7 +133,7 @@ The App is distributed through the Apple App Store. Apple may collect certain da
 
 kshana does not knowingly collect personal information from children under the age of 13 (or the applicable age of digital consent in your jurisdiction). The App does not require accounts, direct identifiers, advertising identifiers, or third-party tracking.
 
-If you are a parent or guardian and believe your child has somehow provided personal information through this App, contact us through the [kshana GitHub issue tracker](https://github.com/yashasg/fantastic-octo-fortnight/issues). We will promptly address the concern.
+If you are a parent or guardian and believe your child has somehow provided personal information through this App, contact us privately at [privacy@yashasg.dev](mailto:privacy@yashasg.dev). We will promptly address the concern. Please do not file COPPA-related concerns in the public GitHub issue tracker, which is reserved for non-sensitive product support.
 
 ---
 
@@ -165,13 +165,13 @@ California residents have the following rights under the California Consumer Pri
 
 **How to submit a CCPA request:**
 
-Use the [kshana GitHub issue tracker](https://github.com/yashasg/fantastic-octo-fortnight/issues) and include "CCPA Request" in your request. Do not include sensitive personal, medical, or financial information in public support requests. Because the App does not maintain user accounts or a developer-hosted user database, we will explain what local data the App stores and how to remove it from your device.
+Email **[privacy@yashasg.dev](mailto:privacy@yashasg.dev)** with the subject line "CCPA Request" and a description of the right(s) you are exercising. Use email rather than the public GitHub issue tracker so that any sensitive personal, medical, or financial information you include is not disclosed publicly. Because the App does not maintain user accounts or a developer-hosted user database, we will explain what local data the App stores and how to remove it from your device.
 
 **Business address for service of legal notices:**
 
 Yashasg designates the following contact method for service of consumer-rights notices:
 
-**Support channel:** https://github.com/yashasg/fantastic-octo-fortnight/issues
+**Email:** [privacy@yashasg.dev](mailto:privacy@yashasg.dev)
 
 ---
 
@@ -183,11 +183,13 @@ Yashasg may update this Privacy Policy from time to time. When changes are made,
 
 ## 12. Contact
 
-If you have questions or concerns about this Privacy Policy, contact:
+If you have questions or concerns about this Privacy Policy, or wish to exercise a privacy right that may involve sensitive personal information, contact us privately at:
 
 **Yashasg**  
-**Support channel:** https://github.com/yashasg/fantastic-octo-fortnight/issues
+**Privacy & legal email:** [privacy@yashasg.dev](mailto:privacy@yashasg.dev)
+
+For non-sensitive product support (bug reports, feature questions, general feedback), the public [kshana GitHub issue tracker](https://github.com/yashasg/fantastic-octo-fortnight/issues) remains available. Do not include personal, medical, financial, or other sensitive information in public issues.
 
 ---
 
-*This Privacy Policy was last updated on April 26, 2026.*
+*This Privacy Policy was last updated on May 14, 2026.*

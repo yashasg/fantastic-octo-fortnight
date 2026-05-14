@@ -1,7 +1,7 @@
 # Terms and Conditions
 
 **App:** kshana  
-**Last Updated:** April 26, 2026  
+**Last Updated:** May 14, 2026  
 **Publisher:** Yashasg
 
 ---
@@ -163,11 +163,13 @@ Yashasg may update these Terms at any time. When changes are made, the "Last Upd
 
 ## 13. Contact
 
-If you have questions about these Terms, contact:
+For questions about these Terms or to deliver legal notices to the publisher, contact us privately at:
 
 **Yashasg**  
-**Support channel:** https://github.com/yashasg/fantastic-octo-fortnight/issues
+**Privacy & legal email:** [privacy@yashasg.dev](mailto:privacy@yashasg.dev)
+
+For non-sensitive product support and bug reports, the public [kshana GitHub issue tracker](https://github.com/yashasg/fantastic-octo-fortnight/issues) remains available. Do not include personal, medical, financial, or other sensitive information in public issues.
 
 ---
 
-*These Terms and Conditions were last updated on April 26, 2026.*
+*These Terms and Conditions were last updated on May 14, 2026.*

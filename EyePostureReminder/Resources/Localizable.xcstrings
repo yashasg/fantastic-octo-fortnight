@@ -1516,7 +1516,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "For questions or concerns, contact the developer through the App Store listing."
+            "value": "For legal questions or notices that may involve sensitive personal information, email privacy@yashasg.dev. For non-sensitive product support, contact the developer through the App Store listing."
           }
         }
       }
@@ -1604,7 +1604,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "For privacy questions, contact the developer through the App Store listing."
+            "value": "For privacy questions or any request that may involve sensitive personal information (including COPPA inquiries and CCPA/GDPR rights requests), email privacy@yashasg.dev. For non-sensitive product support, contact the developer through the App Store listing."
           }
         }
       }

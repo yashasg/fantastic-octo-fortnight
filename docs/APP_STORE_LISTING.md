@@ -131,7 +131,7 @@ If we add analytics or data collection features in a future update, this privacy
 
 #### Contact
 
-For questions about this privacy policy, contact the developer via the App Store support link or at the GitHub repository.
+For privacy or legal requests that may involve sensitive personal information, email privacy@yashasg.dev. For non-sensitive product support, use the App Store support link or the public GitHub issue tracker.
 
 ---
 
