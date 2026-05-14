@@ -1,6 +1,7 @@
 import Combine
-@testable import EyePostureReminder
 import XCTest
+
+@testable import EyePostureReminder
 
 // MARK: - SettingsStore ↔ SettingsViewModel Integration
 

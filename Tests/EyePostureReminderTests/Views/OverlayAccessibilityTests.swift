@@ -1,5 +1,6 @@
-@testable import EyePostureReminder
 import XCTest
+
+@testable import EyePostureReminder
 
 /// Accessibility-focused tests for `OverlayView` — covers #310 (VoiceOver
 /// initial focus order) and related body evaluation after the sort-priority fix.

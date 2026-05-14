@@ -1,5 +1,6 @@
-@testable import EyePostureReminder
 import Foundation
+
+@testable import EyePostureReminder
 @testable import ScreenTimeExtensionShared
 
 final class MockAppGroupIPCRecorder: AppGroupIPCProviding {

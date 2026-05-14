@@ -1,6 +1,7 @@
-@testable import EyePostureReminder
 import Foundation
 import XCTest
+
+@testable import EyePostureReminder
 
 @MainActor
 final class SettingsAccessibilityTests: XCTestCase {

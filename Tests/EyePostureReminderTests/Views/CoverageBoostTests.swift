@@ -1,5 +1,6 @@
-@testable import EyePostureReminder
 import XCTest
+
+@testable import EyePostureReminder
 
 /// Additional tests targeting coverage gaps in files that are partially testable
 /// without a host app. Pure SwiftUI `body` properties remain out of scope for

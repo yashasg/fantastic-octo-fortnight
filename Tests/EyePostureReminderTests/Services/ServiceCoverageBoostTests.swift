@@ -1,5 +1,7 @@
-@testable import EyePostureReminder
+import MetricKit
 import XCTest
+
+@testable import EyePostureReminder
 
 /// Additional service and model tests targeting coverage gaps in partially-covered
 /// production files: PauseConditionManager, OverlayManager, MetricKitSubscriber,
@@ -658,5 +660,3 @@ final class ServiceCoverageBoostTests2: XCTestCase {
         XCTAssertEqual(mock.cancelAllCallCount, 1)
     }
 }
-
-import MetricKit

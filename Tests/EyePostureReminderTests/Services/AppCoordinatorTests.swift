@@ -1,6 +1,7 @@
+import XCTest
+
 @testable import EyePostureReminder
 @testable import ScreenTimeExtensionShared
-import XCTest
 
 // swiftlint:disable file_length
 /// Unit tests for `AppCoordinator`.

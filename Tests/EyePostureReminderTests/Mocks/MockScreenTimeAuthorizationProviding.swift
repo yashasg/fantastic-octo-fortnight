@@ -1,5 +1,6 @@
-@testable import EyePostureReminder
 import Foundation
+
+@testable import EyePostureReminder
 
 /// Mock implementation of `ScreenTimeAuthorizationProviding` for unit tests.
 ///

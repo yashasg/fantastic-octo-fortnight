@@ -1,6 +1,7 @@
-@testable import EyePostureReminder
 import UIKit
 import XCTest
+
+@testable import EyePostureReminder
 
 // swiftlint:disable type_body_length
 

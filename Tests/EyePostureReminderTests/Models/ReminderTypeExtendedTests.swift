@@ -1,5 +1,6 @@
-@testable import EyePostureReminder
 import XCTest
+
+@testable import EyePostureReminder
 
 /// Extended tests for `ReminderType` — computed display properties, notification
 /// identity, and the failable `init(categoryIdentifier:)`.

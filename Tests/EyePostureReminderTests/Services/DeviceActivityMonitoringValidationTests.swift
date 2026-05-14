@@ -1,6 +1,7 @@
+import XCTest
+
 @testable import EyePostureReminder
 @testable import ScreenTimeExtensionShared
-import XCTest
 
 /// Pre-implementation validation tests for M3.5 "DeviceActivity Monitoring Service" (#205).
 ///

@@ -1,5 +1,6 @@
-@testable import EyePostureReminder
 import XCTest
+
+@testable import EyePostureReminder
 
 /// Additional coverage for `SettingsViewModel` — edge cases not yet covered
 /// by the existing test files: SnoozeOption computed properties, preset option

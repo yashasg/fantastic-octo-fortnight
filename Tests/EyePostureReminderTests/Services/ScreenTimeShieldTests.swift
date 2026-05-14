@@ -1,6 +1,7 @@
+import XCTest
+
 @testable import EyePostureReminder
 @testable import ScreenTimeExtensionShared
-import XCTest
 
 /// Unit tests for the Screen Time shield abstraction layer.
 ///

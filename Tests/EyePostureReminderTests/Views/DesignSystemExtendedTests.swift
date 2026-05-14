@@ -1,6 +1,7 @@
-@testable import EyePostureReminder
 import SwiftUI
 import XCTest
+
+@testable import EyePostureReminder
 
 /// Additional coverage for design system tokens — fills remaining gaps in
 /// AppOpacity, AppLayout edge values, AppAnimation boundary checks, and

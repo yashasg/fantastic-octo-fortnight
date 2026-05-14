@@ -1,5 +1,6 @@
-@testable import EyePostureReminder
 import Foundation
+
+@testable import EyePostureReminder
 
 /// Mock implementation of `ScreenTimeShieldProviding` for use in
 /// `AppCoordinator` integration tests (M3.3+).

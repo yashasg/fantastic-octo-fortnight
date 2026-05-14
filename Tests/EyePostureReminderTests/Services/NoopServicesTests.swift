@@ -1,5 +1,6 @@
-@testable import EyePostureReminder
 import XCTest
+
+@testable import EyePostureReminder
 
 /// Tests for `NoopScreenTimeTracker` and `NoopPauseConditionManager`.
 ///

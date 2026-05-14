@@ -1,6 +1,7 @@
-@testable import EyePostureReminder
 import SwiftUI
 import XCTest
+
+@testable import EyePostureReminder
 
 /// Tests for `SecondaryButtonStyle` and the `withMotionSafe` helper in
 /// `Components.swift`. Covers the remaining untested components.

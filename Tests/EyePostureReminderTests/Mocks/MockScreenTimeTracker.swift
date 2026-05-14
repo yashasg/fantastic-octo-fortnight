@@ -1,5 +1,6 @@
-@testable import EyePostureReminder
 import Foundation
+
+@testable import EyePostureReminder
 
 /// Mock implementation of `ScreenTimeTracking` for use in `AppCoordinatorTests`
 /// and any test that needs to control or observe screen-time tracking behaviour

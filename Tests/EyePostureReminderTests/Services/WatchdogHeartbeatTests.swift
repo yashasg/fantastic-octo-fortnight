@@ -1,6 +1,7 @@
+import XCTest
+
 @testable import EyePostureReminder
 @testable import ScreenTimeExtensionShared
-import XCTest
 
 final class WatchdogHeartbeatTests: XCTestCase {
     func test_event_usesWatchdogKindAndStableDetail() {

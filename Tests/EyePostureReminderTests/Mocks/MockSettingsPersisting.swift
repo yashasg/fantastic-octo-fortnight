@@ -1,5 +1,6 @@
-@testable import EyePostureReminder
 import Foundation
+
+@testable import EyePostureReminder
 
 /// In-memory implementation of `SettingsPersisting` for unit tests.
 ///

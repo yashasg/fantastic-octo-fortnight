@@ -1,7 +1,8 @@
-@testable import EyePostureReminder
 import SwiftUI
 import UIKit
 import XCTest
+
+@testable import EyePostureReminder
 
 // Expanded dark mode tests for the DesignSystem.
 //

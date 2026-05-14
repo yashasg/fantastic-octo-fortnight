@@ -1,5 +1,6 @@
-@testable import EyePostureReminder
 import XCTest
+
+@testable import EyePostureReminder
 
 /// Tests for `SettingsViewModel` static formatting helpers.
 /// These are pure functions with branching logic used for user-visible picker labels.

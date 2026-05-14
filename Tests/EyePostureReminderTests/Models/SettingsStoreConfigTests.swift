@@ -1,5 +1,6 @@
-@testable import EyePostureReminder
 import XCTest
+
+@testable import EyePostureReminder
 
 /// Integration tests for `SettingsStore` + `AppConfig` (data-driven defaults.json system).
 ///

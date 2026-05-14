@@ -1,5 +1,6 @@
-@testable import EyePostureReminder
 import UIKit
+
+@testable import EyePostureReminder
 
 /// In-memory stub of `AppStateProviding` for unit tests.
 ///

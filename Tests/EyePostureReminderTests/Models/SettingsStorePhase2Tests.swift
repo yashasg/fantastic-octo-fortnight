@@ -1,5 +1,6 @@
-@testable import EyePostureReminder
 import XCTest
+
+@testable import EyePostureReminder
 
 /// Phase 2 unit tests for `SettingsStore` covering haptics and snooze-count persistence.
 @MainActor

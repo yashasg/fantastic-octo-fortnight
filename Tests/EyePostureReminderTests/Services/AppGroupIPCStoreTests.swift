@@ -1,7 +1,8 @@
-@testable import EyePostureReminder
 import Foundation
-@testable import ScreenTimeExtensionShared
 import XCTest
+
+@testable import EyePostureReminder
+@testable import ScreenTimeExtensionShared
 
 @MainActor
 // swiftlint:disable:next type_body_length

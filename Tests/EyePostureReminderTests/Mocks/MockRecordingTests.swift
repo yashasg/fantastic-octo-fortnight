@@ -1,5 +1,6 @@
-@testable import EyePostureReminder
 import XCTest
+
+@testable import EyePostureReminder
 
 /// Tests for `ServiceLifecycle` protocol conformance and the mock detectors
 /// used in PauseConditionManager tests. Validates mock recording fidelity.

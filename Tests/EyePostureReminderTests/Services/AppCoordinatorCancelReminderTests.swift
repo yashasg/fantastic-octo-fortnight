@@ -1,6 +1,7 @@
+import XCTest
+
 @testable import EyePostureReminder
 @testable import ScreenTimeExtensionShared
-import XCTest
 
 /// Tests for `cancelReminder(for:)` DeviceActivity cancellation behaviour introduced in issue #291.
 ///

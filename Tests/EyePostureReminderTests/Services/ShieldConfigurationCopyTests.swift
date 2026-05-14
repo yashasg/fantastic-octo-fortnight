@@ -1,5 +1,6 @@
-@testable import ScreenTimeExtensionShared
 import XCTest
+
+@testable import ScreenTimeExtensionShared
 
 final class ShieldConfigurationCopyTests: XCTestCase {
 
