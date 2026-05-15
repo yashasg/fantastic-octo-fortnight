@@ -1,13 +1,24 @@
+import ComposableArchitecture
 import SwiftUI
 import UIKit
 import UserNotifications
 
+/// Home screen, wired to `HomeFeature` as part of `#755` Phase A.
+///
+/// The legacy `@EnvironmentObject SettingsStore` / `AppCoordinator` graph has
+/// been removed from this view: every per-type enable flag, master toggle, and
+/// notification auth status is now read from `StoreOf<HomeFeature>`. Local
+/// `@AppStorage`-backed state (`openSettingsOnLaunch`,
+/// `trueInterruptSkippedBannerDismissed`) stays in the view because
+/// `HomeFeature` doesn't persist those yet; the sheet still hands off to the
+/// MVVM `SettingsView`, which receives `SettingsStore` / `AppCoordinator` via
+/// SwiftUI environment inheritance from `EyePostureReminderApp` until
+/// `#755` Phase B migrates that surface as well.
 struct HomeView: View {
     typealias LaunchArgumentsProvider = () -> [String]
     typealias ProcessEnvironmentProvider = () -> [String: String]
 
-    @EnvironmentObject var settings: SettingsStore
-    @EnvironmentObject var coordinator: AppCoordinator
+    @Perception.Bindable var store: StoreOf<HomeFeature>
 
     @State private var showSettings = false
     @AppStorage(AppStorageKey.openSettingsOnLaunch) private var openSettingsOnLaunch = false
@@ -25,6 +36,7 @@ struct HomeView: View {
     private let processEnvironmentProvider: ProcessEnvironmentProvider
 
     init(
+        store: StoreOf<HomeFeature>,
         accessibilityNotificationPoster: AccessibilityNotificationPosting
             = LiveAccessibilityNotificationPoster(),
         launchArguments: [String]? = nil,
@@ -33,6 +45,7 @@ struct HomeView: View {
         processEnvironmentProvider: @escaping ProcessEnvironmentProvider
             = { ProcessInfo.processInfo.environment }
     ) {
+        self.store = store
         self.accessibilityNotificationPoster = accessibilityNotificationPoster
         self.launchArguments = launchArguments
         self.launchArgumentsProvider = launchArgumentsProvider
@@ -42,26 +55,26 @@ struct HomeView: View {
 
     private var statusLabel: String {
         let key = Self.statusLocalizationKey(
-            globalEnabled: settings.globalEnabled,
-            eyesEnabled: settings.eyesEnabled,
-            postureEnabled: settings.postureEnabled,
-            notificationAuthStatus: coordinator.notificationAuthStatus
+            globalEnabled: store.globalEnabled,
+            eyesEnabled: store.eyesEnabled,
+            postureEnabled: store.postureEnabled,
+            notificationAuthStatus: store.notificationAuthStatus
         )
         return String(localized: String.LocalizationValue(key), bundle: .module)
     }
 
     private var shouldShowNotificationRecovery: Bool {
         Self.shouldShowNotificationRecovery(
-            globalEnabled: settings.globalEnabled,
-            notificationAuthStatus: coordinator.notificationAuthStatus
+            globalEnabled: store.globalEnabled,
+            notificationAuthStatus: store.notificationAuthStatus
         )
     }
 
     private var shouldShowNoRemindersConfigured: Bool {
         Self.shouldShowNoRemindersConfigured(
-            globalEnabled: settings.globalEnabled,
-            eyesEnabled: settings.eyesEnabled,
-            postureEnabled: settings.postureEnabled
+            globalEnabled: store.globalEnabled,
+            eyesEnabled: store.eyesEnabled,
+            postureEnabled: store.postureEnabled
         )
     }
 
@@ -106,9 +119,13 @@ struct HomeView: View {
     }
 
     private var shouldShowTrueInterruptPrompts: Bool {
-        if coordinator.screenTimeAuthorization.authorizationStatus == .notDetermined {
-            return true
-        }
+        // Pre-entitlement production builds always resolve Screen Time
+        // authorization to `.unavailable` via `ScreenTimeAuthorizationNoop`,
+        // so the legacy `coordinator.screenTimeAuthorization` check never
+        // returned `true` outside DEBUG launch-arg overrides (#201). The
+        // DEBUG paths below preserve UI-test backdoor parity until Phase 2
+        // wires a real `screenTimeAuthorizationClient` observation into
+        // `HomeFeature.State`.
 #if DEBUG
         if uiTestScreenTimeStatusRaw == ScreenTimeAuthorizationStatus.notDetermined.rawValue {
             return true
@@ -181,115 +198,124 @@ struct HomeView: View {
 #endif
 
     var body: some View {
-        VStack(spacing: AppSpacing.lg) {
-            Spacer()
-
+        WithPerceptionTracking {
             VStack(spacing: AppSpacing.lg) {
-                YinYangEyeView()
+                Spacer()
 
-                // Status copy crossfades as a unit when globalEnabled changes.
-                ZStack {
-                    VStack(spacing: AppSpacing.sm) {
-                        Text("home.title", bundle: .module)
-                            .font(AppTypography.headline)
-                            .foregroundStyle(AppColor.textPrimary)
-                            .multilineTextAlignment(.center)
-                            .accessibilityIdentifier("home.title")
+                VStack(spacing: AppSpacing.lg) {
+                    YinYangEyeView()
 
-                        Text(statusLabel)
-                            .font(AppTypography.body)
-                            .foregroundStyle(AppColor.textSecondary)
-                            .multilineTextAlignment(.center)
-                            .accessibilityIdentifier("home.statusLabel")
+                    // Status copy crossfades as a unit when globalEnabled changes.
+                    ZStack {
+                        VStack(spacing: AppSpacing.sm) {
+                            Text("home.title", bundle: .module)
+                                .font(AppTypography.headline)
+                                .foregroundStyle(AppColor.textPrimary)
+                                .multilineTextAlignment(.center)
+                                .accessibilityIdentifier("home.title")
+
+                            Text(statusLabel)
+                                .font(AppTypography.body)
+                                .foregroundStyle(AppColor.textSecondary)
+                                .multilineTextAlignment(.center)
+                                .accessibilityIdentifier("home.statusLabel")
+                        }
+                        .id(store.globalEnabled)
+                        .transition(.opacity)
                     }
-                    .id(settings.globalEnabled)
-                    .transition(.opacity)
+                    .animation(
+                        reduceMotion ? nil : AppAnimation.statusCrossfadeCurve,
+                        value: store.globalEnabled
+                    )
                 }
-                .animation(
-                    reduceMotion ? nil : AppAnimation.statusCrossfadeCurve,
-                    value: settings.globalEnabled
-                )
+
+                Spacer()
+
+                // Post-onboarding True Interrupt discoverability banner (#258).
+                // Shown only when setup was skipped (notDetermined) and not yet dismissed.
+                if shouldShowTrueInterruptPrompts,
+                   !effectiveTrueInterruptBannerDismissed {
+                    TrueInterruptSkippedBanner(
+                        onSetUp: {
+                            trueInterruptBannerDismissed = true
+                            showSettings = true
+                        },
+                        onDismiss: {
+                            trueInterruptBannerDismissed = true
+                        }
+                    )
+                }
+
+                // Persistent low-noise rediscovery affordance (#280).
+                // Shown after the banner is dismissed while setup is still pending.
+                if shouldShowTrueInterruptPrompts,
+                   effectiveTrueInterruptBannerDismissed {
+                    TrueInterruptSetupPill(onTap: { showSettings = true })
+                }
+
+                if shouldShowNotificationRecovery && !shouldShowNoRemindersConfigured {
+                    HomeNotificationWarningBanner(onOpenSettings: openApplicationSettings)
+                }
+
+                if shouldShowNoRemindersConfigured {
+                    HomeNoRemindersConfiguredBanner(onOpenSettings: { showSettings = true })
+                }
             }
-
-            Spacer()
-
-            // Post-onboarding True Interrupt discoverability banner (#258).
-            // Shown only when setup was skipped (notDetermined) and not yet dismissed.
-            if shouldShowTrueInterruptPrompts,
-               !effectiveTrueInterruptBannerDismissed {
-                TrueInterruptSkippedBanner(
-                    onSetUp: {
-                        trueInterruptBannerDismissed = true
+            .padding(.horizontal, AppSpacing.xl)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .navigationTitle(Text("home.navTitle", bundle: .module))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
                         showSettings = true
-                    },
-                    onDismiss: {
-                        trueInterruptBannerDismissed = true
+                    } label: {
+                        Image(systemName: AppSymbol.settings)
+                            .symbolRenderingMode(.hierarchical)
+                            .foregroundStyle(AppColor.primaryRest)
+                            .accessibilityHidden(true)
                     }
-                )
-            }
-
-            // Persistent low-noise rediscovery affordance (#280).
-            // Shown after the banner is dismissed while setup is still pending.
-            if shouldShowTrueInterruptPrompts,
-               effectiveTrueInterruptBannerDismissed {
-                TrueInterruptSetupPill(onTap: { showSettings = true })
-            }
-
-            if shouldShowNotificationRecovery && !shouldShowNoRemindersConfigured {
-                HomeNotificationWarningBanner(onOpenSettings: openApplicationSettings)
-            }
-
-            if shouldShowNoRemindersConfigured {
-                HomeNoRemindersConfiguredBanner(onOpenSettings: { showSettings = true })
-            }
-        }
-        .padding(.horizontal, AppSpacing.xl)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .navigationTitle(Text("home.navTitle", bundle: .module))
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button {
-                    showSettings = true
-                } label: {
-                    Image(systemName: AppSymbol.settings)
-                        .symbolRenderingMode(.hierarchical)
-                        .foregroundStyle(AppColor.primaryRest)
-                        .accessibilityHidden(true)
+                    .accessibilityLabel(Text("home.settingsButton", bundle: .module))
+                    .accessibilityHint(Text("home.settingsButton.hint", bundle: .module))
+                    .accessibilityIdentifier("home.settingsButton")
                 }
-                .accessibilityLabel(Text("home.settingsButton", bundle: .module))
-                .accessibilityHint(Text("home.settingsButton.hint", bundle: .module))
-                .accessibilityIdentifier("home.settingsButton")
             }
-        }
-        .sheet(isPresented: $showSettings) {
-            NavigationStack {
-                SettingsView(isPresented: $showSettings)
-                    .environmentObject(settings)
-                    .environmentObject(coordinator)
+            .sheet(isPresented: $showSettings) {
+                // `SettingsView` still consumes `@EnvironmentObject
+                // SettingsStore` / `AppCoordinator`; SwiftUI's automatic
+                // sheet-environment inheritance from
+                // `EyePostureReminderApp`'s WindowGroup-level
+                // `.environmentObject(...)` chain provides them. The explicit
+                // re-injection used by the pre-#755 MVVM HomeView is no
+                // longer needed and would also force this view to keep its
+                // own `@EnvironmentObject` declarations.
+                NavigationStack {
+                    SettingsView(isPresented: $showSettings)
+                }
             }
-        }
-        .background(AppColor.background.ignoresSafeArea())
-        .onAppear {
-            if openSettingsOnLaunch {
-                openSettingsOnLaunch = false
-                showSettings = true
+            .background(AppColor.background.ignoresSafeArea())
+            .onAppear {
+                store.send(.onAppear)
+                if openSettingsOnLaunch {
+                    openSettingsOnLaunch = false
+                    showSettings = true
+                }
             }
-        }
-        .task {
-            await coordinator.refreshAuthStatus()
-        }
-        .onChangeCompat(of: openSettingsOnLaunch) { newValue in
-            if newValue {
-                openSettingsOnLaunch = false
-                showSettings = true
+            .task {
+                await store.send(.task).finish()
             }
-        }
-        // Announce master-toggle state changes to VoiceOver (#287).
-        // Guard prevents double-announcement while SettingsView sheet is open.
-        .onChangeCompat(of: settings.globalEnabled) { _ in
-            guard !showSettings else { return }
-            accessibilityNotificationPoster.postAnnouncement(message: statusLabel)
+            .onChangeCompat(of: openSettingsOnLaunch) { newValue in
+                if newValue {
+                    openSettingsOnLaunch = false
+                    showSettings = true
+                }
+            }
+            // Announce master-toggle state changes to VoiceOver (#287).
+            // Guard prevents double-announcement while SettingsView sheet is open.
+            .onChangeCompat(of: store.globalEnabled) { _ in
+                guard !showSettings else { return }
+                accessibilityNotificationPoster.postAnnouncement(message: statusLabel)
+            }
         }
     }
 
@@ -492,10 +518,11 @@ struct TrueInterruptSkippedBanner: View {
 }
 
 #Preview {
-    let coordinator = AppCoordinator()
     NavigationStack {
-        HomeView()
-            .environmentObject(coordinator.settings)
-            .environmentObject(coordinator)
+        HomeView(
+            store: Store(initialState: HomeFeature.State()) {
+                HomeFeature()
+            }
+        )
     }
 }
