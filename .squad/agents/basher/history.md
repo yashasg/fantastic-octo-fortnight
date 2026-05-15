@@ -47,6 +47,7 @@
 - Key file paths: `EyePostureReminder/App/AppDelegate.swift`, `Tests/EyePostureReminderTests/Services/AppDelegateTests.swift`, `.squad/skills/notification-center-factory-seam/SKILL.md`.
 - Lint unblock (services-only): wrapped `SettingsStore` init assignment in multiline call to clear `line_length` at `EyePostureReminder/Models/SettingsStore.swift:205` with no behavior change.
 - Lint unblock (services-only): replaced `line_length` suppression in `AppCoordinator+Helpers` with multiline debug string formatting, removing `superfluous_disable_command` and keeping identical log output.
+- 2026-05-15: Issue #677 body now reflects residual scope only — view migrations are tracked in #702, SettingsStore ObservableObject strip in #701. See updated #677 body before picking up the umbrella.
 
 ## 2026-05-13T22:00:00Z: Google Swift Style Audit (Services + Utilities) — READ-ONLY
 

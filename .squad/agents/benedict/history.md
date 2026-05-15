@@ -43,6 +43,8 @@
 
 <!-- Append new learnings below. Each entry is something lasting about the project. -->
 
+- 2026-05-15: Issue #677 body now reflects residual scope only — view migrations are tracked in #702, SettingsStore ObservableObject strip in #701. See updated #677 body before picking up the umbrella.
+
 ### 2026-04-24: Phase 1 Code Review (M1.8)
 - **Reviewed:** All 16 Swift source files, 7 test files, Package.swift, ARCHITECTURE.md
 - **Verdict:** Conditional Approval — 0 P0, 4 P1, 7 P2 issues

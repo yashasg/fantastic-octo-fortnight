@@ -34,6 +34,8 @@
 
 ## Learnings
 
+- 2026-05-15: Issue #677 body now reflects residual scope only — view migrations are tracked in #702, SettingsStore ObservableObject strip in #701. See updated #677 body before picking up the umbrella.
+
 <!-- Append new learnings below. Each entry is something lasting about the project. -->
 
 ---

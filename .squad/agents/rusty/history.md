@@ -286,3 +286,32 @@ The app respects user-defined system DND contexts. Wellness breaks are *offered*
 
 
 - 2026-05-15: Team now has explicit frontend/backend/devops/product team grouping. See `.squad/team.md` "## Teams" section. Frontend (Linus/Livingston/Saul), Backend (Basher/Yen/Benedict), DevOps (Virgil), Product (Danny/Tess/Reuben/Turk/Frank/Roman), Cross-cutting (you). Routing decisions now respect layer ownership; coordinate architecture across team boundaries.
+
+---
+
+## Session: Deconflict #677 Issue Scope (2024)
+
+### Context
+Issue #677 ("Decommission legacy MVVM types — PHASE 2") was an umbrella tracking the full Phase 2 MVVM-to-TCA migration work. Two sub-issues (#701 and #702) were subsequently carved out and deferred to unblock parallel engineering:
+- #701: SettingsStore ObservableObject strip (blocks on TCA Dependencies mutable access)
+- #702: View migrations + AppCoordinator reference erasure (blocks on TCA reducer stabilization)
+
+### Decision
+Rewrote #677's issue body to clearly delineate residual scope vs. deferred work:
+
+**Residual #677 scope:**
+- AppCoordinator stack deletion (5 files, 1,351 LoC)
+- SettingsViewModel deletion (451 LoC + tests)
+- SelectedAppsState ObservableObject strip
+
+**Deferred to #701 & #702** (full sub-issue specs already written)
+
+**Rationale:** Scope ambiguity creates friction during review and parallel work. An umbrella's body must always reflect current state, not the initial vision. The pattern here—"umbrella-with-deferrals body update"—works for future TCA migration phases.
+
+### Learnings
+1. **Umbrella issues need live-updating bodies.** When sub-issues are carved out post-filing, update the parent to avoid reviewer confusion. A stale umbrella body is a source of ground-truth conflicts.
+2. **Deferred sub-issues require explicit links.** The new body calls out #701 and #702 by number and one-line scope, so context is immediate.
+3. **Residual scope must be quantified.** Line counts + file lists make it clear what work remains and allow reviewers to spot scope creep.
+4. **This pattern reusable for Phase 3 & beyond.** As the TCA migration continues, new umbrellas will accrue deferrals—standardize the body structure (Scope, Deferred To, Pre-requisites, etc.) to keep navigation consistent.
+
+---
