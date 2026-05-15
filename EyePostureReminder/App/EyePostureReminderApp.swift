@@ -4,13 +4,14 @@ import SwiftUI
 @main
 struct EyePostureReminderApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-    @StateObject private var coordinator = AppCoordinator()
     @Environment(\.scenePhase) private var scenePhase
 
-    /// Single TCA `Store` driving the app, introduced by `p0-tca-11` (#674).
-    /// `AppCoordinator` is intentionally kept alongside the store so legacy
-    /// MVVM surfaces (Settings/Home views consuming `@EnvironmentObject`)
-    /// keep working until `p0-tca-14` (#677) decommissions them.
+    /// Single TCA `Store` driving the app. `#755` Phase D removed the
+    /// legacy `@StateObject AppCoordinator` + `.environmentObject(...)`
+    /// injections that previously sat alongside the store: every SwiftUI
+    /// view in the tree (`HomeView`, `SettingsView`, `OnboardingView`,
+    /// `OnboardingSetupView`, `ContentView`/`RootView`) now reads from the
+    /// store scope or `@AppStorage` directly.
     private let store: StoreOf<AppFeature>
 
     init() {
@@ -113,9 +114,7 @@ struct EyePostureReminderApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView(store: store)
-                .environmentObject(coordinator.settings)
-                .environmentObject(coordinator)
+            RootView(store: store)
                 .task {
                     await store.send(.scheduling(.start)).finish()
                 }

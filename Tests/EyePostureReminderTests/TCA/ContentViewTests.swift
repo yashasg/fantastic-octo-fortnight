@@ -5,13 +5,13 @@ import XCTest
 
 @testable import EyePostureReminder
 
-/// `ContentView` body coverage — exercises both the onboarding-gated branch
-/// and the home branch wired up by Phase 2 issue `p0-tca-11` (#674).
+/// `ContentView` body coverage — verifies the thin wrapper still mounts
+/// `RootView` (the canonical TCA root introduced by `#755` Phase D) for both
+/// onboarding-gated and home branches of `AppFeature.State`.
 ///
-/// `ContentView` requires both a TCA `Store` (root state) and the legacy
-/// `@EnvironmentObject` graph (`SettingsStore` + `AppCoordinator`) because
-/// `HomeView` / `OnboardingView` have not yet been migrated off MVVM
-/// (`p0-tca-14` / #677).
+/// As of `#755` Phase D, `ContentView` is a pure pass-through for
+/// `RootView(store:)`; the `@EnvironmentObject` graph (`SettingsStore` +
+/// `AppCoordinator`) has been removed from the view tree.
 @MainActor
 final class ContentViewTests: XCTestCase {
 
@@ -99,19 +99,6 @@ final class ContentViewTests: XCTestCase {
             $0.screenTimeAuthorizationClient = ScreenTimeAuthorizationClient()
             $0.analyticsClient = AnalyticsClient(log: { _ in })
         }
-    }
-
-    /// Builds an `AppCoordinator` whose collaborators are all mock doubles —
-    /// matches `PreviewTests.makeTestCoordinator()`.
-    private func makeTestCoordinator() -> AppCoordinator {
-        AppCoordinator(
-            scheduler: MockReminderScheduler(),
-            notificationCenter: MockNotificationCenter(),
-            overlayManager: MockOverlayPresenting(),
-            screenTimeTracker: MockScreenTimeTracker(),
-            pauseConditionProvider: MockPauseConditionProvider(),
-            ipcStore: MockAppGroupIPCRecorder()
-        )
     }
 
     // MARK: - Body description coverage
