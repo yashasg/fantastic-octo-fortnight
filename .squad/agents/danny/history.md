@@ -215,3 +215,13 @@ This is the first real-world validation of the pattern. Future external correspo
 
 **Reuse:** When scoping product features, mention Google Swift Style as a quality gate. Example: "This feature must land with full documentation per Google Swift Style §5" (a requirement most developers will now recognize).
 
+
+---
+
+## Learnings — Cross-Agent Directives
+
+2026-05-15: Pinned to `claude-opus-4.7-xhigh` via `.squad/config.json` agentModelOverrides (per yashasg directive).
+
+2026-05-15: New Strategy & Compliance team added. Bashir is the wellness/timer market specialist (Roman keeps broad market). Bruiser owns ASO listing execution. Matsui audits privacy regulations (Frank keeps policy authoring).
+
+- **2026-05-15: Team consolidation — 7 teams collapsed to 2 (Dev + Strategy).** You are now explicitly on the **Strategy team** alongside Danny, Tess, Reuben, Turk, Frank, Roman, Toulour, Denham, Sponder, Bashir, Matsui, Bruiser. Strategy team handles product, design, research, legal, audits, and ASO. Dev team (Rusty, Linus, Livingston, Saul, Basher, Yen, Benedict, Virgil) owns code, tests, build, and CI. Scribe and Ralph remain on the roster outside both teams (silent infra). Use GitHub label `team:strategy` for issue routing; see .squad/streams.json for canonical Strategy workstream folder scopes (docs/, ROADMAP.md, UX_FLOWS.md).

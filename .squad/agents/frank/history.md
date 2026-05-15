@@ -1,12 +1,5 @@
 # Frank — History
 
-## Project Context
-
-- **Project:** kshana (formerly Eye & Posture Reminder) — a lightweight iOS app with True Interrupt Mode via Screen Time APIs
-- **Stack:** Swift, SwiftUI (iOS 16+), MVVM, UserNotifications, UIKit overlay, UserDefaults, FamilyControls (Phase 3+)
-- **Owner:** Yashasg
-- **Joined:** 2026-04-24
-
 ## Core Context
 
 - Health/wellness app that reminds users to take eye breaks and check posture
@@ -16,20 +9,6 @@
 - No user accounts or authentication
 - No analytics/telemetry collecting personal data (yet)
 - **Phase 3 pivot:** Now includes True Interrupt Mode via Screen Time APIs; Shield feature pending FamilyControls entitlement approval
-
-## 2026-04-29 — True Interrupt Mode Privacy & Legal Updates
-
-**Task:** Update privacy/legal docs for Screen Time / FamilyControls True Interrupt Mode pivot.  
-**Status:** ✅ Complete — orchestration log filed
-
-**Changes made:**
-- **docs/legal/PRIVACY.md** — Overview + Section 1: Added device activity/Screen Time data disclosure (aggregate-only, in-memory, no transmission)
-- **docs/legal/DISCLAIMER.md** — Added approval status note + comprehensive Screen Time feature section (case ID 102881605113)
-- **docs/PRIVACY_NUTRITION_LABELS.md** — New table row + post-approval label template
-- **GitHub Issues:** Created #199 (closed/redirect to #209), kept #200 (App Store listing coordination)
-- **Owner-only fields:** Preserved all PII placeholders untouched
-
-**Key decision:** Truthful, upfront disclosure of pending approval status. No content-reading (explicit guarantee). Decision merged into `.squad/decisions.md`.
 
 ## Learnings
 
@@ -382,3 +361,13 @@ Yashasg sent the v2 plain-prose draft with user edits (warmer tone, added focus/
 
 **Archive:** See `.squad/log/apple-case-102881605113-sent-2026-05-14.md` for full sent body and diff notes.
 
+
+---
+
+## Learnings — Cross-Agent Directives
+
+2026-05-15: Pinned to `claude-opus-4.7-xhigh` via `.squad/config.json` agentModelOverrides (per yashasg directive).
+
+2026-05-15: Matsui (new Legal & Compliance Auditor) handles regulatory audit cycles (GDPR/CCPA/COPPA/Apple Privacy Manifest). I keep policy authoring (terms, privacy policy text).
+
+- **2026-05-15: Team consolidation — 7 teams collapsed to 2 (Dev + Strategy).** You are now explicitly on the **Strategy team** alongside Danny, Tess, Reuben, Turk, Frank, Roman, Toulour, Denham, Sponder, Bashir, Matsui, Bruiser. Strategy team handles product, design, research, legal, audits, and ASO. Dev team (Rusty, Linus, Livingston, Saul, Basher, Yen, Benedict, Virgil) owns code, tests, build, and CI. Scribe and Ralph remain on the roster outside both teams (silent infra). Use GitHub label `team:strategy` for issue routing; see .squad/streams.json for canonical Strategy workstream folder scopes (docs/, ROADMAP.md, UX_FLOWS.md).

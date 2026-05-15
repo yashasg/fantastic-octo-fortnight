@@ -154,3 +154,7 @@ Orchestration log recorded at 2026-04-30T09:27:10Z. Confirmed AppCoordinator tes
 ## 2026-05-15 — #646 fan-out
 
 Two child issues now assigned from Google Swift audit: #650 (column-limit line-wrapping, MEDIUM) and #652 (access control, HIGH, joint with Basher). Ready to parallelize remediation work across Views layer.
+
+Toulour (Accessibility Auditor), Denham (HIG Reviewer), Sponder (API Contract Monitor) will file issues that may route to me for UI-side fixes.
+
+- **2026-05-15: Team consolidation — 7 teams collapsed to 2 (Dev + Strategy).** You are now explicitly on the **Dev team** alongside Rusty, Linus, Livingston, Saul, Basher, Yen, Benedict, Virgil. Dev team owns code, tests, build, and CI. Strategy team (Danny, Tess, Reuben, Turk, Frank, Roman, Toulour, Denham, Sponder, Bashir, Matsui, Bruiser) handles product, design, research, legal, audits, and ASO. Scribe and Ralph remain on the roster outside both teams (silent infra). Use GitHub label `team:dev` for issue routing; see .squad/streams.json for canonical Dev workstream folder scopes.

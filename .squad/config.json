@@ -2,14 +2,23 @@
   "version": 1,
   "defaultModel": "claude-sonnet-4.6",
   "agentModelOverrides": {
-    "danny": "claude-opus-4.6-1m",
+    "danny": "claude-opus-4.7-xhigh",
     "rusty": "claude-opus-4.6-1m",
     "linus": "gpt-5.3-codex",
     "basher": "gpt-5.3-codex",
     "livingston": "gpt-5.3-codex",
     "saul": "claude-opus-4.6-1m",
     "virgil": "gpt-5.3-codex",
-    "turk": "claude-opus-4.6-1m",
-    "frank": "gpt-5.5"
+    "turk": "claude-opus-4.7-xhigh",
+    "frank": "claude-opus-4.7-xhigh",
+    "tess": "claude-opus-4.7-xhigh",
+    "reuben": "claude-opus-4.7-xhigh",
+    "roman": "claude-opus-4.7-xhigh",
+    "toulour": "claude-opus-4.7-xhigh",
+    "denham": "claude-opus-4.7-xhigh",
+    "sponder": "claude-opus-4.7-xhigh",
+    "bashir": "claude-opus-4.7-xhigh",
+    "matsui": "claude-opus-4.7-xhigh",
+    "bruiser": "claude-opus-4.7-xhigh"
   }
 }

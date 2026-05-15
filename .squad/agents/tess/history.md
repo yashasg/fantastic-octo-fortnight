@@ -272,6 +272,7 @@
    - Preserved accessibility label for illustration
 
 ### Learnings
+- **2026-05-15: Team consolidation — 7 teams collapsed to 2 (Dev + Strategy).** You are now explicitly on the **Strategy team** alongside Danny, Tess, Reuben, Turk, Frank, Roman, Toulour, Denham, Sponder, Bashir, Matsui, Bruiser. Strategy team handles product, design, research, legal, audits, and ASO. Dev team (Rusty, Linus, Livingston, Saul, Basher, Yen, Benedict, Virgil) owns code, tests, build, and CI. Scribe and Ralph remain on the roster outside both teams (silent infra). Use GitHub label `team:strategy` for issue routing; see .squad/streams.json for canonical Strategy workstream folder scopes (docs/, ROADMAP.md, UX_FLOWS.md).
 
 - SwiftUI `Path.addArc` clockwise parameter is inverted from SVG convention (SwiftUI uses flipped Y-axis coordinates). When converting SVG arc sweeps, flip the clockwise boolean.
 - For yin-yang S-curve: the trick is two small arcs (radius = R/2) centered at 25% and 75% of the diameter on the center axis, with opposite sweep directions per half.
@@ -379,3 +380,13 @@
 
 **Reuse:** When scoping new UI components, mention Google Swift Style as a requirement. Developers will recognize it.
 
+- 2026-05-15: Note that #741 (ROADMAP.md) and #742 (UX_FLOWS.md) were both previously labeled squad:tess on the parent #735, but split by file ownership: ROADMAP → squad:rusty (Product), UX_FLOWS → squad:saul (Frontend). Tess no longer owns either.
+
+
+---
+
+## Learnings — Cross-Agent Directives
+
+2026-05-15: Pinned to `claude-opus-4.7-xhigh` via `.squad/config.json` agentModelOverrides (per yashasg directive).
+
+2026-05-15: Toulour (new Accessibility Auditor) and Denham (new HIG Compliance Reviewer) will file issues that route to me for design response and to Linus/Saul/Livingston for implementation/test/review.

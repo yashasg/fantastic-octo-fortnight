@@ -47,6 +47,7 @@
 - Key file paths: `EyePostureReminder/App/AppDelegate.swift`, `Tests/EyePostureReminderTests/Services/AppDelegateTests.swift`, `.squad/skills/notification-center-factory-seam/SKILL.md`.
 - Lint unblock (services-only): wrapped `SettingsStore` init assignment in multiline call to clear `line_length` at `EyePostureReminder/Models/SettingsStore.swift:205` with no behavior change.
 - Lint unblock (services-only): replaced `line_length` suppression in `AppCoordinator+Helpers` with multiline debug string formatting, removing `superfluous_disable_command` and keeping identical log output.
+- 2026-05-15: Issue #677 body now reflects residual scope only — view migrations are tracked in #702, SettingsStore ObservableObject strip in #701. See updated #677 body before picking up the umbrella.
 
 ## 2026-05-13T22:00:00Z: Google Swift Style Audit (Services + Utilities) — READ-ONLY
 
@@ -114,3 +115,8 @@
 ## 2026-05-15 — #646 fan-out
 
 Three child issues now assigned from Google Swift audit: #647 (import ordering, MEDIUM), #648 (IUO review, MEDIUM), #649 (doc comments on Services public API, HIGH). Also joint owner on #652 (access control with Linus, HIGH). Ready to parallelize remediation work.
+
+- 2026-05-15: Yen and Benedict are your new pair partners for backend testing and code review. Yen owns backend test coverage (services, schedulers, pause detectors, persistence); Benedict owns backend code review (concurrency, actor isolation, system APIs, retain cycles). Coordinate test specifications and review criteria with them.
+- 2026-05-15: Sponder (API Contract Monitor) will flag Apple system API deprecations affecting services I own. Matsui (Legal & Compliance) will request privacy-impact assessments before new data-handling features.
+
+- **2026-05-15: Team consolidation — 7 teams collapsed to 2 (Dev + Strategy).** You are now explicitly on the **Dev team** alongside Rusty, Linus, Livingston, Saul, Basher, Yen, Benedict, Virgil. Dev team owns code, tests, build, and CI. Strategy team (Danny, Tess, Reuben, Turk, Frank, Roman, Toulour, Denham, Sponder, Bashir, Matsui, Bruiser) handles product, design, research, legal, audits, and ASO. Scribe and Ralph remain on the roster outside both teams (silent infra). Use GitHub label `team:dev` for issue routing; see .squad/streams.json for canonical Dev workstream folder scopes.

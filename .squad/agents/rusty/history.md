@@ -215,58 +215,6 @@ All model, protocol, and service skeletons in `EyePostureReminder/`:
 
 ---
 
-## Issue #306 — Corrupt legacy eventLog breaks watchdog recovery (2026-04-30)
-
-**Problem:** `readEventsCombined` threw `corruptEventLog` on corrupt legacy `trueInterrupt.ipc.eventLog` key, permanently disabling watchdog recovery since `recoverStaleDeviceActivityWatchdogIfNeeded` returns `false` on any `readEvents()` throw. Per-slot corrupt entries were already silently skipped — inconsistent behavior.
-
-**Fix:** Changed `readEventsCombined` to log a warning via `os.Logger` and continue reading per-slot events when the legacy key is corrupt. Added `Logger` instance to `AppGroupIPCStore` using same subsystem/category as `AppGroupDefaults`.
-
-**Tests:** Replaced `test_readEvents_corruptLog_throws` with two tests (warning-and-continue, corrupt legacy + valid slots → returns slots). Added watchdog recovery test proving corrupt legacy key doesn't block recovery.
-
-**Commit:** db4fac0
-
-## 2026-04-30: Audit-Wave PR Consolidation to main
-
-- Consolidated open squad audit-wave PRs targeting `main` into a single branch/PR for cleaner review and integration.
-- Integrated PRs #440, #449, #450, #452, #454, #459, and the unique analytics-only delta from #451.
-- Confirmed #439 had no remaining unique diff after #440 (legal updates already included).
-- Deliberately dropped `.worktrees/*` changes from #451 as environment-specific workspace artifacts, not product behavior.
-- Validation: `./scripts/build.sh build` and `./scripts/build.sh test` passed; `./scripts/build.sh lint` failed due pre-existing SwiftLint scanning `.worktrees/*/DerivedData` generated files outside the consolidated diff.
-
-
-### 2026-05-03: #497/#498/#499 Remediation Validation + UI Shard Stabilization
-
-**Scope owned:** final architecture validation and merge-readiness assessment for PR #501 after remediation of issues #497/#498/#499.
-
-**What I validated:**
-- #499 callback isolation fix is architecturally correct (`@MainActor`-typed callback path replacing runtime `assumeIsolated` hazard in the timer callback chain).
-- #497/#498 remediation includes assertion-bearing tests (not just invocation smoke checks).
-- Local build + unit suites and CI-targeted UI selections pass after hardening changes.
-
-**Stabilization changes authored (PR #501 branch):**
-- Added resilient UI helper primitives for CI simulator variance:
-  - `waitForElementExists(timeout:)`
-  - `waitForElementHittable(timeout:)`
-  - `tapElementCenter()`
-- Reworked overlay and dark-mode suites to avoid brittle hit-point assumptions (`exists` + coordinate taps where simulator hit-testing is unstable).
-- Pinned overlay launch-argument break durations to 120s for `--show-overlay-eyes/--show-overlay-posture` test launches to prevent mid-test auto-dismiss in shards.
-
-**Commits:** `d6c1df4`, `7c17035`, `4048fef`
-
-**CI outcome:**
-- Overlays + Dark Mode shards recovered to green on latest run after hardening.
-- Settings shard remained unstable and ended `cancelled` after long runtime with intermittent UI-query timeout failures, so workflow did not reach all-success terminal state.
-
-**Final merge verdict at handoff:**
-- **REJECT FOR NOW** — residual risk remains in Settings shard stability despite remediation closure for #497/#498/#499 and overlay/dark-mode improvements.
-
-### 2026-05-03: #462 Phase A Micro-slice — LiveCarPlayDetector AudioSession seam
-
-- Added an `AudioSessionRouting` protocol seam in `PauseConditionManager.swift` and extended `AVAudioSession` to conform, removing direct `AVAudioSession.sharedInstance()` access from `LiveCarPlayDetector` static route logic.
-- `LiveCarPlayDetector` now resolves dependencies with optional injection + factory fallback (`audioSession ?? makeAudioSession()`), preserving existing behavior while improving DI clarity.
-- Added focused seam coverage in `LiveCarPlayDetectorTests` for factory fallback and injected bypass paths, alongside existing behavior tests.
-
-
 ## Learnings
 
 ### 2026-05-04: #462 Phase A Micro-slice — OnboardingView Accessibility Poster Factory Seam
@@ -336,3 +284,82 @@ The app respects user-defined system DND contexts. Wellness breaks are *offered*
 
 **Reuse:** When making architecture decisions (DI protocols, service abstractions, API boundaries), mention Google Swift Style conformance as a design criterion.
 
+
+- 2026-05-15: Team now has explicit frontend/backend/devops/product team grouping. See `.squad/team.md` "## Teams" section. Frontend (Linus/Livingston/Saul), Backend (Basher/Yen/Benedict), DevOps (Virgil), Product (Danny/Tess/Reuben/Turk/Frank/Roman), Cross-cutting (you). Routing decisions now respect layer ownership; coordinate architecture across team boundaries.
+
+---
+
+## Session: Deconflict #677 Issue Scope (2024)
+
+### Context
+Issue #677 ("Decommission legacy MVVM types — PHASE 2") was an umbrella tracking the full Phase 2 MVVM-to-TCA migration work. Two sub-issues (#701 and #702) were subsequently carved out and deferred to unblock parallel engineering:
+- #701: SettingsStore ObservableObject strip (blocks on TCA Dependencies mutable access)
+- #702: View migrations + AppCoordinator reference erasure (blocks on TCA reducer stabilization)
+
+### Decision
+Rewrote #677's issue body to clearly delineate residual scope vs. deferred work:
+
+**Residual #677 scope:**
+- AppCoordinator stack deletion (5 files, 1,351 LoC)
+- SettingsViewModel deletion (451 LoC + tests)
+- SelectedAppsState ObservableObject strip
+
+**Deferred to #701 & #702** (full sub-issue specs already written)
+
+**Rationale:** Scope ambiguity creates friction during review and parallel work. An umbrella's body must always reflect current state, not the initial vision. The pattern here—"umbrella-with-deferrals body update"—works for future TCA migration phases.
+
+### Learnings
+- **2026-05-15: Team consolidation — 7 teams collapsed to 2 (Dev + Strategy).** You are now explicitly on the **Dev team** alongside Rusty, Linus, Livingston, Saul, Basher, Yen, Benedict, Virgil. Dev team owns code, tests, build, and CI. Strategy team (Danny, Tess, Reuben, Turk, Frank, Roman, Toulour, Denham, Sponder, Bashir, Matsui, Bruiser) handles product, design, research, legal, audits, and ASO. Scribe and Ralph remain on the roster outside both teams (silent infra). Use GitHub label `team:dev` for issue routing; see .squad/streams.json for canonical Dev workstream folder scopes.
+1. **Umbrella issues need live-updating bodies.** When sub-issues are carved out post-filing, update the parent to avoid reviewer confusion. A stale umbrella body is a source of ground-truth conflicts.
+2. **Deferred sub-issues require explicit links.** The new body calls out #701 and #702 by number and one-line scope, so context is immediate.
+3. **Residual scope must be quantified.** Line counts + file lists make it clear what work remains and allow reviewers to spot scope creep.
+4. **This pattern reusable for Phase 3 & beyond.** As the TCA migration continues, new umbrellas will accrue deferrals—standardize the body structure (Scope, Deferred To, Pre-requisites, etc.) to keep navigation consistent.
+
+---
+
+---
+
+## Session: Split Issue #735 by File Ownership (2025-05-16)
+
+### Context
+Issue #735 bundled two related docs-drift issues (`ROADMAP.md` and `UX_FLOWS.md`) that describe the project's current architecture as MVVM/AppCoordinator-orchestrated, when that pattern is being decommissioned post-Phase 2 TCA migration. However, the two files have different team owners:
+- **ROADMAP.md**: Product narrative & milestones (squad:rusty territory)
+- **UX_FLOWS.md**: Engineering behavior contracts & flow diagrams (squad:saul/Frontend territory)
+
+### Decision
+Split #735 into two sibling issues by file ownership:
+
+**#741** (`ROADMAP.md`, Product)
+- Owned by squad:rusty (architect closest to Product)
+- L6 header rewrite + Phase-3+ bullets re-anchored from MVVM to TCA
+- Same blocker pattern (#677, #701, #702)
+- Same priority (p2) and sweep scope (alongside #725)
+
+**#742** (`UX_FLOWS.md`, Frontend Engineering)
+- Owned by squad:saul (Frontend code reviewer, would review rewrite anyway)
+- Flow diagrams (§2.x, §6.x, §6.7, §8.x) re-drawn from AppCoordinator methods to Store reducers
+- ContentView paragraph updated to reflect TCA state-driven onboarding
+- Same blocker pattern and priority
+
+**#735** marked as "Superseded by #741 + #742" with banner + original body preserved as tombstone. Added explanatory comment; left open per team convention (owner closes when ready).
+
+### Learnings
+- **2026-05-15: Team consolidation — 7 teams collapsed to 2 (Dev + Strategy).** You are now explicitly on the **Dev team** alongside Rusty, Linus, Livingston, Saul, Basher, Yen, Benedict, Virgil. Dev team owns code, tests, build, and CI. Strategy team (Danny, Tess, Reuben, Turk, Frank, Roman, Toulour, Denham, Sponder, Bashir, Matsui, Bruiser) handles product, design, research, legal, audits, and ASO. Scribe and Ralph remain on the roster outside both teams (silent infra). Use GitHub label `team:dev` for issue routing; see .squad/streams.json for canonical Dev workstream folder scopes.
+
+1. **Split bundled docs-drift issues by file ownership.** When a docs issue spans multiple files with different team owners, splitting by file (not by aspect or urgency) yields clearer accountability and review gates. The pattern: Extract file-specific evidence, AC, and Refs into each child; keep parent as tombstone.
+
+2. **Docs-drift blockers and timelines cross team boundaries.** Both ROADMAP.md and UX_FLOWS.md drift is triggered by the same in-flight work (#677, #701, #702). Coordinating fix timing ensures all four canonical docs (ARCHITECTURE.md, IMPLEMENTATION_PLAN.md, ROADMAP.md, UX_FLOWS.md) transition together from MVVM-era to TCA-era in a single sweep PR. This avoids "piecemeal docs updates" antipattern.
+
+3. **Tombstone parent issues clarify intent.** By prepending a banner to #735's body ("Superseded by #741 + #742") and adding an explanatory comment, future readers see the split rationale and can navigate the family without confusion. Leaving the parent open (vs. closing immediately) respects the owner's privilege to decide when the family is "done."
+
+4. **Reuse this split pattern for future docs sweeps.** The decomposition logic (identify team boundaries, extract evidence by file, preserve blockers & priority in children) is generalizable. Next time a bundled docs issue spans Frontend/Backend/Product, apply the same split-by-ownership template.
+
+### Refs
+
+New issues: #741 (ROADMAP.md), #742 (UX_FLOWS.md)
+Parent issue: #735 (now superseded, kept as tombstone)
+Related: #725 (parent docs sweep), #677, #701, #702 (blockers)
+
+## 2026-05-15 — New Strategy & Compliance Team Established
+
+2026-05-15: New Strategy & Compliance team added (6 members: Toulour/Denham/Sponder/Bashir/Matsui/Bruiser). They file issues; remediation routes to existing dev/test/review team. See team.md and routing.md.

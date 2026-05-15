@@ -32,6 +32,7 @@
 - Retry narrowing still targets only failed tests when available, preserving fast recovery while preventing false-green shards.
 
 ### Learnings
+- **2026-05-15: Team consolidation — 7 teams collapsed to 2 (Dev + Strategy).** You are now explicitly on the **Dev team** alongside Rusty, Linus, Livingston, Saul, Basher, Yen, Benedict, Virgil. Dev team owns code, tests, build, and CI. Strategy team (Danny, Tess, Reuben, Turk, Frank, Roman, Toulour, Denham, Sponder, Bashir, Matsui, Bruiser) handles product, design, research, legal, audits, and ASO. Scribe and Ralph remain on the roster outside both teams (silent infra). Use GitHub label `team:dev` for issue routing; see .squad/streams.json for canonical Dev workstream folder scopes.
 - UI shard retries must validate `.xcresult` status + failure summaries after every green exit to prevent command-stream false positives.
 - Overlay-heavy shards can fail repeatedly on element hittability when setup depends on immediate tappability; gate setup on overlay root existence first, then assert tappability per-test.
 - Keep CI simulator target aligned with local reproducible simulator generation (Xcode 26.4 currently stable on iPhone 17 in this repo) to reduce shard-only geometry/hit-point variance.
@@ -49,6 +50,7 @@
 - Result: ❌ failed at lint stage (`SwiftLint --strict`) before tests, so PR/push flow should be blocked until lint debt is cleared.
 
 ### Learnings
+- **2026-05-15: Team consolidation — 7 teams collapsed to 2 (Dev + Strategy).** You are now explicitly on the **Dev team** alongside Rusty, Linus, Livingston, Saul, Basher, Yen, Benedict, Virgil. Dev team owns code, tests, build, and CI. Strategy team (Danny, Tess, Reuben, Turk, Frank, Roman, Toulour, Denham, Sponder, Bashir, Matsui, Bruiser) handles product, design, research, legal, audits, and ASO. Scribe and Ralph remain on the roster outside both teams (silent infra). Use GitHub label `team:dev` for issue routing; see .squad/streams.json for canonical Dev workstream folder scopes.
 - `./scripts/build.sh all` remains the correct pre-PR parity command; when it fails, the first actionable output is the SwiftLint `error:` list rather than xcodebuild output.
 - For this branch snapshot, lint failures include both branch-touched files (for example `AppCoordinator+Helpers.swift` and `OverlayManagerTests.swift`) and pre-existing larger test-suite debt; CI gate status should be reported as blocked, not partially passed.
 
@@ -66,6 +68,7 @@
 - Prepared branch for push/PR while keeping `.worktrees/` untracked and out of stage.
 
 ### Learnings
+- **2026-05-15: Team consolidation — 7 teams collapsed to 2 (Dev + Strategy).** You are now explicitly on the **Dev team** alongside Rusty, Linus, Livingston, Saul, Basher, Yen, Benedict, Virgil. Dev team owns code, tests, build, and CI. Strategy team (Danny, Tess, Reuben, Turk, Frank, Roman, Toulour, Denham, Sponder, Bashir, Matsui, Bruiser) handles product, design, research, legal, audits, and ASO. Scribe and Ralph remain on the roster outside both teams (silent infra). Use GitHub label `team:dev` for issue routing; see .squad/streams.json for canonical Dev workstream folder scopes.
 - `./scripts/build.sh all` is now green on this branch snapshot, so merge gating can move to remote CI checks.
 - Preserve reproducibility by excluding generated local result artifacts (for example `TestResults.xcresult/Info.plist`) from commits.
 

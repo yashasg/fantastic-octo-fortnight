@@ -1,0 +1,37 @@
+{
+  "defaultWorkflow": "branch-per-issue",
+  "workstreams": [
+    {
+      "name": "Dev",
+      "labelFilter": "team:dev",
+      "folderScope": [
+        "EyePostureReminder/**",
+        "Extensions/**",
+        "ScreenTimeExtensions/**",
+        "Tests/**",
+        "UITests/**",
+        "Package.swift",
+        "Package.resolved",
+        "project.yml",
+        "scripts/**",
+        ".github/**",
+        "ARCHITECTURE.md",
+        "CHANGELOG.md",
+        "CONTRIBUTING.md",
+        "IMPLEMENTATION_PLAN.md",
+        "README.md"
+      ],
+      "description": "Dev team — iOS app sources (Views, ViewModels, Services, Models, TCA, Utilities, Resources), Screen Time / DeviceActivity / ShieldConfiguration extensions, unit + UI test targets, SwiftPM and XcodeGen config, build scripts, and CI workflows. Members: Rusty (Lead/Architect), Linus (UI), Basher (Services), Livingston (Frontend tests), Yen (Backend tests), Saul (Frontend review), Benedict (Backend review), Virgil (CI/CD). See .squad/team.md for the canonical roster."
+    },
+    {
+      "name": "Strategy",
+      "labelFilter": "team:strategy",
+      "folderScope": [
+        "docs/**",
+        "ROADMAP.md",
+        "UX_FLOWS.md"
+      ],
+      "description": "Strategy team — product, design, research, legal, accessibility audits, HIG compliance, API contract monitoring, App Store optimization. Authors docs/ (incl. legal/, app-store-screenshots/, audits, research, ASO listings), ROADMAP, and UX flows. Members: Danny (PM), Tess (UI/UX Design), Reuben (Product Design), Turk (Analytics), Frank (Legal), Roman (Market Research), Toulour (Accessibility Audit), Denham (HIG), Sponder (API Contracts), Bashir (Wellness/Timer Market), Matsui (Legal & Compliance Audit), Bruiser (ASO). Reviewer-gate on UI and contract surfaces lives in routing.md, not here. See .squad/team.md for the canonical roster."
+    }
+  ]
+}

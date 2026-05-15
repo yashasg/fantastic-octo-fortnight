@@ -3,6 +3,52 @@
 - **Owner:** Yashasg
 - **Project:** Eye & Posture Reminder — a lightweight iOS app with background timers and full-screen overlay reminders for eye breaks (20-20-20 rule) and posture checks
 - **Stack:** Swift, SwiftUI (iOS 16+), MVVM, UserNotifications, UIKit overlay, UserDefaults
+- **Created:** 2026-05-15
+- **Scope:** Backend / services & data layer — testing only. Frontend testing belongs to Livingston.
+
+## Core Context
+
+**Backend modules I cover:**
+- SettingsStore, ReminderScheduler, AppCoordinator, OverlayManager (service-side), PauseConditionManager, ScreenTimeTracker
+- AppConfig.swift (Codable) + defaults.json seeding; resetToDefaults() clears & re-seeds
+- Pause conditions: FocusMode (INFocusStatusCenter), CarPlay (AVAudioSession), Driving (CMMotionActivityManager) — gated by pauseWhileDriving
+- ScreenTimeTracker: grace-period state machine (5s reset delay); independent eye/posture counters; CACurrentMediaTime() monotonic
+
+**Established test patterns (inherited from prior service-layer work):**
+- @MainActor test pattern for services touching UI-bound state
+- MockNotificationCenter (addedRequests + pendingRequests) — never hit real UNUserNotificationCenter
+- Bundle injection for AppConfig/SettingsStore via TestBundle.module
+- Async test methods use Task.sleep(nanoseconds: 200_000_000) after actions
+- AppCoordinatorTests: injected MockNotificationCenter to prevent UNUserNotificationCenter crash
+- Settings changes do NOT retroactively remove activeConditions — assert this contract
+- SettingsStore contract: reads settings at callback time (not registration)
+
+**Existing backend test suites I now own:**
+- PauseConditionManager: 28 unit + 41 integration green
+- FocusModeExtendedTests (21): rapid toggle, duplicate events, focus during background
+- DrivingDetectionExtendedTests (29): CarPlay+driving simultaneous, disconnects/stops, full clear, rapid cycles
+- ReminderSchedulerTests: snooze, scheduling, wake timers
+- AppCoordinatorTests, SettingsViewModelTests (service-facing portions)
+
+**Validation:** Use ./scripts/build.sh build and ./scripts/build.sh test.
+
+## Learnings
+
+- 2026-05-15: Issue #677 body now reflects residual scope only — view migrations are tracked in #702, SettingsStore ObservableObject strip in #701. See updated #677 body before picking up the umbrella.
+
+<!-- Append new learnings below. Each entry is something lasting about the project. -->
+
+---
+
+## Inherited Context (from Livingston, pre-split)
+
+> The following is Livingston's full project history at the time of the frontend/backend tester split (2026-05-15). Yen inherits all of it as foundational knowledge. New learnings go above this divider.
+
+# Project Context
+
+- **Owner:** Yashasg
+- **Project:** Eye & Posture Reminder — a lightweight iOS app with background timers and full-screen overlay reminders for eye breaks (20-20-20 rule) and posture checks
+- **Stack:** Swift, SwiftUI (iOS 16+), MVVM, UserNotifications, UIKit overlay, UserDefaults
 - **Created:** 2026-04-24
 
 ## Core Context
@@ -65,8 +111,7 @@ Orchestration log recorded at 2026-04-30T09:27:10Z. Root cause diagnosis documen
 
 **Related:** GitHub Issue #646 contains audit findings across production code only (Views/ViewModels, Services/Utilities, App/Models). Branch: chore/coding-standards-audit.
 
+2026-05-15: When Sponder flags an API migration, I cover the new test surface for services-side changes (Livingston covers UI-side).
 
-- 2026-05-15: You are now explicitly Frontend-scoped. Yen (Backend Tester) owns backend services testing (SettingsStore, ReminderScheduler, etc.); your domain is UI/views testing (SwiftUI, accessibility, overlays, snapshots). Frontend and backend test scopes do not overlap.
-- 2026-05-15: Toulour will extend AccessibilityIdentifier inventory I rely on for UI tests; expect new test surface to cover.
 
 - **2026-05-15: Team consolidation — 7 teams collapsed to 2 (Dev + Strategy).** You are now explicitly on the **Dev team** alongside Rusty, Linus, Livingston, Saul, Basher, Yen, Benedict, Virgil. Dev team owns code, tests, build, and CI. Strategy team (Danny, Tess, Reuben, Turk, Frank, Roman, Toulour, Denham, Sponder, Bashir, Matsui, Bruiser) handles product, design, research, legal, audits, and ASO. Scribe and Ralph remain on the roster outside both teams (silent infra). Use GitHub label `team:dev` for issue routing; see .squad/streams.json for canonical Dev workstream folder scopes.

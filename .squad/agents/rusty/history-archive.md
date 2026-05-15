@@ -697,3 +697,57 @@ Result: **10/10 passed**
 - `try?` on Task.sleep for cancellation is idiomatic but non-obvious; consistent pattern across codebase.
 
 
+## Issue #306 — Corrupt legacy eventLog breaks watchdog recovery (2026-04-30)
+
+**Problem:** `readEventsCombined` threw `corruptEventLog` on corrupt legacy `trueInterrupt.ipc.eventLog` key, permanently disabling watchdog recovery since `recoverStaleDeviceActivityWatchdogIfNeeded` returns `false` on any `readEvents()` throw. Per-slot corrupt entries were already silently skipped — inconsistent behavior.
+
+**Fix:** Changed `readEventsCombined` to log a warning via `os.Logger` and continue reading per-slot events when the legacy key is corrupt. Added `Logger` instance to `AppGroupIPCStore` using same subsystem/category as `AppGroupDefaults`.
+
+**Tests:** Replaced `test_readEvents_corruptLog_throws` with two tests (warning-and-continue, corrupt legacy + valid slots → returns slots). Added watchdog recovery test proving corrupt legacy key doesn't block recovery.
+
+**Commit:** db4fac0
+
+
+## 2026-04-30: Audit-Wave PR Consolidation to main
+
+- Consolidated open squad audit-wave PRs targeting `main` into a single branch/PR for cleaner review and integration.
+- Integrated PRs #440, #449, #450, #452, #454, #459, and the unique analytics-only delta from #451.
+- Confirmed #439 had no remaining unique diff after #440 (legal updates already included).
+- Deliberately dropped `.worktrees/*` changes from #451 as environment-specific workspace artifacts, not product behavior.
+- Validation: `./scripts/build.sh build` and `./scripts/build.sh test` passed; `./scripts/build.sh lint` failed due pre-existing SwiftLint scanning `.worktrees/*/DerivedData` generated files outside the consolidated diff.
+
+
+### 2026-05-03: #497/#498/#499 Remediation Validation + UI Shard Stabilization
+
+**Scope owned:** final architecture validation and merge-readiness assessment for PR #501 after remediation of issues #497/#498/#499.
+
+**What I validated:**
+- #499 callback isolation fix is architecturally correct (`@MainActor`-typed callback path replacing runtime `assumeIsolated` hazard in the timer callback chain).
+- #497/#498 remediation includes assertion-bearing tests (not just invocation smoke checks).
+- Local build + unit suites and CI-targeted UI selections pass after hardening changes.
+
+**Stabilization changes authored (PR #501 branch):**
+- Added resilient UI helper primitives for CI simulator variance:
+  - `waitForElementExists(timeout:)`
+  - `waitForElementHittable(timeout:)`
+  - `tapElementCenter()`
+- Reworked overlay and dark-mode suites to avoid brittle hit-point assumptions (`exists` + coordinate taps where simulator hit-testing is unstable).
+- Pinned overlay launch-argument break durations to 120s for `--show-overlay-eyes/--show-overlay-posture` test launches to prevent mid-test auto-dismiss in shards.
+
+**Commits:** `d6c1df4`, `7c17035`, `4048fef`
+
+**CI outcome:**
+- Overlays + Dark Mode shards recovered to green on latest run after hardening.
+- Settings shard remained unstable and ended `cancelled` after long runtime with intermittent UI-query timeout failures, so workflow did not reach all-success terminal state.
+
+**Final merge verdict at handoff:**
+- **REJECT FOR NOW** — residual risk remains in Settings shard stability despite remediation closure for #497/#498/#499 and overlay/dark-mode improvements.
+
+### 2026-05-03: #462 Phase A Micro-slice — LiveCarPlayDetector AudioSession seam
+
+- Added an `AudioSessionRouting` protocol seam in `PauseConditionManager.swift` and extended `AVAudioSession` to conform, removing direct `AVAudioSession.sharedInstance()` access from `LiveCarPlayDetector` static route logic.
+- `LiveCarPlayDetector` now resolves dependencies with optional injection + factory fallback (`audioSession ?? makeAudioSession()`), preserving existing behavior while improving DI clarity.
+- Added focused seam coverage in `LiveCarPlayDetectorTests` for factory fallback and injected bypass paths, alongside existing behavior tests.
+
+
+
