@@ -26,10 +26,10 @@ final class AppGroupIPCStoreTests: XCTestCase {
         super.tearDown()
     }
 
-    func test_keys_alignWithMainAppSelectionStateAndShieldSession() {
-        XCTAssertEqual(AppGroupIPCKeys.appGroupID, SelectedAppsState.appGroupSuiteName)
-        XCTAssertEqual(AppGroupIPCKeys.selectionMetadata, SelectedAppsState.metadataKey)
-        XCTAssertEqual(AppGroupIPCKeys.trueInterruptEnabled, SelectedAppsState.enabledKey)
+    func test_keys_alignWithSharedAppGroupAndShieldSession() {
+        XCTAssertEqual(AppGroupIPCKeys.appGroupID, "group.com.yashasg.kshana")
+        XCTAssertEqual(AppGroupIPCKeys.selectionMetadata, "trueInterrupt.selectionMetadata")
+        XCTAssertEqual(AppGroupIPCKeys.trueInterruptEnabled, "trueInterrupt.enabled")
         XCTAssertEqual(ShieldSessionKeys.sessionData, ShieldSession.sessionDataKey)
         XCTAssertEqual(ShieldSessionKeys.breakReason, ShieldSession.reasonKey)
         XCTAssertEqual(ShieldSessionKeys.durationSeconds, ShieldSession.durationKey)
@@ -204,8 +204,6 @@ final class AppGroupIPCStoreTests: XCTestCase {
         try store.writeSelection(snapshot)
 
         XCTAssertEqual(try store.readSelection(), snapshot)
-        let appMetadata: SelectedAppsMetadata = snapshot
-        XCTAssertEqual(appMetadata, snapshot)
     }
 
     func test_readSelection_missingValue_returnsEmptySnapshot() throws {

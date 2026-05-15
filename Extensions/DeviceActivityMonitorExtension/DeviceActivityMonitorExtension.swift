@@ -65,9 +65,10 @@ final class DeviceActivityMonitorExtensionImpl: DeviceActivityMonitor {
         let session = DeviceActivityMonitorExtensionImpl.readSession()
         recordWatchdogHeartbeat(.deviceActivityIntervalStarted)
 
-        // Pending #201: Apply app shield restrictions based on the selected apps from
-        // SelectedAppsState (written to the App Group by the main app after the user
-        // configured True Interrupt Mode in the app/category picker).
+        // Pending #201: Apply app shield restrictions based on the selected apps
+        // recorded in the shared App Group `AppGroupSelectionSnapshot` (written by
+        // the main app via `IPCClient.writeSelection` after the user configured
+        // True Interrupt Mode in the app/category picker).
         //
         // Example (requires authorized ManagedSettingsStore post-#201):
         //   if let reason = session.reason {

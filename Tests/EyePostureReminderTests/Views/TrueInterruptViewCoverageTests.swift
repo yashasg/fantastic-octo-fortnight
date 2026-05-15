@@ -319,32 +319,32 @@ final class TrueInterruptViewCoverageTests: XCTestCase {
     }
 
     func test_appCategoryApprovedCard_emptySelection_bodyEvaluation() {
-        let metadata = SelectedAppsMetadata(categoryCount: 0, appCount: 0, lastUpdated: Date())
+        let metadata = AppGroupSelectionSnapshot(categoryCount: 0, appCount: 0, lastUpdated: Date())
         let described = String(describing: AppCategoryApprovedCard(metadata: metadata).body)
         XCTAssertFalse(described.isEmpty)
     }
 
     func test_appCategoryApprovedCard_singleCategorySelection_bodyEvaluation() {
-        let metadata = SelectedAppsMetadata(categoryCount: 1, appCount: 0, lastUpdated: Date())
+        let metadata = AppGroupSelectionSnapshot(categoryCount: 1, appCount: 0, lastUpdated: Date())
         let described = String(describing: AppCategoryApprovedCard(metadata: metadata).body)
         XCTAssertFalse(described.isEmpty)
     }
 
     func test_appCategoryApprovedCard_singleAppSelection_bodyEvaluation() {
-        let metadata = SelectedAppsMetadata(categoryCount: 0, appCount: 1, lastUpdated: Date())
+        let metadata = AppGroupSelectionSnapshot(categoryCount: 0, appCount: 1, lastUpdated: Date())
         let described = String(describing: AppCategoryApprovedCard(metadata: metadata).body)
         XCTAssertFalse(described.isEmpty)
     }
 
     func test_appCategoryApprovedCard_multipleSelections_bodyEvaluation() {
-        let metadata = SelectedAppsMetadata(categoryCount: 2, appCount: 3, lastUpdated: Date())
+        let metadata = AppGroupSelectionSnapshot(categoryCount: 2, appCount: 3, lastUpdated: Date())
         let described = String(describing: AppCategoryApprovedCard(metadata: metadata).body)
         XCTAssertFalse(described.isEmpty)
     }
 
     func test_appCategorySelectionSummary_usesLocalizedPluralCounts() {
         let summary = AppCategorySelectionSummary.text(
-            for: SelectedAppsMetadata(categoryCount: 2, appCount: 3, lastUpdated: Date()),
+            for: AppGroupSelectionSnapshot(categoryCount: 2, appCount: 3, lastUpdated: Date()),
             bundle: TestBundle.module
         )
 
@@ -484,7 +484,7 @@ final class TrueInterruptViewCoverageTests: XCTestCase {
     /// Verifies the placeholder body description does NOT contain a reduced-opacity modifier
     /// on the pickerPlaceholder text. Using `.opacity(0.6)` on `textSecondary` failed WCAG 1.4.3.
     func test_appCategoryApprovedCard_placeholderTextUsesFullOpacity_noReducedOpacity() {
-        let metadata = SelectedAppsMetadata(categoryCount: 0, appCount: 0, lastUpdated: Date())
+        let metadata = AppGroupSelectionSnapshot(categoryCount: 0, appCount: 0, lastUpdated: Date())
         let described = String(describing: AppCategoryApprovedCard(metadata: metadata).body)
         // The body description must not contain a 0.6 opacity literal applied to the placeholder.
         XCTAssertFalse(
@@ -494,7 +494,7 @@ final class TrueInterruptViewCoverageTests: XCTestCase {
 
     /// Verifies the approved-card placeholder body renders successfully when selection is non-empty.
     func test_appCategoryApprovedCard_withSelections_placeholderUsesFullOpacity() {
-        let metadata = SelectedAppsMetadata(categoryCount: 1, appCount: 2, lastUpdated: Date())
+        let metadata = AppGroupSelectionSnapshot(categoryCount: 1, appCount: 2, lastUpdated: Date())
         let described = String(describing: AppCategoryApprovedCard(metadata: metadata).body)
         XCTAssertFalse(
             described.contains("opacity: 0.6"),

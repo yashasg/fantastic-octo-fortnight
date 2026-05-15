@@ -20,6 +20,7 @@
 //     (Phase 7 of #702).
 
 import ComposableArchitecture
+import ScreenTimeExtensionShared
 import SwiftUI
 
 // MARK: - AppCategoryPickerView
@@ -258,7 +259,7 @@ struct AppCategoryDeniedCard: View {
 /// The real picker (from `FamilyControls`) will be embedded here once #201
 /// and the Xcode project migration are complete.
 struct AppCategoryApprovedCard: View {
-    let metadata: SelectedAppsMetadata
+    let metadata: AppGroupSelectionSnapshot
 
     var body: some View {
         VStack(spacing: AppSpacing.sm) {
@@ -292,7 +293,7 @@ struct AppCategoryApprovedCard: View {
 }
 
 enum AppCategorySelectionSummary {
-    static func text(for metadata: SelectedAppsMetadata, bundle: Bundle = .module) -> String {
+    static func text(for metadata: AppGroupSelectionSnapshot, bundle: Bundle = .module) -> String {
         var parts: [String] = []
         if metadata.categoryCount > 0 {
             parts.append(localizedCount(

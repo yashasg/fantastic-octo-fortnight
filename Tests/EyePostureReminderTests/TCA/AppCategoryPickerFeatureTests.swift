@@ -5,9 +5,9 @@ import XCTest
 @testable import EyePostureReminder
 
 /// `TestStore` baseline coverage for `AppCategoryPickerFeature` (Phase 1
-/// reducer `p0-tca-9` / #672). Behavioural parity with the legacy
-/// `SelectedAppsState` lives under Phase 2 issue `p0-tca-15` (#678) once the
-/// IPC client surface is extended.
+/// reducer `p0-tca-9` / #672). Behavioural parity with the retired
+/// `SelectedAppsState` wrapper landed under Phase 2 (`p0-tca-15` / #678)
+/// when the IPC client surface absorbed selection read/write duties.
 @MainActor
 final class AppCategoryPickerFeatureTests: XCTestCase {
 
