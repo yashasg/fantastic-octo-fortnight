@@ -94,6 +94,18 @@ struct SettingsFeature {
         case savedBannerExpired
         case notificationAuthStatusChanged(UNAuthorizationStatus)
         case screenTimeAuthStatusChanged(ScreenTimeAuthorizationStatus)
+
+        /// Emit a `setting_changed` analytics event for settings that are
+        /// still persisted via `@AppStorage` rather than the bindable surface
+        /// of this reducer. `SettingsView` forwards every change to one of
+        /// the seven post-TCA non-bindable rows (#777 silent-emission gap)
+        /// plus the Settings-screen posture interval/duration pickers.
+        ///
+        /// `oldValue` / `newValue` are pre-stringified by the caller so the
+        /// action stays `Equatable` regardless of the underlying setting's
+        /// type (`Bool`, `TimeInterval`, …) and the reducer can forward
+        /// straight into `AnalyticsEvent.settingChanged`.
+        case settingToggleChanged(setting: AnalyticsEvent.SettingKey, oldValue: String, newValue: String)
     }
 
     /// Snooze durations exposed to the Settings UI. Mirrors
@@ -253,6 +265,15 @@ struct SettingsFeature {
             case let .screenTimeAuthStatusChanged(status):
                 state.screenTimeAuthStatus = status
                 return .none
+
+            case let .settingToggleChanged(setting, oldValue, newValue):
+                return .run { [analytics] _ in
+                    analytics.log(.settingChanged(
+                        setting: setting,
+                        oldValue: oldValue,
+                        newValue: newValue
+                    ))
+                }
             }
         }
     }
