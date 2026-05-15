@@ -3,8 +3,10 @@
 //
 // XCUITest suite — Overlay view accessibility and dismiss behavior.
 //
-// NOTE: The overlay is presented by the app coordinator when a reminder notification
-// fires. In UI tests, the overlay can be triggered by using the
+// NOTE: The overlay is presented by the `SchedulingFeature` reducer when a
+// reminder notification fires (routed in via `AppDelegate` →
+// `AppFeature` store → `.notificationRouted`). In UI tests, the overlay can be
+// triggered by using the
 // TestLaunchArguments.showOverlayEyes or TestLaunchArguments.showOverlayPosture
 // launch arguments, which are fully wired to AppDelegate and EyePostureReminderApp.
 //
@@ -112,7 +114,8 @@ final class OverlayPresentationTests: XCTestCase {
             app.waitForElementExists(dismissButton),
             "Overlay dismiss button must be visible when --show-overlay-eyes is used. " +
             "Check that AppDelegate stores 'eyes' in AppStorageKey.uiTestOverlayType and " +
-            "EyePostureReminderApp calls coordinator.handleNotification(for:) in its .task."
+            "EyePostureReminderApp.presentUITestOverlayIfNeeded() routes it to the " +
+            "AppFeature store via .notificationRouted(.reminder(.eyes)) in its .task."
         )
     }
 

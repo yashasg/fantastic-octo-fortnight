@@ -8,14 +8,16 @@ the Google Swift Style guide (`docs/google_swift_coding_style.md`).
 Test cases routinely declare fixtures as IUOs:
 
 ```swift
-final class AppCoordinatorTests: XCTestCase {
+final class ReminderSchedulerTests: XCTestCase {
+    var mockCenter: MockNotificationCenter!
     var settings: SettingsStore!
-    var sut: AppCoordinator!
+    var sut: ReminderScheduler!
 
-    override func setUp() async throws {
-        try await super.setUp()
+    override func setUp() {
+        super.setUp()
+        mockCenter = MockNotificationCenter()
         settings = SettingsStore(store: MockSettingsPersisting())
-        sut = AppCoordinator(settings: settings, …)
+        sut = ReminderScheduler(notificationCenter: mockCenter)
     }
 }
 ```

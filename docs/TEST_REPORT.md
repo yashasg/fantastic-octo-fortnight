@@ -44,17 +44,11 @@
 
 ---
 
-### Services — 716 tests
+### Services — 580 tests
 
 | File | Tests | Coverage Focus |
 |---|---|---|
 | `ReminderSchedulerTests` | 39 | Schedule all/single/cancel, notification content, triggers, identifiers, error resilience |
-| `AppCoordinatorTests` | 45 | Init, lifecycle hooks, ReminderScheduling conformance, overlay delegation, FIFO ordering |
-| `AppCoordinatorExtendedTests` | 47 | Extended coordinator paths, edge cases |
-| `AppCoordinatorNotificationFallbackTests` | 20 | Notification fallback when True Interrupt shield inactive |
-| `AppCoordinatorSnoozeWakeTests` | 7 | Snooze wake-up scheduling |
-| `AppCoordinatorCancelReminderTests` | 4 | Cancel reminder paths |
-| `AppCoordinatorWatchdogHeartbeatTests` | 13 | Watchdog heartbeat correctness |
 | `OverlayManagerTests` | 12 | Singleton identity, visible state, guard paths, queue management, audio wiring |
 | `OverlayManagerExtendedTests` | 20 | Extended overlay manager coverage |
 | `AudioInterruptionManagerTests` | 9 | Protocol conformance, pause/resume cycles, invariant safety |
@@ -174,7 +168,7 @@
 | **Snooze count** persistence + reset | 5 in `SettingsStorePhase2Tests` | ✅ Complete |
 | **Onboarding flag** (`hasSeenOnboarding`) | 12 in `OnboardingTests` | ✅ Complete |
 | **Accessibility** (`AppFont` Dynamic Type, `AppLayout` HIG) | 52 in `DesignSystemTests` | ✅ Complete |
-| **OverlayManager queue FIFO** (coordinator level via `MockOverlayPresenting`) | 5 in `AppCoordinatorTests` + 4 in `OverlayManagerTests` | ✅ Unit-testable paths complete |
+| **OverlayManager queue FIFO** (notification-routing level via `MockOverlayPresenting`) | 4 in `OverlayManagerTests` + routing coverage in `SchedulingFeature_NotificationRoutingTests` | ✅ Unit-testable paths complete |
 | **Smart Pause** (Focus Mode, CarPlay, driving) | 33 in `PauseConditionManagerTests` + 21 in `FocusModeExtendedTests` + 29 in `DrivingDetectionExtendedTests` | ✅ Complete |
 | **Screen-Time Triggers** (`ScreenTimeTracker`) | 54 in `ScreenTimeTrackerTests` + 19 in `ScreenTimeAuthorizationTests` | ✅ Complete |
 | **True Interrupt Mode** (shield, IPC, DeviceActivity) | 12 in `ScreenTimeShieldTests` + 31 in `DeviceActivityMonitorTests` + 24 in `AppGroupIPCStoreTests` | ✅ Unit-testable paths complete |
@@ -197,8 +191,8 @@ The following test scenarios require a live `UIWindowScene` or `UIApplication` w
 | `OverlayView` swipe-up dismiss gesture | Requires `DragGesture` and a rendered View | Simulator UI test |
 | `OverlayView` countdown ring animation | Timer-driven animation requires render loop | Simulator UI test |
 | `ContentView` onboarding routing (`@AppStorage` → View branch) | SwiftUI `@AppStorage` bridging cannot be unit-tested cleanly | Simulator UI test |
-| `AppCoordinator.startFallbackTimers` + timer fire | `Timer.scheduledTimer` requires a live run loop | Simulator integration |
-| `AppCoordinator.handleNotification` foreground path | Requires `UIApplication.shared.connectedScenes` active | Simulator integration |
+| `SchedulingFeature` watchdog/fallback effect end-to-end | Effect uses `Clock.sleep` on a live run loop and a real `UIApplication` scene to observe foreground transitions | Simulator integration |
+| `SchedulingFeature.notificationRouted` foreground path | Requires `UIApplication.shared.connectedScenes` active | Simulator integration |
 | Notification permission prompt | System UI — cannot be automated in CI | Manual test / TestFlight |
 
 ### CI Notes
