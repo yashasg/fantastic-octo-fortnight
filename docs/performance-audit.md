@@ -1,8 +1,16 @@
 # kshana — Battery Life & Performance Audit
 
-**Date:** 2025-07-18
+**Date:** 2025-07-18 (post-TCA refresh 2026-05-15 — see Change Log)
 **Scope:** All Swift source files, assets, Info.plist, background modes
 **App:** kshana (formerly EyePostureReminder) — background timers + full-screen overlay reminders
+
+> **Note:** This audit pre-dates the MVVM → TCA migration (#677 / #701 / #755
+> Phases A–E, PRs #756–#760). Sections that previously cited
+> `AppCoordinator` / `SettingsViewModel` were re-anchored onto the current
+> `AppFeature` / `SchedulingFeature` / `SettingsFeature` stack in #775 so the
+> citations match files that still exist. Inner line numbers in unchanged
+> sections may have drifted; the file paths and findings themselves remain
+> valid.
 
 ---
 
@@ -91,15 +99,20 @@ KVO observation is properly invalidated in `stopMonitoring()`.
 
 `PauseConditionManager` stores subscriptions in `Set<AnyCancellable>` and calls `cancellables.removeAll()` in `stopMonitoring()`. The `stopMonitoring()` is also called at the beginning of `startMonitoring()` to prevent duplicate subscriptions (line 225-227).
 
-### 🟢 GOOD — AppCoordinator cancels debounce tasks in deinit
-**File:** `EyePostureReminder/Services/AppCoordinator.swift:205-208`
+### 🟢 GOOD — SchedulingFeature cancels debounce + snooze-wake effects via TCA cancellation IDs
+**File:** `EyePostureReminder/TCA/Features/SchedulingFeature.swift:267, 426, 453`
 
-```swift
-deinit {
-    rescheduleDebounce.values.forEach { $0.cancel() }
-    snoozeWakeTask?.cancel()
-}
-```
+`SchedulingFeature` wraps the per-type reschedule debounce in
+`.cancellable(id: CancelID.rescheduleDebounce(type), cancelInFlight: true)`
+(L267) and the snooze-wake delay in
+`.cancellable(id: CancelID.snoozeWakeTask, cancelInFlight: true)` (L453).
+`SchedulingFeature.stop` (and every disable/snooze action) returns
+`.merge(.cancel(id: .rescheduleDebounce(...)), .cancel(id: .snoozeWakeTask))`
+so the structured-concurrency `Task`s backing those effects are torn down
+when the reducer leaves a state that needs them — equivalent to the
+manual `rescheduleDebounce.values.forEach { $0.cancel() }` / `snooze
+WakeTask?.cancel()` block that lived in the deleted `AppCoordinator.deinit`
+(removed in #755 Phase E / PR #760).
 
 ---
 
@@ -111,20 +124,35 @@ Every timer callback, notification observer closure, and Task uses `[weak self]`
 - `ScreenTimeTracker.swift:225` — reset task
 - `PauseConditionManager.swift:229, 235, 239` — detector callbacks
 - `PauseConditionManager.swift:247, 256` — Combine sinks
-- `AppCoordinator.swift:157` — threshold callback
-- `AppCoordinator.swift:178` — pause state callback
 - `OverlayManager.swift:99, 164` — scene observer, dismiss callback
 
-No retain cycles detected.
+No retain cycles detected. (The previous `AppCoordinator.swift:157/178`
+threshold/pause-state callbacks were removed in #755 Phase E; the equivalent
+flow now runs inside `SchedulingFeature.thresholdReachedEffect` /
+`pauseStateChanged` via structured-concurrency `for await` loops on the
+dependency-client async streams, which don't capture `self`.)
 
-### 🟢 GOOD — @StateObject used correctly for AppCoordinator
-**File:** `EyePostureReminder/App/EyePostureReminderApp.swift:6`
+### 🟢 GOOD — Single TCA Store owned by `App.init`, never re-created
+**File:** `EyePostureReminder/App/EyePostureReminderApp.swift:15, 48`
 
 ```swift
-@StateObject private var coordinator = AppCoordinator()
+private let store: StoreOf<AppFeature>
+
+init() {
+    // …seed initialState from UserDefaults / launch args…
+    self.store = Store(initialState: initialState) { AppFeature() }
+}
 ```
 
-The coordinator is created once by SwiftUI and persists for the app lifetime. Downstream views use `@EnvironmentObject` (not `@StateObject`), preventing re-creation.
+The store is constructed once during `App.init` and held in a `let` for the
+app lifetime — `WindowGroup` injects it into `RootView(store: store)` and
+downstream views observe scoped sub-stores via
+`@Perception.Bindable var store: StoreOf<…Feature>` plus
+`WithPerceptionTracking` (e.g. `EyePostureReminder/Views/HomeView.swift:21,
+201`, `EyePostureReminder/Views/SettingsView.swift:64, 103`). The
+previous `@StateObject AppCoordinator` + `@EnvironmentObject` graph was
+decommissioned in #755 Phase D (PR #759) and Phase E (PR #760); no view in
+the tree allocates a duplicate root store.
 
 ### 🟢 GOOD — No large image assets
 **File:** `EyePostureReminder/Resources/`
@@ -143,7 +171,12 @@ The app uses only SF Symbols (system icons) and custom font files. Font files ar
 ## 4. View Performance
 
 ### 🟢 GOOD — SwiftUI body properties are lightweight
-All `body` properties contain only declarative view descriptions with no computation, network calls, or data processing. Settings views use `@EnvironmentObject` for reactive updates.
+All `body` properties contain only declarative view descriptions with no
+computation, network calls, or data processing. Settings/Home views observe
+state through `WithPerceptionTracking` over a scoped `StoreOf<…Feature>` plus
+`@AppStorage`-backed primitives (see `EyePostureReminder/Views/SettingsView
+.swift:64, 103`, `EyePostureReminder/Views/HomeView.swift:21, 201`), so only
+the bindings actually read by `body` trigger view invalidation.
 
 ### 🟢 GOOD — HomeView uses .id() for efficient crossfade
 **File:** `EyePostureReminder/Views/HomeView.swift:42`
@@ -155,13 +188,17 @@ All `body` properties contain only declarative view descriptions with no computa
 This forces SwiftUI to treat the status text as a new view when the toggle changes, enabling clean transition animations without expensive diffing.
 
 ### 🟢 GOOD — ForEach uses proper identity
-**File:** `EyePostureReminder/Views/ReminderRowView.swift:35-36`
+**File:** `EyePostureReminder/Views/ReminderRowView.swift:74`
 
 ```swift
-ForEach(SettingsViewModel.intervalOptions, id: \.self) { seconds in
+ForEach(SettingsPickerOptions.intervalOptions, id: \.self) { seconds in
 ```
 
-Using `id: \.self` on `TimeInterval` values is correct since these are unique static constants.
+Using `id: \.self` on `TimeInterval` values is correct since these are unique
+static constants. `SettingsPickerOptions` (defined in
+`EyePostureReminder/Models/SettingsPickerOptions.swift`) hosts the picker
+constants formerly exposed by `SettingsViewModel` — they were extracted in
+#755 Phase B when the view model was deleted.
 
 ### 🟡 WARNING — YinYangEyeView breathing animation runs indefinitely
 **File:** `EyePostureReminder/Views/YinYangEyeView.swift:72-79`
@@ -183,10 +220,14 @@ The `onAppear` guard (`guard !hasStarted`) prevents re-triggering, but there is 
 
 **Recommendation:** Consider using `TimelineView` with a visibility check, or toggling the animation off in `onDisappear`.
 
-### 🟢 GOOD — SettingsView lazily creates SettingsViewModel
-**File:** `EyePostureReminder/Views/SettingsView.swift:296-302`
+### 🟢 GOOD — SettingsView does no eager work at construction
+**File:** `EyePostureReminder/Views/SettingsView.swift:92-100`
 
-The `SettingsViewModel` is created in `onAppear` only when needed, not eagerly. This avoids unnecessary work when the settings sheet is never opened.
+`SettingsView.init` only stores its `StoreOf<SettingsFeature>` and the
+injected `AccessibilityNotificationPosting` — no async work, no service
+allocation. The settings sheet is presented lazily, so this cost is paid
+only on the first open. (The legacy `SettingsViewModel` it replaced was
+deleted in #755 Phase B and is no longer instantiated anywhere.)
 
 ---
 
@@ -312,10 +353,22 @@ Font registration uses `CTFontManagerRegisterGraphicsFont`, which performs synch
 
 **Recommendation:** No action needed for 2 fonts. If font count grows beyond 5-6, consider deferring registration to a background queue.
 
-### 🟢 GOOD — AppCoordinator init is lightweight
-**File:** `EyePostureReminder/Services/AppCoordinator.swift:127-203`
+### 🟢 GOOD — App root + SchedulingFeature start path is lightweight
+**File:** `EyePostureReminder/App/EyePostureReminderApp.swift:17-49, 115-132`;
+`EyePostureReminder/TCA/Features/SchedulingFeature.swift:481-503` (the
+`.start` action)
 
-The init creates service objects (all lightweight allocations), wires callbacks (closure assignment, no work done), and starts pause condition monitoring. `scheduleReminders()` is called asynchronously via `.task` modifier, not blocking the first frame.
+`App.init` registers fonts, seeds onboarding/settings UserDefaults from
+launch arguments under `#if DEBUG`, and constructs a single `Store
+OfAppFeature`. The reducer body and dependency-client wiring are pure value
+work — no I/O, no service allocation. `SchedulingFeature.start` is dispatched
+from `RootView`'s `.task` modifier so the long-running async streams
+(`trackerClient.thresholdReached`, `pauseConditionClient.pauseStateChanges`,
+`settingsClient.stream`, scene/foreground notifications) are subscribed off
+the first frame rather than during init. The deleted `AppCoordinator.init`
+(#755 Phase E / PR #760) used the same "wire callbacks now, schedule work
+via `.task`" shape — only the implementation moved from a god-object onto
+the TCA reducer.
 
 ### 🟢 GOOD — No large asset catalog images
 All visual elements use SF Symbols (system-provided, zero app bundle cost) and programmatic SwiftUI shapes (the yin-yang is drawn with Circle/Path primitives). No bitmap images to load.
@@ -330,14 +383,30 @@ All visual elements use SF Symbols (system-provided, zero app bundle cost) and p
 Analytics uses only `os.Logger` — zero network calls, zero disk writes beyond the system log buffer. No third-party SDK overhead.
 
 ### 🟢 GOOD — Debounced per-type rescheduling
-**File:** `EyePostureReminder/Services/AppCoordinator.swift:324-332`
+**File:** `EyePostureReminder/TCA/Features/SchedulingFeature.swift:267`
 
-Settings changes are debounced per-type with a 300ms window, preventing rapid slider adjustments from thrashing the screen time tracker.
+`SchedulingFeature.performReschedule` returns its work wrapped in
+`.cancellable(id: CancelID.rescheduleDebounce(type), cancelInFlight: true)`,
+so a burst of slider adjustments collapses into a single trailing reschedule
+per `ReminderType`. This preserves the 300 ms debounce window that the
+deleted `AppCoordinator.performReschedule` (#755 Phase E) previously
+enforced, without thrashing `ScreenTimeTracker`.
 
 ### 🟢 GOOD — UI test mode disables background services
-**File:** `EyePostureReminder/Services/AppCoordinator.swift:120-123, 142-152`
+**Files:** `EyePostureReminder/Utilities/UITestMode.swift`;
+`EyePostureReminder/Services/NoopServices.swift:17, 41`;
+`EyePostureReminder/TCA/Features/SchedulingFeature.swift:48, 224`
 
-When running under XCUITest, `NoopScreenTimeTracker` and `NoopPauseConditionManager` replace live services. This eliminates the 1-second timer and motion activity monitoring, preventing test flakiness and unnecessary resource usage during testing.
+`UITestMode.isUITestMode` reads `ProcessInfo.processInfo.arguments` once and
+gates background work two ways: (1) `SchedulingFeature.State` carries an
+`isUITestModeEnabled` flag that short-circuits the `.start` effect's
+threshold/pause/foreground subscriptions, and (2) the dependency clients
+themselves fall back to `Noop*` implementations (`NoopScreenTimeTracker`,
+`NoopPauseConditionManager`, `ScreenTimeAuthorizationNoop`,
+`DeviceActivityMonitorNoop`) when the live entitlements aren't available
+or when XCUITest is detected. This eliminates the 1-second timer and motion
+activity monitoring during UI tests — the same outcome the deleted
+`AppCoordinator.isUITestMode` branch produced before #755 Phase E (PR #760).
 
 ### 🟢 GOOD — MetricKit subscriber registered for production monitoring
 **File:** `EyePostureReminder/Services/MetricKitSubscriber.swift`
@@ -397,3 +466,11 @@ kshana is **battery-efficient by design**. The architecture makes several excell
 - Lightweight startup path with deferred async work
 
 The three warnings are all P3/P4 severity — none will cause measurable battery drain in real usage. The app is ready for production from a battery/performance perspective.
+
+---
+
+## Change Log
+
+| Date | Change | By |
+| --- | --- | --- |
+| 2026-05-15 | Post-TCA-migration refresh (#775). Re-anchored AppCoordinator-era sections onto current TCA stack: §2 debounce cancellation now cites `SchedulingFeature.CancelID.rescheduleDebounce` / `.snoozeWakeTask`; §3 `[weak self]` list drops the deleted `AppCoordinator` callbacks and notes the equivalent `for await` flow inside `SchedulingFeature`; §3 lifecycle ownership rewritten as "Single TCA Store owned by `App.init`" with `StoreOf<AppFeature>` + `WithPerceptionTracking` references; §4 SwiftUI body claim re-anchored from `@EnvironmentObject` to scoped `StoreOf<…Feature>` + `@AppStorage`; §4 `ForEach` identity citation moved from `SettingsViewModel.intervalOptions` to `SettingsPickerOptions.intervalOptions` (#755 Phase B); §4 "lazy SettingsViewModel" rewritten as "SettingsView does no eager work at construction"; §7 startup section now cites `EyePostureReminderApp.init` + `SchedulingFeature.start` instead of the deleted `AppCoordinator.init`; §8 debounce / UI-test-mode sections re-anchored onto `SchedulingFeature` + `UITestMode` + `NoopServices` / `*Noop` dependency-client fallbacks. No findings were added or removed — only file/symbol citations were updated to match the post-#755 architecture. | Rusty |
