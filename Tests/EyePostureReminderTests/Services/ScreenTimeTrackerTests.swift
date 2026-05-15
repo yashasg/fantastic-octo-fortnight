@@ -221,14 +221,15 @@ final class ScreenTimeTrackerTests: XCTestCase {
         defer { tracker.stop() }
 
         tracker.setThreshold(1.0, for: .eyes)
-        var fired = false
-        tracker.onThresholdReached = { _ in fired = true }
+        let didFire = expectation(description: "threshold must not fire while appState is .background")
+        didFire.isInverted = true
+        tracker.onThresholdReached = { _ in didFire.fulfill() }
 
         tracker.startIfActive()
 
-        // Allow 2.5 s — timer must NOT have fired because state is .background.
-        try? await Task.sleep(nanoseconds: 2_500_000_000)
-        XCTAssertFalse(fired, "startIfActive must be a no-op when appStateProvider returns .background")
+        // Inverted expectation: fail fast if the 1s threshold timer fires within
+        // 1.5s. Replaces a 2.5s wall-clock `Task.sleep` (#771).
+        await fulfillment(of: [didFire], timeout: 1.5)
     }
 
     func test_startIfActive_withNilAppStateProvider_usesFactoryProvider() async {
@@ -895,11 +896,14 @@ extension ScreenTimeTrackerTests {
         defer { tracker.stop() }
 
         tracker.setThreshold(2, for: .eyes)
-        tracker.onThresholdReached = { _ in
-            XCTFail("Default notification center should not trigger tracker callbacks")
-        }
+        let didFire = expectation(description: "default center must not trigger injected tracker")
+        didFire.isInverted = true
+        tracker.onThresholdReached = { _ in didFire.fulfill() }
 
         NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
-        try? await Task.sleep(nanoseconds: 2_500_000_000)
+        // Inverted expectation: no observer is attached to the default center,
+        // so the tick timer must remain idle. Replaces a 2.5s wall-clock
+        // `Task.sleep` (#771); ≤0.5s is plenty to surface a stray subscription.
+        await fulfillment(of: [didFire], timeout: 0.5)
     }
 }
