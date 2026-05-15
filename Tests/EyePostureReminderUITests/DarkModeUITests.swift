@@ -41,6 +41,13 @@ final class DarkModeUITests: XCTestCase {
     }
 
     override func tearDownWithError() throws {
+        // Force-terminate so the overlay's `UIWindow` (at `.alert + 1`) is
+        // released and SpringBoard can complete its background assertion before
+        // the next test boots a fresh process. Without this, the dark-mode
+        // overlay tests inherit a zombie process and `waitForOverlayPresented()`
+        // never resolves — same root cause as the Overlays-shard cascade fixed
+        // for `OverlayPresentationTests` / `OverlayPostureTests` in #714 (#726).
+        app?.terminateAndWaitForExit()
         app = nil
     }
 
