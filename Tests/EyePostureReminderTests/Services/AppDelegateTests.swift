@@ -719,7 +719,7 @@ final class AppDelegateTests: XCTestCase {
     }
 
     func test_notificationRoute_snoozeWake_routesToSnoozeWake() {
-        let route = delegate.notificationRoute(for: AppCoordinator.snoozeWakeCategory)
+        let route = delegate.notificationRoute(for: SchedulingFeature.snoozeWakeCategory)
 
         XCTAssertEqual(route, .snoozeWake)
     }
