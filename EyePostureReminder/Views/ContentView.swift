@@ -1,48 +1,20 @@
 import ComposableArchitecture
 import SwiftUI
 
-/// Root SwiftUI surface that gates between `OnboardingView` and `HomeView`.
+/// Thin compatibility wrapper around `RootView`.
 ///
-/// `p0-tca-11` (#674) wires this view to the TCA `Store` so the gate decision
-/// reads from `AppFeature.State.hasSeenOnboarding`. The legacy
-/// `@AppStorage(AppStorageKey.hasSeenOnboarding)` is bridged into the store
-/// via `.onChange` so `OnboardingView`'s `UserDefaults` write (which still
-/// owns persistence until `p0-tca-14` Phase D) propagates to the TCA state
-/// and flips the gate without an MVVM-side observer.
-///
-/// `HomeView` is scoped onto `AppFeature.State.home` here as part of `#755`
-/// Phase A; `OnboardingView` is scoped onto `AppFeature.State.onboarding`
-/// as part of `#755` Phase C.
+/// `#755` Phase D promotes `RootView` to the canonical TCA root surface (it
+/// owns the onboarding gate, destination sheets, and overlay cover). This
+/// wrapper is retained so existing test fixtures and a future
+/// `EyePostureReminderApp.body` keep referencing a stable `ContentView(store:)`
+/// entry point during the in-flight Phase D / Phase E migration. The wrapper
+/// has no behaviour of its own — every responsibility (gating, presentation,
+/// `@AppStorage` bridge) lives in `RootView`.
 struct ContentView: View {
     @Perception.Bindable var store: StoreOf<AppFeature>
-    @AppStorage(AppStorageKey.hasSeenOnboarding) private var persistedHasSeenOnboarding = false
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        WithPerceptionTracking {
-            ZStack {
-                if store.hasSeenOnboarding {
-                    NavigationStack {
-                        HomeView(store: store.scope(state: \.home, action: \.home))
-                    }
-                    .transition(.opacity)
-                } else {
-                    OnboardingView(
-                        store: store.scope(state: \.onboarding, action: \.onboarding)
-                    )
-                        .transition(.opacity)
-                }
-            }
-            .animation(
-                reduceMotion ? nil : AppAnimation.onboardingTransition,
-                value: store.hasSeenOnboarding
-            )
-            .onChangeCompat(of: persistedHasSeenOnboarding) { newValue in
-                if store.hasSeenOnboarding != newValue {
-                    store.send(.hasSeenOnboardingChanged(newValue))
-                }
-            }
-        }
+        RootView(store: store)
     }
 }
 
