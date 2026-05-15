@@ -309,7 +309,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         if let type = ReminderType(categoryIdentifier: categoryID) {
             return .reminder(type)
         }
-        if categoryID == AppCoordinator.snoozeWakeCategory {
+        if categoryID == SchedulingFeature.snoozeWakeCategory {
             return .snoozeWake
         }
         return .ignore
