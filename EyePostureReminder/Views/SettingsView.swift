@@ -128,7 +128,14 @@ struct SettingsView: View {
                 aboutSection
             }
             // #434: "Settings saved" transient feedback banner at bottom.
-            .safeAreaInset(edge: .bottom) {
+            // Use `.overlay(alignment: .bottom)` rather than
+            // `.safeAreaInset(edge: .bottom)`: conditionally-inserted
+            // children of `.safeAreaInset` do not surface in the XCUI
+            // accessibility tree on iOS 26+ (the inset's host view absorbs
+            // them), causing `SettingsFlowTests
+            // .test_settings_savedBanner_appearsOnToggle` to fail even
+            // though the banner renders visually. Tracked as #787 / #434.
+            .overlay(alignment: .bottom) {
                 if store.showSavedBanner {
                     SettingsSavedBanner()
                         .transition(.move(edge: .bottom).combined(with: .opacity))

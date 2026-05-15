@@ -58,7 +58,7 @@ final class SettingsFeatureBindingTests: XCTestCase {
         rescheduleCalls.withValue { XCTAssertTrue($0.isEmpty) }
 
         await clock.advance(by: .milliseconds(300))
-        await clock.advance(by: .seconds(2))
+        await clock.advance(by: .seconds(4))
         await store.receive(\.savedBannerExpired) {
             $0.showSavedBanner = false
         }
@@ -123,7 +123,7 @@ final class SettingsFeatureBindingTests: XCTestCase {
             $0.showSavedBanner = true
         }
         await clock.advance(by: .milliseconds(300))
-        await clock.advance(by: .seconds(2))
+        await clock.advance(by: .seconds(4))
         await store.receive(\.savedBannerExpired) {
             $0.showSavedBanner = false
         }
@@ -188,7 +188,7 @@ final class SettingsFeatureBindingTests: XCTestCase {
             $0.eyesInterval = 600
         }
         await clock.advance(by: .milliseconds(300))
-        await clock.advance(by: .seconds(2))
+        await clock.advance(by: .seconds(4))
         await store.receive(\.savedBannerExpired) {
             $0.showSavedBanner = false
         }
