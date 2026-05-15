@@ -289,7 +289,7 @@ Fired when a DeviceActivity shield session is cancelled/deactivated. No payload 
 |-------|---------|---------|--------------|
 | `durationOption` | `duration_option` | `.public` | See snooze duration code table |
 
-**Stable snooze duration codes** (from `SettingsViewModel.SnoozeOption.analyticsCode`):
+**Stable snooze duration codes** (from `SettingsFeature.SnoozeOption.analyticsCode`):
 
 | Preset | Analytics code | Duration |
 |--------|---------------|---------|
@@ -322,19 +322,21 @@ No payload. Fired when the user manually cancels an active snooze.
 
 **Instrumented `setting` key values:**
 
+The full key set is defined by `AnalyticsLogger.SettingKey` (`EyePostureReminder/Services/AnalyticsLogger.swift`). Post-TCA migration, only the interval/duration keys have live emit-sites; re-instating the remaining toggles is tracked in #777.
+
 | `setting` value | Type | Emitted from |
 |----------------|------|--------------|
-| `globalEnabled` | Bool | `SettingsViewModel.globalEnabled` setter (routed via `SettingsView` master toggle `onChange`) |
-| `eyesEnabled` | Bool | `SettingsViewModel.eyesEnabled` setter (routed via `SettingsView` `.onChange(of: settings.eyesEnabled)`) |
-| `eyesInterval` | TimeInterval | `SettingsViewModel.eyesInterval` setter |
-| `eyesBreakDuration` | TimeInterval | `SettingsViewModel.eyesBreakDuration` setter |
-| `postureEnabled` | Bool | `SettingsViewModel.postureEnabled` setter |
-| `postureInterval` | TimeInterval | `SettingsViewModel.postureInterval` setter |
-| `postureBreakDuration` | TimeInterval | `SettingsViewModel.postureBreakDuration` setter |
-| `pauseDuringFocus` | Bool | `SettingsViewModel.pauseDuringFocus` setter (routed via `SettingsSmartPauseSection` toggle `onChange`) |
-| `pauseWhileDriving` | Bool | `SettingsViewModel.pauseWhileDriving` setter |
-| `notificationFallbackEnabled` | Bool | `SettingsViewModel.notificationFallbackEnabled` setter (also triggers reschedule) |
-| `hapticsEnabled` | Bool | `SettingsViewModel.hapticsEnabled` setter (custom Binding in `SettingsView` Preferences section) |
+| `globalEnabled` | Bool | Not currently emitted post-TCA migration — tracked in #777 |
+| `eyesEnabled` | Bool | Not currently emitted post-TCA migration — tracked in #777 |
+| `eyesInterval` | TimeInterval | `SettingsFeature` reducer (`binding(\.eyesInterval)`); also emitted from `OnboardingSetupView` during the eyes setup picker |
+| `eyesBreakDuration` | TimeInterval | `SettingsFeature` reducer (`binding(\.eyesBreakDuration)`); also emitted from `OnboardingSetupView` during the eyes setup picker |
+| `postureEnabled` | Bool | Not currently emitted post-TCA migration — tracked in #777 |
+| `postureInterval` | TimeInterval | `OnboardingSetupView` posture setup picker only — Settings-screen emission tracked in #777 |
+| `postureBreakDuration` | TimeInterval | `OnboardingSetupView` posture setup picker only — Settings-screen emission tracked in #777 |
+| `pauseDuringFocus` | Bool | Not currently emitted post-TCA migration — tracked in #777 |
+| `pauseWhileDriving` | Bool | Not currently emitted post-TCA migration — tracked in #777 |
+| `notificationFallbackEnabled` | Bool | Not currently emitted post-TCA migration — tracked in #777 |
+| `hapticsEnabled` | Bool | Not currently emitted post-TCA migration — tracked in #777 |
 
 ---
 
