@@ -52,18 +52,20 @@ Onboarding is shown exactly once. If the user force-quits mid-onboarding, they s
 Use SwiftUI `TabView` with `PageTabViewStyle` for horizontal swipe between screens.
 
 ```swift
-TabView(selection: $currentPage) {
-    OnboardingWelcomeView(onNext: { currentPage = 1 })
+TabView(selection: pageBinding) {
+    OnboardingWelcomeView(onNext: { store.send(.nextTapped) })
         .tag(0)
-    OnboardingPermissionView(onNext: { currentPage = 2 }, notificationCenter: coordinator.notificationCenter)
+    OnboardingPermissionView(
+        onNext: { store.send(.nextTapped) },
+        requestPermission: { store.send(.requestNotificationPermission) }
+    )
         .tag(1)
-    OnboardingSetupView(onGetStarted: { currentPage = 3 })
-        .environmentObject(settings)
+    OnboardingSetupView(onGetStarted: { store.send(.nextTapped) })
         .tag(2)
     OnboardingInterruptModeView(
         onGetStarted: finishOnboarding,
         onCustomize: finishOnboardingAndCustomize,
-        authorizationStatus: coordinator.screenTimeAuthorization.authorizationStatus
+        authorizationStatus: store.screenTimeStatus
     )
     .tag(3)
 }
@@ -73,7 +75,7 @@ TabView(selection: $currentPage) {
 
 - **Page dots:** Shown at the bottom centre of all 4 screens. Standard iOS page indicator style.
 - **Swipe:** Left/right swipe navigates between pages freely (no lock on forward-only).
-- **"Next" buttons:** Advance to the next page programmatically (`currentPage += 1`).
+- **"Next" buttons:** Advance to the next page programmatically by dispatching `.nextTapped` to the `OnboardingFeature` reducer.
 - **Back swipe:** Fully supported — users can go back and re-read.
 - **Screen 4 swipe lock:** A `highPriorityGesture` prevents accidental horizontal swiping on `OnboardingInterruptModeView`, ensuring deliberate completion.
 
@@ -423,29 +425,32 @@ See `EyePostureReminder/Views/Onboarding/OnboardingView.swift` for the current i
 
 ```swift
 struct OnboardingView: View {
-    @EnvironmentObject private var coordinator: AppCoordinator
-    @EnvironmentObject private var settings: SettingsStore
-    @State private var currentPage = 0
+    @Perception.Bindable var store: StoreOf<OnboardingFeature>
 
     var body: some View {
-        TabView(selection: $currentPage) {
-            OnboardingWelcomeView(onNext: { currentPage = 1 })
-                .tag(0)
-            OnboardingPermissionView(onNext: { currentPage = 2 }, notificationCenter: coordinator.notificationCenter)
-                .tag(1)
-            OnboardingSetupView(onGetStarted: { currentPage = 3 })
-                .environmentObject(settings)
-                .tag(2)
-            OnboardingInterruptModeView(
-                onGetStarted: finishOnboarding,
-                onCustomize: finishOnboardingAndCustomize,
-                authorizationStatus: coordinator.screenTimeAuthorization.authorizationStatus
-            )
-            .tag(3)
+        WithPerceptionTracking {
+            TabView(selection: pageBinding) {
+                OnboardingWelcomeView(onNext: { store.send(.nextTapped) })
+                    .tag(0)
+                OnboardingPermissionView(
+                    onNext: { store.send(.nextTapped) },
+                    requestPermission: { store.send(.requestNotificationPermission) }
+                )
+                    .tag(1)
+                OnboardingSetupView(onGetStarted: { store.send(.nextTapped) })
+                    .tag(2)
+                OnboardingInterruptModeView(
+                    onGetStarted: finishOnboarding,
+                    onCustomize: finishOnboardingAndCustomize,
+                    authorizationStatus: store.screenTimeStatus
+                )
+                .tag(3)
+            }
+            .tabViewStyle(PageTabViewStyle(indexDisplayMode: .always))
+            .indexViewStyle(PageIndexViewStyle(backgroundDisplayMode: .always))
+            .background(AppColor.background.ignoresSafeArea())
+            .onAppear { store.send(.onAppear) }
         }
-        .tabViewStyle(PageTabViewStyle(indexDisplayMode: .always))
-        .indexViewStyle(PageIndexViewStyle(backgroundDisplayMode: .always))
-        .background(AppColor.background.ignoresSafeArea())
     }
 
     private func finishOnboarding() {
@@ -460,6 +465,11 @@ struct OnboardingView: View {
     }
 }
 ```
+
+`OnboardingFeature` injects the `NotificationClient` and
+`ScreenTimeAuthorizationClient` TCA dependencies; permission requests run
+inside the reducer's `.requestNotificationPermission` and `.onAppear` effects
+rather than being threaded through the view layer.
 
 **Parent integration pattern:**
 

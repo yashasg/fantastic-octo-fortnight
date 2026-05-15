@@ -49,9 +49,9 @@ enum ScreenTimeAuthorizationStatus: String, Sendable, Equatable, CaseIterable {
 /// Provides FamilyControls authorization management for True Interrupt Mode.
 ///
 /// Conforming types are `@MainActor`-isolated so SwiftUI can observe their
-/// published state directly. In production the coordinator holds a reference to
-/// `ScreenTimeAuthorizationNoop` until the entitlement is provisioned; then
-/// `ScreenTimeAuthorizationManager` is injected.
+/// published state directly. In production the `ScreenTimeAuthorizationClient`
+/// TCA dependency vends a `ScreenTimeAuthorizationNoop` until the entitlement
+/// is provisioned; then `ScreenTimeAuthorizationManager` is injected.
 @MainActor
 protocol ScreenTimeAuthorizationProviding: AnyObject {
     /// Current authorization status. Changes are expected to be observable.

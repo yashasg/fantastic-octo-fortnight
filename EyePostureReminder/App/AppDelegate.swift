@@ -276,7 +276,8 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     }
 
     /// Returns and clears a pending UI-test overlay request if present.
-    /// Used by `EyePostureReminderApp` after the coordinator is active.
+    /// Used by `EyePostureReminderApp.presentUITestOverlayIfNeeded()` after the
+    /// `AppFeature` store is active.
     func consumeUITestOverlayType() -> ReminderType? {
         guard let rawType = uiTestDefaults.string(forKey: AppStorageKey.uiTestOverlayType),
               let type = ReminderType(rawValue: rawType) else {
@@ -350,7 +351,8 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         }
     }
 
-    /// Foreground delivery — show overlay immediately via coordinator.
+    /// Foreground delivery — route to the `AppFeature` store immediately so
+    /// `SchedulingFeature` can present the overlay.
     func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         willPresent notification: UNNotification,
@@ -362,7 +364,9 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         completionHandler([])
     }
 
-    /// Background tap — queue via coordinator (scene may not be active yet).
+    /// Background tap — dispatch to the `AppFeature` store; the route is
+    /// buffered in `pendingNotificationRoutes` and flushed once `store` is
+    /// wired up if the scene is not active yet.
     func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse,

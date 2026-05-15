@@ -346,7 +346,7 @@ final class MockAuthorizationCenter {
 }
 ```
 
-**Tests that use this mock:** `AppCoordinatorTests` (Phase 3 branch), main app authorization flow tests
+**Tests that use this mock:** `SchedulingFeature_*Tests` and `OnboardingFeature` TCA tests (Phase 3 branch), main app authorization flow tests
 
 #### 3.5.4 Phase 3+ Extension Test Targets
 
@@ -692,7 +692,7 @@ Re-run the **full manual test checklist** whenever any of these files change:
 | `DeviceActivityMonitorExtension/` | EXT-01, EXT-02, EXT-05, manual device tests |
 | `ShieldConfigurationExtension/` | EXT-02, EXT-03, manual visual inspection |
 | `ShieldActionExtension/` | EXT-03, EXT-04, EXT-10, App Group state sync |
-| `AppCoordinator.swift` (Phase 3 branch) | EXT-06, EXT-07 (shield → fallback overlay flow) |
+| `SchedulingFeature.swift` (Phase 3 branch) | EXT-06, EXT-07 (shield → fallback overlay flow) |
 | `SettingsStore.swift` (Phase 3 branch) | Phase 2 tests + EXT-05 (App Group state isolation) |
 
 **Critical:** Always test Phase 3 changes on a **physical device**. DeviceActivity, ManagedSettings, and FamilyControls APIs are not available in simulator.

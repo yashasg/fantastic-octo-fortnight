@@ -28,7 +28,7 @@ Legend: ✅ Done · ⚠️ In progress / partial · ❌ Not started · 🔒 Bloc
 |---|------|--------|-------|
 | E1 | `NSMotionUsageDescription` present in Info.plist | ✅ Done | Present in `EyePostureReminder/Info.plist` |
 | E2 | Focus Status capability enabled on App ID for distribution signing | ⚠️ Partial | `EyePostureReminder.Distribution.entitlements` intentionally omits Focus Status to unblock archiving; enable when regenerating App Store profile |
-| E3 | Notification permission rationale accurate | ✅ Done | iOS does not require a `NS*UsageDescription` plist key for `UNUserNotificationCenter`. Authorization is requested at runtime in `OnboardingPermissionView` and `AppCoordinator.requestNotificationAuthorisation()` via `requestAuthorization(options: [.alert, .sound, .badge])`; user-facing rationale is presented on the onboarding permission screen before the system prompt. |
+| E3 | Notification permission rationale accurate | ✅ Done | iOS does not require a `NS*UsageDescription` plist key for `UNUserNotificationCenter`. Authorization is requested at runtime in `OnboardingPermissionView` via the `OnboardingFeature` reducer's `.requestNotificationPermission` effect, which calls `NotificationClient.requestAuthorization(options: [.alert, .sound, .badge])`; user-facing rationale is presented on the onboarding permission screen before the system prompt. |
 
 ---
 

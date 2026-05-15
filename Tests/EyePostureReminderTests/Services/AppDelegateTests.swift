@@ -494,9 +494,9 @@ final class AppDelegateTests: XCTestCase {
     /// Regression for #711: the `--show-overlay-eyes` launch arg must seed
     /// `uiTestOverlayType`, `hasSeenOnboarding`, and the inflated break
     /// durations during `init()` (before `didFinishLaunchingWithOptions`),
-    /// so `@StateObject AppCoordinator()`'s `SettingsStore` reads the
-    /// inflated values from `UserDefaults` and the overlay does not
-    /// auto-dismiss before the UI test asserts on it.
+    /// so the `AppFeature` store seed in `EyePostureReminderApp.init()`
+    /// reads the inflated `SettingsStore` values from `UserDefaults` and
+    /// the overlay does not auto-dismiss before the UI test asserts on it.
     func test_init_showOverlayEyes_preSeedsOverlayDefaultsBeforeDidFinishLaunching() throws {
         let defaults = try makeIsolatedDefaults(suffix: #function)
 
