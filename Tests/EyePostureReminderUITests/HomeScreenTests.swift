@@ -140,20 +140,11 @@ final class HomeScreenTests: XCTestCase {
         XCTAssertTrue(statusLabel.waitForExistence(timeout: 3))
         let updatedText = statusLabel.label
 
-        // `HomeFeature.State.globalEnabled` is seeded once on `task` and never
-        // updates from AppStorage writes made through `SettingsView`'s master
-        // toggle — tracked under #785. Drop this `XCTExpectFailure` wrapper
-        // when that bug is closed.
-        XCTExpectFailure(
-            "Master-toggle → status-label reactivity is broken after TCA migration; tracked in #785.",
-            strict: false
-        ) {
-            XCTAssertNotEqual(
-                initialText,
-                updatedText,
-                "Status label should update after toggling the global switch."
-            )
-        }
+        XCTAssertNotEqual(
+            initialText,
+            updatedText,
+            "Status label should update after toggling the global switch."
+        )
     }
 
     // MARK: - test_homeScreen_onLaunch_titleShowsKshana
