@@ -1,3 +1,4 @@
+import ComposableArchitecture
 import SwiftUI
 import UIKit
 // swiftlint:disable file_length
@@ -721,7 +722,6 @@ private struct SettingsSmartPauseSection: View {
 /// Shows an inline denied-recovery warning (#252) and a status-aware footer (#250).
 private struct SettingsTrueInterruptSection: View {
     @EnvironmentObject private var coordinator: AppCoordinator
-    @StateObject private var selectedAppsState = SelectedAppsState()
     @State private var showPicker = false
 
     private var authStatus: ScreenTimeAuthorizationStatus {
@@ -822,17 +822,26 @@ private struct SettingsTrueInterruptSection: View {
             .foregroundStyle(AppColor.textSecondary)
         }
         .sheet(isPresented: $showPicker) {
-            AppCategoryPickerView(
-                appsState: selectedAppsState,
-                authorizationStatus: authStatus,
-                onRequestAuthorization: {
-                    Task { _ = await coordinator.screenTimeAuthorization.requestAuthorization() }
-                },
-                onOpenSettings: openApplicationSettings,
-                onSelectApps: {},
-                onDone: { showPicker = false }
-            )
+            AppCategoryPickerSheet(onSelectApps: {})
         }
+    }
+}
+
+// MARK: - AppCategoryPicker Sheet Wrapper
+
+/// Owns a local `Store` for `AppCategoryPickerView` while the picker is still
+/// presented from MVVM-era parents (`SettingsView`, `OnboardingView`). When
+/// Phase 7 of #702 wires `RootView` as the destination owner, both call sites
+/// can drop this wrapper and present via `$store.scope`.
+private struct AppCategoryPickerSheet: View {
+    let onSelectApps: () -> Void
+
+    @State private var store = Store(
+        initialState: AppCategoryPickerFeature.State()
+    ) { AppCategoryPickerFeature() }
+
+    var body: some View {
+        AppCategoryPickerView(store: store, onSelectApps: onSelectApps)
     }
 }
 

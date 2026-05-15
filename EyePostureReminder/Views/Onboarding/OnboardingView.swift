@@ -3,6 +3,7 @@
 //
 // Main onboarding container — 4-screen TabView with page indicator.
 
+import ComposableArchitecture
 import SwiftUI
 import UIKit
 
@@ -11,7 +12,6 @@ struct OnboardingView: View {
 
     @EnvironmentObject private var coordinator: AppCoordinator
     @EnvironmentObject private var settings: SettingsStore
-    @StateObject private var selectedAppsState = SelectedAppsState()
     @State private var currentPage = 0
     @State private var showAppCategoryPicker = false
 
@@ -68,16 +68,7 @@ struct OnboardingView: View {
             accessibilityNotificationPoster.postScreenChanged()
         }
         .sheet(isPresented: $showAppCategoryPicker) {
-            AppCategoryPickerView(
-                appsState: selectedAppsState,
-                authorizationStatus: coordinator.screenTimeAuthorization.authorizationStatus,
-                onRequestAuthorization: {
-                    Task { _ = await coordinator.screenTimeAuthorization.requestAuthorization() }
-                },
-                onOpenSettings: openApplicationSettings,
-                onSelectApps: {},
-                onDone: { showAppCategoryPicker = false }
-            )
+            OnboardingAppCategoryPickerSheet(onSelectApps: {})
         }
     }
 
@@ -113,6 +104,24 @@ struct OnboardingView: View {
         if let url = URL(string: UIApplication.openSettingsURLString) {
             UIApplication.shared.open(url)
         }
+    }
+}
+
+// MARK: - AppCategoryPicker Sheet Wrapper
+
+/// Owns a local `Store` for `AppCategoryPickerView` while `OnboardingView` is
+/// still presented from the legacy MVVM stack. When Phase 7 of #702 wires
+/// `RootView` as the destination owner, this wrapper is removed and the picker
+/// is presented via `$store.scope(...)`.
+private struct OnboardingAppCategoryPickerSheet: View {
+    let onSelectApps: () -> Void
+
+    @State private var store = Store(
+        initialState: AppCategoryPickerFeature.State()
+    ) { AppCategoryPickerFeature() }
+
+    var body: some View {
+        AppCategoryPickerView(store: store, onSelectApps: onSelectApps)
     }
 }
 
