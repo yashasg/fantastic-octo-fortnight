@@ -41,8 +41,12 @@ final class SchedulingNotificationRoutingTests: XCTestCase {
             $0.settingsClient = settings
             $0.ipcClient = IPCClient(
                 isTrueInterruptEnabled: { false },
+                setTrueInterruptEnabled: { _ in false },
+                readSelection: { .empty },
+                writeSelection: { _ in false },
                 record: { event, _ in recordedEvents.withValue { $0.append(event) } },
-                trueInterruptChanges: { .finished }
+                trueInterruptChanges: { .finished },
+                selectionChanges: { .finished }
             )
             $0.overlayClient = OverlayClient(
                 show: { type, duration, _, _ in
@@ -109,8 +113,12 @@ final class SchedulingNotificationRoutingTests: XCTestCase {
             $0.date = .constant(now)
             $0.ipcClient = IPCClient(
                 isTrueInterruptEnabled: { false },
+                setTrueInterruptEnabled: { _ in false },
+                readSelection: { .empty },
+                writeSelection: { _ in false },
                 record: { event, _ in recordedEvents.withValue { $0.append(event) } },
-                trueInterruptChanges: { .finished }
+                trueInterruptChanges: { .finished },
+                selectionChanges: { .finished }
             )
             $0.overlayClient = OverlayClient(
                 show: { type, _, _, _ in shownOverlays.withValue { $0.append(type) } },

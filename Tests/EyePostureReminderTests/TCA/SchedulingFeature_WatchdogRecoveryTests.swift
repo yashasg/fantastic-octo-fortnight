@@ -63,8 +63,12 @@ final class SchedulingFeatureWatchdogRecoveryTests: XCTestCase {
             TCATestDependencies.applyAllSilentClients(&$0)
             $0.ipcClient = IPCClient(
                 isTrueInterruptEnabled: { false },
+                setTrueInterruptEnabled: { _ in false },
+                readSelection: { .empty },
+                writeSelection: { _ in false },
                 record: { _, _ in },
-                trueInterruptChanges: { stream }
+                trueInterruptChanges: { stream },
+                selectionChanges: { .finished }
             )
         }
         store.exhaustivity = .off
