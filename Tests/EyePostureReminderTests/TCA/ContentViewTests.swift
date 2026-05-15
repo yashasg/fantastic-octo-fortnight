@@ -85,8 +85,12 @@ final class ContentViewTests: XCTestCase {
             )
             $0.ipcClient = IPCClient(
                 isTrueInterruptEnabled: { false },
+                setTrueInterruptEnabled: { _ in false },
+                readSelection: { .empty },
+                writeSelection: { _ in false },
                 record: { _, _ in },
-                trueInterruptChanges: { .finished }
+                trueInterruptChanges: { .finished },
+                selectionChanges: { .finished }
             )
             $0.deviceActivityMonitorClient = DeviceActivityMonitorClient(
                 schedule: { _, _ in },

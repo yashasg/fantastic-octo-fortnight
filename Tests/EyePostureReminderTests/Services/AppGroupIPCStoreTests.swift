@@ -220,6 +220,99 @@ final class AppGroupIPCStoreTests: XCTestCase {
         }
     }
 
+    func test_writeSelection_postsSelectionDidChangeNotificationWithSnapshotPayload() throws {
+        var observed: [AppGroupSelectionSnapshot] = []
+        let observer = NotificationCenter.default.addObserver(
+            forName: AppGroupIPCStore.selectionDidChangeNotification,
+            object: nil,
+            queue: nil
+        ) { notification in
+            let key = AppGroupIPCStore.selectionValueUserInfoKey
+            if let value = notification.userInfo?[key] as? AppGroupSelectionSnapshot {
+                observed.append(value)
+            }
+        }
+        defer { NotificationCenter.default.removeObserver(observer) }
+
+        let snapshot = AppGroupSelectionSnapshot(
+            categoryCount: 1,
+            appCount: 2,
+            lastUpdated: Date(timeIntervalSince1970: 5_000)
+        )
+
+        try store.writeSelection(snapshot)
+
+        XCTAssertEqual(observed, [snapshot])
+    }
+
+    func test_writeSelection_doesNotPostNotificationWhenSnapshotUnchanged() throws {
+        let snapshot = AppGroupSelectionSnapshot(
+            categoryCount: 1,
+            appCount: 1,
+            lastUpdated: Date(timeIntervalSince1970: 6_000)
+        )
+        try store.writeSelection(snapshot)
+
+        var notificationCount = 0
+        let observer = NotificationCenter.default.addObserver(
+            forName: AppGroupIPCStore.selectionDidChangeNotification,
+            object: nil,
+            queue: nil
+        ) { _ in
+            notificationCount += 1
+        }
+        defer { NotificationCenter.default.removeObserver(observer) }
+
+        try store.writeSelection(snapshot)
+
+        XCTAssertEqual(notificationCount, 0)
+    }
+
+    func test_writeSelection_postsSelectionDidChangeOnInjectedCenterOnly() throws {
+        let injectedCenter = NotificationCenter()
+        let store = AppGroupIPCStore(defaults: defaults, maxEventCount: 3, notificationCenter: injectedCenter)
+        var injectedCount = 0
+        var defaultCount = 0
+        let injectedObserver = injectedCenter.addObserver(
+            forName: AppGroupIPCStore.selectionDidChangeNotification,
+            object: nil,
+            queue: nil
+        ) { _ in
+            injectedCount += 1
+        }
+        let defaultObserver = NotificationCenter.default.addObserver(
+            forName: AppGroupIPCStore.selectionDidChangeNotification,
+            object: nil,
+            queue: nil
+        ) { _ in
+            defaultCount += 1
+        }
+        defer {
+            injectedCenter.removeObserver(injectedObserver)
+            NotificationCenter.default.removeObserver(defaultObserver)
+        }
+
+        try store.writeSelection(AppGroupSelectionSnapshot(
+            categoryCount: 0,
+            appCount: 1,
+            lastUpdated: Date(timeIntervalSince1970: 7_000)
+        ))
+
+        XCTAssertEqual(injectedCount, 1)
+        XCTAssertEqual(defaultCount, 0)
+    }
+
+    func test_selectionDidChangeNotification_userInfoKey_isStable() {
+        XCTAssertEqual(AppGroupIPCStore.selectionValueUserInfoKey, "selection")
+    }
+
+    func test_selectionDidChangeNotification_name_isStable() {
+        XCTAssertEqual(
+            AppGroupIPCStore.selectionDidChangeNotification.rawValue,
+            "AppGroupIPCStore.selectionDidChange"
+        )
+    }
+
     func test_shieldSession_roundTripsAndStoresLastStartedTimestamp() throws {
         let triggeredAt = Date(timeIntervalSince1970: 2_000)
         defaults.set("stale", forKey: ShieldSessionKeys.breakReason)

@@ -75,6 +75,14 @@ public final class AppGroupIPCStore {
     )
     public static let trueInterruptEnabledValueUserInfoKey = "enabled"
 
+    /// Posted whenever `writeSelection(_:)` persists a snapshot that differs
+    /// from the previous on-disk value. Subscribers receive the new snapshot
+    /// in `userInfo` keyed by `selectionValueUserInfoKey`.
+    public static let selectionDidChangeNotification = Notification.Name(
+        "AppGroupIPCStore.selectionDidChange"
+    )
+    public static let selectionValueUserInfoKey = "selection"
+
     public enum StoreError: Error, Equatable {
         case appGroupSuiteUnavailable
         case corruptEventLog
@@ -152,9 +160,18 @@ public final class AppGroupIPCStore {
     }
 
     public func writeSelection(_ snapshot: AppGroupSelectionSnapshot) throws {
-        try withLock {
+        let didChange: Bool = try withLock {
             guard let defaults else { throw StoreError.appGroupSuiteUnavailable }
+            let previous = (try? readSelectionLocked(from: defaults)) ?? .empty
             defaults.set(try encoder.encode(snapshot), forKey: AppGroupIPCKeys.selectionMetadata)
+            return previous != snapshot
+        }
+        if didChange {
+            notificationCenter.post(
+                name: Self.selectionDidChangeNotification,
+                object: self,
+                userInfo: [Self.selectionValueUserInfoKey: snapshot]
+            )
         }
     }
 
