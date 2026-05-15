@@ -277,4 +277,43 @@ final class OnboardingFeatureTests: XCTestCase {
 
         await store.send(.completedOnboarding)
     }
+
+    // MARK: - .pageChanged
+
+    /// `.pageChanged` writes the new index into state, mirroring the
+    /// swipe-driven `TabView` selection.
+    func test_pageChanged_writesValueIntoState() async {
+        let store = TestStore(initialState: OnboardingFeature.State()) {
+            OnboardingFeature()
+        }
+
+        await store.send(.pageChanged(2)) {
+            $0.currentPage = 2
+        }
+    }
+
+    /// `.pageChanged` clamps values above `lastPageIndex` so swipe noise
+    /// can't move the reducer into an invalid page.
+    func test_pageChanged_clampsAboveLastPageIndex() async {
+        let store = TestStore(initialState: OnboardingFeature.State()) {
+            OnboardingFeature()
+        }
+
+        await store.send(.pageChanged(99)) {
+            $0.currentPage = OnboardingFeature.lastPageIndex
+        }
+    }
+
+    /// `.pageChanged` clamps negative values to zero.
+    func test_pageChanged_clampsNegativeValuesToZero() async {
+        var initial = OnboardingFeature.State()
+        initial.currentPage = 2
+        let store = TestStore(initialState: initial) {
+            OnboardingFeature()
+        }
+
+        await store.send(.pageChanged(-5)) {
+            $0.currentPage = 0
+        }
+    }
 }
