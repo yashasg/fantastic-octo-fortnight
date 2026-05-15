@@ -153,8 +153,8 @@ final class OverlayManager: OverlayPresenting {
     /// Whether a break overlay window is currently on screen and visible to the user.
     ///
     /// `true` while a `UIWindow` is installed and not hidden, `false` after dismissal
-    /// or before the first overlay is shown. Read by `AppCoordinator` to decide
-    /// whether to suppress duplicate threshold-triggered presentations.
+    /// or before the first overlay is shown. Read by the scheduling surface to
+    /// decide whether to suppress duplicate threshold-triggered presentations.
     var isOverlayVisible: Bool {
         overlayWindow != nil && overlayWindow?.isHidden == false
     }

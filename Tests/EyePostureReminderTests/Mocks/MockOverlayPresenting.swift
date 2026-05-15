@@ -28,7 +28,7 @@ final class MockOverlayPresenting: OverlayPresenting {
     // MARK: - Ordered Call History
 
     /// `ReminderType` arguments passed to `showOverlay`, in call order.
-    /// Use this to verify FIFO ordering at the AppCoordinator integration level.
+    /// Use this to verify FIFO ordering at the scheduling-feature integration level.
     private(set) var showCallOrder: [ReminderType] = []
 
     /// Duration arguments passed to `showOverlay`, parallel to `showCallOrder`.

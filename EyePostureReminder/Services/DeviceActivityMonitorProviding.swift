@@ -10,10 +10,10 @@
 /// `FamilyControls`, `DeviceActivity`, or `ManagedSettings` references.
 /// The concrete implementation will add those imports once #201 is resolved.
 ///
-/// **Default injection:** `AppCoordinator` holds `DeviceActivityMonitorNoop` until:
+/// **Default injection:** the live runtime holds `DeviceActivityMonitorNoop` until:
 ///   1. FamilyControls entitlement is provisioned (#201).
 ///   2. The user grants `AuthorizationCenter.shared.requestAuthorization(for: .individual)`.
-///   3. `DeviceActivityMonitorScheduler` (real impl) is passed to the coordinator init.
+///   3. `DeviceActivityMonitorScheduler` (real impl) is wired into the dependency client.
 ///
 /// **Session lifecycle:**
 ///   - Call `scheduleBreakMonitoring(for:)` when the break overlay is actually visible.
@@ -37,7 +37,7 @@ protocol DeviceActivityMonitorProviding: ServiceLifecycle {
     /// - The user has not granted FamilyControls authorization.
     /// - The device is a simulator (DeviceActivity does not function in Simulator).
     ///
-    /// `AppCoordinator` guards on `isAvailable` before scheduling monitor operations.
+    /// Callers guard on `isAvailable` before scheduling monitor operations.
     var isAvailable: Bool { get }
 
     /// The currently active break monitoring session, or `nil` when no window is running.

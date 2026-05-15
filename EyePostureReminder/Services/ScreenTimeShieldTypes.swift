@@ -26,8 +26,8 @@ extension ShieldTriggerReason {
 
 /// Describes a single, discrete screen-time shielding session.
 ///
-/// Created by `AppCoordinator` when a break begins and passed to
-/// `ScreenTimeShieldProviding.beginShield(for:)` and
+/// Created by the scheduling surface (`SchedulingFeature`) when a break
+/// begins and passed to `ScreenTimeShieldProviding.beginShield(for:)` and
 /// `DeviceActivityMonitorProviding.scheduleBreakMonitoring(for:)`.
 struct ShieldSession: Sendable, Equatable {
     /// The reason the shield is being applied.
@@ -67,8 +67,9 @@ extension ShieldSession {
 
     /// Convenience initialiser that derives the `ShieldTriggerReason` from a `ReminderType`.
     ///
-    /// Used by `AppCoordinator` when bridging the `ScreenTimeTracker.onThresholdReached`
-    /// callback into a `DeviceActivityMonitorProviding.scheduleBreakMonitoring(for:)` call.
+    /// Used by the scheduling surface when bridging the
+    /// `ScreenTimeTracker.onThresholdReached` callback into a
+    /// `DeviceActivityMonitorProviding.scheduleBreakMonitoring(for:)` call.
     ///
     /// - Parameters:
     ///   - type: The reminder type that reached its threshold.

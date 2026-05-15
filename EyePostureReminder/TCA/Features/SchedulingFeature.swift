@@ -3,19 +3,19 @@ import Foundation
 import ScreenTimeExtensionShared
 import UserNotifications
 
-/// Phase 1 reducer (`p0-tca-10` / #673) backing the long-running scheduling
-/// orchestration that the legacy `AppCoordinator` owns today.
+/// TCA reducer (`p0-tca-10` / #673) owning the long-running scheduling
+/// orchestration that the legacy `AppCoordinator` previously held.
 ///
-/// Mirrors the hot paths from `EyePostureReminder/Services/AppCoordinator.swift`
-/// — the streams installed at init plus `scheduleReminders`,
-/// `reschedule(for:)`, `handleNotification(for:)`, `handleForegroundTransition`,
-/// and `appWillResignActive` — using only the dependency clients defined by
-/// `p0-tca-2`. Per the Phase 1 isolation contract this file ships the reducer
-/// surface only; existing `AppCoordinator*.swift` files remain authoritative
-/// at runtime until the Phase 2 wiring issues (`p0-tca-11`–`p0-tca-15`) flip
-/// the production runtime to read from this store.
+/// Built as a behavioural mirror of the (now-deleted) hot paths from
+/// `EyePostureReminder/Services/AppCoordinator.swift` — the streams
+/// installed at init plus `scheduleReminders`, `reschedule(for:)`,
+/// `handleNotification(for:)`, `handleForegroundTransition`, and
+/// `appWillResignActive` — using the dependency clients defined by
+/// `p0-tca-2`. The legacy `AppCoordinator*.swift` files were removed
+/// in `#755` Phase E (commit b9a1c96, PR #760); this reducer is now
+/// the canonical runtime for the surface it ports.
 ///
-/// Behavioural fidelity caveats (intentional Phase-1 deferrals, tracked under
+/// Behavioural fidelity caveats (intentional deferrals, tracked under
 /// `p0-tca-15`):
 ///   * `SettingsClient` only vends a single eyes-side `ReminderSettings`
 ///     snapshot, so per-type interval differentiation reuses
@@ -25,7 +25,7 @@ import UserNotifications
 ///     analytics, launch-readiness analytics, DeviceActivity scheduling on
 ///     overlay present, and the `OverlayClient.lifecycleEvents`-driven
 ///     bookkeeping all require dependency-client surface that does not yet
-///     exist; those side-effects stay on `AppCoordinator` until Phase 2.
+///     exist; those side-effects are tracked under `p0-tca-15` follow-ups.
 ///   * `hapticsEnabled`/`pauseMediaDuringBreaks` are not yet exposed on
 ///     `ReminderSettings`; the reducer passes `false` for both when calling
 ///     `OverlayClient.show` (matches the SettingsClient default state).
@@ -34,9 +34,10 @@ struct SchedulingFeature {
 
     typealias NotificationRoute = AppDelegate.NotificationRoute
 
-    /// Identifier shared with `AppCoordinator.snoozeWakeCategory` so the
-    /// snooze-wake notification scheduled here can be cancelled by either
-    /// runtime during the migration window.
+    /// Identifier for the silent one-time wake notification scheduled when
+    /// a snooze begins. Stable across the legacy `AppCoordinator` → TCA
+    /// migration so a snooze-wake notification scheduled under the old
+    /// runtime is still cancellable here.
     static let snoozeWakeCategory = "com.yashasgujjar.kshana.snooze-wake"
 
     @ObservableState
@@ -192,7 +193,8 @@ extension SchedulingFeature {
             let status = await notificationClient.authorizationStatus()
             await send(.internalAction(.authStatusRefreshed(status)))
 
-            // Snooze guard — port of `AppCoordinator.scheduleReminders` lines 408-431.
+            // Snooze guard — ported from the deleted `AppCoordinator.scheduleReminders`
+            // (#755 Phase E).
             if let until = snapshot.snoozedUntil {
                 if until > Date() {
                     await trackerClient.pauseAll()
@@ -218,7 +220,7 @@ extension SchedulingFeature {
             }
 
             // Skip foreground tracker reconfig in UI-test mode for parity with
-            // `AppCoordinator.scheduleReminders` lines 452-455.
+            // the deleted `AppCoordinator.scheduleReminders` (#755 Phase E).
             guard !snapshot.isUITestMode else { return }
 
             await Self.configureTracker(
@@ -241,7 +243,8 @@ extension SchedulingFeature {
             try? await clock.sleep(for: .milliseconds(300))
             if Task.isCancelled { return }
 
-            // Snooze guard — port of `AppCoordinator.performReschedule` line 226.
+            // Snooze guard — ported from the deleted `AppCoordinator.performReschedule`
+            // (#755 Phase E).
             if let until = snoozedUntil, until > Date() { return }
 
             let status = await notificationClient.authorizationStatus()
@@ -286,7 +289,8 @@ extension SchedulingFeature {
         type: ReminderType,
         state: inout State
     ) -> Effect<Action> {
-        // Snooze guard — port of `AppCoordinator.handleNotification` line 514.
+        // Snooze guard — ported from the deleted `AppCoordinator.handleNotification`
+        // (#755 Phase E).
         if let until = state.snoozedUntil, until > now() { return .none }
         let duration = state.settings.breakDuration
         let interval = state.settings.interval
@@ -329,8 +333,8 @@ extension SchedulingFeature {
         let settingsClient = self.settingsClient
 
         // Defensive guard mirroring the 300 ms disable-debounce window from
-        // `AppCoordinator` init (line 282) — interval is the only signal the
-        // Phase-1 SettingsClient surfaces for the per-type enable check.
+        // the deleted `AppCoordinator` init (#755 Phase E) — interval is the
+        // only signal the SettingsClient surfaces for the per-type enable check.
         guard interval > 0 else { return .none }
 
         return .run { _ in
@@ -359,7 +363,8 @@ extension SchedulingFeature {
                 await overlayClient.dismiss()
                 return
             }
-            // Resume only if no active snooze (port of `AppCoordinator` line 320).
+            // Resume only if no active snooze (ported from the deleted
+            // `AppCoordinator.pauseConditionChanged`, #755 Phase E).
             guard (snoozedUntil ?? .distantPast) <= currentNow else { return }
             await trackerClient.resumeAll()
         }
@@ -377,7 +382,8 @@ extension SchedulingFeature {
             let status = await notificationClient.authorizationStatus()
             await send(.internalAction(.authStatusRefreshed(status)))
 
-            // Port of `AppCoordinator.handleForegroundTransition` lines 587-606.
+            // Ported from the deleted `AppCoordinator.handleForegroundTransition`
+            // (#755 Phase E).
             if let until = snoozedUntil {
                 if until <= Date() {
                     await settingsClient.setSnoozedUntil(nil)
@@ -546,9 +552,9 @@ extension SchedulingFeature {
     }
 
     /// Returns a sendable closure that schedules the silent one-time wake
-    /// notification for the supplied date — mirrors
-    /// `AppCoordinator.scheduleSnoozeWakeNotification(at:)` so a killed app
-    /// is woken when the snooze period expires.
+    /// notification for the supplied date — ports the behaviour of the
+    /// deleted `AppCoordinator.scheduleSnoozeWakeNotification(at:)` (#755
+    /// Phase E) so a killed app is woken when the snooze period expires.
     func makeScheduleSnoozeNotification() -> @Sendable (Date) async -> Void {
         let notificationClient = self.notificationClient
         return { date in

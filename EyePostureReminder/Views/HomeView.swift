@@ -10,10 +10,10 @@ import UserNotifications
 /// notification auth status is now read from `StoreOf<HomeFeature>`. Local
 /// `@AppStorage`-backed state (`openSettingsOnLaunch`,
 /// `trueInterruptSkippedBannerDismissed`) stays in the view because
-/// `HomeFeature` doesn't persist those yet; the sheet still hands off to the
-/// MVVM `SettingsView`, which receives `SettingsStore` / `AppCoordinator` via
-/// SwiftUI environment inheritance from `EyePostureReminderApp` until
-/// `#755` Phase B migrates that surface as well.
+/// `HomeFeature` doesn't persist those yet; the sheet now hands off to the
+/// TCA-driven `SettingsView` (`#755` Phase B), which is sourced from a
+/// scoped `StoreOf<SettingsFeature>` and no longer relies on environment
+/// inheritance from `EyePostureReminderApp`.
 struct HomeView: View {
     typealias LaunchArgumentsProvider = () -> [String]
     typealias ProcessEnvironmentProvider = () -> [String: String]

@@ -138,9 +138,9 @@ struct EyePostureReminderApp: App {
     /// Routes through `store.send(.notificationRouted(.reminder(type)))` —
     /// the same path UNUserNotificationCenter delivery takes via
     /// `AppDelegate.dispatchNotificationRoute` — so the backdoor exercises
-    /// production reducer code instead of the deprecated
-    /// `AppCoordinator.handleNotification` shim that #677 / #702 are
-    /// dismantling. The synchronous `state.scheduling.settings` seed in
+    /// production reducer code instead of the legacy
+    /// `AppCoordinator.handleNotification` shim that was deleted in `#755`
+    /// Phase E. The synchronous `state.scheduling.settings` seed in
     /// `init()` plus the `--show-overlay-*` UserDefaults inflation guarantees
     /// the reducer reads the inflated `breakDuration` immediately, without
     /// racing the `SettingsClient.stream` first emission (#737).

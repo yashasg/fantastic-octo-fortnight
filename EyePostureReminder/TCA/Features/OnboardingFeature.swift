@@ -2,13 +2,13 @@ import ComposableArchitecture
 import Foundation
 import UserNotifications
 
-/// Phase 1 reducer (`p0-tca-7` / #670) backing the onboarding flow.
+/// TCA reducer (`p0-tca-7` / #670) backing the onboarding flow.
 ///
-/// Mirrors the observable behaviour of `OnboardingView` and the
-/// `OnboardingCoordinator`-style hooks routed through `AppCoordinator`
-/// today, so a later Phase 2 issue (`p0-tca-14` / #677) can swap the
-/// onboarding views to read from this store and the legacy
-/// `AppCoordinator` plumbing can be retired.
+/// Owns the observable behaviour previously handled by `OnboardingView` +
+/// the `OnboardingCoordinator`-style hooks that historically routed
+/// through `AppCoordinator` (deleted in `#755` Phase E). The onboarding
+/// views now read from this store directly, so the legacy coordinator
+/// plumbing is fully retired.
 ///
 /// ## Persistence and parent wiring
 ///
@@ -67,8 +67,9 @@ struct OnboardingFeature {
     static let lastPageIndex: Int = 3
 
     /// Notification authorisation options requested by the onboarding
-    /// permission page. Mirrors the set used by `AppCoordinator` so the
-    /// system prompt copy stays identical across the migration.
+    /// permission page. Matches the set used by the legacy `AppCoordinator`
+    /// (deleted in `#755` Phase E) so the system prompt copy stayed
+    /// identical across the migration.
     static let notificationOptions: UNAuthorizationOptions = [.alert, .sound, .badge]
 
     var body: some ReducerOf<Self> {

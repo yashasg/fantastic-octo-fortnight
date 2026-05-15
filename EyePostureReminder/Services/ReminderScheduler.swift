@@ -94,11 +94,11 @@ final class ReminderScheduler: ReminderScheduling {
 
     // MARK: Scheduling — production + test paths
     //
-    // `scheduleReminders(using:)` and `rescheduleReminder(for:using:)` are called
-    // by `AppCoordinator.scheduleReminders()` and `performReschedule(for:)` when
-    // notification permission is `.authorized`, and are also exercised by unit tests.
-    // `AppCoordinator`'s `ReminderScheduling` conformance routes calls through its
-    // own auth-aware paths before delegating here.
+    // `scheduleReminders(using:)` and `rescheduleReminder(for:using:)` are
+    // called by `SchedulingFeature`'s scheduling effects when notification
+    // permission is `.authorized`, and are also exercised by unit tests.
+    // Callers route through their own auth-aware paths before delegating
+    // here.
 
     func scheduleReminders(using settings: SettingsStore) async {
         Logger.scheduling.info("Scheduling all reminders")
