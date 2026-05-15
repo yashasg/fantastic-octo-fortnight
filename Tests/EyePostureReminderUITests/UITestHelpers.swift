@@ -21,7 +21,7 @@ enum TestLaunchArguments {
     /// Triggers the posture check overlay immediately on launch; used by OverlayTests
     /// to display the overlay without waiting for the timer.
     static let showOverlayPosture = "--show-overlay-posture"
-    /// Seeds `ScreenTimeAuthorizationStub(.notDetermined)` into `AppCoordinator` so the
+    /// Seeds `ScreenTimeAuthorizationStub(.notDetermined)` so the
     /// TrueInterruptSkippedBanner and TrueInterruptSetupPill can render in UITests.
     /// The simulator's real FamilyControls status is `.unavailable`; without this arg
     /// neither element would ever appear (#399).
@@ -347,6 +347,23 @@ extension XCUIElement {
         guard waitForHittable(timeout: timeout) else { return false }
         tap()
         return true
+    }
+
+    /// Waits until the element's `value` differs from `initialValue`.
+    ///
+    /// Use after `tap()`-ing a `Switch` whose binding writes through
+    /// `@AppStorage` / a Bindable store: SwiftUI may not have committed the
+    /// rendered value by the time the tap returns, especially on loaded CI
+    /// runners. Reading `value` immediately is racy.
+    @discardableResult
+    func waitForValueChange(from initialValue: String?, timeout: TimeInterval = 3) -> Bool {
+        let predicate: NSPredicate
+        if let initialValue {
+            predicate = NSPredicate(format: "value != %@", initialValue)
+        } else {
+            predicate = NSPredicate(format: "value != nil")
+        }
+        return waitFor(predicate: predicate, timeout: timeout)
     }
 
 }

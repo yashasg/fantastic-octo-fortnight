@@ -723,7 +723,10 @@ cmd_uitest() {
       -test-repetition-relaunch-enabled YES
     )
   fi
-  xcodebuild_test_args+=("${only_testing_args[@]}")
+  # `only_testing_args` may be empty when running the full UI test suite.
+  # Under `set -u`, expanding an empty array as `"${arr[@]}"` triggers an
+  # "unbound variable" error on bash 3.x; the `:+` guard avoids that.
+  xcodebuild_test_args+=(${only_testing_args[@]:+"${only_testing_args[@]}"})
 
   if ! run_xcodebuild "${xcodebuild_test_args[@]}"; then
     fail "UI tests failed"
