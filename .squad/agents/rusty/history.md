@@ -309,6 +309,7 @@ Rewrote #677's issue body to clearly delineate residual scope vs. deferred work:
 **Rationale:** Scope ambiguity creates friction during review and parallel work. An umbrella's body must always reflect current state, not the initial vision. The pattern here—"umbrella-with-deferrals body update"—works for future TCA migration phases.
 
 ### Learnings
+- **2026-05-15: Team consolidation — 7 teams collapsed to 2 (Dev + Strategy).** You are now explicitly on the **Dev team** alongside Rusty, Linus, Livingston, Saul, Basher, Yen, Benedict, Virgil. Dev team owns code, tests, build, and CI. Strategy team (Danny, Tess, Reuben, Turk, Frank, Roman, Toulour, Denham, Sponder, Bashir, Matsui, Bruiser) handles product, design, research, legal, audits, and ASO. Scribe and Ralph remain on the roster outside both teams (silent infra). Use GitHub label `team:dev` for issue routing; see .squad/streams.json for canonical Dev workstream folder scopes.
 1. **Umbrella issues need live-updating bodies.** When sub-issues are carved out post-filing, update the parent to avoid reviewer confusion. A stale umbrella body is a source of ground-truth conflicts.
 2. **Deferred sub-issues require explicit links.** The new body calls out #701 and #702 by number and one-line scope, so context is immediate.
 3. **Residual scope must be quantified.** Line counts + file lists make it clear what work remains and allow reviewers to spot scope creep.
@@ -343,6 +344,7 @@ Split #735 into two sibling issues by file ownership:
 **#735** marked as "Superseded by #741 + #742" with banner + original body preserved as tombstone. Added explanatory comment; left open per team convention (owner closes when ready).
 
 ### Learnings
+- **2026-05-15: Team consolidation — 7 teams collapsed to 2 (Dev + Strategy).** You are now explicitly on the **Dev team** alongside Rusty, Linus, Livingston, Saul, Basher, Yen, Benedict, Virgil. Dev team owns code, tests, build, and CI. Strategy team (Danny, Tess, Reuben, Turk, Frank, Roman, Toulour, Denham, Sponder, Bashir, Matsui, Bruiser) handles product, design, research, legal, audits, and ASO. Scribe and Ralph remain on the roster outside both teams (silent infra). Use GitHub label `team:dev` for issue routing; see .squad/streams.json for canonical Dev workstream folder scopes.
 
 1. **Split bundled docs-drift issues by file ownership.** When a docs issue spans multiple files with different team owners, splitting by file (not by aspect or urgency) yields clearer accountability and review gates. The pattern: Extract file-specific evidence, AC, and Refs into each child; keep parent as tombstone.
 

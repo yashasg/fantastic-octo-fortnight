@@ -289,3 +289,5 @@ Orchestration log recorded at 2026-04-30T09:27:10Z. Code review approved; decisi
 **Pattern for Future Audits:** When decomposing audit findings into child issues, group by technical CATEGORY (not per file/line), assign each category to a single owner, and ensure each issue represents one PR's natural scope. This pattern enables parallel team execution and clean PR review boundaries.
 
 2026-05-15: New Strategy & Compliance team will file issues that lead to backend PRs I review. Watch for compliance-driven changes from Matsui and API-contract changes from Sponder.
+
+- **2026-05-15: Team consolidation — 7 teams collapsed to 2 (Dev + Strategy).** You are now explicitly on the **Dev team** alongside Rusty, Linus, Livingston, Saul, Basher, Yen, Benedict, Virgil. Dev team owns code, tests, build, and CI. Strategy team (Danny, Tess, Reuben, Turk, Frank, Roman, Toulour, Denham, Sponder, Bashir, Matsui, Bruiser) handles product, design, research, legal, audits, and ASO. Scribe and Ralph remain on the roster outside both teams (silent infra). Use GitHub label `team:dev` for issue routing; see .squad/streams.json for canonical Dev workstream folder scopes.

@@ -24189,3 +24189,40 @@ This pattern ensures:
 - New issues: #741, #742
 - Parent: #735 (now superseded)
 - Related: #725 (parent docs sweep), #677, #701, #702 (blockers)
+
+---
+
+## 2026-05-15 — Team Consolidation & Streams Sync
+
+### Decision: Collapse to 2 Teams (Dev + Strategy) + Fix streams.json
+**By:** Yashasg (via Copilot directive)  
+**Date:** 2026-05-15T09:09:14Z  
+**Status:** Implemented
+
+**What**
+
+Collapse the squad's 7-team grouping (Cross-cutting, Frontend, Backend, DevOps, Product, Strategy & Compliance, Infra) into just two teams: **Dev** and **Strategy**. Scribe and Ralph remain on the roster but operate outside both teams (silent infra). Additionally, fix the user-supplied `.squad/streams.json` to mirror the 2-team model and reflect the actual repo layout.
+
+**Why**
+
+User directive: *"too many teams, i just care about dev team and strategy team"*
+
+Consolidation reduces cognitive load when reasoning about ownership. The previously-supplied streams.json was stale — referenced non-existent paths (`app/Sources/...`) and assigned members to wrong teams (Basher to Frontend, Saul/Yen to Strategy, "Nagel" who isn't on the roster).
+
+**Scope**
+
+- **Dev team (8):** Rusty (Lead), Linus, Livingston, Saul, Basher, Yen, Benedict, Virgil — anyone touching code, tests, build, or CI.
+- **Strategy team (12):** Danny, Tess, Reuben, Turk, Frank, Roman, Toulour, Denham, Sponder, Bashir, Matsui, Bruiser — product, design, research, legal, audits, ASO.
+- **Outside both teams:** Scribe (logger), Ralph (work monitor) — still on roster, no team grouping.
+
+**Files Changed**
+
+- `.squad/team.md` — Team column rewritten on all 22 member rows; `## Teams` section collapsed from 7 bullets to 2 + a note about Scribe/Ralph.
+- `.squad/streams.json` — collapsed from 3 streams (Frontend/Backend/Strategy) to 2 (Dev/Strategy); folder scopes corrected to actual paths (`EyePostureReminder/**`, `Extensions/**`, `ScreenTimeExtensions/**`, `Tests/**`, `UITests/**`, `docs/**`, etc.); member lists in descriptions corrected to match team.md.
+- `.squad/agents/*/history.md` (20 files) — dated learning entries added so each member knows new team assignment + workstream labeling convention.
+
+**Coordination Notes**
+
+- Routing.md `Frontend testing` / `Backend testing` / `Frontend code review` / `Backend code review` rows describe **work scope** (UI vs services layer of the iOS app), not team grouping — left unchanged.
+- GitHub workflows (`squad-issue-assign.yml`, `squad-triage.yml`, `sync-squad-labels.yml`, `squad-heartbeat.yml`) parse `## Members` rows by name only — they don't depend on the Team column or the `## Teams` section, so no workflow changes required.
+- The mothballed Python `backend/` directory remains intentionally out of scope for both streams (no `backend/` dir exists in this repo).
