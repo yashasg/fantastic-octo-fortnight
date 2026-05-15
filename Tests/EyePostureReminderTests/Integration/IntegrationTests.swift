@@ -1,4 +1,3 @@
-import Combine
 import XCTest
 
 @testable import EyePostureReminder
@@ -16,7 +15,6 @@ final class SettingsStoreViewModelIntegrationTests: XCTestCase {
     private var store: SettingsStore!
     private var viewModel: SettingsViewModel!
     private var scheduler: MockReminderScheduler!
-    private var cancellables: Set<AnyCancellable>!
 
     override func setUp() async throws {
         try await super.setUp()
@@ -25,11 +23,9 @@ final class SettingsStoreViewModelIntegrationTests: XCTestCase {
         store = SettingsStore(store: userDefaults, config: AppConfig.fallback)
         scheduler = MockReminderScheduler()
         viewModel = SettingsViewModel(settings: store, scheduler: scheduler)
-        cancellables = []
     }
 
     override func tearDown() async throws {
-        cancellables = nil
         viewModel = nil
         scheduler = nil
         store = nil
@@ -155,14 +151,11 @@ final class SettingsStoreViewModelIntegrationTests: XCTestCase {
         XCTAssertEqual(raw, 0, "Persisted snoozedUntil must be 0 after cancel")
     }
 
-    // MARK: Published change propagation
+    // MARK: Observer change propagation
 
-    func test_publishedChange_eyesInterval_receivedBySubscriber() {
+    func test_observerChange_eyesInterval_receivedBySubscriber() {
         var received: [TimeInterval] = []
-        store.$eyesInterval
-            .dropFirst()
-            .sink { received.append($0) }
-            .store(in: &cancellables)
+        store.addObserver { received.append($0.interval) }
 
         store.eyesInterval = 600
         store.eyesInterval = 1200
@@ -170,10 +163,10 @@ final class SettingsStoreViewModelIntegrationTests: XCTestCase {
         XCTAssertEqual(
             received,
             [600, 1200],
-            "Subscribers must receive every @Published eyesInterval change in order")
+            "Observers must receive every eyesInterval change in order via the snapshot")
     }
 
-    func test_publishedChange_globalEnabled_triggersDownstreamAction() async {
+    func test_observerChange_globalEnabled_triggersDownstreamAction() async {
         store.globalEnabled = true
         viewModel.globalToggleChanged()
         await awaitCondition { scheduler.scheduleRemindersCallCount >= 1 }

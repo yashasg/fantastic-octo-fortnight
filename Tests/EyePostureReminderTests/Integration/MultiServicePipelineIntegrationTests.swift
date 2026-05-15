@@ -1,4 +1,3 @@
-import Combine
 import XCTest
 
 @testable import EyePostureReminder
@@ -19,7 +18,6 @@ final class MultiServicePipelineIntegrationTests: XCTestCase {
     private var carPlayDetector: MockCarPlayDetector!
     private var drivingDetector: MockDrivingActivityDetector!
     private var pauseManager: PauseConditionManager!
-    private var cancellables: Set<AnyCancellable>!
 
     override func setUp() async throws {
         try await super.setUp()
@@ -38,12 +36,10 @@ final class MultiServicePipelineIntegrationTests: XCTestCase {
             drivingDetector: drivingDetector
         )
         pauseManager.startMonitoring()
-        cancellables = []
     }
 
     override func tearDown() async throws {
         pauseManager.stopMonitoring()
-        cancellables = nil
         pauseManager = nil
         drivingDetector = nil
         carPlayDetector = nil
@@ -121,28 +117,34 @@ final class MultiServicePipelineIntegrationTests: XCTestCase {
         XCTAssertEqual(store.postureInterval, 1800)
     }
 
-    func test_concurrentPublishedObservers_receiveAllChanges() async {
-        var globalValues: [Bool] = []
-        var intervalValues: [TimeInterval] = []
+    func test_concurrentObservers_receiveSnapshotsForEveryChange() {
+        var snapshots1: [ReminderSettings] = []
+        var snapshots2: [ReminderSettings] = []
 
-        store.$globalEnabled.dropFirst().sink { globalValues.append($0) }.store(in: &cancellables)
-        store.$eyesInterval.dropFirst().sink { intervalValues.append($0) }.store(in: &cancellables)
+        store.addObserver { snapshots1.append($0) }
+        store.addObserver { snapshots2.append($0) }
 
         store.globalEnabled = false
         store.eyesInterval = 600
         store.eyesInterval = 1200
 
-        // Poll until Combine publishers deliver all three changes.
-        await awaitCondition { globalValues.count >= 1 && intervalValues.count >= 2 }
-
+        // Three mutations × two observers = each observer sees 3 snapshots.
         XCTAssertEqual(
-            globalValues,
-            [false],
-            "globalEnabled subscriber must receive one change")
+            snapshots1.count,
+            3,
+            "First observer must receive a snapshot for every mutation")
         XCTAssertEqual(
-            intervalValues,
-            [600, 1200],
-            "eyesInterval subscriber must receive both changes in order")
+            snapshots2.count,
+            3,
+            "Second observer must receive a snapshot for every mutation")
+        XCTAssertEqual(
+            snapshots1.last?.interval,
+            1200,
+            "Last snapshot must reflect the most recent eyesInterval value")
+        XCTAssertEqual(
+            snapshots2.last?.interval,
+            1200,
+            "Last snapshot must reflect the most recent eyesInterval value")
     }
 
     // MARK: Full wiring smoke test
