@@ -26,7 +26,8 @@ final class AppFeatureTests: XCTestCase {
     /// production singletons or fail with a `liveValue` crash inside the
     /// SwiftPM xctest bundle.
     private func makeStore(
-        initialState: AppFeature.State = AppFeature.State()
+        initialState: AppFeature.State = AppFeature.State(),
+        overlayClient overlayClientOverride: OverlayClient? = nil
     ) -> TestStoreOf<AppFeature> {
         TestStore(initialState: initialState) {
             AppFeature()
@@ -67,7 +68,7 @@ final class AppFeatureTests: XCTestCase {
                 cancelReminder: { _ in },
                 cancelAllReminders: {}
             )
-            $0.overlayClient = OverlayClient(
+            $0.overlayClient = overlayClientOverride ?? OverlayClient(
                 show: { _, _, _, _ in },
                 dismiss: {},
                 clearQueue: {},
@@ -346,5 +347,81 @@ final class AppFeatureTests: XCTestCase {
 
         XCTAssertEqual(route, delegateRoute,
                        "AppFeature.NotificationRoute must be an alias of AppDelegate.NotificationRoute")
+    }
+
+    // MARK: - Overlay → Settings handoff (#786)
+
+    /// `.overlaySettingsRequested` is the reducer-side replacement for the
+    /// legacy `AppCoordinator` handoff: when the user taps the "Settings"
+    /// affordance inside the in-break overlay, the reducer must write
+    /// `openSettingsOnLaunch = true` to the shared `UserDefaults` so
+    /// `HomeView`'s `.onChangeCompat(of: openSettingsOnLaunch)` presents
+    /// the Settings sheet on the next layout pass. Regression coverage for
+    /// #786 — pre-fix the tap was a no-op because no reducer consumed
+    /// `OverlayClient.lifecycleEvents()`'s `.settingsTapped` emissions.
+    func test_overlaySettingsRequested_writesOpenSettingsOnLaunchFlag() async {
+        UserDefaults.standard.removeObject(forKey: AppStorageKey.openSettingsOnLaunch)
+        defer {
+            UserDefaults.standard.removeObject(forKey: AppStorageKey.openSettingsOnLaunch)
+        }
+        XCTAssertFalse(
+            UserDefaults.standard.bool(forKey: AppStorageKey.openSettingsOnLaunch),
+            "Precondition: the AppStorage flag must start cleared so we can "
+            + "observe the reducer's write."
+        )
+
+        let store = makeStore()
+        store.exhaustivity = .off
+
+        await store.send(.overlaySettingsRequested(.eyes))
+        await store.finish(timeout: NSEC_PER_SEC)
+
+        XCTAssertTrue(
+            UserDefaults.standard.bool(forKey: AppStorageKey.openSettingsOnLaunch),
+            ".overlaySettingsRequested must flip openSettingsOnLaunch to true "
+            + "so HomeView presents the Settings sheet (#786)."
+        )
+    }
+
+    /// `.onAppear` subscribes to `OverlayClient.lifecycleEvents()` and
+    /// forwards every `.settingsTapped` emission as
+    /// `.overlaySettingsRequested(type)`. Without this wiring the in-overlay
+    /// "Settings" link is a dead-end after the MVVM → TCA migration removed
+    /// `AppCoordinator` (#755). Regression coverage for #786.
+    func test_onAppear_forwardsOverlaySettingsTappedEventsToReducer() async {
+        let (lifecycleStream, lifecycleContinuation) =
+            AsyncStream<OverlayLifecycleEvent>.makeStream()
+        let store = makeStore(
+            overlayClient: OverlayClient(
+                show: { _, _, _, _ in },
+                dismiss: {},
+                clearQueue: {},
+                clearQueueForType: { _ in },
+                isVisible: { false },
+                lifecycleEvents: { lifecycleStream }
+            )
+        )
+        store.exhaustivity = .off
+
+        // Clean the AppStorage write side-effect that fires when the reducer
+        // handles `.overlaySettingsRequested`.
+        UserDefaults.standard.removeObject(forKey: AppStorageKey.openSettingsOnLaunch)
+        defer {
+            UserDefaults.standard.removeObject(forKey: AppStorageKey.openSettingsOnLaunch)
+        }
+
+        let task = await store.send(.onAppear)
+        await store.receive(\.scheduling.start)
+
+        // Unrelated lifecycle events must NOT be forwarded.
+        lifecycleContinuation.yield(.presented(.eyes))
+        lifecycleContinuation.yield(.dismissed(.eyes))
+
+        // The settings-tap is the one event the reducer must convert.
+        lifecycleContinuation.yield(.settingsTapped(.posture))
+        await store.receive(\.overlaySettingsRequested) { _ in }
+
+        lifecycleContinuation.finish()
+        await task.cancel()
     }
 }
