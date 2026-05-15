@@ -288,6 +288,19 @@ extension XCUIApplication {
         }
         return element.exists && element.isHittable
     }
+
+    /// Force-terminates the app and waits up to `timeout` seconds for it to
+    /// reach the `.notRunning` state. Used in `tearDown` for tests that
+    /// present an overlay `UIWindow` so the next test doesn't inherit a
+    /// SpringBoard background-assertion timeout (#714).
+    func terminateAndWaitForExit(timeout: TimeInterval = 5) {
+        terminate()
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if state == .notRunning { return }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+        }
+    }
 }
 
 extension XCUIElement {

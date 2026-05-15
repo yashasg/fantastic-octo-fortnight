@@ -112,6 +112,12 @@ final class OverlayManager: OverlayPresenting {
     private let notificationCenter: NotificationCenter
     private let windowSceneProvider: WindowSceneProvider
 
+    /// Notification name observed to drop the overlay window and clear the queue
+    /// before the process exits. Defaults to `UIApplication.willTerminateNotification`.
+    /// Exposed only so unit tests can post a synthesized notification on a private
+    /// `NotificationCenter` instance and verify the cleanup path runs (#714).
+    static let willTerminateNotification: Notification.Name = UIApplication.willTerminateNotification
+
     // MARK: - State
     //
     // All mutable references below are declared as regular `Optional` (not
@@ -127,6 +133,7 @@ final class OverlayManager: OverlayPresenting {
     private var overlayWindow: UIWindow?
     private var dismissCallback: (() -> Void)?
     private var sceneActivationObserver: NSObjectProtocol?
+    private var willTerminateObserver: NSObjectProtocol?
 
     /// A single queued overlay-show request.
     private struct QueuedOverlay {
@@ -189,10 +196,30 @@ final class OverlayManager: OverlayPresenting {
                 self?.presentNextQueuedOverlay()
             }
         }
+        willTerminateObserver = self.notificationCenter.addObserver(
+            forName: Self.willTerminateNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            // `UIApplication.willTerminateNotification` fires before SpringBoard
+            // tries to reap the process. Releasing the overlay's `UIWindow` here
+            // lets the background assertion complete cleanly so subsequent
+            // `XCUIApplication.terminate()` calls don't time out and cascade
+            // into shard-wide failures (#714). The notification is delivered
+            // synchronously on the main thread, so jumping through `Task`
+            // (which would defer cleanup past process exit) is not safe here —
+            // call into the manager directly via `MainActor.assumeIsolated`.
+            MainActor.assumeIsolated {
+                self?.releaseOverlayWindowForTermination()
+            }
+        }
     }
 
     deinit {
         if let obs = sceneActivationObserver {
+            notificationCenter.removeObserver(obs)
+        }
+        if let obs = willTerminateObserver {
             notificationCenter.removeObserver(obs)
         }
     }
@@ -316,6 +343,29 @@ final class OverlayManager: OverlayPresenting {
             Logger.overlay.info(
                 "Overlay queue removed \(removed) item(s) for \(type.rawValue); remaining \(self.overlayQueue.count)"
             )
+        }
+    }
+
+    // MARK: - Termination Cleanup
+
+    /// Synchronously hides and releases the overlay window so SpringBoard can
+    /// finish its background-assertion handshake during termination. Also
+    /// drops any queued overlays since they will never be presented after the
+    /// process exits. Skips the audio resume / dismiss callback paths because
+    /// the app is going away — emitting analytics or restarting external
+    /// audio at that point is both pointless and racy.
+    private func releaseOverlayWindowForTermination() {
+        let hadOverlay = overlayWindow != nil
+        overlayWindow?.isHidden = true
+        overlayWindow?.rootViewController = nil
+        overlayWindow = nil
+        dismissCallback = nil
+        isAudioPaused = false
+        if !overlayQueue.isEmpty {
+            overlayQueue.removeAll()
+        }
+        if hadOverlay {
+            Logger.overlay.info("Overlay window released on app termination (#714)")
         }
     }
 
