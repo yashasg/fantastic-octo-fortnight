@@ -320,7 +320,12 @@ final class SettingsStore: ObservableObject {
 
 // MARK: - Keys
 
-private extension SettingsStore {
+extension SettingsStore {
+    /// `UserDefaults` key namespace for every persisted `SettingsStore`
+    /// property. Exposed at module scope (not `private`) so non-`@MainActor`
+    /// callers — for example the `EyePostureReminderApp.init` synchronous
+    /// settings seed (#737) — can read the same canonical keys without
+    /// duplicating string literals that would silently drift on rename.
     enum Keys {
         static let globalEnabled          = "kshana.globalEnabled"
         static let eyesEnabled            = "kshana.eyes.enabled"
@@ -336,6 +341,41 @@ private extension SettingsStore {
         static let pauseDuringFocus       = "kshana.pauseDuringFocus"
         static let pauseWhileDriving      = "kshana.pauseWhileDriving"
         static let notificationFallbackEnabled = "kshana.notificationFallbackEnabled"
+    }
+}
+
+// MARK: - Synchronous Seed (#737)
+
+extension SettingsStore {
+    /// Synchronous, non-actor-isolated read of the persisted eyes-side
+    /// `ReminderSettings` directly from the supplied `UserDefaults`.
+    ///
+    /// `EyePostureReminderApp.init()` calls this to seed the TCA root
+    /// `state.scheduling.settings` *before* `SchedulingFeature.start` runs,
+    /// closing the settings-load race that previously left
+    /// `reminderNotificationEffect` reading `breakDuration: 0` and showing
+    /// auto-dismissing overlays during the UI-test backdoor (#737).
+    ///
+    /// Falls back to `ReminderSettings.defaultEyes` for any key not yet
+    /// persisted (first cold launch after install). Per the docstring at the
+    /// top of `SchedulingFeature` the eyes-side snapshot is shared by both
+    /// reminder types until per-type settings land.
+    ///
+    /// Follow-up (#737): retire this helper once `SettingsClient.liveValue`
+    /// exposes a synchronous initial-value accessor that the AppFeature root
+    /// reducer can read at construction time without bouncing to the main
+    /// actor.
+    nonisolated static func eyesSnapshotFromUserDefaults(
+        _ defaults: UserDefaults = .standard
+    ) -> ReminderSettings {
+        let fallback = ReminderSettings.defaultEyes
+        let interval = defaults.object(forKey: Keys.eyesInterval) != nil
+            ? defaults.double(forKey: Keys.eyesInterval)
+            : fallback.interval
+        let breakDuration = defaults.object(forKey: Keys.eyesBreakDuration) != nil
+            ? defaults.double(forKey: Keys.eyesBreakDuration)
+            : fallback.breakDuration
+        return ReminderSettings(interval: interval, breakDuration: breakDuration)
     }
 }
 

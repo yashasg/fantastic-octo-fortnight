@@ -226,6 +226,37 @@ final class AppFeatureTests: XCTestCase {
         await store.receive(\.scheduling.notificationRouted)
     }
 
+    /// #737: When `state.scheduling.settings` is seeded with a non-zero
+    /// `breakDuration` (mirroring `EyePostureReminderApp.init()`'s synchronous
+    /// `SettingsStore.eyesSnapshotFromUserDefaults` read), the seeded value
+    /// must survive `.notificationRouted(.reminder(.eyes))` reduction so
+    /// `SchedulingFeature.reminderNotificationEffect` calls
+    /// `overlayClient.show` with the correct duration. Pre-#737 the seed was
+    /// always `(interval: 0, breakDuration: 0)` regardless of UserDefaults,
+    /// so the UI-test backdoor would intermittently fire `overlayClient.show(
+    /// type, 0, …)` and the overlay would auto-dismiss before any UITest
+    /// could interact with it.
+    func test_notificationRouted_preservesSeededSchedulingSettings() async {
+        var initial = AppFeature.State()
+        initial.scheduling.settings = ReminderSettings(interval: 1200, breakDuration: 600)
+        let store = makeStore(initialState: initial)
+        store.exhaustivity = .off
+
+        XCTAssertEqual(store.state.scheduling.settings.breakDuration, 600,
+                       "Seed must be observable on the initial state before any action runs")
+
+        await store.send(.notificationRouted(.reminder(.eyes)))
+        await store.receive(\.scheduling.notificationRouted)
+
+        XCTAssertEqual(store.state.scheduling.settings.breakDuration, 600,
+                       "Seeded breakDuration must survive the action chain — this is the "
+                       + "value SchedulingFeature.reminderNotificationEffect feeds into "
+                       + "overlayClient.show(type, duration, _, _).")
+        XCTAssertEqual(store.state.scheduling.settings.interval, 1200,
+                       "Seeded interval must also survive — thresholdReachedEffect guards "
+                       + "on `interval > 0` and would silently no-op otherwise.")
+    }
+
     // MARK: - Overlay presentation cleanup (#738 — two-phase dismiss completion)
 
     /// AppFeature owns the `@Presents var overlay` slot. When the child

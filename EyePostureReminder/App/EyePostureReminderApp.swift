@@ -24,11 +24,26 @@ struct EyePostureReminderApp: App {
         // the stale `true` value left in UserDefaults from the previous test
         // launch and onboarding tests landed on Home (#707).
         Self.preSeedHasSeenOnboardingFromLaunchArgsIfNeeded()
+        // Mirror overlay-affecting launch args into UserDefaults BEFORE the
+        // settings seed below reads them, for the same UIApplicationMain
+        // ordering reason. Without this, `--show-overlay-eyes` /
+        // `--show-overlay-posture` would leave `state.scheduling.settings`
+        // stuck on the previous test launch's value (or `defaultEyes`) and
+        // `reminderNotificationEffect` would race with the
+        // `SettingsClient.stream` first emission, intermittently showing
+        // overlays at `breakDuration: 0` (#737).
+        Self.preSeedReminderSettingsFromLaunchArgsIfNeeded()
 #endif
         var initialState = AppFeature.State()
         initialState.hasSeenOnboarding = UserDefaults.standard.bool(
             forKey: AppStorageKey.hasSeenOnboarding
         )
+        // Seed scheduling.settings synchronously from UserDefaults so the TCA
+        // root state observes the persisted (or `--show-overlay-*`-inflated)
+        // `breakDuration` immediately, before `SchedulingFeature.start`
+        // installs the `SettingsClient` stream subscription. Closes the
+        // settings-load race documented in #737.
+        initialState.scheduling.settings = SettingsStore.eyesSnapshotFromUserDefaults()
         self.store = Store(initialState: initialState) { AppFeature() }
     }
 
@@ -60,6 +75,40 @@ struct EyePostureReminderApp: App {
             UserDefaults.standard.set(true, forKey: AppStorageKey.hasSeenOnboarding)
         }
     }
+
+    /// Mirrors the `--show-overlay-eyes` / `--show-overlay-posture` launch
+    /// arguments into the `kshana.eyes.breakDuration` /
+    /// `kshana.posture.breakDuration` UserDefaults keys before
+    /// `SettingsStore.eyesSnapshotFromUserDefaults()` reads them in `init()`.
+    ///
+    /// Mirrors the inflation that `AppDelegate.applyUITestLaunchArguments`
+    /// applies via `SettingsStore.eyesBreakDuration = uiTestOverlayBreakDuration`,
+    /// but runs synchronously in `App.init` so the seed picks it up — the
+    /// `AppDelegate` pass runs from `didFinishLaunchingWithOptions`, after
+    /// `App.init` has already returned. Without this guard the TCA root
+    /// `state.scheduling.settings.breakDuration` would race with
+    /// `SettingsClient.stream`'s first emission and the UI-test overlay
+    /// backdoor (now dispatched through `store.send(.notificationRouted)`)
+    /// would intermittently show 0-second overlays that auto-dismiss before
+    /// `OverlayUITests` can interact with them (#737).
+    ///
+    /// `#if DEBUG` keeps the launch-arg backdoor out of Release/TestFlight
+    /// builds (re: #350/#405).
+    private static func preSeedReminderSettingsFromLaunchArgsIfNeeded() {
+        let args = CommandLine.arguments
+        let inflateForOverlayLaunchArg =
+            args.contains("--show-overlay-eyes") ||
+            args.contains("--show-overlay-posture")
+        guard inflateForOverlayLaunchArg else { return }
+        UserDefaults.standard.set(
+            AppDelegate.uiTestOverlayBreakDuration,
+            forKey: SettingsStore.Keys.eyesBreakDuration
+        )
+        UserDefaults.standard.set(
+            AppDelegate.uiTestOverlayBreakDuration,
+            forKey: SettingsStore.Keys.postureBreakDuration
+        )
+    }
 #endif
 
     var body: some Scene {
@@ -86,13 +135,24 @@ struct EyePostureReminderApp: App {
 #if DEBUG
     /// UI test mode: if a specific overlay type was requested via launch
     /// arguments, trigger it after SwiftUI has attached/activated the window.
+    ///
+    /// Routes through `store.send(.notificationRouted(.reminder(type)))` —
+    /// the same path UNUserNotificationCenter delivery takes via
+    /// `AppDelegate.dispatchNotificationRoute` — so the backdoor exercises
+    /// production reducer code instead of the deprecated
+    /// `AppCoordinator.handleNotification` shim that #677 / #702 are
+    /// dismantling. The synchronous `state.scheduling.settings` seed in
+    /// `init()` plus the `--show-overlay-*` UserDefaults inflation guarantees
+    /// the reducer reads the inflated `breakDuration` immediately, without
+    /// racing the `SettingsClient.stream` first emission (#737).
+    ///
     /// `#if DEBUG` ensures this backdoor is compiled out of Release builds
     /// (re: #350/#405).
     private func presentUITestOverlayIfNeeded() {
         Task { @MainActor in
             await Task.yield()
             if let type = appDelegate.consumeUITestOverlayType() {
-                coordinator.handleNotification(for: type)
+                store.send(.notificationRouted(.reminder(type)))
             }
         }
     }
