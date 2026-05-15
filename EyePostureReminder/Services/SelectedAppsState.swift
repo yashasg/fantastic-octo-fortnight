@@ -16,7 +16,6 @@
 /// main app target once #201 is resolved; the extension reads it via
 /// `ManagedSettingsStore`.
 
-import Combine
 import Foundation
 import os
 import ScreenTimeExtensionShared
@@ -40,9 +39,19 @@ extension AppGroupIPCStore: SelectedAppsIPCStoring {}
 
 // MARK: - SelectedAppsState
 
-/// Observable store for the True Interrupt Mode app/category selection.
+/// App Group–backed store for the True Interrupt Mode app/category selection.
+///
+/// Previously conformed to `ObservableObject` (`@Published` on
+/// `selectionMetadata` / `isTrueInterruptEnabled`) so SwiftUI surfaces
+/// could observe selection changes directly. After `AppCategoryPickerView`
+/// migrated to `StoreOf<AppCategoryPickerFeature>` (Phase 1 reducer), no
+/// production view or test subscribes to the Combine projection any more,
+/// so the conformance + `@Published` wrappers + `import Combine` were
+/// stripped under issue #752 (residual scope of `p0-tca-14` / #677).
+/// The full file is scheduled for deletion in `p0-tca-15` (#678) once
+/// `IPCClient` absorbs read/write + change-stream responsibilities.
 @MainActor
-final class SelectedAppsState: ObservableObject {
+final class SelectedAppsState {
     typealias IPCStoreFactory = (UserDefaults?) -> any SelectedAppsIPCStoring
 
     // MARK: App Group + Persistence Keys
@@ -54,10 +63,10 @@ final class SelectedAppsState: ObservableObject {
     /// UserDefaults key for the user's True Interrupt Mode enabled intent.
     static let enabledKey = AppGroupIPCKeys.trueInterruptEnabled
 
-    // MARK: Published State
+    // MARK: State
 
-    @Published private(set) var selectionMetadata: SelectedAppsMetadata
-    @Published private(set) var isTrueInterruptEnabled: Bool
+    private(set) var selectionMetadata: SelectedAppsMetadata
+    private(set) var isTrueInterruptEnabled: Bool
 
     // MARK: Dependency
 
