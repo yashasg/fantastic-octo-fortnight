@@ -182,6 +182,43 @@ final class HomeFeatureTests: XCTestCase {
                        "Global disabled takes precedence over per-type disablement")
     }
 
+    // MARK: - .task — settings stream subscription (#681)
+
+    func test_task_streamsSettingsSnapshotsIntoState() async {
+        let (stream, continuation) = AsyncStream<ReminderSettings>.makeStream()
+        var settings = TCATestDependencies.silentSettingsClient()
+        settings.stream = { stream }
+
+        let clock = TestClock()
+        let store = TestStore(initialState: HomeFeature.State()) {
+            HomeFeature()
+        } withDependencies: {
+            $0.settingsClient = settings
+            $0.notificationClient = TCATestDependencies.silentNotificationClient(
+                authorizationStatus: .authorized
+            )
+            $0.continuousClock = clock
+        }
+        store.exhaustivity = .off(showSkippedAssertions: false)
+
+        let task = await store.send(.task)
+
+        let firstSnapshot = ReminderSettings(interval: 1200, breakDuration: 20)
+        continuation.yield(firstSnapshot)
+        await store.receive(\.settingsChanged) {
+            $0.settings = firstSnapshot
+        }
+
+        let secondSnapshot = ReminderSettings(interval: 600, breakDuration: 30)
+        continuation.yield(secondSnapshot)
+        await store.receive(\.settingsChanged) {
+            $0.settings = secondSnapshot
+        }
+
+        continuation.finish()
+        await task.cancel()
+    }
+
     // MARK: - Static helpers
 
     func test_static_statusLocalizationKey_paused() {

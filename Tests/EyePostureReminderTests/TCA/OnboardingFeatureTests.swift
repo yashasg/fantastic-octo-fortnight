@@ -148,6 +148,60 @@ final class OnboardingFeatureTests: XCTestCase {
         }
     }
 
+    func test_requestNotificationPermission_grantedRoutesAuthorizedStatus() async {
+        let requestCalls = LockIsolated<[UNAuthorizationOptions]>([])
+        let store = TestStore(initialState: OnboardingFeature.State()) {
+            OnboardingFeature()
+        } withDependencies: {
+            $0.notificationClient = NotificationClient(
+                requestAuthorization: { options in
+                    requestCalls.withValue { $0.append(options) }
+                    return true
+                },
+                authorizationStatus: { .authorized },
+                add: { _ in },
+                removePending: { _ in },
+                removeAllPending: {},
+                pendingRequests: { [] },
+                deliveredNotifications: { [] }
+            )
+            $0.analyticsClient = AnalyticsClient(log: { _ in })
+        }
+
+        await store.send(.requestNotificationPermission)
+        await store.receive(\.notificationStatusChanged) {
+            $0.notificationAuthStatus = .authorized
+        }
+
+        requestCalls.withValue { calls in
+            XCTAssertEqual(calls.count, 1, "Must request permission exactly once")
+            XCTAssertEqual(calls.first, OnboardingFeature.notificationOptions,
+                           "Must request the documented .alert/.sound/.badge bundle")
+        }
+    }
+
+    func test_requestNotificationPermission_deniedRoutesDeniedStatus() async {
+        let store = TestStore(initialState: OnboardingFeature.State()) {
+            OnboardingFeature()
+        } withDependencies: {
+            $0.notificationClient = NotificationClient(
+                requestAuthorization: { _ in false },
+                authorizationStatus: { .denied },
+                add: { _ in },
+                removePending: { _ in },
+                removeAllPending: {},
+                pendingRequests: { [] },
+                deliveredNotifications: { [] }
+            )
+            $0.analyticsClient = AnalyticsClient(log: { _ in })
+        }
+
+        await store.send(.requestNotificationPermission)
+        await store.receive(\.notificationStatusChanged) {
+            $0.notificationAuthStatus = .denied
+        }
+    }
+
     // MARK: - .requestScreenTimeAuthorization
 
     func test_requestScreenTimeAuthorization_routesThroughClient() async {
