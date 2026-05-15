@@ -226,6 +226,48 @@ final class AppFeatureTests: XCTestCase {
         await store.receive(\.scheduling.notificationRouted)
     }
 
+    // MARK: - Overlay presentation cleanup (#738 — two-phase dismiss completion)
+
+    /// AppFeature owns the `@Presents var overlay` slot. When the child
+    /// `OverlayFeature` finishes its two-phase dismiss chain (issue #738) by
+    /// emitting `.dismissed`, the parent reducer must clear
+    /// `state.overlay = nil` so `RootView`'s
+    /// `.fullScreenCover(item: $store.scope(state: \.$overlay, …))` tears
+    /// down the cover. Without this nil write the cover would stay on screen
+    /// until something else clobbers the slot.
+    func test_overlayPresentedDismissed_clearsOverlayState() async {
+        var initial = AppFeature.State()
+        initial.overlay = OverlayFeature.State(type: .eyes, duration: 10)
+        let store = makeStore(initialState: initial)
+        store.exhaustivity = .off
+
+        await store.send(.overlay(.presented(.dismissed))) {
+            $0.overlay = nil
+        }
+    }
+
+    /// Defence-in-depth: a child action that is *not* `.dismissed` must
+    /// leave the overlay slot intact so the cover stays on screen while the
+    /// reducer handles intermediate phases (`.dismissTapped`,
+    /// `.dismissAnimationCompleted`).
+    func test_overlayPresentedDismissTapped_doesNotClearOverlayState() async {
+        var initial = AppFeature.State()
+        initial.overlay = OverlayFeature.State(type: .eyes, duration: 10)
+        let store = makeStore(initialState: initial)
+        store.exhaustivity = .off
+
+        // The child reducer flips `isDismissing`; the parent leaves the
+        // slot untouched so the overlay window stays alive while the view
+        // animates the exit transition.
+        await store.send(.overlay(.presented(.dismissTapped))) {
+            $0.overlay?.isDismissing = true
+        }
+        XCTAssertNotNil(
+            store.state.overlay,
+            "AppFeature must not clear overlay state until .dismissed arrives"
+        )
+    }
+
     // MARK: - Destination state Equatable conformance
 
     /// `AppFeature.Destination.State` synthesised `Equatable` is required by

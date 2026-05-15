@@ -75,6 +75,17 @@ struct AppFeature {
                 return .none
             case let .notificationRouted(route):
                 return .send(.scheduling(.notificationRouted(route)))
+            case .overlay(.presented(.dismissed)):
+                // Two-phase dismiss (#738): once `OverlayFeature` finishes
+                // its `dismissAnimationCompleted` → `overlayClient.dismiss`
+                // → `dismissed` chain, the presentation slot in the root
+                // store must be cleared so `RootView`'s
+                // `.fullScreenCover(item: $store.scope(state: \.$overlay, …))`
+                // tears down the cover. The `@Presents` machinery does not
+                // auto-clear on a child action; the parent reducer owns the
+                // nil write.
+                state.overlay = nil
+                return .none
             case .home, .settings, .onboarding, .scheduling, .overlay, .destination:
                 return .none
             }
