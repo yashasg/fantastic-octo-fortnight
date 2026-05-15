@@ -71,7 +71,7 @@ struct ReminderRowView: View {
                     String(localized: "settings.reminder.intervalPicker", bundle: .module),
                     selection: $interval
                 ) {
-                    ForEach(SettingsViewModel.intervalOptions, id: \.self) { seconds in
+                    ForEach(SettingsPickerOptions.intervalOptions, id: \.self) { seconds in
                         Text(formatInterval(seconds)).tag(seconds)
                     }
                 }
@@ -91,7 +91,7 @@ struct ReminderRowView: View {
                     String(localized: "settings.reminder.durationPicker", bundle: .module),
                     selection: $breakDuration
                 ) {
-                    ForEach(SettingsViewModel.breakDurationOptions, id: \.self) { seconds in
+                    ForEach(SettingsPickerOptions.breakDurationOptions, id: \.self) { seconds in
                         Text(formatDuration(seconds)).tag(seconds)
                     }
                 }
@@ -131,10 +131,10 @@ struct ReminderRowView: View {
     }
 
     private func formatInterval(_ seconds: TimeInterval) -> String {
-        SettingsViewModel.labelForInterval(seconds)
+        SettingsPickerOptions.labelForInterval(seconds)
     }
 
     private func formatDuration(_ seconds: TimeInterval) -> String {
-        SettingsViewModel.labelForBreakDuration(seconds)
+        SettingsPickerOptions.labelForBreakDuration(seconds)
     }
 }

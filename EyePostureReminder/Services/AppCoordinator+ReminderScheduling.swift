@@ -4,10 +4,10 @@ import ScreenTimeExtensionShared
 
 // MARK: - ReminderScheduling Conformance
 
-/// `AppCoordinator` conforms to `ReminderScheduling` so `SettingsViewModel`
-/// can treat it as its scheduler. Every method routes through the
-/// auth-aware coordinator paths, keeping fallback timers in sync when
-/// notifications are denied.
+/// `AppCoordinator` conforms to `ReminderScheduling` so consumers — historically
+/// `SettingsViewModel`, now `SettingsClient` / `SettingsFeature` — can treat it
+/// as their scheduler. Every method routes through the auth-aware coordinator
+/// paths, keeping fallback timers in sync when notifications are denied.
 extension AppCoordinator: ReminderScheduling {
 
     func scheduleReminders(using settings: SettingsStore) async {

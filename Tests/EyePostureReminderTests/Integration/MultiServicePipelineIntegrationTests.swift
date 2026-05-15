@@ -6,14 +6,18 @@ import XCTest
 
 /// Verifies that changes flow correctly across multiple real services without breaking
 /// the pipeline. Tests respect `@MainActor` boundaries using async/await patterns.
+///
+/// The `SettingsStore ↔ SettingsViewModel ↔ Scheduler` slice of this pipeline was
+/// retired alongside `SettingsViewModel` in #755 Phase B. The remaining coverage
+/// exercises pause-condition + observer fan-out paths that still live on
+/// `SettingsStore`. The deleted `SettingsViewModel`-driven slice will be re-covered
+/// as `SettingsFeature` TestStore + integration cases under #679.
 @MainActor
 final class MultiServicePipelineIntegrationTests: XCTestCase {
 
     private var suiteName: String!
     private var userDefaults: UserDefaults!
     private var store: SettingsStore!
-    private var scheduler: MockReminderScheduler!
-    private var viewModel: SettingsViewModel!
     private var focusDetector: MockFocusStatusDetector!
     private var carPlayDetector: MockCarPlayDetector!
     private var drivingDetector: MockDrivingActivityDetector!
@@ -24,8 +28,6 @@ final class MultiServicePipelineIntegrationTests: XCTestCase {
         suiteName = "com.kshana.integration.pipeline.\(UUID().uuidString)"
         userDefaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
         store = SettingsStore(store: userDefaults, config: AppConfig.fallback)
-        scheduler = MockReminderScheduler()
-        viewModel = SettingsViewModel(settings: store, scheduler: scheduler)
         focusDetector = MockFocusStatusDetector()
         carPlayDetector = MockCarPlayDetector()
         drivingDetector = MockDrivingActivityDetector()
@@ -44,49 +46,11 @@ final class MultiServicePipelineIntegrationTests: XCTestCase {
         drivingDetector = nil
         carPlayDetector = nil
         focusDetector = nil
-        viewModel = nil
-        scheduler = nil
         store = nil
         userDefaults.removeSuite(named: suiteName)
         userDefaults = nil
         suiteName = nil
         try await super.tearDown()
-    }
-
-    // MARK: Settings change → ViewModel → Scheduler pipeline
-
-    func test_eyesIntervalChange_pipelineDoesNotBreak() async {
-        store.eyesInterval = 600
-        viewModel.reminderSettingChanged(for: .eyes)
-        await awaitCondition { scheduler.rescheduleCallCount >= 1 }
-
-        XCTAssertEqual(
-            scheduler.rescheduleCallCount,
-            1,
-            "Changing eyesInterval and calling reminderSettingChanged must trigger a reschedule")
-        XCTAssertEqual(scheduler.lastRescheduledType, .eyes)
-    }
-
-    func test_globalToggle_off_then_on_schedulerCallsInOrder() async {
-        store.globalEnabled = false
-        viewModel.globalToggleChanged()
-        await awaitCondition { scheduler.cancelAllCallCount >= 1 }
-        XCTAssertEqual(scheduler.cancelAllCallCount, 1, "Disabling master must cancel all")
-
-        store.globalEnabled = true
-        viewModel.globalToggleChanged()
-        await awaitCondition { scheduler.scheduleRemindersCallCount >= 1 }
-        XCTAssertEqual(scheduler.scheduleRemindersCallCount, 1, "Re-enabling master must schedule")
-    }
-
-    func test_settingsChange_doesNotAffectPauseConditionManager() async {
-        store.eyesInterval = 900
-        viewModel.reminderSettingChanged(for: .eyes)
-        await awaitCondition { scheduler.rescheduleCallCount >= 1 }
-
-        XCTAssertFalse(
-            pauseManager.isPaused,
-            "Changing reminder settings must not inadvertently affect PauseConditionManager state")
     }
 
     // MARK: Pause conditions do not affect scheduler via pipeline
@@ -96,10 +60,6 @@ final class MultiServicePipelineIntegrationTests: XCTestCase {
         focusDetector.simulateFocusChange(true)
 
         XCTAssertTrue(pauseManager.isPaused, "PauseConditionManager must be paused")
-        XCTAssertEqual(
-            scheduler.cancelAllCallCount,
-            0,
-            "PauseConditionManager firing must not directly invoke the scheduler (AppCoordinator owns that)")
     }
 
     // MARK: MainActor boundary test — async settings mutation
@@ -153,13 +113,9 @@ final class MultiServicePipelineIntegrationTests: XCTestCase {
         store.pauseDuringFocus = true
         focusDetector.simulateFocusChange(true)
 
-        // Both the ViewModel and PauseConditionManager share the same SettingsStore reference.
         XCTAssertTrue(
             pauseManager.isPaused,
             "PauseConditionManager must be paused via the shared real SettingsStore")
-        XCTAssertTrue(
-            viewModel.settings.pauseDuringFocus,
-            "ViewModel must see the same pauseDuringFocus=true on the shared store")
 
         let raw = userDefaults.bool(forKey: "kshana.pauseDuringFocus")
         XCTAssertTrue(

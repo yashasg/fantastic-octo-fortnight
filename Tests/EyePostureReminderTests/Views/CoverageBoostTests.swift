@@ -187,26 +187,26 @@ final class CoverageBoostTests: XCTestCase {
         XCTAssertNotNil(modifier)
     }
 
-    // MARK: - SettingsViewModel Formatter Coverage
+    // MARK: - SettingsPickerOptions Formatter Coverage
 
-    func test_settingsViewModel_intervalOptions_isNotEmpty() {
-        XCTAssertFalse(SettingsViewModel.intervalOptions.isEmpty)
+    func test_settingsPickerOptions_intervalOptions_isNotEmpty() {
+        XCTAssertFalse(SettingsPickerOptions.intervalOptions.isEmpty)
     }
 
-    func test_settingsViewModel_breakDurationOptions_isNotEmpty() {
-        XCTAssertFalse(SettingsViewModel.breakDurationOptions.isEmpty)
+    func test_settingsPickerOptions_breakDurationOptions_isNotEmpty() {
+        XCTAssertFalse(SettingsPickerOptions.breakDurationOptions.isEmpty)
     }
 
-    func test_settingsViewModel_labelForInterval_allOptions() {
-        for option in SettingsViewModel.intervalOptions {
-            let label = SettingsViewModel.labelForInterval(option)
+    func test_settingsPickerOptions_labelForInterval_allOptions() {
+        for option in SettingsPickerOptions.intervalOptions {
+            let label = SettingsPickerOptions.labelForInterval(option)
             XCTAssertFalse(label.isEmpty, "Label for interval \(option) should not be empty")
         }
     }
 
-    func test_settingsViewModel_labelForBreakDuration_allOptions() {
-        for option in SettingsViewModel.breakDurationOptions {
-            let label = SettingsViewModel.labelForBreakDuration(option)
+    func test_settingsPickerOptions_labelForBreakDuration_allOptions() {
+        for option in SettingsPickerOptions.breakDurationOptions {
+            let label = SettingsPickerOptions.labelForBreakDuration(option)
             XCTAssertFalse(label.isEmpty, "Label for duration \(option) should not be empty")
         }
     }

@@ -162,7 +162,7 @@ final class ViewBodyCoverageTests: XCTestCase {
     }
 
     func test_reminderRowView_eyes_differentIntervals() {
-        for interval in SettingsViewModel.intervalOptions {
+        for interval in SettingsPickerOptions.intervalOptions {
             render(ReminderRowView(
                 type: .eyes,
                 isEnabled: .constant(true),
@@ -174,7 +174,7 @@ final class ViewBodyCoverageTests: XCTestCase {
     }
 
     func test_reminderRowView_eyes_differentDurations() {
-        for duration in SettingsViewModel.breakDurationOptions {
+        for duration in SettingsPickerOptions.breakDurationOptions {
             render(ReminderRowView(
                 type: .eyes,
                 isEnabled: .constant(true),

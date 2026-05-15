@@ -2,7 +2,7 @@ import Foundation
 
 @testable import EyePostureReminder
 
-/// Mock implementation of `ReminderScheduling` for SettingsViewModel unit tests.
+/// Mock implementation of `ReminderScheduling` for unit / TCA tests.
 ///
 /// Records every call for assertion in tests. All async methods resolve immediately.
 @MainActor

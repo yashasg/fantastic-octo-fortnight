@@ -20,7 +20,7 @@ extension Logger {
     /// UIWindow overlay creation, presentation, and dismissal.
     static let overlay = Logger(subsystem: subsystem, category: "Overlay")
 
-    /// SettingsStore reads/writes and SettingsViewModel actions.
+    /// SettingsStore reads/writes and SettingsFeature reducer actions.
     static let settings = Logger(subsystem: subsystem, category: "Settings")
 
     /// App/scene lifecycle events (foreground, background, termination).

@@ -1,12 +1,15 @@
 import ComposableArchitecture
 import Foundation
+import UserNotifications
 
 /// Phase 1 reducer (`p0-tca-6` / #669) replacing the legacy
 /// `SettingsViewModel` for the Settings screen.
 ///
-/// Mirrors the observable behaviour of `SettingsViewModel` so a later
-/// Phase 2 issue (`p0-tca-14` / #677) can swap `SettingsView` to read from
-/// this store and the legacy view-model can be deleted.
+/// `#755` Phase B extends the surface so `SettingsView` can read every value
+/// it previously sourced from `@EnvironmentObject AppCoordinator` directly
+/// from this store: notification authorisation, Screen Time authorisation,
+/// and the snooze-cancel action that mirrors
+/// `SettingsViewModel.cancelSnooze()`.
 ///
 /// ## Phase 0 dependency surface
 ///
@@ -57,6 +60,17 @@ struct SettingsFeature {
         /// Drives presentation of the transient "Saved" banner.
         var showSavedBanner: Bool = false
 
+        /// Current notification authorization status. Surfaced by
+        /// `SettingsView` to render the "Notifications disabled" warning row
+        /// previously sourced from `AppCoordinator.notificationAuthStatus`.
+        var notificationAuthStatus: UNAuthorizationStatus = .notDetermined
+
+        /// Current Screen Time / FamilyControls authorisation status. Drives
+        /// the True Interrupt Mode status row + denied-recovery callout
+        /// previously sourced from
+        /// `AppCoordinator.screenTimeAuthorization.authorizationStatus`.
+        var screenTimeAuthStatus: ScreenTimeAuthorizationStatus = .unavailable
+
         /// Aggregated eyes-side `ReminderSettings` view used by the
         /// scheduler client. Computed because `ReminderSettings` exposes
         /// `let` fields and so cannot be mutated through a bindable key
@@ -72,10 +86,14 @@ struct SettingsFeature {
     enum Action: BindableAction, Equatable {
         case binding(BindingAction<State>)
         case onAppear
+        case task
         case settingsChanged(ReminderSettings)
         case snoozeTapped(SnoozeOption)
+        case cancelSnooze
         case resetConfirmed
         case savedBannerExpired
+        case notificationAuthStatusChanged(UNAuthorizationStatus)
+        case screenTimeAuthStatusChanged(ScreenTimeAuthorizationStatus)
     }
 
     /// Snooze durations exposed to the Settings UI. Mirrors
@@ -102,6 +120,9 @@ struct SettingsFeature {
     @Dependency(\.settingsClient) var settingsClient: SettingsClient
     @Dependency(\.reminderSchedulerClient) var scheduler: ReminderSchedulerClient
     @Dependency(\.analyticsClient) var analytics: AnalyticsClient
+    @Dependency(\.notificationClient) var notificationClient: NotificationClient
+    @Dependency(\.screenTimeAuthorizationClient)
+    var screenTimeAuthorizationClient: ScreenTimeAuthorizationClient
     @Dependency(\.continuousClock) var clock
     @Dependency(\.date) var now
     @Dependency(\.calendar) var calendar
@@ -110,6 +131,8 @@ struct SettingsFeature {
         case eyesIntervalDebounce
         case eyesBreakDurationDebounce
         case snoozeBanner
+        case screenTimeAuthStatusStream
+        case notificationAuthStatusPoll
     }
 
     var body: some ReducerOf<Self> {
@@ -163,7 +186,29 @@ struct SettingsFeature {
                 state.eyesBreakDuration = snapshot.breakDuration
                 state.prevEyesInterval = snapshot.interval
                 state.prevEyesBreakDuration = snapshot.breakDuration
-                return .none
+                return .run { [notificationClient, screenTimeAuthorizationClient] send in
+                    async let notification = notificationClient.authorizationStatus()
+                    async let screenTime = screenTimeAuthorizationClient.status()
+                    await send(.notificationAuthStatusChanged(notification))
+                    await send(.screenTimeAuthStatusChanged(screenTime))
+                }
+
+            case .task:
+                return .merge(
+                    .run { [clock, notificationClient] send in
+                        for await _ in clock.timer(interval: .seconds(1)) {
+                            let status = await notificationClient.authorizationStatus()
+                            await send(.notificationAuthStatusChanged(status))
+                        }
+                    }
+                    .cancellable(id: CancelID.notificationAuthStatusPoll, cancelInFlight: true),
+                    .run { [screenTimeAuthorizationClient] send in
+                        for await status in screenTimeAuthorizationClient.statusChanges() {
+                            await send(.screenTimeAuthStatusChanged(status))
+                        }
+                    }
+                    .cancellable(id: CancelID.screenTimeAuthStatusStream, cancelInFlight: true)
+                )
 
             case let .settingsChanged(snapshot):
                 state.eyesInterval = snapshot.interval
@@ -184,6 +229,13 @@ struct SettingsFeature {
                 }
                 .cancellable(id: CancelID.snoozeBanner, cancelInFlight: true)
 
+            case .cancelSnooze:
+                return .run { _ in
+                    await settingsClient.setSnoozedUntil(nil)
+                    await settingsClient.setSnoozeCount(0)
+                    analytics.log(.snoozeCancelled)
+                }
+
             case .resetConfirmed:
                 state.showResetConfirm = false
                 return .run { _ in
@@ -192,6 +244,14 @@ struct SettingsFeature {
 
             case .savedBannerExpired:
                 state.showSavedBanner = false
+                return .none
+
+            case let .notificationAuthStatusChanged(status):
+                state.notificationAuthStatus = status
+                return .none
+
+            case let .screenTimeAuthStatusChanged(status):
+                state.screenTimeAuthStatus = status
                 return .none
             }
         }
