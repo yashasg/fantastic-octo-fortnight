@@ -104,8 +104,12 @@ enum TCATestDependencies {
     static func silentIPCClient() -> IPCClient {
         IPCClient(
             isTrueInterruptEnabled: { false },
+            setTrueInterruptEnabled: { _ in false },
+            readSelection: { .empty },
+            writeSelection: { _ in false },
             record: { _, _ in },
-            trueInterruptChanges: { .finished }
+            trueInterruptChanges: { .finished },
+            selectionChanges: { .finished }
         )
     }
 
