@@ -16,7 +16,7 @@ private final class MockMetricKitSubscriber: MetricKitSubscribing {
     }
 }
 
-// swiftlint:disable type_body_length
+// swiftlint:disable type_body_length file_length
 /// Unit tests for `AppDelegate` notification routing logic.
 ///
 /// ## What is tested here
@@ -497,6 +497,100 @@ final class AppDelegateTests: XCTestCase {
         )
 
         XCTAssertNil(defaults.string(forKey: AppStorageKey.uiTestScreenTimeStatus))
+    }
+
+    /// Regression for #711: the `--show-overlay-eyes` launch arg must seed
+    /// `uiTestOverlayType`, `hasSeenOnboarding`, and the inflated break
+    /// durations during `init()` (before `didFinishLaunchingWithOptions`),
+    /// so `@StateObject AppCoordinator()`'s `SettingsStore` reads the
+    /// inflated values from `UserDefaults` and the overlay does not
+    /// auto-dismiss before the UI test asserts on it.
+    func test_init_showOverlayEyes_preSeedsOverlayDefaultsBeforeDidFinishLaunching() throws {
+        let defaults = try makeIsolatedDefaults(suffix: #function)
+
+        _ = AppDelegate(
+            launchArguments: ["--show-overlay-eyes"],
+            uiTestDefaults: defaults
+        )
+
+        XCTAssertEqual(defaults.string(forKey: AppStorageKey.uiTestOverlayType), ReminderType.eyes.rawValue)
+        XCTAssertTrue(defaults.bool(forKey: AppStorageKey.hasSeenOnboarding))
+        XCTAssertEqual(
+            defaults.double(forKey: SettingsStore.Keys.eyesBreakDuration),
+            AppDelegate.uiTestOverlayBreakDuration
+        )
+        XCTAssertEqual(
+            defaults.double(forKey: SettingsStore.Keys.postureBreakDuration),
+            AppDelegate.uiTestOverlayBreakDuration
+        )
+    }
+
+    /// Regression for #711: `--show-overlay-posture` must pre-seed the same
+    /// keys at `init()` time as `--show-overlay-eyes`, only with the
+    /// posture `ReminderType` raw value.
+    func test_init_showOverlayPosture_preSeedsOverlayDefaultsBeforeDidFinishLaunching() throws {
+        let defaults = try makeIsolatedDefaults(suffix: #function)
+
+        _ = AppDelegate(
+            launchArguments: ["--show-overlay-posture"],
+            uiTestDefaults: defaults
+        )
+
+        XCTAssertEqual(defaults.string(forKey: AppStorageKey.uiTestOverlayType), ReminderType.posture.rawValue)
+        XCTAssertTrue(defaults.bool(forKey: AppStorageKey.hasSeenOnboarding))
+        XCTAssertEqual(
+            defaults.double(forKey: SettingsStore.Keys.eyesBreakDuration),
+            AppDelegate.uiTestOverlayBreakDuration
+        )
+        XCTAssertEqual(
+            defaults.double(forKey: SettingsStore.Keys.postureBreakDuration),
+            AppDelegate.uiTestOverlayBreakDuration
+        )
+    }
+
+    /// Without an overlay launch arg, `applyUITestLaunchArguments()` (called
+    /// from `didFinishLaunchingWithOptions`) must clear any stale
+    /// `uiTestOverlayType` value left behind by a previous test launch on the
+    /// same simulator so the next launch does not unexpectedly re-trigger an
+    /// overlay (#711).
+    func test_didFinishLaunching_withoutOverlayFlag_clearsStaleOverlayTypeKey() throws {
+        let defaults = try makeIsolatedDefaults(suffix: #function)
+        defaults.set(ReminderType.eyes.rawValue, forKey: AppStorageKey.uiTestOverlayType)
+        let store = MockSettingsPersisting()
+        let settings = SettingsStore(store: store, config: .fallback)
+        let sut = AppDelegate(
+            notificationCenter: MockUserNotificationCenter(),
+            metricKitSubscriber: MockMetricKitSubscriber(),
+            settingsStore: settings,
+            launchArguments: ["--skip-onboarding"],
+            uiTestDefaults: defaults
+        )
+
+        _ = sut.application(UIApplication.shared, didFinishLaunchingWithOptions: nil)
+
+        XCTAssertNil(defaults.string(forKey: AppStorageKey.uiTestOverlayType))
+    }
+
+    /// The full launch sequence (init + didFinishLaunching) must leave the
+    /// inflated break durations intact even after
+    /// `SettingsStore.resetToDefaults()` runs — the regression in #711 was
+    /// that the reset wiped the pre-seed without re-applying it.
+    func test_didFinishLaunching_showOverlayEyes_preservesInflatedBreakDurationsAfterReset() throws {
+        let defaults = try makeIsolatedDefaults(suffix: #function)
+        let store = MockSettingsPersisting()
+        let settings = SettingsStore(store: store, config: .fallback)
+        let sut = AppDelegate(
+            notificationCenter: MockUserNotificationCenter(),
+            metricKitSubscriber: MockMetricKitSubscriber(),
+            settingsStore: settings,
+            launchArguments: ["--show-overlay-eyes"],
+            uiTestDefaults: defaults
+        )
+
+        _ = sut.application(UIApplication.shared, didFinishLaunchingWithOptions: nil)
+
+        XCTAssertEqual(settings.eyesBreakDuration, AppDelegate.uiTestOverlayBreakDuration)
+        XCTAssertEqual(settings.postureBreakDuration, AppDelegate.uiTestOverlayBreakDuration)
     }
 
     func test_didFinishLaunching_showOverlayEyes_usesInjectedSettingsStoreFactory() throws {

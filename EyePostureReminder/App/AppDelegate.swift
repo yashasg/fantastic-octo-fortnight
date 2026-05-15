@@ -102,6 +102,16 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     /// `EyePostureReminderApp.init()` — because `@UIApplicationDelegateAdaptor`
     /// only instantiates this delegate as part of `UIApplicationMain`, which
     /// runs *after* the App struct's `init()` body returns. See #707.
+    ///
+    /// Overlay launch arguments (`--show-overlay-eyes` / `--show-overlay-posture`)
+    /// are also seeded here so the `uiTestOverlayType` key and inflated break
+    /// durations land before `@StateObject AppCoordinator()` constructs its
+    /// `SettingsStore` (which reads `eyes.breakDuration`/`posture.breakDuration`
+    /// from `UserDefaults` at init). Without this, `applyUITestLaunchArguments()`
+    /// — which runs from `didFinishLaunchingWithOptions`, after the SwiftUI
+    /// state-object instantiation in some launch orderings — wrote inflated
+    /// values into a settings store the active overlay was no longer using,
+    /// causing the overlay to auto-dismiss before tests asserted on it (#711).
     private func preSeedUITestDefaults() {
         if launchArguments.contains("--simulate-screen-time-not-determined") {
             uiTestDefaults.set(
@@ -122,6 +132,35 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
                 uiTestDefaults.set(false, forKey: AppStorageKey.trueInterruptSkippedBannerDismissed)
             }
         }
+
+        if launchArguments.contains("--show-overlay-eyes") {
+            seedOverlayLaunchDefaults(for: .eyes)
+        } else if launchArguments.contains("--show-overlay-posture") {
+            seedOverlayLaunchDefaults(for: .posture)
+        }
+        // Stale `uiTestOverlayType` (no overlay launch arg present) is wiped
+        // by `applyUITestLaunchArguments()` in `didFinishLaunchingWithOptions`,
+        // before SwiftUI's `.onAppear` calls `consumeUITestOverlayType()`.
+    }
+
+    /// Writes the UserDefaults keys consumed by the `--show-overlay-{eyes,posture}`
+    /// UI-test launch arguments. Inflated break durations keep the overlay
+    /// on-screen long enough for assertions to run.
+    ///
+    /// `applyUITestLaunchArguments()` re-applies the same writes after calling
+    /// `SettingsStore.resetToDefaults()` (which would otherwise wipe these
+    /// pre-seeds back to their build-time defaults).
+    private func seedOverlayLaunchDefaults(for type: ReminderType) {
+        uiTestDefaults.set(true, forKey: AppStorageKey.hasSeenOnboarding)
+        uiTestDefaults.set(type.rawValue, forKey: AppStorageKey.uiTestOverlayType)
+        uiTestDefaults.set(
+            Self.uiTestOverlayBreakDuration,
+            forKey: SettingsStore.Keys.eyesBreakDuration
+        )
+        uiTestDefaults.set(
+            Self.uiTestOverlayBreakDuration,
+            forKey: SettingsStore.Keys.postureBreakDuration
+        )
     }
 #endif
 
@@ -170,11 +209,25 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     /// Handles launch arguments injected by XCUITest targets to control app state.
     /// `#if DEBUG` ensures these backdoors are compiled out of Release/TestFlight
     /// builds, closing the production-settings-reset vulnerability (re: #350/#405).
+    ///
+    /// `preSeedUITestDefaults()` (called from `init()`) is the first writer for
+    /// the overlay-launch-arg keys (`uiTestOverlayType`, inflated break
+    /// durations, `hasSeenOnboarding`); this method re-applies the same writes
+    /// after `SettingsStore.resetToDefaults()` because the reset clobbers the
+    /// pre-seeded break durations back to their build-time defaults (#711).
 #if DEBUG
     private func applyUITestLaunchArguments() {
         let args = launchArguments
         let defaults = uiTestDefaults
-        defaults.removeObject(forKey: AppStorageKey.uiTestOverlayType)
+        // Clear any stale overlay-type seed before re-applying any launch-arg
+        // intent. `preSeedUITestDefaults()` writes the new value (when an
+        // overlay launch arg is present) earlier in `init()`; the
+        // overlay-launch-arg branches below repeat the write so the value
+        // survives the `SettingsStore.resetToDefaults()` call inside
+        // `applyOverlayLaunchArgument(for:)`.
+        if !args.contains("--show-overlay-eyes") && !args.contains("--show-overlay-posture") {
+            defaults.removeObject(forKey: AppStorageKey.uiTestOverlayType)
+        }
         if args.contains("--skip-onboarding") {
             defaults.set(true, forKey: AppStorageKey.hasSeenOnboarding)
             // Reset all settings to defaults so each test starts from a clean, known state.
@@ -186,20 +239,10 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
             resolvedSettingsStore.resetToDefaults()
         }
         if args.contains("--show-overlay-eyes") {
-            defaults.set(true, forKey: AppStorageKey.hasSeenOnboarding)
-            let settings = resolvedSettingsStore
-            settings.resetToDefaults()
-            settings.eyesBreakDuration = Self.uiTestOverlayBreakDuration
-            settings.postureBreakDuration = Self.uiTestOverlayBreakDuration
-            defaults.set(ReminderType.eyes.rawValue, forKey: AppStorageKey.uiTestOverlayType)
+            applyOverlayLaunchArgument(for: .eyes)
         }
         if args.contains("--show-overlay-posture") {
-            defaults.set(true, forKey: AppStorageKey.hasSeenOnboarding)
-            let settings = resolvedSettingsStore
-            settings.resetToDefaults()
-            settings.eyesBreakDuration = Self.uiTestOverlayBreakDuration
-            settings.postureBreakDuration = Self.uiTestOverlayBreakDuration
-            defaults.set(ReminderType.posture.rawValue, forKey: AppStorageKey.uiTestOverlayType)
+            applyOverlayLaunchArgument(for: .posture)
         }
         if args.contains("--simulate-screen-time-not-determined") {
             defaults.set(true, forKey: AppStorageKey.hasSeenOnboarding)
@@ -214,6 +257,21 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
                 forKey: AppStorageKey.trueInterruptSkippedBannerDismissed
             )
         }
+    }
+
+    /// Resets the live `SettingsStore` and re-applies the inflated overlay
+    /// break durations + `uiTestOverlayType` seed previously written by
+    /// `preSeedUITestDefaults()`. The reset is required to scrub stale settings
+    /// from prior test launches, but it would otherwise overwrite the inflated
+    /// break durations with the build-time defaults (#711).
+    private func applyOverlayLaunchArgument(for type: ReminderType) {
+        let defaults = uiTestDefaults
+        defaults.set(true, forKey: AppStorageKey.hasSeenOnboarding)
+        let settings = resolvedSettingsStore
+        settings.resetToDefaults()
+        settings.eyesBreakDuration = Self.uiTestOverlayBreakDuration
+        settings.postureBreakDuration = Self.uiTestOverlayBreakDuration
+        defaults.set(type.rawValue, forKey: AppStorageKey.uiTestOverlayType)
     }
 
     /// Returns and clears a pending UI-test overlay request if present.

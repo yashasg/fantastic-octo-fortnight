@@ -323,9 +323,10 @@ final class SettingsStore: ObservableObject {
 extension SettingsStore {
     /// `UserDefaults` key namespace for every persisted `SettingsStore`
     /// property. Exposed at module scope (not `private`) so non-`@MainActor`
-    /// callers — for example the `EyePostureReminderApp.init` synchronous
-    /// settings seed (#737) — can read the same canonical keys without
-    /// duplicating string literals that would silently drift on rename.
+    /// callers can read/write the same canonical keys without duplicating
+    /// string literals that would silently drift on rename:
+    ///   - `EyePostureReminderApp.init` synchronous settings seed (#737)
+    ///   - `AppDelegate.preSeedUITestDefaults()` launch-arg pre-seed (#711)
     enum Keys {
         static let globalEnabled          = "kshana.globalEnabled"
         static let eyesEnabled            = "kshana.eyes.enabled"
