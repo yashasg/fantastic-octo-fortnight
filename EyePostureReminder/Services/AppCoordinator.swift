@@ -29,10 +29,11 @@ import UserNotifications
 ///
 /// **P1-3:** Uses injected `OverlayPresenting` instead of a shared singleton.
 ///
-/// `AppCoordinator` conforms to `ReminderScheduling` so Views can pass it
-/// directly to `SettingsViewModel`. The conformance routes every call through
-/// the auth-aware `scheduleReminders()` / `reschedule(for:)` paths, ensuring
-/// the screen-time tracker stays in sync on every settings change.
+/// `AppCoordinator` conforms to `ReminderScheduling` so Views and the
+/// `SettingsClient` live bridge can pass it directly to scheduling consumers.
+/// The conformance routes every call through the auth-aware
+/// `scheduleReminders()` / `reschedule(for:)` paths, ensuring the screen-time
+/// tracker stays in sync on every settings change.
 ///
 /// Created once by `EyePostureReminderApp` as a `@StateObject` and injected
 /// into the SwiftUI environment. `AppDelegate` receives a weak-ish reference

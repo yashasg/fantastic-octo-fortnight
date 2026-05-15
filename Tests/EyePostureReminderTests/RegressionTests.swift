@@ -13,6 +13,7 @@
 // Bug #118: ScreenTimeTracker double-resign — second willResignActive must cancel first reset Task (one reset, not two)
 // Bug #117: OverlayManager queue-on-no-scene — showOverlay with no UIWindowScene must queue, not drop
 
+import ComposableArchitecture
 import SwiftUI
 import UIKit
 import XCTest
@@ -37,13 +38,15 @@ import XCTest
 @MainActor
 final class SettingsDismissRegressionTests: XCTestCase {
 
-    /// Compile-time guard: SettingsView must be instantiatable with an isPresented binding.
+    /// Compile-time guard: SettingsView must be instantiatable with a store and isPresented binding.
     /// SettingsView uses @Binding var isPresented: Bool for reliable sheet dismissal.
+    @MainActor
     func test_settingsView_instantiatesCorrectly() {
-        let view = SettingsView(isPresented: .constant(true))
+        let store = Store(initialState: SettingsFeature.State()) { SettingsFeature() }
+        let view = SettingsView(store: store, isPresented: .constant(true))
         XCTAssertNotNil(
             view,
-            "SettingsView must be instantiatable with an isPresented binding.")
+            "SettingsView must be instantiatable with a store and isPresented binding.")
     }
 
     /// Runtime guard: writing `false` to the binding must propagate to the caller's state.
@@ -65,12 +68,14 @@ final class SettingsDismissRegressionTests: XCTestCase {
             + "Regression: if the action uses dismiss() instead of the binding, the sheet stays open.")
     }
 
-    /// Compile-time guard from HomeView's perspective: SettingsView(isPresented:) must compile.
+    /// Compile-time guard from HomeView's perspective: SettingsView(store:isPresented:) must compile.
+    @MainActor
     func test_homeView_controlsSettingsPresentation_viaBinding() {
         var showSettings = true
         let binding = Binding<Bool>(get: { showSettings }, set: { showSettings = $0 })
+        let store = Store(initialState: SettingsFeature.State()) { SettingsFeature() }
 
-        _ = SettingsView(isPresented: binding)   // must compile
+        _ = SettingsView(store: store, isPresented: binding)   // must compile
 
         // Sheet dismissed:
         binding.wrappedValue = false

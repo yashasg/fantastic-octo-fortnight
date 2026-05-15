@@ -1,16 +1,8 @@
 import ComposableArchitecture
 import SwiftUI
 import UIKit
+import UserNotifications
 // swiftlint:disable file_length
-
-// MARK: - ViewModel Box
-
-/// @StateObject container that gives SwiftUI-managed lifecycle to SettingsViewModel.
-/// Using @StateObject (instead of @State) ensures SwiftUI preserves the reference
-/// across view re-renders and parent view updates.
-private final class SettingsViewModelBox: ObservableObject {
-    var inner: SettingsViewModel?
-}
 
 // MARK: - Icon Container
 
@@ -46,17 +38,46 @@ private struct SettingsSectionHeader: View {
     }
 }
 
-// swiftlint:disable type_body_length
+/// Settings sheet, wired to `SettingsFeature` as part of `#755` Phase B.
+///
+/// The legacy `@EnvironmentObject SettingsStore` / `AppCoordinator` graph
+/// (and the `SettingsViewModelBox` that bridged them) is gone:
+///
+/// - `eyesInterval` / `eyesBreakDuration` flow through the bindable surface
+///   of `SettingsFeature`, so debounced reschedules and the saved-banner
+///   effect run inside the reducer.
+/// - Every other setting binds directly to its persisted UserDefaults key
+///   via `@AppStorage(SettingsStore.Keys.*)`. `SettingsClient.liveValue`
+///   observes the same `SettingsStore` instance and rebroadcasts changes
+///   into the wider TCA graph, so removing the in-view `SettingsStore`
+///   reference does not break the scheduler.
+/// - Notification + Screen Time authorisation status now come from
+///   `SettingsFeature.State`, refreshed via the same `NotificationClient`
+///   poll + `ScreenTimeAuthorizationClient` stream used by `HomeFeature`.
+///
+/// The legacy analytics emissions that lived on
+/// `SettingsViewModel.notifySettingChanged(...)` are intentionally left as
+/// no-op `onChange` closures here; re-emitting them from the reducer is
+/// deferred to `p0-tca-16` (#679) once the action vocabulary expands to
+/// cover the non-eyes settings.
 struct SettingsView: View {
+    @Perception.Bindable var store: StoreOf<SettingsFeature>
 
-    @EnvironmentObject var settings: SettingsStore
-    @EnvironmentObject var coordinator: AppCoordinator
-
-    // SettingsViewModel handles scheduling side-effects only.
-    // Stored in a @StateObject container so SwiftUI properly manages the class lifecycle.
-    @StateObject private var vmBox = SettingsViewModelBox()
-
-    private var viewModel: SettingsViewModel? { vmBox.inner }
+    @AppStorage(SettingsStore.Keys.globalEnabled) private var globalEnabled = true
+    @AppStorage(SettingsStore.Keys.eyesEnabled) private var eyesEnabled = true
+    @AppStorage(SettingsStore.Keys.postureEnabled) private var postureEnabled = true
+    @AppStorage(SettingsStore.Keys.postureInterval) private var postureInterval: Double = 0
+    @AppStorage(SettingsStore.Keys.postureBreakDuration)
+    private var postureBreakDuration: Double = 0
+    @AppStorage(SettingsStore.Keys.hapticsEnabled) private var hapticsEnabled = true
+    @AppStorage(SettingsStore.Keys.pauseMediaDuringBreaks)
+    private var pauseMediaDuringBreaks = false
+    @AppStorage(SettingsStore.Keys.pauseDuringFocus) private var pauseDuringFocus = true
+    @AppStorage(SettingsStore.Keys.pauseWhileDriving) private var pauseWhileDriving = true
+    @AppStorage(SettingsStore.Keys.notificationFallbackEnabled)
+    private var notificationFallbackEnabled = true
+    @AppStorage(SettingsStore.Keys.snoozedUntil) private var snoozedUntilEpoch: Double = 0
+    @AppStorage(SettingsStore.Keys.snoozeCount) private var snoozeCount: Int = 0
 
     @Binding var isPresented: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -65,449 +86,367 @@ struct SettingsView: View {
     @State private var showTerms = false
     @State private var showPrivacy = false
     @State private var showDisclaimer = false
-    // Previous TimeInterval values for oldValue capture in analytics.
-    // SwiftUI mutates $settings.xxx bindings before onChange fires, so we cannot
-    // read the pre-mutation value inside the ViewModel setter (#386).
-    @State private var prevEyesInterval: TimeInterval = .zero
-    @State private var prevEyesBreakDuration: TimeInterval = .zero
-    @State private var prevPostureInterval: TimeInterval = .zero
-    @State private var prevPostureBreakDuration: TimeInterval = .zero
-    @State private var showResetConfirm = false
-    // #434: Transient "Settings saved" banner state.
-    @State private var showSavedBanner = false
-    @State private var savedBannerTask: Task<Void, Never>?
 
     private let accessibilityNotificationPoster: AccessibilityNotificationPosting
+
     init(
+        store: StoreOf<SettingsFeature>,
         isPresented: Binding<Bool>,
         accessibilityNotificationPoster: AccessibilityNotificationPosting = LiveAccessibilityNotificationPoster()
     ) {
+        self.store = store
         self._isPresented = isPresented
         self.accessibilityNotificationPoster = accessibilityNotificationPoster
     }
 
     var body: some View {
-        Form {
-            // MARK: Master toggle
-            Section {
-                AccessibleToggle(
-                    isOn: $settings.globalEnabled,
-                    tint: AppColor.primaryRest,
-                    accessibilityIdentifier: "settings.masterToggle",
-                    accessibilityHint: Text("settings.masterToggle.hint", bundle: .module),
-                    onChange: { newValue in
-                        viewModel?.notifySettingChanged(.globalEnabled, old: String(!newValue), new: String(newValue))
-                        viewModel?.globalToggleChanged()
-                        showSavedFeedback()
-                    },
-                    label: {
-                        HStack(spacing: AppSpacing.sm) {
-                            SettingsRowIcon(systemName: AppSymbol.masterToggle, tint: AppColor.primaryRest)
-                            Text("settings.masterToggle", bundle: .module)
-                                .foregroundStyle(AppColor.textPrimary)
-                        }
-                    }
+        WithPerceptionTracking {
+            Form {
+                masterToggleSection
+
+                if globalEnabled {
+                    eyesSection
+                    postureSection
+                    SettingsSnoozeSection(
+                        store: store,
+                        snoozedUntilEpoch: snoozedUntilEpoch,
+                        canSnooze: canSnooze,
+                        reduceMotion: reduceMotion
+                    )
+                }
+
+                preferencesSection
+                SettingsSmartPauseSection(
+                    pauseDuringFocus: $pauseDuringFocus,
+                    pauseWhileDriving: $pauseWhileDriving
                 )
-                .listRowBackground(AppColor.surface)
-                .listRowSeparatorTint(AppColor.separatorSoft)
-            } footer: {
-                Group {
-                    if settings.globalEnabled {
-                        Text("settings.masterToggle.footer", bundle: .module)
-                    } else {
-                        Text("settings.pausedBanner", bundle: .module)
-                    }
-                }
-                .font(AppFont.caption)
-                .foregroundStyle(AppColor.textSecondary)
+                SettingsTrueInterruptSection(screenTimeAuthStatus: store.screenTimeAuthStatus)
+                SettingsNotificationWarningSection(notificationAuthStatus: store.notificationAuthStatus)
+                legalSection
+                advancedSection
+                aboutSection
             }
-
-            // MARK: Per-type sections (only shown when master is on)
-            if settings.globalEnabled {
-                Section {
-                    ReminderRowView(
-                        type: .eyes,
-                        isEnabled: $settings.eyesEnabled,
-                        interval: $settings.eyesInterval,
-                        breakDuration: $settings.eyesBreakDuration
-                    ) {
-                        viewModel?.reminderSettingChanged(for: .eyes)
-                    }
-                    .listRowBackground(AppColor.surface)
-                    .listRowSeparatorTint(AppColor.separatorSoft)
-                } header: {
-                    SettingsSectionHeader(
-                        titleKey: "settings.section.eyes",
-                        iconName: AppSymbol.eyeBreak,
-                        iconTint: AppColor.primaryRest
-                    )
-                } footer: {
-                    if settings.eyesEnabled {
-                        Text("settings.reminder.section.footer", bundle: .module)
-                            .font(AppFont.caption)
-                            .foregroundStyle(AppColor.textSecondary)
-                    }
-                }
-
-                Section {
-                    ReminderRowView(
-                        type: .posture,
-                        isEnabled: $settings.postureEnabled,
-                        interval: $settings.postureInterval,
-                        breakDuration: $settings.postureBreakDuration
-                    ) {
-                        viewModel?.reminderSettingChanged(for: .posture)
-                    }
-                    .listRowBackground(AppColor.surface)
-                    .listRowSeparatorTint(AppColor.separatorSoft)
-                } header: {
-                    SettingsSectionHeader(
-                        titleKey: "settings.section.posture",
-                        iconName: AppSymbol.postureCheck,
-                        iconTint: AppColor.secondaryCalm
-                    )
-                } footer: {
-                    if settings.postureEnabled {
-                        Text("settings.reminder.section.footer", bundle: .module)
-                            .font(AppFont.caption)
-                            .foregroundStyle(AppColor.textSecondary)
-                    }
+            // #434: "Settings saved" transient feedback banner at bottom.
+            .safeAreaInset(edge: .bottom) {
+                if store.showSavedBanner {
+                    SettingsSavedBanner()
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                        .padding(.bottom, AppSpacing.md)
+                        .accessibilityIdentifier("settings.savedBanner")
                 }
             }
-
-            // MARK: Snooze (only meaningful when reminders are globally enabled)
-            if settings.globalEnabled {
-                SettingsSnoozeSection(viewModel: viewModel, reduceMotion: reduceMotion)
+            .animation(.easeInOut(duration: 0.25), value: store.showSavedBanner)
+            .scrollContentBackground(.hidden)
+            .background(AppColor.background.ignoresSafeArea())
+            .navigationTitle(Text("settings.navTitle", bundle: .module))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(String(localized: "settings.doneButton", bundle: .module)) {
+                        isPresented = false
+                    }
+                    .font(AppFont.bodyEmphasized)
+                    .foregroundStyle(AppColor.primaryRest)
+                    .accessibilityHint(Text("settings.doneButton.hint", bundle: .module))
+                    .accessibilityIdentifier("settings.doneButton")
+                }
             }
+            .sheet(isPresented: $showTerms) {
+                LegalDocumentView(document: .terms)
+            }
+            .sheet(isPresented: $showPrivacy) {
+                LegalDocumentView(document: .privacy)
+            }
+            .sheet(isPresented: $showDisclaimer) {
+                LegalDocumentView(document: .disclaimer)
+            }
+            .onAppear { store.send(.onAppear) }
+            .task { await store.send(.task).finish() }
+            // Announce master-toggle state changes to VoiceOver (#287).
+            .onChangeCompat(of: globalEnabled) { newValue in
+                let message = newValue
+                    ? String(localized: "home.status.active", bundle: .module)
+                    : String(localized: "home.status.paused", bundle: .module)
+                accessibilityNotificationPoster.postAnnouncement(message: message)
+            }
+            // Announce snooze activate/cancel to VoiceOver (#406).
+            .onChangeCompat(of: snoozedUntilEpoch) { newValue in
+                let message: String = newValue > 0
+                    ? String(localized: "settings.snooze.activated.announcement", bundle: .module)
+                    : String(localized: "settings.snooze.cancelled.announcement", bundle: .module)
+                accessibilityNotificationPoster.postAnnouncement(message: message)
+            }
+        }
+    }
 
-            // MARK: Preferences
-            Section {
-                AccessibleToggle(
-                    isOn: Binding(
-                        get: { viewModel?.hapticsEnabled ?? settings.hapticsEnabled },
-                        set: { newValue in
-                            if let viewModel {
-                                viewModel.hapticsEnabled = newValue
-                            } else {
-                                settings.hapticsEnabled = newValue
-                            }
-                        }
-                    ),
-                    tint: AppColor.primaryRest,
-                    accessibilityIdentifier: "settings.hapticFeedback",
-                    accessibilityHint: Text("settings.hapticFeedback.hint", bundle: .module)
-                ) {
+    // MARK: - Sections
+
+    // swiftlint:disable:next inclusive_language
+    private var masterToggleSection: some View {
+        Section {
+            AccessibleToggle(
+                isOn: $globalEnabled,
+                tint: AppColor.primaryRest,
+                accessibilityIdentifier: "settings.masterToggle",
+                accessibilityHint: Text("settings.masterToggle.hint", bundle: .module),
+                // Legacy `viewModel?.globalToggleChanged()` analytics
+                // emission is deferred to `p0-tca-16` (#679); the
+                // accessibility announcement still fires via
+                // `.onChangeCompat(of: globalEnabled)` below.
+                onChange: { _ in },
+                label: {
                     HStack(spacing: AppSpacing.sm) {
-                        SettingsRowIcon(systemName: AppSymbol.haptics, tint: AppColor.primaryRest)
-                        Text("settings.hapticFeedback", bundle: .module)
+                        SettingsRowIcon(systemName: AppSymbol.masterToggle, tint: AppColor.primaryRest)
+                        Text("settings.masterToggle", bundle: .module)
                             .foregroundStyle(AppColor.textPrimary)
                     }
                 }
-                .listRowBackground(AppColor.surface)
-                .listRowSeparatorTint(AppColor.separatorSoft)
-
-                AccessibleToggle(
-                    isOn: Binding(
-                        get: { viewModel?.notificationFallbackEnabled ?? settings.notificationFallbackEnabled },
-                        set: { newValue in
-                            if let viewModel {
-                                viewModel.notificationFallbackEnabled = newValue
-                            } else {
-                                settings.notificationFallbackEnabled = newValue
-                            }
-                        }
-                    ),
-                    tint: AppColor.primaryRest,
-                    accessibilityIdentifier: "settings.notificationFallback",
-                    accessibilityHint: Text("settings.notificationFallback.hint", bundle: .module)
-                ) {
-                    HStack(spacing: AppSpacing.sm) {
-                        SettingsRowIcon(systemName: AppSymbol.bell, tint: AppColor.primaryRest)
-                        Text("settings.notificationFallback", bundle: .module)
-                            .foregroundStyle(AppColor.textPrimary)
-                    }
+            )
+            .listRowBackground(AppColor.surface)
+            .listRowSeparatorTint(AppColor.separatorSoft)
+        } footer: {
+            Group {
+                if globalEnabled {
+                    Text("settings.masterToggle.footer", bundle: .module)
+                } else {
+                    Text("settings.pausedBanner", bundle: .module)
                 }
-                .listRowBackground(AppColor.surface)
-                .listRowSeparatorTint(AppColor.separatorSoft)
-            } header: {
-                SettingsSectionHeader(titleKey: "settings.section.preferences")
-            } footer: {
-                Text("settings.notificationFallback.footer", bundle: .module)
+            }
+            .font(AppFont.caption)
+            .foregroundStyle(AppColor.textSecondary)
+        }
+    }
+
+    private var eyesSection: some View {
+        Section {
+            ReminderRowView(
+                type: .eyes,
+                isEnabled: $eyesEnabled,
+                interval: $store.eyesInterval,
+                breakDuration: $store.eyesBreakDuration
+            ) {
+                // `eyesInterval` / `eyesBreakDuration` debounce-reschedule
+                // inside the reducer; the legacy
+                // `viewModel?.reminderSettingChanged(.eyes)` callback is
+                // deferred to `p0-tca-16` (#679).
+            }
+            .listRowBackground(AppColor.surface)
+            .listRowSeparatorTint(AppColor.separatorSoft)
+        } header: {
+            SettingsSectionHeader(
+                titleKey: "settings.section.eyes",
+                iconName: AppSymbol.eyeBreak,
+                iconTint: AppColor.primaryRest
+            )
+        } footer: {
+            if eyesEnabled {
+                Text("settings.reminder.section.footer", bundle: .module)
                     .font(AppFont.caption)
                     .foregroundStyle(AppColor.textSecondary)
             }
+        }
+    }
 
-            // MARK: Smart Pause
-            SettingsSmartPauseSection(viewModel: viewModel)
-
-            // MARK: True Interrupt Mode
-            SettingsTrueInterruptSection()
-
-            // MARK: Notification permission warning
-            SettingsNotificationWarningSection()
-
-            // MARK: Legal
-            Section {
-                Button(action: { showTerms = true },
-                       label: { Text("settings.legal.terms", bundle: .module) })
-                .font(AppFont.body)
-                .foregroundStyle(AppColor.primaryRest)
-                .accessibilityHint(Text("settings.legal.terms.hint", bundle: .module))
-                .accessibilityIdentifier("settings.legal.terms")
-                .listRowBackground(AppColor.surface)
-                .listRowSeparatorTint(AppColor.separatorSoft)
-
-                Button(action: { showPrivacy = true },
-                       label: { Text("settings.legal.privacy", bundle: .module) })
-                .font(AppFont.body)
-                .foregroundStyle(AppColor.primaryRest)
-                .accessibilityHint(Text("settings.legal.privacy.hint", bundle: .module))
-                .accessibilityIdentifier("settings.legal.privacy")
-                .listRowBackground(AppColor.surface)
-                .listRowSeparatorTint(AppColor.separatorSoft)
-
-                Button {
-                    guard let hostedPrivacyPolicyURL = LegalLinks.hostedPrivacyPolicyURL else { return }
-                    openURL(hostedPrivacyPolicyURL)
-                } label: {
-                    Text("settings.legal.privacyHosted", bundle: .module)
-                }
-                .font(AppFont.body)
-                .foregroundStyle(AppColor.primaryRest)
-                .accessibilityHint(Text("settings.legal.privacyHosted.hint", bundle: .module))
-                .accessibilityIdentifier("settings.legal.privacyHosted")
-                .listRowBackground(AppColor.surface)
-                .listRowSeparatorTint(AppColor.separatorSoft)
-
-                Button(action: { showDisclaimer = true },
-                       label: { Text("settings.legal.disclaimer", bundle: .module) })
-                .font(AppFont.body)
-                .foregroundStyle(AppColor.primaryRest)
-                .accessibilityHint(Text("settings.legal.disclaimer.hint", bundle: .module))
-                .accessibilityIdentifier("settings.legal.disclaimer")
-                .listRowBackground(AppColor.surface)
-                .listRowSeparatorTint(AppColor.separatorSoft)
-            } header: {
-                SettingsSectionHeader(titleKey: "settings.section.legal")
-            }
-
-            // MARK: Advanced
-            Section {
-                Button(role: .destructive) {
-                    showResetConfirm = true
-                } label: {
-                    Text("settings.resetToDefaults", bundle: .module)
-                }
-                .font(AppFont.body)
-                .accessibilityHint(Text("settings.resetToDefaults.hint", bundle: .module))
-                .accessibilityIdentifier("settings.resetToDefaults")
-                .listRowBackground(AppColor.surface)
-                .listRowSeparatorTint(AppColor.separatorSoft)
-            } header: {
-                SettingsSectionHeader(titleKey: "settings.section.advanced")
-            }
-            .confirmationDialog(
-                Text("settings.resetToDefaults.confirmTitle", bundle: .module),
-                isPresented: $showResetConfirm,
-                titleVisibility: .visible
+    private var postureSection: some View {
+        Section {
+            ReminderRowView(
+                type: .posture,
+                isEnabled: $postureEnabled,
+                interval: $postureInterval,
+                breakDuration: $postureBreakDuration
             ) {
-                Button(role: .destructive) {
-                    settings.resetToDefaults()
-                } label: {
-                    Text("settings.resetToDefaults.confirmAction", bundle: .module)
-                }
-                Button(role: .cancel) {
-                    showResetConfirm = false
-                } label: {
-                    Text("settings.resetToDefaults.cancel", bundle: .module)
-                }
-            } message: {
-                Text("settings.resetToDefaults.confirmMessage", bundle: .module)
+                // Posture-side reschedule is deferred to `p0-tca-16` (#679);
+                // once `SettingsClient.snapshot` vends posture values the
+                // reducer will own this debounce.
             }
+            .listRowBackground(AppColor.surface)
+            .listRowSeparatorTint(AppColor.separatorSoft)
+        } header: {
+            SettingsSectionHeader(
+                titleKey: "settings.section.posture",
+                iconName: AppSymbol.postureCheck,
+                iconTint: AppColor.secondaryCalm
+            )
+        } footer: {
+            if postureEnabled {
+                Text("settings.reminder.section.footer", bundle: .module)
+                    .font(AppFont.caption)
+                    .foregroundStyle(AppColor.textSecondary)
+            }
+        }
+    }
 
-            // MARK: About — feedback + version
-            Section {
-                Button {
-                    // itms-beta:// opens TestFlight when installed.
-                    // For users who installed from the App Store, fall back to the
-                    // TestFlight website so the tap is never a silent no-op.
-                    if let url = URL(string: "itms-beta://") {
-                        UIApplication.shared.open(url, options: [:]) { success in
-                            if !success, let fallback = URL(string: "https://testflight.apple.com") {
-                                UIApplication.shared.open(fallback)
-                            }
-                        }
-                    }
-                } label: {
-                    Text("settings.feedback.sendFeedback", bundle: .module)
+    private var preferencesSection: some View {
+        Section {
+            AccessibleToggle(
+                isOn: $hapticsEnabled,
+                tint: AppColor.primaryRest,
+                accessibilityIdentifier: "settings.hapticFeedback",
+                accessibilityHint: Text("settings.hapticFeedback.hint", bundle: .module)
+            ) {
+                HStack(spacing: AppSpacing.sm) {
+                    SettingsRowIcon(systemName: AppSymbol.haptics, tint: AppColor.primaryRest)
+                    Text("settings.hapticFeedback", bundle: .module)
+                        .foregroundStyle(AppColor.textPrimary)
                 }
-                .font(AppFont.body)
-                .foregroundStyle(AppColor.primaryRest)
-                .accessibilityHint(Text("settings.feedback.sendFeedback.hint", bundle: .module))
-                .accessibilityIdentifier("settings.feedback.sendFeedback")
-                .listRowBackground(AppColor.surface)
-                .listRowSeparatorTint(AppColor.separatorSoft)
-            } header: {
-                SettingsSectionHeader(titleKey: "settings.section.about")
-            } footer: {
-                let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—"
-                let build   = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "—"
-                Text(
-                    String(
-                        format: String(localized: "settings.about.versionFormat", bundle: .module),
-                        version,
-                        build
-                    )
-                )
+            }
+            .listRowBackground(AppColor.surface)
+            .listRowSeparatorTint(AppColor.separatorSoft)
+
+            AccessibleToggle(
+                isOn: $notificationFallbackEnabled,
+                tint: AppColor.primaryRest,
+                accessibilityIdentifier: "settings.notificationFallback",
+                accessibilityHint: Text("settings.notificationFallback.hint", bundle: .module)
+            ) {
+                HStack(spacing: AppSpacing.sm) {
+                    SettingsRowIcon(systemName: AppSymbol.bell, tint: AppColor.primaryRest)
+                    Text("settings.notificationFallback", bundle: .module)
+                        .foregroundStyle(AppColor.textPrimary)
+                }
+            }
+            .listRowBackground(AppColor.surface)
+            .listRowSeparatorTint(AppColor.separatorSoft)
+        } header: {
+            SettingsSectionHeader(titleKey: "settings.section.preferences")
+        } footer: {
+            Text("settings.notificationFallback.footer", bundle: .module)
                 .font(AppFont.caption)
                 .foregroundStyle(AppColor.textSecondary)
-            }
         }
-        // #434: "Settings saved" transient feedback banner at bottom.
-        .safeAreaInset(edge: .bottom) {
-            if showSavedBanner {
-                SettingsSavedBanner()
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-                    .padding(.bottom, AppSpacing.md)
-                    .accessibilityIdentifier("settings.savedBanner")
-            }
-        }
-        .animation(.easeInOut(duration: 0.25), value: showSavedBanner)
-        .scrollContentBackground(.hidden)
-        .background(AppColor.background.ignoresSafeArea())
-        .navigationTitle(Text("settings.navTitle", bundle: .module))
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button(String(localized: "settings.doneButton", bundle: .module)) {
-                    isPresented = false
-                }
-                .font(AppFont.bodyEmphasized)
-                .foregroundStyle(AppColor.primaryRest)
-                .accessibilityHint(Text("settings.doneButton.hint", bundle: .module))
-                .accessibilityIdentifier("settings.doneButton")
-            }
-        }
-        .sheet(isPresented: $showTerms) {
-            LegalDocumentView(document: .terms)
-        }
-        .sheet(isPresented: $showPrivacy) {
-            LegalDocumentView(document: .privacy)
-        }
-        .sheet(isPresented: $showDisclaimer) {
-            LegalDocumentView(document: .disclaimer)
-        }
-        .onAppear {
-            if vmBox.inner == nil {
-                vmBox.inner = SettingsViewModel(
-                    settings: settings,
-                    scheduler: coordinator
-                )
-            }
-            prevEyesInterval = settings.eyesInterval
-            prevEyesBreakDuration = settings.eyesBreakDuration
-            prevPostureInterval = settings.postureInterval
-            prevPostureBreakDuration = settings.postureBreakDuration
-        }
-        .onDisappear { savedBannerTask?.cancel() }
-        .task {
-            await coordinator.refreshAuthStatus()
-        }
-        // Announce master-toggle state changes to VoiceOver (#287).
-        .onChangeCompat(of: settings.globalEnabled) { newValue in
-            let message = newValue
-                ? String(localized: "home.status.active", bundle: .module)
-                : String(localized: "home.status.paused", bundle: .module)
-            accessibilityNotificationPoster.postAnnouncement(message: message)
-            showSavedFeedback()
-        }
-        // Announce snooze activate/cancel to VoiceOver (#406).
-        .onChangeCompat(of: settings.snoozedUntil) { newValue in
-            let message: String = newValue != nil
-                ? String(localized: "settings.snooze.activated.announcement", bundle: .module)
-                : String(localized: "settings.snooze.cancelled.announcement", bundle: .module)
-            accessibilityNotificationPoster.postAnnouncement(message: message)
-            showSavedFeedback()
-        }
-        // Analytics instrumentation for per-reminder settings (#297, #386).
-        // SwiftUI mutates the store before onChange fires, so old values are captured here.
-        // Note: old/new values are logged with `privacy: .private` (redacted in Console).
-        .onChangeCompat(of: settings.eyesEnabled) { newValue in
-            viewModel?.notifySettingChanged(
-                .eyesEnabled,
-                old: String(!newValue),
-                new: String(newValue)
-            )
-            showSavedFeedback()
-        }
-        .onChangeCompat(of: settings.eyesInterval) { newValue in
-            viewModel?.notifySettingChanged(
-                .eyesInterval,
-                old: String(prevEyesInterval),
-                new: String(newValue)
-            )
-            prevEyesInterval = newValue
-            showSavedFeedback()
-        }
-        .onChangeCompat(of: settings.eyesBreakDuration) { newValue in
-            viewModel?.notifySettingChanged(
-                .eyesBreakDuration,
-                old: String(prevEyesBreakDuration),
-                new: String(newValue)
-            )
-            prevEyesBreakDuration = newValue
-            showSavedFeedback()
-        }
-        .onChangeCompat(of: settings.postureEnabled) { newValue in
-            viewModel?.notifySettingChanged(
-                .postureEnabled,
-                old: String(!newValue),
-                new: String(newValue)
-            )
-            showSavedFeedback()
-        }
-        .onChangeCompat(of: settings.postureInterval) { newValue in
-            viewModel?.notifySettingChanged(
-                .postureInterval,
-                old: String(prevPostureInterval),
-                new: String(newValue)
-            )
-            prevPostureInterval = newValue
-            showSavedFeedback()
-        }
-        .onChangeCompat(of: settings.postureBreakDuration) { newValue in
-            viewModel?.notifySettingChanged(
-                .postureBreakDuration,
-                old: String(prevPostureBreakDuration),
-                new: String(newValue)
-            )
-            prevPostureBreakDuration = newValue
-            showSavedFeedback()
-        }
-        // #434: Surface saved banner for Smart Pause toggles.
-        .onChangeCompat(of: settings.pauseDuringFocus) { _ in showSavedFeedback() }
-        .onChangeCompat(of: settings.pauseWhileDriving) { _ in showSavedFeedback() }
-        // #434: Surface saved banner for preferences.
-        .onChangeCompat(of: settings.hapticsEnabled) { _ in showSavedFeedback() }
-        .onChangeCompat(of: settings.notificationFallbackEnabled) { _ in showSavedFeedback() }
     }
 
-    // MARK: - Saved Banner (#434)
+    private var legalSection: some View {
+        Section {
+            Button(action: { showTerms = true },
+                   label: { Text("settings.legal.terms", bundle: .module) })
+            .font(AppFont.body)
+            .foregroundStyle(AppColor.primaryRest)
+            .accessibilityHint(Text("settings.legal.terms.hint", bundle: .module))
+            .accessibilityIdentifier("settings.legal.terms")
+            .listRowBackground(AppColor.surface)
+            .listRowSeparatorTint(AppColor.separatorSoft)
 
-    /// Shows the "Settings saved" toast for 1.5 s, debounced against rapid successive changes.
-    private func showSavedFeedback() {
-        savedBannerTask?.cancel()
-        showSavedBanner = true
-        let msg = String(localized: "settings.savedBanner", bundle: .module)
-        accessibilityNotificationPoster.postAnnouncement(message: msg)
-        savedBannerTask = Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 1_500_000_000)
-            guard !Task.isCancelled else { return }
-            showSavedBanner = false
+            Button(action: { showPrivacy = true },
+                   label: { Text("settings.legal.privacy", bundle: .module) })
+            .font(AppFont.body)
+            .foregroundStyle(AppColor.primaryRest)
+            .accessibilityHint(Text("settings.legal.privacy.hint", bundle: .module))
+            .accessibilityIdentifier("settings.legal.privacy")
+            .listRowBackground(AppColor.surface)
+            .listRowSeparatorTint(AppColor.separatorSoft)
+
+            Button {
+                guard let hostedPrivacyPolicyURL = LegalLinks.hostedPrivacyPolicyURL else { return }
+                openURL(hostedPrivacyPolicyURL)
+            } label: {
+                Text("settings.legal.privacyHosted", bundle: .module)
+            }
+            .font(AppFont.body)
+            .foregroundStyle(AppColor.primaryRest)
+            .accessibilityHint(Text("settings.legal.privacyHosted.hint", bundle: .module))
+            .accessibilityIdentifier("settings.legal.privacyHosted")
+            .listRowBackground(AppColor.surface)
+            .listRowSeparatorTint(AppColor.separatorSoft)
+
+            Button(action: { showDisclaimer = true },
+                   label: { Text("settings.legal.disclaimer", bundle: .module) })
+            .font(AppFont.body)
+            .foregroundStyle(AppColor.primaryRest)
+            .accessibilityHint(Text("settings.legal.disclaimer.hint", bundle: .module))
+            .accessibilityIdentifier("settings.legal.disclaimer")
+            .listRowBackground(AppColor.surface)
+            .listRowSeparatorTint(AppColor.separatorSoft)
+        } header: {
+            SettingsSectionHeader(titleKey: "settings.section.legal")
         }
+    }
+
+    private var advancedSection: some View {
+        Section {
+            Button(role: .destructive) {
+                store.showResetConfirm = true
+            } label: {
+                Text("settings.resetToDefaults", bundle: .module)
+            }
+            .font(AppFont.body)
+            .accessibilityHint(Text("settings.resetToDefaults.hint", bundle: .module))
+            .accessibilityIdentifier("settings.resetToDefaults")
+            .listRowBackground(AppColor.surface)
+            .listRowSeparatorTint(AppColor.separatorSoft)
+        } header: {
+            SettingsSectionHeader(titleKey: "settings.section.advanced")
+        }
+        .confirmationDialog(
+            Text("settings.resetToDefaults.confirmTitle", bundle: .module),
+            isPresented: $store.showResetConfirm,
+            titleVisibility: .visible
+        ) {
+            Button(role: .destructive) {
+                store.send(.resetConfirmed)
+            } label: {
+                Text("settings.resetToDefaults.confirmAction", bundle: .module)
+            }
+            Button(role: .cancel) {
+                store.showResetConfirm = false
+            } label: {
+                Text("settings.resetToDefaults.cancel", bundle: .module)
+            }
+        } message: {
+            Text("settings.resetToDefaults.confirmMessage", bundle: .module)
+        }
+    }
+
+    private var aboutSection: some View {
+        Section {
+            Button {
+                // itms-beta:// opens TestFlight when installed.
+                // For users who installed from the App Store, fall back to the
+                // TestFlight website so the tap is never a silent no-op.
+                if let url = URL(string: "itms-beta://") {
+                    UIApplication.shared.open(url, options: [:]) { success in
+                        if !success, let fallback = URL(string: "https://testflight.apple.com") {
+                            UIApplication.shared.open(fallback)
+                        }
+                    }
+                }
+            } label: {
+                Text("settings.feedback.sendFeedback", bundle: .module)
+            }
+            .font(AppFont.body)
+            .foregroundStyle(AppColor.primaryRest)
+            .accessibilityHint(Text("settings.feedback.sendFeedback.hint", bundle: .module))
+            .accessibilityIdentifier("settings.feedback.sendFeedback")
+            .listRowBackground(AppColor.surface)
+            .listRowSeparatorTint(AppColor.separatorSoft)
+        } header: {
+            SettingsSectionHeader(titleKey: "settings.section.about")
+        } footer: {
+            let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—"
+            let build   = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "—"
+            Text(
+                String(
+                    format: String(localized: "settings.about.versionFormat", bundle: .module),
+                    version,
+                    build
+                )
+            )
+            .font(AppFont.caption)
+            .foregroundStyle(AppColor.textSecondary)
+        }
+    }
+
+    // MARK: - Helpers
+
+    /// Max consecutive snoozes allowed before snooze CTAs disable, mirroring
+    /// the constant `SettingsViewModel` captured from
+    /// `AppConfig.features.maxSnoozeCount` at init time. The value is read
+    /// fresh on each evaluation so a `defaults.json` swap during preview /
+    /// snapshot tests is observable without rebuilding the view.
+    private var canSnooze: Bool {
+        snoozeCount < AppConfig.load().features.maxSnoozeCount
     }
 }
-// swiftlint:enable type_body_length
 
 // MARK: - Saved Banner (#434)
 
@@ -535,17 +474,22 @@ struct SettingsSavedBanner: View {
 // MARK: - Snooze Section
 
 private struct SettingsSnoozeSection: View {
-    @EnvironmentObject private var settings: SettingsStore
-    let viewModel: SettingsViewModel?
+    let store: StoreOf<SettingsFeature>
+    let snoozedUntilEpoch: Double
+    let canSnooze: Bool
     let reduceMotion: Bool
 
+    private var snoozedUntil: Date? {
+        snoozedUntilEpoch > 0 ? Date(timeIntervalSince1970: snoozedUntilEpoch) : nil
+    }
+
     private var isSnoozed: Bool {
-        guard let until = settings.snoozedUntil else { return false }
+        guard let until = snoozedUntil else { return false }
         return until > Date()
     }
 
     private var snoozeUntilFormatted: String {
-        guard let until = settings.snoozedUntil, until > Date() else { return "" }
+        guard let until = snoozedUntil, until > Date() else { return "" }
         return until.formatted(date: .omitted, time: .shortened)
     }
 
@@ -577,7 +521,7 @@ private struct SettingsSnoozeSection: View {
                 .listRowSeparatorTint(AppColor.separatorSoft)
 
                 Button(
-                    action: { animatedAction { viewModel?.cancelSnooze() } },
+                    action: { animatedAction { store.send(.cancelSnooze) } },
                     label: {
                         Label {
                             Text("settings.snooze.cancelButton", bundle: .module)
@@ -593,50 +537,21 @@ private struct SettingsSnoozeSection: View {
                 .listRowBackground(AppColor.surface)
                 .listRowSeparatorTint(AppColor.separatorSoft)
             } else {
-                Button(
-                    action: { animatedAction { viewModel?.snooze(option: .fiveMinutes) } },
-                    label: { Text("settings.snooze.5min", bundle: .module) }
-                )
-                .font(AppFont.body)
-                .foregroundStyle(AppColor.primaryRest)
-                .disabled(!(viewModel?.canSnooze ?? false))
-                .accessibilityLabel(Text("settings.snooze.5min.label", bundle: .module))
-                .accessibilityHint(viewModel?.canSnooze ?? false
-                    ? Text("settings.snooze.5min.hint", bundle: .module)
-                    : Text("settings.snooze.limitReached.hint", bundle: .module))
-                .accessibilityIdentifier("settings.snooze.5min")
-                .listRowBackground(AppColor.surface)
-                .listRowSeparatorTint(AppColor.separatorSoft)
-
-                Button(
-                    action: { animatedAction { viewModel?.snooze(option: .oneHour) } },
-                    label: { Text("settings.snooze.1hour", bundle: .module) }
-                )
-                .font(AppFont.body)
-                .foregroundStyle(AppColor.primaryRest)
-                .disabled(!(viewModel?.canSnooze ?? false))
-                .accessibilityLabel(Text("settings.snooze.1hour.label", bundle: .module))
-                .accessibilityHint(viewModel?.canSnooze ?? false
-                    ? Text("settings.snooze.1hour.hint", bundle: .module)
-                    : Text("settings.snooze.limitReached.hint", bundle: .module))
-                .accessibilityIdentifier("settings.snooze.1hour")
-                .listRowBackground(AppColor.surface)
-                .listRowSeparatorTint(AppColor.separatorSoft)
-
-                Button(
-                    action: { animatedAction { viewModel?.snooze(option: .restOfDay) } },
-                    label: { Text("settings.snooze.restOfDay", bundle: .module) }
-                )
-                .font(AppFont.body)
-                .foregroundStyle(AppColor.warningText)
-                .disabled(!(viewModel?.canSnooze ?? false))
-                .accessibilityLabel(Text("settings.snooze.restOfDay.label", bundle: .module))
-                .accessibilityHint(viewModel?.canSnooze ?? false
-                    ? Text("settings.snooze.restOfDay.hint", bundle: .module)
-                    : Text("settings.snooze.limitReached.hint", bundle: .module))
-                .accessibilityIdentifier("settings.snooze.restOfDay")
-                .listRowBackground(AppColor.surface)
-                .listRowSeparatorTint(AppColor.separatorSoft)
+                snoozeButton(.fiveMinutes, titleKey: "settings.snooze.5min",
+                             labelKey: "settings.snooze.5min.label",
+                             hintKey: "settings.snooze.5min.hint",
+                             identifier: "settings.snooze.5min",
+                             tint: AppColor.primaryRest)
+                snoozeButton(.oneHour, titleKey: "settings.snooze.1hour",
+                             labelKey: "settings.snooze.1hour.label",
+                             hintKey: "settings.snooze.1hour.hint",
+                             identifier: "settings.snooze.1hour",
+                             tint: AppColor.primaryRest)
+                snoozeButton(.restOfDay, titleKey: "settings.snooze.restOfDay",
+                             labelKey: "settings.snooze.restOfDay.label",
+                             hintKey: "settings.snooze.restOfDay.hint",
+                             identifier: "settings.snooze.restOfDay",
+                             tint: AppColor.warningText)
             }
         } header: {
             SettingsSectionHeader(
@@ -646,59 +561,78 @@ private struct SettingsSnoozeSection: View {
             )
         }
     }
+
+    // swiftlint:disable:next function_parameter_count
+    private func snoozeButton(
+        _ option: SettingsFeature.SnoozeOption,
+        titleKey: String.LocalizationValue,
+        labelKey: String.LocalizationValue,
+        hintKey: String.LocalizationValue,
+        identifier: String,
+        tint: Color
+    ) -> some View {
+        Button(
+            action: { animatedAction { store.send(.snoozeTapped(option)) } },
+            label: { Text(String(localized: titleKey, bundle: .module)) }
+        )
+        .font(AppFont.body)
+        .foregroundStyle(tint)
+        .disabled(!canSnooze)
+        .accessibilityLabel(Text(String(localized: labelKey, bundle: .module)))
+        .accessibilityHint(canSnooze
+            ? Text(String(localized: hintKey, bundle: .module))
+            : Text("settings.snooze.limitReached.hint", bundle: .module))
+        .accessibilityIdentifier(identifier)
+        .listRowBackground(AppColor.surface)
+        .listRowSeparatorTint(AppColor.separatorSoft)
+    }
 }
 
 // MARK: - Smart Pause Section
 
 private struct SettingsSmartPauseSection: View {
-    @EnvironmentObject private var settings: SettingsStore
-    let viewModel: SettingsViewModel?
+    @Binding var pauseDuringFocus: Bool
+    @Binding var pauseWhileDriving: Bool
 
     var body: some View {
         Section {
             AccessibleToggle(
-                isOn: $settings.pauseDuringFocus,
+                isOn: $pauseDuringFocus,
                 tint: AppColor.primaryRest,
-                    accessibilityIdentifier: "settings.smartPause.pauseDuringFocus",
-                    accessibilityHint: Text("settings.smartPause.pauseDuringFocus.hint", bundle: .module),
-                    onChange: { newValue in
-                        viewModel?.notifySettingChanged(
-                            .pauseDuringFocus,
-                            old: String(!newValue),
-                            new: String(newValue)
-                        )
-                    },
-                    label: {
-                        Label(
-                            String(localized: "settings.smartPause.pauseDuringFocus", bundle: .module),
-                            systemImage: AppSymbol.pauseDuringFocus
-                        )
-                        .foregroundStyle(AppColor.textPrimary)
-                    }
-                )
+                accessibilityIdentifier: "settings.smartPause.pauseDuringFocus",
+                accessibilityHint: Text("settings.smartPause.pauseDuringFocus.hint", bundle: .module),
+                // `.settingChanged(.pauseDuringFocus, ...)` re-emission is
+                // deferred to `p0-tca-16` (#679); the `@AppStorage` binding
+                // already round-trips through `SettingsStore`.
+                onChange: { _ in },
+                label: {
+                    Label(
+                        String(localized: "settings.smartPause.pauseDuringFocus", bundle: .module),
+                        systemImage: AppSymbol.pauseDuringFocus
+                    )
+                    .foregroundStyle(AppColor.textPrimary)
+                }
+            )
             .listRowBackground(AppColor.surface)
             .listRowSeparatorTint(AppColor.separatorSoft)
 
             AccessibleToggle(
-                isOn: $settings.pauseWhileDriving,
+                isOn: $pauseWhileDriving,
                 tint: AppColor.primaryRest,
-                    accessibilityIdentifier: "settings.smartPause.pauseWhileDriving",
-                    accessibilityHint: Text("settings.smartPause.pauseWhileDriving.hint", bundle: .module),
-                    onChange: { newValue in
-                        viewModel?.notifySettingChanged(
-                            .pauseWhileDriving,
-                            old: String(!newValue),
-                            new: String(newValue)
-                        )
-                    },
-                    label: {
-                        Label(
-                            String(localized: "settings.smartPause.pauseWhileDriving", bundle: .module),
-                            systemImage: AppSymbol.pauseWhileDriving
-                        )
-                        .foregroundStyle(AppColor.textPrimary)
-                    }
-                )
+                accessibilityIdentifier: "settings.smartPause.pauseWhileDriving",
+                accessibilityHint: Text("settings.smartPause.pauseWhileDriving.hint", bundle: .module),
+                // `.settingChanged(.pauseWhileDriving, ...)` re-emission is
+                // deferred to `p0-tca-16` (#679); the `@AppStorage` binding
+                // already round-trips through `SettingsStore`.
+                onChange: { _ in },
+                label: {
+                    Label(
+                        String(localized: "settings.smartPause.pauseWhileDriving", bundle: .module),
+                        systemImage: AppSymbol.pauseWhileDriving
+                    )
+                    .foregroundStyle(AppColor.textPrimary)
+                }
+            )
             .listRowBackground(AppColor.surface)
             .listRowSeparatorTint(AppColor.separatorSoft)
         } header: {
@@ -721,12 +655,8 @@ private struct SettingsSmartPauseSection: View {
 /// a "Configure App Break Access" button that launches `AppCategoryPickerView`.
 /// Shows an inline denied-recovery warning (#252) and a status-aware footer (#250).
 private struct SettingsTrueInterruptSection: View {
-    @EnvironmentObject private var coordinator: AppCoordinator
+    let screenTimeAuthStatus: ScreenTimeAuthorizationStatus
     @State private var showPicker = false
-
-    private var authStatus: ScreenTimeAuthorizationStatus {
-        coordinator.screenTimeAuthorization.authorizationStatus
-    }
 
     var body: some View {
         Section {
@@ -737,10 +667,10 @@ private struct SettingsTrueInterruptSection: View {
                     Text("settings.trueInterrupt.statusLabel", bundle: .module)
                         .font(AppFont.body)
                         .foregroundStyle(AppColor.textPrimary)
-                    Text(LocalizedStringKey(authStatus.localizedStatusKey), bundle: .module)
+                    Text(LocalizedStringKey(screenTimeAuthStatus.localizedStatusKey), bundle: .module)
                         .font(AppFont.caption)
                         .foregroundStyle(
-                            authStatus == .approved ? AppColor.primaryRest : AppColor.textSecondary
+                            screenTimeAuthStatus == .approved ? AppColor.primaryRest : AppColor.textSecondary
                         )
                 }
                 Spacer()
@@ -751,7 +681,7 @@ private struct SettingsTrueInterruptSection: View {
             .accessibilityIdentifier("settings.trueInterrupt.statusRow")
 
             // Denied recovery: warning card + direct Settings link (#252)
-            if authStatus == .denied {
+            if screenTimeAuthStatus == .denied {
                 HStack(spacing: AppSpacing.sm) {
                     IconContainer(icon: AppSymbol.warning, color: AppColor.accentWarm, size: 36)
                         .accessibilityHidden(true)
@@ -789,7 +719,7 @@ private struct SettingsTrueInterruptSection: View {
                     Text("settings.trueInterrupt.configure", bundle: .module)
                         .font(AppFont.body)
                         .foregroundStyle(
-                            authStatus == .unavailable
+                            screenTimeAuthStatus == .unavailable
                                 ? AppColor.textSecondary
                                 : AppColor.primaryRest
                         )
@@ -800,10 +730,10 @@ private struct SettingsTrueInterruptSection: View {
                         .accessibilityHidden(true)
                 }
             }
-            .disabled(authStatus == .unavailable)
+            .disabled(screenTimeAuthStatus == .unavailable)
             .listRowBackground(AppColor.surface)
             .listRowSeparatorTint(AppColor.separatorSoft)
-            .accessibilityHint(authStatus == .unavailable
+            .accessibilityHint(screenTimeAuthStatus == .unavailable
                 ? Text("settings.trueInterrupt.configure.unavailable.hint", bundle: .module)
                 : Text("settings.trueInterrupt.configure.hint", bundle: .module))
             .accessibilityIdentifier("settings.trueInterrupt.configureButton")
@@ -815,7 +745,7 @@ private struct SettingsTrueInterruptSection: View {
             )
         } footer: {
             // Pending-approval explanation when unavailable (#250); standard copy otherwise.
-            Text(LocalizedStringKey(authStatus == .unavailable
+            Text(LocalizedStringKey(screenTimeAuthStatus == .unavailable
                 ? "settings.trueInterrupt.footer.unavailable"
                 : "settings.trueInterrupt.footer"), bundle: .module)
             .font(AppFont.caption)
@@ -831,7 +761,7 @@ private struct SettingsTrueInterruptSection: View {
 
 /// Owns a local `Store` for `AppCategoryPickerView` while the picker is still
 /// presented from MVVM-era parents (`SettingsView`, `OnboardingView`). When
-/// Phase 7 of #702 wires `RootView` as the destination owner, both call sites
+/// Phase D of #755 wires `RootView` as the destination owner, both call sites
 /// can drop this wrapper and present via `$store.scope`.
 private struct AppCategoryPickerSheet: View {
     let onSelectApps: () -> Void
@@ -848,10 +778,10 @@ private struct AppCategoryPickerSheet: View {
 // MARK: - Notification Warning Section
 
 private struct SettingsNotificationWarningSection: View {
-    @EnvironmentObject private var coordinator: AppCoordinator
+    let notificationAuthStatus: UNAuthorizationStatus
 
     var body: some View {
-        if coordinator.notificationAuthStatus == .denied {
+        if notificationAuthStatus == .denied {
             Section {
                 HStack(spacing: AppSpacing.sm) {
                     IconContainer(icon: AppSymbol.warning, color: AppColor.accentWarm, size: 36)
@@ -894,8 +824,9 @@ private func openApplicationSettings() {
 
 #Preview {
     NavigationStack {
-        SettingsView(isPresented: .constant(true))
-            .environmentObject(SettingsStore())
-            .environmentObject(AppCoordinator())
+        SettingsView(
+            store: Store(initialState: SettingsFeature.State()) { SettingsFeature() },
+            isPresented: .constant(true)
+        )
     }
 }

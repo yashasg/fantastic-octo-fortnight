@@ -105,6 +105,9 @@ final class SettingsFeatureTests: XCTestCase {
                 setSnoozeCount: { _ in },
                 resetToDefaults: {}
             )
+            $0.notificationClient.authorizationStatus = { .authorized }
+            $0.screenTimeAuthorizationClient.status = { .approved }
+            $0.screenTimeAuthorizationClient.statusChanges = { .finished }
         }
 
         await store.send(.onAppear) {
@@ -112,6 +115,12 @@ final class SettingsFeatureTests: XCTestCase {
             $0.eyesBreakDuration = 25
             $0.prevEyesInterval = 1200
             $0.prevEyesBreakDuration = 25
+        }
+        await store.receive(\.notificationAuthStatusChanged) {
+            $0.notificationAuthStatus = .authorized
+        }
+        await store.receive(\.screenTimeAuthStatusChanged) {
+            $0.screenTimeAuthStatus = .approved
         }
     }
 

@@ -281,16 +281,13 @@ struct HomeView: View {
                 }
             }
             .sheet(isPresented: $showSettings) {
-                // `SettingsView` still consumes `@EnvironmentObject
-                // SettingsStore` / `AppCoordinator`; SwiftUI's automatic
-                // sheet-environment inheritance from
-                // `EyePostureReminderApp`'s WindowGroup-level
-                // `.environmentObject(...)` chain provides them. The explicit
-                // re-injection used by the pre-#755 MVVM HomeView is no
-                // longer needed and would also force this view to keep its
-                // own `@EnvironmentObject` declarations.
+                // Phase B (#755) owns the SettingsFeature store locally so
+                // the sheet handoff can drop SwiftUI's environment-object
+                // inheritance from EyePostureReminderApp. Phase D will
+                // promote this wrapper into RootView once the destination
+                // graph takes over presentation ownership.
                 NavigationStack {
-                    SettingsView(isPresented: $showSettings)
+                    SettingsSheet(isPresented: $showSettings)
                 }
             }
             .background(AppColor.background.ignoresSafeArea())
@@ -323,6 +320,24 @@ struct HomeView: View {
         if let url = URL(string: UIApplication.openSettingsURLString) {
             UIApplication.shared.open(url)
         }
+    }
+}
+
+// MARK: - Settings Sheet Wrapper
+
+/// Holds the `SettingsFeature` store for the Settings sheet presented from
+/// `HomeView`. Phase D (`#755`) will fold this presentation into
+/// `RootView` via `AppFeature.Destination.settingsSheet`; until then this
+/// wrapper keeps the store lifetime tied to the sheet so the reducer's
+/// timers / streams shut down on dismiss.
+private struct SettingsSheet: View {
+    @Binding var isPresented: Bool
+    @State private var store = Store(
+        initialState: SettingsFeature.State()
+    ) { SettingsFeature() }
+
+    var body: some View {
+        SettingsView(store: store, isPresented: $isPresented)
     }
 }
 

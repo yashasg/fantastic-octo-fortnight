@@ -139,8 +139,8 @@ private struct OnboardingReminderPickerCard: View {
                 String(localized: "onboarding.setup.picker.every", bundle: .module),
                 selection: $interval
             ) {
-                ForEach(SettingsViewModel.intervalOptions, id: \.self) { seconds in
-                    Text(SettingsViewModel.labelForInterval(seconds)).tag(seconds)
+                ForEach(SettingsPickerOptions.intervalOptions, id: \.self) { seconds in
+                    Text(SettingsPickerOptions.labelForInterval(seconds)).tag(seconds)
                 }
             }
             .accessibilityIdentifier("onboarding.\(typeID).intervalPicker")
@@ -167,8 +167,8 @@ private struct OnboardingReminderPickerCard: View {
                 String(localized: "onboarding.setup.picker.breakFor", bundle: .module),
                 selection: $breakDuration
             ) {
-                ForEach(SettingsViewModel.breakDurationOptions, id: \.self) { seconds in
-                    Text(SettingsViewModel.labelForBreakDuration(seconds)).tag(seconds)
+                ForEach(SettingsPickerOptions.breakDurationOptions, id: \.self) { seconds in
+                    Text(SettingsPickerOptions.labelForBreakDuration(seconds)).tag(seconds)
                 }
             }
             .accessibilityIdentifier("onboarding.\(typeID).durationPicker")
@@ -204,8 +204,8 @@ private struct OnboardingReminderPickerCard: View {
         String(
             format: String(localized: "onboarding.setup.card.label", bundle: .module),
             title,
-            SettingsViewModel.labelForInterval(interval),
-            SettingsViewModel.labelForBreakDuration(breakDuration)
+            SettingsPickerOptions.labelForInterval(interval),
+            SettingsPickerOptions.labelForBreakDuration(breakDuration)
         )
     }
 }

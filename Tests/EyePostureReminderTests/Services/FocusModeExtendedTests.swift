@@ -219,121 +219,13 @@ final class FocusModeExtendedTests: XCTestCase {
     }
 }
 
-// MARK: - FocusModeSettingsViewModelTests
+// MARK: - FocusModeSettingsViewModelTests removed (#755 Phase B)
 //
-// @MainActor tests for SettingsViewModel's `pauseDuringFocus` binding.
-// Verifies the VM correctly bridges the SettingsStore property for the Settings UI.
-
-@MainActor
-final class FocusModeSettingsViewModelTests: XCTestCase {
-
-    var mockPersistence: MockSettingsPersisting!
-    var settings: SettingsStore!
-    var mockScheduler: MockReminderScheduler!
-    var vm: SettingsViewModel!
-
-    override func setUp() async throws {
-        try await super.setUp()
-        mockPersistence = MockSettingsPersisting()
-        settings        = SettingsStore(store: mockPersistence)
-        mockScheduler   = MockReminderScheduler()
-        vm              = SettingsViewModel(settings: settings, scheduler: mockScheduler)
-    }
-
-    override func tearDown() async throws {
-        vm = nil
-        mockScheduler = nil
-        settings = nil
-        mockPersistence = nil
-        try await super.tearDown()
-    }
-
-    // MARK: - Getter
-
-    func test_vm_pauseDuringFocus_getter_trueWhenSettingsTrue() {
-        settings.pauseDuringFocus = true
-        XCTAssertTrue(
-            vm.pauseDuringFocus,
-            "VM.pauseDuringFocus getter must return true when settings.pauseDuringFocus=true")
-    }
-
-    func test_vm_pauseDuringFocus_getter_falseWhenSettingsFalse() {
-        settings.pauseDuringFocus = false
-        XCTAssertFalse(
-            vm.pauseDuringFocus,
-            "VM.pauseDuringFocus getter must return false when settings.pauseDuringFocus=false")
-    }
-
-    // MARK: - Setter
-
-    func test_vm_pauseDuringFocus_setter_falseWritesToSettings() {
-        settings.pauseDuringFocus = true
-        vm.pauseDuringFocus = false
-        XCTAssertFalse(
-            settings.pauseDuringFocus,
-            "Setting VM.pauseDuringFocus=false must immediately write false to SettingsStore")
-    }
-
-    func test_vm_pauseDuringFocus_setter_trueWritesToSettings() {
-        settings.pauseDuringFocus = false
-        vm.pauseDuringFocus = true
-        XCTAssertTrue(
-            settings.pauseDuringFocus,
-            "Setting VM.pauseDuringFocus=true must immediately write true to SettingsStore")
-    }
-
-    func test_vm_pauseDuringFocus_setter_getterReflectsNewValue() {
-        settings.pauseDuringFocus = true
-        vm.pauseDuringFocus = false
-        XCTAssertFalse(
-            vm.pauseDuringFocus,
-            "VM.pauseDuringFocus getter must immediately reflect the new value after setter call")
-    }
-
-    // MARK: - Settings Persistence Round-Trip
-
-    func test_pauseDuringFocus_offToOn_roundTrip_survivesReload() {
-        // Step 1: disable
-        vm.pauseDuringFocus = false
-        // Step 2: re-enable via VM
-        vm.pauseDuringFocus = true
-        // Step 3: reload from same MockSettingsPersisting
-        let reloaded = SettingsStore(store: mockPersistence)
-        XCTAssertTrue(
-            reloaded.pauseDuringFocus,
-            "pauseDuringFocus=true must survive a SettingsStore reload after an off→on round-trip")
-    }
-
-    func test_pauseDuringFocus_false_survivesReload() {
-        vm.pauseDuringFocus = false
-        let reloaded = SettingsStore(store: mockPersistence)
-        XCTAssertFalse(
-            reloaded.pauseDuringFocus,
-            "pauseDuringFocus=false must survive a SettingsStore reload")
-    }
-
-    func test_pauseDuringFocus_writesToPersistence_immediately() {
-        vm.pauseDuringFocus = false
-        XCTAssertTrue(
-            mockPersistence.hasValue(forKey: "kshana.pauseDuringFocus"),
-            "Setting pauseDuringFocus must immediately write to MockSettingsPersisting")
-    }
-
-    // MARK: - Independence from pauseWhileDriving
-
-    func test_pauseDuringFocus_doesNotAffect_pauseWhileDriving() {
-        settings.pauseWhileDriving = true
-        vm.pauseDuringFocus = false
-        XCTAssertTrue(
-            settings.pauseWhileDriving,
-            "Changing pauseDuringFocus must not modify pauseWhileDriving")
-    }
-
-    func test_pauseWhileDriving_doesNotAffect_pauseDuringFocus() {
-        settings.pauseDuringFocus = true
-        vm.pauseWhileDriving = false
-        XCTAssertTrue(
-            settings.pauseDuringFocus,
-            "Changing pauseWhileDriving must not modify pauseDuringFocus")
-    }
-}
+// The `SettingsViewModel.pauseDuringFocus` getter/setter coverage that
+// previously lived in `FocusModeSettingsViewModelTests` was removed when
+// `SettingsViewModel` was deleted. The `pauseDuringFocus` binding is now
+// driven from `SettingsView` via `@AppStorage(SettingsStore.Keys.pauseDuringFocus)`
+// and exercised through `SettingsStore` directly.
+//
+// Rewrite as `SettingsFeature` TestStore coverage once the reducer owns the
+// `pauseDuringFocus` analytics emission — tracked under #679.

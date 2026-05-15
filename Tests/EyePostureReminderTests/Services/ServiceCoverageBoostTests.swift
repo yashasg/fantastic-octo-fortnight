@@ -6,7 +6,9 @@ import XCTest
 
 /// Additional service and model tests targeting coverage gaps in partially-covered
 /// production files: PauseConditionManager, OverlayManager, MetricKitSubscriber,
-/// AppDelegate, AppCoordinator, and SettingsViewModel.
+/// AppDelegate, and AppCoordinator. (The legacy `SettingsViewModel` section was
+/// removed alongside `SettingsViewModel` in #755 Phase B; the `SettingsFeature`
+/// TestStore replacement is tracked under #679.)
 @MainActor
 final class ServiceCoverageBoostTests: XCTestCase {
 
@@ -434,109 +436,17 @@ final class ServiceCoverageBoostTests2: XCTestCase {
         XCTAssertEqual(mock.resumeCallCount, 0)
     }
 
-    // MARK: - SettingsViewModel — Additional Coverage
-
-    func test_settingsViewModel_labelForInterval_unknownValue() {
-        let label = SettingsViewModel.labelForInterval(999)
-        XCTAssertFalse(label.isEmpty)
-    }
-
-    func test_settingsViewModel_labelForBreakDuration_unknownValue() {
-        let label = SettingsViewModel.labelForBreakDuration(999)
-        XCTAssertFalse(label.isEmpty)
-    }
-
-    func test_settingsViewModel_globalToggleChanged() {
-        let store = SettingsStore(store: MockSettingsPersisting())
-        let vm = SettingsViewModel(
-            settings: store,
-            scheduler: MockReminderScheduler())
-        store.globalEnabled = true
-        vm.globalToggleChanged()
-        store.globalEnabled = false
-        vm.globalToggleChanged()
-    }
-
-    func test_settingsViewModel_reminderSettingChanged_eyes() {
-        let store = SettingsStore(store: MockSettingsPersisting())
-        let vm = SettingsViewModel(
-            settings: store,
-            scheduler: MockReminderScheduler())
-        vm.reminderSettingChanged(for: .eyes)
-    }
-
-    func test_settingsViewModel_reminderSettingChanged_posture() {
-        let store = SettingsStore(store: MockSettingsPersisting())
-        let vm = SettingsViewModel(
-            settings: store,
-            scheduler: MockReminderScheduler())
-        vm.reminderSettingChanged(for: .posture)
-    }
-
-    func test_settingsViewModel_canSnooze() {
-        let store = SettingsStore(store: MockSettingsPersisting())
-        let vm = SettingsViewModel(
-            settings: store,
-            scheduler: MockReminderScheduler())
-        let result = vm.canSnooze
-        XCTAssertNotNil(result as Any)
-    }
-
-    func test_settingsViewModel_snooze_fiveMinutes() {
-        let store = SettingsStore(store: MockSettingsPersisting())
-        let vm = SettingsViewModel(
-            settings: store,
-            scheduler: MockReminderScheduler())
-        vm.snooze(option: .fiveMinutes)
-    }
-
-    func test_settingsViewModel_snooze_oneHour() {
-        let store = SettingsStore(store: MockSettingsPersisting())
-        let vm = SettingsViewModel(
-            settings: store,
-            scheduler: MockReminderScheduler())
-        vm.snooze(option: .oneHour)
-    }
-
-    func test_settingsViewModel_snooze_restOfDay() {
-        let store = SettingsStore(store: MockSettingsPersisting())
-        let vm = SettingsViewModel(
-            settings: store,
-            scheduler: MockReminderScheduler())
-        vm.snooze(option: .restOfDay)
-    }
-
-    func test_settingsViewModel_cancelSnooze() {
-        let store = SettingsStore(store: MockSettingsPersisting())
-        let vm = SettingsViewModel(
-            settings: store,
-            scheduler: MockReminderScheduler())
-        vm.snooze(option: .fiveMinutes)
-        vm.cancelSnooze()
-        XCTAssertNil(store.snoozedUntil)
-    }
-
-    func test_settingsViewModel_pauseDuringFocus_setter() {
-        let store = SettingsStore(store: MockSettingsPersisting())
-        let vm = SettingsViewModel(
-            settings: store,
-            scheduler: MockReminderScheduler())
-        vm.pauseDuringFocus = true
-        XCTAssertTrue(store.pauseDuringFocus)
-        vm.pauseDuringFocus = false
-        XCTAssertFalse(store.pauseDuringFocus)
-    }
-
-    func test_settingsViewModel_pauseWhileDriving_setter() {
-        let store = SettingsStore(store: MockSettingsPersisting())
-        let vm = SettingsViewModel(
-            settings: store,
-            scheduler: MockReminderScheduler())
-        vm.pauseWhileDriving = true
-        XCTAssertTrue(store.pauseWhileDriving)
-        vm.pauseWhileDriving = false
-        XCTAssertFalse(store.pauseWhileDriving)
-    }
+    // MARK: - SettingsViewModel — Removed (#755 Phase B)
+    //
+    // The SettingsViewModel coverage block previously here was deleted when
+    // `SettingsViewModel` was removed (#755 Phase B). The legacy interval /
+    // break-duration label formatters now live on `SettingsPickerOptions`
+    // and are covered by `CoverageBoostTests` /
+    // `OnboardingViewTests`. The snooze, global-toggle, reminder-setting
+    // changed, and pause-* setter cases will be rewritten as
+    // `SettingsFeature` TestStore coverage under #679.
+    //
+    // Rewrite as `SettingsFeature` TestStore coverage — tracked under #679.
 
     // MARK: - ReminderType — Additional Coverage
 

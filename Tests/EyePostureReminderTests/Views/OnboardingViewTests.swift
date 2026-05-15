@@ -223,19 +223,19 @@ final class OnboardingViewTests: XCTestCase {
         XCTAssertFalse(AppSymbol.postureCheck.isEmpty, "AppSymbol.postureCheck must exist for setup card")
     }
 
-    /// SettingsViewModel interval and duration option lists exist and are non-empty.
+    /// SettingsPickerOptions interval and duration option lists exist and are non-empty.
     func test_setupView_pickerOptions_existAndAreNonEmpty() {
-        XCTAssertFalse(SettingsViewModel.intervalOptions.isEmpty,
+        XCTAssertFalse(SettingsPickerOptions.intervalOptions.isEmpty,
                        "intervalOptions must be non-empty for onboarding pickers")
-        XCTAssertFalse(SettingsViewModel.breakDurationOptions.isEmpty,
+        XCTAssertFalse(SettingsPickerOptions.breakDurationOptions.isEmpty,
                        "breakDurationOptions must be non-empty for onboarding pickers")
     }
 
     /// labelForInterval produces a non-empty string for every interval option.
     func test_setupView_labelForInterval_isNonEmpty() {
-        for option in SettingsViewModel.intervalOptions {
+        for option in SettingsPickerOptions.intervalOptions {
             XCTAssertFalse(
-                SettingsViewModel.labelForInterval(option).isEmpty,
+                SettingsPickerOptions.labelForInterval(option).isEmpty,
                 "labelForInterval must be non-empty for option \(option)"
             )
         }
@@ -243,9 +243,9 @@ final class OnboardingViewTests: XCTestCase {
 
     /// labelForBreakDuration produces a non-empty string for every duration option.
     func test_setupView_labelForBreakDuration_isNonEmpty() {
-        for option in SettingsViewModel.breakDurationOptions {
+        for option in SettingsPickerOptions.breakDurationOptions {
             XCTAssertFalse(
-                SettingsViewModel.labelForBreakDuration(option).isEmpty,
+                SettingsPickerOptions.labelForBreakDuration(option).isEmpty,
                 "labelForBreakDuration must be non-empty for option \(option)"
             )
         }
