@@ -10,22 +10,33 @@
 
 ## Members
 
-| Name | Role | Charter | Status |
-|------|------|---------|--------|
-| Danny | Product Manager | .squad/agents/danny/charter.md | 📦 PM |
-| Tess | UI/UX Designer | .squad/agents/tess/charter.md | 🎨 Design |
-| Reuben | Product Designer | .squad/agents/reuben/charter.md | 🖌️ Product Design |
-| Rusty | iOS Architect / Lead | .squad/agents/rusty/charter.md | 🏗️ Lead |
-| Linus | iOS Dev (UI) | .squad/agents/linus/charter.md | ⚛️ Frontend |
-| Basher | iOS Dev (Services) | .squad/agents/basher/charter.md | 🔧 Backend |
-| Livingston | Tester | .squad/agents/livingston/charter.md | 🧪 Test |
-| Saul | Code Reviewer | .squad/agents/saul/charter.md | 👁️ Review |
-| Virgil | CI/CD Dev | .squad/agents/virgil/charter.md | ⚙️ CI/CD |
-| Turk | Data Analyst | .squad/agents/turk/charter.md | 📊 Analytics |
-| Frank | Legal Advisor | .squad/agents/frank/charter.md | 📝 Legal |
-| Roman | Market Researcher | .squad/agents/roman/charter.md | 📊 Research |
-| Scribe | Scribe | .squad/agents/scribe/charter.md | 📋 Logger |
-| Ralph | Work Monitor | — | 🔄 Monitor |
+| Name | Role | Charter | Status | Team |
+|------|------|---------|--------|------|
+| Danny | Product Manager | .squad/agents/danny/charter.md | 📦 PM | Product |
+| Tess | UI/UX Designer | .squad/agents/tess/charter.md | 🎨 Design | Product |
+| Reuben | Product Designer | .squad/agents/reuben/charter.md | 🖌️ Product Design | Product |
+| Turk | Data Analyst | .squad/agents/turk/charter.md | 📊 Analytics | Product |
+| Frank | Legal Advisor | .squad/agents/frank/charter.md | 📝 Legal | Product |
+| Roman | Market Researcher | .squad/agents/roman/charter.md | 📊 Research | Product |
+| Rusty | iOS Architect / Lead | .squad/agents/rusty/charter.md | 🏗️ Lead | Cross-cutting |
+| Linus | iOS Dev (UI) | .squad/agents/linus/charter.md | ⚛️ Frontend | Frontend |
+| Livingston | Frontend Tester | .squad/agents/livingston/charter.md | 🧪 Test | Frontend |
+| Saul | Frontend Code Reviewer | .squad/agents/saul/charter.md | 👁️ Review | Frontend |
+| Basher | iOS Dev (Services) | .squad/agents/basher/charter.md | 🔧 Backend | Backend |
+| Yen | Backend Tester | .squad/agents/yen/charter.md | 🧪 Test | Backend |
+| Benedict | Backend Code Reviewer | .squad/agents/benedict/charter.md | 👁️ Review | Backend |
+| Virgil | CI/CD Dev | .squad/agents/virgil/charter.md | ⚙️ CI/CD | DevOps |
+| Scribe | Scribe | .squad/agents/scribe/charter.md | 📋 Logger | Infra |
+| Ralph | Work Monitor | — | 🔄 Monitor | Infra |
+
+## Teams
+
+- **🏗️ Cross-cutting:** Rusty (Lead) — owns architecture across all layers
+- **⚛️ Frontend** (UI / views layer): Linus, Livingston (Test), Saul (Review)
+- **🔧 Backend** (services / data layer): Basher, Yen (Test), Benedict (Review)
+- **⚙️ DevOps:** Virgil
+- **📦 Product** (non-dev): Danny, Tess, Reuben, Turk, Frank, Roman
+- **📋 Infra** (silent / monitor): Scribe, Ralph
 
 ## Project Context
 

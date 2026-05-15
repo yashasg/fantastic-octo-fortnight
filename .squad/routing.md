@@ -12,10 +12,12 @@ How to decide who handles what.
 | Architecture, technical decisions | Rusty | MVVM structure, API design, module integration |
 | SwiftUI views, overlays, animations | Linus | SettingsView, OverlayView, UIKit bridging |
 | Notifications, persistence, lifecycle | Basher | ReminderScheduler, SettingsStore, AppDelegate |
-| Testing | Livingston | Unit tests, UI tests, edge cases, mock setup |
+| Frontend testing (SwiftUI views, UI flows, accessibility, snapshots) | Livingston | XCUITest, view-model UI tests, dark mode, localization |
+| Backend testing (services, schedulers, pause detectors, persistence) | Yen | SettingsStore, ReminderScheduler, PauseConditionManager, ScreenTimeTracker tests |
 | CI/CD, builds, signing, pipelines | Virgil | Xcode config, GitHub Actions, fastlane, code signing |
 | Telemetry, analytics, dashboards, metrics | Turk | Event schemas, App Store Connect, MetricKit, usage analysis |
-| Code review | Saul | Review PRs, check quality, suggest improvements |
+| Frontend code review (SwiftUI views, accessibility, assets, animations) | Saul | View PRs, layout, dark-mode parity, VoiceOver |
+| Backend code review (services, concurrency, lifecycle, system APIs) | Benedict | Service PRs, actor isolation, retain cycles, error handling |
 | Legal, terms, privacy, disclaimers | Frank | Terms of service, privacy policy, liability, compliance |
 | Market research, competitors, pricing, ASO | Roman | Competitive analysis, App Store landscape, keywords, monetization |
 | Scope & priorities | Danny | What to build next, trade-offs, decisions |

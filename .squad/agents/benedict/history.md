@@ -3,6 +3,40 @@
 - **Owner:** Yashasg
 - **Project:** Eye & Posture Reminder — a lightweight iOS app with background timers and full-screen overlay reminders for eye breaks (20-20-20 rule) and posture checks
 - **Stack:** Swift, SwiftUI (iOS 16+), MVVM, UserNotifications, UIKit overlay, UserDefaults
+- **Created:** 2026-05-15
+- **Scope:** Backend / services & data layer — code review only. Frontend code review belongs to Saul.
+
+## Core Context
+
+**Backend surface area I review:**
+- SettingsStore, ReminderScheduler, AppCoordinator, OverlayManager (service-side), PauseConditionManager, ScreenTimeTracker
+- AppConfig.swift (Codable) + defaults.json; SettingsStore seeds from JSON on first launch; resetToDefaults() clears & re-seeds
+- Pause conditions: FocusMode (INFocusStatusCenter), CarPlay (AVAudioSession), Driving (CMMotionActivityManager) — all gated by pauseWhileDriving
+- ScreenTimeTracker: grace-period state machine (5s reset delay); independent eye/posture counters; CACurrentMediaTime() monotonic
+
+**Contracts I enforce on review:**
+- SettingsStore reads settings at callback time (not registration)
+- Settings changes do NOT retroactively remove activeConditions
+- @MainActor boundaries respected on services touching UI-bound state
+- MockNotificationCenter / dependency injection used for any UNUserNotificationCenter touch
+- AppConfig / bundle injection via TestBundle.module — no hardcoded bundle access
+- Validation workflow: ./scripts/build.sh build and ./scripts/build.sh test must pass
+
+## Learnings
+
+<!-- Append new learnings below. Each entry is something lasting about the project. -->
+
+---
+
+## Inherited Context (from Saul, pre-split)
+
+> The following is Saul's full project history at the time of the frontend/backend reviewer split (2026-05-15). Benedict inherits all of it as foundational knowledge. New learnings go above this divider.
+
+# Project Context
+
+- **Owner:** Yashasg
+- **Project:** Eye & Posture Reminder — a lightweight iOS app with background timers and full-screen overlay reminders for eye breaks (20-20-20 rule) and posture checks
+- **Stack:** Swift, SwiftUI (iOS 16+), MVVM, UserNotifications, UIKit overlay, UserDefaults
 - **Created:** 2026-04-24
 
 ## Learnings
@@ -251,5 +285,3 @@ Orchestration log recorded at 2026-04-30T09:27:10Z. Code review approved; decisi
 - Team has clear, independent PRs to parallelize remediation work
 
 **Pattern for Future Audits:** When decomposing audit findings into child issues, group by technical CATEGORY (not per file/line), assign each category to a single owner, and ensure each issue represents one PR's natural scope. This pattern enables parallel team execution and clean PR review boundaries.
-
-- 2026-05-15: You are now explicitly Frontend-scoped. Benedict (Backend Code Reviewer) owns backend review (services, concurrency, lifecycle, system APIs); your domain is frontend review (SwiftUI views, accessibility, assets, animations). Frontend and backend review scopes do not overlap.

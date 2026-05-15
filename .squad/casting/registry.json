@@ -83,6 +83,20 @@
       "created_at": "2026-04-26T22:06:00Z",
       "legacy_named": false,
       "status": "active"
+    },
+    "yen": {
+      "persistent_name": "Yen",
+      "universe": "Ocean's Eleven",
+      "created_at": "2026-05-15T07:44:30Z",
+      "legacy_named": false,
+      "status": "active"
+    },
+    "benedict": {
+      "persistent_name": "Benedict",
+      "universe": "Ocean's Eleven",
+      "created_at": "2026-05-15T07:44:30Z",
+      "legacy_named": false,
+      "status": "active"
     }
   }
 }

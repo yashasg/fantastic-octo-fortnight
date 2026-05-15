@@ -114,3 +114,5 @@
 ## 2026-05-15 — #646 fan-out
 
 Three child issues now assigned from Google Swift audit: #647 (import ordering, MEDIUM), #648 (IUO review, MEDIUM), #649 (doc comments on Services public API, HIGH). Also joint owner on #652 (access control with Linus, HIGH). Ready to parallelize remediation work.
+
+- 2026-05-15: Yen and Benedict are your new pair partners for backend testing and code review. Yen owns backend test coverage (services, schedulers, pause detectors, persistence); Benedict owns backend code review (concurrency, actor isolation, system APIs, retain cycles). Coordinate test specifications and review criteria with them.

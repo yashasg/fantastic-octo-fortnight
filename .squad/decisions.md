@@ -24065,3 +24065,26 @@ The key insight: **Categorize by concern, not by location.**
 2. Upon merge of each child issue, corresponding checkbox in #646 is ticked
 3. Close #646 after all child issues merged and CI tooling integrated
 
+
+## 2026-05-15 — Directives: Team Structure & Scoping
+
+### 2026-05-15T07:42:00Z: User directive
+**By:** yashasg (via Copilot)
+
+**What:** CI/CD is classified as DevOps, not Backend. Virgil (CI/CD Dev) belongs under DevOps, not the backend team.
+
+**Why:** User request — captured for team memory
+
+### 2026-05-15T07:43:30Z: User directive
+**By:** yashasg (via Copilot)
+
+**What:** Tester and Reviewer roles are split by layer. Livingston (Tester) and Saul (Code Reviewer) are scoped to the FRONTEND team (UI/views layer). Yen (Backend Tester) and Benedict (Backend Reviewer) are scoped to the BACKEND team (services/data layer). Frontend testers/reviewers do not own backend artifacts and vice versa.
+
+**Why:** User request — captured for team memory
+
+### 2026-05-15T07:44:30Z: User directive
+**By:** yashasg (via Copilot)
+
+**What:** Non-dev members are grouped under the "Product" team. Currently this includes Danny (PM), Turk (Analytics), Frank (Legal), Roman (Market Research), and the designers (Tess, Reuben) by literal application of the rule. Pending correction if designers should sit with Frontend.
+
+**Why:** User request — captured for team memory
