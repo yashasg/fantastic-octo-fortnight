@@ -10,116 +10,132 @@
 // will host the real picker once #201 is resolved.
 //
 // View boundary contract:
-//   - Accepts `SelectedAppsState` as `@ObservedObject` — no @EnvironmentObject.
-//   - Accepts `authorizationStatus` as a plain value — no live FamilyControls import.
-//   - Calls injected action closures — no navigation or UIApplication coupling.
-// This keeps the view testable via body-description inspection without a SwiftUI host.
+//   - Driven by a `StoreOf<AppCategoryPickerFeature>` (TCA Phase 1 reducer).
+//   - `onSelectApps` remains an injected closure: the `FamilyActivityPicker`
+//     invocation is parent-owned and not modeled in the Phase-1 reducer
+//     (extending it is deferred to #678 / Phase 2 of the TCA migration).
+//   - Done dismisses via `@Environment(\.dismiss)` after dispatching
+//     `.doneTapped` to the store, so the parent reducer can clear its
+//     destination once `RootView` takes ownership of presentation
+//     (Phase 7 of #702).
 
+import ComposableArchitecture
 import SwiftUI
 
 // MARK: - AppCategoryPickerView
 
 /// Presents the True Interrupt Mode configuration surface.
 ///
-/// Renders one of four states based on `authorizationStatus`:
+/// Renders one of four states based on `store.authorizationStatus`:
 /// - `.unavailable`   — Entitlement pending; informational banner, CTA disabled.
 /// - `.notDetermined` — Pre-permission copy; "Enable Screen Time Access" CTA.
 /// - `.denied`        — Re-authorize nudge; "Open Settings" CTA.
 /// - `.approved`      — Selection summary; placeholder for FamilyActivityPicker (#201).
 struct AppCategoryPickerView: View {
-    @ObservedObject var appsState: SelectedAppsState
-    let authorizationStatus: ScreenTimeAuthorizationStatus
-    /// Called when the user can still request Screen Time authorization.
-    let onRequestAuthorization: () -> Void
-    /// Called when authorization is denied and iOS Settings is the recovery path.
-    var onOpenSettings: () -> Void = {}
-    /// Called when authorization is approved and the app/category picker is available.
+    @Perception.Bindable var store: StoreOf<AppCategoryPickerFeature>
+    /// Called when authorization is approved and the FamilyActivityPicker can be
+    /// presented. Remains a closure because the picker invocation is parent-owned
+    /// and not modeled in the Phase-1 reducer (#678 will fold it into the store).
     var onSelectApps: () -> Void = {}
-    let onDone: () -> Void
+
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: AppSpacing.lg) {
-                    Spacer(minLength: AppSpacing.xl)
+        WithPerceptionTracking {
+            NavigationStack {
+                ScrollView {
+                    VStack(spacing: AppSpacing.lg) {
+                        Spacer(minLength: AppSpacing.xl)
 
-                    // Hero icon
+                        // Hero icon
                         Image(systemName: AppSymbol.trueInterrupt)
-                        .font(AppFont.trueInterruptIcon)
-                        .symbolRenderingMode(.hierarchical)
-                        .foregroundStyle(AppColor.primaryRest)
-                        .frame(
-                            width: AppLayout.onboardingIllustrationSize,
-                            height: AppLayout.onboardingIllustrationSize
+                            .font(AppFont.trueInterruptIcon)
+                            .symbolRenderingMode(.hierarchical)
+                            .foregroundStyle(AppColor.primaryRest)
+                            .frame(
+                                width: AppLayout.onboardingIllustrationSize,
+                                height: AppLayout.onboardingIllustrationSize
+                            )
+                            .background(Circle().fill(AppColor.surfaceTint))
+                            .accessibilityHidden(true)
+
+                        // Title + context subtitle
+                        VStack(spacing: AppSpacing.sm) {
+                            Text("appCategoryPicker.title", bundle: .module)
+                                .font(AppFont.headline)
+                                .foregroundStyle(AppColor.textPrimary)
+                                .multilineTextAlignment(.center)
+                            Text(subtitleKey, bundle: .module)
+                                .font(AppFont.body)
+                                .foregroundStyle(AppColor.textSecondary)
+                                .multilineTextAlignment(.center)
+                        }
+
+                        // Status-specific information card
+                        statusCard
+                            .padding(.horizontal, AppSpacing.md)
+
+                        Spacer(minLength: AppSpacing.lg)
+
+                        // Primary CTA
+                        Button(action: performPrimaryAction) {
+                            Text(primaryButtonKey, bundle: .module)
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.primary)
+                        .disabled(store.authorizationStatus == .unavailable)
+                        .padding(.horizontal, AppSpacing.xl)
+                        .accessibilityIdentifier("appCategoryPicker.primaryButton")
+                        .accessibilityHint(Text(primaryButtonHintKey, bundle: .module))
+
+                        // Secondary dismiss
+                        Button(action: performDoneAction) {
+                            Text("appCategoryPicker.doneButton", bundle: .module)
+                        }
+                        .buttonStyle(.secondary)
+                        .padding(.horizontal, AppSpacing.xl)
+                        .accessibilityIdentifier("appCategoryPicker.doneButton")
+                        .accessibilityHint(
+                            Text("appCategoryPicker.doneButton.hint", bundle: .module)
                         )
-                        .background(Circle().fill(AppColor.surfaceTint))
-                        .accessibilityHidden(true)
-
-                    // Title + context subtitle
-                    VStack(spacing: AppSpacing.sm) {
-                        Text("appCategoryPicker.title", bundle: .module)
-                            .font(AppFont.headline)
-                            .foregroundStyle(AppColor.textPrimary)
-                            .multilineTextAlignment(.center)
-                        Text(subtitleKey, bundle: .module)
-                            .font(AppFont.body)
-                            .foregroundStyle(AppColor.textSecondary)
-                            .multilineTextAlignment(.center)
                     }
-
-                    // Status-specific information card
-                    statusCard
-                        .padding(.horizontal, AppSpacing.md)
-
-                    Spacer(minLength: AppSpacing.lg)
-
-                    // Primary CTA
-                    Button(action: performPrimaryAction) {
-                        Text(primaryButtonKey, bundle: .module)
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.primary)
-                    .disabled(authorizationStatus == .unavailable)
-                    .padding(.horizontal, AppSpacing.xl)
-                    .accessibilityIdentifier("appCategoryPicker.primaryButton")
-                    .accessibilityHint(Text(primaryButtonHintKey, bundle: .module))
-
-                    // Secondary dismiss
-                    Button(action: onDone) {
-                        Text("appCategoryPicker.doneButton", bundle: .module)
-                    }
-                    .buttonStyle(.secondary)
-                    .padding(.horizontal, AppSpacing.xl)
-                    .accessibilityIdentifier("appCategoryPicker.doneButton")
-                    .accessibilityHint(Text("appCategoryPicker.doneButton.hint", bundle: .module))
+                    .padding(AppSpacing.md)
+                    .frame(maxWidth: AppLayout.onboardingMaxContentWidth)
+                    .frame(maxWidth: .infinity)
                 }
-                .padding(AppSpacing.md)
-                .frame(maxWidth: AppLayout.onboardingMaxContentWidth)
-                .frame(maxWidth: .infinity)
+                .background(AppColor.background.ignoresSafeArea())
+                .navigationTitle(Text("appCategoryPicker.navTitle", bundle: .module))
+                .navigationBarTitleDisplayMode(.inline)
             }
-            .background(AppColor.background.ignoresSafeArea())
-            .navigationTitle(Text("appCategoryPicker.navTitle", bundle: .module))
-            .navigationBarTitleDisplayMode(.inline)
+            .onAppear { store.send(.onAppear) }
         }
     }
 
     func performPrimaryAction() {
-        switch authorizationStatus {
+        switch store.authorizationStatus {
         case .unavailable:
             return
         case .notDetermined:
-            onRequestAuthorization()
+            store.send(.requestAuthorizationTapped)
         case .denied:
-            onOpenSettings()
+            store.send(.openSettingsTapped)
         case .approved:
             onSelectApps()
         }
     }
 
+    /// Dispatches `.doneTapped` for parent-side dismissal logic and dismisses the
+    /// presentation via SwiftUI environment so sheet bindings reset cleanly during
+    /// the transitional period before `RootView` owns the destination scope.
+    func performDoneAction() {
+        store.send(.doneTapped)
+        dismiss()
+    }
+
     // MARK: - Dynamic copy helpers
 
     private var subtitleKey: LocalizedStringKey {
-        switch authorizationStatus {
+        switch store.authorizationStatus {
         case .unavailable:   return "appCategoryPicker.subtitle.unavailable"
         case .notDetermined: return "appCategoryPicker.subtitle.notDetermined"
         case .denied:        return "appCategoryPicker.subtitle.denied"
@@ -128,7 +144,7 @@ struct AppCategoryPickerView: View {
     }
 
     private var primaryButtonKey: LocalizedStringKey {
-        switch authorizationStatus {
+        switch store.authorizationStatus {
         case .unavailable:   return "appCategoryPicker.button.pendingApproval"
         case .notDetermined: return "appCategoryPicker.button.enableAccess"
         case .denied:        return "appCategoryPicker.button.openSettings"
@@ -137,7 +153,7 @@ struct AppCategoryPickerView: View {
     }
 
     private var primaryButtonHintKey: LocalizedStringKey {
-        Self.primaryButtonHintKey(for: authorizationStatus)
+        Self.primaryButtonHintKey(for: store.authorizationStatus)
     }
 
     /// Maps `authorizationStatus` to the localized accessibility hint key for the primary CTA.
@@ -158,7 +174,7 @@ struct AppCategoryPickerView: View {
 
     @ViewBuilder
     private var statusCard: some View {
-        switch authorizationStatus {
+        switch store.authorizationStatus {
         case .unavailable:
             AppCategoryUnavailableBanner()
         case .notDetermined:
@@ -166,7 +182,7 @@ struct AppCategoryPickerView: View {
         case .denied:
             AppCategoryDeniedCard()
         case .approved:
-            AppCategoryApprovedCard(metadata: appsState.selectionMetadata)
+            AppCategoryApprovedCard(metadata: store.selection)
         }
     }
 }
@@ -305,18 +321,16 @@ enum AppCategorySelectionSummary {
 
 #Preview("Unavailable") {
     AppCategoryPickerView(
-        appsState: SelectedAppsState(),
-        authorizationStatus: .unavailable,
-        onRequestAuthorization: {},
-        onDone: {}
+        store: Store(
+            initialState: AppCategoryPickerFeature.State(authorizationStatus: .unavailable)
+        ) { AppCategoryPickerFeature() }
     )
 }
 
 #Preview("Not Determined") {
     AppCategoryPickerView(
-        appsState: SelectedAppsState(),
-        authorizationStatus: .notDetermined,
-        onRequestAuthorization: {},
-        onDone: {}
+        store: Store(
+            initialState: AppCategoryPickerFeature.State(authorizationStatus: .notDetermined)
+        ) { AppCategoryPickerFeature() }
     )
 }

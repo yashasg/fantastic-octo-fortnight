@@ -1,3 +1,5 @@
+import ComposableArchitecture
+import ScreenTimeExtensionShared
 import SwiftUI
 import UIKit
 import XCTest
@@ -15,26 +17,28 @@ final class TrueInterruptViewCoverageTests: XCTestCase {
         XCTAssertNotNil(hostingController.view, file: file, line: line)
     }
 
-    private func makeSelectedAppsState(
-        appCount: Int = 0,
-        categoryCount: Int = 0,
-        file: StaticString = #filePath,
-        line: UInt = #line
-    ) -> SelectedAppsState {
-        let suiteName = "TrueInterruptViewCoverageTests.\(UUID().uuidString)"
-        guard let defaults = UserDefaults(suiteName: suiteName) else {
-            XCTFail("Failed to create isolated defaults", file: file, line: line)
-            return SelectedAppsState()
+    /// Builds a fresh `AppCategoryPickerView` store seeded with the given status and
+    /// optional selection snapshot. Stubs the screen-time client so the view's
+    /// `.onAppear` dispatch (which drains an async authorization probe) doesn't
+    /// race against test teardown or hit the live `FamilyControls` framework.
+    private func makePickerStore(
+        authorizationStatus: ScreenTimeAuthorizationStatus,
+        selection: AppGroupSelectionSnapshot = .empty
+    ) -> StoreOf<AppCategoryPickerFeature> {
+        withDependencies {
+            $0.screenTimeAuthorizationClient = ScreenTimeAuthorizationClient(
+                status: { authorizationStatus },
+                statusChanges: { .finished },
+                requestAuthorization: { authorizationStatus }
+            )
+        } operation: {
+            Store(
+                initialState: AppCategoryPickerFeature.State(
+                    authorizationStatus: authorizationStatus,
+                    selection: selection
+                )
+            ) { AppCategoryPickerFeature() }
         }
-        defaults.removePersistentDomain(forName: suiteName)
-
-        let state = SelectedAppsState(defaults: defaults)
-        state.updateMetadata(SelectedAppsMetadata(
-            categoryCount: categoryCount,
-            appCount: appCount,
-            lastUpdated: Date()
-        ))
-        return state
     }
 
     func test_onboardingInterruptModeView_unavailable_bodyEvaluation() {
@@ -125,149 +129,123 @@ final class TrueInterruptViewCoverageTests: XCTestCase {
     }
 
     func test_appCategoryPickerView_unavailable_bodyEvaluation() {
-        let view = AppCategoryPickerView(
-            appsState: makeSelectedAppsState(),
-            authorizationStatus: .unavailable,
-            onRequestAuthorization: {},
-            onDone: {}
-        )
+        let view = AppCategoryPickerView(store: makePickerStore(authorizationStatus: .unavailable))
         let described = String(describing: view.body)
         XCTAssertFalse(described.isEmpty)
     }
 
     func test_appCategoryPickerView_notDetermined_bodyEvaluation() {
         let view = AppCategoryPickerView(
-            appsState: makeSelectedAppsState(),
-            authorizationStatus: .notDetermined,
-            onRequestAuthorization: {},
-            onDone: {}
+            store: makePickerStore(authorizationStatus: .notDetermined)
         )
         let described = String(describing: view.body)
         XCTAssertFalse(described.isEmpty)
     }
 
     func test_appCategoryPickerView_denied_bodyEvaluation() {
-        let view = AppCategoryPickerView(
-            appsState: makeSelectedAppsState(),
-            authorizationStatus: .denied,
-            onRequestAuthorization: {},
-            onDone: {}
-        )
+        let view = AppCategoryPickerView(store: makePickerStore(authorizationStatus: .denied))
         let described = String(describing: view.body)
         XCTAssertFalse(described.isEmpty)
     }
 
     func test_appCategoryPickerView_approvedEmptySelection_bodyEvaluation() {
-        let view = AppCategoryPickerView(
-            appsState: makeSelectedAppsState(),
-            authorizationStatus: .approved,
-            onRequestAuthorization: {},
-            onDone: {}
-        )
+        let view = AppCategoryPickerView(store: makePickerStore(authorizationStatus: .approved))
         let described = String(describing: view.body)
         XCTAssertFalse(described.isEmpty)
     }
 
     func test_appCategoryPickerView_approvedSelectedApps_bodyEvaluation() {
-        let view = AppCategoryPickerView(
-            appsState: makeSelectedAppsState(appCount: 2, categoryCount: 1),
+        let store = makePickerStore(
             authorizationStatus: .approved,
-            onRequestAuthorization: {},
-            onDone: {}
+            selection: AppGroupSelectionSnapshot(categoryCount: 1, appCount: 2, lastUpdated: Date())
         )
+        let view = AppCategoryPickerView(store: store)
         let described = String(describing: view.body)
         XCTAssertFalse(described.isEmpty)
     }
 
-    func test_appCategoryPickerView_callbacksAreInvocable() {
-        var authorizationRequested = false
-        var doneCalled = false
-        let view = AppCategoryPickerView(
-            appsState: makeSelectedAppsState(),
-            authorizationStatus: .notDetermined,
-            onRequestAuthorization: { authorizationRequested = true },
-            onDone: { doneCalled = true }
-        )
-
-        view.onRequestAuthorization()
-        view.onDone()
-
-        XCTAssertTrue(authorizationRequested)
-        XCTAssertTrue(doneCalled)
-    }
-
-    func test_appCategoryPickerView_deniedPrimaryAction_opensSettingsOnly() {
-        var authorizationRequested = false
-        var settingsOpened = false
-        let view = AppCategoryPickerView(
-            appsState: makeSelectedAppsState(),
-            authorizationStatus: .denied,
-            onRequestAuthorization: { authorizationRequested = true },
-            onOpenSettings: { settingsOpened = true },
-            onDone: {}
-        )
-
-        view.performPrimaryAction()
-
-        XCTAssertFalse(authorizationRequested)
-        XCTAssertTrue(settingsOpened)
-    }
-
-    func test_appCategoryPickerView_notDeterminedPrimaryAction_requestsAuthorizationOnly() {
-        var authorizationRequested = false
-        var settingsOpened = false
-        let view = AppCategoryPickerView(
-            appsState: makeSelectedAppsState(),
-            authorizationStatus: .notDetermined,
-            onRequestAuthorization: { authorizationRequested = true },
-            onOpenSettings: { settingsOpened = true },
-            onDone: {}
-        )
-
-        view.performPrimaryAction()
-
-        XCTAssertTrue(authorizationRequested)
-        XCTAssertFalse(settingsOpened)
-    }
-
-    func test_appCategoryPickerView_approvedPrimaryAction_selectsAppsOnly() {
-        var authorizationRequested = false
-        var settingsOpened = false
+    func test_appCategoryPickerView_onSelectAppsCallback_isInvocable() {
         var selectAppsCalled = false
         let view = AppCategoryPickerView(
-            appsState: makeSelectedAppsState(),
-            authorizationStatus: .approved,
-            onRequestAuthorization: { authorizationRequested = true },
-            onOpenSettings: { settingsOpened = true },
-            onSelectApps: { selectAppsCalled = true },
-            onDone: {}
+            store: makePickerStore(authorizationStatus: .approved),
+            onSelectApps: { selectAppsCalled = true }
         )
 
         view.performPrimaryAction()
 
-        XCTAssertFalse(authorizationRequested)
-        XCTAssertFalse(settingsOpened)
-        XCTAssertTrue(selectAppsCalled)
+        XCTAssertTrue(selectAppsCalled,
+                      "Approved-state primary action must invoke parent-injected onSelectApps")
+    }
+
+    func test_appCategoryPickerView_deniedPrimaryAction_dispatchesOpenSettings() async {
+        let opened = LockIsolated<[URL]>([])
+        let store = withDependencies {
+            $0.screenTimeAuthorizationClient = ScreenTimeAuthorizationClient(
+                status: { .denied },
+                statusChanges: { .finished },
+                requestAuthorization: { .denied }
+            )
+            $0.openURL = OpenURLEffect { url in
+                opened.withValue { $0.append(url) }
+                return true
+            }
+        } operation: {
+            Store(initialState: AppCategoryPickerFeature.State(authorizationStatus: .denied)) {
+                AppCategoryPickerFeature()
+            }
+        }
+        let view = AppCategoryPickerView(store: store)
+
+        view.performPrimaryAction()
+        // Allow the .openSettingsTapped effect to drain.
+        try? await Task.sleep(nanoseconds: 100_000_000)
+
+        opened.withValue { urls in
+            XCTAssertEqual(urls.count, 1,
+                           "Denied-state primary action must route exactly one URL via openURL")
+        }
+    }
+
+    func test_appCategoryPickerView_notDeterminedPrimaryAction_routesAuthorizationRequest() async {
+        let requestCount = LockIsolated(0)
+        let store = withDependencies {
+            $0.screenTimeAuthorizationClient = ScreenTimeAuthorizationClient(
+                status: { .notDetermined },
+                statusChanges: { .finished },
+                requestAuthorization: {
+                    requestCount.withValue { $0 += 1 }
+                    return .approved
+                }
+            )
+        } operation: {
+            Store(
+                initialState: AppCategoryPickerFeature.State(authorizationStatus: .notDetermined)
+            ) { AppCategoryPickerFeature() }
+        }
+        let view = AppCategoryPickerView(store: store)
+
+        view.performPrimaryAction()
+        // Allow the .requestAuthorizationTapped effect to drain.
+        try? await Task.sleep(nanoseconds: 100_000_000)
+
+        XCTAssertEqual(requestCount.value, 1,
+                       "Not-determined primary action must hit the authorization client exactly once")
     }
 
     func test_appCategoryPickerView_unavailablePrimaryAction_isNoOp() {
-        var authorizationRequested = false
-        var settingsOpened = false
         var selectAppsCalled = false
+        let store = makePickerStore(authorizationStatus: .unavailable)
         let view = AppCategoryPickerView(
-            appsState: makeSelectedAppsState(),
-            authorizationStatus: .unavailable,
-            onRequestAuthorization: { authorizationRequested = true },
-            onOpenSettings: { settingsOpened = true },
-            onSelectApps: { selectAppsCalled = true },
-            onDone: {}
+            store: store,
+            onSelectApps: { selectAppsCalled = true }
         )
 
         view.performPrimaryAction()
 
-        XCTAssertFalse(authorizationRequested)
-        XCTAssertFalse(settingsOpened)
-        XCTAssertFalse(selectAppsCalled)
+        XCTAssertFalse(selectAppsCalled,
+                       "Unavailable primary action must not invoke onSelectApps")
+        XCTAssertEqual(store.authorizationStatus, .unavailable,
+                       "Unavailable primary action must not mutate authorization status")
     }
 
     // MARK: - Accessibility Hint Body Tests
@@ -303,12 +281,7 @@ final class TrueInterruptViewCoverageTests: XCTestCase {
     func test_appCategoryPickerView_allStatuses_bodyContainsDoneButtonHint() {
         let expectedDoneHintKey: LocalizedStringKey = "appCategoryPicker.doneButton.hint"
         for status in ScreenTimeAuthorizationStatus.allCases {
-            let view = AppCategoryPickerView(
-                appsState: makeSelectedAppsState(),
-                authorizationStatus: status,
-                onRequestAuthorization: {},
-                onDone: {}
-            )
+            let view = AppCategoryPickerView(store: makePickerStore(authorizationStatus: status))
             let described = String(describing: view.body)
             XCTAssertFalse(
                 described.isEmpty,
@@ -319,12 +292,14 @@ final class TrueInterruptViewCoverageTests: XCTestCase {
 
     func test_appCategoryPickerView_allStatuses_render() {
         for status in ScreenTimeAuthorizationStatus.allCases {
-            render(AppCategoryPickerView(
-                appsState: makeSelectedAppsState(appCount: 1, categoryCount: 1),
+            render(AppCategoryPickerView(store: makePickerStore(
                 authorizationStatus: status,
-                onRequestAuthorization: {},
-                onDone: {}
-            ))
+                selection: AppGroupSelectionSnapshot(
+                    categoryCount: 1,
+                    appCount: 1,
+                    lastUpdated: Date()
+                )
+            )))
         }
     }
 
