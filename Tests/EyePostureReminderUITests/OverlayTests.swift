@@ -94,6 +94,12 @@ final class OverlayPresentationTests: XCTestCase {
     }
 
     override func tearDownWithError() throws {
+        // Force-terminate so the overlay's `UIWindow` (at `.alert + 1`) is
+        // released and SpringBoard can complete its background assertion before
+        // the next test boots a fresh process. Without this the next test in
+        // the shard inherits a zombie process and `waitForOverlayPresented()`
+        // never resolves, cascading into 7 false failures (#714).
+        app?.terminateAndWaitForExit()
         app = nil
     }
 
@@ -209,6 +215,8 @@ final class OverlayPostureTests: XCTestCase {
     }
 
     override func tearDownWithError() throws {
+        // See note in `OverlayPresentationTests.tearDownWithError` (#714).
+        app?.terminateAndWaitForExit()
         app = nil
     }
 
