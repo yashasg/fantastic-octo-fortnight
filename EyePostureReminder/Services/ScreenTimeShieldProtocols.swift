@@ -5,9 +5,10 @@
 /// require the `com.apple.developer.family-controls` entitlement (#201) and
 /// App Extension targets that cannot be expressed in SPM alone.
 ///
-/// These protocols define the integration boundary so `AppCoordinator` can be
-/// wired to the shield provider now, before the Xcode project migration and
-/// entitlement approval unblock the concrete implementation.
+/// These protocols define the integration boundary so the TCA scheduling
+/// surface can be wired to the shield provider now, before the Xcode
+/// project migration and entitlement approval unblock the concrete
+/// implementation.
 
 import Foundation
 
@@ -32,7 +33,7 @@ protocol ScreenTimeShieldProviding: ServiceLifecycle {
     /// Whether Screen Time shielding is authorized and available.
     ///
     /// When `false`, `beginShield(for:)` is a no-op and should not be called.
-    /// `AppCoordinator` checks this before attempting to shield.
+    /// Callers check this before attempting to shield.
     var isAvailable: Bool { get }
 
     /// Begin a shielding session for the given break.

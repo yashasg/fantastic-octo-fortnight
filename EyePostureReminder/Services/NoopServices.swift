@@ -1,4 +1,4 @@
-// Lightweight no-op stubs injected by AppCoordinator in UI test mode.
+// Lightweight no-op stubs swapped in via dependency injection in UI test mode.
 // They satisfy the ScreenTimeTracking / PauseConditionProviding protocols
 // without registering UIKit lifecycle observers or starting repeating timers,
 // which would otherwise fire on the main thread every second and prevent

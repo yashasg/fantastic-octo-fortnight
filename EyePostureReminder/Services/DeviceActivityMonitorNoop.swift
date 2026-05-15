@@ -1,12 +1,13 @@
 /// Compile-safe no-op implementation of `DeviceActivityMonitorProviding`.
 ///
-/// Injected by `AppCoordinator` until:
+/// Used as the default `DeviceActivityMonitorProviding` injection until:
 ///   1. The `com.apple.developer.family-controls` entitlement is provisioned (#201), AND
-///   2. A real `DeviceActivityCenter`-backed scheduler is wired into the coordinator.
+///   2. A real `DeviceActivityCenter`-backed scheduler is wired into the runtime.
 ///
-/// `isAvailable` is always `false`, ensuring `AppCoordinator` never calls
-/// `scheduleBreakMonitoring(for:)` with this stub (callers guard on `isAvailable`).
-/// No `DeviceActivity`, `ManagedSettings`, or `FamilyControls` frameworks are imported.
+/// `isAvailable` is always `false`, so callers never invoke
+/// `scheduleBreakMonitoring(for:)` against this stub (every call site
+/// guards on `isAvailable`). No `DeviceActivity`, `ManagedSettings`, or
+/// `FamilyControls` frameworks are imported.
 
 import Foundation
 

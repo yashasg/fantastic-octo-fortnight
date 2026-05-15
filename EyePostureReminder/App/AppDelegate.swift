@@ -91,12 +91,13 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     private var pendingNotificationRoutes: [NotificationRoute] = []
 
 #if DEBUG
-    /// Pre-seeds UI-test UserDefaults keys in `init()` — before `@StateObject
-    /// AppCoordinator()` in `EyePostureReminderApp` can read them. Without this
-    /// guard, `AppCoordinator.init()` races with `didFinishLaunchingWithOptions`
-    /// and falls back to `ScreenTimeAuthorizationNoop(.unavailable)`, which
-    /// prevents `TrueInterruptSkippedBanner` from ever rendering on the first
-    /// cold launch (#457).
+    /// Pre-seeds UI-test UserDefaults keys before the SwiftUI store seed
+    /// in `EyePostureReminderApp.init()` reads them. Without this guard,
+    /// the seed (which historically lived on `@StateObject AppCoordinator`,
+    /// deleted in `#755` Phase E) raced with `didFinishLaunchingWithOptions`
+    /// and fell back to `ScreenTimeAuthorizationNoop(.unavailable)`, which
+    /// prevented `TrueInterruptSkippedBanner` from ever rendering on the
+    /// first cold launch (#457).
     ///
     /// `hasSeenOnboarding` is pre-seeded earlier — directly in
     /// `EyePostureReminderApp.init()` — because `@UIApplicationDelegateAdaptor`
@@ -105,13 +106,13 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     ///
     /// Overlay launch arguments (`--show-overlay-eyes` / `--show-overlay-posture`)
     /// are also seeded here so the `uiTestOverlayType` key and inflated break
-    /// durations land before `@StateObject AppCoordinator()` constructs its
-    /// `SettingsStore` (which reads `eyes.breakDuration`/`posture.breakDuration`
-    /// from `UserDefaults` at init). Without this, `applyUITestLaunchArguments()`
-    /// — which runs from `didFinishLaunchingWithOptions`, after the SwiftUI
-    /// state-object instantiation in some launch orderings — wrote inflated
-    /// values into a settings store the active overlay was no longer using,
-    /// causing the overlay to auto-dismiss before tests asserted on it (#711).
+    /// durations land before the TCA root state's initial seed reads
+    /// `eyes.breakDuration` / `posture.breakDuration` from `UserDefaults`.
+    /// Without this, `applyUITestLaunchArguments()` — which runs from
+    /// `didFinishLaunchingWithOptions`, after the SwiftUI state seed in
+    /// some launch orderings — wrote inflated values into a settings store
+    /// the active overlay was no longer using, causing the overlay to
+    /// auto-dismiss before tests asserted on it (#711).
     private func preSeedUITestDefaults() {
         if launchArguments.contains("--simulate-screen-time-not-determined") {
             uiTestDefaults.set(

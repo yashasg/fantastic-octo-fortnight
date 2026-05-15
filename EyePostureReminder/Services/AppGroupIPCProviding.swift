@@ -3,7 +3,8 @@ import ScreenTimeExtensionShared
 
 // MARK: - AppGroupIPCProviding
 
-/// Abstraction over `AppGroupIPCStore` used by `AppCoordinator` for dependency injection.
+/// Abstraction over `AppGroupIPCStore` used by the TCA dependency
+/// clients (`IPCClient`, `SchedulingFeature`) for substitution in tests.
 protocol AppGroupIPCProviding: AppGroupIPCEventRecording {
     func isTrueInterruptEnabled() -> Bool
     func readSelection() throws -> AppGroupSelectionSnapshot

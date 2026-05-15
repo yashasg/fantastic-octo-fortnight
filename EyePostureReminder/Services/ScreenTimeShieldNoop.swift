@@ -1,12 +1,12 @@
 /// Compile-safe no-op implementation of `ScreenTimeShieldProviding`.
 ///
-/// Injected by `AppCoordinator` until:
+/// Used as the default `ScreenTimeShieldProviding` injection until:
 /// 1. The FamilyControls entitlement is provisioned (#201), AND
 /// 2. The project is migrated to an Xcode project with the required extension
 ///    targets (`ShieldConfigurationExtension`, `DeviceActivityMonitorExtension`).
 ///
-/// The no-op ensures the `AppCoordinator` shield wiring point compiles and
-/// tests pass unconditionally, with `isAvailable = false` accurately reflecting
+/// The no-op ensures the shield wiring point compiles and tests pass
+/// unconditionally, with `isAvailable = false` accurately reflecting
 /// the pre-entitlement state.
 
 import Foundation

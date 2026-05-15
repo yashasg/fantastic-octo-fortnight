@@ -24,7 +24,7 @@ enum AppStorageKey {
     static let trueInterruptSkippedBannerDismissed = "kshana.trueInterruptSkippedBannerDismissed"
 
     /// Set by XCUITest launch argument `--simulate-screen-time-not-determined` to override
-    /// the `ScreenTimeAuthorizationProviding` injected into `AppCoordinator` with a stub
+    /// the `ScreenTimeAuthorizationProviding` injected into the live runtime with a stub
     /// that returns the stored `ScreenTimeAuthorizationStatus.rawValue`. Cleared after use.
     static let uiTestScreenTimeStatus = "kshana.ui-test.screenTimeStatus"
 }

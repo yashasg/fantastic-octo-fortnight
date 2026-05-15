@@ -35,7 +35,7 @@ extension UIApplication: AppStateProviding {}
 /// the foreground (e.g., on `scheduleReminders()` with the app open) so the
 /// tracker begins counting without waiting for the next lifecycle event.
 ///
-/// All methods must be called on the main thread (owned by `@MainActor AppCoordinator`).
+/// All methods must be called on the main thread.
 @MainActor
 protocol ScreenTimeTracking: ServiceLifecycle {
     var onThresholdReached: (@MainActor (ReminderType) -> Void)? { get set }

@@ -3,10 +3,10 @@ import Foundation
 @testable import EyePostureReminder
 
 /// Mock implementation of `ScreenTimeShieldProviding` for use in
-/// `AppCoordinator` integration tests (M3.3+).
+/// scheduling / shield integration tests (M3.3+).
 ///
 /// Records calls to `beginShield` and `endShield` so tests can assert
-/// the coordinator calls the shield provider at the correct times.
+/// the scheduling surface calls the shield provider at the correct times.
 @MainActor
 final class MockScreenTimeShieldProviding: ScreenTimeShieldProviding {
 

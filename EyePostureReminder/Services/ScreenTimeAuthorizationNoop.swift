@@ -1,11 +1,11 @@
 /// Compile-safe no-op implementation of `ScreenTimeAuthorizationProviding`.
 ///
-/// Injected by `AppCoordinator` until:
+/// Used as the default `ScreenTimeAuthorizationProviding` injection until:
 /// 1. The `com.apple.developer.family-controls` entitlement is provisioned (#201), AND
 /// 2. A real FamilyControls-backed authorization manager is wired in.
 ///
 /// Returns `.unavailable` for all state queries, accurately reflecting the
-/// pre-entitlement condition. `AppCoordinator` and the onboarding / settings UI
+/// pre-entitlement condition. The TCA onboarding / settings reducers
 /// check `authorizationStatus == .unavailable` to show appropriate copy.
 
 import Foundation
