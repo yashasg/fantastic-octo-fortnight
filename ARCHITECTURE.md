@@ -259,7 +259,7 @@ EyePostureReminder/                  (SPM executable target)
 │   ├── AppConfig.swift               Codable struct; loads defaults.json; .fallback hardcoded
 │   ├── ReminderType.swift            enum: .eyes / .posture; display + notification identity
 │   ├── ReminderSettings.swift        struct: interval + breakDuration (seconds)
-│   └── SettingsStore.swift           @ObservableObject; UserDefaults wrapper; SettingsPersisting protocol
+│   └── SettingsStore.swift           @MainActor + ObservableObject; UserDefaults wrapper; SettingsPersisting protocol; UUID-keyed observer surface (Combine `@Published` removed; `objectWillChange.send()` driven from `broadcastChange()`)
 │
 ├── Services/
 │   ├── AppCoordinator.swift          @MainActor; owns all services; ReminderScheduling conformance

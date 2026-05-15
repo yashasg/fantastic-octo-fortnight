@@ -129,7 +129,6 @@ final class SettingsViewModel: ObservableObject {
     private let scheduler: ReminderScheduling
     private let dateProvider: DateProviding
     private let calendar: Calendar
-    private var cancellables: Set<AnyCancellable> = []
 
     // MARK: - Computed State (M2.3)
 
@@ -324,9 +323,12 @@ final class SettingsViewModel: ObservableObject {
         self.maxConsecutiveSnoozes = resolvedMaxSnoozeCount
         self.dateProvider = resolvedDateProvider
         self.calendar = resolvedCalendar
-        settings.objectWillChange
-            .sink { [weak self] in self?.objectWillChange.send() }
-            .store(in: &cancellables)
+        // The observer is held by `settings`; `[weak self]` makes the
+        // callback a no-op once the VM is deallocated, so no explicit
+        // teardown is required.
+        settings.addObserver { [weak self] _ in
+            self?.objectWillChange.send()
+        }
         Logger.settings.debug("SettingsViewModel initialised")
     }
 

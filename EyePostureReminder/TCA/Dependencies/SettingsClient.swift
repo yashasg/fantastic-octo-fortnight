@@ -1,4 +1,3 @@
-import Combine
 import ComposableArchitecture
 import Foundation
 
@@ -136,21 +135,20 @@ extension DependencyValues {
     }
 }
 
-/// Main-actor-isolated owner of the live `SettingsStore` plus the Combine
-/// subscription that mirrors `objectWillChange` updates into the file-scope
-/// snapshot cache and continuation registry.
+/// Main-actor-isolated owner of the live `SettingsStore` plus the observer
+/// subscription that mirrors mutations into the file-scope snapshot cache and
+/// continuation registry.
 @MainActor
 private final class LiveSettingsBridge {
     nonisolated static let shared = LiveSettingsBridge()
 
     let store = SettingsStore()
-    private var cancellables: Set<AnyCancellable> = []
     private var hasBootstrapped = false
 
     private nonisolated init() {}
 
     /// Idempotent bootstrap. Called from `liveValue` via a `@MainActor` task
-    /// so the Combine subscription is wired exactly once on the main actor.
+    /// so the observer subscription is wired exactly once on the main actor.
     func bootstrap() {
         guard !hasBootstrapped else { return }
         hasBootstrapped = true
@@ -159,15 +157,10 @@ private final class LiveSettingsBridge {
         settingsSnapshotCache.setValue(initial)
         broadcastSettings(initial)
 
-        store.objectWillChange
-            .receive(on: RunLoop.main)
-            .sink { [weak store] _ in
-                guard let store else { return }
-                let updated = store.settings(for: .eyes)
-                settingsSnapshotCache.setValue(updated)
-                broadcastSettings(updated)
-            }
-            .store(in: &cancellables)
+        store.addObserver { snapshot in
+            settingsSnapshotCache.setValue(snapshot)
+            broadcastSettings(snapshot)
+        }
     }
 }
 
@@ -184,7 +177,7 @@ private let settingsContinuations =
 
 /// File-scoped factory used by the live `stream` closure to register a new
 /// multicast subscriber. Yields the current snapshot synchronously so first
-/// reads never block on a `objectWillChange` tick.
+/// reads never block on a settings mutation.
 private func makeSettingsStream() -> AsyncStream<ReminderSettings> {
     let (stream, continuation) = AsyncStream<ReminderSettings>.makeStream()
     let id = UUID()

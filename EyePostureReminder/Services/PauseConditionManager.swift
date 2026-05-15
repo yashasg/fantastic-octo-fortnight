@@ -1,5 +1,4 @@
 import AVFoundation
-import Combine
 import CoreMotion
 import Foundation
 import Intents
@@ -303,7 +302,7 @@ final class PauseConditionManager: PauseConditionProviding {
 
     private var activeConditions: Set<PauseConditionSource> = []
 
-    private var cancellables: Set<AnyCancellable> = []
+    private var settingsObserverToken: SettingsStore.ObserverID?
 
     init(
         settings: SettingsStore,
@@ -320,7 +319,7 @@ final class PauseConditionManager: PauseConditionProviding {
     func startMonitoring() {
         // Guard against duplicate subscriptions — tear down any existing
         // monitoring before re-subscribing to avoid double-firing callbacks.
-        if !cancellables.isEmpty {
+        if settingsObserverToken != nil {
             stopMonitoring()
         }
 
@@ -337,29 +336,18 @@ final class PauseConditionManager: PauseConditionProviding {
             self.update(.driving, isActive: driving && self.settings.pauseWhileDriving)
         }
 
-        // Re-evaluate all conditions whenever a pause setting is toggled.
-        // Note: @Published fires in willSet, so we use the value passed by the publisher
-        // rather than re-reading from settings (which still holds the old value at that point).
-        settings.$pauseDuringFocus
-            .dropFirst()
-            .sink { [weak self] newValue in
-                MainActor.assumeIsolated {
-                    guard let self else { return }
-                    self.update(.focusMode, isActive: self.focusDetector.isFocused && newValue)
-                }
-            }
-            .store(in: &cancellables)
-
-        settings.$pauseWhileDriving
-            .dropFirst()
-            .sink { [weak self] newValue in
-                MainActor.assumeIsolated {
-                    guard let self else { return }
-                    self.update(.carPlay, isActive: self.carPlayDetector.isCarPlayActive && newValue)
-                    self.update(.driving, isActive: self.drivingDetector.isDriving && newValue)
-                }
-            }
-            .store(in: &cancellables)
+        // Re-evaluate all conditions whenever any settings property changes.
+        // The observer surface fires after the property has been set, so we
+        // re-read the current pause flags rather than depending on the
+        // willSet semantics the legacy `@Published` publishers used.
+        settingsObserverToken = settings.addObserver { [weak self] _ in
+            guard let self else { return }
+            let pauseFocus = self.settings.pauseDuringFocus
+            let pauseDriving = self.settings.pauseWhileDriving
+            self.update(.focusMode, isActive: self.focusDetector.isFocused && pauseFocus)
+            self.update(.carPlay, isActive: self.carPlayDetector.isCarPlayActive && pauseDriving)
+            self.update(.driving, isActive: self.drivingDetector.isDriving && pauseDriving)
+        }
 
         focusDetector.startMonitoring()
         carPlayDetector.startMonitoring()
@@ -376,7 +364,10 @@ final class PauseConditionManager: PauseConditionProviding {
     }
 
     func stopMonitoring() {
-        cancellables.removeAll()
+        if let token = settingsObserverToken {
+            settings.removeObserver(token)
+            settingsObserverToken = nil
+        }
         focusDetector.stopMonitoring()
         carPlayDetector.stopMonitoring()
         drivingDetector.stopMonitoring()
