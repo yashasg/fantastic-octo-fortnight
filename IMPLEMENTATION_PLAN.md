@@ -1,7 +1,8 @@
 # kshana — iOS App Implementation Plan
 
-> **Scope:** Implementation plan covering Phase 1–2 (delivered) and Phase 3 (Screen Time APIs pivot).
+> **Scope:** Implementation plan covering Phase 1–2 (delivered, TCA migration complete) and Phase 3 (Screen Time APIs pivot, in progress).
 > **Important:** Phase 3 pivots core product from local notification reminders to **True Interrupt Mode via Apple Screen Time APIs** (FamilyControls + DeviceActivity + ManagedSettings). Local notifications become fallback only, not the primary product promise.
+> **Last Updated:** 2026-05-15 — refreshed for the post-TCA-migration architecture (#677 / #701 / #755).
 
 ---
 
@@ -50,27 +51,61 @@ No third-party dependencies are required.
 
 ## 3. Architecture (Phase 1–2)
 
-The app follows a simple **MVVM** structure with a single shared service layer.
+The app is driven by a single root `StoreOf<AppFeature>` composed from per-feature reducers via [pointfreeco/swift-composable-architecture][tca]. The Phase-2 TCA migration (PRs #688 / #690–#695 / #696 / #699 / #700 / #701 / #755 Phases A–E #756–#760) replaced the Phase-0 coordinator + SwiftUI observable-object scaffolding with reducers and dependency clients — see `ARCHITECTURE.md` §4.1 for the full migration receipts.
+
+[tca]: https://github.com/pointfreeco/swift-composable-architecture
 
 ```
-EyePostureApp
+EyePostureReminder
 ├── App
-│   ├── EyePostureApp.swift        – @main entry, scene setup
-│   └── AppDelegate.swift          – notification delegate, background tasks
+│   ├── EyePostureReminderApp.swift   – @main; owns the single `StoreOf<AppFeature>`
+│   └── AppDelegate.swift             – UNUserNotificationCenterDelegate; routes deliveries
+│                                       via `store.send(.notificationRouted(...))`
+├── TCA
+│   ├── AppFeature.swift              – Root reducer; composes feature reducers via `Scope`
+│   ├── RootView.swift                – Canonical TCA root surface (onboarding gate + sheets)
+│   ├── Features/
+│   │   ├── HomeFeature.swift              – Home screen reducer
+│   │   ├── SettingsFeature.swift          – Settings screen reducer
+│   │   ├── OnboardingFeature.swift        – Onboarding state machine
+│   │   ├── OverlayFeature.swift           – Overlay presentation + countdown
+│   │   ├── SchedulingFeature.swift        – Scheduling pipeline (tick, snooze, watchdog)
+│   │   └── AppCategoryPickerFeature.swift – FamilyControls category picker
+│   └── Dependencies/                 – `@DependencyClient` wrappers around live services
+│                                       (SettingsClient, ReminderSchedulerClient,
+│                                       ScreenTimeTrackerClient, OverlayClient,
+│                                       NotificationClient, PauseConditionClient,
+│                                       ScreenTimeAuthorizationClient,
+│                                       DeviceActivityMonitorClient, IPCClient,
+│                                       AnalyticsClient)
 ├── Models
-│   ├── ReminderType.swift         – enum: .eyes / .posture
-│   ├── ReminderSettings.swift     – struct: interval + breakDuration per type
-│   └── SettingsStore.swift        – UserDefaults persistence
-├── Services
-│   ├── ReminderScheduler.swift    – schedules / cancels UNUserNotificationCenter requests
-│   └── OverlayManager.swift       – creates / tears down the UIWindow overlay
-├── ViewModels
-│   └── SettingsViewModel.swift    – @ObservableObject bridging store ↔ UI
+│   ├── ReminderType.swift            – enum: .eyes / .posture
+│   ├── ReminderSettings.swift        – struct: interval + breakDuration per type
+│   ├── SettingsPickerOptions.swift   – Picker presets shared across feature reducers
+│   └── SettingsStore.swift           – UserDefaults wrapper + observer surface
+│                                       (consumed by `SettingsClient.liveValue`)
+├── Services                           – Live implementations of the capabilities the
+│   ├── ReminderScheduler.swift            TCA dependency clients wrap.
+│   ├── ScreenTimeTracker.swift
+│   ├── OverlayManager.swift
+│   ├── PauseConditionManager.swift
+│   ├── AudioInterruptionManager.swift
+│   ├── AnalyticsLogger.swift
+│   ├── MetricKitSubscriber.swift
+│   ├── AppGroupIPCProviding.swift
+│   ├── ServiceLifecycle.swift
+│   └── (FamilyControls + DeviceActivity + Shield wrappers — see ARCHITECTURE.md §3)
 └── Views
-    ├── SettingsView.swift          – main settings screen
-    ├── ReminderRowView.swift       – per-reminder interval/duration pickers
-    └── OverlayView.swift           – full-screen dismissible break screen
+    ├── RootView is the canonical entry; ContentView is a thin compatibility wrapper.
+    ├── HomeView.swift                 – consumes `StoreOf<HomeFeature>`
+    ├── SettingsView.swift             – consumes `StoreOf<SettingsFeature>`
+    ├── ReminderRowView.swift          – per-type interval/duration row
+    ├── OverlayView.swift              – full-screen dismissible break screen
+    ├── AppCategoryPickerView.swift    – FamilyControls picker (Phase 3)
+    └── Onboarding/                    – 4-screen onboarding driven by `OnboardingFeature`
 ```
+
+See `ARCHITECTURE.md` §1 (module dependency graph) and §3 (project structure) for the canonical detailed tree.
 
 ### Phase 3 (New – Architecture Evolution)
 
@@ -123,7 +158,7 @@ Shared App Group (group.com.kshana.screentime)
 |---|---|
 | `ScreenTimeTracker` | Accumulates continuous screen-on time; replaces wall-clock intervals as the reminder trigger condition (M2.7) |
 | `PauseConditionManager` | Aggregates Smart Pause conditions (Focus Mode, CarPlay, `CMMotionActivityManager` driving detection); automatically suspends scheduling while any condition is active |
-| `ServiceLifecycle` | Uniform `start()` / `stop()` protocol implemented by all services; `AppCoordinator` drives the lifecycle |
+| `ServiceLifecycle` | Uniform `start()` / `stop()` protocol implemented by every live service; `SchedulingFeature` drives the lifecycle through its dependency clients |
 | `AudioInterruptionManager` | Pauses media playback during break overlays when the user has opted in |
 
 **Flow (current):**
@@ -177,7 +212,7 @@ ReminderScheduler.scheduleNext()
   (notification queued as fallback)
         │
         ▼
-AppCoordinator.handleBreakNeeded()
+SchedulingFeature `.thresholdReached(type)` reducer effect
         │
         ▼
 ManagedSettingsCoordinator.shieldAppsForBreak()
@@ -329,13 +364,13 @@ Notification actions (optional v2 feature): **"Done"** (dismiss) and **"Snooze 5
 User changes interval picker
         │
         ▼
-SettingsViewModel.update(type:interval:)
+SettingsFeature .intervalChanged(type:interval:)
         │
         ▼
 SettingsStore.save()  →  UserDefaults
         │
         ▼
-AppCoordinator notifies ScreenTimeTracker of new threshold
+SchedulingFeature observes via SettingsClient.stream and updates ScreenTimeTracker threshold
         │
         ▼
 ScreenTimeTracker accumulates screen-on seconds
@@ -343,10 +378,10 @@ ScreenTimeTracker accumulates screen-on seconds
    if Focus / CarPlay / Driving detected)
         │
         ▼
-Threshold reached → AppCoordinator.handleNotification(for:)
+Threshold reached → SchedulingFeature .thresholdReached(type) → OverlayClient.show / NotificationClient.deliver
         │
         ▼
-OverlayManager.showOverlay(...)
+OverlayManager.showOverlay(...)   (live service behind OverlayClient)
         │
         ▼
 OverlayView shown with countdown
@@ -354,9 +389,9 @@ OverlayView shown with countdown
   ┌─────┴──────────┐
   │ User taps ×    │ Timer elapses
   ▼                ▼
-OverlayManager.dismiss()
+OverlayClient.dismiss → OverlayManager.dismiss()
   UIWindow removed from hierarchy
-  ScreenTimeTracker.reset(for: type) — re-arms for next cycle
+  SchedulingFeature emits screenTimeTrackerClient.reset(for: type) — re-arms for next cycle
 ```
 
 ---
@@ -382,9 +417,12 @@ OverlayManager.dismiss()
 |---|---|
 | `SettingsStore` | Unit tests with an in-memory `UserDefaults` suite |
 | `ReminderScheduler` | Unit tests mocking `UNUserNotificationCenter` via a protocol |
-| `OverlayManager` | UI tests asserting window level and dismiss behaviour |
-| `SettingsViewModel` | Unit tests verifying picker bindings trigger reschedule |
-| End-to-end | Manual testing on simulator with shortened intervals (10 s) |
+| `OverlayManager` | Unit + integration tests asserting window level and dismiss behaviour |
+| Feature reducers (`SchedulingFeature`, `SettingsFeature`, `OnboardingFeature`, `OverlayFeature`, `HomeFeature`, `AppCategoryPickerFeature`) | `TestStore` coverage under `Tests/EyePostureReminderTests/TCA/`; fakes injected via `withDependencies` overrides on the matching dependency clients |
+| Integration (`Tests/EyePostureReminderTests/Integration/`) | Real `SettingsStore` + live services wired through TCA clients; mocked UIKit + UNUserNotificationCenter boundaries |
+| End-to-end | Manual testing on simulator with shortened intervals (10 s); XCUITest suite currently gated behind #736 pending TCA rewrite |
+
+See `ARCHITECTURE.md` §10 for the full testing architecture (pyramid, mock patterns, coverage targets).
 
 ---
 
@@ -392,7 +430,7 @@ OverlayManager.dismiss()
 
 | Phase | Scope |
 |---|---|
-| **Phase 0 – Foundation** ✅ | Project scaffolding (SPM, Xcode), CI/CD pipeline (GitHub Actions), MVVM architecture scaffolding, design system (Asset Catalog, String Catalog, design tokens) |
-| **Phase 1 – MVP** ✅ | Settings screen (interval + duration pickers), local notification scheduling, foreground overlay with countdown and dismiss, haptics, accessibility, ~65 unit tests |
-| **Phase 2 – Polish** 🔄 | Onboarding flow, snooze action, smart pause (Focus Mode / CarPlay / driving detection), ScreenTimeTracker replacing wall-clock intervals, data-driven config (Asset Catalog + String Catalog + defaults.json), App Store listing & preparation |
-| **Phase 3 – Advanced** 🔄 | Dependency injection refactoring, iCloud sync via `NSUbiquitousKeyValueStore`, Home Screen widget (WidgetKit), watchOS companion app |
+| **Phase 0 – Foundation** ✅ | Project scaffolding (SPM, Xcode), CI/CD pipeline (GitHub Actions), MVVM architecture scaffolding (later replaced by the TCA migration in Phase 2), design system (Asset Catalog, String Catalog, design tokens) |
+| **Phase 1 – MVP** ✅ | Settings screen (interval + duration pickers), local notification scheduling, foreground overlay with countdown and dismiss, haptics, accessibility, baseline unit tests |
+| **Phase 2 – Polish + TCA migration** ✅ | Onboarding flow, snooze action, smart pause (Focus Mode / CarPlay / driving detection), `ScreenTimeTracker` replacing wall-clock intervals, data-driven config (Asset Catalog + String Catalog + defaults.json), TCA reducer migration (#688 / #690–#695 / #696 / #699 / #700 / #701 / #755 Phases A–E #756–#760), App Store listing & preparation |
+| **Phase 3 – True Interrupt Mode** 🔄 | FamilyControls authorization (#201 pending Apple approval), DeviceActivity + ManagedSettings shield pipeline, shield-action extensions, ShieldConfiguration UI, iCloud sync (`NSUbiquitousKeyValueStore`), Home Screen widget (WidgetKit), watchOS companion app |

@@ -40,6 +40,9 @@ existing `@StateObject AppCoordinator`, so behaviour is byte-equivalent.
 - **#700 — Wire `ScenePhase` observation as a TCA effect.**
 - **#701 — Strip `: ObservableObject` (and the manual `objectWillChange.send()` broadcast) from `SettingsStore`.** Closes the final piece of the MVVM decommission: all SwiftUI surfaces now read settings through their feature stores, non-SwiftUI consumers use the existing `addObserver` / `removeObserver` surface, and `import Combine` is gone from the file.
 
+#### Engineering docs — TCA refresh
+- **#725 — Rewrite `ARCHITECTURE.md` + `IMPLEMENTATION_PLAN.md` around the post-migration TCA layout.** §1 module-dependency graph redrawn around `AppFeature` / per-feature reducers / dependency clients; §3 project structure now lists `EyePostureReminder/TCA/` and the live-service-only `Services/` block; new §2.8 documents the dependency-client layer; §4.1 replaced ("Why TCA"); §10 testing architecture rewritten around `TestStore` + `withDependencies` overrides; `IMPLEMENTATION_PLAN.md` §3 / §9 / §11 / §12 re-anchored to reducers and dependency clients.
+
 #### #462 Phase A — Dependency-injection seams across services
 A long mechanical pass replacing every implicit global / singleton lookup in
 `AppCoordinator`, `AppDelegate`, `ReminderScheduler`, `OverlayManager`,
