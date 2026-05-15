@@ -116,7 +116,14 @@ struct EyePostureReminderApp: App {
         WindowGroup {
             RootView(store: store)
                 .task {
-                    await store.send(.scheduling(.start)).finish()
+                    // `.onAppear` is the AppFeature entry-point action.
+                    // It triggers `.scheduling(.start)` *and* subscribes to
+                    // `overlayClient.lifecycleEvents()` so the overlay →
+                    // Settings handoff (#786) is wired before the user can
+                    // tap anything. Pre-#786 this call went straight to
+                    // `.scheduling(.start)`, which left the lifecycle
+                    // subscription dead.
+                    await store.send(.onAppear).finish()
                 }
                 .onChangeCompat(of: scenePhase) { phase in
                     if phase == .active {
