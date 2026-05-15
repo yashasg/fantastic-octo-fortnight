@@ -13,19 +13,6 @@ final class PreviewTests: XCTestCase {
 
     // MARK: - Helpers
 
-    /// Creates an `AppCoordinator` safe for the unit-test runner (no real
-    /// `UNUserNotificationCenter`, which crashes outside a hosted app).
-    private func makeTestCoordinator() -> AppCoordinator {
-        AppCoordinator(
-            scheduler: MockReminderScheduler(),
-            notificationCenter: MockNotificationCenter(),
-            overlayManager: MockOverlayPresenting(),
-            screenTimeTracker: MockScreenTimeTracker(),
-            pauseConditionProvider: MockPauseConditionProvider(),
-            ipcStore: MockAppGroupIPCRecorder()
-        )
-    }
-
     /// Wraps a SwiftUI view in a UIHostingController, forces layout, and asserts
     /// the resulting UIView is non-nil.
     private func assertPreviewRenders<V: View>(

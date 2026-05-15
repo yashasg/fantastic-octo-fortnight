@@ -1,26 +1,28 @@
-/// UI Test Mode detection for `AppCoordinator`.
-///
-/// Isolated to its own file so that (a) `AppCoordinator.swift` stays within the
-/// file-length SwiftLint budget and (b) the `#if DEBUG` guard is clearly visible.
-
 import Foundation
 
-extension AppCoordinator {
+/// Process-level UI test mode detection.
+///
+/// Lifted from `AppCoordinator.isUITestMode` during `#755` Phase E, when the
+/// `AppCoordinator` stack was deleted. Surviving consumers (currently
+/// `AccessibleToggle`) only need the launch-argument check; they never
+/// touched any other `AppCoordinator` state, so a free-standing helper is
+/// sufficient.
+///
+/// `#if DEBUG` ensures the `CommandLine` inspection is compiled out of
+/// Release/TestFlight builds, preventing accidental onboarding-state resets
+/// in production (re: #350, #405).
+enum UITestMode {
 
-    // MARK: - UI Test Mode
-
-    /// `true` when the app is launched by XCUITest with onboarding-control arguments.
-    /// Used to suppress background services (timers, permission requests) that prevent
-    /// the accessibility tree from settling between test interactions.
-    ///
-    /// `#if DEBUG` ensures this `CommandLine` inspection is compiled out of Release/TestFlight
-    /// builds, preventing accidental onboarding state resets in production (re: #350/#405).
+    /// `true` when the app was launched by XCUITest with one of the
+    /// onboarding-control launch arguments. Used to suppress background
+    /// services and to swap SwiftUI controls for UIKit-backed equivalents
+    /// that XCUITest can reliably tap.
 #if DEBUG
-    static var isUITestMode: Bool {
-        resolveIsUITestMode()
+    static var isEnabled: Bool {
+        resolve()
     }
 
-    static func resolveIsUITestMode(
+    static func resolve(
         launchArguments: [String]? = nil,
         launchArgumentsProvider: () -> [String] = { CommandLine.arguments }
     ) -> Bool {
@@ -38,9 +40,9 @@ extension AppCoordinator {
             launchArguments.contains("--show-true-interrupt-banner")
     }
 #else
-    static var isUITestMode: Bool { false }
+    static var isEnabled: Bool { false }
 
-    static func resolveIsUITestMode(
+    static func resolve(
         launchArguments: [String]? = nil,
         launchArgumentsProvider: () -> [String] = { CommandLine.arguments }
     ) -> Bool {

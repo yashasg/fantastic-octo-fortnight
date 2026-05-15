@@ -272,136 +272,17 @@ final class ServiceCoverageBoostTests: XCTestCase {
 final class ServiceCoverageBoostTests2: XCTestCase {
 
     // MARK: - AppCoordinator — Coverage Gaps
-
-    func test_appCoordinator_isUITestMode_isBool() {
-        // isUITestMode is a static let — just verify it's accessible
-        let mode = AppCoordinator.isUITestMode
-        XCTAssertNotNil(mode as Any)
-    }
-
-    func test_appCoordinator_presentPendingOverlayIfNeeded_doesNotCrash() {
-        let coordinator = AppCoordinator(
-            scheduler: MockReminderScheduler(),
-            notificationCenter: MockNotificationCenter(),
-            overlayManager: MockOverlayPresenting(),
-            screenTimeTracker: MockScreenTimeTracker(),
-            pauseConditionProvider: MockPauseConditionProvider(),
-            ipcStore: MockAppGroupIPCRecorder())
-        coordinator.presentPendingOverlayIfNeeded()
-    }
-
-    func test_appCoordinator_appWillResignActive_doesNotCrash() {
-        let coordinator = AppCoordinator(
-            scheduler: MockReminderScheduler(),
-            notificationCenter: MockNotificationCenter(),
-            overlayManager: MockOverlayPresenting(),
-            screenTimeTracker: MockScreenTimeTracker(),
-            pauseConditionProvider: MockPauseConditionProvider(),
-            ipcStore: MockAppGroupIPCRecorder())
-        coordinator.appWillResignActive()
-    }
-
-    func test_appCoordinator_cancelSnoozeWakeTaskIfNeeded() {
-        let coordinator = AppCoordinator(
-            scheduler: MockReminderScheduler(),
-            notificationCenter: MockNotificationCenter(),
-            overlayManager: MockOverlayPresenting(),
-            screenTimeTracker: MockScreenTimeTracker(),
-            pauseConditionProvider: MockPauseConditionProvider(),
-            ipcStore: MockAppGroupIPCRecorder())
-        coordinator.cancelSnoozeWakeTaskIfNeeded()
-    }
-
-    func test_appCoordinator_handleNotification_eyes() {
-        let overlay = MockOverlayPresenting()
-        let coordinator = AppCoordinator(
-            scheduler: MockReminderScheduler(),
-            notificationCenter: MockNotificationCenter(),
-            overlayManager: overlay,
-            screenTimeTracker: MockScreenTimeTracker(),
-            pauseConditionProvider: MockPauseConditionProvider(),
-            ipcStore: MockAppGroupIPCRecorder())
-        // Exercises the full handleNotification code path.
-        // In CI (no foreground scene) the overlay is queued as pending;
-        // with an active scene it calls showOverlay. Both paths are valid.
-        coordinator.handleNotification(for: .eyes)
-    }
-
-    func test_appCoordinator_handleNotification_posture() {
-        let overlay = MockOverlayPresenting()
-        let coordinator = AppCoordinator(
-            scheduler: MockReminderScheduler(),
-            notificationCenter: MockNotificationCenter(),
-            overlayManager: overlay,
-            screenTimeTracker: MockScreenTimeTracker(),
-            pauseConditionProvider: MockPauseConditionProvider(),
-            ipcStore: MockAppGroupIPCRecorder())
-        coordinator.handleNotification(for: .posture)
-    }
-
-    func test_appCoordinator_scheduleReminders() async {
-        let scheduler = MockReminderScheduler()
-        let coordinator = AppCoordinator(
-            scheduler: scheduler,
-            notificationCenter: MockNotificationCenter(),
-            overlayManager: MockOverlayPresenting(),
-            screenTimeTracker: MockScreenTimeTracker(),
-            pauseConditionProvider: MockPauseConditionProvider(),
-            ipcStore: MockAppGroupIPCRecorder())
-        await coordinator.scheduleReminders()
-    }
-
-    func test_appCoordinator_refreshAuthStatus() async {
-        let mockNotificationCenter = MockNotificationCenter()
-        mockNotificationCenter.authorizationGranted = false
-        let coordinator = AppCoordinator(
-            settings: SettingsStore(store: MockSettingsPersisting()),
-            scheduler: MockReminderScheduler(),
-            notificationCenter: mockNotificationCenter,
-            overlayManager: MockOverlayPresenting(),
-            screenTimeTracker: MockScreenTimeTracker(),
-            pauseConditionProvider: MockPauseConditionProvider(),
-            ipcStore: MockAppGroupIPCRecorder())
-
-        XCTAssertEqual(coordinator.notificationAuthStatus, .notDetermined)
-        await coordinator.refreshAuthStatus()
-        XCTAssertEqual(coordinator.notificationAuthStatus, .denied)
-    }
-
-    func test_appCoordinator_clearExpiredSnoozeIfNeeded() async {
-        let settings = SettingsStore(store: MockSettingsPersisting())
-        settings.snoozedUntil = Date(timeIntervalSinceNow: -60)
-        settings.snoozeCount = 2
-        let coordinator = AppCoordinator(
-            settings: settings,
-            scheduler: MockReminderScheduler(),
-            notificationCenter: MockNotificationCenter(),
-            overlayManager: MockOverlayPresenting(),
-            screenTimeTracker: MockScreenTimeTracker(),
-            pauseConditionProvider: MockPauseConditionProvider(),
-            ipcStore: MockAppGroupIPCRecorder())
-
-        await coordinator.clearExpiredSnoozeIfNeeded()
-        XCTAssertNil(settings.snoozedUntil)
-        XCTAssertEqual(settings.snoozeCount, 0)
-    }
-
-    func test_appCoordinator_handleForegroundTransition() async {
-        let mockNotificationCenter = MockNotificationCenter()
-        mockNotificationCenter.authorizationGranted = true
-        let coordinator = AppCoordinator(
-            settings: SettingsStore(store: MockSettingsPersisting()),
-            scheduler: MockReminderScheduler(),
-            notificationCenter: mockNotificationCenter,
-            overlayManager: MockOverlayPresenting(),
-            screenTimeTracker: MockScreenTimeTracker(),
-            pauseConditionProvider: MockPauseConditionProvider(),
-            ipcStore: MockAppGroupIPCRecorder())
-
-        XCTAssertEqual(coordinator.notificationAuthStatus, .notDetermined)
-        await coordinator.handleForegroundTransition()
-        XCTAssertEqual(coordinator.notificationAuthStatus, .authorized)
-    }
+    //
+    // Follow-up #680: rewrite these coverage-only smoke tests as
+    // `SchedulingFeature` / `SettingsFeature` TestStore assertions. They
+    // previously instantiated `AppCoordinator` directly purely to bump
+    // coverage on private helpers (`presentPendingOverlayIfNeeded`,
+    // `appWillResignActive`, `cancelSnoozeWakeTaskIfNeeded`,
+    // `handleNotification`, `scheduleReminders`, `refreshAuthStatus`,
+    // `clearExpiredSnoozeIfNeeded`, `handleForegroundTransition`). After
+    // `#755` Phase E deleted the coordinator stack, every one of those
+    // surfaces is now exercised through reducer actions covered by
+    // `SchedulingFeatureTests`.
 
     // MARK: - AudioInterruptionManager
 

@@ -47,7 +47,7 @@ struct AccessibleToggle<LabelContent: View>: View {
     }
 
     var body: some View {
-        if AppCoordinator.isUITestMode {
+        if UITestMode.isEnabled {
             uiTestBody
         } else {
             productionBody
