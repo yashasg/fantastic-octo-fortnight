@@ -98,6 +98,8 @@ final class AppDelegateTests: XCTestCase {
             $0.settingsClient = SettingsClient(
                 snapshot: { initialEyesSnapshot },
                 stream: { .finished },
+                enabledFlagsSnapshot: { .allEnabled },
+                enabledFlagsStream: { .finished },
                 updateGlobalEnabled: { _ in },
                 updateEyesEnabled: { _ in },
                 updatePostureEnabled: { _ in },
