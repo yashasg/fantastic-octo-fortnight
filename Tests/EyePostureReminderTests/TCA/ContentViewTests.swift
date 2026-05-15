@@ -10,8 +10,9 @@ import XCTest
 /// onboarding-gated and home branches of `AppFeature.State`.
 ///
 /// As of `#755` Phase D, `ContentView` is a pure pass-through for
-/// `RootView(store:)`; the `@EnvironmentObject` graph (`SettingsStore` +
-/// `AppCoordinator`) has been removed from the view tree.
+/// `RootView(store:)`; the legacy `@EnvironmentObject` graph
+/// (`SettingsStore` plus the now-deleted `AppCoordinator` from `#755` Phase
+/// E) has been removed from the view tree.
 @MainActor
 final class ContentViewTests: XCTestCase {
 

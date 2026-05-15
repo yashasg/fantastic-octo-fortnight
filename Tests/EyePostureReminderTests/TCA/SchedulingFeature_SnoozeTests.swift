@@ -5,8 +5,9 @@ import XCTest
 @testable import EyePostureReminder
 
 /// `TestStore` parity coverage for `SchedulingFeature`'s snooze paths —
-/// Phase 3 issue `p0-tca-17` (#680). Mirrors `AppCoordinatorSnoozeWakeTests`
-/// and the snooze branches of `AppCoordinatorTests`.
+/// Phase 3 issue `p0-tca-17` (#680). Ports the snooze-wake / snooze-branch
+/// behavioural coverage that previously lived against the legacy
+/// `AppCoordinator` (deleted in `#755` Phase E, PR #760).
 @MainActor
 final class SchedulingFeatureSnoozeTests: XCTestCase {
 
@@ -17,7 +18,8 @@ final class SchedulingFeatureSnoozeTests: XCTestCase {
     ///   * cancel every pending scheduled reminder,
     ///   * arm the snooze-wake clock task via `.scheduleSnoozeWake`,
     ///   * schedule the silent snooze-wake notification when authorized.
-    /// Mirrors `AppCoordinator.scheduleReminders` lines 408-431.
+    /// Ports the active-snooze branch of the deleted
+    /// `AppCoordinator.scheduleReminders` (#755 Phase E).
     func test_scheduleReminders_activeSnooze_authorized_pausesAndArmsWake() async {
         // The active-snooze guard inside `scheduleRemindersEffect` compares
         // against the system wall-clock (`Date()`), not `@Dependency(\.date)`,
@@ -88,8 +90,9 @@ final class SchedulingFeatureSnoozeTests: XCTestCase {
 
     /// `.scheduleReminders` with an active snooze but no notification
     /// authorisation must skip the silent-wake notification but still arm
-    /// the in-process snooze-wake task — matches the
-    /// `AppCoordinator.scheduleSnoozeWakeNotification` guard.
+    /// the in-process snooze-wake task — matches the unauthorized-guard
+    /// behaviour ported from the deleted
+    /// `AppCoordinator.scheduleSnoozeWakeNotification` (#755 Phase E).
     func test_scheduleReminders_activeSnooze_unauthorized_skipsSilentNotification() async {
         let snoozedUntil = Date.distantFuture
         let scheduledNotifications = LockIsolated<[String]>([])
@@ -131,7 +134,8 @@ final class SchedulingFeatureSnoozeTests: XCTestCase {
     // MARK: - .scheduleReminders — expired snooze branch
 
     /// An expired snooze must be cleared before the regular schedule path
-    /// runs, mirroring `AppCoordinator.scheduleReminders` lines 421-431.
+    /// runs — ports the expired-snooze branch of the deleted
+    /// `AppCoordinator.scheduleReminders` (#755 Phase E).
     func test_scheduleReminders_expiredSnooze_clearsThenSchedules() async {
         let now = Date(timeIntervalSince1970: 1_700_000_000)
         let snoozedUntil = now.addingTimeInterval(-60)  // expired one minute ago
@@ -214,8 +218,8 @@ final class SchedulingFeatureSnoozeTests: XCTestCase {
     }
 
     /// An expired snooze must be cleared from state, persisted via the
-    /// settings client, and emit `.snoozeExpired` analytics — port of
-    /// `AppCoordinator.clearExpiredSnoozeIfNeeded`.
+    /// settings client, and emit `.snoozeExpired` analytics — ports the
+    /// deleted `AppCoordinator.clearExpiredSnoozeIfNeeded` (#755 Phase E).
     func test_clearExpiredSnoozeIfNeeded_expiredSnooze_clearsState() async {
         let now = Date(timeIntervalSince1970: 1_700_000_000)
         let setUntilCalls = LockIsolated<[Date?]>([])
@@ -258,7 +262,8 @@ final class SchedulingFeatureSnoozeTests: XCTestCase {
 
     /// `.snoozeWakeFired` clears state, persists, logs analytics, and
     /// re-runs `.scheduleReminders` so the regular schedule resumes — direct
-    /// analogue of `AppCoordinator.handleNotification(.snoozeWake)`.
+    /// analogue of the deleted
+    /// `AppCoordinator.handleNotification(.snoozeWake)` (#755 Phase E).
     func test_snoozeWakeFired_clearsStateAndReschedules() async {
         let setUntilCalls = LockIsolated<[Date?]>([])
         let setCountCalls = LockIsolated<[Int]>([])

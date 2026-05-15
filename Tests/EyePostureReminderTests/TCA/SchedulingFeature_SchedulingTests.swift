@@ -5,12 +5,11 @@ import XCTest
 @testable import EyePostureReminder
 
 /// `TestStore` parity coverage for `SchedulingFeature` — Phase 3 issue
-/// `p0-tca-17` (#680). Mirrors the scheduling and reschedule paths exercised
-/// by the legacy `AppCoordinatorTests` family
-/// (`AppCoordinatorTests`, `AppCoordinatorCancelReminderTests`,
-/// `AppCoordinatorThresholdGuardTests`).
+/// `p0-tca-17` (#680). Ports the scheduling and reschedule branches that
+/// previously lived against the legacy `AppCoordinator` (deleted in `#755`
+/// Phase E, PR #760).
 ///
-/// Behavioural-fidelity caveats from `SchedulingFeature.swift` lines 18-31
+/// Behavioural-fidelity caveats from the `SchedulingFeature` preamble
 /// (deferred to Phase 2):
 ///   * `analytics.log(.schedulePathSelected(...))` is not yet emitted by the
 ///     reducer, so the matching assertion is omitted here.
@@ -98,8 +97,9 @@ final class SchedulingFeatureSchedulingTests: XCTestCase {
     // MARK: - .scheduleReminders — unauthorized path
 
     /// `.scheduleReminders` while notifications are denied must call
-    /// `cancelAllReminders` instead of scheduling, mirroring
-    /// `AppCoordinator.scheduleReminders` lines 432-447.
+    /// `cancelAllReminders` instead of scheduling — ports the
+    /// unauthorized branch of the deleted
+    /// `AppCoordinator.scheduleReminders` (#755 Phase E).
     func test_scheduleReminders_unauthorized_cancelsAllReminders() async {
         let scheduledCount = LockIsolated(0)
         let cancelledAll = LockIsolated(0)
@@ -134,9 +134,9 @@ final class SchedulingFeatureSchedulingTests: XCTestCase {
 
     // MARK: - .scheduleReminders — UI-test mode skips tracker reconfig
 
-    /// UI-test mode must short-circuit the foreground tracker reconfig per
-    /// `AppCoordinator.scheduleReminders` lines 452-455 — same parity carried
-    /// over to `scheduleRemindersEffect` line 222.
+    /// UI-test mode must short-circuit the foreground tracker reconfig —
+    /// parity carried over from the deleted `AppCoordinator.scheduleReminders`
+    /// UI-test guard (#755 Phase E) into `scheduleRemindersEffect`.
     func test_scheduleReminders_uiTestMode_skipsTrackerConfig() async {
         let setThresholdCount = LockIsolated(0)
 
@@ -176,7 +176,7 @@ final class SchedulingFeatureSchedulingTests: XCTestCase {
 
     /// Two rapid `.rescheduleType(.eyes)` calls within the 300 ms debounce
     /// window must collapse to a single tracker / scheduler invocation, per
-    /// `rescheduleTypeEffect` line 264 (`cancelInFlight: true`).
+    /// `rescheduleTypeEffect`'s `.cancellable(..., cancelInFlight: true)`.
     func test_rescheduleType_doubleFireWithinDebounce_collapsesToSingleInvocation() async {
         let clock = TestClock()
         let setThresholds = LockIsolated<[ReminderType]>([])
@@ -230,8 +230,8 @@ final class SchedulingFeatureSchedulingTests: XCTestCase {
     // MARK: - .rescheduleType — interval == 0 disables tracking
 
     /// When the per-type interval is 0 the reducer must disable tracking and
-    /// cancel scheduled reminders for that type, mirroring
-    /// `AppCoordinator.performReschedule` lines 234-249.
+    /// cancel scheduled reminders for that type — ports the disable-debounce
+    /// branch of the deleted `AppCoordinator.performReschedule` (#755 Phase E).
     func test_rescheduleType_intervalZero_disablesAndCancels() async {
         let clock = TestClock()
         let disabledTypes = LockIsolated<[ReminderType]>([])
@@ -280,7 +280,8 @@ final class SchedulingFeatureSchedulingTests: XCTestCase {
 
     /// While notifications are denied the reducer must keep tracker enabled
     /// (so the foreground threshold path still fires) but cancel any pending
-    /// scheduled notifications, per `rescheduleTypeEffect` lines 254-258.
+    /// scheduled notifications, per `rescheduleTypeEffect`'s authorized vs.
+    /// denied scheduler branches.
     func test_rescheduleType_unauthorized_keepsTrackerCancelsScheduler() async {
         let clock = TestClock()
         let cancelledTypes = LockIsolated<[ReminderType]>([])
@@ -353,9 +354,10 @@ final class SchedulingFeatureSchedulingTests: XCTestCase {
 
     // MARK: - .backgroundTransition — emits appSessionEnd analytics
 
-    /// `.backgroundTransition` mirrors `AppCoordinator.appWillResignActive` by
-    /// emitting `.appSessionEnd` so Console.app traces show the session
-    /// boundary even after the migration.
+    /// `.backgroundTransition` is the TCA analogue of the deleted
+    /// `AppCoordinator.appWillResignActive` (#755 Phase E) — it emits
+    /// `.appSessionEnd` so Console.app traces show the session boundary
+    /// after the migration.
     func test_backgroundTransition_logsAppSessionEnd() async {
         let loggedEvents = LockIsolated<[String]>([])
 
