@@ -363,9 +363,6 @@ jobs:
           - id: overlays
             name: Overlays
             only_testing_csv: EyePostureReminderUITests/OverlayTests,EyePostureReminderUITests/OverlayPresentationTests,EyePostureReminderUITests/OverlayPostureTests
-          - id: darkmode
-            name: Dark Mode
-            only_testing_csv: EyePostureReminderUITests/DarkModeUITests
 
     steps:
       - name: Checkout

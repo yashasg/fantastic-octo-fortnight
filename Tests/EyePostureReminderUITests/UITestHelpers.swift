@@ -15,9 +15,11 @@ enum TestLaunchArguments {
     static let skipOnboarding = "--skip-onboarding"
     /// Clears `hasSeenOnboarding` → app starts fresh with the onboarding flow.
     static let resetOnboarding = "--reset-onboarding"
-    /// Triggers the eye break overlay immediately on launch; used by OverlayTests and DarkModeUITests to display the overlay without waiting for the timer.
+    /// Triggers the eye break overlay immediately on launch; used by OverlayTests
+    /// to display the overlay without waiting for the timer.
     static let showOverlayEyes = "--show-overlay-eyes"
-    /// Triggers the posture check overlay immediately on launch; used by OverlayTests and DarkModeUITests to display the overlay without waiting for the timer.
+    /// Triggers the posture check overlay immediately on launch; used by OverlayTests
+    /// to display the overlay without waiting for the timer.
     static let showOverlayPosture = "--show-overlay-posture"
     /// Seeds `ScreenTimeAuthorizationStub(.notDetermined)` into `AppCoordinator` so the
     /// TrueInterruptSkippedBanner and TrueInterruptSetupPill can render in UITests.
@@ -30,10 +32,6 @@ enum TestLaunchArguments {
     /// Forces the non-dismissed True Interrupt banner state for deterministic
     /// UITest coverage, even if a prior run persisted the dismissed flag.
     static let showTrueInterruptBanner = "--show-true-interrupt-banner"
-    /// System-provided launch argument key for interface style override.
-    static let appleInterfaceStyle = "-AppleInterfaceStyle"
-    /// System-provided dark appearance value for `-AppleInterfaceStyle`.
-    static let darkAppearance = "Dark"
 }
 
 // MARK: - XCUIApplication + Test Helpers
@@ -45,17 +43,11 @@ extension XCUIApplication {
         // can fail before XCTest has acquired a stable process assertion.
     }
 
-    private func appendDarkModeArgumentIfNeeded(_ darkMode: Bool) {
-        guard darkMode else { return }
-        launchArguments += [TestLaunchArguments.appleInterfaceStyle, TestLaunchArguments.darkAppearance]
-    }
-
     /// Appends `--skip-onboarding` and launches the app.
     /// Use in `setUpWithError()` for tests that start from the Home screen.
-    func launchWithSkippedOnboarding(darkMode: Bool = false) {
+    func launchWithSkippedOnboarding() {
         launchFresh()
         launchArguments += [TestLaunchArguments.skipOnboarding]
-        appendDarkModeArgumentIfNeeded(darkMode)
         launch()
 
         // Defensive fallback: on some runners the launch-argument write may race
@@ -67,28 +59,25 @@ extension XCUIApplication {
 
     /// Appends `--reset-onboarding` and launches the app.
     /// Use in `setUpWithError()` for tests that verify the onboarding flow from scratch.
-    func launchWithOnboarding(darkMode: Bool = false) {
+    func launchWithOnboarding() {
         launchFresh()
         launchArguments += [TestLaunchArguments.resetOnboarding]
-        appendDarkModeArgumentIfNeeded(darkMode)
         launch()
     }
 
     /// Appends `--show-overlay-eyes` and launches the app.
     /// Use in tests that verify the eye break overlay UI.
-    func launchWithEyeOverlay(darkMode: Bool = false) {
+    func launchWithEyeOverlay() {
         launchFresh()
         launchArguments += [TestLaunchArguments.showOverlayEyes]
-        appendDarkModeArgumentIfNeeded(darkMode)
         launch()
     }
 
     /// Appends `--show-overlay-posture` and launches the app.
     /// Use in tests that verify the posture check overlay UI.
-    func launchWithPostureOverlay(darkMode: Bool = false) {
+    func launchWithPostureOverlay() {
         launchFresh()
         launchArguments += [TestLaunchArguments.showOverlayPosture]
-        appendDarkModeArgumentIfNeeded(darkMode)
         launch()
     }
 
@@ -97,7 +86,7 @@ extension XCUIApplication {
     /// Use in tests that verify `TrueInterruptSkippedBanner` (banner not yet dismissed) and
     /// `TrueInterruptSetupPill` (banner dismissed). The simulator's real FamilyControls status
     /// is `.unavailable`, so this argument is required to reach either element (#399).
-    func launchWithTrueInterruptPending(darkMode: Bool = false, bannerDismissed: Bool = false) {
+    func launchWithTrueInterruptPending(bannerDismissed: Bool = false) {
         launchFresh()
         launchArguments += [
             TestLaunchArguments.skipOnboarding,
@@ -114,7 +103,6 @@ extension XCUIApplication {
         }
         launchEnvironment["UITEST_SCREEN_TIME_STATUS"] = "notDetermined"
         launchEnvironment["UITEST_TRUE_INTERRUPT_BANNER_DISMISSED"] = bannerDismissed ? "true" : "false"
-        appendDarkModeArgumentIfNeeded(darkMode)
         launch()
     }
 

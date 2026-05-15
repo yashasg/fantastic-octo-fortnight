@@ -22,7 +22,6 @@
 | `SettingsFlowTests.swift` | `test_settings_openFromHome_sheetAppears`, `test_settings_doneButton_dismissesSheet`, `test_settings_legalSection_termsAndPrivacyExist`, `test_settings_termsRow_opensSheet`, `test_settings_privacyRow_opensSheet`, `test_settings_smartPause_bothTogglesExist`, `test_settings_globalToggle_isVisible`, `test_settings_globalToggle_changesStateOnTap`, `test_settings_preferences_atLeastOneToggleExists`, `test_settings_notificationFallbackToggle_exists`, `test_settings_termsSheet_dismissReturnsToSettings`, `test_settings_privacySheet_dismissReturnsToSettings`, `test_settings_focusToggle_changesStateOnTap`, `test_settings_drivingToggle_changesStateOnTap`, `test_settings_hapticFeedbackToggle_exists`, `test_settings_resetToDefaults_exists`, `test_settings_sendFeedback_exists`, `test_settings_reminderToggles_eyesAndPostureExist`, `test_settings_snoozeButtons_allThreeExist` |
 | `HomeScreenTests.swift` | `test_homeScreen_onLaunch_displaysRequiredElements`, `test_homeScreen_openSettings_snoozeButtonExists`, `test_homeScreen_onLaunch_navigationBarHasTitle`, `test_homeScreen_settingsButton_isHittable`, `test_homeScreen_toggleGlobalSwitch_statusLabelChanges`, `test_homeScreen_onLaunch_titleShowsKshana`, `test_homeScreen_onLaunch_statusLabelIsNotEmpty`, `test_homeScreen_settingsSheet_canBeOpenedAndClosed` |
 | `OverlayTests.swift` | `test_overlay_onNormalLaunch_notPresent`, `test_overlay_onNormalLaunch_homeScreenIsVisible`, `test_overlay_onShowOverlayEyes_dismissButtonVisible`, `test_overlay_onShowOverlayEyes_doneButtonVisible`, `test_overlay_onShowOverlayEyes_supportiveTextVisible`, `test_overlay_doneButton_dismissesOverlay`, `test_overlay_onShowOverlayEyes_settingsLinkVisible`, `test_overlay_postureVariant_dismissButtonVisible`, `test_overlay_postureVariant_doneButtonVisible`, `test_overlay_postureVariant_supportiveTextVisible`, `test_overlay_postureVariant_doneButtonDismissesOverlay` |
-| `DarkModeUITests.swift` | `test_darkMode_homeScreen_launches`, `test_darkMode_homeScreen_settingsButtonIsHittable`, `test_darkMode_settings_canBeOpened`, `test_darkMode_overlay_essentialElementsVisible`, `test_darkMode_overlay_doneButton_dismissesOverlay`, `test_darkMode_onboarding_welcomeScreenLaunches`, `test_darkMode_postureOverlay_essentialElementsVisible` |
 
 ### Naming Convention
 
@@ -47,7 +46,7 @@ Use the `XCUIApplication` convenience helpers instead of raw strings:
 // In setUpWithError():
 app = XCUIApplication()
 app.launchWithSkippedOnboarding()  // or app.launchWithOnboarding()
-app.launchWithEyeOverlay(darkMode: true) // optional dark-mode variant
+app.launchWithEyeOverlay()
 ```
 
 ### Accessibility Identifiers
