@@ -124,6 +124,17 @@ to make the TCA Phase-1 reducers testable in isolation.
 
 ### 🛠 Internal / CI / Style
 
+- **#745 — Purge SDK-bound `ModuleCache.noindex` / `SDKStatCaches.noindex`
+  before each CI build.** The cached `DerivedData` restored across runs
+  contained precompiled `SwiftShims-*.pcm` files that recorded an SDK
+  `module.modulemap` mtime which drifts between macos-15 runner refreshes,
+  causing `xcodebuild` to fail with `error: file '.../SwiftShims-*.pcm'
+  has been modified since the module file '...' was built: mtime changed`
+  and `exit 65` *before* tests ran (no `TestResults.xcresult` produced).
+  Wiping just those two SDK-bound subdirectories preserves the much larger
+  `Build/` intermediates for incremental reuse while removing the false
+  failure surface that was being mis-attributed to source-compile bugs in
+  #746 / #747.
 - **#663 — Integrate SwiftLint into CI** per Google Swift Style.
 - **#685 — Line-wrap pass** in Views to comply with the 100-char column
   limit (closes #650).
