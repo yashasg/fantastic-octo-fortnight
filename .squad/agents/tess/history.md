@@ -381,3 +381,9 @@
 
 - 2026-05-15: Note that #741 (ROADMAP.md) and #742 (UX_FLOWS.md) were both previously labeled squad:tess on the parent #735, but split by file ownership: ROADMAP → squad:rusty (Product), UX_FLOWS → squad:saul (Frontend). Tess no longer owns either.
 
+
+---
+
+## Learnings — Cross-Agent Directives
+
+2026-05-15: Pinned to `claude-opus-4.7-xhigh` via `.squad/config.json` agentModelOverrides (per yashasg directive).

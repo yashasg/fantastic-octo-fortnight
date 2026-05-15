@@ -24089,6 +24089,13 @@ The key insight: **Categorize by concern, not by location.**
 
 **Why:** User request — captured for team memory
 
+### 2026-05-15T08:19:24Z: User directive — Product team model pinning
+**By:** yashasg (via Copilot)
+
+**What:** Everyone on the Product team uses `claude-opus-4.7-xhigh`. Applies to: Danny, Tess, Reuben, Turk, Frank, Roman. Persisted via `.squad/config.json` → `agentModelOverrides`.
+
+**Why:** User request — captured for team memory. Supersedes prior per-agent picks for Danny (was `claude-opus-4.6-1m`), Turk (was `claude-opus-4.6-1m`), and Frank (was `gpt-5.5`); fills in previously-defaulted Tess, Reuben, Roman.
+
 ---
 
 ## 2026-05-15 — Issue & Docs Triage

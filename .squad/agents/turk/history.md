@@ -131,3 +131,9 @@
 - Added 5 unit tests: raw value stability, round-trip init, unknown rejection, and crash-safety logging for both CTAs.
 
 **Validation:** 42/42 `AnalyticsEventTests` passed. Zero PII, zero localized strings, zero free-form values. Privacy posture unchanged ("Data Not Collected").
+
+---
+
+## Learnings — Cross-Agent Directives
+
+2026-05-15: Pinned to `claude-opus-4.7-xhigh` via `.squad/config.json` agentModelOverrides (per yashasg directive).

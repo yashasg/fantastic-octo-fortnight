@@ -276,3 +276,9 @@ Smart Pause exemplifies a pattern: powerful features hidden in settings without 
 - Consider Settings → Help link for each section
 
 - 2026-05-15: Heads up — #741 (ROADMAP.md TCA rewrite, p2) is owned by Rusty (Product team), but the roadmap rewrite touches the user-facing milestone narrative. Loop in Reuben if any UX-relevant decisions need design input.
+
+---
+
+## Learnings — Cross-Agent Directives
+
+2026-05-15: Pinned to `claude-opus-4.7-xhigh` via `.squad/config.json` agentModelOverrides (per yashasg directive).

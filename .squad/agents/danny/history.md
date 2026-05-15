@@ -215,3 +215,9 @@ This is the first real-world validation of the pattern. Future external correspo
 
 **Reuse:** When scoping product features, mention Google Swift Style as a quality gate. Example: "This feature must land with full documentation per Google Swift Style §5" (a requirement most developers will now recognize).
 
+
+---
+
+## Learnings — Cross-Agent Directives
+
+2026-05-15: Pinned to `claude-opus-4.7-xhigh` via `.squad/config.json` agentModelOverrides (per yashasg directive).

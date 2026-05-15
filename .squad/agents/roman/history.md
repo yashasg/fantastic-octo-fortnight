@@ -94,3 +94,9 @@
 - **One material ASO gap found:** "wellness" in keyword field (8 chars) is already indexed by Apple from subtitle "Eye & Posture Wellness" — wasted budget. Additionally the listed character count (96) is inaccurate; actual string is 90 chars. Freeing those chars by removing "wellness" and adding "screen time" (high-intent, unrepresented search term) reaches 93/100 chars. Created issue #307.
 - **Confirmed clean (no new issues needed):** True Interrupt entitlement hedging ✓, Friendly Reminder / local alerts description ✓, category (Health & Fitness primary / Productivity secondary) ✓, competitive differentiation (eye + posture combined, no accounts/ads) ✓, pricing (Free) ✓. Prior issues #272/#250/#218/#292 addressed overpromise/messaging drift risks.
 - **Not duplicated:** Naming no-go research (Kshanam, Drishti), owner blockers (#185/#196/#201/#209/#210), medical disclaimer gap (#302).
+
+---
+
+## Learnings — Cross-Agent Directives
+
+2026-05-15: Pinned to `claude-opus-4.7-xhigh` via `.squad/config.json` agentModelOverrides (per yashasg directive).
