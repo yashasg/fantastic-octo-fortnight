@@ -111,3 +111,5 @@ Orchestration log recorded at 2026-04-30T09:27:10Z. Root cause diagnosis documen
 
 **Related:** GitHub Issue #646 contains audit findings across production code only (Views/ViewModels, Services/Utilities, App/Models). Branch: chore/coding-standards-audit.
 
+2026-05-15: When Sponder flags an API migration, I cover the new test surface for services-side changes (Livingston covers UI-side).
+

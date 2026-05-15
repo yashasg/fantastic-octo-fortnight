@@ -154,3 +154,5 @@ Orchestration log recorded at 2026-04-30T09:27:10Z. Confirmed AppCoordinator tes
 ## 2026-05-15 — #646 fan-out
 
 Two child issues now assigned from Google Swift audit: #650 (column-limit line-wrapping, MEDIUM) and #652 (access control, HIGH, joint with Basher). Ready to parallelize remediation work across Views layer.
+
+Toulour (Accessibility Auditor), Denham (HIG Reviewer), Sponder (API Contract Monitor) will file issues that may route to me for UI-side fixes.

@@ -18,8 +18,14 @@ How to decide who handles what.
 | Telemetry, analytics, dashboards, metrics | Turk | Event schemas, App Store Connect, MetricKit, usage analysis |
 | Frontend code review (SwiftUI views, accessibility, assets, animations) | Saul | View PRs, layout, dark-mode parity, VoiceOver |
 | Backend code review (services, concurrency, lifecycle, system APIs) | Benedict | Service PRs, actor isolation, retain cycles, error handling |
-| Legal, terms, privacy, disclaimers | Frank | Terms of service, privacy policy, liability, compliance |
-| Market research, competitors, pricing, ASO | Roman | Competitive analysis, App Store landscape, keywords, monetization |
+| Legal/policy authoring (terms, privacy, disclaimers) | Frank | Terms of service, privacy policy text, liability copy. Audit cycles route to Matsui. |
+| Market research — broad/cross-category | Roman | App Store landscape outside wellness/timer; broader competitor watch. Wellness/timer specifics route to Bashir. |
+| Accessibility audit (VoiceOver, Dynamic Type, contrast, hit targets) | Toulour | AX labels/hints/traits, AX5 layout, dark-mode contrast on AppColor tokens, AccessibilityIdentifier inventory |
+| HIG / App Review compliance (system patterns, dark mode parity, App Store Section 4) | Denham | SF Symbols, sheet vs alert, status bar, pre-submission audit |
+| Apple system API contracts (deprecation, entitlements, min iOS) | Sponder | UserNotifications, INFocusStatusCenter, AVAudioSession, CMMotionActivityManager, BackgroundTasks watch list |
+| Wellness/timer category market research | Bashir | Direct eye-strain/posture competitors, category pricing models, narrow-category ASO keywords (feeds Bruiser) |
+| Privacy/regulatory compliance audit (GDPR, CCPA, COPPA, Apple Privacy Manifest) | Matsui | NSPrivacyAccessedAPITypes, nutrition label audit, third-party SDK compliance review |
+| App Store Connect listing / ASO execution | Bruiser | Title/subtitle/keywords/description, screenshots, A/B tests, conversion analytics |
 | Scope & priorities | Danny | What to build next, trade-offs, decisions |
 | Session logging | Scribe | Automatic — never needs routing |
 

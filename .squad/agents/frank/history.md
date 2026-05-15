@@ -367,3 +367,5 @@ Yashasg sent the v2 plain-prose draft with user edits (warmer tone, added focus/
 ## Learnings — Cross-Agent Directives
 
 2026-05-15: Pinned to `claude-opus-4.7-xhigh` via `.squad/config.json` agentModelOverrides (per yashasg directive).
+
+2026-05-15: Matsui (new Legal & Compliance Auditor) handles regulatory audit cycles (GDPR/CCPA/COPPA/Apple Privacy Manifest). I keep policy authoring (terms, privacy policy text).

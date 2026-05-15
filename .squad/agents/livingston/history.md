@@ -67,3 +67,4 @@ Orchestration log recorded at 2026-04-30T09:27:10Z. Root cause diagnosis documen
 
 
 - 2026-05-15: You are now explicitly Frontend-scoped. Yen (Backend Tester) owns backend services testing (SettingsStore, ReminderScheduler, etc.); your domain is UI/views testing (SwiftUI, accessibility, overlays, snapshots). Frontend and backend test scopes do not overlap.
+- 2026-05-15: Toulour will extend AccessibilityIdentifier inventory I rely on for UI tests; expect new test surface to cover.

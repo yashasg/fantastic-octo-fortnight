@@ -221,3 +221,5 @@ This is the first real-world validation of the pattern. Future external correspo
 ## Learnings — Cross-Agent Directives
 
 2026-05-15: Pinned to `claude-opus-4.7-xhigh` via `.squad/config.json` agentModelOverrides (per yashasg directive).
+
+2026-05-15: New Strategy & Compliance team added. Bashir is the wellness/timer market specialist (Roman keeps broad market). Bruiser owns ASO listing execution. Matsui audits privacy regulations (Frank keeps policy authoring).

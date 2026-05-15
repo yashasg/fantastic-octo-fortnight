@@ -26,6 +26,12 @@
 | Yen | Backend Tester | .squad/agents/yen/charter.md | 🧪 Test | Backend |
 | Benedict | Backend Code Reviewer | .squad/agents/benedict/charter.md | 👁️ Review | Backend |
 | Virgil | CI/CD Dev | .squad/agents/virgil/charter.md | ⚙️ CI/CD | DevOps |
+| Toulour | Accessibility Auditor | .squad/agents/toulour/charter.md | ♿ A11y | Strategy & Compliance |
+| Denham | HIG Compliance Reviewer | .squad/agents/denham/charter.md | 📐 HIG | Strategy & Compliance |
+| Sponder | API Contract Monitor | .squad/agents/sponder/charter.md | 🛰️ APIs | Strategy & Compliance |
+| Bashir | Market Researcher (Wellness/Timer) | .squad/agents/bashir/charter.md | 🔬 Category | Strategy & Compliance |
+| Matsui | Legal & Compliance Auditor | .squad/agents/matsui/charter.md | ⚖️ Compliance | Strategy & Compliance |
+| Bruiser | App Store Optimizer | .squad/agents/bruiser/charter.md | 🏪 ASO | Strategy & Compliance |
 | Scribe | Scribe | .squad/agents/scribe/charter.md | 📋 Logger | Infra |
 | Ralph | Work Monitor | — | 🔄 Monitor | Infra |
 
@@ -36,6 +42,7 @@
 - **🔧 Backend** (services / data layer): Basher, Yen (Test), Benedict (Review)
 - **⚙️ DevOps:** Virgil
 - **📦 Product** (non-dev): Danny, Tess, Reuben, Turk, Frank, Roman
+- **🧭 Strategy & Compliance** (audit / regulatory / market): Toulour (Accessibility), Denham (HIG), Sponder (API contracts), Bashir (Wellness/Timer Market), Matsui (Legal/Compliance), Bruiser (ASO)
 - **📋 Infra** (silent / monitor): Scribe, Ralph
 
 ## Project Context

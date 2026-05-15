@@ -100,3 +100,5 @@
 ## Learnings — Cross-Agent Directives
 
 2026-05-15: Pinned to `claude-opus-4.7-xhigh` via `.squad/config.json` agentModelOverrides (per yashasg directive).
+
+2026-05-15: Bashir (new Market Researcher, wellness/timer category specialist) is my deputy for the wellness/eye-strain/posture slice. I keep broad/cross-category research. Bruiser handles ASO listing execution downstream of our keyword work.

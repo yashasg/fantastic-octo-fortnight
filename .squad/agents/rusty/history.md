@@ -357,3 +357,7 @@ Split #735 into two sibling issues by file ownership:
 New issues: #741 (ROADMAP.md), #742 (UX_FLOWS.md)
 Parent issue: #735 (now superseded, kept as tombstone)
 Related: #725 (parent docs sweep), #677, #701, #702 (blockers)
+
+## 2026-05-15 — New Strategy & Compliance Team Established
+
+2026-05-15: New Strategy & Compliance team added (6 members: Toulour/Denham/Sponder/Bashir/Matsui/Bruiser). They file issues; remediation routes to existing dev/test/review team. See team.md and routing.md.

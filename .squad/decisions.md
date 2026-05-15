@@ -24096,6 +24096,27 @@ The key insight: **Categorize by concern, not by location.**
 
 **Why:** User request — captured for team memory. Supersedes prior per-agent picks for Danny (was `claude-opus-4.6-1m`), Turk (was `claude-opus-4.6-1m`), and Frank (was `gpt-5.5`); fills in previously-defaulted Tess, Reuben, Roman.
 
+### 2026-05-15T08:24:00Z: User directive — Strategy & Compliance team hired
+**By:** yashasg (via Copilot)
+
+**What:** Created a new "🧭 Strategy & Compliance" team with six new members (cast from Ocean's Eleven universe; user-supplied handles collided with existing roster):
+
+- **Toulour** — Accessibility Auditor (VoiceOver, Dynamic Type, contrast, AccessibilityIdentifier inventory)
+- **Denham** — HIG Compliance Reviewer (Apple HIG + App Store Review Section 4)
+- **Sponder** — API Contract Monitor (Apple system API deprecation/entitlement/min-iOS watch)
+- **Bashir** — Market Researcher specializing in the wellness/timer/eye-strain category (deputy to Roman)
+- **Matsui** — Legal & Compliance Auditor (GDPR/CCPA/COPPA/Apple Privacy Manifest; audits against regulations — Frank still authors user-facing policy)
+- **Bruiser** — App Store Optimizer (App Store Connect listing/screenshots/A-B tests; consumes Bashir/Roman keyword research)
+
+All six pinned to `claude-opus-4.7-xhigh` via `.squad/config.json` agentModelOverrides.
+
+**Why:** User request — captured for team memory. Coordination boundaries with existing Product team:
+- Frank (Legal Advisor) keeps policy authoring; Matsui owns regulatory audit.
+- Roman (Market Researcher) keeps broad market work; Bashir owns the wellness/timer slice.
+- Tess/Linus/Saul/Livingston own remediation; Toulour/Denham/Matsui/Sponder file the issues.
+
+Files added: `.squad/agents/{toulour,denham,sponder,bashir,matsui,bruiser}/{charter,history}.md`. Files updated: `.squad/team.md`, `.squad/routing.md`, `.squad/casting/registry.json`, `.squad/config.json`.
+
 ---
 
 ## 2026-05-15 — Issue & Docs Triage

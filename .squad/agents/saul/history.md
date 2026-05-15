@@ -254,3 +254,4 @@ Orchestration log recorded at 2026-04-30T09:27:10Z. Code review approved; decisi
 
 - 2026-05-15: You are now explicitly Frontend-scoped. Benedict (Backend Code Reviewer) owns backend review (services, concurrency, lifecycle, system APIs); your domain is frontend review (SwiftUI views, accessibility, assets, animations). Frontend and backend review scopes do not overlap.
 - 2026-05-15: Issue #742 (UX_FLOWS.md TCA rewrite, p2) is now in your queue under squad:saul. Blocked on #677 + #701 + #702 landing first. Coordinate with the docs sweep PR that closes #725 + #741.
+- 2026-05-15: Toulour and Denham will file accessibility/HIG issues. I gate the PRs that fix them at the Frontend code review step.

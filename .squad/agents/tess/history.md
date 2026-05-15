@@ -387,3 +387,5 @@
 ## Learnings — Cross-Agent Directives
 
 2026-05-15: Pinned to `claude-opus-4.7-xhigh` via `.squad/config.json` agentModelOverrides (per yashasg directive).
+
+2026-05-15: Toulour (new Accessibility Auditor) and Denham (new HIG Compliance Reviewer) will file issues that route to me for design response and to Linus/Saul/Livingston for implementation/test/review.
