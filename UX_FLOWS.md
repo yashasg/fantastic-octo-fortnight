@@ -31,7 +31,7 @@ Every screen and interaction must work perfectly with VoiceOver, Dynamic Type, a
 
 ### 2.1 First Launch → Onboarding → Permissions → Home Screen
 
-The app uses a 4-screen onboarding flow (`OnboardingView`) shown once on first launch. `ContentView` checks the `hasSeenOnboarding` flag in `@AppStorage` and routes to either `OnboardingView` or `HomeView`.
+The app uses a 4-screen onboarding flow (`OnboardingView`) shown once on first launch. The TCA root (`RootView`) branches on `AppFeature.State.hasSeenOnboarding` — bridged from `@AppStorage("hasSeenOnboarding")` via the `hasSeenOnboardingChanged` action — and routes to either `OnboardingView` (driven by `OnboardingFeature`) or `HomeView` (driven by `HomeFeature`).
 
 **Current reality:** Local reminder alerts are a fallback. The core future promise is Screen Time Shield-based interruption over selected apps/categories once Apple's entitlement is approved.
 
@@ -247,7 +247,7 @@ When True Interrupt mode is **enabled and a Screen Time shield is configured for
 Reminder fires
     │
     ▼
-AppCoordinator evaluates shouldUseShieldPath
+SchedulingFeature reducer evaluates shouldUseShieldPath
     │
     ├─ YES (shield available, configured, entitlement granted)
     │      │
@@ -278,10 +278,10 @@ AppCoordinator evaluates shouldUseShieldPath
 When the shield path is active:
 
 - The **Screen Time shield is the interruption UI**. It is presented by iOS at the system level when the user attempts to open or interact with a shielded app.
-- The **overlay (`OverlayManager.show()`) must NOT fire** when the shield path is the active path. The `AppCoordinator` shield path skips the `handleNotification()` → `OverlayManager` chain entirely.
-- If the user taps a notification banner from a **previous** (fallback-path) event while a shield is active, `AppDelegate.didReceive` routes to `handleNotification()` which would normally show an overlay. Implementation must guard against this by checking `shouldUseShieldPath` before presenting the overlay — if the shield path is currently active, the overlay is suppressed.
+- The **overlay (`OverlayClient.show`) must NOT fire** when the shield path is the active path. The `SchedulingFeature` shield branch emits no `OverlayClient.show` / `NotificationClient.deliver` effect, skipping the overlay/notification chain entirely.
+- If the user taps a notification banner from a **previous** (fallback-path) event while a shield is active, `AppDelegate.didReceive` routes a `SchedulingFeature.notificationRouted(...)` action which would normally produce an `OverlayClient.show` effect. The reducer must guard against this by checking `shouldUseShieldPath` before emitting that effect — if the shield path is currently active, the overlay is suppressed.
 
-> **Risk (identified in #255):** `AppDelegate.didReceive` currently routes all notification taps to `handleNotification()`, which calls `OverlayManager.show()`. This creates a double-presentation risk (shield + overlay) if a stale notification is tapped while a shield is active. The guard check must be added before `OverlayManager.show()` is called.
+> **Risk (identified in #255):** `AppDelegate.didReceive` currently routes all notification taps into the `SchedulingFeature` reducer, which today produces an `OverlayClient.show` effect. This creates a double-presentation risk (shield + overlay) if a stale notification is tapped while a shield is active. The guard check must be added to the reducer before the `OverlayClient.show` effect is emitted.
 
 ---
 
@@ -301,7 +301,7 @@ User taps "I need 5 minutes" (custom ShieldActionProvider button)
 ShieldActionProvider receives action
     │
     ▼
-Delegates to AppCoordinator: requestTemporaryAccess(duration: 5 min)
+Sends Action.requestTemporaryAccess(duration: 5 min) into SchedulingFeature
     │
     ▼
 ManagedSettingsCoordinator temporarily removes shield (5-min window)
@@ -933,13 +933,19 @@ Phase 2 — Breathing Pulse (infinite loop)
 User taps snooze button in Settings (5 min / 1 hr / Rest of day)
     │
     ▼
-AppCoordinator.cancelAllReminders() is called
+SettingsFeature reducer dispatches .snoozeTapped(option)
     │
     ▼
-Step 1: overlayManager.clearQueue()    ← MUST run first (see #267)
+settingsClient.setSnoozedUntil(endDate) writes to UserDefaults
     │
     ▼
-Step 2: if overlayManager.isOverlayVisible → overlayManager.dismissOverlay()
+SchedulingFeature observes the snoozedUntilStream and executes the cancel-all pipeline:
+    │
+    ▼
+Step 1: overlayClient.clearQueue()    ← MUST run first (see #267)
+    │
+    ▼
+Step 2: if overlayClient.isOverlayVisible → overlayClient.dismissOverlay()
          (queue is empty; presentNextQueuedOverlay() sees nothing to show)
     │
     ▼
@@ -947,12 +953,12 @@ Step 3: ManagedSettingsCoordinator.clearAllShields()
          (active shield removed from all shielded apps immediately)
     │
     ▼
-Step 4: scheduler.cancelAllReminders()
+Step 4: schedulerClient.cancelAllReminders()
          (all scheduled UNUserNotificationCenter notifications cancelled)
     │
     ▼
-Step 5: screenTimeTracker.pauseAll()
-Step 6: Snooze wake notification scheduled for (now + snooze duration)
+Step 5: trackerClient.pauseAll()
+Step 6: Snooze wake notification scheduled for (now + snooze duration) via internalAction(.scheduleSnoozeWake)
     │
     ▼
 Snooze active: no new overlays, no new shields, no new notifications
@@ -973,8 +979,8 @@ until snooze expires or user taps "Cancel snooze"
 
 If the snooze wake fires while the user has re-opened a previously-shielded app:
 
-1. `AppCoordinator` receives the snooze-wake notification.
-2. `screenTimeTracker.resumeAll()` re-enables monitoring.
+1. `SchedulingFeature` reducer receives `.snoozeWakeFired` (routed from the snooze-wake notification or in-process snooze-wake task).
+2. `trackerClient.resumeAll()` re-enables monitoring.
 3. If `shouldUseShieldPath` → `ManagedSettingsCoordinator` re-applies shields.
 4. Screen Time shield reappears on shielded apps (system-level, iOS-managed).
 5. Snooze-wake overlay / notification fires via normal path (Section 2.2 / 2.6).
@@ -1004,9 +1010,9 @@ User can return to previously-shielded app freely
 
 #### "Cancel snooze" path
 
-Tapping "Cancel snooze" in Settings calls `AppCoordinator.resumeFromSnooze()`:
-1. Snooze-wake notification cancelled.
-2. `screenTimeTracker.resumeAll()` re-enabled.
+Tapping "Cancel snooze" in Settings dispatches `SettingsFeature.cancelSnooze`, which clears `snoozedUntil` via `settingsClient.setSnoozedUntil(nil)`. `SchedulingFeature` observes the change and:
+1. Snooze-wake notification cancelled (via `internalAction(.cancelSnoozeWake)`).
+2. `trackerClient.resumeAll()` re-enabled.
 3. Shields re-applied if `shouldUseShieldPath`.
 4. Reminders rescheduled from now.
 
