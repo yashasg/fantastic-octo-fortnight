@@ -1,4 +1,3 @@
-import Combine
 import Foundation
 import os
 
@@ -7,11 +6,12 @@ import os
 /// Mutations drive a lightweight observer surface (`addObserver` /
 /// `removeObserver`) so consumers — `SettingsClient.liveValue` and any other
 /// listeners — can react without paying the Combine / `@Published` tax.
-/// `: ObservableObject` conformance is retained so legacy SwiftUI surfaces
-/// using `@EnvironmentObject SettingsStore` continue to refresh;
-/// `objectWillChange.send()` is invoked manually from `broadcastChange()`. The
-/// full `ObservableObject` strip is deferred until the MVVM → TCA view
-/// migration (#677) is complete.
+/// The MVVM → TCA view migration (#677 / #755) removed every
+/// `@EnvironmentObject SettingsStore` callsite, so `: ObservableObject`
+/// conformance and the manual `objectWillChange.send()` broadcast were
+/// dropped under #701. SwiftUI surfaces now read settings exclusively
+/// through their feature stores; non-SwiftUI consumers use the observer
+/// surface below.
 /// The initialiser accepts a `SettingsPersisting` dependency so unit tests
 /// can inject an in-memory store without touching the file system.
 ///
@@ -33,7 +33,7 @@ import os
 /// kshana.notificationFallbackEnabled    Bool   – default true
 /// ```
 @MainActor
-final class SettingsStore: ObservableObject {
+final class SettingsStore {
 
     // MARK: - Global Toggle
 
@@ -191,9 +191,8 @@ final class SettingsStore: ObservableObject {
 
     /// Registers `callback` to receive the current `settings(for: .eyes)`
     /// snapshot every time **any** mutable property changes (or
-    /// `resetToDefaults()` runs). Replaces the legacy `objectWillChange`
-    /// publisher so consumers no longer need Combine. Returns a token that
-    /// must be passed back to `removeObserver(_:)` to unsubscribe.
+    /// `resetToDefaults()` runs). Returns a token that must be passed back
+    /// to `removeObserver(_:)` to unsubscribe.
     @discardableResult
     func addObserver(_ callback: @escaping (ReminderSettings) -> Void) -> ObserverID {
         let id = ObserverID()
@@ -208,7 +207,6 @@ final class SettingsStore: ObservableObject {
     }
 
     private func broadcastChange() {
-        objectWillChange.send()
         guard !observers.isEmpty else { return }
         let snapshot = settings(for: .eyes)
         for callback in observers.values { callback(snapshot) }

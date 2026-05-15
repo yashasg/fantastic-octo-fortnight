@@ -38,6 +38,7 @@ existing `@StateObject AppCoordinator`, so behaviour is byte-equivalent.
 - **#696 — Wire root TCA `Store` in `EyePostureReminderApp`.**
 - **#699 — Bridge `AppDelegate` notification routes to TCA root Store.**
 - **#700 — Wire `ScenePhase` observation as a TCA effect.**
+- **#701 — Strip `: ObservableObject` (and the manual `objectWillChange.send()` broadcast) from `SettingsStore`.** Closes the final piece of the MVVM decommission: all SwiftUI surfaces now read settings through their feature stores, non-SwiftUI consumers use the existing `addObserver` / `removeObserver` surface, and `import Combine` is gone from the file.
 
 #### #462 Phase A — Dependency-injection seams across services
 A long mechanical pass replacing every implicit global / singleton lookup in
@@ -181,8 +182,8 @@ to make the TCA Phase-1 reducers testable in isolation.
 - **165 PRs** merged on top of `v0.2.0` — see `git log v0.2.0..main` for the
   full ledger; this section groups the contributor-visible delta.
 - **Phase 3 of the TCA migration is in flight** (per-feature `TestStore`
-  coverage); the remaining MVVM decommission work is tracked in #677, #701,
-  and #702 and will appear in the next release section once those land.
+  coverage); the remaining MVVM decommission work is tracked in #677 and
+  #702 and will appear in the next release section once those land.
 
 ---
 
