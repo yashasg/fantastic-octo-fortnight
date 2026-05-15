@@ -831,12 +831,20 @@ final class AppCoordinatorTests: XCTestCase {
             return nil
         }
 
-        XCTAssertEqual(latencies.count, 1)
+        // #718: `AnalyticsLogger.testEventHandler` is a process-global hook,
+        // so any AppCoordinator instance from an earlier test whose async
+        // work outlives its test body can still emit `appLaunchReadiness`
+        // events into this test's `captured` array — usually with a
+        // wall-clock latency unrelated to our injected `MockDateProvider`.
+        // Match against the injected 42 s value explicitly so this assertion
+        // measures *our* coordinator's behaviour, not the bleed-through.
+        let injectedLatencies = latencies.filter { abs($0 - 42) < 0.001 }
         XCTAssertEqual(
-            latencies[0],
-            42,
-            accuracy: 0.001,
-            "handleForegroundTransition should derive readiness latency from injected DateProviding")
+            injectedLatencies.count,
+            1,
+            "handleForegroundTransition should emit exactly one readiness " +
+            "event sourced from the injected DateProviding " +
+            "(captured: \(latencies))")
     }
 
     // MARK: - ReminderScheduling conformance (crash-safety)
