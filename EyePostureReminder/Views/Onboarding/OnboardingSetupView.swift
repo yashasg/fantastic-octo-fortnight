@@ -3,13 +3,28 @@
 //
 // Onboarding Screen 3 — Reminder Schedule Setup.
 // Users choose their eye break and posture check windows before getting started.
-// Selections bind directly to SettingsStore so Settings shows the same values later.
+// Selections bind directly to `@AppStorage(SettingsStore.Keys.*)` so the same
+// values surface in `SettingsView` later — no environment-object plumbing
+// required. Picker option lists / labels still come from the legacy
+// `SettingsViewModel` statics until `#755` Phase B's `SettingsPickerOptions`
+// extraction lands; the rebase swaps the references over without touching this
+// file's shape.
 
 import SwiftUI
 
 struct OnboardingSetupView: View {
     let onGetStarted: () -> Void
-    @EnvironmentObject private var settings: SettingsStore
+
+    /// Backed by `SettingsStore.Keys.eyesInterval`. The compile-time default
+    /// matches `AppConfig.fallback.defaults.eyeInterval` so the first cold
+    /// launch (before `SettingsStore` has persisted anything to UserDefaults)
+    /// lands on a picker option that exists in
+    /// `SettingsViewModel.intervalOptions`.
+    @AppStorage(SettingsStore.Keys.eyesInterval) private var eyesInterval: Double = 1200
+    @AppStorage(SettingsStore.Keys.eyesBreakDuration) private var eyesBreakDuration: Double = 20
+    @AppStorage(SettingsStore.Keys.postureInterval) private var postureInterval: Double = 1800
+    @AppStorage(SettingsStore.Keys.postureBreakDuration)
+    private var postureBreakDuration: Double = 10
 
     var body: some View {
         ScrollView {
@@ -41,8 +56,8 @@ struct OnboardingSetupView: View {
                         typeID: "eyes",
                         intervalKey: .eyesInterval,
                         durationKey: .eyesBreakDuration,
-                        interval: $settings.eyesInterval,
-                        breakDuration: $settings.eyesBreakDuration
+                        interval: $eyesInterval,
+                        breakDuration: $eyesBreakDuration
                     )
                     OnboardingReminderPickerCard(
                         icon: AppSymbol.postureCheck,
@@ -54,8 +69,8 @@ struct OnboardingSetupView: View {
                         typeID: "posture",
                         intervalKey: .postureInterval,
                         durationKey: .postureBreakDuration,
-                        interval: $settings.postureInterval,
-                        breakDuration: $settings.postureBreakDuration
+                        interval: $postureInterval,
+                        breakDuration: $postureBreakDuration
                     )
                 }
                 .padding(.horizontal, AppSpacing.md)
@@ -212,5 +227,4 @@ private struct OnboardingReminderPickerCard: View {
 
 #Preview {
     OnboardingSetupView(onGetStarted: {})
-        .environmentObject(SettingsStore())
 }

@@ -2,6 +2,19 @@
 // kshana
 //
 // Main onboarding container — 4-screen TabView with page indicator.
+//
+// Migrated off `@EnvironmentObject AppCoordinator` / `SettingsStore` to a
+// scoped `StoreOf<OnboardingFeature>` as part of `#755` Phase C (was #702
+// Phase 5). The legacy `finishOnboarding()` / `finishOnboardingAndCustomize()`
+// instance methods are preserved as button-handler entry points that emit
+// the `.onboardingCompleted` analytics event directly via `AnalyticsLogger`
+// to keep the #324 single-event invariant cleanly testable from unit-test
+// processes without bootstrapping a TCA `TestStore`. Phase D collapses these
+// view methods into reducer-driven actions once `RootView` owns the button
+// wiring.  The `notificationCenter` / `screenTimeAuthorization` references
+// previously pulled from `AppCoordinator` are now sourced from
+// `OnboardingFeature.State` (status fields refreshed via `.onAppear` + the
+// injected dependency clients).
 
 import ComposableArchitecture
 import SwiftUI
@@ -10,19 +23,21 @@ import UIKit
 struct OnboardingView: View {
     typealias AccessibilityNotificationPosterFactory = () -> AccessibilityNotificationPosting
 
-    @EnvironmentObject private var coordinator: AppCoordinator
-    @EnvironmentObject private var settings: SettingsStore
-    @State private var currentPage = 0
+    @Perception.Bindable var store: StoreOf<OnboardingFeature>
     @State private var showAppCategoryPicker = false
 
     private let accessibilityNotificationPoster: AccessibilityNotificationPosting
 
     init(
+        store: StoreOf<OnboardingFeature> = Store(initialState: OnboardingFeature.State()) {
+            OnboardingFeature()
+        },
         accessibilityNotificationPoster: AccessibilityNotificationPosting? = nil,
         makeAccessibilityNotificationPoster: @escaping AccessibilityNotificationPosterFactory = {
             LiveAccessibilityNotificationPoster()
         }
     ) {
+        self.store = store
         self.accessibilityNotificationPoster =
             accessibilityNotificationPoster ?? makeAccessibilityNotificationPoster()
     }
@@ -33,52 +48,78 @@ struct OnboardingView: View {
     }()
 
     var body: some View {
-        TabView(selection: $currentPage) {
-            OnboardingWelcomeView(onNext: { currentPage = 1 })
-                .tag(0)
-            // Inject the coordinator's notification center so the permission
-            // request can be driven by a mock in UI tests without swizzling.
-            OnboardingPermissionView(
-                onNext: { currentPage = 2 },
-                notificationCenter: coordinator.notificationCenter,
-                requestPermission: { await coordinator.requestNotificationPermission() }
-            )
-                .tag(1)
-            // Settings store is forwarded so picker bindings write directly to
-            // persisted values — no separate sync step needed before first use.
-            OnboardingSetupView(onGetStarted: { currentPage = 3 })
-                .environmentObject(settings)
-                .tag(2)
-            // True Interrupt Mode introduction — shows pre-permission copy and
-            // sets honest expectations while #201 (FamilyControls entitlement)
-            // is pending. Users can skip without losing core reminder functionality.
-            OnboardingInterruptModeView(
-                onGetStarted: finishOnboarding,
-                onSetUp: onboardingSetUpAction,
-                onCustomize: finishOnboardingAndCustomize,
-                authorizationStatus: coordinator.screenTimeAuthorization.authorizationStatus
-            )
-                .tag(3)
-        }
-        .tabViewStyle(PageTabViewStyle(indexDisplayMode: .always))
-        .indexViewStyle(PageIndexViewStyle(backgroundDisplayMode: .always))
-        .background(AppColor.background.ignoresSafeArea())
-        .onAppear { _ = Self.configurePageControl }
-        .onChangeCompat(of: currentPage) { _ in
-            accessibilityNotificationPoster.postScreenChanged()
-        }
-        .sheet(isPresented: $showAppCategoryPicker) {
-            OnboardingAppCategoryPickerSheet(onSelectApps: {})
+        WithPerceptionTracking {
+            TabView(selection: pageBinding) {
+                OnboardingWelcomeView(onNext: { store.send(.nextTapped) })
+                    .tag(0)
+                // Notification permission flows through the reducer's
+                // `.requestNotificationPermission` effect (which uses the
+                // injected `NotificationClient`), so the view no longer needs
+                // to thread `AppCoordinator.notificationCenter` through.
+                OnboardingPermissionView(
+                    onNext: { store.send(.nextTapped) },
+                    requestPermission: {
+                        store.send(.requestNotificationPermission)
+                    }
+                )
+                    .tag(1)
+                // Picker bindings inside `OnboardingSetupView` now write
+                // directly to `@AppStorage(SettingsStore.Keys.*)` — no
+                // `SettingsStore` environment object required.
+                OnboardingSetupView(onGetStarted: { store.send(.nextTapped) })
+                    .tag(2)
+                // True Interrupt Mode introduction. The pre-permission copy
+                // and the disabled-button gating are driven by the reducer's
+                // `screenTimeStatus`, which is seeded on `.onAppear` via
+                // `ScreenTimeAuthorizationClient`.
+                OnboardingInterruptModeView(
+                    onGetStarted: finishOnboarding,
+                    onSetUp: onboardingSetUpAction,
+                    onCustomize: finishOnboardingAndCustomize,
+                    authorizationStatus: store.screenTimeStatus
+                )
+                    .tag(3)
+            }
+            .tabViewStyle(PageTabViewStyle(indexDisplayMode: .always))
+            .indexViewStyle(PageIndexViewStyle(backgroundDisplayMode: .always))
+            .background(AppColor.background.ignoresSafeArea())
+            .onAppear {
+                _ = Self.configurePageControl
+                store.send(.onAppear)
+            }
+            .onChangeCompat(of: store.currentPage) { _ in
+                accessibilityNotificationPoster.postScreenChanged()
+            }
+            .sheet(isPresented: $showAppCategoryPicker) {
+                OnboardingAppCategoryPickerSheet(onSelectApps: {})
+            }
         }
     }
 
+    /// Two-way binding to `OnboardingFeature.State.currentPage`.
+    ///
+    /// Reads pull the latest reducer-owned value (so `.nextTapped` driven
+    /// transitions reflect immediately); writes round-trip through
+    /// `.pageChanged` so swipe-driven page changes mutate state through the
+    /// same reducer pathway as tap-driven navigation.
+    private var pageBinding: Binding<Int> {
+        Binding(
+            get: { store.currentPage },
+            set: { store.send(.pageChanged($0)) }
+        )
+    }
+
     private var onboardingSetUpAction: (() -> Void)? {
-        coordinator.screenTimeAuthorization.authorizationStatus == .unavailable
+        store.screenTimeStatus == .unavailable
             ? nil
             : { showAppCategoryPicker = true }
     }
 
     func finishOnboarding() {
+        // Direct AnalyticsLogger emit preserves the synchronous test-handler
+        // contract (#324 single-event invariant). Reducer-side TCA tests
+        // continue to drive `.finishTapped` for the same emission; Phase D
+        // collapses both paths once `RootView` owns the button wiring.
         AnalyticsLogger.log(.onboardingCompleted(cta: .getStarted))
         accessibilityNotificationPoster.postScreenChanged()
         markOnboardingComplete()
@@ -87,6 +128,8 @@ struct OnboardingView: View {
     /// Completes onboarding and signals HomeView to open the Settings sheet immediately.
     /// Sets `openSettingsOnLaunch` so HomeView auto-opens Settings on first appear.
     func finishOnboardingAndCustomize() {
+        // Direct AnalyticsLogger emit — see `finishOnboarding()` for the
+        // single-event invariant note (#324).
         AnalyticsLogger.log(.onboardingCompleted(cta: .customize))
         UserDefaults.standard.set(true, forKey: AppStorageKey.openSettingsOnLaunch)
         accessibilityNotificationPoster.postScreenChanged()
@@ -99,20 +142,15 @@ struct OnboardingView: View {
     private func markOnboardingComplete() {
         UserDefaults.standard.set(true, forKey: AppStorageKey.hasSeenOnboarding)
     }
-
-    private func openApplicationSettings() {
-        if let url = URL(string: UIApplication.openSettingsURLString) {
-            UIApplication.shared.open(url)
-        }
-    }
 }
 
 // MARK: - AppCategoryPicker Sheet Wrapper
 
-/// Owns a local `Store` for `AppCategoryPickerView` while `OnboardingView` is
-/// still presented from the legacy MVVM stack. When Phase 7 of #702 wires
-/// `RootView` as the destination owner, this wrapper is removed and the picker
-/// is presented via `$store.scope(...)`.
+/// Owns a local `Store` for `AppCategoryPickerView` while the onboarding
+/// flow's app-category picker presentation is still view-owned. When
+/// `#755` Phase D wires `RootView` as the destination owner, this wrapper
+/// is removed and the picker is presented via `$store.scope(...)` against
+/// `AppFeature.Destination.appCategoryPicker`.
 private struct OnboardingAppCategoryPickerSheet: View {
     let onSelectApps: () -> Void
 
@@ -135,6 +173,4 @@ private struct OnboardingAppCategoryPickerSheet: View {
 
 #Preview {
     OnboardingView()
-        .environmentObject(AppCoordinator())
-        .environmentObject(SettingsStore())
 }

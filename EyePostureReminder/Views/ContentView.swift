@@ -7,12 +7,12 @@ import SwiftUI
 /// reads from `AppFeature.State.hasSeenOnboarding`. The legacy
 /// `@AppStorage(AppStorageKey.hasSeenOnboarding)` is bridged into the store
 /// via `.onChange` so `OnboardingView`'s `UserDefaults` write (which still
-/// owns persistence until `p0-tca-14`) propagates to the TCA state and flips
-/// the gate without an MVVM-side observer.
+/// owns persistence until `p0-tca-14` Phase D) propagates to the TCA state
+/// and flips the gate without an MVVM-side observer.
 ///
 /// `HomeView` is scoped onto `AppFeature.State.home` here as part of `#755`
-/// Phase A. `OnboardingView` keeps its `@EnvironmentObject` graph until
-/// Phase C migrates it onto `OnboardingFeature`.
+/// Phase A; `OnboardingView` is scoped onto `AppFeature.State.onboarding`
+/// as part of `#755` Phase C.
 struct ContentView: View {
     @Perception.Bindable var store: StoreOf<AppFeature>
     @AppStorage(AppStorageKey.hasSeenOnboarding) private var persistedHasSeenOnboarding = false
@@ -27,7 +27,9 @@ struct ContentView: View {
                     }
                     .transition(.opacity)
                 } else {
-                    OnboardingView()
+                    OnboardingView(
+                        store: store.scope(state: \.onboarding, action: \.onboarding)
+                    )
                         .transition(.opacity)
                 }
             }

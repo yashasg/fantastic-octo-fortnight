@@ -51,6 +51,12 @@ struct OnboardingFeature {
         case openAppCategoryPicker
         case dismissAppCategoryPicker
         case completedOnboarding
+        /// Writes the current `TabView` page index back into the reducer.
+        /// `nextTapped` covers tap-based navigation; this case covers
+        /// swipe-driven page changes so the reducer remains the single source
+        /// of truth for `currentPage`. Values outside `0...lastPageIndex` are
+        /// clamped.
+        case pageChanged(Int)
     }
 
     @Dependency(\.notificationClient) var notification: NotificationClient
@@ -134,6 +140,10 @@ struct OnboardingFeature {
                 // Parent (`AppFeature`) intercepts to flip
                 // `hasSeenOnboarding` and dismiss onboarding (Phase 2,
                 // `p0-tca-11`); the reducer itself has no local effect.
+                return .none
+
+            case let .pageChanged(page):
+                state.currentPage = max(0, min(page, Self.lastPageIndex))
                 return .none
             }
         }
