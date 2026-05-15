@@ -31,7 +31,7 @@ struct ContentView: View {
                 reduceMotion ? nil : AppAnimation.onboardingTransition,
                 value: store.hasSeenOnboarding
             )
-            .onChange(of: persistedHasSeenOnboarding) { newValue in
+            .onChangeCompat(of: persistedHasSeenOnboarding) { newValue in
                 if store.hasSeenOnboarding != newValue {
                     store.send(.hasSeenOnboardingChanged(newValue))
                 }
