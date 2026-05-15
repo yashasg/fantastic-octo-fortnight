@@ -113,6 +113,17 @@ to make the TCA Phase-1 reducers testable in isolation.
 
 ### 🧪 Tests
 
+- **#736 (phase 1) — Retire `DarkModeUITests.swift`.** The seven cases only
+  asserted accessibility identifiers (which are color-scheme-independent and
+  already covered by light-mode `HomeScreenTests` / `OverlayTests` /
+  `OnboardingFlowTests` / `SettingsFlowTests`) — no actual dark-mode rendering
+  / color / contrast assertions. Drops the `darkMode:` parameter from the
+  `launchWith*` helpers in `UITestHelpers.swift` (sole caller deleted), the
+  `appleInterfaceStyle` / `darkAppearance` constants, the `darkmode` shard
+  from the disabled `uitest-shard` CI matrix, and the `DarkModeUITests`
+  entries in `ARCHITECTURE.md` + `Tests/EyePostureReminderUITests/README.md`.
+  The remaining four UI test files are tracked for individual port/retain/delete
+  decisions under #736.
 - **#708 — `OverlayFeature` behavioural-parity TestStore coverage**
   (`p0-tca-16` Phase 3 of TCA migration).
 - **#704 — Phase-3 TestStore expansion** for #679 (`HomeFeature`), #681

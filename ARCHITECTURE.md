@@ -465,7 +465,6 @@ Tests/
 │   └── RegressionTests.swift         Bug regression guards; one section per fixed bug
 │
 └── EyePostureReminderUITests/        (Xcode-only UI test target — not in Package.swift; currently gated `if: false` in CI per #736)
-    ├── DarkModeUITests.swift
     ├── HomeScreenTests.swift
     ├── OnboardingFlowTests.swift
     ├── OverlayTests.swift
@@ -1632,7 +1631,7 @@ The canonical test layout is documented in §3 ("Project Structure") under the `
 // How these tests catch a regression: ...
 ```
 
-**UI test target (`EyePostureReminderUITests/`):** Lives outside SPM. Currently gated `if: false` in CI per #736 pending the TCA-store rewrite. Existing cases: `DarkModeUITests`, `HomeScreenTests`, `OnboardingFlowTests`, `OverlayTests`, `SettingsFlowTests`.
+**UI test target (`EyePostureReminderUITests/`):** Lives outside SPM. Currently gated `if: false` in CI per #736 pending the TCA-store rewrite. Existing cases: `HomeScreenTests`, `OnboardingFlowTests`, `OverlayTests`, `SettingsFlowTests`.
 
 ---
 
