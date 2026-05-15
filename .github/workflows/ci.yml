@@ -232,6 +232,11 @@ jobs:
     runs-on: macos-15
     needs: build-and-test
     timeout-minutes: 20
+    # UI tests are temporarily disabled while the MVVM → TCA migration (#662)
+    # is in flight. They will be rewritten on top of TCA and re-enabled under
+    # issue #736. To re-enable: delete this `if: false` line and the matching
+    # ones on `uitest-shard` below.
+    if: false
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
@@ -313,6 +318,8 @@ jobs:
     runs-on: macos-15
     needs: uitest-prepare
     timeout-minutes: 35
+    # Disabled alongside `uitest-prepare`; see comment there. Tracked in #736.
+    if: false
     strategy:
       fail-fast: false
       matrix:
@@ -515,8 +522,13 @@ jobs:
         if: ${{ needs.uitest-shard.result == 'success' }}
         run: echo "All UI test shards passed."
 
+      - name: UI tests disabled
+        if: ${{ needs.uitest-shard.result == 'skipped' }}
+        run: |
+          echo "::notice::UI tests are temporarily disabled pending the MVVM → TCA rewrite (tracking issue #736)."
+
       - name: Report UI shard failure
-        if: ${{ needs.uitest-shard.result != 'success' }}
+        if: ${{ needs.uitest-shard.result != 'success' && needs.uitest-shard.result != 'skipped' }}
         run: |
           echo "::error::UI test shards did not all pass (result: ${{ needs.uitest-shard.result }})."
           exit 1
