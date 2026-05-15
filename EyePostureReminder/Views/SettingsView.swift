@@ -55,11 +55,12 @@ private struct SettingsSectionHeader: View {
 ///   `SettingsFeature.State`, refreshed via the same `NotificationClient`
 ///   poll + `ScreenTimeAuthorizationClient` stream used by `HomeFeature`.
 ///
-/// The legacy analytics emissions that lived on
-/// `SettingsViewModel.notifySettingChanged(...)` are intentionally left as
-/// no-op `onChange` closures here; re-emitting them from the reducer is
-/// tracked in #777 (post-TCA `setting_changed` emission gaps) once the
-/// action vocabulary expands to cover the non-eyes settings.
+/// The `setting_changed` analytics emissions that lived on the legacy
+/// `SettingsViewModel.notifySettingChanged(...)` callbacks are restored by
+/// #777 via `prev*` `@State` mirrors and `.onChangeCompat` watchers that
+/// forward each change to `SettingsFeature.Action.settingToggleChanged`.
+/// `eyesInterval` / `eyesBreakDuration` keep emitting directly from the
+/// reducer's bindable surface.
 struct SettingsView: View {
     @Perception.Bindable var store: StoreOf<SettingsFeature>
 
@@ -160,7 +161,9 @@ struct SettingsView: View {
             .sheet(isPresented: $showDisclaimer) {
                 LegalDocumentView(document: .disclaimer)
             }
-            .onAppear { store.send(.onAppear) }
+            .onAppear {
+                store.send(.onAppear)
+            }
             .task { await store.send(.task).finish() }
             // Announce master-toggle state changes to VoiceOver (#287).
             .onChangeCompat(of: globalEnabled) { newValue in
@@ -176,6 +179,11 @@ struct SettingsView: View {
                     : String(localized: "settings.snooze.cancelled.announcement", bundle: .module)
                 accessibilityNotificationPoster.postAnnouncement(message: message)
             }
+            // `setting_changed` emissions for the seven non-bindable
+            // Settings rows + the Settings-screen posture pickers (#777).
+            // `eyesInterval` / `eyesBreakDuration` keep emitting from the
+            // reducer's bindable surface.
+            .modifier(SettingsAnalyticsForwarder(store: store))
         }
     }
 
@@ -189,10 +197,10 @@ struct SettingsView: View {
                 tint: AppColor.primaryRest,
                 accessibilityIdentifier: "settings.masterToggle",
                 accessibilityHint: Text("settings.masterToggle.hint", bundle: .module),
-                // Legacy `viewModel?.globalToggleChanged()` analytics
-                // emission is tracked in #777 (post-TCA `setting_changed`
-                // emission gaps); the accessibility announcement still
-                // fires via `.onChangeCompat(of: globalEnabled)` below.
+                // Analytics and VoiceOver announcements both fire from the
+                // `.onChangeCompat(of: globalEnabled)` modifiers on the
+                // enclosing `Form` so the toggle stays a pure rendering of
+                // the persisted `@AppStorage` value.
                 onChange: { _ in },
                 label: {
                     HStack(spacing: AppSpacing.sm) {
@@ -601,10 +609,8 @@ private struct SettingsSmartPauseSection: View {
                 tint: AppColor.primaryRest,
                 accessibilityIdentifier: "settings.smartPause.pauseDuringFocus",
                 accessibilityHint: Text("settings.smartPause.pauseDuringFocus.hint", bundle: .module),
-                // `.settingChanged(.pauseDuringFocus, ...)` re-emission is
-                // tracked in #777 (post-TCA setting_changed emission gaps);
-                // the `@AppStorage` binding already round-trips through
-                // `SettingsStore`.
+                // `setting_changed` emission is owned by `SettingsView`'s
+                // `.onChangeCompat(of: pauseDuringFocus)` watcher (#777).
                 onChange: { _ in },
                 label: {
                     Label(
@@ -622,10 +628,8 @@ private struct SettingsSmartPauseSection: View {
                 tint: AppColor.primaryRest,
                 accessibilityIdentifier: "settings.smartPause.pauseWhileDriving",
                 accessibilityHint: Text("settings.smartPause.pauseWhileDriving.hint", bundle: .module),
-                // `.settingChanged(.pauseWhileDriving, ...)` re-emission is
-                // tracked in #777 (post-TCA setting_changed emission gaps);
-                // the `@AppStorage` binding already round-trips through
-                // `SettingsStore`.
+                // `setting_changed` emission is owned by `SettingsView`'s
+                // `.onChangeCompat(of: pauseWhileDriving)` watcher (#777).
                 onChange: { _ in },
                 label: {
                     Label(
@@ -821,6 +825,111 @@ private struct SettingsNotificationWarningSection: View {
 private func openApplicationSettings() {
     if let url = URL(string: UIApplication.openSettingsURLString) {
         UIApplication.shared.open(url)
+    }
+}
+
+// MARK: - Setting-change analytics forwarder
+
+/// Forwards every change to a non-bindable `SettingsView` row into
+/// `SettingsFeature.Action.settingToggleChanged` so the post-TCA
+/// `setting_changed` analytics emission gap is closed without growing
+/// `SettingsView`'s body past SwiftLint's `type_body_length` cap.
+///
+/// The view owns the `@AppStorage` mirrors as well; this modifier observes
+/// the same UserDefaults keys so the prev-value snapshot stays in sync with
+/// the row even when the value mutates outside the View (e.g. via reset).
+/// Eyes interval/duration emissions remain owned by `SettingsFeature`'s
+/// bindable surface (#777).
+private struct SettingsAnalyticsForwarder: ViewModifier {
+    let store: StoreOf<SettingsFeature>
+
+    @AppStorage(SettingsStore.Keys.globalEnabled) private var globalEnabled = true
+    @AppStorage(SettingsStore.Keys.eyesEnabled) private var eyesEnabled = true
+    @AppStorage(SettingsStore.Keys.postureEnabled) private var postureEnabled = true
+    @AppStorage(SettingsStore.Keys.postureInterval) private var postureInterval: Double = 0
+    @AppStorage(SettingsStore.Keys.postureBreakDuration) private var postureBreakDuration: Double = 0
+    @AppStorage(SettingsStore.Keys.hapticsEnabled) private var hapticsEnabled = true
+    @AppStorage(SettingsStore.Keys.pauseDuringFocus) private var pauseDuringFocus = true
+    @AppStorage(SettingsStore.Keys.pauseWhileDriving) private var pauseWhileDriving = true
+    @AppStorage(SettingsStore.Keys.notificationFallbackEnabled)
+    private var notificationFallbackEnabled = true
+
+    // Pre-change snapshots used to compute the `oldValue` carried by each
+    // `.settingToggleChanged` emission. `@AppStorage.onChange` fires with the
+    // post-change value only, so we capture the prior value on appearance and
+    // refresh it after every successful emit. Mirrors the `prev*` pattern in
+    // `OnboardingSetupView`.
+    @State private var prevGlobalEnabled = true
+    @State private var prevEyesEnabled = true
+    @State private var prevPostureEnabled = true
+    @State private var prevPostureInterval: Double = 0
+    @State private var prevPostureBreakDuration: Double = 0
+    @State private var prevHapticsEnabled = true
+    @State private var prevPauseDuringFocus = true
+    @State private var prevPauseWhileDriving = true
+    @State private var prevNotificationFallbackEnabled = true
+
+    func body(content: Content) -> some View {
+        content
+            .onAppear { primeSnapshots() }
+            .onChangeCompat(of: globalEnabled) { newValue in
+                emit(.globalEnabled, prev: &prevGlobalEnabled, newValue: newValue)
+            }
+            .onChangeCompat(of: eyesEnabled) { newValue in
+                emit(.eyesEnabled, prev: &prevEyesEnabled, newValue: newValue)
+            }
+            .onChangeCompat(of: postureEnabled) { newValue in
+                emit(.postureEnabled, prev: &prevPostureEnabled, newValue: newValue)
+            }
+            .onChangeCompat(of: hapticsEnabled) { newValue in
+                emit(.hapticsEnabled, prev: &prevHapticsEnabled, newValue: newValue)
+            }
+            .onChangeCompat(of: notificationFallbackEnabled) { newValue in
+                emit(
+                    .notificationFallbackEnabled,
+                    prev: &prevNotificationFallbackEnabled,
+                    newValue: newValue
+                )
+            }
+            .onChangeCompat(of: pauseDuringFocus) { newValue in
+                emit(.pauseDuringFocus, prev: &prevPauseDuringFocus, newValue: newValue)
+            }
+            .onChangeCompat(of: pauseWhileDriving) { newValue in
+                emit(.pauseWhileDriving, prev: &prevPauseWhileDriving, newValue: newValue)
+            }
+            .onChangeCompat(of: postureInterval) { newValue in
+                emit(.postureInterval, prev: &prevPostureInterval, newValue: newValue)
+            }
+            .onChangeCompat(of: postureBreakDuration) { newValue in
+                emit(.postureBreakDuration, prev: &prevPostureBreakDuration, newValue: newValue)
+            }
+    }
+
+    private func primeSnapshots() {
+        prevGlobalEnabled = globalEnabled
+        prevEyesEnabled = eyesEnabled
+        prevPostureEnabled = postureEnabled
+        prevPostureInterval = postureInterval
+        prevPostureBreakDuration = postureBreakDuration
+        prevHapticsEnabled = hapticsEnabled
+        prevPauseDuringFocus = pauseDuringFocus
+        prevPauseWhileDriving = pauseWhileDriving
+        prevNotificationFallbackEnabled = notificationFallbackEnabled
+    }
+
+    private func emit<Value: Equatable & CustomStringConvertible>(
+        _ key: AnalyticsEvent.SettingKey,
+        prev: inout Value,
+        newValue: Value
+    ) {
+        guard prev != newValue else { return }
+        let oldValue = prev
+        prev = newValue
+        store.send(.settingToggleChanged(
+            setting: key,
+            oldValue: String(describing: oldValue),
+            newValue: String(describing: newValue)
+        ))
     }
 }
 
