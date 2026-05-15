@@ -3,7 +3,7 @@
 > **Status:** v0.2.0 (Restful Grove) shipped — Phase 1+2 complete; **PIVOT to True Interrupt Mode (Screen Time APIs)** — Phase 3 (Interrupt Mode MVP)  
 > **Core Value Proposition:** True Interrupt Mode via Apple Screen Time APIs (FamilyControls + DeviceActivity + ManagedSettings) to pause distracting apps during break reminders. Local notifications are backup-only, not core.  
 > **Target Platform:** iOS 16+ (17+ for full Screen Time API support)  
-> **Architecture:** MVVM + Screen Time APIs (DeviceActivity, ManagedSettings, ShieldConfiguration), app groups, extension communication  
+> **Architecture:** TCA (ComposableArchitecture) + Screen Time APIs (DeviceActivity, ManagedSettings, ShieldConfiguration), app groups, extension communication  
 > **Team:** 13 members across PM, Design, Architecture, Dev, QA, Review, Legal, DevOps, Analytics
 
 ---
@@ -63,7 +63,7 @@
   - MVVM architecture with Models, Services, ViewModels, Views layers
   - `ReminderType`, `ReminderSettings`, `SettingsStore` models defined
   - `ReminderScheduler`, `OverlayManager` protocols + implementations
-  - Service layer established (`AppCoordinator` orchestrator added in Phase 2)
+  - Service layer established (`AppCoordinator` orchestrator added in Phase 2, decommissioned in the Phase-2 TCA migration — #677 / #755 / PRs #756–#760)
 
 #### M0.3: CI/CD Pipeline ✅
 - **Owner:** Virgil (CI/CD Dev), Saul (Code Reviewer)
@@ -267,7 +267,7 @@
     - **Focus Status Detector:** Uses `INFocusStatusCenter` (iOS 16+, `com.apple.intents` entitlement)
     - **CarPlay Detector:** Uses `AVAudioSession.currentRoute` (no entitlement)
     - **Driving Activity Detector:** Uses `CMMotionActivityManager` coprocessor (`NSMotionUsageDescription` Info.plist)
-  - Integration with `AppCoordinator`: `isPaused` state → timers pause/resume
+  - Pause integration: `isPaused` stream → `SchedulingFeature` reducer dispatches `screenTimeTrackerClient.pauseAll` / `.resumeAll` effects
   - Pause logic: Focus active OR CarPlay active OR driving detected → no reminders
   - Grace period: interruptions < 5s don't reset elapsed time
   - Unit tests with protocol mocks for all three detectors
@@ -418,7 +418,7 @@ Local notification fallback ensures we gracefully degrade if Screen Time APIs un
 ```
 Reminder fires (via ScreenTimeTracker)
     ↓
-AppCoordinator.handleBreakNeeded()
+SchedulingFeature reducer .thresholdReached → OverlayClient.show / NotificationClient.deliver
     ↓
 ManagedSettingsCoordinator.shieldAppsForBreak()
     ↓
@@ -753,7 +753,7 @@ Device resumes normal activity
 
 ## Key Decisions Logged
 
-- **Decision 1.1 (Basher, Phase 1):** SettingsViewModel owns preset options (canonical source)
+- **Decision 1.1 (Basher, Phase 1):** Settings layer owns canonical preset options (Phase 1: implemented in the legacy view-model; migrated to `SettingsFeature.State` in Phase 2 / #688 / #755)
 - **Decision 1.2 (Linus, Phase 1):** Overlay swipe-UP dismiss (fixes earlier bug)
 - **Decision 2.1 (Rusty + Basher, Phase 2):** Screen-time triggers replace wall-clock intervals; 5s grace period on app backgrounding
 - **Decision 2.2 (Basher, Phase 2):** Dual snooze wake mechanism (in-process Task + silent notification); max 2 consecutive snoozes
@@ -818,7 +818,7 @@ Phase 3: Interrupt Mode MVP 🔄 In Progress
 - ✅ Full MVP (Phase 1): Settings, notifications, overlay with countdown, haptics, snooze
 - ✅ Polish (Phase 2): Onboarding (4 screens), smart pause (Focus/CarPlay/driving), accessibility (WCAG AA), data-driven config (Asset Catalog + String Catalog + defaults.json), screen-time triggers (continuous screen-on time with grace period), yin-yang logo animation (Restful Grove redesign — custom SwiftUI Path, spin→breathe, reduce-motion support)
 - ✅ Test Coverage: 71+ unit tests, XCUITest scaffold (HomeScreen, Settings, Onboarding flows)
-- ✅ Architecture: MVVM established, ScreenTimeTracker service, PauseConditionManager with three detectors, protocols for testability
+- ✅ Architecture: TCA (ComposableArchitecture) — `AppFeature` root store composed from per-feature reducers (`HomeFeature`, `SettingsFeature`, `OnboardingFeature`, `OverlayFeature`, `SchedulingFeature`, `AppCategoryPickerFeature`); ScreenTimeTracker service, PauseConditionManager with three detectors, dependency-client layer for testability (migration receipts: #688 / #755 / PRs #756–#760)
 - ✅ Team: 13 members (PM, Design, Architect, 2 iOS Devs, Tester, Code Reviewer, Legal, CI/CD, Data Analyst, Formatter, Scribe)
 
 **Ready for:**
