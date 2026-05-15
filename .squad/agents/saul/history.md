@@ -253,3 +253,4 @@ Orchestration log recorded at 2026-04-30T09:27:10Z. Code review approved; decisi
 **Pattern for Future Audits:** When decomposing audit findings into child issues, group by technical CATEGORY (not per file/line), assign each category to a single owner, and ensure each issue represents one PR's natural scope. This pattern enables parallel team execution and clean PR review boundaries.
 
 - 2026-05-15: You are now explicitly Frontend-scoped. Benedict (Backend Code Reviewer) owns backend review (services, concurrency, lifecycle, system APIs); your domain is frontend review (SwiftUI views, accessibility, assets, animations). Frontend and backend review scopes do not overlap.
+- 2026-05-15: Issue #742 (UX_FLOWS.md TCA rewrite, p2) is now in your queue under squad:saul. Blocked on #677 + #701 + #702 landing first. Coordinate with the docs sweep PR that closes #725 + #741.

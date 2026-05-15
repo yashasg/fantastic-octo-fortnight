@@ -379,3 +379,5 @@
 
 **Reuse:** When scoping new UI components, mention Google Swift Style as a requirement. Developers will recognize it.
 
+- 2026-05-15: Note that #741 (ROADMAP.md) and #742 (UX_FLOWS.md) were both previously labeled squad:tess on the parent #735, but split by file ownership: ROADMAP → squad:rusty (Product), UX_FLOWS → squad:saul (Frontend). Tess no longer owns either.
+

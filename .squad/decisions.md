@@ -24088,3 +24088,76 @@ The key insight: **Categorize by concern, not by location.**
 **What:** Non-dev members are grouped under the "Product" team. Currently this includes Danny (PM), Turk (Analytics), Frank (Legal), Roman (Market Research), and the designers (Tess, Reuben) by literal application of the rule. Pending correction if designers should sit with Frontend.
 
 **Why:** User request — captured for team memory
+
+---
+
+## 2026-05-15 — Issue & Docs Triage
+
+### Decision: Split #735 by File Ownership (2026-05-15T08:11:55Z)
+**Author:** Rusty (iOS Architect / Lead)
+**Date:** 2026-05-15
+**Status:** Executed
+
+**Rationale**
+
+Issue #735 bundled two docs-drift issues with **different team owners**:
+- `ROADMAP.md` (Product narrative & milestones) → squad:rusty
+- `UX_FLOWS.md` (Engineering flow contracts) → squad:saul/Frontend
+
+Bundling obscures accountability and makes review gates ambiguous. Splitting by file ownership yields:
+1. **Clear ownership**: Each child has one obvious owner + team context
+2. **Focused acceptance criteria**: Evidence and AC stay within one file's scope
+3. **Consistent timeline**: Both share the same blocker (#677, #701, #702) and sweep (alongside #725)
+4. **Review clarity**: Reviewer expectations align with file ownership (Product lead reviews #741, Frontend reviewer reviews #742)
+
+**Action Taken**
+
+Created two sibling issues:
+
+**#741**: `[p2] Docs drift: ROADMAP.md still describes MVVM/AppCoordinator orchestration after TCA Phase-2`
+- Owner: squad:rusty (architect, closest to Product)
+- Evidence: L6 header + L56/L63/L66/L110/L132/L270/L421/L756/L821 (MVVM references)
+- AC: L6 header rewrite + Phase-3+ bullets re-anchored to TCA
+- Blocker: #677, #701, #702
+- Priority: p2
+
+**#742**: `[p2] Docs drift: UX_FLOWS.md still describes MVVM/AppCoordinator orchestration after TCA Phase-2`
+- Owner: squad:saul (Frontend code reviewer)
+- Evidence: L34/L250/L281/L282/L304/L936/L976/L1007 (AppCoordinator method references in flow diagrams)
+- AC: Flow diagrams (§2.x, §6.x, §6.7, §8.x) re-drawn to Store reducers; L34 ContentView paragraph updated
+- Blocker: #677, #701, #702
+- Priority: p2
+
+**#735 transformation**:
+- Prepended "⚠️ Superseded by #741 + #742" banner at top
+- Preserved original body verbatim under "## Original (now split)"
+- Added explanatory comment explaining split rationale
+- Left open (not closed) — owner decides closure timing
+
+Cross-links added via:
+- #735 body banner + comment explaining split
+- #741 comment referencing #735 + #742
+- #742 comment referencing #735 + #741
+
+**Convention Going Forward**
+
+**"Split bundled docs-drift issues by file ownership"**
+
+When a docs issue spans multiple files with different team owners (e.g., Frontend/Backend/Product):
+1. Identify team boundaries and file ownership via `.squad/team.md`
+2. Create one child issue per file, extracting file-specific evidence + AC
+3. Preserve blockers and priority in all children (they're shared)
+4. Add "## Refs" section linking parent + siblings
+5. Mark parent as "Superseded by #X + #Y" tombstone (add banner, keep body verbatim below)
+6. Add cross-linking comments on all four issues (parent + both children)
+7. Leave parent open unless explicitly closed by owner
+
+This pattern ensures:
+- Future readers navigate the family without confusion
+- Team accountability is clear (each child is one team's work)
+- Related docs are updated together in the same sweep PR (avoiding piecemeal drift)
+
+**Refs**
+- New issues: #741, #742
+- Parent: #735 (now superseded)
+- Related: #725 (parent docs sweep), #677, #701, #702 (blockers)

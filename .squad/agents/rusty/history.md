@@ -315,3 +315,45 @@ Rewrote #677's issue body to clearly delineate residual scope vs. deferred work:
 4. **This pattern reusable for Phase 3 & beyond.** As the TCA migration continues, new umbrellas will accrue deferrals—standardize the body structure (Scope, Deferred To, Pre-requisites, etc.) to keep navigation consistent.
 
 ---
+
+---
+
+## Session: Split Issue #735 by File Ownership (2025-05-16)
+
+### Context
+Issue #735 bundled two related docs-drift issues (`ROADMAP.md` and `UX_FLOWS.md`) that describe the project's current architecture as MVVM/AppCoordinator-orchestrated, when that pattern is being decommissioned post-Phase 2 TCA migration. However, the two files have different team owners:
+- **ROADMAP.md**: Product narrative & milestones (squad:rusty territory)
+- **UX_FLOWS.md**: Engineering behavior contracts & flow diagrams (squad:saul/Frontend territory)
+
+### Decision
+Split #735 into two sibling issues by file ownership:
+
+**#741** (`ROADMAP.md`, Product)
+- Owned by squad:rusty (architect closest to Product)
+- L6 header rewrite + Phase-3+ bullets re-anchored from MVVM to TCA
+- Same blocker pattern (#677, #701, #702)
+- Same priority (p2) and sweep scope (alongside #725)
+
+**#742** (`UX_FLOWS.md`, Frontend Engineering)
+- Owned by squad:saul (Frontend code reviewer, would review rewrite anyway)
+- Flow diagrams (§2.x, §6.x, §6.7, §8.x) re-drawn from AppCoordinator methods to Store reducers
+- ContentView paragraph updated to reflect TCA state-driven onboarding
+- Same blocker pattern and priority
+
+**#735** marked as "Superseded by #741 + #742" with banner + original body preserved as tombstone. Added explanatory comment; left open per team convention (owner closes when ready).
+
+### Learnings
+
+1. **Split bundled docs-drift issues by file ownership.** When a docs issue spans multiple files with different team owners, splitting by file (not by aspect or urgency) yields clearer accountability and review gates. The pattern: Extract file-specific evidence, AC, and Refs into each child; keep parent as tombstone.
+
+2. **Docs-drift blockers and timelines cross team boundaries.** Both ROADMAP.md and UX_FLOWS.md drift is triggered by the same in-flight work (#677, #701, #702). Coordinating fix timing ensures all four canonical docs (ARCHITECTURE.md, IMPLEMENTATION_PLAN.md, ROADMAP.md, UX_FLOWS.md) transition together from MVVM-era to TCA-era in a single sweep PR. This avoids "piecemeal docs updates" antipattern.
+
+3. **Tombstone parent issues clarify intent.** By prepending a banner to #735's body ("Superseded by #741 + #742") and adding an explanatory comment, future readers see the split rationale and can navigate the family without confusion. Leaving the parent open (vs. closing immediately) respects the owner's privilege to decide when the family is "done."
+
+4. **Reuse this split pattern for future docs sweeps.** The decomposition logic (identify team boundaries, extract evidence by file, preserve blockers & priority in children) is generalizable. Next time a bundled docs issue spans Frontend/Backend/Product, apply the same split-by-ownership template.
+
+### Refs
+
+New issues: #741 (ROADMAP.md), #742 (UX_FLOWS.md)
+Parent issue: #735 (now superseded, kept as tombstone)
+Related: #725 (parent docs sweep), #677, #701, #702 (blockers)

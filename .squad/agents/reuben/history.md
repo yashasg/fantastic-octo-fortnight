@@ -274,3 +274,5 @@ Smart Pause exemplifies a pattern: powerful features hidden in settings without 
 - Release notes / What's New (new features)
 - Onboarding mention for Phase 1 features
 - Consider Settings → Help link for each section
+
+- 2026-05-15: Heads up — #741 (ROADMAP.md TCA rewrite, p2) is owned by Rusty (Product team), but the roadmap rewrite touches the user-facing milestone narrative. Loop in Reuben if any UX-relevant decisions need design input.
