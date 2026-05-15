@@ -98,6 +98,33 @@ jobs:
           restore-keys: |
             spm-sourcepackages-${{ runner.os }}-xcode${{ env.XCODE_VERSION }}-
 
+      # ── Purge SDK-bound caches (#745) ────────────────────────────────────────
+      # The cached DerivedData restored above contains ModuleCache.noindex with
+      # precompiled `.pcm` module files (notably `SwiftShims-*.pcm`) that record
+      # the mtime of the SDK's `usr/lib/swift/shims/module.modulemap` they were
+      # built against. macos-15 runners and Xcode_16.4 patches across runs can
+      # have differing SDK file mtimes (cold-image refreshes, SDK shims relinked
+      # by Xcode), so the cached pcm refuses to load on the next run with:
+      #   error: file '.../SwiftShims-*.pcm' has been modified since the module
+      #   file '...' was built: mtime changed (was X, now Y)
+      # That trips xcodebuild with `exit 65` *before* tests run, so no
+      # `TestResults.xcresult` is produced — making the failure look like a
+      # source/test-compile bug (#746, #747) when the real cause is the SDK
+      # mtime drift documented in #745. Discarding both caches forces the
+      # compiler to rebuild them against the current runner's SDK while still
+      # keeping the much larger `Build/` intermediates (.swiftmodule, object
+      # files) around for incremental reuse — so the speedup from caching is
+      # preserved without the false failures.
+      - name: Purge SDK-bound module caches (avoid SwiftShims mtime drift)
+        run: |
+          for SUBDIR in ModuleCache.noindex SDKStatCaches.noindex; do
+            CACHE_PATH="${{ env.DERIVED_DATA_PATH }}/${SUBDIR}"
+            if [[ -d "$CACHE_PATH" ]]; then
+              echo "Removing stale ${SUBDIR} (would otherwise trigger SwiftShims mtime mismatch — see #745)"
+              rm -rf "$CACHE_PATH"
+            fi
+          done
+
       # ── Homebrew package cache ───────────────────────────────────────────────
       - name: Cache Homebrew packages
         id: brew-cache
