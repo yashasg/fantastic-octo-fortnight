@@ -78,6 +78,7 @@ final class OverlayFeatureBehaviorTests: XCTestCase {
         await clock.advance(by: .seconds(1))
         await store.receive(\.timerTick) { $0.secondsRemaining = 0 }
         await store.receive(\.timerExpired) { $0.isDismissing = true }
+        await store.send(.dismissAnimationCompleted) { $0.isFinalized = true }
         await store.receive(\.dismissed)
 
         XCTAssertEqual(spies.dismissCalls.value, 1,
@@ -101,6 +102,7 @@ final class OverlayFeatureBehaviorTests: XCTestCase {
         await store.receive(\.timerTick) { $0.secondsRemaining = 9 }
 
         await store.send(.dismissTapped) { $0.isDismissing = true }
+        await store.send(.dismissAnimationCompleted) { $0.isFinalized = true }
         await store.receive(\.dismissed)
 
         // Advance well past the original duration: tick effect must be
@@ -118,6 +120,12 @@ final class OverlayFeatureBehaviorTests: XCTestCase {
         )
 
         await store.send(.dismissTapped) { $0.isDismissing = true }
+        // Two-phase dismiss (#738): `overlayClient.dismiss` must NOT have
+        // fired yet — only the animation-completion phase owns that side
+        // effect.
+        XCTAssertEqual(spies.dismissCalls.value, 0,
+                       "overlayClient.dismiss must not fire on dismissTapped alone (two-phase dismiss)")
+        await store.send(.dismissAnimationCompleted) { $0.isFinalized = true }
         await store.receive(\.dismissed)
 
         XCTAssertEqual(spies.dismissCalls.value, 1,
@@ -134,6 +142,7 @@ final class OverlayFeatureBehaviorTests: XCTestCase {
         )
 
         await store.send(.dismissTapped) { $0.isDismissing = true }
+        await store.send(.dismissAnimationCompleted) { $0.isFinalized = true }
         await store.receive(\.dismissed)
 
         let events = spies.analytics.value
@@ -166,6 +175,7 @@ final class OverlayFeatureBehaviorTests: XCTestCase {
         }
 
         await store.send(.dismissTapped) { $0.isDismissing = true }
+        await store.send(.dismissAnimationCompleted) { $0.isFinalized = true }
         await store.receive(\.dismissed)
 
         let events = spies.analytics.value
@@ -192,6 +202,82 @@ final class OverlayFeatureBehaviorTests: XCTestCase {
                        "Re-entrant dismissTapped must not double-log analytics")
         XCTAssertEqual(spies.dismissCalls.value, 0,
                        "Re-entrant dismissTapped must not call overlay.dismiss again")
+    }
+
+    // MARK: - Two-phase dismiss ordering (#738)
+
+    /// Asserts the strict happens-before ordering required by #702 Phase 2:
+    /// **analytics → animation-pending → animation-completed → overlay
+    /// client dismiss → dismissed.** The `overlayClient.dismiss` call is
+    /// gated entirely on `.dismissAnimationCompleted` arriving — it never
+    /// fires off `.dismissTapped` alone.
+    func test_twoPhaseDismiss_dismissTapped_ordering() async {
+        let clock = TestClock()
+        let spies = makeSpies()
+        let store = makeStore(
+            initialState: OverlayFeature.State(type: .eyes, duration: 30),
+            clock: clock,
+            spies: spies
+        )
+
+        // Phase 1: tap → analytics + isDismissing flip; no dismiss yet.
+        await store.send(.dismissTapped) { $0.isDismissing = true }
+        XCTAssertEqual(spies.analytics.value.count, 1,
+                       "Analytics emits on dismissTapped, not on completion")
+        XCTAssertEqual(spies.dismissCalls.value, 0,
+                       "overlayClient.dismiss must wait for animation completion")
+
+        // Phase 2: animation completes → overlayClient.dismiss + dismissed.
+        await store.send(.dismissAnimationCompleted) { $0.isFinalized = true }
+        await store.receive(\.dismissed)
+        XCTAssertEqual(spies.dismissCalls.value, 1,
+                       "overlayClient.dismiss must fire exactly once after completion")
+    }
+
+    /// Same ordering contract applied to the auto-dismiss path so the view
+    /// can play `AppAnimation.overlayAutoDismiss` before the underlying
+    /// `UIWindow` is torn down.
+    func test_twoPhaseDismiss_timerExpired_ordering() async {
+        let clock = TestClock()
+        let spies = makeSpies()
+        let store = makeStore(
+            initialState: OverlayFeature.State(type: .posture, duration: 10),
+            clock: clock,
+            spies: spies
+        )
+
+        await store.send(.timerExpired) { $0.isDismissing = true }
+        XCTAssertEqual(spies.analytics.value.count, 1,
+                       "Analytics emits on timerExpired, not on completion")
+        XCTAssertEqual(spies.dismissCalls.value, 0,
+                       "overlayClient.dismiss must wait for animation completion")
+
+        await store.send(.dismissAnimationCompleted) { $0.isFinalized = true }
+        await store.receive(\.dismissed)
+        XCTAssertEqual(spies.dismissCalls.value, 1,
+                       "overlayClient.dismiss must fire exactly once after completion")
+    }
+
+    /// Defence-in-depth: a re-entrant `.dismissAnimationCompleted` (e.g.
+    /// SwiftUI animation interrupt firing the completion callback twice)
+    /// must not call `overlayClient.dismiss` a second time.
+    func test_dismissAnimationCompleted_reentrant_doesNotCallOverlayDismissTwice() async {
+        let clock = TestClock()
+        let spies = makeSpies()
+        let store = makeStore(
+            initialState: OverlayFeature.State(type: .eyes, duration: 10),
+            clock: clock,
+            spies: spies
+        )
+
+        await store.send(.dismissTapped) { $0.isDismissing = true }
+        await store.send(.dismissAnimationCompleted) { $0.isFinalized = true }
+        await store.receive(\.dismissed)
+        XCTAssertEqual(spies.dismissCalls.value, 1)
+
+        await store.send(.dismissAnimationCompleted)
+        XCTAssertEqual(spies.dismissCalls.value, 1,
+                       "Re-entrant .dismissAnimationCompleted must not fire overlay.dismiss again")
     }
 
     // MARK: - .settingsTapped: analytics-only side effect
@@ -265,6 +351,7 @@ final class OverlayFeatureBehaviorTests: XCTestCase {
         )
 
         await store.send(.timerExpired) { $0.isDismissing = true }
+        await store.send(.dismissAnimationCompleted) { $0.isFinalized = true }
         await store.receive(\.dismissed)
 
         let events = spies.analytics.value
@@ -288,6 +375,11 @@ final class OverlayFeatureBehaviorTests: XCTestCase {
         )
 
         await store.send(.timerExpired) { $0.isDismissing = true }
+        // Two-phase dismiss (#738): the side-effect doesn't fire until the
+        // view (or this test) sends `.dismissAnimationCompleted`.
+        XCTAssertEqual(spies.dismissCalls.value, 0,
+                       "overlayClient.dismiss must not fire on timerExpired alone (two-phase dismiss)")
+        await store.send(.dismissAnimationCompleted) { $0.isFinalized = true }
         await store.receive(\.dismissed)
 
         XCTAssertEqual(spies.dismissCalls.value, 1)

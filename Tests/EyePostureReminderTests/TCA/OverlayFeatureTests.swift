@@ -50,6 +50,7 @@ final class OverlayFeatureTests: XCTestCase {
         XCTAssertTrue(state.hapticsEnabled, "hapticsEnabled defaults to true")
         XCTAssertFalse(state.pauseMediaEnabled, "pauseMediaEnabled defaults to false")
         XCTAssertFalse(state.isDismissing, "isDismissing defaults to false")
+        XCTAssertFalse(state.isFinalized, "isFinalized defaults to false")
         XCTAssertEqual(state.secondsRemaining, 10)
     }
 
@@ -63,8 +64,15 @@ final class OverlayFeatureTests: XCTestCase {
         } withDependencies: { TCATestDependencies.applyAllSilentClients(&$0) }
 
         await store.send(.onAppear)
+        // Two-phase dismiss (#738): `.timerExpired` flips `isDismissing`
+        // and emits analytics, but the actual `overlayClient.dismiss()`
+        // side effect is deferred until the view (or this test) sends
+        // `.dismissAnimationCompleted`.
         await store.receive(\.timerExpired) {
             $0.isDismissing = true
+        }
+        await store.send(.dismissAnimationCompleted) {
+            $0.isFinalized = true
         }
         await store.receive(\.dismissed)
     }
@@ -96,6 +104,9 @@ final class OverlayFeatureTests: XCTestCase {
         await store.receive(\.timerExpired) {
             $0.isDismissing = true
         }
+        await store.send(.dismissAnimationCompleted) {
+            $0.isFinalized = true
+        }
         await store.receive(\.dismissed)
     }
 
@@ -111,22 +122,26 @@ final class OverlayFeatureTests: XCTestCase {
         await store.receive(\.timerExpired) {
             $0.isDismissing = true
         }
+        await store.send(.dismissAnimationCompleted) {
+            $0.isFinalized = true
+        }
         await store.receive(\.dismissed)
     }
 
     // MARK: - .dismissTapped
 
-    func test_dismissTapped_setsIsDismissingAndDismisses() async {
+    func test_dismissTapped_setsIsDismissingButDoesNotEmitDismissed() async {
         let store = TestStore(
             initialState: OverlayFeature.State(type: .eyes, duration: 10)
         ) {
             OverlayFeature()
         } withDependencies: { TCATestDependencies.applyAllSilentClients(&$0) }
 
+        // Phase 1: tap flips `isDismissing` only — no `.dismissed` follow-up
+        // because the view still has to play its exit animation. (#738)
         await store.send(.dismissTapped) {
             $0.isDismissing = true
         }
-        await store.receive(\.dismissed)
     }
 
     func test_dismissTapped_whileAlreadyDismissing_isNoOp() async {
@@ -153,17 +168,19 @@ final class OverlayFeatureTests: XCTestCase {
 
     // MARK: - .timerExpired
 
-    func test_timerExpired_setsIsDismissingAndDismisses() async {
+    func test_timerExpired_setsIsDismissingButDoesNotEmitDismissed() async {
         let store = TestStore(
             initialState: OverlayFeature.State(type: .posture, duration: 5)
         ) {
             OverlayFeature()
         } withDependencies: { TCATestDependencies.applyAllSilentClients(&$0) }
 
+        // Phase 1: auto-expiry flips `isDismissing` only — no `.dismissed`
+        // follow-up because the view still has to play its exit animation.
+        // (#738)
         await store.send(.timerExpired) {
             $0.isDismissing = true
         }
-        await store.receive(\.dismissed)
     }
 
     func test_timerExpired_whileAlreadyDismissing_isNoOp() async {
@@ -174,6 +191,81 @@ final class OverlayFeatureTests: XCTestCase {
         } withDependencies: { TCATestDependencies.applyAllSilentClients(&$0) }
 
         await store.send(.timerExpired)
+    }
+
+    // MARK: - .dismissAnimationCompleted (#738 — two-phase dismiss completion)
+
+    /// `.dismissAnimationCompleted` after `.dismissTapped` flips
+    /// `isFinalized` and triggers the actual dismiss side-effect chain.
+    func test_dismissAnimationCompleted_afterDismissTapped_dispatchesDismissed() async {
+        let store = TestStore(
+            initialState: OverlayFeature.State(type: .eyes, duration: 10)
+        ) {
+            OverlayFeature()
+        } withDependencies: { TCATestDependencies.applyAllSilentClients(&$0) }
+
+        await store.send(.dismissTapped) {
+            $0.isDismissing = true
+        }
+        await store.send(.dismissAnimationCompleted) {
+            $0.isFinalized = true
+        }
+        await store.receive(\.dismissed)
+    }
+
+    /// `.dismissAnimationCompleted` after `.timerExpired` flips
+    /// `isFinalized` and triggers the actual dismiss side-effect chain.
+    func test_dismissAnimationCompleted_afterTimerExpired_dispatchesDismissed() async {
+        let store = TestStore(
+            initialState: OverlayFeature.State(type: .posture, duration: 5)
+        ) {
+            OverlayFeature()
+        } withDependencies: { TCATestDependencies.applyAllSilentClients(&$0) }
+
+        await store.send(.timerExpired) {
+            $0.isDismissing = true
+        }
+        await store.send(.dismissAnimationCompleted) {
+            $0.isFinalized = true
+        }
+        await store.receive(\.dismissed)
+    }
+
+    /// Idempotency guard: re-arrival of `.dismissAnimationCompleted` (e.g.
+    /// SwiftUI animation interrupt firing the completion callback twice)
+    /// must not dispatch `.dismissed` a second time, which would otherwise
+    /// double-tear the underlying `UIWindow` via `overlayClient.dismiss`.
+    func test_dismissAnimationCompleted_reentrant_isNoOp() async {
+        let store = TestStore(
+            initialState: OverlayFeature.State(type: .eyes, duration: 10)
+        ) {
+            OverlayFeature()
+        } withDependencies: { TCATestDependencies.applyAllSilentClients(&$0) }
+
+        await store.send(.dismissTapped) {
+            $0.isDismissing = true
+        }
+        await store.send(.dismissAnimationCompleted) {
+            $0.isFinalized = true
+        }
+        await store.receive(\.dismissed)
+
+        // Second arrival is a pure no-op — no state delta, no follow-up.
+        await store.send(.dismissAnimationCompleted)
+    }
+
+    /// Out-of-order arrival: a stray `.dismissAnimationCompleted` before any
+    /// dismiss path has fired must not flip `isFinalized` or trigger the
+    /// dismiss side effect — the reducer would be free to interpret it as
+    /// "dismiss now" otherwise, breaking the `isDismissing` precondition.
+    func test_dismissAnimationCompleted_beforeAnyDismissPath_isNoOp() async {
+        let store = TestStore(
+            initialState: OverlayFeature.State(type: .eyes, duration: 10)
+        ) {
+            OverlayFeature()
+        } withDependencies: { TCATestDependencies.applyAllSilentClients(&$0) }
+
+        await store.send(.dismissAnimationCompleted)
     }
 
     // MARK: - .dismissed
