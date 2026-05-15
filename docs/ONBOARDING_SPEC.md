@@ -270,7 +270,7 @@ Let the user configure their eye break and posture check intervals before enteri
 |---|---|
 | **Primary CTA** | `Get Started` |
 
-Pickers use `SettingsViewModel.intervalOptions` and `SettingsViewModel.breakDurationOptions` for their values.
+Pickers use `SettingsPickerOptions.intervalOptions` and `SettingsPickerOptions.breakDurationOptions` for their values.
 
 ### "Get Started" Behaviour
 
