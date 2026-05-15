@@ -68,7 +68,7 @@
 | `ScreenTimeShieldTests` | 12 | Shield enable/disable, clear-all |
 | `DeviceActivityMonitorTests` | 31 | DeviceActivity monitor lifecycle |
 | `DeviceActivityMonitoringValidationTests` | 16 | Validation and guard paths |
-| `SelectedAppsStateTests` | 26 | SelectedAppsState encode/decode, equality |
+| `AppGroupIPCStoreTests` | 24 | App Group selection metadata round-trip, key alignment, snapshot encode/decode |
 | `AppGroupIPCStoreTests` | 24 | IPC store read/write, capped log |
 | `ShieldConfigurationCopyTests` | 17 | Shield configuration copy correctness |
 | `NoopServicesTests` | 24 | No-op service conformance checks |
@@ -159,7 +159,6 @@
 | `MockScreenTimeAuthorizationProviding` | `ScreenTimeAuthorizationProviding` | Controls authorization grant/deny in tests |
 | `MockScreenTimeShieldProviding` | `ScreenTimeShieldProviding` | Stubs shield enable/disable/clear |
 | `MockScreenTimeTracker` | `ScreenTimeTracking` | Returns configurable screen-on durations |
-| `MockSelectedAppsIPCStore` | `SelectedAppsIPCStoring` | In-memory IPC store for TrueInterrupt tests |
 | `MockAppGroupIPCRecorder` | `AppGroupIPCRecording` | Captures IPC events in-memory |
 | `MockAccessibilityNotificationPoster` | `AccessibilityNotificationPosting` | Captures VoiceOver announcement calls |
 | `MockDetectors` | Multiple detector protocols | Aggregated mock for Focus/Driving/CarPlay detectors |
@@ -178,7 +177,7 @@
 | **OverlayManager queue FIFO** (coordinator level via `MockOverlayPresenting`) | 5 in `AppCoordinatorTests` + 4 in `OverlayManagerTests` | ✅ Unit-testable paths complete |
 | **Smart Pause** (Focus Mode, CarPlay, driving) | 33 in `PauseConditionManagerTests` + 21 in `FocusModeExtendedTests` + 29 in `DrivingDetectionExtendedTests` | ✅ Complete |
 | **Screen-Time Triggers** (`ScreenTimeTracker`) | 54 in `ScreenTimeTrackerTests` + 19 in `ScreenTimeAuthorizationTests` | ✅ Complete |
-| **True Interrupt Mode** (shield, IPC, DeviceActivity) | 12 in `ScreenTimeShieldTests` + 31 in `DeviceActivityMonitorTests` + 26 in `SelectedAppsStateTests` + 24 in `AppGroupIPCStoreTests` | ✅ Unit-testable paths complete |
+| **True Interrupt Mode** (shield, IPC, DeviceActivity) | 12 in `ScreenTimeShieldTests` + 31 in `DeviceActivityMonitorTests` + 24 in `AppGroupIPCStoreTests` | ✅ Unit-testable paths complete |
 | **Analytics** (`AnalyticsLogger`, all events) | 43 in `AnalyticsEventTests` + 43 in `AnalyticsLoggerTests` | ✅ Complete |
 | **String Catalog completeness** | 186 in `StringCatalogTests` | ✅ Complete |
 | **Regression suite** | 48 in `RegressionTests` | ✅ Complete |

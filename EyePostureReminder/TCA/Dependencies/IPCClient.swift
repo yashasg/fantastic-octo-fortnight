@@ -14,8 +14,8 @@ import ScreenTimeExtensionShared
 /// the failure log emitted when `recordEvent` throws.
 ///
 /// Phase 2 (`p0-tca-15` / #678) extended the surface with selection
-/// read/write + multicast, allowing `SelectedAppsState` to be retired in
-/// favour of reducer-driven access to the App Group store.
+/// read/write + multicast and retired the legacy `SelectedAppsState`
+/// wrapper in favour of reducer-driven access to the App Group store.
 @DependencyClient
 struct IPCClient: Sendable {
     /// Whether the user has toggled on the True Interrupt (DeviceActivity

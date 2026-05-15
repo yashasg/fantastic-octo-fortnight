@@ -8,12 +8,12 @@ import UIKit
 /// Phase-1 reducer for the True Interrupt Mode app/category configuration
 /// surface.
 ///
-/// Mirrors the observable behaviour of `AppCategoryPickerView` +
-/// `SelectedAppsState`: tracks the Screen Time authorisation status, holds the
-/// latest `AppGroupSelectionSnapshot`, drives the authorisation request flow,
-/// and routes the `denied` recovery path through iOS Settings. The parent
-/// `AppFeature` is responsible for dismissing the destination on `.doneTapped`
-/// (e.g. by clearing `state.destination`).
+/// Tracks the Screen Time authorisation status, holds the latest
+/// `AppGroupSelectionSnapshot` (sourced from `IPCClient.readSelection` /
+/// `selectionChanges`), drives the authorisation request flow, and routes
+/// the `denied` recovery path through iOS Settings. The parent `AppFeature`
+/// is responsible for dismissing the destination on `.doneTapped` (e.g. by
+/// clearing `state.destination`).
 @Reducer
 struct AppCategoryPickerFeature {
     @ObservableState
