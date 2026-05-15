@@ -40,7 +40,6 @@ private final class MockMetricKitSubscriber: MetricKitSubscribing {
 final class AppDelegateTests: XCTestCase {
 
     var delegate: AppDelegate!
-    var coordinator: AppCoordinator!
     var settings: SettingsStore!
     var mockNotif: MockNotificationCenter!
     var mockOverlay: MockOverlayPresenting!
@@ -53,15 +52,6 @@ final class AppDelegateTests: XCTestCase {
         settings        = SettingsStore(store: persistence)
         mockNotif       = MockNotificationCenter()
         mockOverlay     = MockOverlayPresenting()
-        coordinator     = AppCoordinator(
-            settings: settings,
-            scheduler: ReminderScheduler(notificationCenter: mockNotif),
-            notificationCenter: mockNotif,
-            overlayManager: mockOverlay,
-            screenTimeTracker: MockScreenTimeTracker(),
-            pauseConditionProvider: MockPauseConditionProvider(),
-            ipcStore: MockAppGroupIPCRecorder()
-        )
         snoozeCountWrites = LockIsolated<[Int]>([])
         store = Self.makeAppFeatureStore(
             settings: settings,
@@ -72,9 +62,7 @@ final class AppDelegateTests: XCTestCase {
     }
 
     override func tearDown() async throws {
-        coordinator.stopFallbackTimers()
         delegate = nil
-        coordinator = nil
         settings = nil
         mockNotif = nil
         mockOverlay = nil
@@ -745,38 +733,15 @@ final class AppDelegateTests: XCTestCase {
     }
 
     // MARK: - handleNotification routing (coordinator path exercised by delegate)
-
-    /// `handleNotification(for:)` must reset `snoozeCount` to 0.
-    /// This is observable without an active UIWindowScene and is the key side-effect
-    /// triggered by the `willPresent` / `didReceive` delegate paths.
-    func test_handleNotification_resetsSnoozeCount() {
-        settings.snoozeCount = 5
-
-        coordinator.handleNotification(for: .eyes)
-
-        XCTAssertEqual(
-            settings.snoozeCount,
-            0,
-            "handleNotification must reset snoozeCount to 0 (a real reminder fired)"
-        )
-    }
-
-    func test_handleNotification_resetsSnoozeCount_forPosture() {
-        settings.snoozeCount = 2
-
-        coordinator.handleNotification(for: .posture)
-
-        XCTAssertEqual(settings.snoozeCount, 0)
-    }
-
-    /// When there is no active UIWindowScene (unit test environment), `handleNotification`
-    /// must queue a pending overlay rather than crashing.
-    func test_handleNotification_withNoActiveScene_doesNotCrash() {
-        // In the unit-test runner there are no active UIWindowScenes,
-        // so the coordinator queues the overlay — both paths must not crash.
-        coordinator.handleNotification(for: .eyes)
-        coordinator.handleNotification(for: .posture)
-    }
+    //
+    // Follow-up #680: rewrite these handleNotification / scheduleReminders
+    // coverage checks as `SchedulingFeature` TestStore assertions. The legacy
+    // `AppCoordinator` was deleted in `#755` Phase E and the routing surface
+    // they exercised now lives in `SchedulingFeature.notificationRoutedEffect`
+    // / `SchedulingFeature.scheduleReminders`. The
+    // `dispatchNotificationRoute` tests further above (which run through the
+    // store directly) cover the public route contract; this section only held
+    // duplicate coverage against the deleted coordinator helpers.
 
     func test_dispatchNotificationRoute_beforeStoreWiring_replaysReminderWhenStoreIsSet() async {
         delegate.store = nil
@@ -821,24 +786,14 @@ final class AppDelegateTests: XCTestCase {
     }
 
     // MARK: - Snooze-wake routing (scheduleReminders path exercised by delegate)
-
-    /// The snooze-wake path calls `scheduleReminders()`, which (when auth is granted)
-    /// adds notification requests. This verifies the coordinator correctly handles the
-    /// snooze-wake category routing branch.
-    func test_snoozeWakeRouting_callsScheduleReminders_addsRequests() async {
-        mockNotif.authorizationGranted = true
-        settings.eyesEnabled    = true
-        settings.postureEnabled = true
-        settings.snoozedUntil   = nil // no active snooze
-
-        // `scheduleReminders()` is called by the delegate when it sees snoozeWakeCategory.
-        await coordinator.scheduleReminders()
-
-        // screenTimeTracker path is used (no UNNotification requests in screen-time mode),
-        // but `scheduleReminders` must complete without crashing.
-        // The coordinator operates in screen-time mode so no UNNotification is scheduled.
-        XCTAssertNil(settings.snoozedUntil, "scheduleReminders must not set a snooze when none was active")
-    }
+    //
+    // Follow-up #680: rewrite the snooze-wake coverage as a
+    // `SchedulingFeature` TestStore assertion against
+    // `.notificationRouted(.snoozeWake)`. The legacy
+    // `AppCoordinator.scheduleReminders()` shim was deleted in `#755`
+    // Phase E; the snooze-wake category routing is now driven entirely
+    // by the store (see `AppDelegate.notificationRoute(for:)` →
+    // `SchedulingFeature.snoozeWakeCategory`).
 
     private func makeIsolatedDefaults(suffix: String) throws -> UserDefaults {
         let suiteName = "AppDelegateTests.\(suffix).\(UUID().uuidString)"
