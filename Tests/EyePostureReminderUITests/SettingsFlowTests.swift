@@ -103,12 +103,18 @@ final class SettingsFlowTests: XCTestCase {
 
         let initialFocusValue = focusToggle.value as? String
         focusToggle.tap()
-        XCTAssertNotEqual(initialFocusValue, focusToggle.value as? String, "Focus pause toggle should change state.")
+        XCTAssertTrue(
+            focusToggle.waitForValueChange(from: initialFocusValue),
+            "Focus pause toggle should change state after tap."
+        )
 
         scrollToElement(drivingToggle)
         let initialDrivingValue = drivingToggle.value as? String
         drivingToggle.tap()
-        XCTAssertNotEqual(initialDrivingValue, drivingToggle.value as? String, "Driving pause toggle should change.")
+        XCTAssertTrue(
+            drivingToggle.waitForValueChange(from: initialDrivingValue),
+            "Driving pause toggle should change state after tap."
+        )
     }
 
     // MARK: - test_settings_globalToggle_changesStateOnTap
@@ -122,12 +128,18 @@ final class SettingsFlowTests: XCTestCase {
 
         let initialValue = globalToggle.value as? String
         globalToggle.tap()
+        XCTAssertTrue(
+            globalToggle.waitForValueChange(from: initialValue),
+            "Global toggle should change state after being tapped."
+        )
 
         let newValue = globalToggle.value as? String
-        XCTAssertNotEqual(initialValue, newValue, "Global toggle should change state after being tapped.")
-
         globalToggle.tap()
-        XCTAssertEqual(initialValue, globalToggle.value as? String, "Global toggle should be restored after assertion.")
+        XCTAssertTrue(
+            globalToggle.waitForValueChange(from: newValue),
+            "Global toggle should be restored after assertion."
+        )
+        XCTAssertEqual(initialValue, globalToggle.value as? String)
     }
 
     // MARK: - test_settings_secondaryControls_exist
@@ -251,8 +263,11 @@ final class SettingsFlowTests: XCTestCase {
 
         // 2. Flip the toggle.
         toggle.tap()
+        XCTAssertTrue(
+            toggle.waitForValueChange(from: initialValue),
+            "Toggle must change state after tap."
+        )
         let flippedValue = toggle.value as? String ?? ""
-        XCTAssertNotEqual(initialValue, flippedValue, "Toggle must change state after tap.")
 
         // 3. Dismiss and reopen Settings.
         dismissSettings()
@@ -289,8 +304,11 @@ final class SettingsFlowTests: XCTestCase {
 
         // 2. Flip the toggle.
         toggle.tap()
+        XCTAssertTrue(
+            toggle.waitForValueChange(from: initialValue),
+            "Eyes toggle must change state after tap."
+        )
         let flippedValue = toggle.value as? String ?? ""
-        XCTAssertNotEqual(initialValue, flippedValue, "Eyes toggle must change state after tap.")
 
         // 3. Dismiss and reopen Settings.
         dismissSettings()
@@ -324,7 +342,10 @@ final class SettingsFlowTests: XCTestCase {
         )
         let initialValue = globalToggle.value as? String
         globalToggle.tap()
-        XCTAssertNotEqual(initialValue, globalToggle.value as? String, "Master toggle should change state after tap.")
+        XCTAssertTrue(
+            globalToggle.waitForValueChange(from: initialValue),
+            "Master toggle should change state after tap."
+        )
 
         // The saved banner should appear immediately after the toggle.
         let bannerContainer = app.otherElements["settings.savedBanner"]
@@ -336,7 +357,7 @@ final class SettingsFlowTests: XCTestCase {
         globalToggle.tap()
 
         XCTExpectFailure(
-            "Transient saved banner is not reliably discoverable via XCUI in CI; tracked for follow-up.",
+            "Transient saved banner is not reliably discoverable via XCUI in CI; tracked in #787.",
             strict: false
         ) {
             XCTAssertTrue(
