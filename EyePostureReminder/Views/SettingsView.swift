@@ -58,8 +58,8 @@ private struct SettingsSectionHeader: View {
 /// The legacy analytics emissions that lived on
 /// `SettingsViewModel.notifySettingChanged(...)` are intentionally left as
 /// no-op `onChange` closures here; re-emitting them from the reducer is
-/// deferred to `p0-tca-16` (#679) once the action vocabulary expands to
-/// cover the non-eyes settings.
+/// tracked in #777 (post-TCA `setting_changed` emission gaps) once the
+/// action vocabulary expands to cover the non-eyes settings.
 struct SettingsView: View {
     @Perception.Bindable var store: StoreOf<SettingsFeature>
 
@@ -190,9 +190,9 @@ struct SettingsView: View {
                 accessibilityIdentifier: "settings.masterToggle",
                 accessibilityHint: Text("settings.masterToggle.hint", bundle: .module),
                 // Legacy `viewModel?.globalToggleChanged()` analytics
-                // emission is deferred to `p0-tca-16` (#679); the
-                // accessibility announcement still fires via
-                // `.onChangeCompat(of: globalEnabled)` below.
+                // emission is tracked in #777 (post-TCA `setting_changed`
+                // emission gaps); the accessibility announcement still
+                // fires via `.onChangeCompat(of: globalEnabled)` below.
                 onChange: { _ in },
                 label: {
                     HStack(spacing: AppSpacing.sm) {
@@ -602,8 +602,9 @@ private struct SettingsSmartPauseSection: View {
                 accessibilityIdentifier: "settings.smartPause.pauseDuringFocus",
                 accessibilityHint: Text("settings.smartPause.pauseDuringFocus.hint", bundle: .module),
                 // `.settingChanged(.pauseDuringFocus, ...)` re-emission is
-                // deferred to `p0-tca-16` (#679); the `@AppStorage` binding
-                // already round-trips through `SettingsStore`.
+                // tracked in #777 (post-TCA setting_changed emission gaps);
+                // the `@AppStorage` binding already round-trips through
+                // `SettingsStore`.
                 onChange: { _ in },
                 label: {
                     Label(
@@ -622,8 +623,9 @@ private struct SettingsSmartPauseSection: View {
                 accessibilityIdentifier: "settings.smartPause.pauseWhileDriving",
                 accessibilityHint: Text("settings.smartPause.pauseWhileDriving.hint", bundle: .module),
                 // `.settingChanged(.pauseWhileDriving, ...)` re-emission is
-                // deferred to `p0-tca-16` (#679); the `@AppStorage` binding
-                // already round-trips through `SettingsStore`.
+                // tracked in #777 (post-TCA setting_changed emission gaps);
+                // the `@AppStorage` binding already round-trips through
+                // `SettingsStore`.
                 onChange: { _ in },
                 label: {
                     Label(
