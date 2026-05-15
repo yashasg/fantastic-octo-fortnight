@@ -70,7 +70,7 @@ struct EyePostureReminderApp: App {
                 .task {
                     await store.send(.scheduling(.start)).finish()
                 }
-                .onChange(of: scenePhase) { phase in
+                .onChangeCompat(of: scenePhase) { phase in
                     if phase == .active {
                         presentUITestOverlayIfNeeded()
                     }
