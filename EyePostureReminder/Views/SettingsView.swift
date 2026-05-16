@@ -240,10 +240,11 @@ struct SettingsView: View {
                 interval: $store.eyesInterval,
                 breakDuration: $store.eyesBreakDuration
             ) {
-                // `eyesInterval` / `eyesBreakDuration` debounce-reschedule
-                // inside the reducer; the legacy
-                // `viewModel?.reminderSettingChanged(.eyes)` callback is
-                // deferred to `p0-tca-16` (#679).
+                // Eyes-side reschedule + `setting_changed` analytics are
+                // reducer-owned: `$store.eyesInterval` /
+                // `$store.eyesBreakDuration` flow through `SettingsFeature`'s
+                // bindable surface, which debounces and dispatches the
+                // reschedule effect. No view-level callback needed here.
             }
             .listRowBackground(AppColor.surface)
             .listRowSeparatorTint(AppColor.separatorSoft)
@@ -270,9 +271,17 @@ struct SettingsView: View {
                 interval: $postureInterval,
                 breakDuration: $postureBreakDuration
             ) {
-                // Posture-side reschedule is deferred to `p0-tca-16` (#679);
-                // once `SettingsClient.snapshot` vends posture values the
-                // reducer will own this debounce.
+                // Posture-side pickers still bind directly through
+                // `@AppStorage(SettingsStore.Keys.postureInterval)` /
+                // `@AppStorage(SettingsStore.Keys.postureBreakDuration)` —
+                // they are not yet on `SettingsFeature`'s bindable surface.
+                // Persistence + reschedule continue to flow via
+                // `SettingsStore` → `SettingsClient.liveValue` →
+                // `SchedulingFeature`; `setting_changed` analytics emit
+                // from the `.onChangeCompat` watchers below.
+                // Migration onto the reducer's bindable surface is tracked
+                // by #805 (extend `SettingsClient.snapshot` to vend
+                // posture-side values).
             }
             .listRowBackground(AppColor.surface)
             .listRowSeparatorTint(AppColor.separatorSoft)
