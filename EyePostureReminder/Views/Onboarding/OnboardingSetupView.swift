@@ -5,10 +5,9 @@
 // Users choose their eye break and posture check windows before getting started.
 // Selections bind directly to `@AppStorage(SettingsStore.Keys.*)` so the same
 // values surface in `SettingsView` later — no environment-object plumbing
-// required. Picker option lists / labels still come from the legacy
-// `SettingsViewModel` statics until `#755` Phase B's `SettingsPickerOptions`
-// extraction lands; the rebase swaps the references over without touching this
-// file's shape.
+// required. Picker option lists and labels come from
+// `SettingsPickerOptions` (the canonical preset source extracted in `#755`
+// Phase B).
 
 import SwiftUI
 
@@ -19,7 +18,7 @@ struct OnboardingSetupView: View {
     /// matches `AppConfig.fallback.defaults.eyeInterval` so the first cold
     /// launch (before `SettingsStore` has persisted anything to UserDefaults)
     /// lands on a picker option that exists in
-    /// `SettingsViewModel.intervalOptions`.
+    /// `SettingsPickerOptions.intervalOptions`.
     @AppStorage(SettingsStore.Keys.eyesInterval) private var eyesInterval: Double = 1200
     @AppStorage(SettingsStore.Keys.eyesBreakDuration) private var eyesBreakDuration: Double = 20
     @AppStorage(SettingsStore.Keys.postureInterval) private var postureInterval: Double = 1800
