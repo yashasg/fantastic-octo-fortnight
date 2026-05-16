@@ -42,7 +42,7 @@ final class SettingsFeatureSnoozeTests: XCTestCase {
         await store.send(.snoozeTapped(.fiveMinutes)) {
             $0.showSavedBanner = true
         }
-        await clock.advance(by: .seconds(2))
+        await clock.advance(by: .seconds(4))
         await store.receive(\.savedBannerExpired) {
             $0.showSavedBanner = false
         }
@@ -97,7 +97,7 @@ final class SettingsFeatureSnoozeTests: XCTestCase {
         await store.send(.snoozeTapped(.oneHour)) {
             $0.showSavedBanner = true
         }
-        await clock.advance(by: .seconds(2))
+        await clock.advance(by: .seconds(4))
         await store.receive(\.savedBannerExpired) {
             $0.showSavedBanner = false
         }
@@ -153,7 +153,7 @@ final class SettingsFeatureSnoozeTests: XCTestCase {
         await store.send(.snoozeTapped(.restOfDay)) {
             $0.showSavedBanner = true
         }
-        await clock.advance(by: .seconds(2))
+        await clock.advance(by: .seconds(4))
         await store.receive(\.savedBannerExpired) {
             $0.showSavedBanner = false
         }

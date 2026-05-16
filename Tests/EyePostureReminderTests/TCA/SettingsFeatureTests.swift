@@ -219,7 +219,7 @@ final class SettingsFeatureTests: XCTestCase {
         }
 
         // Drive the savedBannerExpired effect.
-        await clock.advance(by: .seconds(2))
+        await clock.advance(by: .seconds(4))
         await store.receive(\.savedBannerExpired) {
             $0.showSavedBanner = false
         }

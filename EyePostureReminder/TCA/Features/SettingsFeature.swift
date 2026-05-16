@@ -143,9 +143,19 @@ struct SettingsFeature {
         case eyesIntervalDebounce
         case eyesBreakDurationDebounce
         case snoozeBanner
+        case settingToggleBanner
         case screenTimeAuthStatusStream
         case notificationAuthStatusPoll
     }
+
+    /// Time the "Settings saved" banner stays on screen after a persisted
+    /// change. 4 s keeps the confirmation visible long enough that XCUI's
+    /// `Wait for app to idle` window (~2 s on macOS-15 CI runners) still
+    /// leaves >1 s for `XCTestCase.waitForExistence` to observe the banner.
+    /// Shared by the bindable surface, snooze tap, and the non-bindable
+    /// analytics shim so the duration stays consistent across every
+    /// banner-triggering action.
+    private static let savedBannerVisibilityDuration: Duration = .seconds(4)
 
     var body: some ReducerOf<Self> {
         BindingReducer()
@@ -165,7 +175,7 @@ struct SettingsFeature {
                         oldValue: String(oldValue),
                         newValue: String(newValue)
                     ))
-                    try await clock.sleep(for: .seconds(2))
+                    try await clock.sleep(for: Self.savedBannerVisibilityDuration)
                     await send(.savedBannerExpired)
                 }
                 .cancellable(id: CancelID.eyesIntervalDebounce, cancelInFlight: true)
@@ -184,7 +194,7 @@ struct SettingsFeature {
                         oldValue: String(oldValue),
                         newValue: String(newValue)
                     ))
-                    try await clock.sleep(for: .seconds(2))
+                    try await clock.sleep(for: Self.savedBannerVisibilityDuration)
                     await send(.savedBannerExpired)
                 }
                 .cancellable(id: CancelID.eyesBreakDurationDebounce, cancelInFlight: true)
@@ -236,7 +246,7 @@ struct SettingsFeature {
                     await settingsClient.setSnoozedUntil(endDate)
                     await settingsClient.setSnoozeCount(0)
                     analytics.log(.snoozeActivated(durationOption: option.analyticsCode))
-                    try await clock.sleep(for: .seconds(2))
+                    try await clock.sleep(for: Self.savedBannerVisibilityDuration)
                     await send(.savedBannerExpired)
                 }
                 .cancellable(id: CancelID.snoozeBanner, cancelInFlight: true)
@@ -267,13 +277,26 @@ struct SettingsFeature {
                 return .none
 
             case let .settingToggleChanged(setting, oldValue, newValue):
-                return .run { [analytics] _ in
+                // #787: the non-bindable rows (master toggle, eyes/posture
+                // enable, smart-pause toggles, …) write through `@AppStorage`
+                // and reach the reducer only via this analytics shim. The
+                // legacy `SettingsViewModel` flipped the saved-banner for
+                // every persisted change, so we mirror that here. Without
+                // this, the master-toggle XCUITest assertion in
+                // `SettingsFlowTests.test_settings_savedBanner_appearsOnToggle`
+                // never observes the banner (read as "XCUI flake" until the
+                // root cause was identified).
+                state.showSavedBanner = true
+                return .run { [analytics] send in
                     analytics.log(.settingChanged(
                         setting: setting,
                         oldValue: oldValue,
                         newValue: newValue
                     ))
+                    try await clock.sleep(for: Self.savedBannerVisibilityDuration)
+                    await send(.savedBannerExpired)
                 }
+                .cancellable(id: CancelID.settingToggleBanner, cancelInFlight: true)
             }
         }
     }

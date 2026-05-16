@@ -348,24 +348,31 @@ final class SettingsFlowTests: XCTestCase {
         )
 
         // The saved banner should appear immediately after the toggle.
-        let bannerContainer = app.otherElements["settings.savedBanner"]
+        // Pre-#787 the banner only fired for the eyes-interval / break-duration
+        // bindable surface and snooze taps, so the master toggle (which writes
+        // through `@AppStorage` and reaches the reducer via the
+        // `.settingToggleChanged` analytics shim) never saw it. The fix in
+        // `SettingsFeature` flips `showSavedBanner = true` for every
+        // `.settingToggleChanged` emission, so the banner is now visible for
+        // the same window as every other persisted change.
+        //
+        // Banner is rendered as an `.overlay(alignment: .bottom)` host and
+        // carries `.accessibilityAddTraits(.isStaticText)`, so XCUI types it
+        // as `StaticText`. Query that first; fall back to `otherElements` in
+        // case the host classification changes. Generous timeouts cover the
+        // ~2 s XCUI "wait for app to idle" window after the toggle tap.
         let bannerLabel = app.staticTexts["settings.savedBanner"]
-        let bannerAppeared = bannerContainer.waitForExistence(timeout: 3)
-            || bannerLabel.waitForExistence(timeout: 1)
+        let bannerContainer = app.otherElements["settings.savedBanner"]
+        let bannerAppeared = bannerLabel.waitForExistence(timeout: 3)
+            || bannerContainer.waitForExistence(timeout: 1)
 
         // Restore toggle to avoid test pollution before asserting.
         globalToggle.tap()
 
-        XCTExpectFailure(
-            "Transient saved banner is not reliably discoverable via XCUI in CI; tracked in #787.",
-            strict: false
-        ) {
-            XCTAssertTrue(
-                bannerAppeared,
-                "'Settings saved' confirmation banner must appear after a setting change (#434). " +
-                "Add .accessibilityIdentifier(\"settings.savedBanner\") to the SettingsSavedBanner overlay."
-            )
-        }
+        XCTAssertTrue(
+            bannerAppeared,
+            "'Settings saved' confirmation banner must appear after a setting change (#434)."
+        )
     }
 }
 
