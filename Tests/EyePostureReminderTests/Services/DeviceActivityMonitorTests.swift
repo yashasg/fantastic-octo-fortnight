@@ -8,8 +8,6 @@ import XCTest
 /// - `DeviceActivityMonitorNoop` compile-safe behaviour (no FamilyControls required)
 /// - `DeviceActivityMonitorProviding` protocol contract via `MockDeviceActivityMonitorProviding`
 /// - `ShieldSession(type:durationSeconds:triggeredAt:)` convenience initialiser
-/// - `AppCoordinator` integration: `deviceActivityMonitor` is called on threshold
-///   (when `isAvailable` is true) and on `cancelAllReminders()`
 ///
 /// No test imports or instantiates `DeviceActivity`, `ManagedSettings`, or `FamilyControls`.
 /// All tests are safe to run in the iOS Simulator and SPM test host.
@@ -222,17 +220,6 @@ final class DeviceActivityMonitorTests: XCTestCase {
         XCTAssertEqual(mock.cancelCallCount, 0)
         XCTAssertTrue(mock.scheduledSessions.isEmpty)
     }
-
-    // MARK: - AppCoordinator integration
-    //
-    // Follow-up #680: rewrite the deleted coverage as `SchedulingFeature`
-    // TestStore assertions. The previous tests in this section constructed
-    // an `AppCoordinator` directly to verify that `cancelAllReminders()` /
-    // threshold scheduling correctly delegated to `DeviceActivityMonitor`.
-    // After `#755` Phase E removed the coordinator stack, the same wiring
-    // now lives in `SchedulingFeature` (see `cancelRemindersEffect` and
-    // `notificationRoutedEffect`) and should be covered with TCA-native
-    // assertions instead of resurrected here.
 
     // MARK: - Helpers
 

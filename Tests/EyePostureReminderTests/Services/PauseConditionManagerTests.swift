@@ -159,8 +159,8 @@ final class PauseConditionManagerTests: XCTestCase {
     // MARK: - Snooze Interaction
     //
     // PauseConditionManager and snooze are independent pause axes (per spec).
-    // PauseConditionManager reports its own state truthfully; AppCoordinator is
-    // responsible for checking both before calling resumeAll().
+    // PauseConditionManager reports its own state truthfully; SchedulingFeature
+    // is responsible for checking both before calling resumeAll().
 
     func test_pause_whenPauseClearsWhileSnoozeActive_conditionManagerReportsNotPaused() {
         settings.pauseDuringFocus = true
@@ -176,9 +176,9 @@ final class PauseConditionManagerTests: XCTestCase {
 
         XCTAssertFalse(sut.isPaused, "PauseConditionManager.isPaused is false: all conditions have cleared")
         XCTAssertEqual(callbackValue, false, "onPauseStateChanged fires false when all conditions clear")
-        // The consumer (AppCoordinator) must still gate resumeAll() behind this snooze check:
+        // SchedulingFeature must still gate resumeAll() behind this snooze check:
         let snoozeStillActive = settings.snoozedUntil.map { $0 > Date() } ?? false
-        XCTAssertTrue(snoozeStillActive, "Snooze is still active — AppCoordinator must not resume tracking yet")
+        XCTAssertTrue(snoozeStillActive, "Snooze is still active — SchedulingFeature must not resume tracking yet")
     }
 
     func test_snooze_aloneDoesNotAffect_isPaused() {

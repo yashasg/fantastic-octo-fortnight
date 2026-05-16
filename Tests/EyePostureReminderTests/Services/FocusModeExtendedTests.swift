@@ -218,14 +218,3 @@ final class FocusModeExtendedTests: XCTestCase {
             "onPauseStateChanged must not fire when state remains paused after one condition clears")
     }
 }
-
-// MARK: - FocusModeSettingsViewModelTests removed (#755 Phase B)
-//
-// The `SettingsViewModel.pauseDuringFocus` getter/setter coverage that
-// previously lived in `FocusModeSettingsViewModelTests` was removed when
-// `SettingsViewModel` was deleted. The `pauseDuringFocus` binding is now
-// driven from `SettingsView` via `@AppStorage(SettingsStore.Keys.pauseDuringFocus)`
-// and exercised through `SettingsStore` directly.
-//
-// Rewrite as `SettingsFeature` TestStore coverage once the reducer owns the
-// `pauseDuringFocus` analytics emission — tracked under #679.
