@@ -240,10 +240,11 @@ struct SettingsView: View {
                 interval: $store.eyesInterval,
                 breakDuration: $store.eyesBreakDuration
             ) {
-                // `eyesInterval` / `eyesBreakDuration` debounce-reschedule
-                // inside the reducer; the legacy
-                // `viewModel?.reminderSettingChanged(.eyes)` callback is
-                // deferred to `p0-tca-16` (#679).
+                // `eyesInterval` / `eyesBreakDuration` flow through
+                // `SettingsFeature`'s bindable surface; the reducer owns
+                // the debounce-reschedule effect (see
+                // `SettingsFeature.swift` `.binding(\.eyesInterval)` /
+                // `.binding(\.eyesBreakDuration)` cases).
             }
             .listRowBackground(AppColor.surface)
             .listRowSeparatorTint(AppColor.separatorSoft)
@@ -270,9 +271,14 @@ struct SettingsView: View {
                 interval: $postureInterval,
                 breakDuration: $postureBreakDuration
             ) {
-                // Posture-side reschedule is deferred to `p0-tca-16` (#679);
-                // once `SettingsClient.snapshot` vends posture values the
-                // reducer will own this debounce.
+                // Posture-side pickers still bind through
+                // `@AppStorage(SettingsStore.Keys.posture*)` directly: the
+                // shared `SettingsClient` snapshot/stream surface only
+                // vends eyes-side `ReminderSettings` today, so
+                // `SettingsFeature` does not yet host bindable
+                // `postureInterval` / `postureBreakDuration` mirrors.
+                // Tracked by #805 (extend snapshot + migrate onto the
+                // reducer's bindable surface).
             }
             .listRowBackground(AppColor.surface)
             .listRowSeparatorTint(AppColor.separatorSoft)
