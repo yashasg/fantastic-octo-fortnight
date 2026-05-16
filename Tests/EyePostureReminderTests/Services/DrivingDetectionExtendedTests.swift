@@ -306,14 +306,3 @@ final class DrivingDetectionExtendedTests: XCTestCase {
             "Rapid driving toggles ending on driving=true must leave manager paused")
     }
 }
-
-// MARK: - DrivingSettingsViewModelTests removed (#755 Phase B)
-//
-// The `SettingsViewModel.pauseWhileDriving` getter/setter coverage that
-// previously lived in `DrivingSettingsViewModelTests` was removed when
-// `SettingsViewModel` was deleted. The `pauseWhileDriving` binding is now
-// driven from `SettingsView` via `@AppStorage(SettingsStore.Keys.pauseWhileDriving)`
-// and exercised through `SettingsStore` directly.
-//
-// Rewrite as `SettingsFeature` TestStore coverage once the reducer owns the
-// `pauseWhileDriving` analytics emission — tracked under #679.

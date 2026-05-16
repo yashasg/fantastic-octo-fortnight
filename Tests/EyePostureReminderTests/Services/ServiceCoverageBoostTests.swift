@@ -6,9 +6,7 @@ import XCTest
 
 /// Additional service and model tests targeting coverage gaps in partially-covered
 /// production files: PauseConditionManager, OverlayManager, MetricKitSubscriber,
-/// AppDelegate, and AppCoordinator. (The legacy `SettingsViewModel` section was
-/// removed alongside `SettingsViewModel` in #755 Phase B; the `SettingsFeature`
-/// TestStore replacement is tracked under #679.)
+/// AppDelegate, and related service helpers.
 @MainActor
 final class ServiceCoverageBoostTests: XCTestCase {
 
@@ -271,19 +269,6 @@ final class ServiceCoverageBoostTests: XCTestCase {
 @MainActor
 final class ServiceCoverageBoostTests2: XCTestCase {
 
-    // MARK: - AppCoordinator — Coverage Gaps
-    //
-    // Follow-up #680: rewrite these coverage-only smoke tests as
-    // `SchedulingFeature` / `SettingsFeature` TestStore assertions. They
-    // previously instantiated `AppCoordinator` directly purely to bump
-    // coverage on private helpers (`presentPendingOverlayIfNeeded`,
-    // `appWillResignActive`, `cancelSnoozeWakeTaskIfNeeded`,
-    // `handleNotification`, `scheduleReminders`, `refreshAuthStatus`,
-    // `clearExpiredSnoozeIfNeeded`, `handleForegroundTransition`). After
-    // `#755` Phase E deleted the coordinator stack, every one of those
-    // surfaces is now exercised through reducer actions covered by
-    // `SchedulingFeatureTests`.
-
     // MARK: - AudioInterruptionManager
 
     func test_audioInterruptionManager_pauseAndResume() {
@@ -316,18 +301,6 @@ final class ServiceCoverageBoostTests2: XCTestCase {
         XCTAssertEqual(mock.pauseCallCount, 0)
         XCTAssertEqual(mock.resumeCallCount, 0)
     }
-
-    // MARK: - SettingsViewModel — Removed (#755 Phase B)
-    //
-    // The SettingsViewModel coverage block previously here was deleted when
-    // `SettingsViewModel` was removed (#755 Phase B). The legacy interval /
-    // break-duration label formatters now live on `SettingsPickerOptions`
-    // and are covered by `CoverageBoostTests` /
-    // `OnboardingViewTests`. The snooze, global-toggle, reminder-setting
-    // changed, and pause-* setter cases will be rewritten as
-    // `SettingsFeature` TestStore coverage under #679.
-    //
-    // Rewrite as `SettingsFeature` TestStore coverage — tracked under #679.
 
     // MARK: - ReminderType — Additional Coverage
 

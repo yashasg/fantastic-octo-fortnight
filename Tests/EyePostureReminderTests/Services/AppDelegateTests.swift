@@ -734,17 +734,6 @@ final class AppDelegateTests: XCTestCase {
         }
     }
 
-    // MARK: - handleNotification routing (coordinator path exercised by delegate)
-    //
-    // Follow-up #680: rewrite these handleNotification / scheduleReminders
-    // coverage checks as `SchedulingFeature` TestStore assertions. The legacy
-    // `AppCoordinator` was deleted in `#755` Phase E and the routing surface
-    // they exercised now lives in `SchedulingFeature.notificationRoutedEffect`
-    // / `SchedulingFeature.scheduleReminders`. The
-    // `dispatchNotificationRoute` tests further above (which run through the
-    // store directly) cover the public route contract; this section only held
-    // duplicate coverage against the deleted coordinator helpers.
-
     func test_dispatchNotificationRoute_beforeStoreWiring_replaysReminderWhenStoreIsSet() async {
         delegate.store = nil
         settings.snoozeCount = 4
@@ -787,16 +776,6 @@ final class AppDelegateTests: XCTestCase {
         )
     }
 
-    // MARK: - Snooze-wake routing (scheduleReminders path exercised by delegate)
-    //
-    // Follow-up #680: rewrite the snooze-wake coverage as a
-    // `SchedulingFeature` TestStore assertion against
-    // `.notificationRouted(.snoozeWake)`. The legacy
-    // `AppCoordinator.scheduleReminders()` shim was deleted in `#755`
-    // Phase E; the snooze-wake category routing is now driven entirely
-    // by the store (see `AppDelegate.notificationRoute(for:)` →
-    // `SchedulingFeature.snoozeWakeCategory`).
-
     private func makeIsolatedDefaults(suffix: String) throws -> UserDefaults {
         let suiteName = "AppDelegateTests.\(suffix).\(UUID().uuidString)"
         guard let defaults = UserDefaults(suiteName: suiteName) else {
@@ -810,3 +789,4 @@ final class AppDelegateTests: XCTestCase {
     }
 }
 // swiftlint:enable type_body_length
+// swiftlint:enable file_length

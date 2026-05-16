@@ -12,7 +12,7 @@ import XCTest
 /// All tests use `ScreenTimeShieldNoop` (the pre-entitlement stub) and
 /// verify the domain types and protocol contract. When the real
 /// `ScreenTimeShieldManager` is added in M3.3, a parallel test file with
-/// a `MockScreenTimeShieldProviding` will test `AppCoordinator` integration.
+/// a `MockScreenTimeShieldProviding` can cover the reducer-driven shield flow.
 @MainActor
 final class ScreenTimeShieldTests: XCTestCase {
 
@@ -26,8 +26,8 @@ final class ScreenTimeShieldTests: XCTestCase {
     func test_noop_beginShield_doesNotThrow() async throws {
         let sut = ScreenTimeShieldNoop()
         let session = makeSession()
-        // Must not throw — AppCoordinator calls this regardless of availability guard
-        // in test builds; the real guard lives in the caller.
+        // Must not throw — test-only callers may hit the noop implementation
+        // before availability is checked at the call site.
         try await sut.beginShield(for: session)
     }
 

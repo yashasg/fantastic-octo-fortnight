@@ -714,7 +714,7 @@ final class PauseConditionColdStartTests: XCTestCase {
     }
 
     /// Verify the `onPauseStateChanged` callback fires immediately on startMonitoring()
-    /// when focus is already active — callers (AppCoordinator) must receive the signal.
+    /// when focus is already active — SchedulingFeature must receive the signal.
     func test_coldStart_focusAlreadyActive_startMonitoring_firesCallback() {
         let mockFocus = MockFocusStatusDetector()
         let mockPersistence = MockSettingsPersisting()
@@ -835,9 +835,9 @@ final class ScreenTimeDoubleResignTests: XCTestCase {
 ///   3. `isOverlayVisible` remains `false` (no scene → no window created).
 ///   4. `clearQueue()` drains the queue without crash (proves a queue exists to drain).
 ///
-/// For the AppCoordinator-level verification that the queued request surfaces once
-/// `presentPendingOverlayIfNeeded()` is called, see
-/// `AppCoordinatorTests.test_handleNotification_eyes_thenPresentPending_callsShowOverlayWithEyes`.
+/// Reducer-level notification-routing coverage lives in
+/// `SchedulingNotificationRoutingTests.test_notificationRouted_reminderEyes_runsFallbackPipeline`;
+/// this class stays focused on the no-scene queueing contract inside `OverlayManager`.
 @MainActor
 final class OverlayQueueNoSceneTests: XCTestCase {
 
@@ -866,7 +866,7 @@ final class OverlayQueueNoSceneTests: XCTestCase {
         XCTAssertFalse(
             dismissFired,
             "#117 regression: onDismiss must not fire synchronously for a queued request. "
-            + "A silent drop that calls onDismiss() immediately would cause AppCoordinator to "
+            + "A silent drop that calls onDismiss() immediately would cause the scheduling flow to "
             + "reschedule the reminder without ever having shown the overlay.")
 
         manager.clearQueue()
