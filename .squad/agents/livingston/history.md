@@ -70,3 +70,18 @@ Orchestration log recorded at 2026-04-30T09:27:10Z. Root cause diagnosis documen
 - 2026-05-15: Toulour will extend AccessibilityIdentifier inventory I rely on for UI tests; expect new test surface to cover.
 
 - **2026-05-15: Team consolidation — 7 teams collapsed to 2 (Dev + Strategy).** You are now explicitly on the **Dev team** alongside Rusty, Linus, Livingston, Saul, Basher, Yen, Benedict, Virgil. Dev team owns code, tests, build, and CI. Strategy team (Danny, Tess, Reuben, Turk, Frank, Roman, Toulour, Denham, Sponder, Bashir, Matsui, Bruiser) handles product, design, research, legal, audits, and ASO. Scribe and Ralph remain on the roster outside both teams (silent infra). Use GitHub label `team:dev` for issue routing; see .squad/streams.json for canonical Dev workstream folder scopes.
+
+## 2026-05-16: CI Overlays shard failure — run 25957888870
+
+**Event:** All 8 overlay-launch tests failed in "UI Tests / Overlays" shard on `main`. Root cause: `waitForOverlayPresented(timeout: 8)` timeout too tight for loaded macos-15 CI runners.
+
+**Root cause (Bucket A — test infra):** CI log showed each `OverlayPresentationTests` failure took exactly ~14s (8s `waitForOverlayVisible` timeout + ~6s app-launch and `terminateAndWaitForExit` overhead). This means `overlay.root` never appeared within 8 seconds on a warm simulator. The `OverlayPostureTests` failure on the cold simulator (first test, 3.5-minute hang) was caused by XCTest's internal "Failed to get matching snapshots: Timed out while evaluating UI query" error when evaluating `isHittable` before the accessibility tree settled. Passing tests (`OverlayTests` class, normal launch, no overlay trigger) were unaffected. Production overlay code and accessibility identifiers unchanged.
+
+**Fix:** `UITestHelpers.swift` — bumped `waitForOverlayPresented` default from 8 s → 20 s and introduced a shared deadline so the two sequential phases (visibility + hittability) share a single 20-second budget (minimum 3 s reserved for the hittability phase). Also bumped `waitForOverlayVisible` default to 20 s to match.
+
+**Contract for `waitForOverlayPresented`:** single shared `TimeInterval` deadline; visibility check consumes most of the budget; hittability check gets `max(3, remaining)` seconds. If overlay.root never appears within the budget the helper short-circuits immediately. 20 s is the right default for macos-15 CI; local M-series runs complete in <5 s and are unaffected by the larger budget.
+
+**Flake-prevention patterns:**
+- Always confirm total wait = visibility + hittability ≤ one shared deadline; never let each phase use the full timeout independently (avoids silently doubling wall-clock cost).
+- The 8-second default was tuned on M-series hardware. Any future timeout reduction should be verified on CI, not just locally.
+- On very cold simulators, XCTest snapshot evaluation for `waitForExistence`/`isHittable` can take minutes. A generous budget (20+ s) is preferable over retry-reliance for the overlay readiness gate.
