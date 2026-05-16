@@ -2,18 +2,32 @@ import ComposableArchitecture
 import Foundation
 import SwiftUI
 
-/// Root reducer composing every feature in the TCA migration of the Eye &
-/// Posture Reminder app.
+/// Root reducer composing every feature in the Eye & Posture Reminder app.
 ///
-/// Phase 0 (`p0-tca-3` / #666) deliberately leaves the body almost empty:
-/// the goal is to nail down the *surface* — state shape, action vocabulary,
-/// scopes, and presentation wiring — so that Phase 1 issues can fill in each
-/// individual feature reducer in any order, without merge collisions on this
-/// root file.
+/// `AppFeature` is the production runtime entry point: `EyePostureReminderApp`
+/// owns a `StoreOf<AppFeature>` (the legacy `@StateObject AppCoordinator` +
+/// `.environmentObject(...)` graph was removed in #755 Phase E, PR #760). The
+/// reducer body:
 ///
-/// Wiring into `EyePostureReminderApp.swift` is intentionally deferred to
-/// Phase 2 issue `p0-tca-11` (#674) — the legacy MVVM app-coordinator stack
-/// remains the production runtime until then.
+/// - `Scope`s `HomeFeature`, `SettingsFeature`, `OnboardingFeature`, and
+///   `SchedulingFeature` under their respective state slices.
+/// - Bridges `scenePhaseChanged(.active)` to `scheduling`'s foreground
+///   transition + expired-snooze sweep, and `.background` to its background
+///   transition.
+/// - Forwards `notificationRouted(...)` events from `AppDelegate` into
+///   `SchedulingFeature`.
+/// - Subscribes to `OverlayClient.lifecycleEvents` on `.onAppear` so the
+///   overlay's "Settings" CTA round-trips through
+///   `overlaySettingsRequested(type)` and re-instates the
+///   `openSettingsOnLaunch` handoff that the deleted `AppCoordinator` used to
+///   own (regression coverage: #786).
+/// - Owns the two-phase overlay dismiss (#738) by clearing the `@Presents`
+///   slot once `OverlayFeature` finishes its dismiss animation.
+///
+/// The surface — state shape, action vocabulary, scopes, and presentation
+/// wiring — was nailed down in Phase 0 (`p0-tca-3` / #666); the full
+/// composition and `EyePostureReminderApp` wiring were completed by Phase 2
+/// (`p0-tca-11` / #674) and the AppCoordinator deletion in #755 Phase E.
 @Reducer
 struct AppFeature {
     /// Re-exposes `AppDelegate.NotificationRoute` at the AppFeature scope so
