@@ -160,6 +160,10 @@ ensure_booted() {
 }
 
 # ── Build ─────────────────────────────────────────────────────────────────────
+# Note: -skipMacroValidation suppresses the interactive "trust" prompt
+# Xcode otherwise requires for Swift macros (e.g. ComposableArchitecture's
+# `@Reducer`, `@DependencyClient`). Required for headless / CI builds — added
+# in #664 alongside the swift-composable-architecture 1.25.5 dependency.
 build_for_simulator() {
   local sim_name="$1"
 
@@ -173,13 +177,13 @@ build_for_simulator() {
   local dest="platform=iOS Simulator,name=${sim_name},OS=latest"
 
   if command -v xcpretty &>/dev/null; then
-    xcodebuild build \
+    xcodebuild -skipMacroValidation build \
       -scheme "$SCHEME" \
       -destination "$dest" \
       -derivedDataPath "$DERIVED_DATA_PATH" \
       "${XCODE_FLAGS[@]}" | xcpretty
   else
-    xcodebuild build \
+    xcodebuild -skipMacroValidation build \
       -scheme "$SCHEME" \
       -destination "$dest" \
       -derivedDataPath "$DERIVED_DATA_PATH" \
