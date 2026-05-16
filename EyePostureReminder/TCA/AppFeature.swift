@@ -43,12 +43,25 @@ struct AppFeature {
         case overlay(PresentationAction<OverlayFeature.Action>)
         case destination(PresentationAction<Destination.Action>)
         case notificationRouted(NotificationRoute)
+        /// Fired when `OverlayClient.lifecycleEvents` emits
+        /// `.settingsTapped(type)` while the break overlay is on screen.
+        /// Pre-TCA, the same handoff lived on `AppCoordinator` and set
+        /// `openSettingsOnLaunch = true` so `HomeView` opened Settings on
+        /// next layout pass. The TCA migration removed `AppCoordinator`
+        /// without re-plumbing this; see #786 for the regression report.
+        case overlaySettingsRequested(ReminderType)
     }
 
     @Reducer
     enum Destination {
         case settingsSheet(SettingsFeature)
         case appCategoryPicker(AppCategoryPickerFeature)
+    }
+
+    @Dependency(\.overlayClient) var overlayClient: OverlayClient
+
+    private enum CancelID: Hashable {
+        case overlayLifecycle
     }
 
     var body: some ReducerOf<Self> {
@@ -60,7 +73,17 @@ struct AppFeature {
         Reduce { state, action in
             switch action {
             case .onAppear:
-                return .send(.scheduling(.start))
+                return .merge(
+                    .send(.scheduling(.start)),
+                    .run { [overlayClient] send in
+                        for await event in overlayClient.lifecycleEvents() {
+                            if case let .settingsTapped(type) = event {
+                                await send(.overlaySettingsRequested(type))
+                            }
+                        }
+                    }
+                    .cancellable(id: CancelID.overlayLifecycle, cancelInFlight: true)
+                )
             case .scenePhaseChanged(.active):
                 return .merge(
                     .send(.scheduling(.foregroundTransition)),
@@ -86,6 +109,19 @@ struct AppFeature {
                 // nil write.
                 state.overlay = nil
                 return .none
+            case .overlaySettingsRequested:
+                // Re-instate the legacy `AppCoordinator` handoff: setting the
+                // shared `openSettingsOnLaunch` flag is what `HomeView`'s
+                // `.onChangeCompat(of: openSettingsOnLaunch)` watches to
+                // present the Settings sheet after the overlay slide-out
+                // animation finishes. Matches `OnboardingView`'s
+                // existing direct-write pattern for the same key. Tracked
+                // as #786.
+                return .run { _ in
+                    UserDefaults.standard.set(
+                        true, forKey: AppStorageKey.openSettingsOnLaunch
+                    )
+                }
             case .home, .settings, .onboarding, .scheduling, .overlay, .destination:
                 return .none
             }
