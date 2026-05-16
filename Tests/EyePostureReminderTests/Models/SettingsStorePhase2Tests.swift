@@ -89,9 +89,4 @@ final class SettingsStorePhase2Tests: XCTestCase {
         sut.snoozeCount = 1
         XCTAssertNil(sut.snoozedUntil, "Setting snoozeCount must not affect snoozedUntil")
     }
-
-    // MARK: - Onboarding
-    // Note: hasSeenOnboarding is not yet implemented in Phase 2 source.
-    // Tests will be added in a future phase once AppCoordinator / SettingsStore
-    // gains the `hasSeenOnboarding` property.
 }
