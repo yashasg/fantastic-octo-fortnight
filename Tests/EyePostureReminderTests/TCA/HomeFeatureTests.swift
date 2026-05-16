@@ -34,6 +34,8 @@ final class HomeFeatureTests: XCTestCase {
             $0.settingsClient = SettingsClient(
                 snapshot: { snapshot },
                 stream: { .finished },
+                enabledFlagsSnapshot: { .allEnabled },
+                enabledFlagsStream: { .finished },
                 updateGlobalEnabled: { _ in },
                 updateEyesEnabled: { _ in },
                 updatePostureEnabled: { _ in },
@@ -57,6 +59,34 @@ final class HomeFeatureTests: XCTestCase {
 
         await store.send(.onAppear) {
             $0.settings = snapshot
+        }
+        await store.receive(\.notificationAuthStatusChanged) {
+            $0.notificationAuthStatus = .authorized
+        }
+    }
+
+    /// Regression coverage for #785: `.onAppear` must seed the enable-flag
+    /// state from `SettingsClient.enabledFlagsSnapshot()` so a relaunch
+    /// after the user toggled the master switch off renders the paused
+    /// status label, instead of using the all-on `State` defaults.
+    func test_onAppear_seedsEnabledFlagsFromSnapshot() async {
+        var settings = TCATestDependencies.silentSettingsClient()
+        settings.enabledFlagsSnapshot = {
+            EnabledFlags(global: false, eyes: false, posture: true)
+        }
+        let store = TestStore(initialState: HomeFeature.State()) {
+            HomeFeature()
+        } withDependencies: {
+            $0.settingsClient = settings
+            $0.notificationClient = TCATestDependencies.silentNotificationClient(
+                authorizationStatus: .authorized
+            )
+        }
+
+        await store.send(.onAppear) {
+            $0.globalEnabled = false
+            $0.eyesEnabled = false
+            $0.postureEnabled = true
         }
         await store.receive(\.notificationAuthStatusChanged) {
             $0.notificationAuthStatus = .authorized
@@ -95,6 +125,33 @@ final class HomeFeatureTests: XCTestCase {
 
         await store.send(.settingsChanged(snapshot)) {
             $0.settings = snapshot
+        }
+    }
+
+    // MARK: - .enabledFlagsChanged
+
+    /// `.enabledFlagsChanged` writes every field of the supplied `EnabledFlags`
+    /// triplet to `State`, including transitions back to `true` so a
+    /// re-enable broadcast clears the paused status label (#785).
+    func test_enabledFlagsChanged_writesAllThreeFlagsToState() async {
+        let store = TestStore(initialState: HomeFeature.State()) {
+            HomeFeature()
+        }
+
+        await store.send(.enabledFlagsChanged(EnabledFlags(
+            global: false, eyes: false, posture: false
+        ))) {
+            $0.globalEnabled = false
+            $0.eyesEnabled = false
+            $0.postureEnabled = false
+        }
+
+        await store.send(.enabledFlagsChanged(EnabledFlags(
+            global: true, eyes: true, posture: false
+        ))) {
+            $0.globalEnabled = true
+            $0.eyesEnabled = true
+            $0.postureEnabled = false
         }
     }
 
@@ -216,6 +273,48 @@ final class HomeFeatureTests: XCTestCase {
         }
 
         continuation.finish()
+        await task.cancel()
+    }
+
+    // MARK: - .task — enabled-flags stream subscription (#785)
+
+    /// `.task` subscribes to `SettingsClient.enabledFlagsStream` and pipes
+    /// each emission through `.enabledFlagsChanged`, so writes made by
+    /// `SettingsView`'s `@AppStorage` master-toggle binding flow into
+    /// `HomeFeature.State` and the home status label re-renders.
+    func test_task_streamsEnabledFlagsIntoState() async {
+        let (flagsStream, flagsContinuation) = AsyncStream<EnabledFlags>.makeStream()
+        var settings = TCATestDependencies.silentSettingsClient()
+        settings.enabledFlagsStream = { flagsStream }
+
+        let clock = TestClock()
+        let store = TestStore(initialState: HomeFeature.State()) {
+            HomeFeature()
+        } withDependencies: {
+            $0.settingsClient = settings
+            $0.notificationClient = TCATestDependencies.silentNotificationClient(
+                authorizationStatus: .authorized
+            )
+            $0.continuousClock = clock
+        }
+        store.exhaustivity = .off(showSkippedAssertions: false)
+
+        let task = await store.send(.task)
+
+        let pausedFlags = EnabledFlags(global: false, eyes: true, posture: true)
+        flagsContinuation.yield(pausedFlags)
+        await store.receive(\.enabledFlagsChanged) {
+            $0.globalEnabled = false
+        }
+
+        let perTypeOff = EnabledFlags(global: false, eyes: false, posture: false)
+        flagsContinuation.yield(perTypeOff)
+        await store.receive(\.enabledFlagsChanged) {
+            $0.eyesEnabled = false
+            $0.postureEnabled = false
+        }
+
+        flagsContinuation.finish()
         await task.cancel()
     }
 

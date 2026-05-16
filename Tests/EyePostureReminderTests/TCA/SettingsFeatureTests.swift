@@ -89,6 +89,8 @@ final class SettingsFeatureTests: XCTestCase {
             $0.settingsClient = SettingsClient(
                 snapshot: { snapshot },
                 stream: { .finished },
+                enabledFlagsSnapshot: { .allEnabled },
+                enabledFlagsStream: { .finished },
                 updateGlobalEnabled: { _ in },
                 updateEyesEnabled: { _ in },
                 updatePostureEnabled: { _ in },
@@ -167,6 +169,8 @@ final class SettingsFeatureTests: XCTestCase {
             $0.settingsClient = SettingsClient(
                 snapshot: { ReminderSettings(interval: 0, breakDuration: 0) },
                 stream: { .finished },
+                enabledFlagsSnapshot: { .allEnabled },
+                enabledFlagsStream: { .finished },
                 updateGlobalEnabled: { _ in },
                 updateEyesEnabled: { _ in },
                 updatePostureEnabled: { _ in },

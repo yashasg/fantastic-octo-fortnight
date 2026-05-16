@@ -1,6 +1,25 @@
 import ComposableArchitecture
 import Foundation
 
+/// Snapshot of the three persisted enable-flag keys
+/// (`globalEnabled` / `eyesEnabled` / `postureEnabled`).
+///
+/// Vended by `SettingsClient.enabledFlagsSnapshot` /
+/// `enabledFlagsStream` so reducers (notably `HomeFeature`) stay in lock-step
+/// with master-toggle changes made from `SettingsView` — including the writes
+/// `SettingsView` makes directly via `@AppStorage` bindings, which bypass the
+/// `SettingsStore` setters and therefore do not fire the existing
+/// `SettingsStore` observer surface. See #785.
+struct EnabledFlags: Sendable, Equatable {
+    var global: Bool
+    var eyes: Bool
+    var posture: Bool
+
+    /// All-on default used as the cold-start seed and the `liveValue`
+    /// fallback before `LiveSettingsBridge.bootstrap()` runs.
+    static let allEnabled = EnabledFlags(global: true, eyes: true, posture: true)
+}
+
 /// TCA dependency client wrapping `SettingsStore` for reducer consumption.
 ///
 /// Phase 0 of the MVVM → TCA migration (#665). The closure surface is the
@@ -19,6 +38,17 @@ struct SettingsClient: Sendable {
     /// Multicast stream of `ReminderSettings` snapshots. A new subscriber
     /// receives the current snapshot and every subsequent change.
     var stream: @Sendable () -> AsyncStream<ReminderSettings> = { .finished }
+
+    /// Synchronous snapshot of the persisted enable-flag triplet. Cached on
+    /// the file-scope `enabledFlagsCache` so reducers can read it off the
+    /// main actor. See #785 for why this is separate from `snapshot()`.
+    var enabledFlagsSnapshot: @Sendable () -> EnabledFlags = { .allEnabled }
+
+    /// Multicast stream of `EnabledFlags` snapshots. A new subscriber
+    /// receives the current snapshot synchronously and every subsequent
+    /// change — including writes that bypass `SettingsStore` setters (e.g.
+    /// `SettingsView`'s `@AppStorage` master-toggle binding). See #785.
+    var enabledFlagsStream: @Sendable () -> AsyncStream<EnabledFlags> = { .finished }
 
     /// Toggles the global reminders master switch.
     var updateGlobalEnabled: @Sendable (Bool) async -> Void
@@ -72,6 +102,8 @@ extension SettingsClient: DependencyKey {
         return SettingsClient(
             snapshot: { settingsSnapshotCache.value },
             stream: { makeSettingsStream() },
+            enabledFlagsSnapshot: { enabledFlagsCache.value },
+            enabledFlagsStream: { makeEnabledFlagsStream() },
             updateGlobalEnabled: { value in
                 await MainActor.run { LiveSettingsBridge.shared.store.globalEnabled = value }
             },
@@ -144,6 +176,7 @@ private final class LiveSettingsBridge {
 
     let store = SettingsStore()
     private var hasBootstrapped = false
+    private var defaultsObservationToken: NSObjectProtocol?
 
     private nonisolated init() {}
 
@@ -157,9 +190,48 @@ private final class LiveSettingsBridge {
         settingsSnapshotCache.setValue(initial)
         broadcastSettings(initial)
 
+        let initialFlags = EnabledFlags(
+            global: store.globalEnabled,
+            eyes: store.eyesEnabled,
+            posture: store.postureEnabled
+        )
+        enabledFlagsCache.setValue(initialFlags)
+        broadcastEnabledFlags(initialFlags)
+
         store.addObserver { snapshot in
             settingsSnapshotCache.setValue(snapshot)
             broadcastSettings(snapshot)
+        }
+
+        // `SettingsView` writes the master / per-type enable flags directly to
+        // `UserDefaults` through `@AppStorage`, which bypasses `SettingsStore`
+        // setters and therefore the existing `addObserver` surface. Listen for
+        // `UserDefaults.didChangeNotification` so both write paths (store
+        // setter and direct `@AppStorage`) keep the file-scope cache and the
+        // multicast continuations in sync. See #785.
+        defaultsObservationToken = NotificationCenter.default.addObserver(
+            forName: UserDefaults.didChangeNotification,
+            object: UserDefaults.standard,
+            queue: .main
+        ) { _ in
+            let defaults = UserDefaults.standard
+            let flags = EnabledFlags(
+                global: defaults.bool(
+                    forKey: SettingsStore.Keys.globalEnabled,
+                    defaultValue: true
+                ),
+                eyes: defaults.bool(
+                    forKey: SettingsStore.Keys.eyesEnabled,
+                    defaultValue: true
+                ),
+                posture: defaults.bool(
+                    forKey: SettingsStore.Keys.postureEnabled,
+                    defaultValue: true
+                )
+            )
+            guard flags != enabledFlagsCache.value else { return }
+            enabledFlagsCache.setValue(flags)
+            broadcastEnabledFlags(flags)
         }
     }
 }
@@ -169,11 +241,22 @@ private let settingsSnapshotCache = LockIsolated<ReminderSettings>(
     ReminderSettings(interval: 0, breakDuration: 0)
 )
 
+/// File-scoped enable-flag cache; safe to read from any actor. Seeded to
+/// `.allEnabled` so reads before `LiveSettingsBridge.bootstrap()` finishes
+/// (e.g. during early Phase-2 `state.home.*` initialisation) match the
+/// all-on shipping default.
+private let enabledFlagsCache = LockIsolated<EnabledFlags>(.allEnabled)
+
 /// File-scoped multicast continuations. Held outside the `@MainActor` bridge
 /// to side-step a Swift constraint-solver bug that surfaces when
 /// `Continuation.onTermination` captures `@MainActor`-isolated static storage.
 private let settingsContinuations =
     LockIsolated<[UUID: AsyncStream<ReminderSettings>.Continuation]>([:])
+
+/// File-scoped multicast continuations for `EnabledFlags` subscribers. Kept
+/// alongside `settingsContinuations` for the same `@MainActor` reason.
+private let enabledFlagsContinuations =
+    LockIsolated<[UUID: AsyncStream<EnabledFlags>.Continuation]>([:])
 
 /// File-scoped factory used by the live `stream` closure to register a new
 /// multicast subscriber. Yields the current snapshot synchronously so first
@@ -191,8 +274,31 @@ private func makeSettingsStream() -> AsyncStream<ReminderSettings> {
     return stream
 }
 
+/// File-scoped factory used by the live `enabledFlagsStream` closure to
+/// register a new multicast subscriber. Yields the current cached flags
+/// synchronously so the first emission carries the persisted truth without
+/// waiting for the next `UserDefaults` mutation.
+private func makeEnabledFlagsStream() -> AsyncStream<EnabledFlags> {
+    let (stream, continuation) = AsyncStream<EnabledFlags>.makeStream()
+    let id = UUID()
+    continuation.yield(enabledFlagsCache.value)
+    enabledFlagsContinuations.withValue { $0[id] = continuation }
+    continuation.onTermination = { _ in
+        enabledFlagsContinuations.withValue { dict in
+            dict[id] = nil
+        }
+    }
+    return stream
+}
+
 private func broadcastSettings(_ value: ReminderSettings) {
     settingsContinuations.withValue { dict in
+        for continuation in dict.values { continuation.yield(value) }
+    }
+}
+
+private func broadcastEnabledFlags(_ value: EnabledFlags) {
+    enabledFlagsContinuations.withValue { dict in
         for continuation in dict.values { continuation.yield(value) }
     }
 }

@@ -9,12 +9,10 @@ import UserNotifications
 /// this store without altering observable behaviour.
 ///
 /// Inputs come from the shared dependency clients defined by `p0-tca-2`:
-/// `SettingsClient` exposes the eyes-side `ReminderSettings` snapshot/stream,
-/// and `NotificationClient` exposes the system authorisation status. Per-type
-/// enable flags (`globalEnabled` / `eyesEnabled` / `postureEnabled`) are held
-/// directly on `State` because the Phase 0 `SettingsClient` snapshot only
-/// vends the eyes `ReminderSettings`. Those flags will be wired into the
-/// store as part of Phase 2 (`p0-tca-15`) when bindings are introduced.
+/// `SettingsClient` exposes the eyes-side `ReminderSettings` snapshot/stream
+/// **and** an `EnabledFlags` snapshot/stream that tracks the master /
+/// per-type toggles (#785). `NotificationClient` exposes the system
+/// authorisation status.
 @Reducer
 struct HomeFeature {
     @ObservableState
@@ -58,6 +56,7 @@ struct HomeFeature {
         case settingsTapped
         case dismissTrueInterruptBanner
         case settingsChanged(ReminderSettings)
+        case enabledFlagsChanged(EnabledFlags)
         case notificationAuthStatusChanged(UNAuthorizationStatus)
     }
 
@@ -67,6 +66,7 @@ struct HomeFeature {
 
     private enum CancelID: Hashable {
         case settingsStream
+        case enabledFlagsStream
         case authStatusPoll
     }
 
@@ -75,6 +75,10 @@ struct HomeFeature {
             switch action {
             case .onAppear:
                 state.settings = settingsClient.snapshot()
+                let flags = settingsClient.enabledFlagsSnapshot()
+                state.globalEnabled = flags.global
+                state.eyesEnabled = flags.eyes
+                state.postureEnabled = flags.posture
                 return .run { send in
                     let status = await notificationClient.authorizationStatus()
                     await send(.notificationAuthStatusChanged(status))
@@ -88,6 +92,12 @@ struct HomeFeature {
                         }
                     }
                     .cancellable(id: CancelID.settingsStream, cancelInFlight: true),
+                    .run { send in
+                        for await flags in settingsClient.enabledFlagsStream() {
+                            await send(.enabledFlagsChanged(flags))
+                        }
+                    }
+                    .cancellable(id: CancelID.enabledFlagsStream, cancelInFlight: true),
                     .run { [clock, notificationClient] send in
                         for await _ in clock.timer(interval: .seconds(1)) {
                             let status = await notificationClient.authorizationStatus()
@@ -108,6 +118,12 @@ struct HomeFeature {
 
             case let .settingsChanged(snapshot):
                 state.settings = snapshot
+                return .none
+
+            case let .enabledFlagsChanged(flags):
+                state.globalEnabled = flags.global
+                state.eyesEnabled = flags.eyes
+                state.postureEnabled = flags.posture
                 return .none
 
             case let .notificationAuthStatusChanged(status):

@@ -19,7 +19,6 @@ linked to a tracking issue — drop the wrapper once the underlying fix lands:
 
 | Test | Tracking issue | Reason |
 |---|---|---|
-| `HomeScreenTests.test_homeScreen_toggleGlobalSwitch_statusLabelChanges` | [#785](https://github.com/yashasg/fantastic-octo-fortnight/issues/785) | TCA regression: status label not reactive to master toggle |
 | `OverlayPresentationTests.test_overlay_settingsLink_opensSettingsWithSnoozeOptions` | [#786](https://github.com/yashasg/fantastic-octo-fortnight/issues/786) | TCA regression: overlay → Settings sheet routing dropped |
 | `SettingsFlowTests.test_settings_savedBanner_appearsOnToggle` | [#787](https://github.com/yashasg/fantastic-octo-fortnight/issues/787) | XCUI flake: transient banner not discoverable in CI |
 
