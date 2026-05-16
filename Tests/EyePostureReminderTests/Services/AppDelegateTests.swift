@@ -809,4 +809,4 @@ final class AppDelegateTests: XCTestCase {
         return defaults
     }
 }
-// swiftlint:enable type_body_length
+// swiftlint:enable type_body_length file_length
