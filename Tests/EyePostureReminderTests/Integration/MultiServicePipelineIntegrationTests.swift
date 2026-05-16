@@ -6,12 +6,6 @@ import XCTest
 
 /// Verifies that changes flow correctly across multiple real services without breaking
 /// the pipeline. Tests respect `@MainActor` boundaries using async/await patterns.
-///
-/// The `SettingsStore ↔ SettingsViewModel ↔ Scheduler` slice of this pipeline was
-/// retired alongside `SettingsViewModel` in #755 Phase B. The remaining coverage
-/// exercises pause-condition + observer fan-out paths that still live on
-/// `SettingsStore`. The deleted `SettingsViewModel`-driven slice will be re-covered
-/// as `SettingsFeature` TestStore + integration cases under #679.
 @MainActor
 final class MultiServicePipelineIntegrationTests: XCTestCase {
 

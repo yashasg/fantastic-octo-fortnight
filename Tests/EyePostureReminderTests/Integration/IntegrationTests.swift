@@ -2,18 +2,6 @@ import XCTest
 
 @testable import EyePostureReminder
 
-// MARK: - SettingsStore ↔ SettingsViewModel Integration (removed #755 Phase B)
-//
-// The `SettingsStoreViewModelIntegrationTests` class was removed when
-// `SettingsViewModel` was deleted. `SettingsStore` round-trip coverage
-// (UserDefaults persistence, observer broadcast, snooze setters) is
-// preserved under `SettingsStoreTests` and `AppConfigSettingsStoreIntegrationTests`
-// below. The view-model proxy / `cancelSnooze` / `globalToggleChanged`
-// behaviours will be re-covered as `SettingsFeature` TestStore cases
-// under #679.
-//
-// `SettingsFeature` TestStore + integration cases under #679.
-
 // MARK: - AppConfig → SettingsStore First Launch Integration
 
 /// Verifies the data-driven defaults pipeline using real `UserDefaults` suites
