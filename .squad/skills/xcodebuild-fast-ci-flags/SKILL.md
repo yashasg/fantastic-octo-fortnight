@@ -123,3 +123,5 @@ settings:
 - Leaving `COMPILER_INDEX_STORE_ENABLE` unset on CI — default is YES, which writes megabytes of index data for an IDE that isn't running.
 - Using `-configuration Debug` (or no flag) for test-only CI pipelines — wastes optimisation that Release provides, and misses whole-module opportunity.
 - Pinning `SIMULATOR` to `iPhone 17` without verifying the runner has the iOS 18/26 runtime. If the runtime isn't pre-installed, the download step adds 5-10 minutes.
+- **Putting `ENABLE_TESTABILITY=YES` in the global `XCODE_FLAGS` array** — it flows into `cmd_build` and marks the production binary as testable. Pass it only as a positional arg to `run_xcodebuild` on `build-for-testing` calls.
+- **Fixing only one `Debug-iphonesimulator` reference in `cmd_uitest`** — there are two: the PlistBuddy `-c Set` string AND the `local products_dir` variable assignment. Both must be updated to `${CONFIGURATION}-iphonesimulator` or the SPM binary copy into .app fails at runtime.

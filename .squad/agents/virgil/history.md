@@ -119,3 +119,33 @@ Awaiting Yashas authorization for Phase 0/1 implementation. Proposed diffs prepa
 - **2026-05-17: CI Architecture pre-review coordination pattern.** When proposing major CI changes with architectural implications (e.g., switching to Release config), proactively flag relevant reviewers (e.g., Rusty for app architecture) in decision inbox BEFORE Scribe merge. This enables parallel audit feedback and faster approval cycles.
 - **Xcodebuild action patterns:** `build-for-testing` creates app+test binaries without running tests; `test-without-building` reuses those binaries. This is the gold standard for CI pipelines that split compile and test steps. Mirror this in all SPM+Xcode workflows.
 - **SPM + Release config complexity:** SPM projects without xcodeproj (executable targets) cannot add custom Xcode configurations. Use `OTHER_SWIFT_FLAGS` to inject `"-DCI"` flag on test actions only — this flows through to SPM targets and enables `#if CI` semantics without needing a true Xcode config.
+
+## 2026-05-17 — Release + wholemodule script implementation (APPLIED)
+
+Directive from Yashas: no more CI YAML edits — all build config changes go through `scripts/build.sh`.
+
+### What Changed (commit `edc772c`, branch `fix/run-sh-and-overlay-timeout`, MR #808)
+
+1. **`CONFIGURATION=Release` default** — added near top of script, above constants. Env-var overridable: `CONFIGURATION=Debug ./scripts/build.sh build`.
+2. **`SWIFT_COMPILATION_MODE=wholemodule` in XCODE_FLAGS** — injected as xcodebuild build-setting override. No project.yml edit needed.
+3. **`ENABLE_TESTABILITY=YES` on `build-for-testing` only** — passed directly to the `run_xcodebuild` call in `cmd_test` and `cmd_uitest`. NOT on `cmd_build` (shippable binary stays clean).
+4. **`cmd_test` refactored** to `build-for-testing` + `test-without-building` — eliminates the double-compile. `.xctestrun` is located after build-for-testing via `find "${DERIVED_DATA_PATH}/Build/Products" -name "${SCHEME}_*.xctestrun"`. Pattern mirrors the existing `cmd_uitest` logic.
+5. **PlistBuddy path + `products_dir` variable** fixed: `Debug-iphonesimulator` → `${CONFIGURATION}-iphonesimulator` (both at the PlistBuddy call and the `local products_dir` assignment below it).
+6. **Free CI flags added** to XCODE_FLAGS: `COMPILER_INDEX_STORE_ENABLE=NO`, `DEBUG_INFORMATION_FORMAT=dwarf`, `ONLY_ACTIVE_ARCH=YES`.
+7. **Header + info lines updated**: script header comment shows CONFIGURATION override; `cmd_build`, `cmd_test`, `cmd_uitest` all print `info "Configuration: $CONFIGURATION"`. Usage function documents `CONFIGURATION` and `SIMULATOR` env vars.
+
+### Surprises / Line Number Notes
+
+- Original audit proposed `cmd_test` line range ~458–496; actual lines were correct at review time but shifted +2 due to the header comment addition earlier in the session. Edits applied cleanly against the string anchors, not line numbers — no drift issues.
+- `cmd_clean` also had a hardcoded `xcodebuild clean` without `-configuration`; added it for completeness (not in original task scope but logically consistent).
+- No `#if DEBUG` source file edits were made per directive — this remains a known follow-up item.
+
+### Known Remaining Issue
+
+**22 `#if DEBUG` guards** in UITestMode, AppDelegate, EyePostureReminderApp, HomeView, AnalyticsLogger will cause test failures under Release config. CI will surface these on next run. Separate Yashas authorization needed before those source edits can land.
+
+### Learnings
+
+- **Injecting build settings via xcodebuild CLI args (not project.yml)** is the correct pattern when CI workflow YAMLs are frozen. `XCODE_FLAGS` array in `build.sh` is the single source of truth for all build-setting overrides.
+- **`ENABLE_TESTABILITY=YES` scoping is critical**: passing it only on `build-for-testing` calls (not the plain `build` action) keeps the production binary clean. Verified pattern: add it as a trailing positional arg to `run_xcodebuild`; it becomes part of `"$@"` which xcodebuild treats as a build-setting override.
+- **`cmd_uitest` had TWO hardcoded `Debug-iphonesimulator` references**, not one — both the PlistBuddy `-c Set` string and the `local products_dir` variable assignment on the line below. Both must change together or SPM binary copy into .app bundle fails at runtime.

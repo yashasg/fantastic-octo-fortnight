@@ -144,3 +144,27 @@ Three child issues now assigned from Google Swift audit: #647 (import ordering, 
 - Orchestration logs: `.squad/orchestration-log/2026-05-17T08-57-37Z-virgil.md` and `-rusty.md`
 - Session log: `.squad/log/2026-05-17T08-57-37Z-ci-clean-release-perf-audit.md`
 - Decision: `.squad/decisions.md` (search for "CI Clean-Build + Release-Config Speedup Decision")
+
+## 2026-05-17 — Upcoming: Coordinated Source Edits for Release-Config CI (AnalyticsLogger)
+
+**FYI:** Virgil and Scribe orchestrated Release + wholemodule defaults in scripts/build.sh (Commit edc772c). Follow-up gap identified:
+
+22 `#if DEBUG` guards in 5 app source files will break tests under Release config:
+- HomeView.swift — Linus's domain (UI)
+- UITestMode.swift — UI layer
+- AppDelegate.swift — app entry
+- EyePostureReminderApp.swift — app root
+- **AnalyticsLogger.swift** — your domain (Basher, Services)
+
+**Next Step (Pending Yashas Authorization)**
+
+Source edits: `#if DEBUG` → `#if DEBUG || CI` (5 files, ~22 lines) + script injects `-D CI` via OTHER_SWIFT_FLAGS.
+
+**Coordination**
+
+Linus owns HomeView + UITestMode cross-domain visibility; you own AnalyticsLogger. When authorization arrives, both will be assigned source-edit PRs with unified strategy. See `.squad/log/2026-05-17T09-13-37Z-scripts-release-wholemodule-impl.md` for full context.
+
+**Refs**
+- Virgil decision: `.squad/decisions.md` (2026-05-17 Release + Wholemodule section)
+- Linus history: `.squad/agents/linus/history.md` (same update)
+- Orchestration: `.squad/orchestration-log/2026-05-17T09-13-37Z-scribe.md`
