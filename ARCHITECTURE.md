@@ -354,7 +354,6 @@ EyePostureReminder/                  (SPM executable target)
 │   ├── Logger+App.swift              OSLog subsystem categories: .lifecycle, .scheduling, .overlay, .settings
 │   ├── AppStorageKeys.swift          Centralized `@AppStorage` key constants
 │   ├── AccessibilityNotificationPosting.swift  Wraps `UIAccessibility.post` for testability
-│   ├── DateProviding.swift           Injectable date provider (test seam)
 │   ├── LegalLinks.swift              Canonical privacy / terms URLs
 │   └── UITestMode.swift              `#if DEBUG` launch-arg helpers for UI tests
 │
@@ -395,7 +394,6 @@ Tests/
 │   │   ├── MockSettingsPersisting.swift
 │   │   ├── MockAppGroupIPCRecorder.swift  Captures `IPCClient` writes in unit tests
 │   │   ├── MockAppStateProvider.swift     Fake `UIApplication.applicationState`
-│   │   ├── MockDateProvider.swift         Fake clock for SchedulingFeature snooze tests
 │   │   ├── MockDeviceActivityMonitorProviding.swift
 │   │   ├── MockScreenTimeAuthorizationProviding.swift
 │   │   ├── MockScreenTimeShieldProviding.swift
