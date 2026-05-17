@@ -109,10 +109,12 @@ final class HomeScreenTests: XCTestCase {
     /// Verifies the TrueInterruptSkippedBanner renders when Screen Time authorization is
     /// `.notDetermined` and the banner has not been dismissed. Both CTAs must be hittable.
     ///
-    /// Requires `--simulate-screen-time-not-determined` launch argument so the
-    /// `ScreenTimeAuthorizationStub(.notDetermined)` is consulted by `HomeView`
-    /// when computing True-Interrupt visibility (the real simulator
-    /// FamilyControls status is `.unavailable`).
+    /// Requires `--simulate-screen-time-not-determined` launch argument so
+    /// `AppStorageKey.uiTestScreenTimeStatus = .notDetermined` (seeded by
+    /// `AppDelegate.preSeedUITestDefaults()`) is consulted by `HomeView` when
+    /// computing True-Interrupt visibility (the real simulator FamilyControls
+    /// status is `.unavailable`, and the live provider remains
+    /// `ScreenTimeAuthorizationNoop`).
     func test_homeScreen_trueInterruptBanner_exists() throws {
         relaunchWithTrueInterruptPending()
 

@@ -325,7 +325,7 @@ EyePostureReminder/                  (SPM executable target)
 │   ├── ServiceLifecycle.swift        Lifecycle protocol (start/stop) for uniform service management
 │   ├── AppGroupIPCProviding.swift    App-group UserDefaults wrapper + event log for main ↔ extension state
 │   ├── ScreenTimeAuthorizationProviding.swift  FamilyControls authorization abstraction
-│   ├── ScreenTimeAuthorizationStub.swift / ...Noop.swift  Build-time stubs for non-FamilyControls builds
+│   ├── ScreenTimeAuthorizationNoop.swift  Default build-time stub returning `.unavailable` until #201 entitlement
 │   ├── ScreenTimeShieldProtocols.swift / ScreenTimeShieldTypes.swift / ScreenTimeShieldNoop.swift  ManagedSettings shield surface
 │   ├── DeviceActivityMonitorProviding.swift / DeviceActivityMonitorNoop.swift  DeviceActivity stubs
 │   └── NoopServices.swift            Centralized no-op fallbacks for distribution builds
