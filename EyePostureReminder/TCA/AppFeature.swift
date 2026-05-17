@@ -5,9 +5,7 @@ import SwiftUI
 /// Root reducer composing every feature in the Eye & Posture Reminder app.
 ///
 /// `AppFeature` is the production runtime entry point: `EyePostureReminderApp`
-/// owns a `StoreOf<AppFeature>` (the legacy `@StateObject AppCoordinator` +
-/// `.environmentObject(...)` graph was removed in #755 Phase E, PR #760). The
-/// reducer body:
+/// owns a `StoreOf<AppFeature>` and the reducer body:
 ///
 /// - `Scope`s `HomeFeature`, `SettingsFeature`, `OnboardingFeature`, and
 ///   `SchedulingFeature` under their respective state slices.
@@ -18,16 +16,15 @@ import SwiftUI
 ///   `SchedulingFeature`.
 /// - Subscribes to `OverlayClient.lifecycleEvents` on `.onAppear` so the
 ///   overlay's "Settings" CTA round-trips through
-///   `overlaySettingsRequested(type)` and re-instates the
-///   `openSettingsOnLaunch` handoff that the deleted `AppCoordinator` used to
-///   own (regression coverage: #786).
+///   `overlaySettingsRequested(type)` and flips the `openSettingsOnLaunch`
+///   handoff (regression coverage: #786).
 /// - Owns the two-phase overlay dismiss (#738) by clearing the `@Presents`
 ///   slot once `OverlayFeature` finishes its dismiss animation.
 ///
 /// The surface — state shape, action vocabulary, scopes, and presentation
 /// wiring — was nailed down in Phase 0 (`p0-tca-3` / #666); the full
 /// composition and `EyePostureReminderApp` wiring were completed by Phase 2
-/// (`p0-tca-11` / #674) and the AppCoordinator deletion in #755 Phase E.
+/// (`p0-tca-11` / #674) and #755 Phase E (PR #760).
 @Reducer
 struct AppFeature {
     /// Re-exposes `AppDelegate.NotificationRoute` at the AppFeature scope so
@@ -59,10 +56,10 @@ struct AppFeature {
         case notificationRouted(NotificationRoute)
         /// Fired when `OverlayClient.lifecycleEvents` emits
         /// `.settingsTapped(type)` while the break overlay is on screen.
-        /// Pre-TCA, the same handoff lived on `AppCoordinator` and set
-        /// `openSettingsOnLaunch = true` so `HomeView` opened Settings on
-        /// next layout pass. The TCA migration removed `AppCoordinator`
-        /// without re-plumbing this; see #786 for the regression report.
+        /// Sets the shared `openSettingsOnLaunch` UserDefaults flag so
+        /// `RootView` opens Settings on the next layout pass; see #786
+        /// for the regression report that re-plumbed this handoff after
+        /// the TCA migration.
         case overlaySettingsRequested(ReminderType)
         /// Presents the canonical Settings destination
         /// (`Destination.settingsSheet`) on behalf of a non-`HomeView`
@@ -134,13 +131,13 @@ struct AppFeature {
                 state.overlay = nil
                 return .none
             case .overlaySettingsRequested:
-                // Re-instate the legacy `AppCoordinator` handoff: setting the
-                // shared `openSettingsOnLaunch` flag is what `RootView`'s
-                // `.onChangeCompat(of: openSettingsOnLaunch)` watches to
-                // dispatch `.openSettingsSheetRequested` after the overlay
-                // slide-out animation finishes. Matches `OnboardingView`'s
-                // existing direct-write pattern for the same key. Tracked
-                // as #786 (write) and #814 (read → destination handoff).
+                // Setting the shared `openSettingsOnLaunch` flag is what
+                // `RootView`'s `.onChangeCompat(of: openSettingsOnLaunch)`
+                // watches to dispatch `.openSettingsSheetRequested` after
+                // the overlay slide-out animation finishes. Matches
+                // `OnboardingView`'s existing direct-write pattern for
+                // the same key. Tracked as #786 (write) and #814
+                // (read → destination handoff).
                 return .run { _ in
                     UserDefaults.standard.set(
                         true, forKey: AppStorageKey.openSettingsOnLaunch
