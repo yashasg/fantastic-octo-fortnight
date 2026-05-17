@@ -70,3 +70,88 @@ Orchestration log recorded at 2026-04-30T09:27:10Z. Root cause diagnosis documen
 - 2026-05-15: Toulour will extend AccessibilityIdentifier inventory I rely on for UI tests; expect new test surface to cover.
 
 - **2026-05-15: Team consolidation — 7 teams collapsed to 2 (Dev + Strategy).** You are now explicitly on the **Dev team** alongside Rusty, Linus, Livingston, Saul, Basher, Yen, Benedict, Virgil. Dev team owns code, tests, build, and CI. Strategy team (Danny, Tess, Reuben, Turk, Frank, Roman, Toulour, Denham, Sponder, Bashir, Matsui, Bruiser) handles product, design, research, legal, audits, and ASO. Scribe and Ralph remain on the roster outside both teams (silent infra). Use GitHub label `team:dev` for issue routing; see .squad/streams.json for canonical Dev workstream folder scopes.
+
+## 2026-05-16: CI Overlays shard failure — run 25957888870
+
+**Event:** All 8 overlay-launch tests failed in "UI Tests / Overlays" shard on `main`. Root cause: `waitForOverlayPresented(timeout: 8)` timeout too tight for loaded macos-15 CI runners.
+
+**Root cause (Bucket A — test infra):** CI log showed each `OverlayPresentationTests` failure took exactly ~14s (8s `waitForOverlayVisible` timeout + ~6s app-launch and `terminateAndWaitForExit` overhead). This means `overlay.root` never appeared within 8 seconds on a warm simulator. The `OverlayPostureTests` failure on the cold simulator (first test, 3.5-minute hang) was caused by XCTest's internal "Failed to get matching snapshots: Timed out while evaluating UI query" error when evaluating `isHittable` before the accessibility tree settled. Passing tests (`OverlayTests` class, normal launch, no overlay trigger) were unaffected. Production overlay code and accessibility identifiers unchanged.
+
+**Fix:** `UITestHelpers.swift` — bumped `waitForOverlayPresented` default from 8 s → 20 s and introduced a shared deadline so the two sequential phases (visibility + hittability) share a single 20-second budget (minimum 3 s reserved for the hittability phase). Also bumped `waitForOverlayVisible` default to 20 s to match.
+
+**Contract for `waitForOverlayPresented`:** single shared `TimeInterval` deadline; visibility check consumes most of the budget; hittability check gets `max(3, remaining)` seconds. If overlay.root never appears within the budget the helper short-circuits immediately. 20 s is the right default for macos-15 CI; local M-series runs complete in <5 s and are unaffected by the larger budget.
+
+**Flake-prevention patterns:**
+- Always confirm total wait = visibility + hittability ≤ one shared deadline; never let each phase use the full timeout independently (avoids silently doubling wall-clock cost).
+- The 8-second default was tuned on M-series hardware. Any future timeout reduction should be verified on CI, not just locally.
+- On very cold simulators, XCTest snapshot evaluation for `waitForExistence`/`isHittable` can take minutes. A generous budget (20+ s) is preferable over retry-reliance for the overlay readiness gate.
+
+## 2026-05-17 — Upcoming: Release-Config CI Changes & Source Reviews
+
+**FYI:** Virgil (CI/CD) and Rusty (Architecture) completed a phased CI optimization audit. Upcoming changes will require source code reviews and approvals from dev team (including you).
+
+### Timeline
+
+1. **Phase 0 (Immediate, no review needed):** `cmd_test` refactor (use `build-for-testing` + `test-without-building` pattern). ~40–50% CI speedup.
+2. **Phase 1 (Immediate, no review needed):** Add speedup flags (`COMPILER_INDEX_STORE_ENABLE=NO`, etc.) to build-from-gitlab.yml.
+3. **Phase 2 (Requires your review):** Release config adoption + coordinated source changes. Rusty flagged HIGH-severity architectural implications and issued blocking call. Source changes span 5 app files (~25 lines); Rusty will assign this to dev team for review.
+4. **Phase 3 (Optional, future):** Runner upgrade.
+
+### What You Need to Know
+
+- Release-config CI switch is high-value (WMO + faster tests) but requires pre-flight source coordination.
+- Blocking issue: 22 `#if DEBUG` guards in 5 app files gate test-critical UITest backdoors. These must be changed to `#if DEBUG || CI` before Release switch.
+- Rusty is NOT signing off on Phase 2 until source changes land and pass green on Debug CI baseline first.
+- When the source-change PR lands (in your review queue), the Phase 2 CI diff can follow immediately.
+
+### Refs
+
+- Orchestration logs: `.squad/orchestration-log/2026-05-17T08-57-37Z-virgil.md` and `-rusty.md`
+- Session log: `.squad/log/2026-05-17T08-57-37Z-ci-clean-release-perf-audit.md`
+- Decision: `.squad/decisions.md` (search for "CI Clean-Build + Release-Config Speedup Decision")
+
+## 2026-05-17 — TCA UI Test Rewrite Issue Filed (#806)
+
+**Event:** Authored GitLab work item ([Work Item #806](https://gitlab.com/yashasg/fantastic-octo-fortnight/-/work_items/806)) capturing UI test execution optimization via TCA `TestStore` migration.
+
+**Context:** Commit `edc772c` (Release + wholemodule + cmd_test double-compile fix) landed CI build performance win (~40-50% faster). Next CI bottleneck is UI test execution time (~500+ sec of XCUITest synchronization overhead per run).
+
+**Categorization audit (brief):**
+- **HomeScreenTests.swift** (250 LOC) — App launch + layout (A/B split; home screen element existence tests → TestStore, app launch E2E → XCUITest)
+- **SettingsFlowTests.swift** (320 LOC) — Toggle/sheet state (A candidate; reducer tests for settings mutations, E2E for sheet navigation)
+- **OnboardingFlowTests.swift** (260 LOC) — Flow progression (A/B split; state machine → TestStore, deep-link routing → XCUITest)
+- **OverlayTests.swift** (280 LOC) — Overlay + snooze (B for overlay UIKit, A for snooze state)
+- **AppStoreScreenshotTests.swift** (110 LOC) — Screenshots (pure B; keep XCUITest for marketing asset generation)
+- **UITestHelpers.swift** (420 LOC) — Launch + wait helpers (refactor to reduce app-sync overhead)
+
+**Total:** ~1,640 LOC. Estimated 45-55% rewriteable to TestStore (500-800 LOC, 60-70% faster execution).
+
+**Acceptance criteria:** Audit document, category-(A) rewrite complete, category-(B) optimized, zero behavior regressions, >40% UI test shard time reduction (500s → <300s).
+
+**Owners:** Livingston (lead), Rusty (architecture review), Saul (merge gate).
+
+**Related:** MR !808 (commit edc772c) — CI build perf; Rusty's architecture audit — `#if DEBUG || CI` source changes (separate authorization).
+
+## 2026-05-17 — CI-Gate Annotation Posted to Work Item #806
+
+**Event:** Posted comment to GitLab Work Item #806 pinning the CI-gate context and definition-of-done.
+
+**Comment ID:** 3355586658
+
+**What Was Annotated**
+
+Clarified in the issue itself that:
+1. UI tests are currently OFF CI per user directive (Yashas disabled them)
+2. This work item (TCA UI test rewrite) is the blocking gate for re-enable
+3. Definition-of-done now includes: **re-enable UI tests on CI within the time/performance budget**
+4. The scope narrowing for Rusty's Release-config audit (UITest guards no longer affect CI Release blocker; only unit-test guards remain)
+
+**Timeline for CI Re-Enable**
+
+Once this issue is completed (audit done, category-(A) rewritten to TestStore, category-(B) optimized):
+1. Coordinate with Virgil (CI/CD) to re-enable UI test job in CI workflow
+2. Verify all shards pass (onboarding, overlay, home, settings, dark mode)
+3. Confirm >40% shard time reduction achieved (500s → <300s target)
+4. Yashas/Rusty final approval before merge
+
+**Related Decision:** `.squad/decisions.md` — "2026-05-17 — TCA UI Test Rewrite Issue Filed (Work Item #806)"

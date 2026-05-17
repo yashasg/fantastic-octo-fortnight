@@ -28,15 +28,6 @@ PACKAGE_PATH="$(cd "$(dirname "$0")/.." && pwd)"
 DERIVED_DATA_PATH="${PACKAGE_PATH}/DerivedData"
 # Bundle ID is extracted from the built .app at runtime (see install_and_launch)
 
-XCODE_FLAGS=(
-  CODE_SIGN_IDENTITY=""
-  CODE_SIGNING_REQUIRED=NO
-  CODE_SIGNING_ALLOWED=NO
-  ENABLE_BITCODE=NO
-  ENABLE_APP_INTENTS_METADATA_EXTRACTION=NO
-  ENABLE_APPINTENTS_METADATA_EXTRACTION=NO
-)
-
 # ── Defaults ─────────────────────────────────────────────────────────────────
 DEVICE_NAME=""
 SKIP_BUILD=false
@@ -160,33 +151,15 @@ ensure_booted() {
 }
 
 # ── Build ─────────────────────────────────────────────────────────────────────
+# Delegates entirely to build.sh — the single source of truth for all
+# xcodebuild invocations (flags, xcpretty fallback, XCODE_FLAGS, derivedData
+# path, -skipMacroValidation). Setting $SIMULATOR tells build.sh's
+# detect_destination() which simulator to target instead of auto-probing.
 build_for_simulator() {
   local sim_name="$1"
 
-  header "BUILD (Simulator)"
-  info "Scheme:      $SCHEME"
-  info "Destination: $sim_name"
-
-  local start
-  start=$(date +%s)
-
-  local dest="platform=iOS Simulator,name=${sim_name},OS=latest"
-
-  if command -v xcpretty &>/dev/null; then
-    xcodebuild build \
-      -scheme "$SCHEME" \
-      -destination "$dest" \
-      -derivedDataPath "$DERIVED_DATA_PATH" \
-      "${XCODE_FLAGS[@]}" | xcpretty
-  else
-    xcodebuild build \
-      -scheme "$SCHEME" \
-      -destination "$dest" \
-      -derivedDataPath "$DERIVED_DATA_PATH" \
-      "${XCODE_FLAGS[@]}"
-  fi
-
-  pass "Build succeeded ($(elapsed "$start"))"
+  SIMULATOR="platform=iOS Simulator,name=${sim_name},OS=latest" \
+    "${PACKAGE_PATH}/scripts/build.sh" build
 }
 
 # ── App Bundle Assembly ───────────────────────────────────────────────────────

@@ -120,3 +120,51 @@ Three child issues now assigned from Google Swift audit: #647 (import ordering, 
 - 2026-05-15: Sponder (API Contract Monitor) will flag Apple system API deprecations affecting services I own. Matsui (Legal & Compliance) will request privacy-impact assessments before new data-handling features.
 
 - **2026-05-15: Team consolidation — 7 teams collapsed to 2 (Dev + Strategy).** You are now explicitly on the **Dev team** alongside Rusty, Linus, Livingston, Saul, Basher, Yen, Benedict, Virgil. Dev team owns code, tests, build, and CI. Strategy team (Danny, Tess, Reuben, Turk, Frank, Roman, Toulour, Denham, Sponder, Bashir, Matsui, Bruiser) handles product, design, research, legal, audits, and ASO. Scribe and Ralph remain on the roster outside both teams (silent infra). Use GitHub label `team:dev` for issue routing; see .squad/streams.json for canonical Dev workstream folder scopes.
+
+## 2026-05-17 — Upcoming: Release-Config CI Changes & Source Reviews
+
+**FYI:** Virgil (CI/CD) and Rusty (Architecture) completed a phased CI optimization audit. Upcoming changes will require source code reviews and approvals from dev team (including you).
+
+### Timeline
+
+1. **Phase 0 (Immediate, no review needed):** `cmd_test` refactor (use `build-for-testing` + `test-without-building` pattern). ~40–50% CI speedup.
+2. **Phase 1 (Immediate, no review needed):** Add speedup flags (`COMPILER_INDEX_STORE_ENABLE=NO`, etc.) to build-from-gitlab.yml.
+3. **Phase 2 (Requires your review):** Release config adoption + coordinated source changes. Rusty flagged HIGH-severity architectural implications and issued blocking call. Source changes span 5 app files (~25 lines); Rusty will assign this to dev team for review.
+4. **Phase 3 (Optional, future):** Runner upgrade.
+
+### What You Need to Know
+
+- Release-config CI switch is high-value (WMO + faster tests) but requires pre-flight source coordination.
+- Blocking issue: 22 `#if DEBUG` guards in 5 app files gate test-critical UITest backdoors. These must be changed to `#if DEBUG || CI` before Release switch.
+- Rusty is NOT signing off on Phase 2 until source changes land and pass green on Debug CI baseline first.
+- When the source-change PR lands (in your review queue), the Phase 2 CI diff can follow immediately.
+
+### Refs
+
+- Orchestration logs: `.squad/orchestration-log/2026-05-17T08-57-37Z-virgil.md` and `-rusty.md`
+- Session log: `.squad/log/2026-05-17T08-57-37Z-ci-clean-release-perf-audit.md`
+- Decision: `.squad/decisions.md` (search for "CI Clean-Build + Release-Config Speedup Decision")
+
+## 2026-05-17 — Upcoming: Coordinated Source Edits for Release-Config CI (AnalyticsLogger)
+
+**FYI:** Virgil and Scribe orchestrated Release + wholemodule defaults in scripts/build.sh (Commit edc772c). Follow-up gap identified:
+
+22 `#if DEBUG` guards in 5 app source files will break tests under Release config:
+- HomeView.swift — Linus's domain (UI)
+- UITestMode.swift — UI layer
+- AppDelegate.swift — app entry
+- EyePostureReminderApp.swift — app root
+- **AnalyticsLogger.swift** — your domain (Basher, Services)
+
+**Next Step (Pending Yashas Authorization)**
+
+Source edits: `#if DEBUG` → `#if DEBUG || CI` (5 files, ~22 lines) + script injects `-D CI` via OTHER_SWIFT_FLAGS.
+
+**Coordination**
+
+Linus owns HomeView + UITestMode cross-domain visibility; you own AnalyticsLogger. When authorization arrives, both will be assigned source-edit PRs with unified strategy. See `.squad/log/2026-05-17T09-13-37Z-scripts-release-wholemodule-impl.md` for full context.
+
+**Refs**
+- Virgil decision: `.squad/decisions.md` (2026-05-17 Release + Wholemodule section)
+- Linus history: `.squad/agents/linus/history.md` (same update)
+- Orchestration: `.squad/orchestration-log/2026-05-17T09-13-37Z-scribe.md`

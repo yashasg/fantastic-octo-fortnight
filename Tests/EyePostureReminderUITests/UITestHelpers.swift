@@ -186,16 +186,31 @@ extension XCUIApplication {
     ///
     /// Tests should call this once, then use shorter follow-up waits for
     /// secondary elements (dismiss button, supportive text, settings link).
+    ///
+    /// A shared deadline caps the total budget at `timeout` seconds (plus a
+    /// 3-second minimum reserved for the hittability phase) so the two
+    /// sequential waits don't silently double the wall-clock cost.
+    ///
+    /// - Note: 20 s default matches the macos-15 CI runner profile. Local
+    ///   M-series machines finish in <5 s; the inflated budget only fires on
+    ///   loaded CI runners where the overlay appearance or accessibility-tree
+    ///   evaluation is slow.
     @discardableResult
-    func waitForOverlayPresented(timeout: TimeInterval = 8) -> Bool {
-        guard waitForOverlayVisible(timeout: timeout) else { return false }
+    func waitForOverlayPresented(timeout: TimeInterval = 20) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        guard waitForOverlayVisible(timeout: deadline.timeIntervalSinceNow) else {
+            return false
+        }
         let doneButton = buttons["overlay.doneButton"]
-        return waitForElementHittable(doneButton, timeout: timeout)
+        // Reserve at least 3 s for the hittability phase even when the
+        // visibility check consumed most of the budget.
+        let hittableTimeout = max(3.0, deadline.timeIntervalSinceNow)
+        return waitForElementHittable(doneButton, timeout: hittableTimeout)
     }
 
     /// Waits until the overlay root exists, regardless of button hittability.
     @discardableResult
-    func waitForOverlayVisible(timeout: TimeInterval = 8) -> Bool {
+    func waitForOverlayVisible(timeout: TimeInterval = 20) -> Bool {
         otherElements["overlay.root"].waitForExistence(timeout: timeout)
     }
 
