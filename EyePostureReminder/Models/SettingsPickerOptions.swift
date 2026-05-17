@@ -4,11 +4,11 @@ import Foundation
 /// break-duration pickers rendered by `SettingsView`, `OnboardingSetupView`,
 /// and `ReminderRowView`.
 ///
-/// Extracted from the legacy `SettingsViewModel` as part of `#755` Phase B so
-/// the SwiftUI surfaces can keep their picker rows after the view-model is
-/// deleted. The values themselves are byte-identical to the MVVM-era
-/// constants — analytics codes, accessibility labels, and persisted
-/// UserDefaults values all keep their stable mapping.
+/// Extracted into its own enum under `#755` Phase B so the SwiftUI surfaces
+/// can keep their picker rows from a single source of truth. The constants
+/// — interval / break-duration presets, analytics codes, accessibility
+/// labels, and persisted `UserDefaults` values — are stable across releases
+/// so analytics dashboards and on-disk settings keep their mapping.
 enum SettingsPickerOptions {
     /// Available reminder interval presets, in seconds (1 / 10 / 20 / 30 / 45
     /// / 60 minutes).
