@@ -32,6 +32,10 @@ header(){ echo -e "\n${BOLD}${CYAN}━━━ $* ━━━${RESET}"; }
 
 # ── Build configuration ───────────────────────────────────────────────────────
 # Defaults to Release for CI correctness (whole-module optimisation, no -Onone).
+# `cmd_test` injects `SWIFT_ACTIVE_COMPILATION_CONDITIONS=CI` so test-only
+# hooks gated on `#if DEBUG || CI` remain visible. See `.squad/decisions.md`
+# (2026-05-17 — CI Clean-Build + Release-Config Speedup Decision) and #807.
+#
 # Local dev override: CONFIGURATION=Debug ./scripts/build.sh build
 CONFIGURATION="${CONFIGURATION:-Release}"
 
@@ -478,9 +482,12 @@ cmd_test() {
   info "Test scheme:    $SCHEME (includes $TEST_SCHEME)"
   info "Configuration:  $CONFIGURATION"
 
-  # NOTE: Tests may fail under Release until #if DEBUG → #if DEBUG || CI source
-  # edits land (22 guards in UITestMode, AppDelegate, EyePostureReminderApp,
-  # HomeView, AnalyticsLogger). See .squad/decisions.md (Rusty audit).
+  # `CI` is injected as a Swift active compilation condition so test-only
+  # hooks gated on `#if DEBUG || CI` (e.g. `AnalyticsLogger.testEventHandler`)
+  # are visible under Release. The flag is scoped to `build-for-testing`
+  # so it never reaches archive builds — see `.squad/decisions.md`
+  # (2026-05-17 — CI Clean-Build + Release-Config Speedup Decision)
+  # and issue #807.
 
   rm -rf "${PACKAGE_PATH}/TestResults.xcresult"
 
@@ -490,7 +497,8 @@ cmd_test() {
     -destination "$dest" \
     -configuration "$CONFIGURATION" \
     -derivedDataPath "$DERIVED_DATA_PATH" \
-    ENABLE_TESTABILITY=YES; then
+    ENABLE_TESTABILITY=YES \
+    SWIFT_ACTIVE_COMPILATION_CONDITIONS='$(inherited) CI'; then
     fail "build-for-testing failed"
     exit 1
   fi

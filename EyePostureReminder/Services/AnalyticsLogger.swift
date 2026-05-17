@@ -212,9 +212,16 @@ enum AnalyticsLogger {
         category: "Analytics"
     )
 
-#if DEBUG
+#if DEBUG || CI
     /// Test-only hook. Set in unit tests to intercept emitted events; must be
     /// reset to `nil` in `tearDown` to avoid cross-test contamination.
+    ///
+    /// Visible under either `DEBUG` (developer builds) or `CI` (Release-config
+    /// test runs that inject `-DCI` via `scripts/build.sh cmd_test`). The
+    /// symbol is never present in production archive builds — verify via
+    /// `SWIFT_ACTIVE_COMPILATION_CONDITIONS` on the archive scheme. See
+    /// `.squad/decisions.md` (2026-05-17 — CI Clean-Build + Release-Config
+    /// Speedup Decision) and issue #807.
     ///
     /// `nonisolated(unsafe)` acknowledges the Swift 6 isolation trade-off:
     /// XCTest serialises test cases within a process so no actual data race
@@ -227,7 +234,7 @@ enum AnalyticsLogger {
 
     /// Emit an analytics event as a structured os.Logger entry.
     static func log(_ event: AnalyticsEvent) {
-#if DEBUG
+#if DEBUG || CI
         testEventHandler?(event)
 #endif
         switch event {
