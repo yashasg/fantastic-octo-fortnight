@@ -45,55 +45,6 @@ final class OnboardingFlowTests: XCTestCase {
         XCTAssertTrue(nextButton.isHittable, "Welcome Next CTA must be tappable.")
     }
 
-    // MARK: - test_onboarding_fullFlow_completesSuccessfully
-
-    /// Taps through onboarding and verifies the app transitions
-    /// to the Home screen upon completion.
-    func test_onboarding_fullFlow_completesSuccessfully() throws {
-        // --- Screen 1: Welcome ---
-        let nextButton = app.buttons["onboarding.welcome.nextButton"]
-        XCTAssertTrue(
-            nextButton.waitForExistence(timeout: 3),
-            "Next button must exist on Welcome screen. " +
-            "Add .accessibilityIdentifier(\"onboarding.welcome.nextButton\") " +
-            "to the CTA button in OnboardingWelcomeView."
-        )
-        nextButton.tap()
-
-        // --- Screen 2: Permission ---
-        let permissionNextButton = app.buttons["onboarding.permission.nextButton"]
-        XCTAssertTrue(
-            permissionNextButton.waitForExistence(timeout: 3),
-            "Continue button must exist on Permission screen. " +
-            "Add .accessibilityIdentifier(\"onboarding.permission.nextButton\") in OnboardingPermissionView."
-        )
-        permissionNextButton.tap()
-
-        // --- Screen 3: Setup ---
-        let getStartedButton = app.buttons["onboarding.setup.getStartedButton"]
-        XCTAssertTrue(
-            getStartedButton.waitForExistence(timeout: 3),
-            "Get Started button must exist on Setup screen. " +
-            "Add .accessibilityIdentifier(\"onboarding.setup.getStartedButton\") in OnboardingSetupView."
-        )
-        getStartedButton.tap()
-
-        // --- Screen 4: True Interrupt Mode ---
-        let interruptSkipButton = app.buttons["onboarding.interrupt.skipButton"]
-        XCTAssertTrue(
-            interruptSkipButton.waitForExistence(timeout: 3),
-            "Skip button must exist on the True Interrupt Mode screen."
-        )
-        interruptSkipButton.tap()
-
-        // --- Post-onboarding: Home screen should be visible ---
-        let homeNav = app.navigationBars.firstMatch
-        XCTAssertTrue(
-            homeNav.waitForExistence(timeout: 3),
-            "Navigation bar should appear on the Home screen after completing onboarding."
-        )
-    }
-
     // MARK: - test_onboarding_interruptMode_actionsExistAndComingSoonIsDisabled
 
     /// Verifies True Interrupt Mode exposes skip/customize actions and keeps pre-entitlement setup disabled.

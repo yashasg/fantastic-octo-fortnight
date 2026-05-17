@@ -173,10 +173,17 @@ final class OverlayPostureTests: XCTestCase {
         app = nil
     }
 
-    // MARK: - test_overlay_postureVariant_visibleAndDismissible
+    // MARK: - test_overlay_postureVariant_renderingAccessibilityIDs
 
-    /// Verifies the posture check overlay renders with its essential controls and dismisses.
-    func test_overlay_postureVariant_visibleAndDismissible() throws {
+    /// Verifies the posture check overlay renders with its essential controls
+    /// (dismiss, done, supportive text). The dismiss assertion that used to
+    /// live here has been dropped in #806 Phase 2 — Done-tap → dismiss flow is
+    /// covered by `OverlayFeatureBehaviorTests.test_dismissTapped_callsOverlayClientDismissExactlyOnce`
+    /// and `test_twoPhaseDismiss_dismissTapped_ordering`. The remaining render
+    /// sweep is the (B) portion: it asserts the UIKit `UIWindow` actually mounts
+    /// at `.alert + 1` and the SwiftUI render tree exposes the documented
+    /// accessibility identifiers — a surface no reducer test can cover.
+    func test_overlay_postureVariant_renderingAccessibilityIDs() throws {
         let dismissButton = app.buttons["overlay.dismissButton"]
         XCTAssertTrue(
             app.waitForElementExists(dismissButton),
@@ -193,13 +200,6 @@ final class OverlayPostureTests: XCTestCase {
         XCTAssertTrue(
             app.waitForElementExists(supportiveText),
             "Supportive text must be visible on the posture overlay."
-        )
-
-        XCTAssertTrue(app.tapElementCenter(doneButton))
-
-        XCTAssertTrue(
-            app.waitForOverlayDismissed(timeout: 3),
-            "After tapping Done on posture overlay, the overlay should be dismissed."
         )
     }
 }

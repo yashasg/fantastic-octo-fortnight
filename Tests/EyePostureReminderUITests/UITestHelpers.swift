@@ -214,35 +214,10 @@ extension XCUIApplication {
         otherElements["overlay.root"].waitForExistence(timeout: timeout)
     }
 
-    /// Waits for overlay dismissal using a positive fallback state and explicit
-    /// overlay-root disappearance.
-    @discardableResult
-    func waitForOverlayDismissed(timeout: TimeInterval = 3) -> Bool {
-        let overlayRoot = otherElements["overlay.root"]
-        let deadline = Date().addingTimeInterval(timeout)
-
-        while Date() < deadline {
-            if !overlayRoot.exists && waitForHomeScreenReady(timeout: 0.5) {
-                return true
-            }
-            activate()
-            let step = min(0.2, max(0.05, deadline.timeIntervalSinceNow))
-            RunLoop.current.run(until: Date().addingTimeInterval(step))
-        }
-
-        return !overlayRoot.exists && waitForHomeScreenReady(timeout: 1)
-    }
-
     /// Verifies that `overlay.root` never appears throughout the full observation window.
     @discardableResult
     func waitForOverlayToRemainAbsent(timeout: TimeInterval = 2, pollInterval: TimeInterval = 0.1) -> Bool {
         otherElements["overlay.root"].waitForContinuousNonExistence(timeout: timeout, pollInterval: pollInterval)
-    }
-
-    /// Backward-compatible alias kept for existing tests.
-    @discardableResult
-    func waitForOverlayReady(timeout: TimeInterval = 4) -> Bool {
-        waitForOverlayPresented(timeout: timeout)
     }
 
     /// Waits for an element to become hittable and retries once after activating the app.
@@ -348,12 +323,6 @@ extension XCUIElement {
             RunLoop.current.run(until: Date().addingTimeInterval(step))
         }
         return !exists
-    }
-
-    /// Waits until the element is not hittable (covers hidden-but-mounted cases).
-    @discardableResult
-    func waitForNotHittable(timeout: TimeInterval = 3) -> Bool {
-        waitFor(predicate: NSPredicate(format: "hittable == false"), timeout: timeout)
     }
 
     /// Taps an element after waiting for a hittable state.

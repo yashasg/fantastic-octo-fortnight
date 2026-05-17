@@ -14,8 +14,7 @@ Accessibility trees can keep elements mounted during transitions, making raw exi
 ## iOS/XCUITest Helpers
 - `waitForHittable(timeout:)` with single total deadline.
 - `waitForOverlayPresented()` anchored on a hittable control.
-- `waitForOverlayDismissed()` anchored on fallback screen + overlay root non-existence.
-- `waitForNotHittable()` for hidden mounted elements.
+- `waitForOverlayToRemainAbsent(timeout:pollInterval:)` for asserting the overlay never appears across a full observation window (root non-existence — guards against false-green from a transiently-hidden mounted overlay).
 
 ## Runtime-gated prompt pattern
 - For simulator-dependent surfaces (permissions/Screen Time prompts), assert one of the valid UI affordances (e.g., banner **or** fallback pill) instead of one brittle branch.

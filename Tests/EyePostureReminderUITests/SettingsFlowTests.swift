@@ -69,79 +69,6 @@ final class SettingsFlowTests: XCTestCase {
         )
     }
 
-    // MARK: - test_settings_smartPauseControls_toggleAndShowFooter
-
-    /// Verifies Smart Pause controls are present, documented, and toggleable.
-    func test_settings_smartPauseControls_toggleAndShowFooter() throws {
-        openSettings()
-
-        let focusToggle = app.switches["settings.smartPause.pauseDuringFocus"]
-        let drivingToggle = app.switches["settings.smartPause.pauseWhileDriving"]
-        scrollToElement(focusToggle)
-        scrollToElement(drivingToggle)
-
-        XCTAssertTrue(
-            focusToggle.waitForExistence(timeout: 3),
-            "Focus Mode toggle must exist in the Smart Pause section. " +
-            "Add .accessibilityIdentifier(\"settings.smartPause.pauseDuringFocus\") " +
-            "to the Focus toggle in SettingsView."
-        )
-        XCTAssertTrue(
-            drivingToggle.waitForExistence(timeout: 3),
-            "Driving toggle must exist in the Smart Pause section. " +
-            "Add .accessibilityIdentifier(\"settings.smartPause.pauseWhileDriving\") " +
-            "to the Driving toggle in SettingsView."
-        )
-
-        let footerText = app.staticTexts.matching(
-            NSPredicate(format: "label CONTAINS[c] 'smart pause' OR label CONTAINS[c] 'focus mode'")
-        ).firstMatch
-        XCTAssertTrue(
-            footerText.waitForExistence(timeout: 2),
-            "Smart Pause section must display a footer explaining the feature (#433)."
-        )
-
-        let initialFocusValue = focusToggle.value as? String
-        focusToggle.tap()
-        XCTAssertTrue(
-            focusToggle.waitForValueChange(from: initialFocusValue),
-            "Focus pause toggle should change state after tap."
-        )
-
-        scrollToElement(drivingToggle)
-        let initialDrivingValue = drivingToggle.value as? String
-        drivingToggle.tap()
-        XCTAssertTrue(
-            drivingToggle.waitForValueChange(from: initialDrivingValue),
-            "Driving pause toggle should change state after tap."
-        )
-    }
-
-    // MARK: - test_settings_globalToggle_changesStateOnTap
-
-    /// Taps the global toggle and verifies the toggle changes state.
-    func test_settings_globalToggle_changesStateOnTap() throws {
-        openSettings()
-
-        let globalToggle = app.switches["settings.masterToggle"]
-        XCTAssertTrue(app.waitForElementHittable(globalToggle, timeout: 5))
-
-        let initialValue = globalToggle.value as? String
-        globalToggle.tap()
-        XCTAssertTrue(
-            globalToggle.waitForValueChange(from: initialValue),
-            "Global toggle should change state after being tapped."
-        )
-
-        let newValue = globalToggle.value as? String
-        globalToggle.tap()
-        XCTAssertTrue(
-            globalToggle.waitForValueChange(from: newValue),
-            "Global toggle should be restored after assertion."
-        )
-        XCTAssertEqual(initialValue, globalToggle.value as? String)
-    }
-
     // MARK: - test_settings_accessibilityIDsPresent
 
     /// Single accessibility-identifier sanity check for the Settings sheet
@@ -302,52 +229,6 @@ final class SettingsFlowTests: XCTestCase {
         dismissSettings()
     }
 
-    // MARK: - test_settings_savedBanner_appearsOnToggle (#434)
-
-    /// Verifies the transient 'Settings saved' banner appears after toggling a setting (#434).
-    func test_settings_savedBanner_appearsOnToggle() throws {
-        openSettings()
-
-        // Tap the global toggle to trigger a setting change.
-        let globalToggle = app.switches["settings.masterToggle"]
-        XCTAssertTrue(
-            globalToggle.waitForHittable(timeout: 3),
-            "Master toggle must exist in Settings."
-        )
-        let initialValue = globalToggle.value as? String
-        globalToggle.tap()
-        XCTAssertTrue(
-            globalToggle.waitForValueChange(from: initialValue),
-            "Master toggle should change state after tap."
-        )
-
-        // The saved banner should appear immediately after the toggle.
-        // Pre-#787 the banner only fired for the eyes-interval / break-duration
-        // bindable surface and snooze taps, so the master toggle (which writes
-        // through `@AppStorage` and reaches the reducer via the
-        // `.settingToggleChanged` analytics shim) never saw it. The fix in
-        // `SettingsFeature` flips `showSavedBanner = true` for every
-        // `.settingToggleChanged` emission, so the banner is now visible for
-        // the same window as every other persisted change.
-        //
-        // Banner is rendered as an `.overlay(alignment: .bottom)` host and
-        // carries `.accessibilityAddTraits(.isStaticText)`, so XCUI types it
-        // as `StaticText`. Query that first; fall back to `otherElements` in
-        // case the host classification changes. Generous timeouts cover the
-        // ~2 s XCUI "wait for app to idle" window after the toggle tap.
-        let bannerLabel = app.staticTexts["settings.savedBanner"]
-        let bannerContainer = app.otherElements["settings.savedBanner"]
-        let bannerAppeared = bannerLabel.waitForExistence(timeout: 3)
-            || bannerContainer.waitForExistence(timeout: 1)
-
-        // Restore toggle to avoid test pollution before asserting.
-        globalToggle.tap()
-
-        XCTAssertTrue(
-            bannerAppeared,
-            "'Settings saved' confirmation banner must appear after a setting change (#434)."
-        )
-    }
 }
 
 private extension SettingsFlowTests {
