@@ -18401,3 +18401,159 @@ Applied the following to `scripts/build.sh` only (no .github/workflows, no proje
 - Implementation file: `.squad/decisions/inbox/virgil-script-release-wholemodule-implemented.md` (now merged into this section)
 - Session log: `.squad/log/2026-05-17T09-13-37Z-scripts-release-wholemodule-impl.md`
 - Orchestration log: `.squad/orchestration-log/2026-05-17T09-13-37Z-scribe.md`
+
+---
+
+## 2026-05-17 — User Directive: UI Tests Disabled on CI Until TCA Rewrite
+
+**By:** Yashas (via Copilot)  
+**Date:** 2026-05-17T09:19:33Z  
+**Status:** Captured; re-enable gate is Work Item #806
+
+**Directive Statement**
+
+"i disabled ui tests on ci, will add them back when you fix our UI tests using TCA"
+
+**What Happened**
+
+- UI tests have been REMOVED from CI (manual action — commented out or disabled the UI test job in `.github/workflows/` or the `uitest` invocation).
+- The gate for re-enabling is the TCA UI-test rewrite work item (Work Item #806, filed by Livingston immediately after this directive).
+- Once tests are rewritten to use TCA `TestStore` where appropriate and remaining XCUITest tests are fast/reliable, Yashas will re-enable on CI.
+
+**Implication for Release-Config CI Risk**
+
+Rusty's audit identified 22 `#if DEBUG` guards in 5 app files. This directive **narrows the scope**:
+
+| Guard Category | Effect | CI Impact | Status |
+|---|---|---|---|
+| UITestMode / AppDelegate UITestArgs / HomeView UITest backdoors | Only affect UI tests | No longer a CI blocker (UI tests off CI) | Not in scope |
+| AnalyticsLogger `#if DEBUG` guards | Affect 3 unit tests | Still blocks Release+wholemodule CI baseline | Blocker |
+| `#if DEBUG`-wrapped test files (14 silently dropped) | Affect unit tests | Still blocks Release+wholemodule CI baseline | Blocker |
+
+→ Release-config CI blocker shrinks from "22 guards breaking UITests + unit tests" to "AnalyticsLogger + 14 silently-dropped unit test files" — still requires the `#if DEBUG → #if DEBUG || CI` treatment, but narrower scope.
+
+**Not in Scope**
+
+- Adding UI tests back to CI before TCA rewrite ships
+- Release-config source changes (separate authorization from Yashas required)
+
+**Related**
+
+- Work Item #806: TCA UI-test rewrite issue (filed immediately after this directive)
+- Rusty's Release-config audit: CI-Clean-Build + Release-Config Speedup Decision (earlier)
+
+---
+
+## 2026-05-17 — TCA UI Test Rewrite Issue Filed (Work Item #806)
+
+**By:** Livingston (Frontend Tester)  
+**Date:** 2026-05-17  
+**Status:** Queued (waiting for pickup)  
+**URL:** https://gitlab.com/yashasg/fantastic-octo-fortnight/-/work_items/806
+
+**Context**
+
+Commit `edc772c` (Release + wholemodule + cmd_test refactor) landed CI build performance win (~40-50% faster). Next CI bottleneck: UI test execution time (~500+ sec of XCUITest synchronization overhead per run). This work item captures the TCA migration strategy to address it.
+
+**Categorization Strategy**
+
+Tests categorized into three buckets:
+
+### (A) Pure State Assertions → Migrate to TCA TestStore
+
+Behavior that lives in TCA reducers/state but is currently tested via XCUITest tap-wait-verify flows.
+
+**Migrate to `TestStore`:**
+- Reducer action handling (send + assert state mutations)
+- Effect cancellation on dismiss
+- Error paths and edge cases (no app sync delays)
+- Snooze state machine
+- Settings toggles and mutations
+- Onboarding state progression
+
+**Expected:** 500–800 LOC rewritten to TestStore; ~60–70% execution time reduction for this category.
+
+### (B) Genuine E2E Flows → Keep & Optimize XCUITest
+
+System integration scenarios that require actual app launch, UIKit layer interaction, or device state.
+
+**Keep as XCUITest:**
+- App launch and initial state
+- Deep-link routing and app-state resumption
+- Accessibility tree traversal (VoiceOver, dynamic type)
+- UIKit overlay integration (window/modal presentation)
+- System notifications and interrupts
+- Device state (locked screen, low power mode)
+- Screenshot generation for App Store
+
+**Expected:** Remaining ~40–45% of tests; optimized for reduced redundant waits.
+
+### (C) Redundant or Replaceable → Consolidate/Remove
+
+Tests that verify UI element existence when the reducer already covers the mutation.
+
+**Strategy:** Consolidate or remove; keep lightweight sanity layer in XCUITest to catch accessibility ID drift.
+
+## TCA vs. XCUITest Tradeoffs
+
+| Dimension | TestStore | XCUITest |
+|---|---|---|
+| Speed | <50ms per test | 5s+ app-launch + sync |
+| Determinism | Synchronous reducer logic; no flakes | Timing-sensitive UI interactions |
+| Isolation | Test one action in isolation | Full app context (cascading state) |
+| Error Injection | Mock effects easily | Real network/permissions |
+| Parallelism | Can run in parallel per test class | Single simulator per shard |
+| Real App | Reducer logic only | Catches integration bugs |
+| Accessibility | Logic-level assertions | Verifies actual VoiceOver flow |
+| System Integration | N/A | Real UIKit overlays, deep links |
+
+**Decision:** Use **TestStore for reducer/state logic** (fastest feedback, highest volume); use **XCUITest for integration + accessibility** (lower volume, necessary for confidence).
+
+## Scope & Audit
+
+- **Files:** 6 UI test files in `Tests/EyePostureReminderUITests/`
+  - HomeScreenTests.swift (250 LOC) — A/B split
+  - SettingsFlowTests.swift (320 LOC) — A candidate
+  - OnboardingFlowTests.swift (260 LOC) — A/B split
+  - OverlayTests.swift (280 LOC) — B for overlay UIKit, A for snooze state
+  - AppStoreScreenshotTests.swift (110 LOC) — pure B
+  - UITestHelpers.swift (420 LOC) — refactor to reduce app-sync overhead
+- **Total:** ~1,640 LOC
+- **Estimated Rewriteable:** 45-55% to TestStore (500-800 LOC, 60-70% faster)
+
+## Migration Phases
+
+1. **Audit (immediate):** Categorize all 1,640 LOC into (A)/(B)/(C) with rationale
+2. **Rewrite (next):** Category-(A) tests become new TCA reducer test modules; old XCUITest implementations removed
+3. **Optimize (final):** Category-(B) suite deduped/trimmed; wall-clock measurement baseline vs. after
+
+## Acceptance Criteria
+
+- [ ] Audit document committed (`.squad/work/ui-test-migration-audit.md`)
+- [ ] Category-(A) tests rewritten as `TestStore` tests
+- [ ] Category-(B) XCUITest suite optimized
+- [ ] Zero behavior regressions (full test suite passes)
+- [ ] **CI measurement:** >40% reduction in UI test shard time (500s → <300s)
+- [ ] Coverage parity maintained
+- [ ] **Re-enable UI tests on CI** (proof of pudding; linked to user directive re-enable gate)
+
+## Team Assignments
+
+- **Livingston (lead):** UI test rewrite audit + implementation
+- **Rusty (architecture):** TCA pattern alignment review; verify consistency with AppFeature/AppReducer patterns
+- **Saul (merge gate):** Validation before merge; coverage + regression testing
+
+## Notes for Picker-Upper
+
+1. Start with **audit phase** — read Rusty's TCA patterns from the app codebase (AppFeature, AppReducer) as examples
+2. Each reducer that's tested via UI should get its own `*Tests.swift` file in `Tests/` (not `UITests/`)
+3. Verify TestStore tests cover the same edge cases as the old XCUITest (permutations, error paths, rapid interactions)
+4. Measure wall-clock time: `time xcodebuild test -scheme EyePostureReminder -destination generic/platform=iOS` before and after
+5. If source changes (`#if DEBUG || CI`) are still pending, hold those changes separate — don't mix with this migration
+6. **CI Gate:** Once PR merges, coordinate with Yashas/Virgil to re-enable UI tests on CI as final step
+
+**Related:**
+- User directive (above): UI tests disabled on CI until TCA rewrite ships
+- MR !808 / commit `edc772c`: CI build perf (Release + wholemodule + cmd_test double-compile fix) — **landed**
+- Rusty's Release-config audit: separate gate for `#if DEBUG → #if DEBUG || CI` source changes
+

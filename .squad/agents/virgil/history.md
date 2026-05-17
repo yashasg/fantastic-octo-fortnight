@@ -149,3 +149,18 @@ Directive from Yashas: no more CI YAML edits — all build config changes go thr
 - **Injecting build settings via xcodebuild CLI args (not project.yml)** is the correct pattern when CI workflow YAMLs are frozen. `XCODE_FLAGS` array in `build.sh` is the single source of truth for all build-setting overrides.
 - **`ENABLE_TESTABILITY=YES` scoping is critical**: passing it only on `build-for-testing` calls (not the plain `build` action) keeps the production binary clean. Verified pattern: add it as a trailing positional arg to `run_xcodebuild`; it becomes part of `"$@"` which xcodebuild treats as a build-setting override.
 - **`cmd_uitest` had TWO hardcoded `Debug-iphonesimulator` references**, not one — both the PlistBuddy `-c Set` string and the `local products_dir` variable assignment on the line below. Both must change together or SPM binary copy into .app bundle fails at runtime.
+
+## 2026-05-17 — UI Tests Off CI Until TCA Rewrite (Directive Captured)
+
+**Event:** User directive — UI tests disabled on CI until TCA rewrite ships (Work Item #806 filed by Livingston).
+
+**Implication for Release+wholemodule CI (MR #808):**
+
+✅ **No immediate impact on your work.** The `CONFIGURATION=Release` and `SWIFT_COMPILATION_MODE=wholemodule` defaults you applied in MR #808 do NOT need to worry about UITest behavior under Release config for CI purposes — UI tests are off CI now.
+
+**Timeline:**
+1. UI tests stay off CI during Livingston's TCA rewrite work (Work Item #806)
+2. Once TCA rewrite ships and re-enable gate is cleared, UITest guards may need Release-config treatment (separate decision at that time)
+3. For NOW: Your Release+wholemodule implementation is correct as-is
+
+**Related Decision:** `.squad/decisions.md` — "2026-05-17 — User Directive: UI Tests Disabled on CI Until TCA Rewrite"

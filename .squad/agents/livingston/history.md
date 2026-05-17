@@ -109,3 +109,49 @@ Orchestration log recorded at 2026-04-30T09:27:10Z. Root cause diagnosis documen
 - Orchestration logs: `.squad/orchestration-log/2026-05-17T08-57-37Z-virgil.md` and `-rusty.md`
 - Session log: `.squad/log/2026-05-17T08-57-37Z-ci-clean-release-perf-audit.md`
 - Decision: `.squad/decisions.md` (search for "CI Clean-Build + Release-Config Speedup Decision")
+
+## 2026-05-17 — TCA UI Test Rewrite Issue Filed (#806)
+
+**Event:** Authored GitLab work item ([Work Item #806](https://gitlab.com/yashasg/fantastic-octo-fortnight/-/work_items/806)) capturing UI test execution optimization via TCA `TestStore` migration.
+
+**Context:** Commit `edc772c` (Release + wholemodule + cmd_test double-compile fix) landed CI build performance win (~40-50% faster). Next CI bottleneck is UI test execution time (~500+ sec of XCUITest synchronization overhead per run).
+
+**Categorization audit (brief):**
+- **HomeScreenTests.swift** (250 LOC) — App launch + layout (A/B split; home screen element existence tests → TestStore, app launch E2E → XCUITest)
+- **SettingsFlowTests.swift** (320 LOC) — Toggle/sheet state (A candidate; reducer tests for settings mutations, E2E for sheet navigation)
+- **OnboardingFlowTests.swift** (260 LOC) — Flow progression (A/B split; state machine → TestStore, deep-link routing → XCUITest)
+- **OverlayTests.swift** (280 LOC) — Overlay + snooze (B for overlay UIKit, A for snooze state)
+- **AppStoreScreenshotTests.swift** (110 LOC) — Screenshots (pure B; keep XCUITest for marketing asset generation)
+- **UITestHelpers.swift** (420 LOC) — Launch + wait helpers (refactor to reduce app-sync overhead)
+
+**Total:** ~1,640 LOC. Estimated 45-55% rewriteable to TestStore (500-800 LOC, 60-70% faster execution).
+
+**Acceptance criteria:** Audit document, category-(A) rewrite complete, category-(B) optimized, zero behavior regressions, >40% UI test shard time reduction (500s → <300s).
+
+**Owners:** Livingston (lead), Rusty (architecture review), Saul (merge gate).
+
+**Related:** MR !808 (commit edc772c) — CI build perf; Rusty's architecture audit — `#if DEBUG || CI` source changes (separate authorization).
+
+## 2026-05-17 — CI-Gate Annotation Posted to Work Item #806
+
+**Event:** Posted comment to GitLab Work Item #806 pinning the CI-gate context and definition-of-done.
+
+**Comment ID:** 3355586658
+
+**What Was Annotated**
+
+Clarified in the issue itself that:
+1. UI tests are currently OFF CI per user directive (Yashas disabled them)
+2. This work item (TCA UI test rewrite) is the blocking gate for re-enable
+3. Definition-of-done now includes: **re-enable UI tests on CI within the time/performance budget**
+4. The scope narrowing for Rusty's Release-config audit (UITest guards no longer affect CI Release blocker; only unit-test guards remain)
+
+**Timeline for CI Re-Enable**
+
+Once this issue is completed (audit done, category-(A) rewritten to TestStore, category-(B) optimized):
+1. Coordinate with Virgil (CI/CD) to re-enable UI test job in CI workflow
+2. Verify all shards pass (onboarding, overlay, home, settings, dark mode)
+3. Confirm >40% shard time reduction achieved (500s → <300s target)
+4. Yashas/Rusty final approval before merge
+
+**Related Decision:** `.squad/decisions.md` — "2026-05-17 — TCA UI Test Rewrite Issue Filed (Work Item #806)"

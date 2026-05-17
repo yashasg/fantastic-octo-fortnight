@@ -345,3 +345,23 @@ Awaiting: (1) Yashas approval to proceed; (2) Source changes PR submission + rev
 - **2026-05-17: Release-config audit pattern for SPM-based projects.** For any SPM project (no xcodeproj) considering Release config switch: (1) audit all `#if DEBUG` guards for test-critical code, (2) verify `@testable import` count + ENABLE_TESTABILITY impact, (3) check for hardcoded build-artifact paths (e.g., PlistBuddy), (4) recommend `OTHER_SWIFT_FLAGS="-DCI"` injection mechanism for CI-only test hooks.
 - **Compilation condition injection in SPM:** Use `OTHER_SWIFT_FLAGS="-DCI"` in xcodebuild invocation — flows through to SPM targets and enables `#if CI` checks. This is the only mechanism for custom conditions in SPM without adding a real xcodeproj or config.
 - **Security gate + test infrastructure coupling:** When `#if DEBUG` guards security-sensitive code (UITest backdoors), ensure test-critical hooks are NOT within the same guard. Either extract hooks to separate `#if CI` guard, or widen guard to `#if DEBUG || CI` when safe. This decouples security (production cleanliness) from test requirements (debug features for CI).
+
+## 2026-05-17 — #if DEBUG Blocker Scope Narrowed (UI Tests Off CI)
+
+**Event:** User directive captured — UI tests disabled on CI until TCA rewrite ships (Work Item #806 filed by Livingston).
+
+**Scope Update:** The 22 `#if DEBUG` guards identified in the Release-config audit split into **two buckets:**
+
+| Bucket | Guards | Affected Tests | CI Impact | Status |
+|---|---|---|---|---|
+| **UITest-specific** (UITestMode, AppDelegate UITestArgs, EyePostureReminderApp UITest hooks, HomeView UITest backdoors) | ~9 | UI test suite (~500 tests) | ✅ No longer a CI blocker (UI tests off CI) | Not in scope now |
+| **Unit-test-affecting** (AnalyticsLogger injection + 14 `#if DEBUG`-wrapped test files) | ~13 | 3 unit tests + 12-14 silently-dropped tests | Still blocks Release CI baseline | Still a blocker |
+
+**Key Implication:** Blocker shrinks from "22 guards breaking UITests + unit tests" to "AnalyticsLogger + unit-test files" (~13 guards) — narrower scope, same `#if DEBUG → #if DEBUG || CI` fix pattern. No change to the sign-off gate or pre-flight checklist.
+
+**Timeline:**
+1. UI tests stay off CI during TCA rewrite work (Work Item #806, assigned to Livingston)
+2. Once TCA rewrite ships + re-enable gate cleared, UITest guards will need `#if DEBUG || CI` updates IF/WHEN we bring UI tests back to Release-config CI (future decision)
+3. For immediate Release-config CI switch: focus on AnalyticsLogger + unit-test files only
+
+**Related Decision:** `.squad/decisions.md` — "2026-05-17 — User Directive: UI Tests Disabled on CI Until TCA Rewrite"
