@@ -138,12 +138,27 @@ that only `test_settings_reminderControls_exposeTogglesAndPickers` used).
    - Removed now-dead UITestHelpers: `XCUIApplication.waitForOverlayDismissed`, `XCUIApplication.waitForOverlayReady`, `XCUIElement.waitForNotHittable`.
    - **Outcome:** 5 more XCUI cases removed (23 → 18) plus dead helper cleanup.
 
-3. **Phase 3 — backfill missing reducer coverage, then delete remaining (A)**:
-   - `SettingsFlowTests` #7, #8 — add `SettingsClientLiveTests` for the
-     persisted-snapshot round-trip if missing.
-   - `OnboardingFlowTests` #5 — add an `OnboardingFeatureTests` enable-flag
-     truth-table for the pre-entitlement setup-preview disabled state.
-   - **Outcome:** the last 4 (A) XCUI cases gone; only (B) survives.
+3. **Phase 3 — backfill missing reducer coverage, then delete remaining (A)** (✅ landed in #806 phase-3 MR):
+   - `SettingsFlowTests` #7, #8 — persistence chain already covered by
+     `SettingsStoreObserverTests.test_observer_firesOnGlobalEnabledMutation`
+     (and the eyes-side mutation tests in the same file) plus the
+     `LiveSettingsBridge` `UserDefaults.didChangeNotification` observer that
+     re-publishes through `SettingsClient.enabledFlagsSnapshot()` /
+     `enabledFlagsStream()`. The audit's optional
+     `SettingsClientLiveTests.test_snapshot_reflectsLatestStoreWrite` was
+     skipped (singleton + `UserDefaults.standard` pollution risk outweighs
+     the marginal coverage on a chain already exercised by reducer-feature
+     tests that read through the same `enabledFlagsSnapshot` surface).
+   - `OnboardingFlowTests` #5 — already covered by
+     `TrueInterruptViewCoverageTests.test_onboardingInterruptModeView_disabled_usesDisabledHintKey`,
+     which exercises the `isPrimaryButtonDisabled` truth-table via
+     `primaryButtonHintKey` (the public side-effect of the same conditional).
+     Companion `unavailableWithSetup_usesPreviewHintKey` / `approved_usesEnableHintKey`
+     tests cover the enabled branches.
+   - Removed now-dead `XCUIElement.waitForValueChange` and the
+     `SettingsFlowTests.dismissSettings` helper after their last call-sites
+     went away.
+   - **Outcome:** the last 3 (A) XCUI cases gone (18 → 15); only (B) survives.
 
 4. **Phase 4 — measure**:
    - Capture the baseline UI-test wall-clock on `main` before any

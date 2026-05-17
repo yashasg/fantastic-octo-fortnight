@@ -45,38 +45,6 @@ final class OnboardingFlowTests: XCTestCase {
         XCTAssertTrue(nextButton.isHittable, "Welcome Next CTA must be tappable.")
     }
 
-    // MARK: - test_onboarding_interruptMode_actionsExistAndComingSoonIsDisabled
-
-    /// Verifies True Interrupt Mode exposes skip/customize actions and keeps pre-entitlement setup disabled.
-    func test_onboarding_interruptMode_actionsExistAndComingSoonIsDisabled() throws {
-        navigateToInterruptMode()
-
-        let interruptSkipButton = app.buttons["onboarding.interrupt.skipButton"]
-        XCTAssertTrue(
-            interruptSkipButton.waitForExistence(timeout: 3),
-            "After tapping Get Started, the app should show the True Interrupt Mode screen."
-        )
-
-        let setupPreviewButton = app.buttons["onboarding.interrupt.enableButton"]
-        XCTAssertTrue(
-            setupPreviewButton.waitForExistence(timeout: 3),
-            "True Interrupt screen must expose the setup preview button."
-        )
-
-        let customizeButton = app.buttons["onboarding.interrupt.customizeButton"]
-        XCTAssertTrue(
-            app.revealAndWaitForHittable(customizeButton, timeout: 5, maxSwipes: 4),
-            "\"Customize Settings\" tertiary CTA must exist on the True Interrupt Mode screen. " +
-            "Ensure onCustomize is non-nil in OnboardingView and " +
-            ".accessibilityIdentifier(\"onboarding.interrupt.customizeButton\") is set."
-        )
-        XCTAssertTrue(customizeButton.isHittable, "\"Customize Settings\" button must be tappable.")
-        XCTAssertFalse(
-            setupPreviewButton.isEnabled,
-            "Pre-entitlement setup preview must remain disabled instead of opening a locked picker flow."
-        )
-    }
-
     // MARK: - test_onboarding_customizeButton_opensSettingsAfterCompletion
 
     /// Tapping "Customize Settings" completes onboarding and opens the Settings sheet.
