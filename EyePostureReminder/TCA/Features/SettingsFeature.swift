@@ -2,14 +2,13 @@ import ComposableArchitecture
 import Foundation
 import UserNotifications
 
-/// Phase 1 reducer (`p0-tca-6` / #669) replacing the legacy
-/// `SettingsViewModel` for the Settings screen.
+/// Reducer powering the Settings screen, introduced by `p0-tca-6` / #669.
 ///
-/// `#755` Phase B extends the surface so `SettingsView` can read every value
-/// it previously sourced from `@EnvironmentObject AppCoordinator` directly
-/// from this store: notification authorisation, Screen Time authorisation,
-/// and the snooze-cancel action that mirrors
-/// `SettingsViewModel.cancelSnooze()`.
+/// `#755` Phase B extended the surface so `SettingsView` can read every
+/// value it needs — debounced eyes-side reschedules, notification
+/// authorisation, Screen Time / FamilyControls authorisation, and the
+/// snooze-cancel action — directly from this store, without reaching
+/// across to a parallel object graph.
 ///
 /// ## Posture-side bindable surface (#805)
 ///
@@ -73,15 +72,15 @@ struct SettingsFeature {
         /// Drives presentation of the transient "Saved" banner.
         var showSavedBanner: Bool = false
 
-        /// Current notification authorization status. Surfaced by
-        /// `SettingsView` to render the "Notifications disabled" warning row
-        /// previously sourced from `AppCoordinator.notificationAuthStatus`.
+        /// Current notification authorization status. Populated from the
+        /// `NotificationClient` stream and surfaced by `SettingsView` to
+        /// render the "Notifications disabled" warning row.
         var notificationAuthStatus: UNAuthorizationStatus = .notDetermined
 
-        /// Current Screen Time / FamilyControls authorisation status. Drives
-        /// the True Interrupt Mode status row + denied-recovery callout
-        /// previously sourced from
-        /// `AppCoordinator.screenTimeAuthorization.authorizationStatus`.
+        /// Current Screen Time / FamilyControls authorisation status.
+        /// Populated from the `ScreenTimeAuthorizationClient` stream and
+        /// drives the True Interrupt Mode status row + denied-recovery
+        /// callout in `SettingsView`.
         var screenTimeAuthStatus: ScreenTimeAuthorizationStatus = .unavailable
 
         /// Aggregated eyes-side `ReminderSettings` view used by the
@@ -133,10 +132,10 @@ struct SettingsFeature {
         case settingToggleChanged(setting: AnalyticsEvent.SettingKey, oldValue: String, newValue: String)
     }
 
-    /// Snooze durations exposed to the Settings UI. Mirrors
-    /// `SettingsViewModel.SnoozeOption` so analytics codes are stable
-    /// across the MVVM → TCA migration. Localised labels stay in the View
-    /// layer per the Phase 1 "own this file only" constraint.
+    /// Snooze durations exposed to the Settings UI. Analytics codes
+    /// stay stable across releases (and survived the MVVM → TCA
+    /// migration). Localised labels stay in the View layer per the
+    /// Phase 1 "own this file only" constraint.
     enum SnoozeOption: String, CaseIterable, Equatable, Sendable {
         case fiveMinutes
         case oneHour
@@ -356,10 +355,10 @@ struct SettingsFeature {
             case let .settingToggleChanged(setting, oldValue, newValue):
                 // #787: the non-bindable rows (master toggle, eyes/posture
                 // enable, smart-pause toggles, …) write through `@AppStorage`
-                // and reach the reducer only via this analytics shim. The
-                // legacy `SettingsViewModel` flipped the saved-banner for
-                // every persisted change, so we mirror that here. Without
-                // this, the master-toggle XCUITest assertion in
+                // and reach the reducer only via this analytics shim. Every
+                // persisted setting change also flips the saved-banner, so
+                // we mirror that here. Without this, the master-toggle
+                // XCUITest assertion in
                 // `SettingsFlowTests.test_settings_savedBanner_appearsOnToggle`
                 // never observes the banner (read as "XCUI flake" until the
                 // root cause was identified).
@@ -381,11 +380,9 @@ struct SettingsFeature {
 
 extension SettingsFeature.SnoozeOption {
     /// Computes the absolute snooze expiry date from an injected reference
-    /// date and calendar. Copied verbatim from
-    /// `SettingsViewModel.SnoozeOption.endDate(referenceDate:calendar:)`
-    /// so behaviour — including the rest-of-day midnight calculation that
-    /// honours DST transitions — matches the legacy implementation
-    /// exactly.
+    /// date and calendar. Behaviour — including the rest-of-day midnight
+    /// calculation that honours DST transitions — is locked in by the
+    /// `SnoozeOption` unit tests.
     func endDate(referenceDate: Date, calendar: Calendar) -> Date {
         switch self {
         case .fiveMinutes:
