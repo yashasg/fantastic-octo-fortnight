@@ -42,7 +42,7 @@ jobs:
         run: |
           git clone --depth 1 \
             --branch ${{ github.event.client_payload.branch }} \
-            https://gitlab-token:${{ secrets.GITLAB_PAT }}@gitlab.com/yashasg/${{ github.event.client_payload.project_name }} \
+            https://gitlab-token:${{ secrets.GITLAB_PAT }}@gitlab.com/${{ github.event.client_payload.project_name }} \
             .
 
       - name: Select Xcode ${{ env.XCODE_VERSION }}
