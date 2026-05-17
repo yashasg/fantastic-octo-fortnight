@@ -38,27 +38,23 @@ private struct SettingsSectionHeader: View {
     }
 }
 
-/// Settings sheet, wired to `SettingsFeature` as part of `#755` Phase B.
+/// Settings sheet, wired to `SettingsFeature` (`#755` Phase B).
 ///
-/// The legacy `@EnvironmentObject SettingsStore` / `AppCoordinator` graph
-/// (and the `SettingsViewModelBox` that bridged them) is gone:
-///
-/// - `eyesInterval` / `eyesBreakDuration` flow through the bindable surface
-///   of `SettingsFeature`, so debounced reschedules and the saved-banner
-///   effect run inside the reducer.
-/// - Every other setting binds directly to its persisted UserDefaults key
-///   via `@AppStorage(SettingsStore.Keys.*)`. `SettingsClient.liveValue`
+/// - `eyesInterval` / `eyesBreakDuration` flow through the bindable
+///   surface of `SettingsFeature`, so debounced reschedules and the
+///   saved-banner effect run inside the reducer.
+/// - Every other setting binds directly to its persisted UserDefaults
+///   key via `@AppStorage(SettingsStore.Keys.*)`. `SettingsClient.liveValue`
 ///   observes the same `SettingsStore` instance and rebroadcasts changes
-///   into the wider TCA graph, so removing the in-view `SettingsStore`
-///   reference does not break the scheduler.
-/// - Notification + Screen Time authorisation status now come from
+///   into the wider TCA graph, so the in-view `@AppStorage` reads do not
+///   bypass the scheduler.
+/// - Notification + Screen Time authorisation status come from
 ///   `SettingsFeature.State`, refreshed via the same `NotificationClient`
 ///   poll + `ScreenTimeAuthorizationClient` stream used by `HomeFeature`.
 ///
-/// The `setting_changed` analytics emissions that lived on the legacy
-/// `SettingsViewModel.notifySettingChanged(...)` callbacks are restored by
-/// #777 via `prev*` `@State` mirrors and `.onChangeCompat` watchers that
-/// forward each change to `SettingsFeature.Action.settingToggleChanged`.
+/// The `setting_changed` analytics emissions are restored by #777 via
+/// `prev*` `@State` mirrors and `.onChangeCompat` watchers that forward
+/// each change to `SettingsFeature.Action.settingToggleChanged`.
 /// `eyesInterval` / `eyesBreakDuration` keep emitting directly from the
 /// reducer's bindable surface.
 struct SettingsView: View {
@@ -454,11 +450,10 @@ struct SettingsView: View {
 
     // MARK: - Helpers
 
-    /// Max consecutive snoozes allowed before snooze CTAs disable, mirroring
-    /// the constant `SettingsViewModel` captured from
-    /// `AppConfig.features.maxSnoozeCount` at init time. The value is read
-    /// fresh on each evaluation so a `defaults.json` swap during preview /
-    /// snapshot tests is observable without rebuilding the view.
+    /// Max consecutive snoozes allowed before snooze CTAs disable. Reads
+    /// `AppConfig.features.maxSnoozeCount` fresh on each evaluation so a
+    /// `defaults.json` swap during preview / snapshot tests is observable
+    /// without rebuilding the view.
     private var canSnooze: Bool {
         snoozeCount < AppConfig.load().features.maxSnoozeCount
     }
