@@ -14,9 +14,7 @@ import XCTest
 /// NOTE: Views that use `@AppStorage` crash in the SPM test-host process
 /// (`bundleProxyForCurrentProcess is nil`) because `UserDefaults(suiteName:)`
 /// cannot resolve the host bundle — those are tested via `_ = view.body` or
-/// callback-contract tests instead. (No first-party view uses
-/// `@EnvironmentObject` anymore; the legacy `AppCoordinator` /
-/// `SettingsStore` environment graph was removed in #677 / #755.)
+/// callback-contract tests instead.
 @MainActor
 final class ViewBodyCoverageTests: XCTestCase {
 
@@ -114,8 +112,7 @@ final class ViewBodyCoverageTests: XCTestCase {
     // NOTE: OnboardingSetupView binds pickers to `@AppStorage(SettingsStore.Keys.*)`,
     // which crashes in the SPM test-host process (`bundleProxyForCurrentProcess`
     // is `nil`). Body rendering is skipped per project convention; only
-    // callback-contract and token tests are run here. (Migrated off
-    // `@EnvironmentObject SettingsStore` in #755 Phase C.)
+    // callback-contract and token tests are run here.
 
     func test_onboardingSetupView_getStartedCallback() {
         var started = false
