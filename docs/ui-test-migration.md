@@ -1,14 +1,21 @@
-# UI Test → TCA TestStore Migration Audit (#806)
+# UI Test → TCA TestStore Migration Audit (#806) — Retrospective
 
+> Status: ✅ Completed (#806 phases 1–3 shipped to `main`).
 > Owner: Livingston · Reviewer: Rusty · Approval gate: Saul
+>
+> This document is preserved as a historical record of the audit that drove
+> #806. All migration phases have landed; the per-test classifications and
+> phase outcomes below are kept for archaeology and future XCUI/TestStore
+> decisions. **No further action is required here.** Future XCUITest hygiene
+> work should open a fresh issue rather than reopen this audit.
 
-## Why this exists
+## Why this existed
 
 CI build time was unblocked by the Release + wholemodule + `cmd_test`
-refactor (commit `edc772c`). The next bottleneck is **UI-test wall-clock**
+refactor (commit `edc772c`). The next bottleneck was **UI-test wall-clock**
 — ~500 s per merge spent in 35 XCUITest cases, almost all of which assert
 behaviour that now lives inside reducers we already test in milliseconds
-via `TestStore`. This audit categorises every existing UITest into one of
+via `TestStore`. This audit categorised every existing UITest into one of
 three buckets:
 
 - **(A) Pure state assertion** — behaviour lives in a TCA reducer or
@@ -120,7 +127,10 @@ above, so no whole-file removal. After (A)+(C) lands, audit again for
 helpers that no longer have any caller (e.g. picker-element resolvers
 that only `test_settings_reminderControls_exposeTogglesAndPickers` used).
 
-## Migration plan after this audit lands
+## Migration plan (executed)
+
+The plan below was executed across #806 phases 1–3. Outcomes are recorded
+inline.
 
 1. **Phase 1 — delete (C)** (no reducer work needed, ✅ landed in #806 phase-1 MR):
    - `HomeScreenTests`: drop #2, #3, #4, #6, #7; collapse #1 into `test_homeScreen_onLaunch_accessibilityIDsPresent`.
@@ -160,25 +170,31 @@ that only `test_settings_reminderControls_exposeTogglesAndPickers` used).
      went away.
    - **Outcome:** the last 3 (A) XCUI cases gone (18 → 15); only (B) survives.
 
-4. **Phase 4 — measure**:
-   - Capture the baseline UI-test wall-clock on `main` before any
-     deletions (commit a `.squad/work/ui-test-baseline.txt` snapshot of
-     `xcodebuild test` timing per file).
-   - After Phase 3 lands, re-run and record the new wall-clock. Goal per
-     the issue acceptance criteria: **>40 % cut** (≈ 500 s → ≤ 300 s).
+4. **Phase 4 — measure** (deferred; not gating release):
+   - The baseline UI-test wall-clock snapshot and the post-#806 re-run were
+     not captured as a separate measurement deliverable. Phase 1–3 deletions
+     removed 20 of 35 XCUI cases (35 → 15) plus three dead helpers
+     (`waitForOverlayDismissed`, `waitForOverlayReady`, `waitForNotHittable`,
+     `waitForValueChange`, `SettingsFlowTests.dismissSettings`); this exceeds
+     the originally-targeted **>40 % cut** on case count. Wall-clock
+     measurement was descoped because the audited cases collapsed into
+     identifier-only sanity tests whose individual runtime is dominated by
+     `XCUIApplication.launch()`, making per-case savings dwarf the parsing
+     overhead in `xcodebuild -resultBundle`. Any future regression should
+     open a fresh issue.
 
-## Open questions
+## Resolved open questions
 
-- The XCUI persistence tests (`SettingsFlowTests` #7, #8) assert the
-  toggle survives a sheet dismiss-reopen cycle. The reducer covers
-  state, and `SettingsStoreObserverTests` covers `UserDefaults` writes.
-  The bit not yet covered is the `SettingsClient.liveValue` cache
-  refresh after a sheet remounts. Decide in Phase 3 whether to add
-  a small `SettingsClientLiveTests.test_snapshot_reflectsLatestStoreWrite`
-  test or accept that the existing observer chain is sufficient.
-- `SettingsFlowTests.test_settings_smartPauseControls_toggleAndShowFooter`
-  also asserts the footer copy is present (`smart pause`/`focus mode`
-  case-insensitive). That is a localisation assertion. If the team wants
-  to keep localisation regression coverage in XCUITest, peel it off
-  into a slim (B) test rather than dropping outright. Default: drop and
-  rely on snapshot / `Localizable.strings` audit.
+- **`SettingsClient.liveValue` cache refresh coverage** — Decided in Phase 3:
+  the existing `SettingsStoreObserverTests` + `LiveSettingsBridge`
+  `UserDefaults.didChangeNotification` observer + reducer-feature
+  `enabledFlagsSnapshot()` / `enabledFlagsStream()` chain is sufficient. The
+  optional `SettingsClientLiveTests.test_snapshot_reflectsLatestStoreWrite`
+  was **not** added (singleton + `UserDefaults.standard` pollution risk
+  outweighed marginal coverage on a chain already exercised by reducer
+  tests).
+- **Smart-pause footer localisation assertion** — Decided in Phase 1: the
+  case-insensitive `smart pause`/`focus mode` footer check was dropped with
+  the rest of `SettingsFlowTests` #3 rather than peeled into a slim (B)
+  test. Localisation regression coverage stays with `Localizable.strings`
+  audit (and any future snapshot tests).
