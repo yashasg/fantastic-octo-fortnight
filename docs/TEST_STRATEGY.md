@@ -244,7 +244,7 @@ final class MockUserDefaults: SettingsPersisting {
 }
 ```
 
-**Tests that use this mock:** `SettingsStoreTests`, `SettingsViewModelTests`
+**Tests that use this mock:** `SettingsStoreTests`
 
 ---
 
@@ -437,7 +437,7 @@ Tests/
 
 ---
 
-### 4.4 Permission Flow (`SettingsViewModelTests` + manual)
+### 4.4 Permission Flow (manual)
 
 | # | Test Name | Type | Scenario | Expected Result |
 |---|-----------|------|----------|-----------------|
@@ -710,11 +710,9 @@ EyePostureReminderTests/
 │   └── MockUserDefaults.swift            (§3.4)
 ├── Models/
 │   └── SettingsStoreTests.swift          (§4.1 — SP-01 to SP-13)
-├── Services/
-│   ├── ReminderSchedulerTests.swift      (§4.2 — NS-01 to NS-15)
-│   └── OverlayManagerTests.swift         (§4.3 — OV-01 to OV-13)
-└── ViewModels/
-    └── SettingsViewModelTests.swift      (§4.4 — PF-01 to PF-04)
+└── Services/
+    ├── ReminderSchedulerTests.swift      (§4.2 — NS-01 to NS-15)
+    └── OverlayManagerTests.swift         (§4.3 — OV-01 to OV-13)
 
 EyePostureReminderUITests/
 ├── SettingsFlowTests.swift               (§4.1 save/load via UI)
