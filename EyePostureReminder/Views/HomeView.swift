@@ -3,18 +3,15 @@ import SwiftUI
 import UIKit
 import UserNotifications
 
-/// Home screen, wired to `HomeFeature` as part of `#755` Phase A.
+/// Home screen, wired to `HomeFeature` (`#755` Phase A).
 ///
-/// The legacy `@EnvironmentObject SettingsStore` / `AppCoordinator` graph has
-/// been removed from this view: every per-type enable flag, master toggle, and
-/// notification auth status is now read from `StoreOf<HomeFeature>`.
-/// `#814` retired the local `@State showSettings` / private `SettingsSheet`
-/// wrapper so the Settings sheet is presented exclusively through
-/// `AppFeature.Destination.settingsSheet` by `RootView`; the gear button and
-/// in-screen banners dispatch `.settingsTapped` and the parent reducer owns
-/// the destination write. The `openSettingsOnLaunch` UserDefaults handoff is
-/// now observed by `RootView`, which routes it through
-/// `AppFeature.Action.openSettingsSheetRequested`.
+/// Every per-type enable flag, master toggle, and notification auth status
+/// is read from `StoreOf<HomeFeature>`. The Settings sheet is presented
+/// exclusively through `AppFeature.Destination.settingsSheet` by `RootView`
+/// (#814); the gear button and in-screen banners dispatch `.settingsTapped`
+/// and the parent reducer owns the destination write. The
+/// `openSettingsOnLaunch` UserDefaults handoff is observed by `RootView`,
+/// which routes it through `AppFeature.Action.openSettingsSheetRequested`.
 struct HomeView: View {
     typealias LaunchArgumentsProvider = () -> [String]
     typealias ProcessEnvironmentProvider = () -> [String: String]
