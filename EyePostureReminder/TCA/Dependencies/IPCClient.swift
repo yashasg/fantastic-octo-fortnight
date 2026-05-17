@@ -5,7 +5,7 @@ import ScreenTimeExtensionShared
 
 /// TCA dependency client wrapping `AppGroupIPCStore` for reducer consumption.
 ///
-/// Phase 0 of the MVVM → TCA migration (#665). The `liveValue` adapter
+/// Phase 0 of the TCA migration (#665). The `liveValue` adapter
 /// installs `NotificationCenter` observers for the
 /// `trueInterruptEnabledDidChange` and `selectionDidChange` notifications
 /// that multicast to every active stream subscriber via per-subscriber

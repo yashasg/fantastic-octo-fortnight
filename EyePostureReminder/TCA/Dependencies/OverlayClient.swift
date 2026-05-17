@@ -17,7 +17,7 @@ enum OverlayLifecycleEvent: Equatable, Sendable {
 
 /// TCA dependency client wrapping `OverlayManager` for reducer consumption.
 ///
-/// Phase 0 of the MVVM → TCA migration (#665). The `liveValue` adapter
+/// Phase 0 of the TCA migration (#665). The `liveValue` adapter
 /// installs a single set of `OverlayLifecycleCallbacks` per `show` call that
 /// multicasts to every active `lifecycleEvents` subscriber via per-subscriber
 /// `AsyncStream` continuations.

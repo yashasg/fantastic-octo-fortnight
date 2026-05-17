@@ -3,7 +3,7 @@ import Foundation
 
 /// TCA dependency client wrapping `ReminderScheduler` for reducer consumption.
 ///
-/// Phase 0 of the MVVM → TCA migration (#665). The `liveValue` adapter routes
+/// Phase 0 of the TCA migration (#665). The `liveValue` adapter routes
 /// scheduling calls through the existing `@MainActor` `ReminderScheduler`,
 /// which itself reads the live `SettingsStore` snapshot. The `ReminderSettings`
 /// argument carried by the closures is part of the normative Phase 1 contract
