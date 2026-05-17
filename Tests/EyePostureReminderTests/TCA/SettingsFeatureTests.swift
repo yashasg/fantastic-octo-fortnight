@@ -16,6 +16,8 @@ final class SettingsFeatureTests: XCTestCase {
 
         XCTAssertEqual(state.eyesInterval, 0)
         XCTAssertEqual(state.eyesBreakDuration, 0)
+        XCTAssertEqual(state.postureInterval, 0)
+        XCTAssertEqual(state.postureBreakDuration, 0)
         XCTAssertEqual(state.prevEyesInterval, .zero)
         XCTAssertEqual(state.prevEyesBreakDuration, .zero)
         XCTAssertEqual(state.prevPostureInterval, .zero)
@@ -31,6 +33,15 @@ final class SettingsFeatureTests: XCTestCase {
 
         XCTAssertEqual(state.settings.interval, 600)
         XCTAssertEqual(state.settings.breakDuration, 30)
+    }
+
+    func test_state_postureSettings_isComputedFromBindableMirrors() {
+        var state = SettingsFeature.State()
+        state.postureInterval = 1500
+        state.postureBreakDuration = 12
+
+        XCTAssertEqual(state.postureSettings.interval, 1500)
+        XCTAssertEqual(state.postureSettings.breakDuration, 12)
     }
 
     // MARK: - SnoozeOption
@@ -83,12 +94,15 @@ final class SettingsFeatureTests: XCTestCase {
 
     func test_onAppear_seedsBindablesAndPrevValuesFromSnapshot() async {
         let snapshot = ReminderSettings(interval: 1200, breakDuration: 25)
+        let posture = ReminderSettings(interval: 1800, breakDuration: 10)
         let store = TestStore(initialState: SettingsFeature.State()) {
             SettingsFeature()
         } withDependencies: {
             $0.settingsClient = SettingsClient(
                 snapshot: { snapshot },
                 stream: { .finished },
+                postureSnapshot: { posture },
+                postureStream: { .finished },
                 enabledFlagsSnapshot: { .allEnabled },
                 enabledFlagsStream: { .finished },
                 updateGlobalEnabled: { _ in },
@@ -117,6 +131,10 @@ final class SettingsFeatureTests: XCTestCase {
             $0.eyesBreakDuration = 25
             $0.prevEyesInterval = 1200
             $0.prevEyesBreakDuration = 25
+            $0.postureInterval = 1800
+            $0.postureBreakDuration = 10
+            $0.prevPostureInterval = 1800
+            $0.prevPostureBreakDuration = 10
         }
         await store.receive(\.notificationAuthStatusChanged) {
             $0.notificationAuthStatus = .authorized
@@ -139,6 +157,22 @@ final class SettingsFeatureTests: XCTestCase {
             $0.eyesBreakDuration = 15
             $0.prevEyesInterval = 900
             $0.prevEyesBreakDuration = 15
+        }
+    }
+
+    // MARK: - .postureSettingsChanged
+
+    func test_postureSettingsChanged_writesAllFourMirroredFields() async {
+        let store = TestStore(initialState: SettingsFeature.State()) {
+            SettingsFeature()
+        }
+        let snapshot = ReminderSettings(interval: 1800, breakDuration: 12)
+
+        await store.send(.postureSettingsChanged(snapshot)) {
+            $0.postureInterval = 1800
+            $0.postureBreakDuration = 12
+            $0.prevPostureInterval = 1800
+            $0.prevPostureBreakDuration = 12
         }
     }
 
@@ -169,6 +203,8 @@ final class SettingsFeatureTests: XCTestCase {
             $0.settingsClient = SettingsClient(
                 snapshot: { ReminderSettings(interval: 0, breakDuration: 0) },
                 stream: { .finished },
+                postureSnapshot: { ReminderSettings(interval: 0, breakDuration: 0) },
+                postureStream: { .finished },
                 enabledFlagsSnapshot: { .allEnabled },
                 enabledFlagsStream: { .finished },
                 updateGlobalEnabled: { _ in },

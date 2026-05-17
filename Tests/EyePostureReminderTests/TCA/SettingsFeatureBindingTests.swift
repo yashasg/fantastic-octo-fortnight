@@ -202,4 +202,196 @@ final class SettingsFeatureBindingTests: XCTestCase {
             XCTAssertEqual(snapshots.first?.interval, 600)
         }
     }
+
+    // MARK: - Posture-side bindable surface (#805)
+
+    func test_binding_postureInterval_debouncesThenPersistsReschedulesAndLogs() async {
+        let clock = TestClock()
+        let updateCalls = LockIsolated<[TimeInterval]>([])
+        let rescheduleCalls = LockIsolated<[(ReminderType, ReminderSettings)]>([])
+        let analyticsEvents = LockIsolated<[AnalyticsEvent]>([])
+
+        var settings = TCATestDependencies.silentSettingsClient()
+        settings.updatePostureInterval = { value in
+            updateCalls.withValue { $0.append(value) }
+        }
+
+        var initial = SettingsFeature.State()
+        initial.prevPostureInterval = 1800
+        initial.postureInterval = 1800
+        initial.prevPostureBreakDuration = 10
+        initial.postureBreakDuration = 10
+
+        let store = TestStore(initialState: initial) {
+            SettingsFeature()
+        } withDependencies: {
+            $0.settingsClient = settings
+            $0.reminderSchedulerClient = ReminderSchedulerClient(
+                scheduleReminders: { _ in },
+                rescheduleReminder: { type, snapshot in
+                    rescheduleCalls.withValue { $0.append((type, snapshot)) }
+                },
+                cancelReminder: { _ in },
+                cancelAllReminders: {}
+            )
+            $0.analyticsClient = AnalyticsClient(log: { event in
+                analyticsEvents.withValue { $0.append(event) }
+            })
+            $0.continuousClock = clock
+        }
+
+        await store.send(.binding(.set(\.postureInterval, 900))) {
+            $0.postureInterval = 900
+            $0.showSavedBanner = true
+        }
+
+        updateCalls.withValue { XCTAssertTrue($0.isEmpty, "Update must wait for debounce") }
+        rescheduleCalls.withValue { XCTAssertTrue($0.isEmpty) }
+
+        await clock.advance(by: .milliseconds(300))
+        await clock.advance(by: .seconds(4))
+        await store.receive(\.savedBannerExpired) {
+            $0.showSavedBanner = false
+        }
+
+        updateCalls.withValue { XCTAssertEqual($0, [900]) }
+        rescheduleCalls.withValue { calls in
+            XCTAssertEqual(calls.count, 1)
+            XCTAssertEqual(calls.first?.0, .posture,
+                           "Posture-interval bindings must reschedule the posture reminder")
+            XCTAssertEqual(calls.first?.1.interval, 900)
+            XCTAssertEqual(calls.first?.1.breakDuration, 10)
+        }
+        analyticsEvents.withValue { events in
+            XCTAssertEqual(events.count, 1)
+            guard case let .settingChanged(setting, oldValue, newValue) = events.first else {
+                XCTFail("Expected .settingChanged; got \(String(describing: events.first))")
+                return
+            }
+            XCTAssertEqual(setting, .postureInterval)
+            XCTAssertEqual(oldValue, "1800.0",
+                           "Analytics delta must use prevPostureInterval (1800), not the in-flight new value")
+            XCTAssertEqual(newValue, "900.0")
+        }
+    }
+
+    func test_binding_postureBreakDuration_debouncesThenPersistsReschedulesAndLogs() async {
+        let clock = TestClock()
+        let updateCalls = LockIsolated<[TimeInterval]>([])
+        let rescheduleCalls = LockIsolated<[(ReminderType, ReminderSettings)]>([])
+        let analyticsEvents = LockIsolated<[AnalyticsEvent]>([])
+
+        var settings = TCATestDependencies.silentSettingsClient()
+        settings.updatePostureBreakDuration = { value in
+            updateCalls.withValue { $0.append(value) }
+        }
+
+        var initial = SettingsFeature.State()
+        initial.prevPostureInterval = 1800
+        initial.postureInterval = 1800
+        initial.prevPostureBreakDuration = 10
+        initial.postureBreakDuration = 10
+
+        let store = TestStore(initialState: initial) {
+            SettingsFeature()
+        } withDependencies: {
+            $0.settingsClient = settings
+            $0.reminderSchedulerClient = ReminderSchedulerClient(
+                scheduleReminders: { _ in },
+                rescheduleReminder: { type, snapshot in
+                    rescheduleCalls.withValue { $0.append((type, snapshot)) }
+                },
+                cancelReminder: { _ in },
+                cancelAllReminders: {}
+            )
+            $0.analyticsClient = AnalyticsClient(log: { event in
+                analyticsEvents.withValue { $0.append(event) }
+            })
+            $0.continuousClock = clock
+        }
+
+        await store.send(.binding(.set(\.postureBreakDuration, 20))) {
+            $0.postureBreakDuration = 20
+            $0.showSavedBanner = true
+        }
+        await clock.advance(by: .milliseconds(300))
+        await clock.advance(by: .seconds(4))
+        await store.receive(\.savedBannerExpired) {
+            $0.showSavedBanner = false
+        }
+
+        updateCalls.withValue { XCTAssertEqual($0, [20]) }
+        rescheduleCalls.withValue { calls in
+            XCTAssertEqual(calls.count, 1)
+            XCTAssertEqual(calls.first?.0, .posture)
+            XCTAssertEqual(calls.first?.1.breakDuration, 20)
+            XCTAssertEqual(calls.first?.1.interval, 1800,
+                           "Reschedule snapshot must carry the unchanged posture interval")
+        }
+        analyticsEvents.withValue { events in
+            guard case let .settingChanged(setting, oldValue, newValue) = events.first else {
+                XCTFail("Expected .settingChanged; got \(String(describing: events.first))")
+                return
+            }
+            XCTAssertEqual(setting, .postureBreakDuration)
+            XCTAssertEqual(oldValue, "10.0")
+            XCTAssertEqual(newValue, "20.0")
+        }
+    }
+
+    func test_binding_postureInterval_rapidEdits_collapseToLatestValue() async {
+        let clock = TestClock()
+        let updateCalls = LockIsolated<[TimeInterval]>([])
+        let rescheduleCalls = LockIsolated<[ReminderSettings]>([])
+
+        var settings = TCATestDependencies.silentSettingsClient()
+        settings.updatePostureInterval = { value in
+            updateCalls.withValue { $0.append(value) }
+        }
+
+        var initial = SettingsFeature.State()
+        initial.prevPostureInterval = 1800
+        initial.postureInterval = 1800
+
+        let store = TestStore(initialState: initial) {
+            SettingsFeature()
+        } withDependencies: {
+            $0.settingsClient = settings
+            $0.reminderSchedulerClient = ReminderSchedulerClient(
+                scheduleReminders: { _ in },
+                rescheduleReminder: { _, snapshot in
+                    rescheduleCalls.withValue { $0.append(snapshot) }
+                },
+                cancelReminder: { _ in },
+                cancelAllReminders: {}
+            )
+            $0.analyticsClient = AnalyticsClient(log: { _ in })
+            $0.continuousClock = clock
+        }
+
+        await store.send(.binding(.set(\.postureInterval, 1500))) {
+            $0.postureInterval = 1500
+            $0.showSavedBanner = true
+        }
+        await store.send(.binding(.set(\.postureInterval, 1200))) {
+            $0.postureInterval = 1200
+        }
+        await store.send(.binding(.set(\.postureInterval, 900))) {
+            $0.postureInterval = 900
+        }
+        await clock.advance(by: .milliseconds(300))
+        await clock.advance(by: .seconds(4))
+        await store.receive(\.savedBannerExpired) {
+            $0.showSavedBanner = false
+        }
+
+        updateCalls.withValue { calls in
+            XCTAssertEqual(calls, [900],
+                           "cancelInFlight debounce must collapse rapid posture-interval edits to the latest value")
+        }
+        rescheduleCalls.withValue { snapshots in
+            XCTAssertEqual(snapshots.count, 1)
+            XCTAssertEqual(snapshots.first?.interval, 900)
+        }
+    }
 }

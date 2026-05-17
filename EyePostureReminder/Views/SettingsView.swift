@@ -67,9 +67,6 @@ struct SettingsView: View {
     @AppStorage(SettingsStore.Keys.globalEnabled) private var globalEnabled = true
     @AppStorage(SettingsStore.Keys.eyesEnabled) private var eyesEnabled = true
     @AppStorage(SettingsStore.Keys.postureEnabled) private var postureEnabled = true
-    @AppStorage(SettingsStore.Keys.postureInterval) private var postureInterval: Double = 0
-    @AppStorage(SettingsStore.Keys.postureBreakDuration)
-    private var postureBreakDuration: Double = 0
     @AppStorage(SettingsStore.Keys.hapticsEnabled) private var hapticsEnabled = true
     @AppStorage(SettingsStore.Keys.pauseMediaDuringBreaks)
     private var pauseMediaDuringBreaks = false
@@ -187,9 +184,9 @@ struct SettingsView: View {
                 accessibilityNotificationPoster.postAnnouncement(message: message)
             }
             // `setting_changed` emissions for the seven non-bindable
-            // Settings rows + the Settings-screen posture pickers (#777).
-            // `eyesInterval` / `eyesBreakDuration` keep emitting from the
-            // reducer's bindable surface.
+            // Settings rows (#777). `eyesInterval` / `eyesBreakDuration` and
+            // (post-#805) `postureInterval` / `postureBreakDuration` all
+            // emit from the reducer's bindable surface.
             .modifier(SettingsAnalyticsForwarder(store: store))
         }
     }
@@ -268,20 +265,15 @@ struct SettingsView: View {
             ReminderRowView(
                 type: .posture,
                 isEnabled: $postureEnabled,
-                interval: $postureInterval,
-                breakDuration: $postureBreakDuration
+                interval: $store.postureInterval,
+                breakDuration: $store.postureBreakDuration
             ) {
-                // Posture-side pickers still bind directly through
-                // `@AppStorage(SettingsStore.Keys.postureInterval)` /
-                // `@AppStorage(SettingsStore.Keys.postureBreakDuration)` —
-                // they are not yet on `SettingsFeature`'s bindable surface.
-                // Persistence + reschedule continue to flow via
-                // `SettingsStore` → `SettingsClient.liveValue` →
-                // `SchedulingFeature`; `setting_changed` analytics emit
-                // from the `.onChangeCompat` watchers below.
-                // Migration onto the reducer's bindable surface is tracked
-                // by #805 (extend `SettingsClient.snapshot` to vend
-                // posture-side values).
+                // Posture-side reschedule + `setting_changed` analytics are
+                // reducer-owned after #805: `$store.postureInterval` /
+                // `$store.postureBreakDuration` flow through
+                // `SettingsFeature`'s bindable surface, which debounces and
+                // dispatches the per-type reschedule effect. Mirrors the
+                // eyes-side flow above; no view-level callback needed here.
             }
             .listRowBackground(AppColor.surface)
             .listRowSeparatorTint(AppColor.separatorSoft)
@@ -854,16 +846,15 @@ private func openApplicationSettings() {
 /// The view owns the `@AppStorage` mirrors as well; this modifier observes
 /// the same UserDefaults keys so the prev-value snapshot stays in sync with
 /// the row even when the value mutates outside the View (e.g. via reset).
-/// Eyes interval/duration emissions remain owned by `SettingsFeature`'s
-/// bindable surface (#777).
+/// Eyes interval/duration and posture interval/duration emissions are
+/// owned by `SettingsFeature`'s bindable surface (#777, #805) so they do
+/// not appear here.
 private struct SettingsAnalyticsForwarder: ViewModifier {
     let store: StoreOf<SettingsFeature>
 
     @AppStorage(SettingsStore.Keys.globalEnabled) private var globalEnabled = true
     @AppStorage(SettingsStore.Keys.eyesEnabled) private var eyesEnabled = true
     @AppStorage(SettingsStore.Keys.postureEnabled) private var postureEnabled = true
-    @AppStorage(SettingsStore.Keys.postureInterval) private var postureInterval: Double = 0
-    @AppStorage(SettingsStore.Keys.postureBreakDuration) private var postureBreakDuration: Double = 0
     @AppStorage(SettingsStore.Keys.hapticsEnabled) private var hapticsEnabled = true
     @AppStorage(SettingsStore.Keys.pauseDuringFocus) private var pauseDuringFocus = true
     @AppStorage(SettingsStore.Keys.pauseWhileDriving) private var pauseWhileDriving = true
@@ -878,8 +869,6 @@ private struct SettingsAnalyticsForwarder: ViewModifier {
     @State private var prevGlobalEnabled = true
     @State private var prevEyesEnabled = true
     @State private var prevPostureEnabled = true
-    @State private var prevPostureInterval: Double = 0
-    @State private var prevPostureBreakDuration: Double = 0
     @State private var prevHapticsEnabled = true
     @State private var prevPauseDuringFocus = true
     @State private var prevPauseWhileDriving = true
@@ -913,20 +902,12 @@ private struct SettingsAnalyticsForwarder: ViewModifier {
             .onChangeCompat(of: pauseWhileDriving) { newValue in
                 emit(.pauseWhileDriving, prev: &prevPauseWhileDriving, newValue: newValue)
             }
-            .onChangeCompat(of: postureInterval) { newValue in
-                emit(.postureInterval, prev: &prevPostureInterval, newValue: newValue)
-            }
-            .onChangeCompat(of: postureBreakDuration) { newValue in
-                emit(.postureBreakDuration, prev: &prevPostureBreakDuration, newValue: newValue)
-            }
     }
 
     private func primeSnapshots() {
         prevGlobalEnabled = globalEnabled
         prevEyesEnabled = eyesEnabled
         prevPostureEnabled = postureEnabled
-        prevPostureInterval = postureInterval
-        prevPostureBreakDuration = postureBreakDuration
         prevHapticsEnabled = hapticsEnabled
         prevPauseDuringFocus = pauseDuringFocus
         prevPauseWhileDriving = pauseWhileDriving
