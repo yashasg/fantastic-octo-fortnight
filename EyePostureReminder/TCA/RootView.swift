@@ -3,10 +3,9 @@ import SwiftUI
 
 /// Canonical TCA root surface for the Eye & Posture Reminder app.
 ///
-/// `#755` Phase D wires this view into `EyePostureReminderApp.swift` so the
-/// onboarding gate, sheet presentations, and overlay cover are all owned by
-/// the `AppFeature` store rather than by an `@EnvironmentObject AppCoordinator`
-/// graph.
+/// Wired into `EyePostureReminderApp.swift` by `#755` Phase D so the
+/// onboarding gate, sheet presentations, and overlay cover are all owned
+/// by the `AppFeature` store.
 ///
 /// Responsibilities split:
 /// - **Gate**: branches between `OnboardingView` and `HomeView` off of
