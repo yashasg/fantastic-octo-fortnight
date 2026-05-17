@@ -72,8 +72,14 @@ final class PreviewTests: XCTestCase {
 
     // MARK: - Onboarding
 
-    // NOTE: OnboardingView wraps TabView with @EnvironmentObject — bundle proxy crash.
-    // Individual screens (Welcome, Permission, Setup) are tested individually below.
+    // NOTE: OnboardingView wraps a TabView whose `OnboardingSetupView` page binds
+    // pickers to `@AppStorage(SettingsStore.Keys.*)`. `@AppStorage`'s
+    // `UserDefaults(suiteName:)` lookup crashes in the SPM test-host process
+    // (`bundleProxyForCurrentProcess is nil`), so the full container body is not
+    // rendered here. Individual screens (Welcome, Permission, Setup) are tested
+    // individually below. (The legacy `@EnvironmentObject AppCoordinator` /
+    // `SettingsStore` graph was removed in #755 Phase C — see
+    // `EyePostureReminder/Views/Onboarding/OnboardingView.swift`.)
 
     func test_onboardingWelcomeView_preview() {
         let view = OnboardingWelcomeView(onNext: {})
@@ -86,7 +92,10 @@ final class PreviewTests: XCTestCase {
     }
 
     func test_onboardingSetupView_preview() {
-        // OnboardingSetupView uses @EnvironmentObject — body rendering skipped in SPM test host.
+        // OnboardingSetupView binds pickers to `@AppStorage(SettingsStore.Keys.*)`,
+        // which crashes the SPM test-host process (`bundleProxyForCurrentProcess`
+        // is `nil`). Body rendering is skipped; instantiation-only is sufficient
+        // here. (Migrated off `@EnvironmentObject SettingsStore` in #755 Phase C.)
         let view = OnboardingSetupView(onGetStarted: {})
         _ = view
     }

@@ -196,7 +196,8 @@ final class OnboardingViewTests: XCTestCase {
 
     // MARK: - OnboardingSetupView
 
-    /// The setup view instantiates without crash (no body evaluation — uses @EnvironmentObject).
+    /// The setup view instantiates without crash (no body evaluation — `@AppStorage`
+    /// pickers crash the SPM test-host bundle proxy).
     func test_setupView_instantiatesWithoutCrash() {
         let view = OnboardingSetupView(onGetStarted: {})
         _ = view
@@ -253,8 +254,10 @@ final class OnboardingViewTests: XCTestCase {
 
     // MARK: - OnboardingSetupView — Reminder Window Selection
 
-    /// Setup view instantiates without crash when SettingsStore is available.
-    /// Guards the DI seam for picker state (no body evaluation — EnvironmentObject).
+    /// Setup view instantiates without crash even when no environment store is
+    /// supplied — picker state is read from `@AppStorage` (`SettingsStore.Keys.*`).
+    /// Guards the DI seam for picker state (no body evaluation — `@AppStorage`
+    /// crashes the SPM test-host bundle proxy).
     func test_setupView_withSettingsStoreEnvironment_instantiatesWithoutCrash() {
         let view = OnboardingSetupView(onGetStarted: {})
         _ = view
