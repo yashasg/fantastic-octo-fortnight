@@ -92,12 +92,12 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
 
 #if DEBUG
     /// Pre-seeds UI-test UserDefaults keys before the SwiftUI store seed
-    /// in `EyePostureReminderApp.init()` reads them. Without this guard,
-    /// the seed (which historically lived on `@StateObject AppCoordinator`,
-    /// deleted in `#755` Phase E) raced with `didFinishLaunchingWithOptions`
-    /// and fell back to `ScreenTimeAuthorizationNoop(.unavailable)`, which
-    /// prevented `TrueInterruptSkippedBanner` from ever rendering on the
-    /// first cold launch (#457).
+    /// in `EyePostureReminderApp.init()` reads them. Without this guard
+    /// (added in `#755` Phase E), the store seed raced with
+    /// `didFinishLaunchingWithOptions` and fell back to
+    /// `ScreenTimeAuthorizationNoop(.unavailable)`, which prevented
+    /// `TrueInterruptSkippedBanner` from ever rendering on the first cold
+    /// launch (#457).
     ///
     /// `hasSeenOnboarding` is pre-seeded earlier — directly in
     /// `EyePostureReminderApp.init()` — because `@UIApplicationDelegateAdaptor`
