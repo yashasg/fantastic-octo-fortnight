@@ -4,11 +4,12 @@ import UserNotifications
 
 /// TCA reducer (`p0-tca-7` / #670) backing the onboarding flow.
 ///
-/// Owns the observable behaviour previously handled by `OnboardingView` +
-/// the `OnboardingCoordinator`-style hooks that historically routed
-/// through `AppCoordinator` (deleted in `#755` Phase E). The onboarding
-/// views now read from this store directly, so the legacy coordinator
-/// plumbing is fully retired.
+/// Owns the observable behaviour for the onboarding tab carousel:
+/// `currentPage` navigation, notification + Screen Time authorisation
+/// status (sourced from `NotificationClient` and
+/// `ScreenTimeAuthorizationClient`), and the `showAppCategoryPicker`
+/// flag that drives parent-side presentation. The onboarding views read
+/// from this store directly.
 ///
 /// ## Persistence and parent wiring
 ///
@@ -67,9 +68,8 @@ struct OnboardingFeature {
     static let lastPageIndex: Int = 3
 
     /// Notification authorisation options requested by the onboarding
-    /// permission page. Matches the set used by the legacy `AppCoordinator`
-    /// (deleted in `#755` Phase E) so the system prompt copy stayed
-    /// identical across the migration.
+    /// permission page. Stable across releases so the system prompt copy
+    /// shown to existing users does not change.
     static let notificationOptions: UNAuthorizationOptions = [.alert, .sound, .badge]
 
     var body: some ReducerOf<Self> {
