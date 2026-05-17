@@ -252,7 +252,7 @@ SchedulingFeature reducer evaluates shouldUseShieldPath
     ├─ YES (shield available, configured, entitlement granted)
     │      │
     │      ▼
-    │  ManagedSettingsCoordinator applies shield to selected apps
+    │  `ManagedSettingsClient` (TCA dep) applies shield to selected apps
     │  Notification scheduling SKIPPED for this event
     │  (no concurrent banner, no lock-screen notification)
     │
@@ -266,7 +266,7 @@ SchedulingFeature reducer evaluates shouldUseShieldPath
 - True Interrupt mode is disabled in Settings
 - No apps or categories are selected for shielding
 - FamilyControls entitlement not yet approved (#201 BLOCKER)
-- `ManagedSettingsCoordinator` throws an error applying the shield
+- `ManagedSettingsClient` (TCA dep) returns an error applying the shield
 - Device does not support Screen Time (e.g., Simulator, MDM restrictions)
 
 **The two paths are mutually exclusive per reminder event.** There is no scenario where both a shield and a notification fire for the same break event.
@@ -304,7 +304,7 @@ ShieldActionProvider receives action
 Sends Action.requestTemporaryAccess(duration: 5 min) into SchedulingFeature
     │
     ▼
-ManagedSettingsCoordinator temporarily removes shield (5-min window)
+`ManagedSettingsClient` (TCA dep) temporarily removes shield (5-min window)
 User can use app normally for 5 minutes
     │
     ▼
@@ -949,7 +949,7 @@ Step 2: if overlayClient.isOverlayVisible → overlayClient.dismissOverlay()
          (queue is empty; presentNextQueuedOverlay() sees nothing to show)
     │
     ▼
-Step 3: ManagedSettingsCoordinator.clearAllShields()
+Step 3: `managedSettingsClient.clearAllShields()` (TCA dep, pending #201)
          (active shield removed from all shielded apps immediately)
     │
     ▼
@@ -971,9 +971,9 @@ until snooze expires or user taps "Cancel snooze"
 
 - All Screen Time shields are **removed immediately** on snooze activation.
 - Users can open previously-shielded apps freely during the snooze window.
-- `ManagedSettingsCoordinator` re-applies shields when snooze expires (on snooze-wake).
+- `managedSettingsClient` (TCA dep) re-applies shields when snooze expires (on snooze-wake).
 
-> **Status:** `ManagedSettingsCoordinator` shield-clearing on snooze is **not yet integrated** (pending #201 entitlement). The `cancelAllReminders()` ordering fix (#267) must land first, then shield-clearing can be wired in.
+> **Status:** `managedSettingsClient` shield-clearing on snooze is **not yet integrated** (pending #201 entitlement and the TCA `ManagedSettings` dependency client; the legacy `ManagedSettingsCoordinator` was removed during the TCA migration). The `cancelAllReminders()` ordering fix (#267) must land first, then shield-clearing can be wired in.
 
 #### Snooze expiry (snooze-wake) while app is shielded
 
@@ -981,11 +981,11 @@ If the snooze wake fires while the user has re-opened a previously-shielded app:
 
 1. `SchedulingFeature` reducer receives `.snoozeWakeFired` (routed from the snooze-wake notification or in-process snooze-wake task).
 2. `trackerClient.resumeAll()` re-enables monitoring.
-3. If `shouldUseShieldPath` → `ManagedSettingsCoordinator` re-applies shields.
+3. If `shouldUseShieldPath` → `managedSettingsClient` (TCA dep) re-applies shields.
 4. Screen Time shield reappears on shielded apps (system-level, iOS-managed).
 5. Snooze-wake overlay / notification fires via normal path (Section 2.2 / 2.6).
 
-There is **no race** between shield re-application and the wake notification because shield application is synchronous via `ManagedSettingsCoordinator` and the wake notification is fired after `resumeAll()` completes.
+There is **no race** between shield re-application and the wake notification because shield application is synchronous via `managedSettingsClient` (TCA dep) and the wake notification is fired after `resumeAll()` completes.
 
 #### User navigates to Settings mid-shield
 
