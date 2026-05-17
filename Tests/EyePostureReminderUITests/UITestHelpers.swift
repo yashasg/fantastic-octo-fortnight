@@ -311,12 +311,6 @@ extension XCUIElement {
         return exists && isHittable
     }
 
-    /// Waits until the element no longer exists in the accessibility tree.
-    @discardableResult
-    func waitForNonExistence(timeout: TimeInterval = 3) -> Bool {
-        waitFor(predicate: NSPredicate(format: "exists == false"), timeout: timeout)
-    }
-
     /// Verifies `exists == false` for the full timeout window, failing if the element appears at any point.
     @discardableResult
     func waitForContinuousNonExistence(timeout: TimeInterval = 3, pollInterval: TimeInterval = 0.1) -> Bool {
