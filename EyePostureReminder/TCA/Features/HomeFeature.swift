@@ -4,9 +4,9 @@ import UserNotifications
 
 /// Phase 1 reducer (`p0-tca-5` / #668) backing the Home screen.
 ///
-/// Mirrors the read-only behaviour of the existing MVVM `HomeView` so a
-/// later Phase 2 issue (`p0-tca-14`) can swap the view body to read from
-/// this store without altering observable behaviour.
+/// `HomeView` reads its per-type enable flags, master toggle,
+/// notification auth status, and `ReminderSettings` snapshot exclusively
+/// from `StoreOf<HomeFeature>` (#785 / `p0-tca-14`).
 ///
 /// Inputs come from the shared dependency clients defined by `p0-tca-2`:
 /// `SettingsClient` exposes the eyes-side `ReminderSettings` snapshot/stream
