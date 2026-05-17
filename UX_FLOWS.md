@@ -1085,13 +1085,14 @@ Snooze controls are in the **Settings screen**, not on the overlay. This separat
 
 **Snooze access path:** Overlay → tap ⚙️ → Settings screen → snooze button. Two deliberate taps prevents accidental suppression.
 
-**Snooze activation sequence (canonical):**
-1. `overlayManager.clearQueue()` — clears queued overlays first (see #267)
-2. `overlayManager.dismissOverlay()` — dismisses visible overlay (queue already empty; no orphan shown)
-3. `ManagedSettingsCoordinator.clearAllShields()` — removes active True Interrupt shields (pending #201)
-4. `scheduler.cancelAllReminders()` — cancels all scheduled notifications
-5. `screenTimeTracker.pauseAll()` — pauses tracking
-6. Snooze-wake notification scheduled
+**Snooze activation sequence (canonical, TCA pipeline post-#677 / #755):**
+1. User taps a snooze option in Settings → `SettingsFeature.snoozeTapped(option)` (`SettingsFeature.swift:319`) computes the endDate and writes `settingsClient.setSnoozedUntil(endDate)` (`SettingsFeature.swift:323`).
+2. The settings stream propagates the new `snoozedUntil` into `SchedulingFeature`, whose `scheduleRemindersEffect` enters the snooze branch (`SchedulingFeature.swift:183-212`).
+3. `trackerClient.pauseAll()` (`SchedulingFeature.swift:200`) pauses tracking.
+4. `schedulerClient.cancelAllReminders()` (`SchedulingFeature.swift:201`) cancels all scheduled notifications. Note: the `Snooze` reducer also `.cancel(id: .rescheduleDebounce(...))` / `.cancel(id: .snoozeWakeTask)` via TCA cancellation IDs — see `docs/performance-audit.md:102-115`.
+5. The snooze-wake notification is scheduled via `scheduleSnoozeNotification(until)` (`SchedulingFeature.swift:204`) and a structured-concurrency wake task is registered through `.internalAction(.scheduleSnoozeWake(until))`.
+6. Overlay teardown is routed through `AppFeature.overlay(.presented(.dismissed))` which clears the `@Presents var overlay` (`AppFeature.swift:125-134`). Overlay lifecycle is owned by `OverlayFeature` + `AppFeature.Destination` — there is no singleton `OverlayManager` reachable from snooze.
+7. Shields, when entitlement (#201) lands, will be invoked via a TCA `ManagedSettings` dependency client (the `ManagedSettingsCoordinator` symbol was removed during the TCA migration).
 
 **While snooze is active:** No new overlays, shields, or notifications are delivered. The snooze-wake notification is the only scheduled event.
 
