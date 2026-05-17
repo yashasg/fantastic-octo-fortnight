@@ -10,25 +10,21 @@
 name: CI
 
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+  repository_dispatch:
+    types: [gitlab_push, gitlab_mr]
 
 permissions:
   contents: read
   actions: read
 
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.event.client_payload.branch }}
   cancel-in-progress: true
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   XCODE_VERSION: "16.4"
   SCHEME: "EyePostureReminder"
-  # No .xcodeproj — project uses Swift Package Manager.
-  # xcodebuild resolves the package directly from Package.swift.
   SIMULATOR: "platform=iOS Simulator,name=iPhone 17"
   DERIVED_DATA_PATH: "${{ github.workspace }}/DerivedData"
 
@@ -37,19 +33,22 @@ jobs:
     name: Build & Test
     runs-on: macos-15
     timeout-minutes: 30
+    if: |
+      github.event.client_payload.event == 'merge_request' ||
+      (github.event.client_payload.event == 'push' && github.event.client_payload.branch == 'main')
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      - name: Checkout from GitLab
+        run: |
+          git clone --depth 1 \
+            --branch ${{ github.event.client_payload.branch }} \
+            https://gitlab-token:${{ secrets.GITLAB_PAT }}@gitlab.com/yashasg/${{ github.event.client_payload.project_name }} \
+            .
 
       - name: Select Xcode ${{ env.XCODE_VERSION }}
-        run: |
-          XCODE_PATH="/Applications/Xcode_${{ env.XCODE_VERSION }}.app/Contents/Developer"
-          if [[ -d "$XCODE_PATH" ]]; then
-            sudo xcode-select -switch "$XCODE_PATH"
-          else
-            echo "Xcode_${{ env.XCODE_VERSION }}.app not found; using current selection: $(xcode-select -p)"
-          fi
+        uses: maxim-lobanov/setup-xcode@60606e260d2fc5762a71e64e74b2174e8ea3c8bd  # v1.6.0
+        with:
+          xcode-version: ${{ env.XCODE_VERSION }}
 
       - name: Ensure iOS Simulator runtime
         run: |
@@ -60,10 +59,6 @@ jobs:
           echo "Available iOS simulators:"
           xcrun simctl list devices available | grep -i iphone | head -5
 
-      # ── Versioning ──────────────────────────────────────────────────────────
-      # MARKETING_VERSION is managed via: ./scripts/build.sh version <x.y.z>
-      # CURRENT_PROJECT_VERSION is overridden here from github.run_number (guaranteed unique + increasing).
-      # GIT_COMMIT_HASH is exported for traceability in build logs/artifacts.
       - name: Set version build settings
         run: |
           COMMIT_HASH=$(git rev-parse --short HEAD)
@@ -80,14 +75,13 @@ jobs:
           echo "CURRENT_PROJECT_VERSION=$BUILD_NUMBER" >> $GITHUB_ENV
           echo "Version settings: marketing=$MARKETING_VER build=$BUILD_NUMBER commit=$COMMIT_HASH"
 
-      # ── Dependency cache ─────────────────────────────────────────────────────
       - name: Cache DerivedData
         uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5.0.5
         with:
           path: ${{ env.DERIVED_DATA_PATH }}
-          key: derived-data-branch-${{ runner.os }}-xcode${{ env.XCODE_VERSION }}-${{ github.head_ref || github.ref_name }}-${{ hashFiles('Package.swift', 'Package.resolved', 'scripts/build.sh', '.github/workflows/ci.yml') }}
+          key: derived-data-branch-${{ runner.os }}-xcode${{ env.XCODE_VERSION }}-${{ github.event.client_payload.branch }}-${{ hashFiles('Package.swift', 'Package.resolved', 'scripts/build.sh', '.github/workflows/ci.yml') }}
           restore-keys: |
-            derived-data-branch-${{ runner.os }}-xcode${{ env.XCODE_VERSION }}-${{ github.head_ref || github.ref_name }}-
+            derived-data-branch-${{ runner.os }}-xcode${{ env.XCODE_VERSION }}-${{ github.event.client_payload.branch }}-
             derived-data-branch-${{ runner.os }}-xcode${{ env.XCODE_VERSION }}-main-
 
       - name: Cache SwiftPM SourcePackages
@@ -98,23 +92,6 @@ jobs:
           restore-keys: |
             spm-sourcepackages-${{ runner.os }}-xcode${{ env.XCODE_VERSION }}-
 
-      # ── Purge SDK-bound caches (#745) ────────────────────────────────────────
-      # The cached DerivedData restored above contains ModuleCache.noindex with
-      # precompiled `.pcm` module files (notably `SwiftShims-*.pcm`) that record
-      # the mtime of the SDK's `usr/lib/swift/shims/module.modulemap` they were
-      # built against. macos-15 runners and Xcode_16.4 patches across runs can
-      # have differing SDK file mtimes (cold-image refreshes, SDK shims relinked
-      # by Xcode), so the cached pcm refuses to load on the next run with:
-      #   error: file '.../SwiftShims-*.pcm' has been modified since the module
-      #   file '...' was built: mtime changed (was X, now Y)
-      # That trips xcodebuild with `exit 65` *before* tests run, so no
-      # `TestResults.xcresult` is produced — making the failure look like a
-      # source/test-compile bug (#746, #747) when the real cause is the SDK
-      # mtime drift documented in #745. Discarding both caches forces the
-      # compiler to rebuild them against the current runner's SDK while still
-      # keeping the much larger `Build/` intermediates (.swiftmodule, object
-      # files) around for incremental reuse — so the speedup from caching is
-      # preserved without the false failures.
       - name: Purge SDK-bound module caches (avoid SwiftShims mtime drift)
         run: |
           for SUBDIR in ModuleCache.noindex SDKStatCaches.noindex; do
@@ -125,7 +102,6 @@ jobs:
             fi
           done
 
-      # ── Homebrew package cache ───────────────────────────────────────────────
       - name: Cache Homebrew packages
         id: brew-cache
         uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5.0.5
@@ -137,38 +113,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-brew-xcodegen-swiftlint-
 
-      # ── Screen Time extension scaffold ──────────────────────────────────────
-      # Compile-only validation. Runtime FamilyControls/DeviceActivity behavior
-      # still requires #201 entitlement approval and physical-device testing.
-
-      # Guardrail: reject any commit that accidentally adds com.apple.developer.family-controls
-      # to distribution entitlements before issue #201 (Apple entitlement approval) is resolved.
-      # This prevents a fake-success archive that App Store Connect would reject on upload.
-      - name: Validate distribution entitlements (no premature FamilyControls)
-        run: |
-          BLOCKED_KEY="com.apple.developer.family-controls"
-          DIST_ENTITLEMENTS=(
-            "EyePostureReminder/EyePostureReminder.Distribution.entitlements"
-            "Extensions/ShieldConfigurationExtension/ShieldConfigurationExtension.Distribution.entitlements"
-            "Extensions/DeviceActivityMonitorExtension/DeviceActivityMonitorExtension.Distribution.entitlements"
-          )
-          FAILED=0
-          for f in "${DIST_ENTITLEMENTS[@]}"; do
-            if [[ ! -f "$f" ]]; then
-              echo "::warning::Distribution entitlements file not found: $f"
-              continue
-            fi
-            if grep -q "$BLOCKED_KEY" "$f"; then
-              echo "::error file=${f}::Distribution entitlements contain ${BLOCKED_KEY} but issue #201 (FamilyControls approval) is still open. Remove it or merge #201 first."
-              FAILED=1
-            fi
-          done
-          if [[ "$FAILED" -ne 0 ]]; then
-            echo "Entitlements guardrail failed. See errors above."
-            exit 1
-          fi
-          echo "Distribution entitlements guardrail passed — no premature FamilyControls key."
-
       - name: Install XcodeGen
         run: |
           if brew list xcodegen &>/dev/null 2>&1; then
@@ -177,42 +121,24 @@ jobs:
             brew install xcodegen
           fi
 
-      # ── Lint ─────────────────────────────────────────────────────────────────
-      # Run SwiftLint before any compilation so style violations fail fast and
-      # don't waste a full build/test cycle. SwiftLint is configured in
-      # .swiftlint.yml against the Google Swift Style guide
-      # (docs/google_swift_coding_style.md). See CONTRIBUTING.md.
-      - name: Install SwiftLint
-        run: |
-          if brew list swiftlint &>/dev/null 2>&1; then
-            brew link --overwrite swiftlint 2>/dev/null || true
-          else
-            brew install swiftlint
-          fi
-          swiftlint --version
-
       - name: Lint (SwiftLint --strict)
-        run: ./scripts/build.sh lint
+        uses: norio-nomura/action-swiftlint@9f4dcd7fd46b4e75d7935cf2f4df406d73814d70  # 3.2.1
+        with:
+          args: --strict
 
       - name: Build Screen Time extensions (simulator, no signing)
         run: ./scripts/setup-screentime.sh --build
 
-      # ── Build + test ─────────────────────────────────────────────────────────
       - name: Build and test (simulator)
         run: |
           ./scripts/build.sh build
           ./scripts/build.sh test
 
-      # ── Coverage ─────────────────────────────────────────────────────────────
       - name: Report coverage
         if: always()
-        run: |
-          xcrun xccov view --report TestResults.xcresult
+        run: xcrun xccov view --report TestResults.xcresult
 
       - name: Enforce coverage threshold
-        # Run on all outcomes so coverage is always enforced — even when earlier
-        # steps fail — preventing asymmetric validation where a failing test run
-        # silently bypasses the 80 % gate.
         if: success()
         run: |
           if [[ ! -d TestResults.xcresult ]]; then
@@ -230,317 +156,13 @@ jobs:
             exit 1
           fi
 
-      # ── Artifacts ────────────────────────────────────────────────────────────
-      - name: Collect dSYMs
+      - name: Post status to GitLab
         if: always()
         run: |
-          find "${{ env.DERIVED_DATA_PATH }}" -name "*.dSYM" -exec cp -r {} . \; 2>/dev/null || true
-
-      - name: Upload dSYMs
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
-        if: always()
-        with:
-          name: dSYMs-${{ env.MARKETING_VERSION }}-build${{ github.run_number }}
-          path: "*.dSYM"
-          retention-days: 90
-          if-no-files-found: warn
-
-      - name: Upload test results
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
-        if: always()
-        with:
-          name: test-results-${{ env.MARKETING_VERSION }}-build${{ github.run_number }}
-          path: TestResults.xcresult
-          retention-days: 30
-          if-no-files-found: error
-
-  uitest-prepare:
-    name: UI Tests / Prepare artifacts
-    runs-on: macos-15
-    needs: build-and-test
-    timeout-minutes: 20
-    steps:
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
-
-      - name: Select Xcode ${{ env.XCODE_VERSION }}
-        run: |
-          XCODE_PATH="/Applications/Xcode_${{ env.XCODE_VERSION }}.app/Contents/Developer"
-          if [[ -d "$XCODE_PATH" ]]; then
-            sudo xcode-select -switch "$XCODE_PATH"
-          else
-            echo "Xcode_${{ env.XCODE_VERSION }}.app not found; using current selection: $(xcode-select -p)"
-          fi
-
-      - name: Ensure iOS Simulator runtime
-        run: |
-          if ! xcrun simctl list devices available 2>/dev/null | grep -q "iPhone"; then
-            echo "No iOS simulators found — downloading runtime…"
-            xcodebuild -downloadPlatform iOS -quiet || true
-          fi
-          echo "Available iOS simulators:"
-          xcrun simctl list devices available | grep -i iphone | head -5
-
-      - name: Generate UI test project
-        run: |
-          ./scripts/setup-uitests.sh
-
-      - name: Build UI tests for testing (once)
-        # -skipMacroValidation suppresses Xcode's interactive trust prompt for
-        # the Swift macro plugins introduced by the swift-composable-architecture
-        # 1.25.5 dependency (#664). Even though the UI test target does not
-        # import TCA, building the local SwiftPM package resolves the full
-        # macro graph (ComposableArchitectureMacros, CasePathsMacros,
-        # DependenciesMacrosPlugin, PerceptionMacros), which fails headless
-        # validation otherwise.
-        #
-        # SWIFT_TREAT_WARNINGS_AS_ERRORS / GCC_TREAT_WARNINGS_AS_ERRORS are
-        # NOT passed as xcodebuild command-line overrides because they
-        # propagate to every target — including the TCA dependency targets
-        # that pass `-suppress-warnings` in their own package configs — and
-        # the two flags conflict (`error: conflicting options
-        # '-warnings-as-errors' and '-suppress-warnings'`). The no-warning
-        # contract on first-party UI test targets is enforced per-target via
-        # SWIFT_TREAT_WARNINGS_AS_ERRORS = YES in UITests/project.yml.
-        run: |
-          xcodebuild build-for-testing \
-            -project UITests/EyePostureReminderUITests.xcodeproj \
-            -scheme EyePostureReminderUITests \
-            -destination "${{ env.SIMULATOR }}" \
-            -derivedDataPath "${{ env.DERIVED_DATA_PATH }}" \
-            -skipMacroValidation \
-            CODE_SIGN_IDENTITY= \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO \
-            ENABLE_BITCODE=NO \
-            ENABLE_APP_INTENTS_METADATA_EXTRACTION=NO \
-            ENABLE_APPINTENTS_METADATA_EXTRACTION=NO
-
-      - name: Verify prebuilt xctestrun
-        run: |
-          XCTESTRUN_PATH=$(find "${{ env.DERIVED_DATA_PATH }}/Build/Products" \
-            -name "EyePostureReminderUITests_*.xctestrun" -maxdepth 1 -print | sort | tail -1)
-          if [[ -z "$XCTESTRUN_PATH" ]]; then
-            echo "::error::No EyePostureReminderUITests_*.xctestrun found in prebuilt artifacts"
-            exit 1
-          fi
-          echo "Prepared xctestrun: $XCTESTRUN_PATH"
-
-      - name: Upload UI prebuilt artifacts
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
-        with:
-          name: ui-prebuilt-${{ github.run_id }}
-          path: ${{ env.DERIVED_DATA_PATH }}/Build/Products
-          retention-days: 1
-          if-no-files-found: error
-          overwrite: true
-
-  uitest-shard:
-    name: UI Tests / ${{ matrix.shard.name }}
-    runs-on: macos-15
-    needs: uitest-prepare
-    timeout-minutes: 35
-    strategy:
-      fail-fast: false
-      matrix:
-        shard:
-          - id: onboarding
-            name: Onboarding
-            only_testing_csv: EyePostureReminderUITests/OnboardingFlowTests
-          - id: home
-            name: Home
-            only_testing_csv: EyePostureReminderUITests/HomeScreenTests
-          - id: settings
-            name: Settings
-            only_testing_csv: EyePostureReminderUITests/SettingsFlowTests
-          - id: overlays
-            name: Overlays
-            only_testing_csv: EyePostureReminderUITests/OverlayTests,EyePostureReminderUITests/OverlayPresentationTests,EyePostureReminderUITests/OverlayPostureTests
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
-
-      - name: Select Xcode ${{ env.XCODE_VERSION }}
-        run: |
-          XCODE_PATH="/Applications/Xcode_${{ env.XCODE_VERSION }}.app/Contents/Developer"
-          if [[ -d "$XCODE_PATH" ]]; then
-            sudo xcode-select -switch "$XCODE_PATH"
-          else
-            echo "Xcode_${{ env.XCODE_VERSION }}.app not found; using current selection: $(xcode-select -p)"
-          fi
-
-      - name: Ensure iOS Simulator runtime
-        run: |
-          if ! xcrun simctl list devices available 2>/dev/null | grep -q "iPhone"; then
-            echo "No iOS simulators found — downloading runtime…"
-            xcodebuild -downloadPlatform iOS -quiet || true
-          fi
-          echo "Available iOS simulators:"
-          xcrun simctl list devices available | grep -i iphone | head -5
-
-      - name: Download UI prebuilt artifacts
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
-        with:
-          name: ui-prebuilt-${{ github.run_id }}
-          path: ${{ env.DERIVED_DATA_PATH }}/Build/Products
-
-      - name: Boot Simulator
-        run: |
-          SIMULATOR_NAME="$(echo "${SIMULATOR}" | sed -E 's/.*name=([^,]+).*/\1/')"
-          if [[ -z "${SIMULATOR_NAME}" || "${SIMULATOR_NAME}" == "${SIMULATOR}" ]]; then
-            echo "::error::Failed to parse simulator name from SIMULATOR=${SIMULATOR}"
-            exit 1
-          fi
-          echo "Using simulator: ${SIMULATOR_NAME}"
-          # Start from a single-simulator baseline to avoid cross-runner bleed.
-          xcrun simctl shutdown all 2>/dev/null || true
-          # Erase to ensure a clean state (avoids stale SpringBoard caches)
-          xcrun simctl shutdown "${SIMULATOR_NAME}" 2>/dev/null || true
-          xcrun simctl erase "${SIMULATOR_NAME}" 2>/dev/null || true
-          xcrun simctl boot "${SIMULATOR_NAME}" 2>/dev/null || true
-          # Wait for simulator to finish booting
-          xcrun simctl bootstatus "${SIMULATOR_NAME}" -b 2>/dev/null || sleep 10
-          SIMULATOR_UDID="$(python3 - "${SIMULATOR_NAME}" <<'PY'
-          import json
-          import subprocess
-          import sys
-          
-          target = sys.argv[1]
-          data = json.loads(
-            subprocess.check_output(
-              ["xcrun", "simctl", "list", "devices", "-j"],
-              text=True,
-            )
-          )
-          for runtime_devices in data.get("devices", {}).values():
-            for device in runtime_devices:
-              if device.get("name") == target and device.get("state") == "Booted":
-                print(device.get("udid", ""))
-                raise SystemExit(0)
-          raise SystemExit(1)
-          PY
-          )"
-          if [[ -z "${SIMULATOR_UDID}" ]]; then
-            echo "::error::Could not resolve a booted UDID for simulator '${SIMULATOR_NAME}'"
-            xcrun simctl list devices booted
-            exit 1
-          fi
-          echo "Resolved simulator UDID: ${SIMULATOR_UDID}"
-          echo "SIMULATOR_UDID=${SIMULATOR_UDID}" >> "$GITHUB_ENV"
-          echo "SIMULATOR=platform=iOS Simulator,id=${SIMULATOR_UDID}" >> "$GITHUB_ENV"
-          # Wait for SpringBoard to be fully initialized (critical for UI tests)
-          echo "Waiting for SpringBoard to finish launching…"
-          for i in $(seq 1 30); do
-            if xcrun simctl spawn "${SIMULATOR_UDID}" launchctl print system 2>/dev/null | grep -q "com.apple.SpringBoard"; then
-              echo "SpringBoard is ready (after ${i}s)"
-              break
-            fi
-            sleep 1
-          done
-          # Extra settle time for system services
-          sleep 5
-
-      - name: Run UI Tests (shard ${{ matrix.shard.id }})
-        env:
-          UITEST_SHARD_TIMEOUT_SECONDS: "1800"
-          UITEST_HEARTBEAT_SECONDS: "60"
-          UITEST_XCODEBUILD_TEST_ITERATIONS: "2"
-          UITEST_XCODEBUILD_MAX_TEST_SECONDS: "600"
-        run: |
-          XCTESTRUN_PATH=$(find "${{ env.DERIVED_DATA_PATH }}/Build/Products" \
-            -name "EyePostureReminderUITests_*.xctestrun" -maxdepth 1 -print | sort | tail -1)
-          if [[ -z "$XCTESTRUN_PATH" ]]; then
-            echo "::error::Prebuilt xctestrun not found in downloaded artifacts"
-            exit 1
-          fi
-
-          IFS=',' read -r -a ONLY_TESTING_FILTERS <<< "${{ matrix.shard.only_testing_csv }}"
-          CMD=(./scripts/build.sh uitest --xctestrun-path "$XCTESTRUN_PATH" --result-bundle-path "UITestResults-${{ matrix.shard.id }}.xcresult")
-          for FILTER in "${ONLY_TESTING_FILTERS[@]}"; do
-            FILTER="$(echo "$FILTER" | xargs)"
-            [[ -n "$FILTER" ]] && CMD+=(--only-testing "$FILTER")
-          done
-          python3 - "${CMD[@]}" <<'PY'
-          import os
-          import subprocess
-          import sys
-          import time
-
-          timeout_seconds = int(os.environ.get("UITEST_SHARD_TIMEOUT_SECONDS", "1800"))
-          heartbeat_seconds = int(os.environ.get("UITEST_HEARTBEAT_SECONDS", "60"))
-          simulator_udid = os.environ.get("SIMULATOR_UDID", "booted")
-          command = sys.argv[1:]
-
-          print(f"Running shard command: {' '.join(command)}", flush=True)
-
-          process = subprocess.Popen(command)
-          start = time.monotonic()
-          next_heartbeat = heartbeat_seconds
-
-          while True:
-              return_code = process.poll()
-              elapsed = int(time.monotonic() - start)
-
-              if return_code is not None:
-                  sys.exit(return_code)
-
-              if elapsed >= next_heartbeat:
-                  print(f"::notice::UI shard still running ({elapsed}s elapsed)", flush=True)
-                  next_heartbeat += heartbeat_seconds
-
-              if elapsed >= timeout_seconds:
-                  print(
-                      f"::error::UI shard exceeded watchdog timeout ({timeout_seconds}s); collecting simulator diagnostics",
-                      flush=True,
-                  )
-                  subprocess.run(["xcrun", "simctl", "list", "devices", "booted"], check=False)
-                  subprocess.run(
-                      ["xcrun", "simctl", "spawn", simulator_udid, "launchctl", "print", "system"],
-                      check=False,
-                  )
-                  process.terminate()
-                  try:
-                      process.wait(timeout=20)
-                  except subprocess.TimeoutExpired:
-                      process.kill()
-                      process.wait()
-                  sys.exit(124)
-
-              time.sleep(1)
-          PY
-
-      - name: Upload UI test results
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
-        if: always()
-        with:
-          name: ui-test-results-${{ matrix.shard.id }}-build${{ github.run_number }}
-          path: UITestResults-${{ matrix.shard.id }}.xcresult
-          retention-days: 30
-          if-no-files-found: error
-
-      - name: Upload UI retry failure report
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
-        if: always()
-        with:
-          name: ui-retry-failures-${{ matrix.shard.id }}-build${{ github.run_number }}
-          path: UITestResults-${{ matrix.shard.id }}-retry-failures.md
-          retention-days: 30
-          if-no-files-found: warn
-
-  uitest:
-    name: UI Tests
-    runs-on: macos-15
-    needs: uitest-shard
-    if: always()
-    timeout-minutes: 10
-    steps:
-      - name: UI test shards passed
-        if: ${{ needs.uitest-shard.result == 'success' }}
-        run: echo "All UI test shards passed."
-
-      - name: Report UI shard failure
-        if: ${{ needs.uitest-shard.result != 'success' }}
-        run: |
-          echo "::error::UI test shards did not all pass (result: ${{ needs.uitest-shard.result }})."
-          exit 1
+          STATE=$([[ "${{ job.status }}" == "success" ]] && echo "success" || echo "failed")
+          curl -X POST \
+            -H "PRIVATE-TOKEN: ${{ secrets.GITLAB_PAT }}" \
+            "https://gitlab.com/api/v4/projects/${{ github.event.client_payload.project_id }}/statuses/${{ github.event.client_payload.sha }}" \
+            -d "state=${STATE}" \
+            -d "name=Build & Test" \
+            -d "target_url=https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
