@@ -28,6 +28,8 @@ enum TCATestDependencies {
         SettingsClient(
             snapshot: { ReminderSettings(interval: 0, breakDuration: 0) },
             stream: { .finished },
+            postureSnapshot: { ReminderSettings(interval: 0, breakDuration: 0) },
+            postureStream: { .finished },
             enabledFlagsSnapshot: { .allEnabled },
             enabledFlagsStream: { .finished },
             updateGlobalEnabled: { _ in },
