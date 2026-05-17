@@ -305,7 +305,6 @@ EyePostureReminder/                  (SPM executable target)
 │   │   ├── DeviceActivityMonitorClient.swift    Wraps the Phase-3 DeviceActivity provider
 │   │   ├── IPCClient.swift                Wraps `AppGroupIPCProviding` for cross-process state
 │   │   └── AnalyticsClient.swift          Wraps `AnalyticsLogger`
-│   └── Bindings/                          SwiftUI binding helpers for `@Perception.Bindable` stores
 │
 ├── Models/
 │   ├── AppConfig.swift               Codable struct; loads defaults.json; .fallback hardcoded
@@ -366,16 +365,25 @@ EyePostureReminder/                  (SPM executable target)
     └── PrivacyInfo.xcprivacy         Apple privacy manifest for App Store Connect compliance
 
 Extensions/                           (XcodeGen app-extension targets)
-├── Shared/
-│   └── ShieldSessionKeys.swift       App Group UserDefaults keys mirrored from ShieldSession
+├── Shared/                           App Group helpers shared by main app + both extensions
+│   ├── AppGroupDefaults.swift             App Group `UserDefaults` suite accessor
+│   ├── AppGroupIPCStore.swift             Cross-process event log built on `AppGroupDefaults`
+│   ├── ShieldConfigurationCopyLocalization.swift  Localised strings for shield UI copy
+│   ├── ShieldIntervalEndCleanupPolicy.swift       Snapshot-aware cleanup policy on interval end
+│   ├── ShieldSessionKeys.swift            App Group UserDefaults keys mirrored from ShieldSession
+│   ├── ShieldSessionSnapshot.swift        Codable snapshot of an active shield session
+│   ├── ShieldTriggerReason.swift          Reason enum recorded when a shield is raised
+│   └── WatchdogHeartbeat.swift            Liveness heartbeat written by the monitor extension
 ├── ShieldConfigurationExtension/
 │   ├── Info.plist                    com.apple.ManagedSettingsUI.shield-configuration-service
 │   ├── ShieldConfigurationDataSource.swift
-│   └── ShieldConfigurationExtension.entitlements
+│   ├── ShieldConfigurationExtension.entitlements             (dev signing)
+│   └── ShieldConfigurationExtension.Distribution.entitlements (distribution signing)
 └── DeviceActivityMonitorExtension/
     ├── Info.plist                    com.apple.deviceactivity.monitor-extension
     ├── DeviceActivityMonitorExtension.swift
-    └── DeviceActivityMonitorExtension.entitlements
+    ├── DeviceActivityMonitorExtension.entitlements             (dev signing)
+    └── DeviceActivityMonitorExtension.Distribution.entitlements (distribution signing)
 
 Tests/
 ├── EyePostureReminderTests/          (SPM test target, depends on EyePostureReminder)
@@ -431,7 +439,6 @@ Tests/
 │   ├── TCA/                          `TestStore` coverage per feature reducer + dependency client
 │   │   ├── AppFeatureTests.swift
 │   │   ├── AppCategoryPickerFeatureTests.swift
-│   │   ├── ContentViewTests.swift
 │   │   ├── HomeFeatureTests.swift
 │   │   ├── OnboardingFeatureTests.swift
 │   │   ├── OverlayFeatureTests.swift / OverlayFeatureBehaviorTests.swift
@@ -1693,3 +1700,4 @@ Establish baselines on the CI runner (not local) to avoid machine-dependent drif
 | 2026-04-25 | Fix docs drift (#93): added 3 undocumented services (AnalyticsLogger, MetricKitSubscriber, ServiceLifecycle) to module graph + project structure; corrected color token names in §4.4 to match Asset Catalog (ReminderBlue, ReminderGreen, WarningOrange, PermissionBanner, PermissionBannerText, WarningText) | Rusty |
 | 2026-04-28 | Added §5.5 True Interrupt Mode (Phase 3+) architecture: FamilyControls authorization flow, four-target app extension model (main + DeviceActivityMonitor + ShieldConfiguration + ShieldAction), ManagedSettingsStore shield blocking, App Group state schema, ShieldConfiguration data-only limitations (no animations/arbitrary views), local notification fallback pattern, distribution gating (Apple case ID 102881605113 pending). Updated Phase 3 milestones with explicit True Interrupt Mode scope. | Rusty |
 | 2026-05-15 | Post-TCA-migration refresh (#725). §1 module-dependency graph redrawn around `AppFeature` / per-feature reducers / dependency clients; §3 project-structure tree updated for `EyePostureReminder/TCA/` + live-service-only `Services/`; added §2.8 dependency-client surface; rewrote §4.1 as "Why TCA Over MVVM?"; §4.6 / §4.7 / §5.5 re-anchored from `AppCoordinator` onto `SchedulingFeature` + matching clients; §7.4 SwiftUI example switched to `StoreOf<Feature>` + `WithPerceptionTracking`; §10 Testing Architecture rewritten around the `TestStore` + `withDependencies` workflow; §8 / §8.5 milestone + onboarding-flow refs cleaned. | Rusty |
+| 2026-05-17 | §3 project-structure tree refresh (#859). Dropped the deleted `Tests/EyePostureReminderTests/TCA/ContentViewTests.swift` row (removed in 4f6d4c5 alongside the dead `ContentView` pass-through wrapper). Dropped the `EyePostureReminder/TCA/Bindings/` directory row whose only file (`StoreScopes.swift`) was removed in 82bc5eb — there is no `Bindings/` directory on disk any more. Expanded the `Extensions/Shared/` listing from the lone `ShieldSessionKeys.swift` row to enumerate all eight App Group / shield-session helpers that now ship there (`AppGroupDefaults`, `AppGroupIPCStore`, `ShieldConfigurationCopyLocalization`, `ShieldIntervalEndCleanupPolicy`, `ShieldSessionKeys`, `ShieldSessionSnapshot`, `ShieldTriggerReason`, `WatchdogHeartbeat`) and called out the per-extension `.Distribution.entitlements` files used by signed builds. Docs-only — no source changes. | Copilot |
