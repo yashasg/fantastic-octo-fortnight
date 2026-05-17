@@ -198,8 +198,10 @@ to make the TCA Phase-1 reducers testable in isolation.
 - **165 PRs** merged on top of `v0.2.0` — see `git log v0.2.0..main` for the
   full ledger; this section groups the contributor-visible delta.
 - **Phase 3 of the TCA migration is in flight** (per-feature `TestStore`
-  coverage); the remaining MVVM decommission work is tracked in #677 and
-  #702 and will appear in the next release section once those land.
+  coverage). The MVVM decommission tracked in #677 and #702 has landed —
+  PR #754 deleted the `SelectedAppsState` wrapper (#678 final) and PR #760
+  deleted the `AppCoordinator` stack (#755 Phase E); the follow-up
+  doc/citation sweep continues in #767..#834.
 
 ---
 
