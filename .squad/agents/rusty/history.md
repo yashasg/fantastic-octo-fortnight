@@ -23,121 +23,18 @@ Production-quality scaffold pre-built before Phase 1 team work: Models (Reminder
 - UI team task (M1.2/M1.5): Refactor SettingsView sheet presentation, HomeView navigation stack, OverlayView swipe/haptic fixes.
 - Test team task (M1.7): Add PauseConditionManager tests, dark mode tests, focus/driving detection edge cases.
 
-### 2025-07-25: Architecture Scaffolding — Models, Services, ViewModels
+**## Pre-May-2026 Summary (Consolidated from 100+ entries)**
+- **Architecture Foundation (2026-04-24):** Comprehensive protocol-based architecture documented in ARCHITECTURE.md; MVVM + UIWindow overlay + UserDefaults; iOS 16.0 minimum; 85% coverage target.
+- **Telemetry Strategy (2025-07-25):** Tiered approach — Phase 1: Instruments only; Phase 2: os.Logger + MetricKit; Phase 3+: no third-party analytics. App battery efficiency grade A+.
+- **TestFlight Telemetry (2025-07-25):** os.Logger moved to Phase 1 (TestFlight needs context logs); MetricKit moved to Phase 2 (payloads available on beta builds); Xcode Organizer crashes work from first build.
+- **MPRemoteCommandCenter Placement (2025-07-25):** Phase 2 opt-in feature, not Phase 3 — 30-line `AudioInterruptionManager`, low complexity; never use `UIBackgroundModes: audio` without actual audio playback.
+- **Services Scaffold (2025-07-25):** All model, protocol, and service skeletons completed: ReminderType, ReminderSettings, SettingsStore (UserDefaults wrapper), ReminderScheduler, OverlayManager, AudioInterruptionManager, SettingsViewModel, Logger+App.
+- **Key architectural decisions:** MVVM pattern; UIWindow overlay for reliability; protocol abstractions for testability; UserDefaults for 5 scalars; iOS 16.0+; no background modes.
+- **Open questions resolved:** Landscape support deferred (Portrait-lock for health intervention); Do Not Disturb mode will dismiss overlay per health-app UX pattern; presets-only intervals confirmed for Phase 1.
 
-**What I built:**
+---
 
-All model, protocol, and service skeletons in `EyePostureReminder/`:
-
-| File | Purpose |
-|---|---|
-| `Models/ReminderType.swift` | `enum ReminderType` with `.eyes` / `.posture`, SF Symbol name, title, SwiftUI Color |
-| `Models/ReminderSettings.swift` | `struct ReminderSettings` — interval + breakDuration as `TimeInterval` |
-| `Models/SettingsStore.swift` | `ObservableObject` UserDefaults wrapper + `SettingsPersisting` protocol + `UserDefaults` conformance |
-| `Services/ReminderScheduler.swift` | `NotificationScheduling` protocol + `ReminderScheduling` protocol + concrete `ReminderScheduler` |
-| `Services/OverlayManager.swift` | `OverlayPresenting` protocol + `@MainActor OverlayManager` with UIWindow lifecycle |
-| `Services/AudioInterruptionManager.swift` | `MediaControlling` protocol + stub `AudioInterruptionManager` (Phase 2) |
-| `ViewModels/SettingsViewModel.swift` | `@MainActor ObservableObject` shell with protocol-injected dependencies |
-| `Utilities/Logger+App.swift` | `os.Logger` extension — 4 categories: scheduling, overlay, settings, lifecycle |
-
-**Key design decisions made:**
-
-1. **`SettingsPersisting` adds explicit `defaultValue` parameter** — Foundation's `UserDefaults` returns `0`/`false` when a key is absent, which is indistinguishable from the user having set 0 manually. Explicit defaults eliminate this ambiguity across all callers.
-
-2. **`SettingsStore` owns `SettingsPersisting` protocol definition** — co-locating the protocol with its primary consumer reduces file scatter for this scope. If we ever have a second consumer, extract to `Protocols/`.
-
-3. **`OverlayManager` is `@MainActor`** — UIWindow mutations must occur on the main thread. The actor annotation enforces this at compile time rather than relying on runtime assertions.
-
-4. **`OverlayManager.showOverlay` acquires `UIWindowScene` at call time** — not cached at init. This is correct for an app that may background/foreground between reminders; the active scene at presentation time is the right one.
-
-5. **`SettingsViewModel` replaced pre-existing skeleton** — Basher's initial file referenced stale API shapes (`ReminderScheduler.shared`, `store.remindersEnabled`, etc.). Updated to match the protocol-based architecture.
-
-**Pre-existing files found (Basher's work):**
-- `App/`, `Views/` already seeded — no conflicts, no overlap.
-
-**What Phase 2 needs:**
-- `AudioInterruptionManager.pauseExternalAudio()` / `resumeExternalAudio()` — stubs in place with implementation notes.
-- `OverlayManager.showOverlay` — swap placeholder `UIViewController` for real `UIHostingController<OverlayView>`.
-- `SettingsViewModel` — add snooze countdown timer (`Timer.publish`) for UI feedback.
-
-### 2025-07-25: MPRemoteCommandCenter Phase Placement — Correction
-
-**What I corrected:**
-- Previous recommendation placed "media pause during overlay" in Phase 3, citing battery/memory concerns. That was imprecise.
-- `MPRemoteCommandCenter` itself: < 50 KB memory, zero battery cost. Not the actual risk.
-- `AVAudioSession` lifecycle IS the real concern — but it's a 30-line implementation, not a Phase 3-level problem.
-- Key clarification: `MPRemoteCommandCenter` is for RECEIVING remote commands. To INTERRUPT another app's audio, you activate `AVAudioSession` without `.mixWithOthers`. These are related but distinct.
-
-**Revised recommendation:**
-- **Phase 2**, opt-in toggle (`pauseMediaDuringBreaks`, default OFF)
-- No `UIBackgroundModes: audio`, no `MPNowPlayingInfoCenter`
-- Single critical rule: always deactivate with `.setActive(false, options: .notifyOthersOnDeactivation)` in ALL dismiss paths
-- Complexity: Low (~30 lines, thin `AudioInterruptionManager`)
-
-**What to avoid:**
-- Never add `UIBackgroundModes: audio` — App Review will reject if you don't actually play audio
-- Never set `MPNowPlayingInfoCenter.nowPlayingInfo` — creates phantom Control Center entry
-- Don't hold the audio session open between reminders — activate on overlay show, deactivate on overlay dismiss
-
-**Why Phase 3 was wrong:**
-- There are no Phase 1 learnings needed to de-risk this. The implementation is self-contained.
-- Deferring trivial, well-scoped opt-in features to Phase 3 inflates the roadmap without reason.
-
-**Documentation updated:** `.squad/decisions/inbox/rusty-mpremote-revised.md`
-
-### 2026-04-24: Architecture Foundation
-
-**What I did:**
-- Analyzed IMPLEMENTATION_PLAN.md and defined comprehensive architecture in ARCHITECTURE.md
-- Created protocol-based abstractions for testability (NotificationScheduling, SettingsPersisting, OverlayPresenting)
-- Documented 10 key technical decisions with trade-off analysis in .squad/decisions/inbox/rusty-architecture-decisions.md
-- Defined module dependency graph, Xcode project structure, and coding conventions
-- Identified technical risks (notification permissions, iPadOS overlay behavior, iOS version constraints)
-- Specified CI pipeline and testing strategy (85% coverage target for business logic)
-
-**Key architectural decisions:**
-1. **MVVM pattern** — natural fit for SwiftUI, clear separation of concerns
-2. **UIWindow overlay** over `.fullScreenCover` — reliable interruption is critical for health intervention
-3. **Protocol abstractions** for system APIs — enables fast unit testing without mocking system frameworks
-4. **UserDefaults** for persistence — 5 scalar values don't justify SwiftData overhead
-5. **iOS 16.0 minimum** — modern APIs reduce code complexity by ~30%
-6. **No background modes** — `UNUserNotificationCenter` handles scheduling battery-efficiently
-
-**Technical risks to monitor:**
-- Notification permission denial → fallback to foreground-only mode required
-- iPadOS multitasking (Split View) may affect overlay window behavior — needs testing
-- 64-notification limit is a non-issue (we use 2 repeating notifications), but snooze feature would consume budget
-
-**Project insights:**
-- This is a **health intervention tool** where reliability > elegance. The overlay must interrupt the user, which drove the UIWindow decision.
-- Battery efficiency is paramount — users won't tolerate a health app that drains battery. All background work delegated to iOS.
-- Testability is non-negotiable — protocols let us test scheduling logic without firing real notifications.
-
-**Next owner actions:**
-- Team reviews decisions in .squad/decisions/inbox/rusty-architecture-decisions.md
-- Resolve open questions: landscape support (iPad), Do Not Disturb mode, custom intervals vs presets
-- After approval, proceed with M1.1 (project scaffold)
-
-### 2025-07-25: Telemetry Strategy & Battery/Memory Audit
-
-**What I did:**
-- Evaluated Apple's full native telemetry stack (os.log, MetricKit, Xcode Organizer, App Store Connect, Instruments) for this app's scope
-- Performed component-by-component battery/memory audit of the current architecture
-- Analyzed MPRemoteCommandCenter (media pause) as a potential feature addition
-- Documented findings in .squad/decisions/inbox/rusty-telemetry-battery.md
-
-**Key decisions:**
-1. **Tiered telemetry adoption:** Phase 1 uses Instruments only. Phase 2 replaces `print()` with `os.Logger`. MetricKit deferred to Phase 3+ (no users = no payloads).
-2. **No third-party analytics** — App Store Connect + Xcode Organizer cover our needs for free with zero integration cost.
-3. **Architecture is well-optimized** — UNUserNotificationCenter delegates all background work to iOS (app process not kept alive). UIWindow overlay is created on-demand and released. UserDefaults is the correct persistence choice for 5 scalar values.
-4. **MPRemoteCommandCenter media pause** flagged as Phase 3 opt-in feature — requires careful audio session lifecycle management to avoid battery drain and user confusion.
-
-**Validation items for M1.5:**
-- UIWindow must be set to `nil` after dismissal (not just hidden) — verify with Xcode Memory Graph Debugger
-- UIHostingController must not be retained by closure/delegate cycles — verify with Instruments Allocations
-- Add debug assertion in OverlayManager.dismissOverlay() to catch leaks early
-
-**Architecture insight:**
+## 2026-05-15 — Release-Config CI Compatibility Audit (kshana / EyePostureReminder)
 - Battery efficiency grade: A+ overall. The "no background modes" decision is the single most important battery optimization — the app simply doesn't exist as a running process between reminders.
 
 ### 2025-07-25: TestFlight Telemetry Deep Dive
@@ -363,3 +260,88 @@ Related: #725 (parent docs sweep), #677, #701, #702 (blockers)
 ## 2026-05-15 — New Strategy & Compliance Team Established
 
 2026-05-15: New Strategy & Compliance team added (6 members: Toulour/Denham/Sponder/Bashir/Matsui/Bruiser). They file issues; remediation routes to existing dev/test/review team. See team.md and routing.md.
+
+## Learnings
+
+### 2026-05-15 — Release-Config CI Compatibility Audit (kshana / EyePostureReminder)
+
+**Project architecture note:** Main app is a Swift Package (Package.swift executableTarget), NO main xcodeproj. Unit tests run via `xcodebuild test -scheme EyePostureReminder`. UITests use `UITests/EyePostureReminderUITests.xcodeproj`.
+
+**Release-config compatibility findings:**
+
+1. **`#if DEBUG` is the dominant risk pattern.** The codebase correctly uses `#if DEBUG` to gate UITest backdoors out of production (per #350/#405 settings-reset vulnerability). This same gate covers test-critical hooks:
+   - `UITestMode.swift` — entire implementation (launch-arg parsing) is `#if DEBUG`. UITests completely broken under Release.
+   - `AppDelegate.swift` — `preSeedUITestDefaults()`, `applyUITestLaunchArguments()` both `#if DEBUG`. UITest seeding broken.
+   - `EyePostureReminderApp.swift` — three pre-seed/injection methods all `#if DEBUG`. Onboarding and overlay UITests broken.
+   - `HomeView.swift` — AppStorage property + two helper methods `#if DEBUG`. Screen time simulation broken.
+   - `AnalyticsLogger.swift` — `testEventHandler` hook `#if DEBUG`. 3 unit tests fail at runtime (empty captured-events array).
+
+2. **`@testable import` scope:** 105 `@testable import` usages across 97 test files, targeting `EyePostureReminder` and `ScreenTimeExtensionShared`. For SPM, `ENABLE_TESTABILITY=YES` in the xcodebuild command is required and sufficient — xcodebuild propagates it through the SPM target graph.
+
+3. **Test files with `#if DEBUG` guards:**
+   - `HomeViewLaunchContextResolverTests.swift` — ENTIRE class (12 tests) inside `#if DEBUG`. Silent test drop, not a failure.
+   - `AppDelegateTests.swift` — 1 test method inside `#if DEBUG`. Silent drop.
+   - `SettingsStoreSeedTests.swift` — 1 test method has `#if DEBUG / #else XCTSkip`. Will XCTSkip under Release.
+
+4. **Assertions:** `assert()` at OverlayManager.swift:316 and `assertionFailure()` at AnalyticsLogger.swift:373 become no-ops under Release. Neither causes test failures but both guard real invariants — recommended to convert to `precondition`/`preconditionFailure`.
+
+5. **Zero risk categories:** No `@inline`, `@inlinable`, `@_transparent`, `@_optimize`, `unowned`, or `withUnsafePointer` usages in app/extension code. No Swift Testing (`@Test`) macros. `#Preview` blocks are unguarded but compile fine in all configurations. OSLog usage is test-safe.
+
+6. **SPM and custom configurations:** SPM has no xcodeproj for the main target. Custom compilation conditions can be injected via `OTHER_SWIFT_FLAGS="-DCI"` in the xcodebuild invocation — this flows through to SPM target builds and makes `#if CI` active in source. Only activate on test/build-for-testing commands, never on production builds.
+
+**Recommended pattern — `#if DEBUG || CI`:** Replace all 22 `#if DEBUG` guards covering test infrastructure in the 5 app files listed above. The `CI` flag is set only on CI test xcodebuild calls, keeping production binaries clean. This is the minimal-change, secure approach for SPM-based projects.
+
+**Configuration strategy decision:** Option (b) — CI-derived config via `OTHER_SWIFT_FLAGS="-DCI"` on top of `-configuration Release`, NOT plain Release (breaks tests) and NOT Debug+WMO (misses `-O` goal). ~25 lines changed across 5 files.
+
+**Pre-flight source change checklist:**
+- `UITestMode.swift` — `#if DEBUG` → `#if DEBUG || CI` (1 block)
+- `AppDelegate.swift` — `#if DEBUG` → `#if DEBUG || CI` (3 blocks)
+- `EyePostureReminderApp.swift` — `#if DEBUG` → `#if DEBUG || CI` (3 blocks)
+- `HomeView.swift` — `#if DEBUG` → `#if DEBUG || CI` (3 blocks)
+- `AnalyticsLogger.swift` — `#if DEBUG` → `#if DEBUG || CI` (2 blocks)
+- `HomeViewLaunchContextResolverTests.swift` — `#if DEBUG` → `#if DEBUG || CI` (1 guard, recovers 12 tests)
+
+**Sign-off gate:** All 1985+ tests must pass; UITest shards all green; coverage ≥ 80%; confirm `-DCI` NOT present in production archive build settings.
+
+## 2026-05-17 — Release-Config CI Compatibility Audit (COMPLETED)
+
+Orchestration log written: `.squad/orchestration-log/2026-05-17T08-57-37Z-rusty.md`. Audit completed; blocking call issued.
+
+### Key Findings
+
+**HIGH-severity blockers identified:**
+
+| Category | Count | Severity | Root Cause |
+|---|---|---|---|
+| `#if DEBUG` — UITest backdoors in 5 app files | 22 total | **High** | Security model correctly gates test hooks; same gate breaks Release config. |
+| `@testable import` + ENABLE_TESTABILITY | 105 usages | **High** | SPM Release default is `ENABLE_TESTABILITY=NO`; test compilation fails. |
+| UITest xctestrun PlistBuddy hardcoding | 1 path | High | build.sh line 663 hardcodes `Debug-iphonesimulator`. |
+| `#if DEBUG` in test files (silent drops) | 3 | Med | 12 tests silently disappear; 1 test method drops; 1 XCTSkips. |
+
+**Zero-risk categories:** No `@inline`, `@inlinable`, `unowned`, `withUnsafePointer`, Swift Testing macros, or optimizer-sensitive code patterns found.
+
+### Decision & Blocking Call
+
+**Issued: HIGH-severity blocking call.** Release-config CI switch WILL BREAK 3 unit tests + entire UITest suite without coordinated source changes.
+
+**Recommended strategy: Option (b) — CI-derived config via `OTHER_SWIFT_FLAGS="-DCI"` on test xcodebuild only.**
+
+Source changes required (~25 lines, 5 files):
+- Replace `#if DEBUG` → `#if DEBUG || CI` in: UITestMode.swift, AppDelegate.swift, EyePostureReminderApp.swift, HomeView.swift, AnalyticsLogger.swift
+- Optionally recover 12 silent-drop tests: add guard to HomeViewLaunchContextResolverTests.swift
+
+**Pre-flight gate (HARD):** Source changes must land and pass green on current Debug CI baseline BEFORE Virgil's Release-config CI diff merges.
+
+### Decision Merged
+
+Release-config compatibility decision merged into `.squad/decisions.md` as part of phased CI optimization plan. Skill document written: `.squad/skills/release-config-ci-audit/SKILL.md`.
+
+### Status
+
+Awaiting: (1) Yashas approval to proceed; (2) Source changes PR submission + review; (3) Green validation on Debug baseline; (4) Release-config CI switch (Virgil).
+
+### Learnings
+
+- **2026-05-17: Release-config audit pattern for SPM-based projects.** For any SPM project (no xcodeproj) considering Release config switch: (1) audit all `#if DEBUG` guards for test-critical code, (2) verify `@testable import` count + ENABLE_TESTABILITY impact, (3) check for hardcoded build-artifact paths (e.g., PlistBuddy), (4) recommend `OTHER_SWIFT_FLAGS="-DCI"` injection mechanism for CI-only test hooks.
+- **Compilation condition injection in SPM:** Use `OTHER_SWIFT_FLAGS="-DCI"` in xcodebuild invocation — flows through to SPM targets and enables `#if CI` checks. This is the only mechanism for custom conditions in SPM without adding a real xcodeproj or config.
+- **Security gate + test infrastructure coupling:** When `#if DEBUG` guards security-sensitive code (UITest backdoors), ensure test-critical hooks are NOT within the same guard. Either extract hooks to separate `#if CI` guard, or widen guard to `#if DEBUG || CI` when safe. This decouples security (production cleanliness) from test requirements (debug features for CI).

@@ -24226,3 +24226,98 @@ Consolidation reduces cognitive load when reasoning about ownership. The previou
 - Routing.md `Frontend testing` / `Backend testing` / `Frontend code review` / `Backend code review` rows describe **work scope** (UI vs services layer of the iOS app), not team grouping — left unchanged.
 - GitHub workflows (`squad-issue-assign.yml`, `squad-triage.yml`, `sync-squad-labels.yml`, `squad-heartbeat.yml`) parse `## Members` rows by name only — they don't depend on the Team column or the `## Teams` section, so no workflow changes required.
 - The mothballed Python `backend/` directory remains intentionally out of scope for both streams (no `backend/` dir exists in this repo).
+
+---
+
+## 2026-05-17 — CI Clean-Build + Release-Config Speedup Decision
+
+### Decision: Phased CI Optimization Plan (Clean Build + Release Config)
+**Authors:** Virgil (CI/CD Dev) + Rusty (iOS Architect/Lead)  
+**Date:** 2026-05-17  
+**Status:** Proposed — awaiting Yashas authorization for Phase 0/1 implementation
+
+**Context**
+
+User request: Measure and propose speedup measures for clean CI builds, with Release configuration to benefit from whole-module optimization and faster test execution. Current CI pipeline runs on `macos-latest` (macOS 15, Apple Silicon) with clean builds (no inter-run DerivedData caching).
+
+**Findings Summary (Virgil)**
+
+1. **Double-compilation (highest-impact win):** `cmd_build` uses `xcodebuild build`; `cmd_test` uses `xcodebuild test` (recompiles everything). UITests already use the correct pattern: `build-for-testing` + `test-without-building`. Projected saving: **40–50% off build+test pipeline**.
+
+2. **COMPILER_INDEX_STORE_ENABLE=NO:** Index store generation is pure waste on CI runners (no IDE). TCA + SwiftSyntax multiplies impact due to high compilation-unit count. Estimated saving: **1–3 min on cold builds**.
+
+3. **DEBUG_INFORMATION_FORMAT=dwarf:** Skip dSYM generation on non-archive CI builds (dsymutil I/O only for archive builds). Estimated saving: **30–90 seconds**.
+
+4. **ENABLE_TESTABILITY=YES via XCODE_FLAGS on cmd_test only:** Release builds default to `ENABLE_TESTABILITY=NO` — blocks 108 `@testable import` usages across 97 test files. Must be forced only on test actions, not on production build.
+
+5. **ModuleCache purge gating:** Unconditional `rm -rf DerivedData/ModuleCache.noindex` wastes 20–30s on cold runs when no cache was restored. Gate on `cache-hit` output to make it conditional.
+
+6. **Release config block in main app:** `project.yml` main app target lacks `SWIFT_COMPILATION_MODE: wholemodule` for Release config (exists in UITests and ScreenTimeExtensions pbxprojs). Must add to enable WMO savings.
+
+7. **UITest xctestrun PlistBuddy path:** Line 663 of `build.sh` hardcodes `Debug-iphonesimulator`. When Release is adopted, must update to `Release-iphonesimulator`.
+
+8. **Runner upgrade (macos-15-xlarge):** Optional; M1 Pro 6-core can cut cold builds by 30–50% but costs 8–10× more per minute. Valid long-term, not recommended until cold build time regularly exceeds 20 min.
+
+**Findings Summary (Rusty) — Release-Config Compatibility Audit**
+
+| Category | Count | Severity | Action |
+|---|---|---|---|
+| `#if DEBUG` — UITest backdoors in app source | 22 in 6 files | **High (test runtime failure)** | Replace with `#if DEBUG \|\| CI`; inject `-DCI` on test xcodebuild |
+| `@testable import` + ENABLE_TESTABILITY | 105 usages / 97 files | **High (compile blocker)** | Force `ENABLE_TESTABILITY=YES` on cmd_test only |
+| `#if DEBUG` — Test files (silent drops) | 3 occurrences | Med | Recover 12 tests if guard updated to `#if DEBUG \|\| CI` |
+| UITest xctestrun PlistBuddy path | 1 hardcoded | High | Update `Debug-iphonesimulator` → `Release-iphonesimulator` |
+| `assert()`/`assertionFailure()` | 2 sites | Low | Consider converting to `precondition()`/`preconditionFailure()` |
+| Zero risk categories | — | None | No `@inline`, `@inlinable`, `unowned`, `withUnsafePointer`, or Swift Testing macros found |
+
+**Blocking Call (Rusty — HIGH SEVERITY)**
+
+Release-config CI switch **WILL BREAK** 3 unit tests + entire UITest suite + 1 test class (12 silent-drop tests) without source changes. Root cause: `#if DEBUG` correctly gates UITest backdoors out of production (per security model #350/#405), but this same gate covers test-only infrastructure in 5 app files.
+
+**Recommended Configuration Strategy: Option (b) — CI-Derived Config**
+
+- **Mechanism:** Inject `-DCI` compilation flag via `OTHER_SWIFT_FLAGS="-DCI"` in xcodebuild invocations for test/build-for-testing actions only, never in production builds.
+- **Source changes:** Replace `#if DEBUG` → `#if DEBUG || CI` in 5 app files (~25 mechanical lines):
+  - `UITestMode.swift` (1 block)
+  - `AppDelegate.swift` (3 blocks)
+  - `EyePostureReminderApp.swift` (3 blocks)
+  - `HomeView.swift` (3 blocks)
+  - `AnalyticsLogger.swift` (2 blocks)
+  - Optionally: `HomeViewLaunchContextResolverTests.swift` (recover 12 silent-drop tests)
+
+- **Why Option (b)?** 
+  - Option (a) — plain Release: Breaks tests without source changes (non-starter).
+  - Option (c) — Debug+WMO: Misses `-O` optimization goal (half the motivation lost).
+  - Option (b): Minimal, secure, and preserves production binary cleanliness.
+
+**Phased Implementation Plan**
+
+1. **Phase 0 (Immediate, no blockers):** `cmd_test` → `build-for-testing` + `test-without-building` (copy UITests pattern). Independent of Release config. ~40–50% pipeline saving.
+
+2. **Phase 1 (Immediate, no blockers):** Add speedup flags (`COMPILER_INDEX_STORE_ENABLE=NO`, `DEBUG_INFORMATION_FORMAT=dwarf`, conditional ModuleCache purge) to build-from-gitlab.yml. Independent of Release config.
+
+3. **Phase 2 (Requires source changes first):** Release config migration. Source changes (~25 lines, 5 files) must land on Debug CI baseline first, pass green, then CI diff merges. Validation gate: all 1985+ tests green, UITest shards all green, coverage ≥ 80%, confirm `-DCI` NOT in production archive build settings.
+
+4. **Phase 3 (Optional, cost-benefit):** Runner upgrade to macos-15-xlarge (deferred until cold build time > 20 min regularly).
+
+**Pre-flight Checklist (Before Release Switch)**
+
+- [ ] Source changes (§ above) reviewed by Rusty, merged, and green on Debug CI baseline.
+- [ ] All 1985+ existing tests pass.
+- [ ] Zero new SWIFT_TREAT_WARNINGS_AS_ERRORS failures under Release+WMO.
+- [ ] UITest shards all green (onboarding, overlay launch, screen time simulation).
+- [ ] Coverage ≥ 80% (existing gate).
+- [ ] `-DCI` confirmed NOT present in production archive build (verify SWIFT_ACTIVE_COMPILATION_CONDITIONS in Xcode build settings).
+
+**Coordination**
+
+- **Basher, Livingston:** Upcoming change. You will be asked to review/approve source changes (5 app files) before Release switch.
+- **Virgil:** Prepare Phase 0/1 diffs once Yashas authorizes. Phase 2 implementation follows after source-change PR merges.
+
+**Decision**
+
+Approved: Proceed with Phase 0/1 as low-risk high-reward first step. Phase 2 blocked on Rusty sign-off gate (source changes + pre-flight validation). Implementation sequencing: source changes → Phase 0/1 CI diff → Phase 2 Release switch → validation suite.
+
+**Status:** Awaiting Yashas authorization to begin Phase 0/1.
+
+---
+

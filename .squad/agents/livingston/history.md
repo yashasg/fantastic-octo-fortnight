@@ -85,3 +85,27 @@ Orchestration log recorded at 2026-04-30T09:27:10Z. Root cause diagnosis documen
 - Always confirm total wait = visibility + hittability ≤ one shared deadline; never let each phase use the full timeout independently (avoids silently doubling wall-clock cost).
 - The 8-second default was tuned on M-series hardware. Any future timeout reduction should be verified on CI, not just locally.
 - On very cold simulators, XCTest snapshot evaluation for `waitForExistence`/`isHittable` can take minutes. A generous budget (20+ s) is preferable over retry-reliance for the overlay readiness gate.
+
+## 2026-05-17 — Upcoming: Release-Config CI Changes & Source Reviews
+
+**FYI:** Virgil (CI/CD) and Rusty (Architecture) completed a phased CI optimization audit. Upcoming changes will require source code reviews and approvals from dev team (including you).
+
+### Timeline
+
+1. **Phase 0 (Immediate, no review needed):** `cmd_test` refactor (use `build-for-testing` + `test-without-building` pattern). ~40–50% CI speedup.
+2. **Phase 1 (Immediate, no review needed):** Add speedup flags (`COMPILER_INDEX_STORE_ENABLE=NO`, etc.) to build-from-gitlab.yml.
+3. **Phase 2 (Requires your review):** Release config adoption + coordinated source changes. Rusty flagged HIGH-severity architectural implications and issued blocking call. Source changes span 5 app files (~25 lines); Rusty will assign this to dev team for review.
+4. **Phase 3 (Optional, future):** Runner upgrade.
+
+### What You Need to Know
+
+- Release-config CI switch is high-value (WMO + faster tests) but requires pre-flight source coordination.
+- Blocking issue: 22 `#if DEBUG` guards in 5 app files gate test-critical UITest backdoors. These must be changed to `#if DEBUG || CI` before Release switch.
+- Rusty is NOT signing off on Phase 2 until source changes land and pass green on Debug CI baseline first.
+- When the source-change PR lands (in your review queue), the Phase 2 CI diff can follow immediately.
+
+### Refs
+
+- Orchestration logs: `.squad/orchestration-log/2026-05-17T08-57-37Z-virgil.md` and `-rusty.md`
+- Session log: `.squad/log/2026-05-17T08-57-37Z-ci-clean-release-perf-audit.md`
+- Decision: `.squad/decisions.md` (search for "CI Clean-Build + Release-Config Speedup Decision")
