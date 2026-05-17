@@ -21,7 +21,12 @@ final class HomeFeatureTests: XCTestCase {
         XCTAssertTrue(state.postureEnabled)
         XCTAssertEqual(state.notificationAuthStatus, .notDetermined)
         XCTAssertFalse(state.trueInterruptBannerDismissed)
-        XCTAssertFalse(state.openSettingsOnLaunch)
+        XCTAssertFalse(
+            state.settingsSheetActive,
+            "settingsSheetActive must default to false; the parent reducer flips it "
+            + "when .home(.settingsTapped) / .openSettingsSheetRequested writes the "
+            + "Settings destination (#814)."
+        )
     }
 
     // MARK: - .onAppear

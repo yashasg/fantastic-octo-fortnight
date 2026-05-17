@@ -64,6 +64,16 @@ struct AppFeature {
         /// next layout pass. The TCA migration removed `AppCoordinator`
         /// without re-plumbing this; see #786 for the regression report.
         case overlaySettingsRequested(ReminderType)
+        /// Presents the canonical Settings destination
+        /// (`Destination.settingsSheet`) on behalf of a non-`HomeView`
+        /// trigger — currently `RootView`'s `@AppStorage(openSettingsOnLaunch)`
+        /// observer (#814), which routes the legacy UserDefaults handoff
+        /// written by `OnboardingView.finishOnboardingAndCustomize()` and the
+        /// `.overlaySettingsRequested` effect into a TCA action instead of a
+        /// SwiftUI `@State` bridge inside `HomeView`. `HomeView`'s own gear
+        /// button dispatches `.home(.settingsTapped)`, which the parent
+        /// reducer collapses onto the same destination write.
+        case openSettingsSheetRequested
     }
 
     @Reducer
@@ -125,17 +135,46 @@ struct AppFeature {
                 return .none
             case .overlaySettingsRequested:
                 // Re-instate the legacy `AppCoordinator` handoff: setting the
-                // shared `openSettingsOnLaunch` flag is what `HomeView`'s
+                // shared `openSettingsOnLaunch` flag is what `RootView`'s
                 // `.onChangeCompat(of: openSettingsOnLaunch)` watches to
-                // present the Settings sheet after the overlay slide-out
-                // animation finishes. Matches `OnboardingView`'s
+                // dispatch `.openSettingsSheetRequested` after the overlay
+                // slide-out animation finishes. Matches `OnboardingView`'s
                 // existing direct-write pattern for the same key. Tracked
-                // as #786.
+                // as #786 (write) and #814 (read → destination handoff).
                 return .run { _ in
                     UserDefaults.standard.set(
                         true, forKey: AppStorageKey.openSettingsOnLaunch
                     )
                 }
+            case .home(.settingsTapped):
+                // #814: HomeView's gear button (and the in-screen banners that
+                // also call it) dispatch `.home(.settingsTapped)`. The parent
+                // owns presentation: write the canonical destination and
+                // mirror the active flag into HomeFeature.State so the view's
+                // VoiceOver master-toggle announcement guard (#287) can read
+                // it without keeping a SwiftUI `@State` bridge.
+                state.destination = .settingsSheet(SettingsFeature.State())
+                state.home.settingsSheetActive = true
+                return .none
+            case .openSettingsSheetRequested:
+                // #814: RootView's `@AppStorage(openSettingsOnLaunch)`
+                // observer routes the legacy UserDefaults handoff
+                // (`OnboardingView.finishOnboardingAndCustomize()` and
+                // `.overlaySettingsRequested`) through this action so the
+                // destination write goes through the reducer, not via a
+                // SwiftUI `@State` bridge inside `HomeView`.
+                state.destination = .settingsSheet(SettingsFeature.State())
+                state.home.settingsSheetActive = true
+                return .none
+            case .destination(.dismiss):
+                // Keep the HomeFeature mirror in sync with the canonical
+                // destination presence — see `.home(.settingsTapped)` above
+                // for the announcement-guard rationale (#287 / #814). Fires
+                // when SwiftUI dismisses the sheet via `RootView`'s
+                // `$store.scope(state: \.destination?.settingsSheet, …)`
+                // binding being set to nil (Done button / swipe-down).
+                state.home.settingsSheetActive = false
+                return .none
             case .home, .settings, .onboarding, .scheduling, .overlay, .destination:
                 return .none
             }
