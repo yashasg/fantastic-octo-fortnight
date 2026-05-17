@@ -65,8 +65,7 @@
 | `AppGroupIPCStoreTests` | 24 | App Group selection metadata round-trip, key alignment, snapshot encode/decode |
 | `AppGroupIPCStoreTests` | 24 | IPC store read/write, capped log |
 | `ShieldConfigurationCopyTests` | 17 | Shield configuration copy correctness |
-| `NoopServicesTests` | 24 | No-op service conformance checks |
-| `ServiceLifecycleTests` | 12 | Start/stop lifecycle protocol |
+| `ServiceLifecycleTests` | 7 | Start/stop lifecycle protocol |
 | `MetricKitSubscriberTests` | 7 | MetricKit subscriber registration |
 | `WatchdogHeartbeatTests` | 11 | Heartbeat ping/pong |
 | `AppDelegateTests` | 14 | AppDelegate lifecycle hooks |
