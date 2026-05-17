@@ -27,17 +27,17 @@
  │      Views       │  │ Feature Reducers     │  │   Dependency Clients     │
  │                  │  │                      │  │    (TCA boundaries)      │
  │ RootView         │  │ HomeFeature          │  │ SettingsClient           │
- │ ContentView      │◄─┤ SettingsFeature      │◄─┤ ReminderSchedulerClient  │
- │ HomeView         │  │ OnboardingFeature    │  │ ScreenTimeTrackerClient  │
- │ SettingsView     │  │ OverlayFeature       │  │ OverlayClient            │
- │ OnboardingView   │  │ SchedulingFeature    │  │ NotificationClient       │
- │ OverlayView      │  │ AppCategoryPicker-   │  │ PauseConditionClient     │
- │ AppCategory-     │  │   Feature            │  │ ScreenTimeAuthorization- │
- │   PickerView     │  │                      │  │   Client                 │
- │ DesignSystem     │  │                      │  │ DeviceActivityMonitor-   │
- │ LegalDocument-   │  │                      │  │   Client                 │
- │   View           │  │                      │  │ IPCClient                │
- │ YinYangEyeView   │  │                      │  │ AnalyticsClient          │
+ │ HomeView         │◄─┤ SettingsFeature      │◄─┤ ReminderSchedulerClient  │
+ │ SettingsView     │  │ OnboardingFeature    │  │ ScreenTimeTrackerClient  │
+ │ OnboardingView   │  │ OverlayFeature       │  │ OverlayClient            │
+ │ OverlayView      │  │ SchedulingFeature    │  │ NotificationClient       │
+ │ AppCategory-     │  │ AppCategoryPicker-   │  │ PauseConditionClient     │
+ │   PickerView     │  │   Feature            │  │ ScreenTimeAuthorization- │
+ │ DesignSystem     │  │                      │  │   Client                 │
+ │ LegalDocument-   │  │                      │  │ DeviceActivityMonitor-   │
+ │   View           │  │                      │  │   Client                 │
+ │ YinYangEyeView   │  │                      │  │ IPCClient                │
+ │                  │  │                      │  │ AnalyticsClient          │
  └──────────────────┘  └──────────┬───────────┘  └─────────────┬────────────┘
                                   │                            │
                                   ▼                            ▼
@@ -331,7 +331,6 @@ EyePostureReminder/                  (SPM executable target)
 │   └── NoopServices.swift            Centralized no-op fallbacks for distribution builds
 │
 ├── Views/
-│   ├── ContentView.swift             Thin wrapper retained for preview / test compatibility; delegates to `RootView`
 │   ├── HomeView.swift                App home screen; consumes `StoreOf<HomeFeature>`
 │   ├── SettingsView.swift            Settings screen; consumes `StoreOf<SettingsFeature>`
 │   ├── ReminderRowView.swift         Per-type interval/duration row

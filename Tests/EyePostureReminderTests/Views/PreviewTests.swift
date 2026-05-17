@@ -41,9 +41,6 @@ final class PreviewTests: XCTestCase {
         assertPreviewRenders(view)
     }
 
-    // MARK: - ContentView
-    // NOTE: ContentView uses @AppStorage — same bundle proxy crash. Covered via UI tests.
-
     // MARK: - YinYangEyeView
 
     func test_yinYangEyeView_preview() {

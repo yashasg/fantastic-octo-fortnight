@@ -96,7 +96,7 @@ EyePostureReminder
 │   ├── ServiceLifecycle.swift
 │   └── (FamilyControls + DeviceActivity + Shield wrappers — see ARCHITECTURE.md §3)
 └── Views
-    ├── RootView is the canonical entry; ContentView is a thin compatibility wrapper.
+    ├── RootView is the canonical entry.
     ├── HomeView.swift                 – consumes `StoreOf<HomeFeature>`
     ├── SettingsView.swift             – consumes `StoreOf<SettingsFeature>`
     ├── ReminderRowView.swift          – per-type interval/duration row

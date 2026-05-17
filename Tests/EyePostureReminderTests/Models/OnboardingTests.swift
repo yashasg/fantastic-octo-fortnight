@@ -3,9 +3,9 @@ import XCTest
 @testable import EyePostureReminder
 
 /// Tests for the `hasSeenOnboarding` UserDefaults flag that gates
-/// the first-launch vs. returning-user flow in `ContentView`.
+/// the first-launch vs. returning-user flow in `RootView`.
 ///
-/// `ContentView` reads the flag via `@AppStorage(AppStorageKey.hasSeenOnboarding)`
+/// `RootView` reads the flag via `@AppStorage(AppStorageKey.hasSeenOnboarding)`
 /// which defaults to `false`. `OnboardingView.finishOnboarding()` writes `true` to
 /// `UserDefaults.standard` when the user completes onboarding.
 ///
@@ -15,7 +15,7 @@ final class OnboardingTests: XCTestCase {
 
     // MARK: - Constants
 
-    /// Key used by `ContentView`'s `@AppStorage` binding and by
+    /// Key used by `RootView`'s `@AppStorage` binding and by
     /// `OnboardingView.finishOnboarding()`. Sourced from `AppStorageKey` to
     /// guarantee tests exercise the same key as production code.
     static let hasSeenOnboardingKey = AppStorageKey.hasSeenOnboarding
@@ -37,13 +37,13 @@ final class OnboardingTests: XCTestCase {
         super.tearDown()
     }
 
-    // MARK: - Key Correctness (contract with ContentView)
+    // MARK: - Key Correctness (contract with RootView)
 
     func test_hasSeenOnboardingKey_exactString() {
         XCTAssertEqual(
             Self.hasSeenOnboardingKey,
             "kshana.hasSeenOnboarding",
-            "Key must match the @AppStorage key used in ContentView and OnboardingView")
+            "Key must match the @AppStorage key used in RootView and OnboardingView")
     }
 
     // MARK: - First Launch (no key set)

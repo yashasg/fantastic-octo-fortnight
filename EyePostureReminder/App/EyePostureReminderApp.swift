@@ -10,7 +10,7 @@ struct EyePostureReminderApp: App {
     /// legacy `@StateObject AppCoordinator` + `.environmentObject(...)`
     /// injections that previously sat alongside the store: every SwiftUI
     /// view in the tree (`HomeView`, `SettingsView`, `OnboardingView`,
-    /// `OnboardingSetupView`, `ContentView`/`RootView`) now reads from the
+    /// `OnboardingSetupView`, `RootView`) now reads from the
     /// store scope or `@AppStorage` directly.
     private let store: StoreOf<AppFeature>
 
