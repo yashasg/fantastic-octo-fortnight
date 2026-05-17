@@ -22,7 +22,7 @@ struct EnabledFlags: Sendable, Equatable {
 
 /// TCA dependency client wrapping `SettingsStore` for reducer consumption.
 ///
-/// Phase 0 of the MVVM → TCA migration (#665). The closure surface is the
+/// Phase 0 of the TCA migration (#665). The closure surface is the
 /// normative contract Phase 1 reducers will copy verbatim. The `liveValue`
 /// adapter routes every getter and setter through the existing `@MainActor`
 /// `SettingsStore` so both worlds coexist during the migration.

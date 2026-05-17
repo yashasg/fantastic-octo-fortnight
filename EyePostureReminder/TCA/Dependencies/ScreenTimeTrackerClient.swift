@@ -3,7 +3,7 @@ import Foundation
 
 /// TCA dependency client wrapping `ScreenTimeTracker` for reducer consumption.
 ///
-/// Phase 0 of the MVVM → TCA migration (#665). The `liveValue` adapter installs
+/// Phase 0 of the TCA migration (#665). The `liveValue` adapter installs
 /// a single `onThresholdReached` closure on the underlying tracker that
 /// multicasts to every active `thresholdReached` subscriber via per-subscriber
 /// `AsyncStream` continuations.

@@ -4,7 +4,7 @@ import Foundation
 /// TCA dependency client wrapping `ScreenTimeAuthorizationProviding` for
 /// reducer consumption.
 ///
-/// Phase 0 of the MVVM → TCA migration (#665). The pre-entitlement default
+/// Phase 0 of the TCA migration (#665). The pre-entitlement default
 /// implementation is `ScreenTimeAuthorizationNoop`, which always returns
 /// `.unavailable`; the `liveValue` adapter forwards through that noop until
 /// the FamilyControls entitlement is provisioned (#201).

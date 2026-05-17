@@ -4,7 +4,7 @@ import Foundation
 /// TCA dependency client wrapping `DeviceActivityMonitorProviding` for reducer
 /// consumption.
 ///
-/// Phase 0 of the MVVM → TCA migration (#665). The pre-entitlement default
+/// Phase 0 of the TCA migration (#665). The pre-entitlement default
 /// implementation is `DeviceActivityMonitorNoop`, so the `liveValue` adapter
 /// effectively becomes a noop until the FamilyControls entitlement (#201) is
 /// provisioned. The `UUID` argument carried by the closures is part of the
