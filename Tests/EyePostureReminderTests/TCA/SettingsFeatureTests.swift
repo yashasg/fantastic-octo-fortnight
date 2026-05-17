@@ -4,8 +4,8 @@ import XCTest
 @testable import EyePostureReminder
 
 /// `TestStore` baseline coverage for `SettingsFeature` (Phase 1 reducer
-/// `p0-tca-6` / #669). Behavioural parity with `SettingsViewModel` lives
-/// under Phase 3 issue `p0-tca-16` (#679).
+/// `p0-tca-6` / #669). Extended behavioural coverage lives under Phase 3
+/// issue `p0-tca-16` (#679).
 @MainActor
 final class SettingsFeatureTests: XCTestCase {
 
