@@ -2,11 +2,10 @@ import Foundation
 
 @testable import EyePostureReminder
 
-/// Mock implementation of `ScreenTimeTracking` for use in scheduling /
-/// tracker integration tests (formerly `AppCoordinatorTests`, migrated to
-/// `SchedulingFeature*Tests` in `#755` Phase E). Lets tests control or
-/// observe screen-time tracking behaviour without spinning up real
-/// `Timer`s or UIApplication lifecycle observers.
+/// Mock implementation of `ScreenTimeTracking` for use in
+/// `SchedulingFeature*Tests`. Lets tests control or observe screen-time
+/// tracking behaviour without spinning up real `Timer`s or UIApplication
+/// lifecycle observers (#755 Phase E).
 @MainActor
 final class MockScreenTimeTracker: ScreenTimeTracking {
 
