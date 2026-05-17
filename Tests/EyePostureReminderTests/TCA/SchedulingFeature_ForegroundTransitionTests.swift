@@ -5,9 +5,9 @@ import XCTest
 @testable import EyePostureReminder
 
 /// `TestStore` parity coverage for `SchedulingFeature.foregroundTransition`
-/// — Phase 3 issue `p0-tca-17` (#680). Ports the foreground-branch coverage
-/// that previously lived against the legacy `AppCoordinator` (deleted in
-/// `#755` Phase E, PR #760).
+/// — Phase 3 issue `p0-tca-17` (#680). Covers the auth-refresh, snooze,
+/// and reschedule branches of the foreground-transition effect (history:
+/// ported in `#755` Phase E, PR #760).
 @MainActor
 final class SchedulingForegroundTransitionTests: XCTestCase {
 
@@ -37,8 +37,8 @@ final class SchedulingForegroundTransitionTests: XCTestCase {
 
     /// When the cached auth status differs from the live one, the reducer
     /// must re-run `.scheduleReminders` so newly-granted authorisation gets
-    /// picked up immediately, porting the auth-status-changed branch of the
-    /// deleted `AppCoordinator.handleForegroundTransition` (#755 Phase E).
+    /// picked up immediately — auth-status-changed branch of
+    /// `.foregroundTransition` (#755 Phase E).
     func test_foregroundTransition_noSnooze_authChanged_runsScheduleReminders() async {
         var initial = SchedulingFeature.State()
         initial.notificationAuthStatus = .notDetermined
@@ -66,8 +66,8 @@ final class SchedulingForegroundTransitionTests: XCTestCase {
 
     /// Future snooze + authorized notifications: reducer arms the wake task
     /// and posts the silent snooze-wake notification, but never re-runs
-    /// `.scheduleReminders`. Ports the future-snooze branch of the deleted
-    /// `AppCoordinator.handleForegroundTransition` (#755 Phase E).
+    /// `.scheduleReminders` — future-snooze branch of
+    /// `.foregroundTransition` (#755 Phase E).
     func test_foregroundTransition_futureSnooze_authorized_armsWakeAndPostsSilentNotification() async {
         // Snooze branch in `foregroundTransitionEffect` compares `until <=
         // Date()` (system wall-clock), so use `Date.distantFuture` to keep
@@ -156,8 +156,8 @@ final class SchedulingForegroundTransitionTests: XCTestCase {
     // MARK: - Expired snooze on foreground
 
     /// Returning to foreground after a snooze expired must clear state and
-    /// re-run scheduling — ports the expired-snooze branch of the deleted
-    /// `AppCoordinator.handleForegroundTransition` (#755 Phase E).
+    /// re-run scheduling — expired-snooze branch of
+    /// `.foregroundTransition` (#755 Phase E).
     func test_foregroundTransition_expiredSnooze_clearsAndReschedules() async {
         let now = Date(timeIntervalSince1970: 1_700_000_000)
         let setUntilCalls = LockIsolated<[Date?]>([])
