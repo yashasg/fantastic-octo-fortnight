@@ -133,9 +133,8 @@ struct SettingsFeature {
     }
 
     /// Snooze durations exposed to the Settings UI. Analytics codes
-    /// stay stable across releases (and survived the MVVM → TCA
-    /// migration). Localised labels stay in the View layer per the
-    /// Phase 1 "own this file only" constraint.
+    /// stay stable across releases. Localised labels stay in the View
+    /// layer per the Phase 1 "own this file only" constraint.
     enum SnoozeOption: String, CaseIterable, Equatable, Sendable {
         case fiveMinutes
         case oneHour
