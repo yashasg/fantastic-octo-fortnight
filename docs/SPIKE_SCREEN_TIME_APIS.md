@@ -105,7 +105,7 @@ group.com.yashasg.kshana/shield.triggeredAt      — Date
 ## 5. Break → Shield Flow (Target Architecture, Post-Entitlement)
 
 ```
-AppCoordinator                    DeviceActivityMonitorExtension
+SchedulingFeature                 DeviceActivityMonitorExtension
       │                                        │
       │  beginShield(for: session)             │
       │──► write shared UserDefaults           │
