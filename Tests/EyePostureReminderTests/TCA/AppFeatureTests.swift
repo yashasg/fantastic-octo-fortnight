@@ -426,4 +426,59 @@ final class AppFeatureTests: XCTestCase {
         lifecycleContinuation.finish()
         await task.cancel()
     }
+
+    // MARK: - Settings destination handoff (#814)
+
+    /// `.home(.settingsTapped)` is the canonical user-driven action for
+    /// opening the Settings sheet from `HomeView` (gear toolbar button,
+    /// `TrueInterruptSkippedBanner`/`Pill` setup CTAs, "no reminders"
+    /// banner). Pre-#814 `HomeView` owned a local `@State showSettings`
+    /// bridge plus a private `SettingsSheet` wrapper; the parent reducer
+    /// must now write `state.destination = .settingsSheet(...)` itself so
+    /// presentation flows through the canonical `RootView` graph and the
+    /// store lifetime tracks the destination slot.
+    func test_homeSettingsTapped_presentsSettingsSheetDestination() async {
+        let store = makeStore()
+        store.exhaustivity = .off
+
+        await store.send(.home(.settingsTapped)) {
+            $0.destination = .settingsSheet(SettingsFeature.State())
+            $0.home.settingsSheetActive = true
+        }
+    }
+
+    /// `.openSettingsSheetRequested` is the non-`HomeView` entry point used
+    /// by `RootView`'s `@AppStorage(openSettingsOnLaunch)` observer. It
+    /// routes both the `.overlaySettingsRequested` UserDefaults handoff
+    /// (#786) and `OnboardingView.finishOnboardingAndCustomize()` through
+    /// the reducer so the destination write never depends on a SwiftUI
+    /// `@State` bridge inside `HomeView` (#814 acceptance).
+    func test_openSettingsSheetRequested_presentsSettingsSheetDestination() async {
+        let store = makeStore()
+        store.exhaustivity = .off
+
+        await store.send(.openSettingsSheetRequested) {
+            $0.destination = .settingsSheet(SettingsFeature.State())
+            $0.home.settingsSheetActive = true
+        }
+    }
+
+    /// `state.home.settingsSheetActive` mirrors the canonical destination
+    /// presence so `HomeView`'s `.onChangeCompat(of: store.globalEnabled)`
+    /// guard (#287 — VoiceOver master-toggle announcement) can suppress
+    /// while Settings is open without keeping a `@State showSettings`
+    /// bridge. `.destination(.dismiss)` must clear the mirror so the
+    /// announcement re-arms after the sheet tears down.
+    func test_destinationDismiss_clearsHomeSettingsSheetActive() async {
+        var initial = AppFeature.State()
+        initial.destination = .settingsSheet(SettingsFeature.State())
+        initial.home.settingsSheetActive = true
+        let store = makeStore(initialState: initial)
+        store.exhaustivity = .off
+
+        await store.send(.destination(.dismiss)) {
+            $0.destination = nil
+            $0.home.settingsSheetActive = false
+        }
+    }
 }

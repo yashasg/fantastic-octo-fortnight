@@ -23,7 +23,12 @@ struct HomeFeature {
         var postureEnabled: Bool = true
         var notificationAuthStatus: UNAuthorizationStatus = .notDetermined
         var trueInterruptBannerDismissed: Bool = false
-        var openSettingsOnLaunch: Bool = false
+        /// Mirrors `AppFeature.State.destination?.settingsSheet != nil`, kept in
+        /// sync by `AppFeature` whenever it presents/dismisses the canonical
+        /// Settings destination (#814). `HomeView` reads this to suppress the
+        /// VoiceOver master-toggle announcement (#287) while Settings is open,
+        /// replacing the legacy `@State showSettings` guard.
+        var settingsSheetActive: Bool = false
 
         var statusLocalizationKey: String {
             HomeFeature.statusLocalizationKey(
