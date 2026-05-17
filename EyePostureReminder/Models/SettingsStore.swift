@@ -434,11 +434,6 @@ extension SettingsStore {
     /// persisted (first cold launch after install). Per the docstring at the
     /// top of `SchedulingFeature` the eyes-side snapshot is shared by both
     /// reminder types until per-type settings land.
-    ///
-    /// Follow-up (#737): retire this helper once `SettingsClient.liveValue`
-    /// exposes a synchronous initial-value accessor that the AppFeature root
-    /// reducer can read at construction time without bouncing to the main
-    /// actor.
     nonisolated static func eyesSnapshotFromUserDefaults(
         _ defaults: UserDefaults = .standard
     ) -> ReminderSettings {
