@@ -129,13 +129,14 @@ that only `test_settings_reminderControls_exposeTogglesAndPickers` used).
    - `OverlayTests`: drop #2, #4, #5, #7.
    - **Outcome:** 12 fewer XCUI cases (35 → 23); immediate wall-clock saving.
 
-2. **Phase 2 — delete (A) where reducer coverage already exists**:
-   - `HomeScreenTests` #5 — already covered.
-   - `SettingsFlowTests` #3, #4, #9 — already covered.
-   - `OnboardingFlowTests` #2 — already covered.
-   - `OverlayTests` #6 (state portion), #9 (dismiss portion) — already
-     covered.
-   - **Outcome:** 6 more XCUI cases removed.
+2. **Phase 2 — delete (A) where reducer coverage already exists** (✅ landed in #806 phase-2 MR):
+   - `HomeScreenTests` #5 — already covered by `HomeFeatureTests.test_state_statusKey_paused_whenGlobalDisabled`.
+   - `SettingsFlowTests` #3, #4, #9 — already covered by `SettingsFeatureToggleEmissionTests`.
+   - `OnboardingFlowTests` #2 — already covered by `OnboardingFeatureTests.test_nextTapped_*` / `test_finishTapped_*` / `test_skipTapped_*`.
+   - `OverlayTests` #6 — already a thinner (B) UIWindow-release smoke; nothing left to strip after Phase 1.
+   - `OverlayTests` #9 — kept render-only sweep (renamed `test_overlay_postureVariant_renderingAccessibilityIDs`); dismiss assertion dropped (covered by `OverlayFeatureBehaviorTests.test_dismissTapped_callsOverlayClientDismissExactlyOnce`).
+   - Removed now-dead UITestHelpers: `XCUIApplication.waitForOverlayDismissed`, `XCUIApplication.waitForOverlayReady`, `XCUIElement.waitForNotHittable`.
+   - **Outcome:** 5 more XCUI cases removed (23 → 18) plus dead helper cleanup.
 
 3. **Phase 3 — backfill missing reducer coverage, then delete remaining (A)**:
    - `SettingsFlowTests` #7, #8 — add `SettingsClientLiveTests` for the

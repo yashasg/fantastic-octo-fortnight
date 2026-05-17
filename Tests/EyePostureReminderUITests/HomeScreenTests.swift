@@ -80,37 +80,6 @@ final class HomeScreenTests: XCTestCase {
         )
     }
 
-    // MARK: - test_homeScreen_toggleGlobalSwitch_statusLabelChanges
-
-    /// Opens Settings, toggles the global switch OFF, closes Settings,
-    /// and verifies the status label reflects the paused state.
-    func test_homeScreen_toggleGlobalSwitch_statusLabelChanges() throws {
-        let statusLabel = app.staticTexts["home.statusLabel"]
-        XCTAssertTrue(statusLabel.waitForExistence(timeout: 3))
-        let initialText = statusLabel.label
-
-        let settingsButton = app.buttons["home.settingsButton"]
-        XCTAssertTrue(settingsButton.waitForExistence(timeout: 3))
-        settingsButton.tap()
-
-        let globalToggle = app.switches["settings.masterToggle"]
-        XCTAssertTrue(globalToggle.waitForExistence(timeout: 3))
-        globalToggle.tap()
-
-        let doneButton = app.buttons["settings.doneButton"]
-        XCTAssertTrue(doneButton.waitForExistence(timeout: 3))
-        doneButton.tap()
-
-        XCTAssertTrue(statusLabel.waitForExistence(timeout: 3))
-        let updatedText = statusLabel.label
-
-        XCTAssertNotEqual(
-            initialText,
-            updatedText,
-            "Status label should update after toggling the global switch."
-        )
-    }
-
     // MARK: - test_homeScreen_settingsSheet_canBeOpenedAndClosed
 
     /// Opens Settings and closes it multiple times to verify no state corruption.
