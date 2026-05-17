@@ -9,10 +9,10 @@ Versioning strategy: `0.x.x` during TestFlight beta, `1.0.0` at App Store launch
 
 ## Unreleased
 
-> Spans 165 PRs merged on top of `v0.2.0` — the headline is the **TCA migration**
-> (Phases 1 & 2 shipped, Phase 3 TestStore coverage in flight) plus a deep
-> dependency-injection pass (#462 Phase A) and the App Store / TestFlight
-> readiness sweep (#411 → #635).
+> Spans 165+ PRs merged on top of `v0.2.0` — the headline is the **TCA migration**
+> (Phases 1, 2 & 3 all shipped, including the #806 phase-1/2/3 UI-test → TestStore
+> audit landings) plus a deep dependency-injection pass (#462 Phase A) and the
+> App Store / TestFlight readiness sweep (#411 → #635).
 
 ### 🔄 Changed
 
