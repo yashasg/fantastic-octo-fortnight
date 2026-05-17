@@ -12,12 +12,13 @@
 // View boundary contract:
 //   - Driven by a `StoreOf<AppCategoryPickerFeature>` (TCA Phase 1 reducer).
 //   - `onSelectApps` remains an injected closure: the `FamilyActivityPicker`
-//     invocation is parent-owned and not modeled in the Phase-1 reducer
-//     (extending it is deferred to #678 / Phase 2 of the TCA migration).
+//     invocation is parent-owned because `FamilyActivityPicker` requires the
+//     `com.apple.developer.family-controls` entitlement, which is gated on
+//     `#201`. It cannot be modeled inside the reducer until the entitlement
+//     lands.
 //   - Done dismisses via `@Environment(\.dismiss)` after dispatching
 //     `.doneTapped` to the store, so the parent reducer can clear its
-//     destination once `RootView` takes ownership of presentation
-//     (Phase 7 of #702).
+//     `AppFeature.Destination.appCategoryPicker` slot.
 
 import ComposableArchitecture
 import ScreenTimeExtensionShared
@@ -35,8 +36,9 @@ import SwiftUI
 struct AppCategoryPickerView: View {
     @Perception.Bindable var store: StoreOf<AppCategoryPickerFeature>
     /// Called when authorization is approved and the FamilyActivityPicker can be
-    /// presented. Remains a closure because the picker invocation is parent-owned
-    /// and not modeled in the Phase-1 reducer (#678 will fold it into the store).
+    /// presented. Remains a closure because `FamilyActivityPicker` requires the
+    /// FamilyControls entitlement (gated on `#201`) and so cannot be invoked
+    /// inside the reducer's effect graph until that entitlement lands.
     var onSelectApps: () -> Void = {}
 
     @Environment(\.dismiss) private var dismiss
