@@ -76,16 +76,9 @@
 
 ---
 
-### ViewModels — 121 tests
+### ViewModels — decommissioned
 
-| File | Tests | Coverage Focus |
-|---|---|---|
-| `SettingsViewModelTests` | 36 | masterToggle, reminderSettingChanged, snooze(for:), cancelSnooze |
-| `SettingsViewModelPhase2Tests` | 35 | snooze(option:) for all 3 cases, canSnooze limit, isSnoozeActive, snoozeCount persistence, integration survivability |
-| `SettingsViewModelExtendedTests` | 41 | Extended VM paths, edge cases |
-| `SettingsViewModelFormatterTests` | 9 | Interval/duration label formatting |
-
-**Estimated coverage:** ~90%
+> The legacy MVVM `SettingsViewModel` layer (and its four `SettingsViewModel*Tests.swift` suites) was decommissioned during the TCA migration (`#677` / `#755`, PRs `#756`–`#760`). Equivalent Settings coverage now lives in TCA reducer tests under `Tests/EyePostureReminderTests/TCA/Settings*.swift` (`SettingsFeatureTests`, `SettingsFeatureSnoozeTests`, `SettingsFeatureToggleEmissionTests`, `SettingsFeatureBindingTests`). A dedicated `### TCA Reducers` rollup is tracked as a separate restructure.
 
 ---
 
@@ -164,7 +157,7 @@
 | Feature | Tests | Status |
 |---|---|---|
 | **Haptics** (`hapticsEnabled` toggle) | 5 in `SettingsStorePhase2Tests` | ✅ Complete |
-| **Snooze lifecycle** (`snooze(option:)`, limit, expiry, cancel, persistence) | 35 in `SettingsViewModelPhase2Tests` | ✅ Complete |
+| **Snooze lifecycle** (`snooze(option:)`, limit, expiry, cancel, persistence) | 3 in `SettingsFeatureSnoozeTests` + 8 in `SchedulingFeature_SnoozeTests` | ✅ Complete |
 | **Snooze count** persistence + reset | 5 in `SettingsStorePhase2Tests` | ✅ Complete |
 | **Onboarding flag** (`hasSeenOnboarding`) | 12 in `OnboardingTests` | ✅ Complete |
 | **Accessibility** (`AppFont` Dynamic Type, `AppLayout` HIG) | 52 in `DesignSystemTests` | ✅ Complete |
