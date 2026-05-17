@@ -120,7 +120,16 @@ final class ViewBodyCoverageTests: XCTestCase {
     }
 
     // MARK: - ReminderRowView
-
+    //
+    // Rendering tests for `ReminderRowView` are gated on `#if !CI` because the
+    // view embeds `SwiftUI.Picker` and the Swift compiler emits opaque-type
+    // descriptor references to the `_` private `View.tag(_:includeOptional:)`
+    // overload. The Xcode 26.4 simulator SDK marks `SwiftUICore.framework`
+    // as client-restricted, so the test xctest bundle fails to dlopen with
+    // a `symbol not found in flat namespace` error. Local Xcode IDE runs
+    // still exercise these tests (the `CI` flag is only injected from
+    // `scripts/build.sh cmd_test`). Tracked in #807.
+#if !CI
     func test_reminderRowView_eyes_enabled() {
         render(ReminderRowView(
             type: .eyes,
@@ -184,6 +193,7 @@ final class ViewBodyCoverageTests: XCTestCase {
             ))
         }
     }
+#endif
 
     // MARK: - YinYangEyeView
 
@@ -368,6 +378,7 @@ final class ViewBodyCoverageTests: XCTestCase {
         XCTAssertFalse(described.isEmpty)
     }
 
+#if !CI
     func test_reminderRowView_eyes_enabled_bodyEvaluation() {
         let view = ReminderRowView(
             type: .eyes,
@@ -415,6 +426,7 @@ final class ViewBodyCoverageTests: XCTestCase {
         let described = String(describing: view.body)
         XCTAssertFalse(described.isEmpty)
     }
+#endif
 
     func test_overlayView_eyes_bodyEvaluation() {
         let view = OverlayView(
@@ -553,6 +565,7 @@ final class ViewBodyCoverageTests: XCTestCase {
             "ReminderType.posture.rawValue must be 'posture' — used in 'settings.posture.{kind}Picker' (#427)")
     }
 
+#if !CI
     /// Verifies `ReminderRowView` body evaluates with both pickers visible (isEnabled=true) (#427).
     func test_reminderRowView_eyes_enabled_pickersRendered_bodyEvaluates() {
         let view = ReminderRowView(
@@ -585,6 +598,7 @@ final class ViewBodyCoverageTests: XCTestCase {
             "ReminderRowView (posture, enabled) body must evaluate — pickers must render with identifiers (#427)"
         )
     }
+#endif
 
     // MARK: - #428: IconContainer image is self-hiding (decorative)
 
@@ -611,6 +625,7 @@ final class ViewBodyCoverageTests: XCTestCase {
 
     // MARK: - #432: ReminderRowView accepts injected poster for VoiceOver announcements
 
+#if !CI
     /// Verifies `ReminderRowView` compiles and its body evaluates when a mock
     /// `AccessibilityNotificationPosting` is injected — confirming the #432 API contract.
     func test_reminderRowView_acceptsMockPoster_bodyEvaluates_enabled() {
@@ -644,6 +659,7 @@ final class ViewBodyCoverageTests: XCTestCase {
         XCTAssertFalse(described.isEmpty,
             "ReminderRowView with injected poster (disabled) body must evaluate (#432)")
     }
+#endif
 
     /// Verifies the localization strings for picker-visibility announcements exist and are non-empty.
     func test_pickerVisibilityAnnouncementStrings_exist() {

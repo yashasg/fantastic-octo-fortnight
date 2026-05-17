@@ -83,7 +83,7 @@ final class SettingsStoreSeedTests: XCTestCase {
     /// surface it so the TCA `reminderNotificationEffect` reads
     /// `breakDuration: 600` immediately, with no race against the
     /// `SettingsClient.stream` first emission.
-    func test_eyesSnapshot_uiTestOverlayInflation_isHonoured() {
+    func test_eyesSnapshot_uiTestOverlayInflation_isHonoured() throws {
 #if DEBUG
         defaults.set(
             AppDelegate.uiTestOverlayBreakDuration,
