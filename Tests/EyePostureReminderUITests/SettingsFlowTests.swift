@@ -142,69 +142,43 @@ final class SettingsFlowTests: XCTestCase {
         XCTAssertEqual(initialValue, globalToggle.value as? String)
     }
 
-    // MARK: - test_settings_secondaryControls_exist
+    // MARK: - test_settings_accessibilityIDsPresent
 
-    /// Verifies secondary Settings controls that do not need separate launch cycles.
-    func test_settings_secondaryControls_exist() throws {
+    /// Single accessibility-identifier sanity check for the Settings sheet
+    /// (#806 Phase 1). Collapses the previous per-section existence tests
+    /// (`test_settings_secondaryControls_exist` and
+    /// `test_settings_reminderControls_exposeTogglesAndPickers`) into a single
+    /// existence sweep. Behaviour assertions for these controls live in the
+    /// reducer-level `SettingsFeatureToggleEmissionTests` (#427).
+    func test_settings_accessibilityIDsPresent() throws {
         openSettings()
         ensureGlobalToggleEnabled()
 
-        let snooze5min = app.buttons["settings.snooze.5min"]
-        scrollToElement(snooze5min)
-        XCTAssertTrue(snooze5min.waitForExistence(timeout: 3), "Snooze 5 min button must exist in Settings.")
+        // Snooze + Preferences + footer-level controls.
+        let secondaryIDs: [(XCUIElement, String)] = [
+            (app.buttons["settings.snooze.5min"], "Snooze 5 min button"),
+            (app.buttons["settings.snooze.1hour"], "Snooze 1 hour button"),
+            (app.buttons["settings.snooze.restOfDay"], "Snooze Rest of Day button"),
+            (app.switches["settings.hapticFeedback"], "Haptic Feedback toggle"),
+            (app.switches["settings.notificationFallback"], "Notification fallback toggle"),
+            (app.buttons["settings.resetToDefaults"], "Reset to Defaults button"),
+            (app.buttons["settings.feedback.sendFeedback"], "Send Feedback button")
+        ]
+        for (element, label) in secondaryIDs {
+            scrollToElement(element)
+            XCTAssertTrue(
+                element.waitForExistence(timeout: 3),
+                "\(label) must exist in Settings."
+            )
+        }
 
-        let snooze1hour = app.buttons["settings.snooze.1hour"]
-        XCTAssertTrue(snooze1hour.waitForExistence(timeout: 3), "Snooze 1 hour button must exist in Settings.")
-
-        let snoozeRestOfDay = app.buttons["settings.snooze.restOfDay"]
-        scrollToElement(snoozeRestOfDay)
-        XCTAssertTrue(
-            snoozeRestOfDay.waitForExistence(timeout: 3),
-            "Snooze Rest of Day button must exist in Settings."
-        )
-
-        let hapticToggle = app.switches["settings.hapticFeedback"]
-        scrollToElement(hapticToggle)
-        XCTAssertTrue(
-            hapticToggle.waitForExistence(timeout: 3),
-            "Haptic Feedback toggle must exist in Settings."
-        )
-
-        let fallbackToggle = app.switches["settings.notificationFallback"]
-        scrollToElement(fallbackToggle)
-        XCTAssertTrue(
-            fallbackToggle.waitForExistence(timeout: 3),
-            "Notification fallback toggle must exist in the Preferences section."
-        )
-
-        let resetButton = app.buttons["settings.resetToDefaults"]
-        scrollToElement(resetButton)
-        XCTAssertTrue(
-            resetButton.waitForExistence(timeout: 3),
-            "Reset to Defaults button must exist in Settings."
-        )
-
-        let feedbackButton = app.buttons["settings.feedback.sendFeedback"]
-        scrollToElement(feedbackButton)
-        XCTAssertTrue(
-            feedbackButton.waitForExistence(timeout: 3),
-            "Send Feedback button must exist in Settings."
-        )
-    }
-
-    // MARK: - test_settings_reminderControls_exposeTogglesAndPickers
-
-    /// Verifies reminder toggles and their interval/duration pickers are exposed (#427).
-    func test_settings_reminderControls_exposeTogglesAndPickers() throws {
-        openSettings()
-
+        // Reminder toggles + their nested interval/duration pickers (#427).
         let eyesToggle = app.switches["settings.eyes.toggle"]
+        scrollToElement(eyesToggle)
         XCTAssertTrue(
             eyesToggle.waitForExistence(timeout: 3),
             "Eye break toggle must exist in Settings."
         )
-
-        // Ensure toggle is ON so pickers are visible.
         if eyesToggle.value as? String == "0" {
             eyesToggle.tap()
         }
@@ -224,11 +198,11 @@ final class SettingsFlowTests: XCTestCase {
         )
 
         let postureToggle = app.switches["settings.posture.toggle"]
+        scrollToElement(postureToggle)
         XCTAssertTrue(
             postureToggle.waitForExistence(timeout: 3),
             "Posture check toggle must exist in Settings."
         )
-
         if postureToggle.value as? String == "0" {
             postureToggle.tap()
         }
