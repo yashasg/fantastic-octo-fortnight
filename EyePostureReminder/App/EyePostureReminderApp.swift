@@ -6,12 +6,10 @@ struct EyePostureReminderApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @Environment(\.scenePhase) private var scenePhase
 
-    /// Single TCA `Store` driving the app. `#755` Phase D removed the
-    /// legacy `@StateObject AppCoordinator` + `.environmentObject(...)`
-    /// injections that previously sat alongside the store: every SwiftUI
+    /// Single TCA `Store` driving the app (`#755` Phase D). Every SwiftUI
     /// view in the tree (`HomeView`, `SettingsView`, `OnboardingView`,
-    /// `OnboardingSetupView`, `RootView`) now reads from the
-    /// store scope or `@AppStorage` directly.
+    /// `OnboardingSetupView`, `RootView`) reads from a store scope or
+    /// `@AppStorage` directly.
     private let store: StoreOf<AppFeature>
 
     init() {
@@ -145,9 +143,8 @@ struct EyePostureReminderApp: App {
     /// Routes through `store.send(.notificationRouted(.reminder(type)))` —
     /// the same path UNUserNotificationCenter delivery takes via
     /// `AppDelegate.dispatchNotificationRoute` — so the backdoor exercises
-    /// production reducer code instead of the legacy
-    /// `AppCoordinator.handleNotification` shim that was deleted in `#755`
-    /// Phase E. The synchronous `state.scheduling.settings` seed in
+    /// the production reducer code added in `#755` Phase E rather than any
+    /// out-of-band shim. The synchronous `state.scheduling.settings` seed in
     /// `init()` plus the `--show-overlay-*` UserDefaults inflation guarantees
     /// the reducer reads the inflated `breakDuration` immediately, without
     /// racing the `SettingsClient.stream` first emission (#737).
