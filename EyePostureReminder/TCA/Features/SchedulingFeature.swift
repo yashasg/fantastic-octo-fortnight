@@ -4,16 +4,11 @@ import ScreenTimeExtensionShared
 import UserNotifications
 
 /// TCA reducer (`p0-tca-10` / #673) owning the long-running scheduling
-/// orchestration that the legacy `AppCoordinator` previously held.
-///
-/// Built as a behavioural mirror of the (now-deleted) hot paths from
-/// `EyePostureReminder/Services/AppCoordinator.swift` — the streams
-/// installed at init plus `scheduleReminders`, `reschedule(for:)`,
-/// `handleNotification(for:)`, `handleForegroundTransition`, and
-/// `appWillResignActive` — using the dependency clients defined by
-/// `p0-tca-2`. The legacy `AppCoordinator*.swift` files were removed
-/// in `#755` Phase E (commit b9a1c96, PR #760); this reducer is now
-/// the canonical runtime for the surface it ports.
+/// orchestration: streams installed at init plus `scheduleReminders`,
+/// `reschedule(for:)`, `handleNotification(for:)`,
+/// `handleForegroundTransition`, and `appWillResignActive`. It is the
+/// canonical runtime for that surface (`#755` Phase E) and consumes the
+/// dependency clients defined by `p0-tca-2`.
 ///
 /// Behavioural fidelity caveats (intentional deferrals, tracked under
 /// `p0-tca-15`):
@@ -35,9 +30,9 @@ struct SchedulingFeature {
     typealias NotificationRoute = AppDelegate.NotificationRoute
 
     /// Identifier for the silent one-time wake notification scheduled when
-    /// a snooze begins. Stable across the legacy `AppCoordinator` → TCA
-    /// migration so a snooze-wake notification scheduled under the old
-    /// runtime is still cancellable here.
+    /// a snooze begins. The value is stable across releases so a snooze-wake
+    /// notification scheduled by an earlier app version is still cancellable
+    /// here.
     static let snoozeWakeCategory = "com.yashasgujjar.kshana.snooze-wake"
 
     @ObservableState
@@ -193,8 +188,9 @@ extension SchedulingFeature {
             let status = await notificationClient.authorizationStatus()
             await send(.internalAction(.authStatusRefreshed(status)))
 
-            // Snooze guard — ported from the deleted `AppCoordinator.scheduleReminders`
-            // (#755 Phase E).
+            // Snooze guard (`#755` Phase E): if a snooze is still active,
+            // pause trackers, drop scheduled reminders, and ensure the
+            // wake notification is armed for the snooze-expiry time.
             if let until = snapshot.snoozedUntil {
                 if until > Date() {
                     await trackerClient.pauseAll()
@@ -219,8 +215,8 @@ extension SchedulingFeature {
                 await schedulerClient.cancelAllReminders()
             }
 
-            // Skip foreground tracker reconfig in UI-test mode for parity with
-            // the deleted `AppCoordinator.scheduleReminders` (#755 Phase E).
+            // Skip foreground tracker reconfig in UI-test mode so the
+            // deterministic test environment isn't perturbed (`#755` Phase E).
             guard !snapshot.isUITestMode else { return }
 
             await Self.configureTracker(
@@ -243,8 +239,8 @@ extension SchedulingFeature {
             try? await clock.sleep(for: .milliseconds(300))
             if Task.isCancelled { return }
 
-            // Snooze guard — ported from the deleted `AppCoordinator.performReschedule`
-            // (#755 Phase E).
+            // Snooze guard (`#755` Phase E): skip the reschedule if a
+            // snooze is still active.
             if let until = snoozedUntil, until > Date() { return }
 
             let status = await notificationClient.authorizationStatus()
@@ -289,8 +285,8 @@ extension SchedulingFeature {
         type: ReminderType,
         state: inout State
     ) -> Effect<Action> {
-        // Snooze guard — ported from the deleted `AppCoordinator.handleNotification`
-        // (#755 Phase E).
+        // Snooze guard (`#755` Phase E): swallow the notification if a
+        // snooze is still active.
         if let until = state.snoozedUntil, until > now() { return .none }
         let duration = state.settings.breakDuration
         let interval = state.settings.interval
@@ -332,9 +328,9 @@ extension SchedulingFeature {
         let schedulerClient = self.schedulerClient
         let settingsClient = self.settingsClient
 
-        // Defensive guard mirroring the 300 ms disable-debounce window from
-        // the deleted `AppCoordinator` init (#755 Phase E) — interval is the
-        // only signal the SettingsClient surfaces for the per-type enable check.
+        // Defensive guard mirroring the 300 ms disable-debounce window
+        // (`#755` Phase E) — interval is the only signal `SettingsClient`
+        // surfaces for the per-type enable check.
         guard interval > 0 else { return .none }
 
         return .run { _ in
@@ -363,8 +359,7 @@ extension SchedulingFeature {
                 await overlayClient.dismiss()
                 return
             }
-            // Resume only if no active snooze (ported from the deleted
-            // `AppCoordinator.pauseConditionChanged`, #755 Phase E).
+            // Resume only if no active snooze is in effect (`#755` Phase E).
             guard (snoozedUntil ?? .distantPast) <= currentNow else { return }
             await trackerClient.resumeAll()
         }
@@ -382,8 +377,9 @@ extension SchedulingFeature {
             let status = await notificationClient.authorizationStatus()
             await send(.internalAction(.authStatusRefreshed(status)))
 
-            // Ported from the deleted `AppCoordinator.handleForegroundTransition`
-            // (#755 Phase E).
+            // Foreground snooze reconciliation (`#755` Phase E): clear
+            // expired snoozes and reschedule, or re-arm the wake
+            // notification for a still-active snooze.
             if let until = snoozedUntil {
                 if until <= Date() {
                     await settingsClient.setSnoozedUntil(nil)
@@ -552,9 +548,8 @@ extension SchedulingFeature {
     }
 
     /// Returns a sendable closure that schedules the silent one-time wake
-    /// notification for the supplied date — ports the behaviour of the
-    /// deleted `AppCoordinator.scheduleSnoozeWakeNotification(at:)` (#755
-    /// Phase E) so a killed app is woken when the snooze period expires.
+    /// notification for the supplied date (`#755` Phase E) so a killed app
+    /// is woken when the snooze period expires.
     func makeScheduleSnoozeNotification() -> @Sendable (Date) async -> Void {
         let notificationClient = self.notificationClient
         return { date in
