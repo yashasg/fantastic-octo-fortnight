@@ -102,7 +102,7 @@ final class MockNotificationScheduler: NotificationScheduling {
 }
 ```
 
-**Tests that use this mock:** `ReminderSchedulerTests`, `SettingsViewModelTests`
+**Tests that use this mock:** `ReminderSchedulerTests`, `OnboardingFeatureTests`
 
 ---
 
@@ -681,7 +681,7 @@ Re-run the **full manual test checklist** whenever any of these files change:
 | `ReminderScheduler.swift` | NS-01 through NS-15, LC-01, LC-02 |
 | `OverlayManager.swift` | OV-01 through OV-13, EC-01–EC-03 |
 | `SettingsStore.swift` | SP-01 through SP-13, PF-01 through PF-04 |
-| `SettingsViewModel.swift` | SP-06–SP-09, PF-01–PF-04 |
+| `SettingsFeature.swift` | SP-06–SP-09, PF-01–PF-04 |
 | `OverlayView.swift` | VoiceOver checklist §6.1, Reduce Motion §6.3 |
 | `AppDelegate.swift` | LC-03–LC-05, PF-05–PF-07 |
 
