@@ -59,7 +59,7 @@ checks; remaining 12 (B) cases are the slow, irreducible ones).
 | 6 | `test_homeScreen_onLaunch_titleShowsKshana` | (C) | Drop — brand-name literal asserted from a `LocalizedStringKey`; covered by snapshot/localisation tests if any drift matters. |
 | 7 | `test_homeScreen_onLaunch_statusLabelIsNotEmpty` | (C) | Drop — duplicates #5. |
 | 8 | `test_homeScreen_settingsSheet_canBeOpenedAndClosed` | (B) | Keep. SwiftUI `.sheet(isPresented:)` round-trip is a genuine binding-lifecycle test that `TestStore` cannot exercise. Slim to one open/close cycle. |
-| 9 | `test_homeScreen_trueInterruptBanner_exists` | (B) | Keep. Exercises `--simulate-screen-time-not-determined` + `ScreenTimeAuthorizationStub` injection — system-integration surface. |
+| 9 | `test_homeScreen_trueInterruptBanner_exists` | (B) | Keep. Exercises `--simulate-screen-time-not-determined` seeding `AppStorageKey.uiTestScreenTimeStatus` (read by `HomeView` while the live provider remains `ScreenTimeAuthorizationNoop`) — system-integration surface. |
 | 10 | `test_homeScreen_trueInterruptSetupPill_exists` | (B) | Keep. Banner-dismissed `@AppStorage` pre-seed exercised end-to-end. |
 
 **Net for file:** 10 tests → 3 XCUI tests (#1 collapsed, #8, #9, #10) +

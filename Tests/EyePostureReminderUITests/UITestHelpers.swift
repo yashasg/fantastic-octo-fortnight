@@ -21,10 +21,14 @@ enum TestLaunchArguments {
     /// Triggers the posture check overlay immediately on launch; used by OverlayTests
     /// to display the overlay without waiting for the timer.
     static let showOverlayPosture = "--show-overlay-posture"
-    /// Seeds `ScreenTimeAuthorizationStub(.notDetermined)` so the
-    /// TrueInterruptSkippedBanner and TrueInterruptSetupPill can render in UITests.
-    /// The simulator's real FamilyControls status is `.unavailable`; without this arg
-    /// neither element would ever appear (#399).
+    /// Seeds `AppStorageKey.uiTestScreenTimeStatus = .notDetermined` (via
+    /// `AppDelegate.preSeedUITestDefaults()` / `applyUITestLaunchArguments()`)
+    /// so the TrueInterruptSkippedBanner and TrueInterruptSetupPill can render
+    /// in UITests. `HomeView` reads the AppStorage key directly when computing
+    /// True-Interrupt visibility; the live `ScreenTimeAuthorizationProviding`
+    /// remains `ScreenTimeAuthorizationNoop`. The simulator's real
+    /// FamilyControls status is `.unavailable`; without this arg neither
+    /// element would ever appear (#399).
     static let simulateScreenTimeNotDetermined = "--simulate-screen-time-not-determined"
     /// Pre-seeds the True Interrupt skipped-banner dismissed flag so UITests can
     /// assert the setup pill directly without depending on an earlier banner tap.
