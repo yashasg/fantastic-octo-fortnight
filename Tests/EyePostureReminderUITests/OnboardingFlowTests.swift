@@ -19,11 +19,15 @@ final class OnboardingFlowTests: XCTestCase {
         app = nil
     }
 
-    // MARK: - test_onboarding_welcomeScreen_disclaimerIsVisible
+    // MARK: - test_onboarding_welcome_accessibilityIDsPresent
 
-    /// Verifies the medical disclaimer text is present on the first onboarding screen.
-    /// The disclaimer must always be visible without scrolling on the Welcome page.
-    func test_onboarding_welcomeScreen_disclaimerIsVisible() throws {
+    /// Single accessibility-identifier sanity check for the Welcome onboarding
+    /// screen (#806 Phase 1). Collapses the previous per-screen identifier
+    /// existence sweeps (`test_onboarding_permissionScreen_controlsExist`,
+    /// `test_onboarding_setupScreen_controlsExist`) into the one screen we
+    /// haven't covered with a reducer test. The medical disclaimer must be
+    /// visible without scrolling and the Next CTA must be present and hittable.
+    func test_onboarding_welcome_accessibilityIDsPresent() throws {
         let disclaimerElement = app.staticTexts["onboarding.welcome.disclaimer"]
         XCTAssertTrue(
             disclaimerElement.waitForExistence(timeout: 3),
@@ -31,6 +35,14 @@ final class OnboardingFlowTests: XCTestCase {
             "Add .accessibilityIdentifier(\"onboarding.welcome.disclaimer\") " +
             "to the disclaimer Text in OnboardingWelcomeView."
         )
+
+        let nextButton = app.buttons["onboarding.welcome.nextButton"]
+        XCTAssertTrue(
+            nextButton.waitForExistence(timeout: 3),
+            "Next CTA must exist on the Welcome screen. " +
+            "Add .accessibilityIdentifier(\"onboarding.welcome.nextButton\") in OnboardingWelcomeView."
+        )
+        XCTAssertTrue(nextButton.isHittable, "Welcome Next CTA must be tappable.")
     }
 
     // MARK: - test_onboarding_fullFlow_completesSuccessfully
@@ -79,62 +91,6 @@ final class OnboardingFlowTests: XCTestCase {
         XCTAssertTrue(
             homeNav.waitForExistence(timeout: 3),
             "Navigation bar should appear on the Home screen after completing onboarding."
-        )
-    }
-
-    // MARK: - test_onboarding_permissionScreen_controlsExist
-
-    /// Verifies the permission screen exposes both continue and notification CTAs.
-    func test_onboarding_permissionScreen_controlsExist() throws {
-        navigateToPermission()
-
-        let continueButton = app.buttons["onboarding.permission.nextButton"]
-        XCTAssertTrue(
-            continueButton.waitForExistence(timeout: 3),
-            "After tapping Next on the Welcome screen, the Permission screen's continue button should appear."
-        )
-
-        let enableButton = app.buttons["onboarding.enableNotifications"]
-        XCTAssertTrue(
-            enableButton.waitForExistence(timeout: 3),
-            "Allow Reminder Alerts button must exist on the Permission screen. " +
-            "Add .accessibilityIdentifier(\"onboarding.enableNotifications\") in OnboardingPermissionView."
-        )
-        XCTAssertTrue(enableButton.isHittable, "Allow Reminder Alerts button must be tappable.")
-    }
-
-    // MARK: - test_onboarding_setupScreen_controlsExist
-
-    /// Verifies the setup screen exposes its primary CTA, picker identifiers, and reassurance copy.
-    func test_onboarding_setupScreen_controlsExist() throws {
-        navigateToSetup()
-
-        let getStartedButton = app.buttons["onboarding.setup.getStartedButton"]
-        XCTAssertTrue(getStartedButton.waitForExistence(timeout: 3))
-
-        let eyeIntervalPicker = onboardingElement(identifier: "onboarding.eyes.intervalPicker")
-        XCTAssertTrue(
-            eyeIntervalPicker.waitForExistence(timeout: 3),
-            "Setup screen should expose the eye-break interval picker."
-        )
-
-        let postureIntervalPicker = onboardingElement(identifier: "onboarding.posture.intervalPicker")
-        XCTAssertTrue(
-            postureIntervalPicker.waitForExistence(timeout: 3),
-            "Setup screen should expose the posture-check interval picker."
-        )
-
-        let durationPicker = onboardingElement(identifier: "onboarding.eyes.durationPicker")
-        XCTAssertTrue(
-            durationPicker.waitForExistence(timeout: 3),
-            "Eye break duration picker must exist on the Setup screen with identifier 'onboarding.eyes.durationPicker'."
-        )
-
-        let reassuranceText = app.staticTexts["onboarding.setup.changeInSettings"]
-        XCTAssertTrue(
-            reassuranceText.waitForExistence(timeout: 3),
-            "Setup screen must show reassurance copy with identifier 'onboarding.setup.changeInSettings'. " +
-            "Expected Text(\"onboarding.setup.changeInSettings\") with .accessibilityIdentifier in OnboardingSetupView."
         )
     }
 
@@ -212,18 +168,5 @@ private extension OnboardingFlowTests {
         let getStartedButton = app.buttons["onboarding.setup.getStartedButton"]
         XCTAssertTrue(getStartedButton.waitForExistence(timeout: 3))
         getStartedButton.tap()
-    }
-
-    func onboardingElement(identifier: String) -> XCUIElement {
-        let picker = app.pickers[identifier]
-        if picker.exists { return picker }
-
-        let button = app.buttons[identifier]
-        if button.exists { return button }
-
-        let staticText = app.staticTexts[identifier]
-        if staticText.exists { return staticText }
-
-        return app.otherElements[identifier]
     }
 }

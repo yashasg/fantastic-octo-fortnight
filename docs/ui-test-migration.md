@@ -122,12 +122,12 @@ that only `test_settings_reminderControls_exposeTogglesAndPickers` used).
 
 ## Migration plan after this audit lands
 
-1. **Phase 1 — delete (C)** (no reducer work needed):
-   - `HomeScreenTests`: drop #2, #3, #4, #6, #7; collapse #1.
-   - `SettingsFlowTests`: collapse #5+#6 into one sanity test.
-   - `OnboardingFlowTests`: drop #3, #4; collapse #1.
+1. **Phase 1 — delete (C)** (no reducer work needed, ✅ landed in #806 phase-1 MR):
+   - `HomeScreenTests`: drop #2, #3, #4, #6, #7; collapse #1 into `test_homeScreen_onLaunch_accessibilityIDsPresent`.
+   - `SettingsFlowTests`: collapse #5+#6 into one `test_settings_accessibilityIDsPresent` sanity test.
+   - `OnboardingFlowTests`: drop #3, #4; collapse #1 into `test_onboarding_welcome_accessibilityIDsPresent`.
    - `OverlayTests`: drop #2, #4, #5, #7.
-   - **Outcome:** 11 fewer XCUI cases; immediate wall-clock saving.
+   - **Outcome:** 12 fewer XCUI cases (35 → 23); immediate wall-clock saving.
 
 2. **Phase 2 — delete (A) where reducer coverage already exists**:
    - `HomeScreenTests` #5 — already covered.
