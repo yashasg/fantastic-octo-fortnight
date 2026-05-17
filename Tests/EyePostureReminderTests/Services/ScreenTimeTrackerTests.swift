@@ -3,8 +3,6 @@ import XCTest
 
 @testable import EyePostureReminder
 
-// swiftlint:disable type_body_length
-
 /// Unit tests for `ScreenTimeTracker`.
 ///
 /// Tests are split into two groups:
@@ -434,23 +432,33 @@ final class ScreenTimeTrackerTests: XCTestCase {
 
     // MARK: - Pause prevents threshold from firing
 
-    /// A paused type must never trigger the callback even after the tick timer runs.
-    func test_pausedType_doesNotFireCallback() async throws {
+    /// A paused type must never trigger the callback even after multiple ticks
+    /// well past its threshold.
+    ///
+    /// Driven deterministically via `sut.tick(now:)` — no wall-clock wait — to
+    /// eliminate the simulator-watchdog termination flake observed under
+    /// full-suite Release-config load (#812). The previous implementation
+    /// posted `didBecomeActiveNotification` and awaited a 3.5 s inverted
+    /// expectation; under accumulated suite-wide wall-clock pressure the
+    /// simulator could SIGTERM xctest before this test completed. The manual-
+    /// tick form follows the existing pattern (see
+    /// `test_reset_zeroesElapsed_delaysNextCallback`).
+    func test_pausedType_doesNotFireCallback() {
         var callbackFired = false
-        let noCallback = expectation(description: "paused type must not fire callback")
-        noCallback.isInverted = true
         sut.setThreshold(2, for: .eyes)
         sut.pause(for: .eyes)
         sut.onThresholdReached = { _ in
             callbackFired = true
-            noCallback.fulfill()
         }
 
-        NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
+        // Drive several ticks spanning well past the 2 s threshold.
+        // Paused types must not accumulate, so the callback must never fire
+        // regardless of how many ticks elapse.
+        sut.tick(now: 1.0)
+        sut.tick(now: 2.5)
+        sut.tick(now: 5.0)
 
-        await fulfillment(of: [noCallback], timeout: 3.5)
         XCTAssertFalse(callbackFired, "Paused type must not fire the threshold callback")
-        sut.stop()
     }
 
     // MARK: - setThreshold guard: only calls resumeAll on actual change
@@ -662,8 +670,6 @@ extension ScreenTimeTrackerTests {
     }
 
 }
-
-// swiftlint:enable type_body_length
 
 extension ScreenTimeTrackerTests {
 
