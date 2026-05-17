@@ -7,18 +7,18 @@ import XCTest
 /// Watchdog-recovery TestStore coverage for `SchedulingFeature` —
 /// Phase 3 issue `p0-tca-17` (#680).
 ///
-/// The legacy `AppCoordinator.runWatchdogRecoveryIfNeeded(at:)` (deleted in
-/// `#755` Phase E, PR #760) read the App Group IPC log, detected a stale
-/// heartbeat, then cancelled every reminder and restarted the schedule. The
-/// TCA `SchedulingFeature` reducer (this file's PR is the Phase-3 test
-/// rewrite, not the Phase-2 wiring) does not yet expose a watchdog-recovery
-/// action because the dependency-client surface required for it (an
-/// `IPCClient.recentEvents`-style accessor + a heartbeat clock adapter) has
-/// not been added — see the deferral note in the `SchedulingFeature.swift`
-/// preamble (watchdog recovery, fallback-routing IPC reads, session-timing
-/// analytics, launch-readiness analytics, DeviceActivity scheduling on
-/// overlay present, and `OverlayClient.lifecycleEvents`-driven bookkeeping
-/// are tracked under `p0-tca-15` follow-ups).
+/// Watchdog recovery historically read the App Group IPC log, detected a
+/// stale heartbeat, then cancelled every reminder and restarted the
+/// schedule. The TCA `SchedulingFeature` reducer (this file's PR is the
+/// Phase-3 test rewrite, not the Phase-2 wiring) does not yet expose a
+/// watchdog-recovery action because the dependency-client surface required
+/// for it (an `IPCClient.recentEvents`-style accessor + a heartbeat clock
+/// adapter) has not been added — see the deferral note in the
+/// `SchedulingFeature.swift` preamble (watchdog recovery, fallback-routing
+/// IPC reads, session-timing analytics, launch-readiness analytics,
+/// DeviceActivity scheduling on overlay present, and
+/// `OverlayClient.lifecycleEvents`-driven bookkeeping are tracked under
+/// `p0-tca-15` follow-ups — history: `#755` Phase E, PR #760).
 ///
 /// The pause-condition + IPC stream effects defined in `startEffect()` are
 /// the closest in-scope analogues to "external trigger reschedules" so the
