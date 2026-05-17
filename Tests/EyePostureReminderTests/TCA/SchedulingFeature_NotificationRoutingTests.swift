@@ -7,9 +7,8 @@ import XCTest
 
 /// `TestStore` parity coverage for `SchedulingFeature`'s notification
 /// routing + threshold-reached paths — Phase 3 issue `p0-tca-17` (#680).
-/// Ports the notification-fallback / `handleNotification` /
-/// `thresholdReached` branches that previously lived against the legacy
-/// `AppCoordinator` (deleted in `#755` Phase E, PR #760).
+/// Covers the `.notificationRouted` and `.thresholdReached` branches of
+/// the reducer (history: ported in `#755` Phase E, PR #760).
 @MainActor
 final class SchedulingNotificationRoutingTests: XCTestCase {
 
@@ -19,8 +18,7 @@ final class SchedulingNotificationRoutingTests: XCTestCase {
     /// pipeline: clears the snooze counter, records an IPC fallback event,
     /// emits `.reminderTriggered(.notificationFallback)`, presents the
     /// overlay, and resets the in-app tracker so it doesn't double-fire.
-    /// Ports the eyes branch of the deleted
-    /// `AppCoordinator.handleNotification` (#755 Phase E).
+    /// Eyes branch of `.notificationRouted` (#755 Phase E).
     func test_notificationRouted_reminderEyes_runsFallbackPipeline() async {
         let setSnoozeCounts = LockIsolated<[Int]>([])
         let recordedEvents = LockIsolated<[AppGroupIPCEvent]>([])
@@ -97,8 +95,8 @@ final class SchedulingNotificationRoutingTests: XCTestCase {
     // MARK: - .notificationRouted while snoozed
 
     /// While a snooze is active, an arriving reminder notification must be
-    /// ignored — ports the snooze-guard branch of the deleted
-    /// `AppCoordinator.handleNotification` (#755 Phase E).
+    /// ignored — snooze-guard branch of `.notificationRouted`
+    /// (#755 Phase E).
     func test_notificationRouted_reminderDuringActiveSnooze_isNoOp() async {
         let now = Date(timeIntervalSince1970: 1_700_000_000)
         let recordedEvents = LockIsolated<[AppGroupIPCEvent]>([])
@@ -143,9 +141,8 @@ final class SchedulingNotificationRoutingTests: XCTestCase {
 
     // MARK: - .notificationRouted(.snoozeWake)
 
-    /// `.snoozeWake` clears the snooze state and re-runs scheduling — ports
-    /// the snooze-wake branch of the deleted
-    /// `AppCoordinator.handleNotification` (#755 Phase E).
+    /// `.snoozeWake` clears the snooze state and re-runs scheduling —
+    /// snooze-wake branch of `.notificationRouted` (#755 Phase E).
     func test_notificationRouted_snoozeWake_clearsAndReschedules() async {
         var initial = SchedulingFeature.State()
         initial.snoozedUntil = Date(timeIntervalSince1970: 1_700_000_000)
@@ -184,8 +181,8 @@ final class SchedulingNotificationRoutingTests: XCTestCase {
 
     /// When `state.settings.interval == 0` the type is treated as disabled
     /// (Phase-1 SettingsClient single-value caveat) and `.thresholdReached`
-    /// must short-circuit, porting the 300 ms disable-debounce guard from
-    /// the deleted `AppCoordinator.handleNotification` path (#755 Phase E).
+    /// must short-circuit via the 300 ms disable-debounce guard
+    /// (#755 Phase E).
     func test_thresholdReached_intervalZero_isNoOp() async {
         let shownOverlays = LockIsolated<[ReminderType]>([])
         let loggedEvents = LockIsolated<[String]>([])
@@ -280,10 +277,9 @@ final class SchedulingNotificationRoutingTests: XCTestCase {
     // MARK: - .thresholdReached — enabled, unauthorized
 
     /// When notifications are denied the foreground threshold path still
-    /// presents the overlay (ports the threshold-callback branch of the
-    /// deleted `AppCoordinator`, #755 Phase E) but the reducer must not call
-    /// `scheduler.rescheduleReminder` because there is no notification queue
-    /// to reschedule into.
+    /// presents the overlay (threshold-callback branch, #755 Phase E) but
+    /// the reducer must not call `scheduler.rescheduleReminder` because
+    /// there is no notification queue to reschedule into.
     func test_thresholdReached_enabledUnauthorized_showsOverlayButSkipsReschedule() async {
         let shownOverlays = LockIsolated<[ReminderType]>([])
         let rescheduledTypes = LockIsolated<[ReminderType]>([])
@@ -325,8 +321,8 @@ final class SchedulingNotificationRoutingTests: XCTestCase {
     // MARK: - .overlayDismissed
 
     /// `.overlayDismissed` cancels every active DeviceActivity monitoring
-    /// window so a dismissed break stops accruing shield time — ports the
-    /// deleted `AppCoordinator.dismissOverlay` (#755 Phase E).
+    /// window so a dismissed break stops accruing shield time
+    /// (#755 Phase E).
     func test_overlayDismissed_cancelsAllDeviceActivitySessions() async {
         let cancelArgs = LockIsolated<[UUID?]>([])
 
