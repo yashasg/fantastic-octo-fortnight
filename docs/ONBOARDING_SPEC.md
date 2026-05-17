@@ -26,22 +26,30 @@ The user should leave onboarding feeling calm, informed, and ready — not overw
 ### First-Launch Detection
 
 ```swift
-// UserDefaults key — checked in EyePostureApp.swift or SceneDelegate
-let hasSeenOnboarding = UserDefaults.standard.bool(forKey: "hasSeenOnboarding")
+// UserDefaults key — read in EyePostureReminderApp.init() (no SceneDelegate)
+let hasSeenOnboarding = UserDefaults.standard.bool(forKey: AppStorageKey.hasSeenOnboarding)
 
 // On onboarding completion ("Get Started" or "Customize" tap):
-UserDefaults.standard.set(true, forKey: "hasSeenOnboarding")
+UserDefaults.standard.set(true, forKey: AppStorageKey.hasSeenOnboarding)
 ```
 
 **Logic in app entry point:**
 
 ```swift
-if UserDefaults.standard.bool(forKey: "hasSeenOnboarding") {
-    // Show SettingsView directly
-} else {
-    // Show OnboardingView
+// EyePostureReminder/App/EyePostureReminderApp.swift
+init() {
+    // SwiftUI App lifecycle — bridged to `AppDelegate` via
+    // `@UIApplicationDelegateAdaptor(AppDelegate.self)` (no SceneDelegate).
+    // The TCA root state pre-seeds `hasSeenOnboarding` directly here because
+    // `@UIApplicationDelegateAdaptor` instantiates `AppDelegate` *after*
+    // the App struct's `init()` body runs.
+    initialState.hasSeenOnboarding = UserDefaults.standard.bool(
+        forKey: AppStorageKey.hasSeenOnboarding
+    )
 }
 ```
+
+UI-test launch arguments (`--skip-onboarding`, `--reset-onboarding`) are re-applied by `AppDelegate.applyUITestLaunchArguments()` after `didFinishLaunchingWithOptions`.
 
 Onboarding is shown exactly once. If the user force-quits mid-onboarding, they see it again on next launch (flag only set on explicit completion).
 
