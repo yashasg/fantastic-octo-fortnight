@@ -768,10 +768,12 @@ private struct SettingsTrueInterruptSection: View {
 
 // MARK: - AppCategoryPicker Sheet Wrapper
 
-/// Owns a local `Store` for `AppCategoryPickerView` while the picker is still
-/// presented from MVVM-era parents (`SettingsView`, `OnboardingView`). When
-/// Phase D of #755 wires `RootView` as the destination owner, both call sites
-/// can drop this wrapper and present via `$store.scope`.
+/// Owns a local `Store` for `AppCategoryPickerView` because the picker is
+/// presented from `SettingsView` rather than from `RootView`'s destination
+/// stack — the parent view only needs `onSelectApps`, so wiring the picker
+/// store at the root would force an otherwise-unused destination case
+/// onto `AppFeature`. The wrapper keeps the picker self-contained while
+/// `SettingsView` remains the presenting surface.
 private struct AppCategoryPickerSheet: View {
     let onSelectApps: () -> Void
 
