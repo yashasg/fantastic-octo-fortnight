@@ -11,9 +11,12 @@ import XCTest
 /// force SwiftUI body evaluation and register line coverage. Different state
 /// permutations exercise conditional branches inside view bodies.
 ///
-/// NOTE: Views that use `@EnvironmentObject` + `@AppStorage` crash in the SPM
-/// test-host process (`bundleProxyForCurrentProcess is nil`) so those are tested
-/// via `_ = view.body` or callback-contract tests instead.
+/// NOTE: Views that use `@AppStorage` crash in the SPM test-host process
+/// (`bundleProxyForCurrentProcess is nil`) because `UserDefaults(suiteName:)`
+/// cannot resolve the host bundle — those are tested via `_ = view.body` or
+/// callback-contract tests instead. (No first-party view uses
+/// `@EnvironmentObject` anymore; the legacy `AppCoordinator` /
+/// `SettingsStore` environment graph was removed in #677 / #755.)
 @MainActor
 final class ViewBodyCoverageTests: XCTestCase {
 
@@ -108,9 +111,11 @@ final class ViewBodyCoverageTests: XCTestCase {
     }
 
     // MARK: - OnboardingSetupView
-    // NOTE: OnboardingSetupView uses @EnvironmentObject (SettingsStore), which crashes
-    // in the SPM test-host process. Body rendering is skipped per project convention;
-    // only callback-contract and token tests are run here.
+    // NOTE: OnboardingSetupView binds pickers to `@AppStorage(SettingsStore.Keys.*)`,
+    // which crashes in the SPM test-host process (`bundleProxyForCurrentProcess`
+    // is `nil`). Body rendering is skipped per project convention; only
+    // callback-contract and token tests are run here. (Migrated off
+    // `@EnvironmentObject SettingsStore` in #755 Phase C.)
 
     func test_onboardingSetupView_getStartedCallback() {
         var started = false
