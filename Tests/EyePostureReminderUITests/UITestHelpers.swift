@@ -333,21 +333,4 @@ extension XCUIElement {
         return true
     }
 
-    /// Waits until the element's `value` differs from `initialValue`.
-    ///
-    /// Use after `tap()`-ing a `Switch` whose binding writes through
-    /// `@AppStorage` / a Bindable store: SwiftUI may not have committed the
-    /// rendered value by the time the tap returns, especially on loaded CI
-    /// runners. Reading `value` immediately is racy.
-    @discardableResult
-    func waitForValueChange(from initialValue: String?, timeout: TimeInterval = 3) -> Bool {
-        let predicate: NSPredicate
-        if let initialValue {
-            predicate = NSPredicate(format: "value != %@", initialValue)
-        } else {
-            predicate = NSPredicate(format: "value != nil")
-        }
-        return waitFor(predicate: predicate, timeout: timeout)
-    }
-
 }

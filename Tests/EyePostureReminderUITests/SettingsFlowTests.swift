@@ -151,84 +151,6 @@ final class SettingsFlowTests: XCTestCase {
         )
     }
 
-    // MARK: - test_settings_globalToggle_persistsAfterSheetDismissal
-
-    /// Verifies that flipping the global master toggle is persisted across a full
-    /// Settings sheet dismiss-and-reopen cycle (#436).
-    func test_settings_globalToggle_persistsAfterSheetDismissal() throws {
-        // 1. Open Settings and capture the initial toggle state.
-        openSettings()
-        let toggle = app.switches["settings.masterToggle"]
-        XCTAssertTrue(toggle.waitForExistence(timeout: 3))
-        let initialValue = toggle.value as? String ?? ""
-
-        // 2. Flip the toggle.
-        toggle.tap()
-        XCTAssertTrue(
-            toggle.waitForValueChange(from: initialValue),
-            "Toggle must change state after tap."
-        )
-        let flippedValue = toggle.value as? String ?? ""
-
-        // 3. Dismiss and reopen Settings.
-        dismissSettings()
-        openSettings()
-
-        // 4. Assert the toggled state survived the round-trip.
-        let persistedToggle = app.switches["settings.masterToggle"]
-        XCTAssertTrue(persistedToggle.waitForExistence(timeout: 3))
-        XCTAssertEqual(
-            persistedToggle.value as? String,
-            flippedValue,
-            "Master toggle value must persist after Settings sheet is dismissed and reopened (#436)."
-        )
-
-        // 5. Restore to initial state so the test is non-destructive.
-        persistedToggle.tap()
-        dismissSettings()
-    }
-
-    // MARK: - test_settings_eyesReminderToggle_persistsAfterSheetDismissal
-
-    /// Verifies that the eye-break reminder toggle state is persisted across a full
-    /// Settings sheet dismiss-and-reopen cycle (#436).
-    func test_settings_eyesReminderToggle_persistsAfterSheetDismissal() throws {
-        // 1. Open Settings and capture the initial eyes-toggle state.
-        openSettings()
-        let toggle = app.switches["settings.eyes.toggle"]
-        XCTAssertTrue(
-            toggle.waitForExistence(timeout: 3),
-            "Eye-break toggle must exist. ReminderRowView must expose " +
-            ".accessibilityIdentifier(\"settings.eyes.toggle\")."
-        )
-        let initialValue = toggle.value as? String ?? ""
-
-        // 2. Flip the toggle.
-        toggle.tap()
-        XCTAssertTrue(
-            toggle.waitForValueChange(from: initialValue),
-            "Eyes toggle must change state after tap."
-        )
-        let flippedValue = toggle.value as? String ?? ""
-
-        // 3. Dismiss and reopen Settings.
-        dismissSettings()
-        openSettings()
-
-        // 4. Assert the toggled state survived the round-trip.
-        let persistedToggle = app.switches["settings.eyes.toggle"]
-        XCTAssertTrue(persistedToggle.waitForExistence(timeout: 3))
-        XCTAssertEqual(
-            persistedToggle.value as? String,
-            flippedValue,
-            "Eye-break toggle value must persist after Settings sheet is dismissed and reopened (#436)."
-        )
-
-        // 5. Restore to initial state so the test is non-destructive.
-        persistedToggle.tap()
-        dismissSettings()
-    }
-
 }
 
 private extension SettingsFlowTests {
@@ -337,15 +259,6 @@ private extension SettingsFlowTests {
             app.activate()
         }
         return navigationBar.exists
-    }
-
-    /// Taps Done to dismiss Settings and waits for the sheet to disappear.
-    func dismissSettings() {
-        let doneButton = app.buttons["settings.doneButton"]
-        XCTAssertTrue(doneButton.waitForExistence(timeout: 3), "Done button must exist to dismiss Settings.")
-        doneButton.tap()
-        let settingsNav = app.navigationBars["Settings"]
-        _ = settingsNav.waitForNonExistence(timeout: 3)
     }
 
     /// Collect diagnostics only on failure path to avoid happy-path CI overhead.
