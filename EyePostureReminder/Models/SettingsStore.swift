@@ -3,15 +3,13 @@ import os
 
 /// `UserDefaults`-backed store for all user-configurable settings.
 ///
-/// Mutations drive a lightweight observer surface (`addObserver` /
-/// `removeObserver`) so consumers — `SettingsClient.liveValue` and any other
-/// listeners — can react without paying the Combine / `@Published` tax.
-/// The MVVM → TCA view migration (#677 / #755) removed every
-/// `@EnvironmentObject SettingsStore` callsite, so `: ObservableObject`
-/// conformance and the manual `objectWillChange.send()` broadcast were
-/// dropped under #701. SwiftUI surfaces now read settings exclusively
-/// through their feature stores; non-SwiftUI consumers use the observer
-/// surface below.
+/// SwiftUI surfaces read settings exclusively through their feature stores
+/// (via `SettingsClient`); non-SwiftUI consumers subscribe via the
+/// lightweight observer surface (`addObserver` / `removeObserver`) that
+/// every setter fans out, avoiding the Combine / `@Published` tax. The
+/// `: ObservableObject` conformance and manual `objectWillChange.send()`
+/// broadcast were dropped under #701 once no `@EnvironmentObject` callsite
+/// remained (#677 / #755).
 /// The initialiser accepts a `SettingsPersisting` dependency so unit tests
 /// can inject an in-memory store without touching the file system.
 ///
