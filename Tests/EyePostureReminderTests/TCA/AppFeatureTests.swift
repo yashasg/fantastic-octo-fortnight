@@ -353,10 +353,9 @@ final class AppFeatureTests: XCTestCase {
 
     // MARK: - Overlay → Settings handoff (#786)
 
-    /// `.overlaySettingsRequested` is the reducer-side replacement for the
-    /// legacy `AppCoordinator` handoff: when the user taps the "Settings"
-    /// affordance inside the in-break overlay, the reducer must write
-    /// `openSettingsOnLaunch = true` to the shared `UserDefaults` so
+    /// `.overlaySettingsRequested` writes `openSettingsOnLaunch = true` to
+    /// the shared `UserDefaults` when the user taps the "Settings"
+    /// affordance inside the in-break overlay, so
     /// `HomeView`'s `.onChangeCompat(of: openSettingsOnLaunch)` presents
     /// the Settings sheet on the next layout pass. Regression coverage for
     /// #786 — pre-fix the tap was a no-op because no reducer consumed
@@ -388,8 +387,7 @@ final class AppFeatureTests: XCTestCase {
     /// `.onAppear` subscribes to `OverlayClient.lifecycleEvents()` and
     /// forwards every `.settingsTapped` emission as
     /// `.overlaySettingsRequested(type)`. Without this wiring the in-overlay
-    /// "Settings" link is a dead-end after the MVVM → TCA migration removed
-    /// `AppCoordinator` (#755). Regression coverage for #786.
+    /// "Settings" link would be a dead-end. Regression coverage for #786.
     func test_onAppear_forwardsOverlaySettingsTappedEventsToReducer() async {
         let (lifecycleStream, lifecycleContinuation) =
             AsyncStream<OverlayLifecycleEvent>.makeStream()
