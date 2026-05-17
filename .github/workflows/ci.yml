@@ -121,10 +121,17 @@ jobs:
             brew install xcodegen
           fi
 
+      - name: Install SwiftLint
+        run: |
+          if brew list swiftlint &>/dev/null 2>&1; then
+            brew link --overwrite swiftlint 2>/dev/null || true
+          else
+            brew install swiftlint
+          fi
+          swiftlint --version
+
       - name: Lint (SwiftLint --strict)
-        uses: norio-nomura/action-swiftlint@3.2.1
-        with:
-          args: --strict
+        run: ./scripts/build.sh lint
 
       - name: Build Screen Time extensions (simulator, no signing)
         run: ./scripts/setup-screentime.sh --build
