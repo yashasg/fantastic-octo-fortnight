@@ -29,7 +29,7 @@ Users can customise reminder intervals and break durations. The overlay is dismi
 | Background scheduling | **UserNotifications** (`UNUserNotificationCenter`) |
 | Overlay window | **UIKit** – secondary `UIWindow` at `.alert` window level |
 | Persistent settings | **UserDefaults** (lightweight key-value store) |
-| App lifecycle | **UIApplicationDelegate** / `SceneDelegate` |
+| App lifecycle | **SwiftUI App lifecycle** (`@main` / `App`) bridged via `@UIApplicationDelegateAdaptor` → `AppDelegate.swift` |
 | Haptics | **CoreHaptics** / `UINotificationFeedbackGenerator` |
 | Accessibility | **UIAccessibility** APIs |
 
