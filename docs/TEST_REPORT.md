@@ -183,7 +183,7 @@ The following test scenarios require a live `UIWindowScene` or `UIApplication` w
 | `OverlayView` haptic feedback firing on countdown | `UIImpactFeedbackGenerator` requires a live device/simulator | Simulator integration suite |
 | `OverlayView` swipe-up dismiss gesture | Requires `DragGesture` and a rendered View | Simulator UI test |
 | `OverlayView` countdown ring animation | Timer-driven animation requires render loop | Simulator UI test |
-| `ContentView` onboarding routing (`@AppStorage` → View branch) | SwiftUI `@AppStorage` bridging cannot be unit-tested cleanly | Simulator UI test |
+| `RootView` onboarding routing (`@AppStorage` → View branch) | SwiftUI `@AppStorage` bridging cannot be unit-tested cleanly | Simulator UI test |
 | `SchedulingFeature` watchdog/fallback effect end-to-end | Effect uses `Clock.sleep` on a live run loop and a real `UIApplication` scene to observe foreground transitions | Simulator integration |
 | `SchedulingFeature.notificationRouted` foreground path | Requires `UIApplication.shared.connectedScenes` active | Simulator integration |
 | Notification permission prompt | System UI — cannot be automated in CI | Manual test / TestFlight |

@@ -240,7 +240,7 @@ Both `.rotationEffect` and `.scaleEffect` are transform-based operations that ru
 
 ### 🟢 GOOD — Animations respect reduce-motion
 All animation sites check `@Environment(\.accessibilityReduceMotion)`:
-- `ContentView.swift:19` — onboarding transition
+- `RootView.swift:47` — onboarding transition
 - `HomeView.swift:45` — status crossfade
 - `OverlayView.swift:159, 234, 257, 276` — countdown ring, entrance, dismiss
 - `YinYangEyeView.swift:66` — spin and breathing

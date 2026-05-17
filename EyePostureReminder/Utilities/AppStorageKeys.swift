@@ -8,7 +8,7 @@ import Foundation
 /// onboarding to repeat forever or be skipped permanently).
 enum AppStorageKey {
     /// Set to `true` once the user completes the onboarding flow.
-    /// Read by `ContentView` via `@AppStorage` to gate the main UI.
+    /// Read by `RootView` via `@AppStorage` to gate the main UI.
     static let hasSeenOnboarding = "kshana.hasSeenOnboarding"
 
     /// Set to `true` by `OnboardingView.finishOnboardingAndCustomize()` to

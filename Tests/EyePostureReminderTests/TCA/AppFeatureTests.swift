@@ -132,7 +132,7 @@ final class AppFeatureTests: XCTestCase {
     /// without producing a follow-up effect — the bridge from
     /// `@AppStorage(AppStorageKey.hasSeenOnboarding)` written by
     /// `OnboardingView.markOnboardingComplete` relies on this exact pure write
-    /// so `ContentView` flips from `OnboardingView` → `HomeView`.
+    /// so `RootView` flips from `OnboardingView` → `HomeView`.
     func test_hasSeenOnboardingChanged_true_setsStateAndProducesNoEffect() async {
         let store = makeStore()
 
@@ -155,7 +155,7 @@ final class AppFeatureTests: XCTestCase {
     }
 
     /// Sending the same value as the current state is still applied (the
-    /// reducer does not early-return) — `ContentView` guards against a
+    /// reducer does not early-return) — `RootView` guards against a
     /// redundant dispatch but the reducer itself stays idempotent.
     func test_hasSeenOnboardingChanged_idempotent_keepsValueStable() async {
         var initial = AppFeature.State()

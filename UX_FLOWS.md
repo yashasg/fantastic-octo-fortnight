@@ -42,7 +42,7 @@ User taps app icon (first time)
 Launch Screen (standard iOS animation, < 1 second)
     │
     ▼
-ContentView checks @AppStorage("hasSeenOnboarding")
+RootView checks @AppStorage("hasSeenOnboarding")
     │
     ├─ false (first launch)
     │      │
@@ -130,7 +130,7 @@ ContentView checks @AppStorage("hasSeenOnboarding")
     │      ▼
     │  hasSeenOnboarding = true (written to UserDefaults)
     │  onboardingCompleted(cta: .getStarted or .customize) telemetry logged
-    │  ContentView transitions to HomeView (opacity crossfade, 0.4s)
+    │  RootView transitions to HomeView (opacity crossfade, 0.4s)
     │  If permission granted, reminders scheduled; if denied, fallback to local alerts
     │
     └─ true (returning user)
@@ -737,12 +737,12 @@ OverlayManager checks: is an overlay currently visible?
 3. Notification Permission screen explains why alerts matter, then offers "Allow Reminder Alerts" or "Not now"
 4. Reminder Setup screen lets user pick eye/posture intervals with interactive pickers; "Get Started" advances to Screen 4
 5. True Interrupt Mode screen explains Screen Time-based blocking; user taps "Skip for Now" or "Customize Settings"
-6. `hasSeenOnboarding` flag set → ContentView crossfades to HomeView
+6. `hasSeenOnboarding` flag set → RootView crossfades to HomeView
 7. If "Customize Settings" was tapped, `openSettingsOnLaunch = true` → HomeView opens Settings sheet immediately
 8. Reminders are scheduled. Done.
 
 **Implementation details:**
-- `ContentView` checks `@AppStorage(hasSeenOnboarding)` to gate the flow
+- `RootView` checks `@AppStorage(hasSeenOnboarding)` to gate the flow
 - `OnboardingView` uses a `TabView` with `PageTabViewStyle` for horizontal swipe between screens
 - `OnboardingInterruptModeView` (Screen 4) blocks accidental swipe-past with a `highPriorityGesture`
 - `OnboardingSetupView` (Screen 3) has one CTA: "Get Started" (advances to Screen 4); interval pickers bind directly to `SettingsStore`
