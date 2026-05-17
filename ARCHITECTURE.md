@@ -327,8 +327,7 @@ EyePostureReminder/                  (SPM executable target)
 │   ├── ScreenTimeAuthorizationProviding.swift  FamilyControls authorization abstraction
 │   ├── ScreenTimeAuthorizationNoop.swift  Default build-time stub returning `.unavailable` until #201 entitlement
 │   ├── ScreenTimeShieldProtocols.swift / ScreenTimeShieldTypes.swift / ScreenTimeShieldNoop.swift  ManagedSettings shield surface
-│   ├── DeviceActivityMonitorProviding.swift / DeviceActivityMonitorNoop.swift  DeviceActivity stubs
-│   └── NoopServices.swift            Centralized no-op fallbacks for distribution builds
+│   └── DeviceActivityMonitorProviding.swift / DeviceActivityMonitorNoop.swift  DeviceActivity stubs
 │
 ├── Views/
 │   ├── HomeView.swift                App home screen; consumes `StoreOf<HomeFeature>`
@@ -421,7 +420,6 @@ Tests/
 │   │   ├── FocusModeExtendedTests.swift / LiveFocusStatusDetectorTests.swift
 │   │   ├── LiveCarPlayDetectorTests.swift
 │   │   ├── MetricKitSubscriberTests.swift
-│   │   ├── NoopServicesTests.swift
 │   │   ├── OverlayManagerTests.swift / OverlayManagerExtendedTests.swift / OverlayManagerTerminationTests.swift
 │   │   ├── PauseConditionManagerTests.swift
 │   │   ├── ReminderSchedulerTests.swift
