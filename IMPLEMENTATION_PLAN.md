@@ -115,7 +115,7 @@ Phase 3 adds extension targets and Screen Time services:
 kshana (Main App)
 ├── (existing Phase 1–2 structure above)
 ├── Services (new)
-│   ├── ManagedSettingsCoordinator    – configures shields via ManagedSettings.store
+│   ├── ManagedSettingsClient         – TCA dep wired into SchedulingFeature; configures shields via ManagedSettings.store
 │   ├── DeviceActivityMonitor         – observes screen time via DeviceActivity
 │   └── AppGroupBridge                – inter-process communication (main ↔ extensions)
 ├── Models (new)
@@ -215,7 +215,7 @@ ReminderScheduler.scheduleNext()
 SchedulingFeature `.thresholdReached(type)` reducer effect
         │
         ▼
-ManagedSettingsCoordinator.shieldAppsForBreak()
+managedSettingsClient.shieldAppsForBreak()   (TCA dep, invoked by SchedulingFeature)
   – reads ShieldedAppCategory (user-selected apps from AppCategoryPickerView)
   – configures DeviceActivity schedule
         │
@@ -232,7 +232,7 @@ Extension Process (ShieldConfiguration target)
   │ Break duration elapses                  │ User requests access
   │                                          │ (ShieldAction button)
   ▼                                          ▼
-ManagedSettingsCoordinator.clearShields()   ShieldActionProvider
+managedSettingsClient.clearShields()        ShieldActionProvider
   – ManagedSettings.store.clear()           – Logs access request
   – Notification cancelled (fallback)        – Requires confirmation
                                               – Sets 5-min grace period

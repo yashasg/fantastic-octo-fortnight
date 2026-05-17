@@ -410,7 +410,7 @@ Local notification fallback ensures we gracefully degrade if Screen Time APIs un
 - **ShieldAction Extension:** Implements `ShieldActionProvider` protocol for app/website unblocker buttons
 - **New Services:**
   - `DeviceActivityMonitor` — observes screen time via DeviceActivity.monitoredDevices
-  - `ManagedSettingsCoordinator` — configures shields via ManagedSettings
+  - `ManagedSettingsClient` — TCA dependency wired into `SchedulingFeature` (or a dedicated shield-feature reducer) that configures shields via ManagedSettings (legacy `ManagedSettingsCoordinator` was removed during the TCA migration)
   - `AppCategoryPicker` — UI for category/app selection
   - `AppGroupBridge` — inter-process communication (main app ↔ extensions)
 
@@ -420,7 +420,7 @@ Reminder fires (via ScreenTimeTracker)
     ↓
 SchedulingFeature reducer .thresholdReached → OverlayClient.show / NotificationClient.deliver
     ↓
-ManagedSettingsCoordinator.shieldAppsForBreak()
+managedSettingsClient.shieldAppsForBreak()   (TCA dep, invoked by SchedulingFeature effect)
     ↓
 ManagedSettings.apply() — shield config pushed to DeviceActivity
     ↓
@@ -430,7 +430,7 @@ Shield renders on device (user cannot bypass immediately)
     ↓
 Break duration elapses
     ↓
-ManagedSettingsCoordinator.clearShields()
+managedSettingsClient.clearShields()   (TCA dep)
     ↓
 Device resumes normal activity
     ↓
@@ -520,10 +520,10 @@ Device resumes normal activity
 - **Owner:** Basher (Services Dev) + Linus (iOS UI Dev)
 - **Status:** 🔄 PLANNED
 - **Scope:**
-  - `ManagedSettingsCoordinator` applies ManagedSettings.store.shield(applications: [...])
+  - `managedSettingsClient` (TCA dep, invoked from `SchedulingFeature` or a dedicated shield-feature reducer) applies ManagedSettings.store.shield(applications: [...])
   - ShieldConfiguration extension provides customized shield UI (logo, messaging)
   - ShieldAction extension allows user to request app access ("I need 1 min" button) with confirmation
-  - Shield dismissal triggers ManagedSettingsCoordinator.clearShields()
+  - Shield dismissal triggers `managedSettingsClient.clearShields()` (TCA dep)
   - Logging: track shield duration, user interactions
 - **Dependencies:** M3.5
 - **Duration:** 6 days
