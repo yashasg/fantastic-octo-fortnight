@@ -122,7 +122,7 @@ jobs:
           fi
 
       - name: Lint (SwiftLint --strict)
-        uses: norio-nomura/action-swiftlint@9f4dcd7fd46b4e75d7935cf2f4df406d73814d70  # 3.2.1
+        uses: norio-nomura/action-swiftlint@3.2.1
         with:
           args: --strict
 
