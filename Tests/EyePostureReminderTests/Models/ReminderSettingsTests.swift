@@ -33,6 +33,65 @@ final class ReminderSettingsTests: XCTestCase {
         XCTAssertEqual(sut.breakDuration, 3600)
     }
 
+    // MARK: - Overlay-flag fields (#899)
+
+    func test_init_hapticsEnabled_defaultIsFalse() {
+        let sut = ReminderSettings(interval: 1200, breakDuration: 20)
+        XCTAssertFalse(
+            sut.hapticsEnabled,
+            "hapticsEnabled must default to false so legacy two-arg call sites "
+            + "preserve the pre-#899 `false` literal that SchedulingFeature "
+            + "used to pass to OverlayClient.show"
+        )
+    }
+
+    func test_init_pauseMediaDuringBreaks_defaultIsFalse() {
+        let sut = ReminderSettings(interval: 1200, breakDuration: 20)
+        XCTAssertFalse(
+            sut.pauseMediaDuringBreaks,
+            "pauseMediaDuringBreaks must default to false so legacy two-arg "
+            + "call sites preserve the pre-#899 `false` literal"
+        )
+    }
+
+    func test_init_hapticsEnabled_isRetained() {
+        let sut = ReminderSettings(
+            interval: 1200,
+            breakDuration: 20,
+            hapticsEnabled: true
+        )
+        XCTAssertTrue(sut.hapticsEnabled)
+    }
+
+    func test_init_pauseMediaDuringBreaks_isRetained() {
+        let sut = ReminderSettings(
+            interval: 1200,
+            breakDuration: 20,
+            pauseMediaDuringBreaks: true
+        )
+        XCTAssertTrue(sut.pauseMediaDuringBreaks)
+    }
+
+    func test_equatable_differentHapticsEnabled_areNotEqual() {
+        let first = ReminderSettings(
+            interval: 1200, breakDuration: 20, hapticsEnabled: false
+        )
+        let second = ReminderSettings(
+            interval: 1200, breakDuration: 20, hapticsEnabled: true
+        )
+        XCTAssertNotEqual(first, second)
+    }
+
+    func test_equatable_differentPauseMediaDuringBreaks_areNotEqual() {
+        let first = ReminderSettings(
+            interval: 1200, breakDuration: 20, pauseMediaDuringBreaks: false
+        )
+        let second = ReminderSettings(
+            interval: 1200, breakDuration: 20, pauseMediaDuringBreaks: true
+        )
+        XCTAssertNotEqual(first, second)
+    }
+
     // MARK: - Equatable
 
     func test_equatable_sameValues_areEqual() {

@@ -390,6 +390,38 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertEqual(sut.settings(for: .posture).breakDuration, 20)
     }
 
+    // MARK: - settings(for:) — overlay-flag propagation (#899)
+
+    /// `hapticsEnabled` is global (not per-type), so `settings(for: .eyes)`
+    /// and `settings(for: .posture)` both surface the same persisted value.
+    func test_settingsForEyes_returnsCurrentHapticsEnabled() {
+        sut.hapticsEnabled = false
+        XCTAssertFalse(sut.settings(for: .eyes).hapticsEnabled)
+        sut.hapticsEnabled = true
+        XCTAssertTrue(sut.settings(for: .eyes).hapticsEnabled)
+    }
+
+    func test_settingsForPosture_returnsCurrentHapticsEnabled() {
+        sut.hapticsEnabled = false
+        XCTAssertFalse(sut.settings(for: .posture).hapticsEnabled)
+        sut.hapticsEnabled = true
+        XCTAssertTrue(sut.settings(for: .posture).hapticsEnabled)
+    }
+
+    func test_settingsForEyes_returnsCurrentPauseMediaDuringBreaks() {
+        sut.pauseMediaDuringBreaks = true
+        XCTAssertTrue(sut.settings(for: .eyes).pauseMediaDuringBreaks)
+        sut.pauseMediaDuringBreaks = false
+        XCTAssertFalse(sut.settings(for: .eyes).pauseMediaDuringBreaks)
+    }
+
+    func test_settingsForPosture_returnsCurrentPauseMediaDuringBreaks() {
+        sut.pauseMediaDuringBreaks = true
+        XCTAssertTrue(sut.settings(for: .posture).pauseMediaDuringBreaks)
+        sut.pauseMediaDuringBreaks = false
+        XCTAssertFalse(sut.settings(for: .posture).pauseMediaDuringBreaks)
+    }
+
     // MARK: - isEnabled(for:) — master + per-type gate
 
     func test_isEnabled_globalOn_eyesOn_returnsTrue() {
