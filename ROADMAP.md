@@ -129,7 +129,7 @@
   - `SettingsStore.swift` wrapping UserDefaults with type-safe accessors
   - Default values: eyes (1200s / 20s), posture (1800s / 10s), remindersEnabled (true)
   - Unit tests with 90%+ coverage for save/load/clear
-  - `SettingsViewModel` binds UI to store; publishes changes
+  - `SettingsViewModel` binds UI to store; publishes changes (the `SettingsViewModel` was later decommissioned in the Phase-2 TCA migration — #677 / #701 / #755; settings binding now flows through `SettingsFeature` reducer + dependency clients)
 
 #### M1.2: Settings UI ✅
 - **Owner:** Linus (iOS UI Dev)
@@ -138,7 +138,7 @@
   - `SettingsView.swift` with SwiftUI Form layout
   - Toggle for "Enable Reminders"
   - `ReminderRowView` components (interval + duration pickers)
-  - Live binding to ViewModel; changes save immediately
+  - Live binding to ViewModel; changes save immediately (the `SettingsViewModel` was later decommissioned in the Phase-2 TCA migration — #677 / #701 / #755; the SwiftUI `Form` now binds directly to `SettingsFeature` state via `StoreOf<SettingsFeature>` + `WithPerceptionTracking`)
   - Accessibility labels for VoiceOver
 
 #### M1.3: Notification Scheduling ✅
