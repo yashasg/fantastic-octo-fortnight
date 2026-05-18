@@ -9,10 +9,11 @@ Versioning strategy: `0.x.x` during TestFlight beta, `1.0.0` at App Store launch
 
 ## Unreleased
 
-> Spans 299 PRs merged on top of `v0.2.0` — the headline is the **TCA migration**
+> Spans the post-`v0.2.0` PR stream — the headline is the **TCA migration**
 > (Phases 1, 2 & 3 all shipped, including the #806 phase-1/2/3 UI-test → TestStore
 > audit landings) plus a deep dependency-injection pass (#462 Phase A) and the
-> App Store / TestFlight readiness sweep (#411 → #635).
+> App Store / TestFlight readiness sweep (#411 → #635). Run
+> `git log v0.2.0..main --first-parent` for the live ledger.
 
 ### 🔄 Changed
 
@@ -201,13 +202,17 @@ to make the TCA Phase-1 reducers testable in isolation.
   — `SchedulingFeature_WatchdogRecoveryTests.test_watchdogRecovery_deferredToPhase2`
   and `SettingsStoreSeedTests.test_uiTestOverlayBreakDuration`). Mirrors
   `docs/TEST_REPORT.md` L7 / L15 / L225 (authoritative).
-- **299 PRs** merged on top of `v0.2.0` — see `git log v0.2.0..main --first-parent`
-  for the full ledger; this section groups the contributor-visible delta.
+- **Post-`v0.2.0` PR stream** — run `git log v0.2.0..main --first-parent` for the
+  full ledger; this section groups the contributor-visible delta. (The literal
+  cumulative count was removed in #885 — it drifted by exactly +1 on every
+  merge and burnt one dedicated follow-up PR each time; #881–#884 are the
+  evidence.)
 - **Phase 3 of the TCA migration is in flight** (per-feature `TestStore`
   coverage). The MVVM decommission tracked in #677 and #702 has landed —
   PR #754 deleted the `SelectedAppsState` wrapper (#678 final) and PR #760
   deleted the `AppCoordinator` stack (#755 Phase E); the follow-up
-  doc/citation sweep continues in #767..#883.
+  doc/citation sweep continues in the `#767+` series (run
+  `git log --grep='Closes #' v0.2.0..main --oneline` for the live list).
 
 ---
 
