@@ -26,56 +26,69 @@
 
 ## Coverage by Module
 
-### Models — 280 tests
+> **Per-module / per-file count recipe (root-cause fix — see #890):** Module-header totals and the per-file `Tests` columns previously listed in every rollup below drifted by ±1 on every test add/remove (#880, #886, #887 each spent a dedicated PR to refresh ±1–2 rows). Following the #889 root-cause pattern, the literal counts have been dropped. Run the recipes below at HEAD for live counts.
+>
+> ```bash
+> # Per-module total (replace <Module>):
+> grep -rc 'func test' Tests/EyePostureReminderTests/<Module> --include='*.swift' \
+>   | awk -F: '{s+=$2} END {print s}'
+>
+> # Per-file counts inside a module:
+> grep -rc 'func test' Tests/EyePostureReminderTests/<Module> --include='*.swift'
+> ```
+>
+> Module folders: `Models`, `Services`, `Views`, `Integration`, `TCA`, `Mocks`, `Utilities`. `RegressionTests.swift` lives at the top level (`grep -c 'func test' Tests/EyePostureReminderTests/RegressionTests.swift`).
 
-| File | Tests | Coverage Focus |
-|---|---|---|
-| `ReminderTypeTests` | 34 | All cases, identifiers, display properties, round-trip init |
-| `ReminderTypeExtendedTests` | 28 | Edge cases, boundary values |
-| `SettingsStoreTests` | 72 | Defaults, persistence, isEnabled gates, independence, restart simulation, presets |
-| `SettingsStoreConfigTests` | 31 | Config validation and preset logic |
-| `SettingsStoreObserverTests` | 12 | `SettingsStore.addObserver` / `removeObserver` broadcast and token lifecycle |
-| `SettingsStorePhase2Tests` | 10 | hapticsEnabled toggle + persistence, snoozeCount persistence |
-| `SettingsStoreSeedTests` | 9 | Synchronous `eyesSnapshot` UserDefaults read for the TCA root seed (#737) |
-| `ReminderSettingsTests` | 19 | ReminderSettings struct coverage |
-| `PauseConditionSourceTests` | 13 | PauseConditionSource enum cases |
-| `OnboardingTests` | 12 | `hasSeenOnboarding` flag: first-launch default, persistence, reset, key correctness |
-| `AppConfigTests` | 40 | AppConfig defaults, update logic, equality |
+### Models
+
+| File | Coverage Focus |
+|---|---|
+| `ReminderTypeTests` | All cases, identifiers, display properties, round-trip init |
+| `ReminderTypeExtendedTests` | Edge cases, boundary values |
+| `SettingsStoreTests` | Defaults, persistence, isEnabled gates, independence, restart simulation, presets |
+| `SettingsStoreConfigTests` | Config validation and preset logic |
+| `SettingsStoreObserverTests` | `SettingsStore.addObserver` / `removeObserver` broadcast and token lifecycle |
+| `SettingsStorePhase2Tests` | hapticsEnabled toggle + persistence, snoozeCount persistence |
+| `SettingsStoreSeedTests` | Synchronous `eyesSnapshot` UserDefaults read for the TCA root seed (#737) |
+| `ReminderSettingsTests` | ReminderSettings struct coverage |
+| `PauseConditionSourceTests` | PauseConditionSource enum cases |
+| `OnboardingTests` | `hasSeenOnboarding` flag: first-launch default, persistence, reset, key correctness |
+| `AppConfigTests` | AppConfig defaults, update logic, equality |
 
 **Estimated coverage:** ~93%
 
 ---
 
-### Services — 571 tests
+### Services
 
-| File | Tests | Coverage Focus |
-|---|---|---|
-| `ReminderSchedulerTests` | 42 | Schedule all/single/cancel, notification content, triggers, identifiers, error resilience |
-| `OverlayManagerTests` | 18 | Singleton identity, visible state, guard paths, queue management, audio wiring |
-| `OverlayManagerExtendedTests` | 25 | Extended overlay manager coverage |
-| `OverlayManagerTerminationTests` | 6 | Overlay window teardown on `UIApplication.willTerminateNotification` (#714) |
-| `AudioInterruptionManagerTests` | 4 | Protocol conformance, pause/resume cycles, invariant safety |
-| `PauseConditionManagerTests` | 33 | All pause-condition aggregation paths (Focus, driving, CarPlay) |
-| `FocusModeExtendedTests` | 11 | Focus mode edge cases |
-| `LiveFocusStatusDetectorTests` | 5 | Live Focus-status detector wiring |
-| `DrivingDetectionExtendedTests` | 19 | Driving detection state transitions |
-| `LiveDrivingActivityDetectorTests` | 5 | Live driving-activity detector wiring |
-| `LiveCarPlayDetectorTests` | 7 | Live CarPlay detector wiring |
-| `AnalyticsEventTests` | 52 | All `AnalyticsEvent` cases, serialization |
-| `AnalyticsLoggerTests` | 46 | Logger routing, privacy tiers |
-| `ScreenTimeTrackerTests` | 62 | ScreenTimeTracker state, screen-on accumulation, threshold fire |
-| `ScreenTimeAuthorizationTests` | 19 | Authorization request paths |
-| `ScreenTimeShieldTests` | 12 | Shield enable/disable, clear-all |
-| `DeviceActivityMonitorTests` | 26 | DeviceActivity monitor lifecycle |
-| `DeviceActivityMonitoringValidationTests` | 19 | Validation and guard paths |
-| `AppGroupIPCStoreTests` | 36 | App Group selection metadata round-trip, key alignment, snapshot encode/decode, IPC read/write, capped log |
-| `ShieldConfigurationCopyTests` | 17 | Shield configuration copy correctness |
-| `ServiceLifecycleTests` | 7 | Start/stop lifecycle protocol |
-| `MetricKitSubscriberTests` | 11 | MetricKit subscriber registration |
-| `WatchdogHeartbeatTests` | 11 | Heartbeat ping/pong |
-| `AppDelegateTests` | 34 | AppDelegate lifecycle hooks |
-| `DistributionEntitlementsTests` | 1 | Distribution entitlements include `com.apple.developer.focus-status` |
-| `ServiceCoverageBoostTests` | 43 | Coverage-boost suite for misc service paths |
+| File | Coverage Focus |
+|---|---|
+| `ReminderSchedulerTests` | Schedule all/single/cancel, notification content, triggers, identifiers, error resilience |
+| `OverlayManagerTests` | Singleton identity, visible state, guard paths, queue management, audio wiring |
+| `OverlayManagerExtendedTests` | Extended overlay manager coverage |
+| `OverlayManagerTerminationTests` | Overlay window teardown on `UIApplication.willTerminateNotification` (#714) |
+| `AudioInterruptionManagerTests` | Protocol conformance, pause/resume cycles, invariant safety |
+| `PauseConditionManagerTests` | All pause-condition aggregation paths (Focus, driving, CarPlay) |
+| `FocusModeExtendedTests` | Focus mode edge cases |
+| `LiveFocusStatusDetectorTests` | Live Focus-status detector wiring |
+| `DrivingDetectionExtendedTests` | Driving detection state transitions |
+| `LiveDrivingActivityDetectorTests` | Live driving-activity detector wiring |
+| `LiveCarPlayDetectorTests` | Live CarPlay detector wiring |
+| `AnalyticsEventTests` | All `AnalyticsEvent` cases, serialization |
+| `AnalyticsLoggerTests` | Logger routing, privacy tiers |
+| `ScreenTimeTrackerTests` | ScreenTimeTracker state, screen-on accumulation, threshold fire |
+| `ScreenTimeAuthorizationTests` | Authorization request paths |
+| `ScreenTimeShieldTests` | Shield enable/disable, clear-all |
+| `DeviceActivityMonitorTests` | DeviceActivity monitor lifecycle |
+| `DeviceActivityMonitoringValidationTests` | Validation and guard paths |
+| `AppGroupIPCStoreTests` | App Group selection metadata round-trip, key alignment, snapshot encode/decode, IPC read/write, capped log |
+| `ShieldConfigurationCopyTests` | Shield configuration copy correctness |
+| `ServiceLifecycleTests` | Start/stop lifecycle protocol |
+| `MetricKitSubscriberTests` | MetricKit subscriber registration |
+| `WatchdogHeartbeatTests` | Heartbeat ping/pong |
+| `AppDelegateTests` | AppDelegate lifecycle hooks |
+| `DistributionEntitlementsTests` | Distribution entitlements include `com.apple.developer.focus-status` |
+| `ServiceCoverageBoostTests` | Coverage-boost suite for misc service paths |
 
 **Estimated coverage:** ~85%
 
@@ -87,99 +100,107 @@
 
 ---
 
-### Views — 660 tests
+### Views
 
-| File | Tests | Coverage Focus |
-|---|---|---|
-| `DesignSystemTests` | 60 | AppFont accessibility, AppSpacing 4pt grid, AppLayout iOS HIG, AppAnimation spec values, AppColor accessibility, AppSymbol non-empty names |
-| `DesignSystemExtendedTests` | 50 | Extended design token coverage |
-| `ColorTokenTests` | 32 | Asset Catalog color token correctness |
-| `ComponentsTests` | 20 | Shared UI component correctness |
-| `ComponentsExtendedTests` | 17 | Extended component edge cases |
-| `CoverageBoostTests` | 34 | Coverage-boost suite for misc View paths |
-| `ViewBodyCoverageTests` | 75 | View body compile + expression coverage |
-| `HomeViewLaunchContextResolverTests` | 12 | HomeView status resolver: launch-context overrides, notification-denied recovery, no-reminders banner |
-| `OnboardingViewTests` | 41 | OnboardingWelcomeView, OnboardingPermissionView, OnboardingSetupView, OnboardingInterruptModeView |
-| `TrueInterruptViewCoverageTests` | 44 | TrueInterrupt onboarding and settings view paths |
-| `DarkModeTests` | 17 | Dark Mode rendering correctness for key views |
-| `OverlayAccessibilityTests` | 5 | Overlay accessibility modal flag and VoiceOver |
-| `OverlayGestureTests` | 11 | `OverlayView.shouldDismissForSwipe` upward-threshold and direction-dominance logic |
-| `SettingsAccessibilityTests` | 3 | `SettingsSavedBanner` body, decorative checkmark accessibility-hidden, hosted-privacy-link localized copy |
-| `PreviewTests` | 9 | SwiftUI preview providers compile without crash |
-| `StringCatalogTests` | 205 | All String Catalog keys resolve; no missing/empty values |
-| `YinYangEyeViewTests` | 9 | Yin-yang logo Path drawing tests |
-| `YinYangEyeViewExtendedTests` | 16 | Extended logo animation and accessibility |
+| File | Coverage Focus |
+|---|---|
+| `DesignSystemTests` | AppFont accessibility, AppSpacing 4pt grid, AppLayout iOS HIG, AppAnimation spec values, AppColor accessibility, AppSymbol non-empty names |
+| `DesignSystemExtendedTests` | Extended design token coverage |
+| `ColorTokenTests` | Asset Catalog color token correctness |
+| `ComponentsTests` | Shared UI component correctness |
+| `ComponentsExtendedTests` | Extended component edge cases |
+| `CoverageBoostTests` | Coverage-boost suite for misc View paths |
+| `ViewBodyCoverageTests` | View body compile + expression coverage |
+| `HomeViewLaunchContextResolverTests` | HomeView status resolver: launch-context overrides, notification-denied recovery, no-reminders banner |
+| `OnboardingViewTests` | OnboardingWelcomeView, OnboardingPermissionView, OnboardingSetupView, OnboardingInterruptModeView |
+| `TrueInterruptViewCoverageTests` | TrueInterrupt onboarding and settings view paths |
+| `DarkModeTests` | Dark Mode rendering correctness for key views |
+| `OverlayAccessibilityTests` | Overlay accessibility modal flag and VoiceOver |
+| `OverlayGestureTests` | `OverlayView.shouldDismissForSwipe` upward-threshold and direction-dominance logic |
+| `SettingsAccessibilityTests` | `SettingsSavedBanner` body, decorative checkmark accessibility-hidden, hosted-privacy-link localized copy |
+| `PreviewTests` | SwiftUI preview providers compile without crash |
+| `StringCatalogTests` | All String Catalog keys resolve; no missing/empty values |
+| `YinYangEyeViewTests` | Yin-yang logo Path drawing tests |
+| `YinYangEyeViewExtendedTests` | Extended logo animation and accessibility |
 
 **Estimated coverage:** ~78% (runtime `Font` introspection not possible; tests verify constant expressions and catalog completeness)
 
 ---
 
-### Integration — 24 tests
+### Integration
 
-| File | Tests | Coverage Focus |
-|---|---|---|
-| `IntegrationTests` | 20 | Multi-service pipeline: scheduler → coordinator → overlay sequence |
-| `MultiServicePipelineIntegrationTests` | 4 | Parallel service start/stop under load |
-
----
-
-### Regression — 48 tests
-
-| File | Tests | Coverage Focus |
-|---|---|---|
-| `RegressionTests` | 48 | Guard against regressions on all previously-fixed bugs |
+| File | Coverage Focus |
+|---|---|
+| `IntegrationTests` | Multi-service pipeline: scheduler → coordinator → overlay sequence |
+| `MultiServicePipelineIntegrationTests` | Parallel service start/stop under load |
 
 ---
 
-### Utilities — 21 tests
+### Regression
 
-| File | Tests | Coverage Focus |
-|---|---|---|
-| `AccessibilityAnnouncementTests` | 12 | Accessibility announcement text correctness |
-| `AppStorageKeysTests` | 8 | All `@AppStorage` key string constants are unique and non-empty |
-| `LegalLinksTests` | 1 | `LegalLinks.hostedPrivacyPolicyURL` scheme/host/path resolves to the public GitHub Pages URL |
+| File | Coverage Focus |
+|---|---|
+| `RegressionTests` | Guard against regressions on all previously-fixed bugs |
 
 ---
 
-### TCA Reducers — 169 tests
+### Utilities
+
+| File | Coverage Focus |
+|---|---|
+| `AccessibilityAnnouncementTests` | Accessibility announcement text correctness |
+| `AppStorageKeysTests` | All `@AppStorage` key string constants are unique and non-empty |
+| `LegalLinksTests` | `LegalLinks.hostedPrivacyPolicyURL` scheme/host/path resolves to the public GitHub Pages URL |
+
+---
+
+### TCA Reducers
 
 > Post-TCA migration (`#677` / `#755`, PRs `#756`–`#760`) reducer-level coverage. Lives under `Tests/EyePostureReminderTests/TCA/` and exercises every `Reducer` feature via `TestStore` (Swift Composable Architecture) plus the lock-isolated dependency clients in `EyePostureReminder/TCA/Dependencies/`.
 
-| File | Tests | Coverage Focus |
-|---|---|---|
-| `HomeFeatureTests` | 25 | `HomeFeature` state init, launch-context resolution, status derivation, action handling |
-| `AppFeatureTests` | 22 | `AppFeature` root composition; child-reducer effect isolation via no-op dependency stubs |
-| `OnboardingFeatureTests` | 21 | `OnboardingFeature` step transitions, permission gates, `hasSeenOnboarding` persistence |
-| `OverlayFeatureTests` | 17 | `OverlayFeature` state init (duration clamping, type/haptics), action handling |
-| `OverlayFeatureBehaviorTests` | 14 | `OverlayFeature` runtime behaviour: analytics emission, dismiss-call recording, FIFO ordering |
-| `SettingsFeatureTests` | 13 | `SettingsFeature` default state, action handling, persistence wiring |
-| `AppCategoryPickerFeatureTests` | 9 | `AppCategoryPickerFeature` authorisation/selection state + Screen Time picker actions |
-| `SchedulingFeature_SnoozeTests` | 8 | `SchedulingFeature.scheduleReminders` snooze-active branch: pause + cancel + wake notification |
-| `SchedulingFeature_SchedulingTests` | 8 | `SchedulingFeature.scheduleReminders` authorised path + auth-status refresh semantics |
-| `SchedulingFeature_NotificationRoutingTests` | 8 | `SchedulingFeature.notificationRouted` fallback pipeline + IPC fallback events |
-| `SettingsFeatureBindingTests` | 6 | `SettingsFeature` `@BindingState` debouncing → persist + reschedule + analytics |
-| `SchedulingFeature_ForegroundTransitionTests` | 5 | `SchedulingFeature.foregroundTransition` no-snooze auth-status-unchanged refresh-only path |
-| `SettingsFeatureToggleEmissionTests` | 4 | `SettingsFeature.settingToggleChanged` analytics emission per toggle key |
-| `SettingsFeatureSnoozeTests` | 3 | `SettingsFeature.snoozeTapped` persists expiry + zeroes counter + logs analytics |
-| `SchedulingFeature_WatchdogRecoveryTests` | 3 | `SchedulingFeature` watchdog-recovery deferral (Phase-2 IPC-heartbeat dependency `XCTSkip` until landed) |
-| `IPCClientSurfaceTests` | 3 | `IPCClient` overridden-client surface routes all accessors to the test recorder |
-| `TCATestDependencies` | 0 | Shared no-op dependency-stub factory (no tests; helper only) |
+| File | Coverage Focus |
+|---|---|
+| `HomeFeatureTests` | `HomeFeature` state init, launch-context resolution, status derivation, action handling |
+| `AppFeatureTests` | `AppFeature` root composition; child-reducer effect isolation via no-op dependency stubs |
+| `OnboardingFeatureTests` | `OnboardingFeature` step transitions, permission gates, `hasSeenOnboarding` persistence |
+| `OverlayFeatureTests` | `OverlayFeature` state init (duration clamping, type/haptics), action handling |
+| `OverlayFeatureBehaviorTests` | `OverlayFeature` runtime behaviour: analytics emission, dismiss-call recording, FIFO ordering |
+| `SettingsFeatureTests` | `SettingsFeature` default state, action handling, persistence wiring |
+| `AppCategoryPickerFeatureTests` | `AppCategoryPickerFeature` authorisation/selection state + Screen Time picker actions |
+| `SchedulingFeature_SnoozeTests` | `SchedulingFeature.scheduleReminders` snooze-active branch: pause + cancel + wake notification |
+| `SchedulingFeature_SchedulingTests` | `SchedulingFeature.scheduleReminders` authorised path + auth-status refresh semantics |
+| `SchedulingFeature_NotificationRoutingTests` | `SchedulingFeature.notificationRouted` fallback pipeline + IPC fallback events |
+| `SettingsFeatureBindingTests` | `SettingsFeature` `@BindingState` debouncing → persist + reschedule + analytics |
+| `SchedulingFeature_ForegroundTransitionTests` | `SchedulingFeature.foregroundTransition` no-snooze auth-status-unchanged refresh-only path |
+| `SettingsFeatureToggleEmissionTests` | `SettingsFeature.settingToggleChanged` analytics emission per toggle key |
+| `SettingsFeatureSnoozeTests` | `SettingsFeature.snoozeTapped` persists expiry + zeroes counter + logs analytics |
+| `SchedulingFeature_WatchdogRecoveryTests` | `SchedulingFeature` watchdog-recovery deferral (Phase-2 IPC-heartbeat dependency `XCTSkip` until landed) |
+| `IPCClientSurfaceTests` | `IPCClient` overridden-client surface routes all accessors to the test recorder |
+| `TCATestDependencies` | Shared no-op dependency-stub factory (no tests; helper only) |
 
 ---
 
-### Mocks — 28 tests
+### Mocks
 
-> Self-tests for mock infrastructure that exercises the mock-recording fidelity. Distinct from the [Mock Infrastructure appendix](#mock-infrastructure-14-mock-files) below, which catalogues the 14 mock objects used by other suites.
+> Self-tests for mock infrastructure that exercises the mock-recording fidelity. Distinct from the [Mock Infrastructure appendix](#mock-infrastructure) below, which catalogues the mock objects used by other suites.
 
-| File | Tests | Coverage Focus |
-|---|---|---|
-| `MockRecordingTests` | 20 | `ServiceLifecycle` protocol conformance + mock detector recording fidelity (used by `PauseConditionManager` tests) |
-| `MockMediaControllingTests` | 6 | `MockMediaControlling` self-test: pause/resume call counts and ordering |
-| `TestBundleHelper` | 2 | Locates the production resource bundle from `@testable` test targets (SPM `{Package}_{Target}.bundle` resolution) |
+| File | Coverage Focus |
+|---|---|
+| `MockRecordingTests` | `ServiceLifecycle` protocol conformance + mock detector recording fidelity (used by `PauseConditionManager` tests) |
+| `MockMediaControllingTests` | `MockMediaControlling` self-test: pause/resume call counts and ordering |
+| `TestBundleHelper` | Locates the production resource bundle from `@testable` test targets (SPM `{Package}_{Target}.bundle` resolution) |
 
 ---
 
-## Mock Infrastructure (14 mock files)
+## Mock Infrastructure
+
+> **Mock-file count recipe (root-cause fix — see #890):** The header previously hard-coded "14 mock files" and drifted whenever a mock was added or removed (#890 evidence: header said 14, the table had 13 — `MockAppStateProvider` row was missing). Following the #889 / #885 pattern, the literal has been dropped. Run the recipe below at HEAD for the live count.
+>
+> ```bash
+> # Live mock-file count (excludes *Tests.swift self-tests under Mocks/):
+> ls Tests/EyePostureReminderTests/Mocks/Mock*.swift \
+>   | grep -v 'Tests\.swift$' | wc -l
+> ```
 
 | Mock | Protocol | Purpose |
 |---|---|---|
@@ -196,25 +217,28 @@
 | `MockAppGroupIPCRecorder` | `AppGroupIPCRecording` | Captures IPC events in-memory |
 | `MockAccessibilityNotificationPoster` | `AccessibilityNotificationPosting` | Captures VoiceOver announcement calls |
 | `MockDetectors` | Multiple detector protocols | Aggregated mock for Focus/Driving/CarPlay detectors |
+| `MockAppStateProvider` | `AppStateProviding` | Controls foreground/background state for scheduler + lifecycle tests |
 
 ---
 
 ## Phase 2 Test Status
 
-| Feature | Tests | Status |
+> **Per-row count recipe (root-cause fix — see #890):** This table previously listed literal `N in <Suite>` counts per row, which drifted on every test add/remove in the cited suites. Following the #889 pattern, the literal counts have been dropped. The `Coverage Sources` column lists the canonical suite files; run `grep -c 'func test' Tests/EyePostureReminderTests/<path>/<Suite>.swift` for any specific live count.
+
+| Feature | Coverage Sources | Status |
 |---|---|---|
-| **Haptics** (`hapticsEnabled` toggle) | 5 in `SettingsStorePhase2Tests` | ✅ Complete |
-| **Snooze lifecycle** (`snooze(option:)`, limit, expiry, cancel, persistence) | 3 in `SettingsFeatureSnoozeTests` + 8 in `SchedulingFeature_SnoozeTests` | ✅ Complete |
-| **Snooze count** persistence + reset | 5 in `SettingsStorePhase2Tests` | ✅ Complete |
-| **Onboarding flag** (`hasSeenOnboarding`) | 12 in `OnboardingTests` | ✅ Complete |
-| **Accessibility** (`AppFont` Dynamic Type, `AppLayout` HIG) | 52 in `DesignSystemTests` | ✅ Complete |
-| **OverlayManager queue FIFO** (notification-routing level via `MockOverlayPresenting`) | 4 in `OverlayManagerTests` + routing coverage in `SchedulingFeature_NotificationRoutingTests` | ✅ Unit-testable paths complete |
-| **Smart Pause** (Focus Mode, CarPlay, driving) | 33 in `PauseConditionManagerTests` + 11 in `FocusModeExtendedTests` + 19 in `DrivingDetectionExtendedTests` | ✅ Complete |
-| **Screen-Time Triggers** (`ScreenTimeTracker`) | 54 in `ScreenTimeTrackerTests` + 19 in `ScreenTimeAuthorizationTests` | ✅ Complete |
-| **True Interrupt Mode** (shield, IPC, DeviceActivity) | 12 in `ScreenTimeShieldTests` + 26 in `DeviceActivityMonitorTests` + 24 in `AppGroupIPCStoreTests` | ✅ Unit-testable paths complete |
-| **Analytics** (`AnalyticsLogger`, all events) | 43 in `AnalyticsEventTests` + 43 in `AnalyticsLoggerTests` | ✅ Complete |
-| **String Catalog completeness** | 186 in `StringCatalogTests` | ✅ Complete |
-| **Regression suite** | 48 in `RegressionTests` | ✅ Complete |
+| **Haptics** (`hapticsEnabled` toggle) | `SettingsStorePhase2Tests` | ✅ Complete |
+| **Snooze lifecycle** (`snooze(option:)`, limit, expiry, cancel, persistence) | `SettingsFeatureSnoozeTests`, `SchedulingFeature_SnoozeTests` | ✅ Complete |
+| **Snooze count** persistence + reset | `SettingsStorePhase2Tests` | ✅ Complete |
+| **Onboarding flag** (`hasSeenOnboarding`) | `OnboardingTests` | ✅ Complete |
+| **Accessibility** (`AppFont` Dynamic Type, `AppLayout` HIG) | `DesignSystemTests` | ✅ Complete |
+| **OverlayManager queue FIFO** (notification-routing level via `MockOverlayPresenting`) | `OverlayManagerTests`, `SchedulingFeature_NotificationRoutingTests` | ✅ Unit-testable paths complete |
+| **Smart Pause** (Focus Mode, CarPlay, driving) | `PauseConditionManagerTests`, `FocusModeExtendedTests`, `DrivingDetectionExtendedTests` | ✅ Complete |
+| **Screen-Time Triggers** (`ScreenTimeTracker`) | `ScreenTimeTrackerTests`, `ScreenTimeAuthorizationTests` | ✅ Complete |
+| **True Interrupt Mode** (shield, IPC, DeviceActivity) | `ScreenTimeShieldTests`, `DeviceActivityMonitorTests`, `AppGroupIPCStoreTests` | ✅ Unit-testable paths complete |
+| **Analytics** (`AnalyticsLogger`, all events) | `AnalyticsEventTests`, `AnalyticsLoggerTests` | ✅ Complete |
+| **String Catalog completeness** | `StringCatalogTests` | ✅ Complete |
+| **Regression suite** | `RegressionTests` | ✅ Complete |
 
 ---
 
