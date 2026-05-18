@@ -10,21 +10,23 @@ import UserNotifications
 /// canonical runtime for that surface (`#755` Phase E) and consumes the
 /// dependency clients defined by `p0-tca-2`.
 ///
-/// Behavioural fidelity caveats (intentional deferrals, tracked under
-/// #895 — the closed `p0-tca-15` (#678) meta-tracker no longer owns
-/// these follow-ups):
+/// Behavioural fidelity caveats (intentional deferrals, each tracked by a
+/// dedicated open issue — the closed `p0-tca-15` (#678) meta-tracker no
+/// longer owns these follow-ups, and the umbrella drift from referencing
+/// it was resolved in #895 by splitting per bullet):
 ///   * `SettingsClient` only vends a single eyes-side `ReminderSettings`
 ///     snapshot, so per-type interval differentiation reuses
 ///     `state.settings.interval` for both reminder types until a richer
-///     settings client lands.
+///     settings client lands (#897).
 ///   * Fallback-routing IPC reads, session-timing analytics,
 ///     launch-readiness analytics, DeviceActivity scheduling on overlay
 ///     present, and the `OverlayClient.lifecycleEvents`-driven bookkeeping
-///     all require dependency-client surface that does not yet exist;
-///     those side-effects are tracked under #895 follow-ups.
+///     all require dependency-client surface that does not yet exist
+///     (#898).
 ///   * `hapticsEnabled`/`pauseMediaDuringBreaks` are not yet exposed on
 ///     `ReminderSettings`; the reducer passes `false` for both when calling
-///     `OverlayClient.show` (matches the SettingsClient default state).
+///     `OverlayClient.show` (matches the SettingsClient default state) —
+///     #899.
 ///
 /// Watchdog recovery shipped in #892 via `.watchdogRecoveryTriggered`
 /// (action + effect) wired on top of `IPCClient.recentEvents` and the
