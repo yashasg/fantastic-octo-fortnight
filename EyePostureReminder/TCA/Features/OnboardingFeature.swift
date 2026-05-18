@@ -113,6 +113,7 @@ struct OnboardingFeature {
                     // surface and adding it would violate the "own this file
                     // only" constraint, so the analytics call is deferred to
                     // the AnalyticsLogger surface extension that owns it.
+                    // Tracking: #896.
                 }
 
             case .requestScreenTimeAuthorization:
