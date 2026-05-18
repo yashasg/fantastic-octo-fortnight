@@ -123,7 +123,8 @@ enum TCATestDependencies {
     static func silentDeviceActivityMonitorClient() -> DeviceActivityMonitorClient {
         DeviceActivityMonitorClient(
             schedule: { _, _ in },
-            cancel: { _ in }
+            cancel: { _ in },
+            startScheduleForOverlay: { _ in }
         )
     }
 
