@@ -137,7 +137,7 @@
 |---|---|---|
 | `MockNotificationCenter` | `NotificationScheduling` | Controls add/remove/auth in scheduler tests |
 | `MockSettingsPersisting` | `SettingsPersisting` | In-memory UserDefaults replacement |
-| `MockReminderScheduler` | `ReminderScheduling` | Tracks ViewModel → scheduler call counts |
+| `MockReminderScheduler` | `ReminderScheduling` | Tracks reducer/feature → scheduler call counts (TCA `TestStore` and direct mock-call verification) |
 | `MockMediaControlling` | `MediaControlling` | Counts pause/resume calls in overlay tests |
 | `MockOverlayPresenting` | `OverlayPresenting` | Tracks showOverlay type/duration/haptics order for FIFO verification |
 | `MockPauseConditionProvider` | `PauseConditionProviding` | Returns configurable pause-condition states |
