@@ -354,15 +354,20 @@ EyePostureReminder/                  (SPM executable target)
 │   ├── LegalLinks.swift              Canonical privacy / terms URLs
 │   └── UITestMode.swift              `#if DEBUG` launch-arg helpers for UI tests
 │
-└── Resources/
-    ├── Colors.xcassets               Semantic color tokens with dark/light variants:
-    │                                   Legacy: ReminderBlue, ReminderGreen, WarningOrange, WarningText
-    │                                   Restful Grove: RGPrimaryRest, RGSecondaryCalm, RGAccentWarm,
-    │                                     RGSurface, RGSurfaceTint, RGBackground, RGTextPrimary,
-    │                                     RGTextSecondary, RGSeparatorSoft, RGShadowCard
-    ├── Localizable.xcstrings         ~35 user-facing strings; Xcode 15 String Catalog
-    ├── defaults.json                 First-launch seed values for intervals + feature flags
-    └── PrivacyInfo.xcprivacy         Apple privacy manifest for App Store Connect compliance
+├── Resources/
+│   ├── Colors.xcassets               Semantic color tokens with dark/light variants:
+│   │                                   Legacy: ReminderBlue, ReminderGreen, WarningOrange, WarningText
+│   │                                   Restful Grove: RGPrimaryRest, RGSecondaryCalm, RGAccentWarm,
+│   │                                     RGSurface, RGSurfaceTint, RGBackground, RGTextPrimary,
+│   │                                     RGTextSecondary, RGSeparatorSoft, RGShadowCard
+│   ├── Fonts/
+│   │   ├── Nunito-Regular.ttf            Custom UI font (Restful Grove typography)
+│   │   ├── Nunito-Italic.ttf             Custom UI font — italic variant
+│   │   └── OFL-Nunito.txt                SIL Open Font License notice bundled alongside Nunito files
+│   ├── Localizable.xcstrings         ~35 user-facing strings; Xcode 15 String Catalog
+│   └── defaults.json                 First-launch seed values for intervals + feature flags
+│
+└── PrivacyInfo.xcprivacy             Apple privacy manifest for App Store Connect compliance (copied via `Package.swift`)
 
 Extensions/                           (XcodeGen app-extension targets)
 ├── Shared/                           App Group helpers shared by main app + both extensions
@@ -378,12 +383,14 @@ Extensions/                           (XcodeGen app-extension targets)
 │   ├── Info.plist                    com.apple.ManagedSettingsUI.shield-configuration-service
 │   ├── ShieldConfigurationDataSource.swift
 │   ├── ShieldConfigurationExtension.entitlements             (dev signing)
-│   └── ShieldConfigurationExtension.Distribution.entitlements (distribution signing)
+│   ├── ShieldConfigurationExtension.Distribution.entitlements (distribution signing)
+│   └── PrivacyInfo.xcprivacy         Apple privacy manifest for the shield-configuration extension (#635)
 └── DeviceActivityMonitorExtension/
     ├── Info.plist                    com.apple.deviceactivity.monitor-extension
     ├── DeviceActivityMonitorExtension.swift
     ├── DeviceActivityMonitorExtension.entitlements             (dev signing)
-    └── DeviceActivityMonitorExtension.Distribution.entitlements (distribution signing)
+    ├── DeviceActivityMonitorExtension.Distribution.entitlements (distribution signing)
+    └── PrivacyInfo.xcprivacy         Apple privacy manifest for the device-activity-monitor extension (#635)
 
 Tests/
 ├── EyePostureReminderTests/          (SPM test target, depends on EyePostureReminder)
@@ -404,6 +411,8 @@ Tests/
 │   │   ├── MockScreenTimeAuthorizationProviding.swift
 │   │   ├── MockScreenTimeShieldProviding.swift
 │   │   ├── MockAccessibilityNotificationPoster.swift
+│   │   ├── MockMediaControllingTests.swift  Self-tests for `MockMediaControlling` recording fidelity
+│   │   ├── MockRecordingTests.swift         Self-tests for `ServiceLifecycle` mock detector recording
 │   │   └── TestBundleHelper.swift    TestBundle.module — resolves SPM resource bundle in tests
 │   ├── Models/
 │   │   ├── AppConfigTests.swift
@@ -447,7 +456,7 @@ Tests/
 │   │   ├── SchedulingFeature_SchedulingTests.swift
 │   │   ├── SchedulingFeature_SnoozeTests.swift
 │   │   ├── SchedulingFeature_WatchdogRecoveryTests.swift
-│   │   ├── SettingsFeatureTests.swift / SettingsFeatureBindingTests.swift / SettingsFeatureSnoozeTests.swift
+│   │   ├── SettingsFeatureTests.swift / SettingsFeatureBindingTests.swift / SettingsFeatureSnoozeTests.swift / SettingsFeatureToggleEmissionTests.swift
 │   │   ├── IPCClientSurfaceTests.swift
 │   │   └── TCATestDependencies.swift  Shared `withDependencies` overrides for TestStore setup
 │   ├── Views/
@@ -461,6 +470,11 @@ Tests/
 │   │   ├── SettingsAccessibilityTests.swift / StringCatalogTests.swift
 │   │   ├── TrueInterruptViewCoverageTests.swift
 │   │   └── YinYangEyeViewTests.swift / YinYangEyeViewExtendedTests.swift
+│   ├── Utilities/                    Unit tests for `EyePostureReminder/Utilities/` helpers
+│   │   ├── AccessibilityAnnouncementTests.swift  `AccessibilityNotificationPosting` announcement coverage (#287)
+│   │   ├── AppStorageKeysTests.swift             Centralised `@AppStorage` key constant coverage
+│   │   ├── AsyncTestHelpers.swift                Shared `XCTestCase` polling helpers (#456) — deterministic waits
+│   │   └── LegalLinksTests.swift                 Canonical privacy / terms URL coverage
 │   ├── Integration/                  Real SettingsStore + live services wired through TCA clients; mocked UIKit / UNUserNotificationCenter
 │   │   ├── IntegrationTests.swift
 │   │   └── MultiServicePipelineIntegrationTests.swift
@@ -1701,3 +1715,4 @@ Establish baselines on the CI runner (not local) to avoid machine-dependent drif
 | 2026-04-28 | Added §5.5 True Interrupt Mode (Phase 3+) architecture: FamilyControls authorization flow, four-target app extension model (main + DeviceActivityMonitor + ShieldConfiguration + ShieldAction), ManagedSettingsStore shield blocking, App Group state schema, ShieldConfiguration data-only limitations (no animations/arbitrary views), local notification fallback pattern, distribution gating (Apple case ID 102881605113 pending). Updated Phase 3 milestones with explicit True Interrupt Mode scope. | Rusty |
 | 2026-05-15 | Post-TCA-migration refresh (#725). §1 module-dependency graph redrawn around `AppFeature` / per-feature reducers / dependency clients; §3 project-structure tree updated for `EyePostureReminder/TCA/` + live-service-only `Services/`; added §2.8 dependency-client surface; rewrote §4.1 as "Why TCA Over MVVM?"; §4.6 / §4.7 / §5.5 re-anchored from `AppCoordinator` onto `SchedulingFeature` + matching clients; §7.4 SwiftUI example switched to `StoreOf<Feature>` + `WithPerceptionTracking`; §10 Testing Architecture rewritten around the `TestStore` + `withDependencies` workflow; §8 / §8.5 milestone + onboarding-flow refs cleaned. | Rusty |
 | 2026-05-17 | §3 project-structure tree refresh (#859). Dropped the deleted `Tests/EyePostureReminderTests/TCA/ContentViewTests.swift` row (removed in 4f6d4c5 alongside the dead `ContentView` pass-through wrapper). Dropped the `EyePostureReminder/TCA/Bindings/` directory row whose only file (`StoreScopes.swift`) was removed in 82bc5eb — there is no `Bindings/` directory on disk any more. Expanded the `Extensions/Shared/` listing from the lone `ShieldSessionKeys.swift` row to enumerate all eight App Group / shield-session helpers that now ship there (`AppGroupDefaults`, `AppGroupIPCStore`, `ShieldConfigurationCopyLocalization`, `ShieldIntervalEndCleanupPolicy`, `ShieldSessionKeys`, `ShieldSessionSnapshot`, `ShieldTriggerReason`, `WatchdogHeartbeat`) and called out the per-extension `.Distribution.entitlements` files used by signed builds. Docs-only — no source changes. | Copilot |
+| 2026-05-17 | §3 project-structure tree residual-drift fix (#861). Moved `PrivacyInfo.xcprivacy` out of `EyePostureReminder/Resources/` and onto the `EyePostureReminder/` root row (peer of `App/`, `Models/`, `Resources/`) so the tree matches `Package.swift:40 .copy("PrivacyInfo.xcprivacy")`. Added the `Resources/Fonts/` subtree (`Nunito-Regular.ttf`, `Nunito-Italic.ttf`, `OFL-Nunito.txt`). Added the per-extension `PrivacyInfo.xcprivacy` rows for `Extensions/ShieldConfigurationExtension/` and `Extensions/DeviceActivityMonitorExtension/` (shipped in #635). Added the missing `Tests/EyePostureReminderTests/TCA/SettingsFeatureToggleEmissionTests.swift` to the `SettingsFeature*Tests` row. Added the missing `Tests/EyePostureReminderTests/Mocks/MockMediaControllingTests.swift` and `MockRecordingTests.swift` rows. Added the previously-omitted `Tests/EyePostureReminderTests/Utilities/` test subtree (`AccessibilityAnnouncementTests`, `AppStorageKeysTests`, `AsyncTestHelpers`, `LegalLinksTests`). Docs-only — no source changes. | Copilot |
