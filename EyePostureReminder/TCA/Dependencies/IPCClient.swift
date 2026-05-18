@@ -16,6 +16,15 @@ import ScreenTimeExtensionShared
 /// Phase 2 (`p0-tca-15` / #678) extended the surface with selection
 /// read/write + multicast, giving reducers direct access to the App
 /// Group store.
+///
+/// Watchdog Phase-2 wiring (#892) added `recentEvents`, an App Group
+/// event-log snapshot the reducer pairs with `@Dependency(\.date)` (TCA's
+/// `DateGenerator`, the `Clock`-shaped adapter that vends "now" for
+/// heartbeat-staleness comparisons). Together with the reducer action
+/// `SchedulingFeature.watchdogRecoveryTriggered`, they form the dependency
+/// surface the deleted `AppCoordinator.recoverStaleDevice…` detector
+/// required — see `Tests/.../WatchdogHeartbeatTests.swift` for the parity
+/// contract the reducer composes with `WatchdogHeartbeat.status(…)`.
 @DependencyClient
 struct IPCClient: Sendable {
     /// Whether the user has toggled on the True Interrupt (DeviceActivity
@@ -52,6 +61,15 @@ struct IPCClient: Sendable {
     /// receives every subsequent successful `writeSelection` payload until
     /// the consumer terminates.
     var selectionChanges: @Sendable () -> AsyncStream<AppGroupSelectionSnapshot> = { .finished }
+
+    /// Snapshot of the recent App Group IPC event log used by watchdog
+    /// recovery detection (#892). Returns an empty array when the store is
+    /// unavailable so callers can stay synchronous without try-catch. The
+    /// reducer pairs this read with the `@Dependency(\.date)` clock — TCA's
+    /// `DateGenerator` is the `Clock`-shaped adapter that vends the "now"
+    /// used for heartbeat-staleness comparisons; a `TestStore` can drive
+    /// both deterministically inside a single `withDependencies` block.
+    var recentEvents: @Sendable () async -> [AppGroupIPCEvent] = { [] }
 }
 
 extension IPCClient: DependencyKey {
@@ -74,7 +92,10 @@ extension IPCClient: DependencyKey {
                 await MainActor.run { LiveIPCBridge.shared.record(event, context: context) }
             },
             trueInterruptChanges: { makeTrueInterruptStream() },
-            selectionChanges: { makeSelectionStream() }
+            selectionChanges: { makeSelectionStream() },
+            recentEvents: {
+                await MainActor.run { LiveIPCBridge.shared.readEvents() }
+            }
         )
     }()
 }
@@ -174,6 +195,21 @@ private final class LiveIPCBridge {
                 error=\(error.localizedDescription, privacy: .public)
                 """)
             return false
+        }
+    }
+
+    func readEvents() -> [AppGroupIPCEvent] {
+        do {
+            return try store.readEvents()
+        } catch {
+            AnalyticsLogger.log(
+                .ipcOperationFailed(operation: .readEvents, reason: .unavailable)
+            )
+            ipcLogger.error("""
+                event=ipc_read_events_failed \
+                error=\(error.localizedDescription, privacy: .public)
+                """)
+            return []
         }
     }
 }

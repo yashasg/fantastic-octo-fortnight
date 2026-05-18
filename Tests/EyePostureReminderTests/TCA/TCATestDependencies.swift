@@ -113,7 +113,8 @@ enum TCATestDependencies {
             writeSelection: { _ in false },
             record: { _, _ in },
             trueInterruptChanges: { .finished },
-            selectionChanges: { .finished }
+            selectionChanges: { .finished },
+            recentEvents: { [] }
         )
     }
 
