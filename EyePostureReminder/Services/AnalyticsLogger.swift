@@ -175,6 +175,14 @@ enum AnalyticsEvent: Sendable {
     /// Fired when the user completes onboarding. `cta` records which exit button was tapped.
     case onboardingCompleted(cta: OnboardingCTA)
 
+    /// Fired when the user responds to the system notification-permission prompt
+    /// shown during onboarding. `granted` reflects the boolean returned by
+    /// `UNUserNotificationCenter.requestAuthorization(options:)` — `true` when
+    /// the user tapped *Allow*, `false` when they tapped *Don't Allow*. The
+    /// event is intentionally not emitted when the underlying call throws, so
+    /// the stream only contains real user-driven responses.
+    case notificationPermissionResponded(granted: Bool)
+
     /// Non-PII code for the onboarding exit CTA the user tapped.
     enum OnboardingCTA: String, CaseIterable {
         case getStarted = "get_started"
@@ -364,6 +372,12 @@ enum AnalyticsLogger {
             logger.info("""
                 event=onboarding_completed \
                 cta=\(cta.rawValue, privacy: .public)
+                """)
+
+        case let .notificationPermissionResponded(granted):
+            logger.info("""
+                event=notification_permission_responded \
+                granted=\(granted, privacy: .public)
                 """)
 
         case let .appLaunchReadiness(payload):

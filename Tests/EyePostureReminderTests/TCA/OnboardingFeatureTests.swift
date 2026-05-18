@@ -125,6 +125,7 @@ final class OnboardingFeatureTests: XCTestCase {
     // MARK: - .requestNotificationPermission
 
     func test_requestNotificationPermission_swallowsThrowAndUpdatesStatus() async {
+        let analyticsEvents = LockIsolated<[AnalyticsEvent]>([])
         let store = TestStore(initialState: OnboardingFeature.State()) {
             OnboardingFeature()
         } withDependencies: {
@@ -139,17 +140,29 @@ final class OnboardingFeatureTests: XCTestCase {
                 pendingRequests: { [] },
                 deliveredNotifications: { [] }
             )
-            $0.analyticsClient = AnalyticsClient(log: { _ in })
+            $0.analyticsClient = AnalyticsClient(
+                log: { event in analyticsEvents.withValue { $0.append(event) } }
+            )
         }
 
         await store.send(.requestNotificationPermission)
         await store.receive(\.notificationStatusChanged) {
             $0.notificationAuthStatus = .authorized
         }
+
+        analyticsEvents.withValue { events in
+            let responded = events.filter {
+                if case .notificationPermissionResponded = $0 { return true }
+                return false
+            }
+            XCTAssertTrue(responded.isEmpty,
+                          "Throws must skip the analytics emission so the stream only records real user responses")
+        }
     }
 
     func test_requestNotificationPermission_grantedRoutesAuthorizedStatus() async {
         let requestCalls = LockIsolated<[UNAuthorizationOptions]>([])
+        let analyticsEvents = LockIsolated<[AnalyticsEvent]>([])
         let store = TestStore(initialState: OnboardingFeature.State()) {
             OnboardingFeature()
         } withDependencies: {
@@ -165,7 +178,9 @@ final class OnboardingFeatureTests: XCTestCase {
                 pendingRequests: { [] },
                 deliveredNotifications: { [] }
             )
-            $0.analyticsClient = AnalyticsClient(log: { _ in })
+            $0.analyticsClient = AnalyticsClient(
+                log: { event in analyticsEvents.withValue { $0.append(event) } }
+            )
         }
 
         await store.send(.requestNotificationPermission)
@@ -178,9 +193,19 @@ final class OnboardingFeatureTests: XCTestCase {
             XCTAssertEqual(calls.first, OnboardingFeature.notificationOptions,
                            "Must request the documented .alert/.sound/.badge bundle")
         }
+
+        analyticsEvents.withValue { events in
+            let responded: [Bool] = events.compactMap {
+                if case let .notificationPermissionResponded(granted) = $0 { return granted }
+                return nil
+            }
+            XCTAssertEqual(responded, [true],
+                           "Granted response must emit exactly one .notificationPermissionResponded(true) (#896)")
+        }
     }
 
     func test_requestNotificationPermission_deniedRoutesDeniedStatus() async {
+        let analyticsEvents = LockIsolated<[AnalyticsEvent]>([])
         let store = TestStore(initialState: OnboardingFeature.State()) {
             OnboardingFeature()
         } withDependencies: {
@@ -193,12 +218,23 @@ final class OnboardingFeatureTests: XCTestCase {
                 pendingRequests: { [] },
                 deliveredNotifications: { [] }
             )
-            $0.analyticsClient = AnalyticsClient(log: { _ in })
+            $0.analyticsClient = AnalyticsClient(
+                log: { event in analyticsEvents.withValue { $0.append(event) } }
+            )
         }
 
         await store.send(.requestNotificationPermission)
         await store.receive(\.notificationStatusChanged) {
             $0.notificationAuthStatus = .denied
+        }
+
+        analyticsEvents.withValue { events in
+            let responded: [Bool] = events.compactMap {
+                if case let .notificationPermissionResponded(granted) = $0 { return granted }
+                return nil
+            }
+            XCTAssertEqual(responded, [false],
+                           "Denied response must emit exactly one .notificationPermissionResponded(false) (#896)")
         }
     }
 
