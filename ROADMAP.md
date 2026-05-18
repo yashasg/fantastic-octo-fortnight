@@ -505,16 +505,16 @@ Device resumes normal activity
 - **Owner:** Basher (Services Dev)
 - **Status:** 🔄 PLANNED
 - **Scope:**
-  - `DeviceActivityMonitor` service tracks screen-on time per app/category (via ScreenTime APIs)
-  - Integrate with existing ScreenTimeTracker (bridge to new API)
-  - Test DeviceActivity schedule updates
-  - Edge cases: app backgrounding, device lock, multi-app scenarios
+  - `DeviceActivityMonitor` service tracks screen-on time per app/category (via ScreenTime APIs) (blocked by #201 entitlement approval — real `DeviceActivityCenter.startMonitoring` semantics need FamilyControls plus a live `ShieldSession` derived from a `FamilyActivityPicker` selection (#410); compile-only scaffold delivered via the `DeviceActivityMonitorExtension` target + `DeviceActivityMonitorProviding` protocol + `DeviceActivityMonitorNoop` adapter)
+  - Integrate with existing ScreenTimeTracker (bridge to new API) (later delivered via `DeviceActivityMonitorClient` TCA dep (`schedule(_:_:)` / `cancel(_:)` / `startScheduleForOverlay(_:)`) routed through `LiveDeviceActivityMonitorBridge`; `SchedulingFeature.startEffect` calls `startScheduleForOverlay(_:)` on `OverlayClient.lifecycleEvents` `.presented` and `cancel(_:)` on `.dismissed` (#903). The live adapter remains a no-op until #201 promotes the bridge off `DeviceActivityMonitorNoop`.)
+  - Test DeviceActivity schedule updates (later delivered via `DeviceActivityMonitorClient` `@DependencyClient` test seam in `SchedulingFeature` `TestStore` tests — schedule/cancel call sites are recorder-asserted independent of the real Apple framework (#903); device-level scheduling tests remain blocked by #201)
+  - Edge cases: app backgrounding, device lock, multi-app scenarios (blocked by #201 — requires a live monitoring extension exercised against real Apple framework lifecycles)
 - **Dependencies:** M3.3, M3.4
 - **Duration:** 4 days
 - **Acceptance Criteria:**
-  - DeviceActivityMonitor detects apps launched by user
-  - Screen time accrual matches expected thresholds
-  - Transitions to shield state on break reminder
+  - DeviceActivityMonitor detects apps launched by user (blocked by #201)
+  - Screen time accrual matches expected thresholds (blocked by #201)
+  - Transitions to shield state on break reminder (blocked by #201 / #410 — live shield application is ShieldAction Phase 2)
 
 #### M3.6: ManagedSettings Shielding + ShieldAction Extension
 - **Owner:** Basher (Services Dev) + Linus (iOS UI Dev)
