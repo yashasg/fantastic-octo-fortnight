@@ -23,17 +23,19 @@ import XCTest
 /// The pause-condition + IPC stream effects defined in `startEffect()` are
 /// the closest in-scope analogues to "external trigger reschedules" so the
 /// covering tests assert those paths here. The watchdog-recovery test
-/// itself documents the deferral via `XCTSkip` so the migration ticket can
-/// re-enable it once the wider dependency surface lands.
+/// itself documents the deferral via `XCTSkip` (tracking issue #892) so
+/// the migration ticket can re-enable it once the wider dependency surface
+/// lands.
 @MainActor
 final class SchedulingFeatureWatchdogRecoveryTests: XCTestCase {
 
     // MARK: - Watchdog-recovery deferral
 
-    /// Records the deferral. Once Phase-2 lands the IPC-recent-events
-    /// accessor + heartbeat clock adapter, replace this `XCTSkip` with the
-    /// behavioural-parity test against the new
-    /// `.watchdogRecoveryTriggered` action.
+    /// Records the deferral. Once the Phase-2 dependency surface lands
+    /// (`IPCClient.recentEvents` accessor + heartbeat clock adapter +
+    /// `SchedulingFeature.watchdogRecoveryTriggered` action — tracking
+    /// issue #892), replace this `XCTSkip` with the behavioural-parity
+    /// test against the new `.watchdogRecoveryTriggered` action.
     func test_watchdogRecovery_deferredToPhase2() throws {
         try XCTSkipIf(true, """
             SchedulingFeature lacks watchdog-recovery surface in Phase 1
@@ -41,6 +43,8 @@ final class SchedulingFeatureWatchdogRecoveryTests: XCTestCase {
             Re-enable once an IPCClient.recentEvents accessor + heartbeat
             clock adapter ship so the legacy watchdog-heartbeat coverage
             can be ported into a behavioural-parity test.
+            Tracking: GitLab issue #892 (squad:basher, priority:p2,
+            type:feature).
             """)
     }
 
