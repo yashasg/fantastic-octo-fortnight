@@ -471,18 +471,18 @@ Device resumes normal activity
 - **Owner:** Basher (Services Dev) + Virgil (CI/CD)
 - **Status:** 🔄 PLANNED
 - **Scope:**
-  - Add ShieldConfiguration extension target to Xcode project
-  - Add ShieldAction extension target (optional first phase)
-  - Configure Info.plist for extensions (NSExtensionPointIdentifier)
-  - Add app group to main app + both extensions
-  - Update CI/CD to build/test both targets
-  - Code signing: ensure extension provisioning profiles included
+  - Add ShieldConfiguration extension target to Xcode project (later delivered via `project.yml` `ShieldConfigurationExtension` target + `Extensions/ShieldConfigurationExtension/` sources)
+  - Add ShieldAction extension target (optional first phase) (deferred to ShieldAction Phase 2 (#410) — compile-only scaffold not yet added; `project.yml` currently defines only the ShieldConfiguration + DeviceActivityMonitor extension targets)
+  - Configure Info.plist for extensions (NSExtensionPointIdentifier) (later delivered via per-extension `Info.plist` wiring in `project.yml` (`INFOPLIST_FILE` for `ShieldConfigurationExtension` + `DeviceActivityMonitorExtension`))
+  - Add app group to main app + both extensions (later delivered via App Group mismatch fix (#415) — `group.com.yashasg.kshana` now attached to main app + both extension entitlements files)
+  - Update CI/CD to build/test both targets (later delivered via `.github/workflows/ci.yml` step that runs `./scripts/setup-screentime.sh --build` for an unsigned simulator compile of both extension targets (#210 partial))
+  - Code signing: ensure extension provisioning profiles included (blocked by #201 entitlement approval — signed extension distribution path lives in `scripts/build_signed.sh` and the remaining #210 acceptance items)
 - **Dependencies:** M3.2 spike complete
 - **Duration:** 3 days
 - **Acceptance Criteria:**
-  - Both extension targets build without errors
-  - CI/CD pipeline builds and signs both targets
-  - App group shared container accessible from both targets
+  - Both extension targets build without errors (later delivered — CI compiles both targets unsigned for the simulator)
+  - CI/CD pipeline builds and signs both targets (partially delivered — unsigned build path delivered via #210; signed build path remains blocked by #201)
+  - App group shared container accessible from both targets (later delivered via #415 + `Extensions/Shared/ShieldSessionKeys.swift` `appGroupID` constant)
 
 #### M3.4: Authorization + App/Category Picker
 - **Owner:** Linus (iOS UI Dev) + Basher (Services Dev)
