@@ -247,30 +247,45 @@ final class ScreenTimeTrackerRegressionTests: XCTestCase {
     }
 
     /// disableTracking removes a type from the tracker; no callback fires afterward.
+    ///
+    /// Driven deterministically via `sut.tick(now:)` — no wall-clock wait — to
+    /// eliminate the residual ~3.5 s inverted-expectation budget on this surface
+    /// (post-#876/#877 sweep, #878). `tick()` directly exercises the threshold
+    /// guard logic that `disableTracking` mutates; multiple ticks past the
+    /// would-be threshold prove the disabled type never fires.
     func test_disableTracking_removesType_noCallbackFires() {
-        let noCallback = expectation(description: "no callback after disableTracking")
-        noCallback.isInverted = true
+        var fired = false
 
         sut.setThreshold(2, for: .eyes)
         sut.disableTracking(for: .eyes)
-        sut.onThresholdReached = { _ in noCallback.fulfill() }
+        sut.onThresholdReached = { _ in fired = true }
 
-        NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
-        wait(for: [noCallback], timeout: 3.5)
+        sut.tick(now: 1.0)
+        sut.tick(now: 2.0)
+        sut.tick(now: 3.0)
+
+        XCTAssertFalse(fired, "disableTracking must permanently prevent the callback from firing")
     }
 
     /// pause(for:) prevents counter accumulation for one type.
     /// Regression guard: if pausing is ignored, reminders fire during user-initiated snooze.
+    ///
+    /// Driven deterministically via `sut.tick(now:)` — no wall-clock wait — to
+    /// eliminate the residual ~3.5 s inverted-expectation budget on this surface
+    /// (post-#876/#877 sweep, #878). Mirrors the canonical pattern in
+    /// `Services/ScreenTimeTrackerTests.swift::test_pausedType_doesNotFireCallback`.
     func test_pause_preventsCallbackFiring() {
-        let noCallback = expectation(description: "paused type must not fire")
-        noCallback.isInverted = true
+        var fired = false
 
         sut.setThreshold(2, for: .eyes)
         sut.pause(for: .eyes)
-        sut.onThresholdReached = { _ in noCallback.fulfill() }
+        sut.onThresholdReached = { _ in fired = true }
 
-        NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
-        wait(for: [noCallback], timeout: 3.5)
+        sut.tick(now: 1.0)
+        sut.tick(now: 2.0)
+        sut.tick(now: 3.0)
+
+        XCTAssertFalse(fired, "Paused type must not fire the threshold callback regardless of accumulated ticks")
     }
 
     /// After pause + resume, the type must fire again when the threshold is reached.
@@ -295,18 +310,25 @@ final class ScreenTimeTrackerRegressionTests: XCTestCase {
     }
 
     /// pauseAll() must prevent ALL types from firing.
+    ///
+    /// Driven deterministically via `sut.tick(now:)` — no wall-clock wait — to
+    /// eliminate the residual ~3.5 s inverted-expectation budget on this surface
+    /// (post-#876/#877 sweep, #878). Mirrors the canonical pattern in
+    /// `Services/ScreenTimeTrackerTests.swift::test_pausedType_doesNotFireCallback`.
     func test_pauseAll_preventsAllCallbacks() {
-        let noCallback = expectation(description: "no callbacks after pauseAll")
-        noCallback.isInverted = true
+        var fired = false
 
         for type in ReminderType.allCases {
             sut.setThreshold(2, for: type)
         }
         sut.pauseAll()
-        sut.onThresholdReached = { _ in noCallback.fulfill() }
+        sut.onThresholdReached = { _ in fired = true }
 
-        NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
-        wait(for: [noCallback], timeout: 3.5)
+        sut.tick(now: 1.0)
+        sut.tick(now: 2.0)
+        sut.tick(now: 3.0)
+
+        XCTAssertFalse(fired, "pauseAll must prevent every type's threshold callback regardless of accumulated ticks")
     }
 
     // MARK: Threshold Firing (Deterministic Tick Driver)
@@ -380,11 +402,19 @@ final class ScreenTimeTrackerRegressionTests: XCTestCase {
     /// The callback must NOT fire during screen-off.
     /// Regression: if the timer is not stopped on resignActive, reminders fire while
     /// the screen is off (the wall-clock timer bug).
+    ///
+    /// Tightened inverted window (3.5 s → 1.8 s) and compressed `threshold` to
+    /// `0.5` (post-#876/#877 sweep, #878). The contract under test is "after
+    /// `willResignActive`, the real `Timer.scheduledTimer` is invalidated and
+    /// no further ticks fire" — so the wait window is the test. 1.8 s spans
+    /// the worst-case `Timer.scheduledTimer(withTimeInterval: 1.0)` + 0.5 s
+    /// tolerance plus a 0.3 s safety margin, so a regressed (still-running)
+    /// timer would surface as a callback within the window.
     func test_willResignActive_stopsAccumulation_noCallbackDuringScreenOff() {
         let noCallback = expectation(description: "no callback while screen is off")
         noCallback.isInverted = true
 
-        sut.setThreshold(2, for: .eyes)
+        sut.setThreshold(0.5, for: .eyes)
         sut.onThresholdReached = { _ in noCallback.fulfill() }
 
         // Start ticking, then immediately resign active.
@@ -393,32 +423,44 @@ final class ScreenTimeTrackerRegressionTests: XCTestCase {
         NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
         NotificationCenter.default.post(name: UIApplication.willResignActiveNotification, object: nil)
 
-        wait(for: [noCallback], timeout: 3.5)
+        wait(for: [noCallback], timeout: 1.8)
     }
 
     /// Returning to active within the grace period resumes counting from where it left off
     /// (counter is NOT reset). The callback must eventually fire.
     /// Regression guard: if the grace period cancellation doesn't work, counters reset on every
     /// brief interruption (notification banner, incoming call), making long intervals impossible.
+    ///
+    /// Driven deterministically via `tracker.tick(now:)` with a compressed
+    /// `resetGracePeriod: 0.3` — no `RunLoop.current.run(until:)` and no
+    /// wall-clock wait (post-#876/#877 sweep, #878). The previous implementation
+    /// paid two `RunLoop` runs (~0.7 s) plus a 6 s expectation timeout. Mirrors
+    /// the canonical pattern in
+    /// `Services/ScreenTimeTrackerTests.swift::test_gracePeriod_withinGrace_preservesElapsedTime`.
     func test_withinGracePeriod_returnsToActive_resumesCounting() {
-        let callbackFired = expectation(description: "callback fires after resume within grace period")
+        let tracker = ScreenTimeTracker(resetGracePeriod: 0.3)
+        defer { tracker.stop() }
 
-        sut.setThreshold(3, for: .eyes)
-        sut.onThresholdReached = { type in
-            if type == .eyes { callbackFired.fulfill() }
+        var callCount = 0
+        tracker.setThreshold(3, for: .eyes)
+        tracker.onThresholdReached = { type in
+            if type == .eyes { callCount += 1 }
         }
 
-        // Start counting.
-        NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
+        // Accumulate ~2.0 s of elapsed time (below threshold = 3).
+        tracker.tick(now: 1.0)
+        tracker.tick(now: 2.0)
+        XCTAssertEqual(callCount, 0, "Threshold = 3 must not fire after 2 s of accumulation")
 
-        // Briefly resign (~0.5s accumulated), then return within the 5-second grace period.
-        RunLoop.current.run(until: Date(timeIntervalSinceNow: 0.5))
+        // Brief resign + immediate return — synchronous posts run inside the
+        // 0.3 s grace window, so the resetTask is cancelled before it fires.
         NotificationCenter.default.post(name: UIApplication.willResignActiveNotification, object: nil)
-        RunLoop.current.run(until: Date(timeIntervalSinceNow: 0.2))
         NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
 
-        // Resumed from ~0.5s; callback should fire within ~3s more.
-        wait(for: [callbackFired], timeout: 6.0)
+        // If elapsed was preserved across the resign/return round-trip, one
+        // post-resume tick brings the counter from 2.0 → 3.0 and fires the callback.
+        tracker.tick(now: 3.0)
+        XCTAssertEqual(callCount, 1, "Returning within grace must preserve elapsed counters")
     }
 }
 // MARK: ─── Bug 5: Data-Driven Defaults ───────────────────────────────────────
