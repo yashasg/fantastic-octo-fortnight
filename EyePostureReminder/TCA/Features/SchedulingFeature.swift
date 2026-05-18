@@ -21,6 +21,11 @@ import UserNotifications
 ///     overlay present, and the `OverlayClient.lifecycleEvents`-driven
 ///     bookkeeping all require dependency-client surface that does not yet
 ///     exist; those side-effects are tracked under `p0-tca-15` follow-ups.
+///     Watchdog-recovery specifically (IPC-recent-events accessor +
+///     heartbeat-clock adapter + `.watchdogRecoveryTriggered` action) is
+///     tracked under GitLab issue #892 — re-enabling
+///     `SchedulingFeature_WatchdogRecoveryTests.test_watchdogRecovery_deferredToPhase2`
+///     is gated on that issue closing.
 ///   * `hapticsEnabled`/`pauseMediaDuringBreaks` are not yet exposed on
 ///     `ReminderSettings`; the reducer passes `false` for both when calling
 ///     `OverlayClient.show` (matches the SettingsClient default state).
