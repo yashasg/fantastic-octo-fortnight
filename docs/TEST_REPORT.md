@@ -171,9 +171,9 @@
 | **Onboarding flag** (`hasSeenOnboarding`) | 12 in `OnboardingTests` | ✅ Complete |
 | **Accessibility** (`AppFont` Dynamic Type, `AppLayout` HIG) | 52 in `DesignSystemTests` | ✅ Complete |
 | **OverlayManager queue FIFO** (notification-routing level via `MockOverlayPresenting`) | 4 in `OverlayManagerTests` + routing coverage in `SchedulingFeature_NotificationRoutingTests` | ✅ Unit-testable paths complete |
-| **Smart Pause** (Focus Mode, CarPlay, driving) | 33 in `PauseConditionManagerTests` + 21 in `FocusModeExtendedTests` + 29 in `DrivingDetectionExtendedTests` | ✅ Complete |
+| **Smart Pause** (Focus Mode, CarPlay, driving) | 33 in `PauseConditionManagerTests` + 11 in `FocusModeExtendedTests` + 19 in `DrivingDetectionExtendedTests` | ✅ Complete |
 | **Screen-Time Triggers** (`ScreenTimeTracker`) | 54 in `ScreenTimeTrackerTests` + 19 in `ScreenTimeAuthorizationTests` | ✅ Complete |
-| **True Interrupt Mode** (shield, IPC, DeviceActivity) | 12 in `ScreenTimeShieldTests` + 31 in `DeviceActivityMonitorTests` + 24 in `AppGroupIPCStoreTests` | ✅ Unit-testable paths complete |
+| **True Interrupt Mode** (shield, IPC, DeviceActivity) | 12 in `ScreenTimeShieldTests` + 26 in `DeviceActivityMonitorTests` + 24 in `AppGroupIPCStoreTests` | ✅ Unit-testable paths complete |
 | **Analytics** (`AnalyticsLogger`, all events) | 43 in `AnalyticsEventTests` + 43 in `AnalyticsLoggerTests` | ✅ Complete |
 | **String Catalog completeness** | 186 in `StringCatalogTests` | ✅ Complete |
 | **Regression suite** | 48 in `RegressionTests` | ✅ Complete |
