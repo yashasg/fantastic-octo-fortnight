@@ -11,7 +11,8 @@ import UserNotifications
 /// dependency clients defined by `p0-tca-2`.
 ///
 /// Behavioural fidelity caveats (intentional deferrals, tracked under
-/// `p0-tca-15`):
+/// #895 — the closed `p0-tca-15` (#678) meta-tracker no longer owns
+/// these follow-ups):
 ///   * `SettingsClient` only vends a single eyes-side `ReminderSettings`
 ///     snapshot, so per-type interval differentiation reuses
 ///     `state.settings.interval` for both reminder types until a richer
@@ -20,7 +21,7 @@ import UserNotifications
 ///     launch-readiness analytics, DeviceActivity scheduling on overlay
 ///     present, and the `OverlayClient.lifecycleEvents`-driven bookkeeping
 ///     all require dependency-client surface that does not yet exist;
-///     those side-effects are tracked under `p0-tca-15` follow-ups.
+///     those side-effects are tracked under #895 follow-ups.
 ///   * `hapticsEnabled`/`pauseMediaDuringBreaks` are not yet exposed on
 ///     `ReminderSettings`; the reducer passes `false` for both when calling
 ///     `OverlayClient.show` (matches the SettingsClient default state).
