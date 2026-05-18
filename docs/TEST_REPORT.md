@@ -83,7 +83,7 @@
 
 ### ViewModels — decommissioned
 
-> The legacy MVVM `SettingsViewModel` layer (and its four `SettingsViewModel*Tests.swift` suites) was decommissioned during the TCA migration (`#677` / `#755`, PRs `#756`–`#760`). Equivalent Settings coverage now lives in TCA reducer tests under `Tests/EyePostureReminderTests/TCA/Settings*.swift` (`SettingsFeatureTests`, `SettingsFeatureSnoozeTests`, `SettingsFeatureToggleEmissionTests`, `SettingsFeatureBindingTests`). A dedicated `### TCA Reducers` rollup is tracked as a separate restructure.
+> The legacy MVVM `SettingsViewModel` layer (and its four `SettingsViewModel*Tests.swift` suites) was decommissioned during the TCA migration (`#677` / `#755`, PRs `#756`–`#760`). Equivalent Settings coverage now lives in TCA reducer tests under `Tests/EyePostureReminderTests/TCA/Settings*.swift` (`SettingsFeatureTests`, `SettingsFeatureSnoozeTests`, `SettingsFeatureToggleEmissionTests`, `SettingsFeatureBindingTests`) — see the new §"TCA Reducers" rollup below.
 
 ---
 
@@ -138,6 +138,44 @@
 | `AccessibilityAnnouncementTests` | 12 | Accessibility announcement text correctness |
 | `AppStorageKeysTests` | 8 | All `@AppStorage` key string constants are unique and non-empty |
 | `LegalLinksTests` | 1 | `LegalLinks.hostedPrivacyPolicyURL` scheme/host/path resolves to the public GitHub Pages URL |
+
+---
+
+### TCA Reducers — 169 tests
+
+> Post-TCA migration (`#677` / `#755`, PRs `#756`–`#760`) reducer-level coverage. Lives under `Tests/EyePostureReminderTests/TCA/` and exercises every `Reducer` feature via `TestStore` (Swift Composable Architecture) plus the lock-isolated dependency clients in `EyePostureReminder/TCA/Dependencies/`.
+
+| File | Tests | Coverage Focus |
+|---|---|---|
+| `HomeFeatureTests` | 25 | `HomeFeature` state init, launch-context resolution, status derivation, action handling |
+| `AppFeatureTests` | 22 | `AppFeature` root composition; child-reducer effect isolation via no-op dependency stubs |
+| `OnboardingFeatureTests` | 21 | `OnboardingFeature` step transitions, permission gates, `hasSeenOnboarding` persistence |
+| `OverlayFeatureTests` | 17 | `OverlayFeature` state init (duration clamping, type/haptics), action handling |
+| `OverlayFeatureBehaviorTests` | 14 | `OverlayFeature` runtime behaviour: analytics emission, dismiss-call recording, FIFO ordering |
+| `SettingsFeatureTests` | 13 | `SettingsFeature` default state, action handling, persistence wiring |
+| `AppCategoryPickerFeatureTests` | 9 | `AppCategoryPickerFeature` authorisation/selection state + Screen Time picker actions |
+| `SchedulingFeature_SnoozeTests` | 8 | `SchedulingFeature.scheduleReminders` snooze-active branch: pause + cancel + wake notification |
+| `SchedulingFeature_SchedulingTests` | 8 | `SchedulingFeature.scheduleReminders` authorised path + auth-status refresh semantics |
+| `SchedulingFeature_NotificationRoutingTests` | 8 | `SchedulingFeature.notificationRouted` fallback pipeline + IPC fallback events |
+| `SettingsFeatureBindingTests` | 6 | `SettingsFeature` `@BindingState` debouncing → persist + reschedule + analytics |
+| `SchedulingFeature_ForegroundTransitionTests` | 5 | `SchedulingFeature.foregroundTransition` no-snooze auth-status-unchanged refresh-only path |
+| `SettingsFeatureToggleEmissionTests` | 4 | `SettingsFeature.settingToggleChanged` analytics emission per toggle key |
+| `SettingsFeatureSnoozeTests` | 3 | `SettingsFeature.snoozeTapped` persists expiry + zeroes counter + logs analytics |
+| `SchedulingFeature_WatchdogRecoveryTests` | 3 | `SchedulingFeature` watchdog-recovery deferral (Phase-2 IPC-heartbeat dependency `XCTSkip` until landed) |
+| `IPCClientSurfaceTests` | 3 | `IPCClient` overridden-client surface routes all accessors to the test recorder |
+| `TCATestDependencies` | 0 | Shared no-op dependency-stub factory (no tests; helper only) |
+
+---
+
+### Mocks — 28 tests
+
+> Self-tests for mock infrastructure that exercises the mock-recording fidelity. Distinct from the [Mock Infrastructure appendix](#mock-infrastructure-14-mock-files) below, which catalogues the 14 mock objects used by other suites.
+
+| File | Tests | Coverage Focus |
+|---|---|---|
+| `MockRecordingTests` | 20 | `ServiceLifecycle` protocol conformance + mock detector recording fidelity (used by `PauseConditionManager` tests) |
+| `MockMediaControllingTests` | 6 | `MockMediaControlling` self-test: pause/resume call counts and ordering |
+| `TestBundleHelper` | 2 | Locates the production resource bundle from `@testable` test targets (SPM `{Package}_{Target}.bundle` resolution) |
 
 ---
 
