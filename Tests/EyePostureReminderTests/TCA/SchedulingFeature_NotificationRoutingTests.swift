@@ -340,7 +340,8 @@ final class SchedulingNotificationRoutingTests: XCTestCase {
             TCATestDependencies.applyAllSilentClients(&$0)
             $0.deviceActivityMonitorClient = DeviceActivityMonitorClient(
                 schedule: { _, _ in },
-                cancel: { id in cancelArgs.withValue { $0.append(id) } }
+                cancel: { id in cancelArgs.withValue { $0.append(id) } },
+                startScheduleForOverlay: { _ in }
             )
         }
 

@@ -20,21 +20,18 @@ import UserNotifications
 ///     running stream but does not emit a cold-launch readiness event,
 ///     so the legacy `AppCoordinator` `launchReady` signal is still
 ///     dropped (#902).
-///   * DeviceActivity scheduling on overlay present:
-///     `DeviceActivityMonitorClient.startScheduleForOverlay(_:)` (or
-///     equivalent) is not yet wired to the overlay-present transition;
-///     the existing `cancel(_:)` accessor is the only path consumed
-///     today (#903).
 ///   * `OverlayClient.lifecycleEvents`-driven bookkeeping: the
 ///     reducer subscribes to the multicast stream from `startEffect`
 ///     (cancellable from `stopEffect`) and routes every `.presented` /
 ///     `.dismissed` / `.settingsTapped` emission through
 ///     `.overlayLifecycleEvent(_:)` (#904). `.presented` / `.dismissed`
 ///     now drive `SessionTimingClient.sessionStarted` /
-///     `sessionEnded` per-type (#901); the remaining per-event
-///     side-effect (DeviceActivity-on-present) is still owned by
-///     sibling tracker #903 so the `.settingsTapped` variant remains a
-///     structural no-op pending that landing.
+///     `sessionEnded` per-type (#901) and the DeviceActivity-on-present
+///     hook landed in #903 — `.presented` calls
+///     `DeviceActivityMonitorClient.startScheduleForOverlay(_:)` and
+///     `.dismissed` calls the existing `cancel(_:)` accessor — so
+///     `.settingsTapped` is the only remaining structural no-op pending
+///     its own future tracker.
 ///
 /// Per-type interval differentiation (#897) is now honoured: `State`
 /// caches both the eyes-side and posture-side `ReminderSettings`
@@ -694,9 +691,10 @@ extension SchedulingFeature {
     /// Subscribes to `OverlayClient.lifecycleEvents()` and forwards each
     /// emission as `.overlayLifecycleEvent(_:)` (#904). The stream is
     /// installed from `startEffect` and cancelled from `stopEffect`. The
-    /// reducer's handler dispatches `SessionTimingClient` calls per #901;
-    /// remaining per-event hooks (DeviceActivity-on-present, #903) plug in
-    /// from the same handler without re-plumbing the stream wiring.
+    /// reducer's handler dispatches `SessionTimingClient` calls per #901
+    /// and `DeviceActivityMonitorClient.startScheduleForOverlay(_:)` /
+    /// `cancel(_:)` per #903; future per-event hooks plug in from the
+    /// same handler without re-plumbing the stream wiring.
     func overlayLifecycleStreamEffect() -> Effect<Action> {
         let overlayClient = self.overlayClient
         return .run { send in
@@ -709,20 +707,22 @@ extension SchedulingFeature {
 
     /// Routes a single `OverlayLifecycleEvent` to the per-variant side-
     /// effects owned by sibling trackers. `.presented` / `.dismissed` map
-    /// to `SessionTimingClient.sessionStarted` / `sessionEnded` (#901);
-    /// `.settingsTapped` is still a structural no-op pending the analytics
-    /// surface a future tracker will own. Extracted from the reducer body
-    /// so #903 can add the DeviceActivity-on-present hook alongside the
-    /// existing session-timing emit without forking the dispatch site.
+    /// to `SessionTimingClient.sessionStarted` / `sessionEnded` (#901)
+    /// and to `DeviceActivityMonitorClient.startScheduleForOverlay(_:)`
+    /// (on `.presented`) / `cancel(_:)` (on `.dismissed`) per #903.
+    /// `.settingsTapped` is still a structural no-op pending the
+    /// analytics surface a future tracker will own.
     func overlayLifecycleEventEffect(_ event: OverlayLifecycleEvent) -> Effect<Action> {
         switch event {
         case let .presented(type):
-            return .run { [sessionTimingClient, now] _ in
+            return .run { [sessionTimingClient, deviceActivity, now] _ in
                 await sessionTimingClient.sessionStarted(type, now())
+                await deviceActivity.startScheduleForOverlay(type)
             }
         case let .dismissed(type):
-            return .run { [sessionTimingClient, now] _ in
+            return .run { [sessionTimingClient, deviceActivity, now] _ in
                 await sessionTimingClient.sessionEnded(type, now())
+                await deviceActivity.cancel(nil)
             }
         case .settingsTapped:
             return .none

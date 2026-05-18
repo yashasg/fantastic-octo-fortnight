@@ -106,7 +106,8 @@ final class AppFeatureTests: XCTestCase {
             )
             $0.deviceActivityMonitorClient = DeviceActivityMonitorClient(
                 schedule: { _, _ in },
-                cancel: { _ in }
+                cancel: { _ in },
+                startScheduleForOverlay: { _ in }
             )
             $0.screenTimeAuthorizationClient = ScreenTimeAuthorizationClient()
             $0.analyticsClient = AnalyticsClient(log: { _ in })
