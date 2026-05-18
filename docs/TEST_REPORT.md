@@ -26,15 +26,17 @@
 
 ## Coverage by Module
 
-### Models — 253 tests
+### Models — 280 tests
 
 | File | Tests | Coverage Focus |
 |---|---|---|
 | `ReminderTypeTests` | 34 | All cases, identifiers, display properties, round-trip init |
 | `ReminderTypeExtendedTests` | 28 | Edge cases, boundary values |
-| `SettingsStoreTests` | 66 | Defaults, persistence, isEnabled gates, independence, restart simulation, presets |
+| `SettingsStoreTests` | 72 | Defaults, persistence, isEnabled gates, independence, restart simulation, presets |
 | `SettingsStoreConfigTests` | 31 | Config validation and preset logic |
+| `SettingsStoreObserverTests` | 12 | `SettingsStore.addObserver` / `removeObserver` broadcast and token lifecycle |
 | `SettingsStorePhase2Tests` | 10 | hapticsEnabled toggle + persistence, snoozeCount persistence |
+| `SettingsStoreSeedTests` | 9 | Synchronous `eyesSnapshot` UserDefaults read for the TCA root seed (#737) |
 | `ReminderSettingsTests` | 19 | ReminderSettings struct coverage |
 | `PauseConditionSourceTests` | 13 | PauseConditionSource enum cases |
 | `OnboardingTests` | 12 | `hasSeenOnboarding` flag: first-launch default, persistence, reset, key correctness |
@@ -44,32 +46,36 @@
 
 ---
 
-### Services — 580 tests
+### Services — 571 tests
 
 | File | Tests | Coverage Focus |
 |---|---|---|
-| `ReminderSchedulerTests` | 39 | Schedule all/single/cancel, notification content, triggers, identifiers, error resilience |
-| `OverlayManagerTests` | 12 | Singleton identity, visible state, guard paths, queue management, audio wiring |
-| `OverlayManagerExtendedTests` | 20 | Extended overlay manager coverage |
-| `AudioInterruptionManagerTests` | 9 | Protocol conformance, pause/resume cycles, invariant safety |
+| `ReminderSchedulerTests` | 42 | Schedule all/single/cancel, notification content, triggers, identifiers, error resilience |
+| `OverlayManagerTests` | 18 | Singleton identity, visible state, guard paths, queue management, audio wiring |
+| `OverlayManagerExtendedTests` | 25 | Extended overlay manager coverage |
+| `OverlayManagerTerminationTests` | 6 | Overlay window teardown on `UIApplication.willTerminateNotification` (#714) |
+| `AudioInterruptionManagerTests` | 4 | Protocol conformance, pause/resume cycles, invariant safety |
 | `PauseConditionManagerTests` | 33 | All pause-condition aggregation paths (Focus, driving, CarPlay) |
-| `FocusModeExtendedTests` | 21 | Focus mode edge cases |
-| `DrivingDetectionExtendedTests` | 29 | Driving detection state transitions |
-| `AnalyticsEventTests` | 43 | All `AnalyticsEvent` cases, serialization |
-| `AnalyticsLoggerTests` | 43 | Logger routing, privacy tiers |
-| `ScreenTimeTrackerTests` | 54 | ScreenTimeTracker state, screen-on accumulation, threshold fire |
+| `FocusModeExtendedTests` | 11 | Focus mode edge cases |
+| `LiveFocusStatusDetectorTests` | 5 | Live Focus-status detector wiring |
+| `DrivingDetectionExtendedTests` | 19 | Driving detection state transitions |
+| `LiveDrivingActivityDetectorTests` | 5 | Live driving-activity detector wiring |
+| `LiveCarPlayDetectorTests` | 7 | Live CarPlay detector wiring |
+| `AnalyticsEventTests` | 52 | All `AnalyticsEvent` cases, serialization |
+| `AnalyticsLoggerTests` | 46 | Logger routing, privacy tiers |
+| `ScreenTimeTrackerTests` | 62 | ScreenTimeTracker state, screen-on accumulation, threshold fire |
 | `ScreenTimeAuthorizationTests` | 19 | Authorization request paths |
 | `ScreenTimeShieldTests` | 12 | Shield enable/disable, clear-all |
-| `DeviceActivityMonitorTests` | 31 | DeviceActivity monitor lifecycle |
-| `DeviceActivityMonitoringValidationTests` | 16 | Validation and guard paths |
-| `AppGroupIPCStoreTests` | 24 | App Group selection metadata round-trip, key alignment, snapshot encode/decode |
-| `AppGroupIPCStoreTests` | 24 | IPC store read/write, capped log |
+| `DeviceActivityMonitorTests` | 26 | DeviceActivity monitor lifecycle |
+| `DeviceActivityMonitoringValidationTests` | 19 | Validation and guard paths |
+| `AppGroupIPCStoreTests` | 36 | App Group selection metadata round-trip, key alignment, snapshot encode/decode, IPC read/write, capped log |
 | `ShieldConfigurationCopyTests` | 17 | Shield configuration copy correctness |
 | `ServiceLifecycleTests` | 7 | Start/stop lifecycle protocol |
-| `MetricKitSubscriberTests` | 7 | MetricKit subscriber registration |
+| `MetricKitSubscriberTests` | 11 | MetricKit subscriber registration |
 | `WatchdogHeartbeatTests` | 11 | Heartbeat ping/pong |
-| `AppDelegateTests` | 14 | AppDelegate lifecycle hooks |
-| `ServiceCoverageBoostTests` | 65 | Coverage-boost suite for misc service paths |
+| `AppDelegateTests` | 34 | AppDelegate lifecycle hooks |
+| `DistributionEntitlementsTests` | 1 | Distribution entitlements include `com.apple.developer.focus-status` |
+| `ServiceCoverageBoostTests` | 43 | Coverage-boost suite for misc service paths |
 
 **Estimated coverage:** ~85%
 
@@ -81,23 +87,26 @@
 
 ---
 
-### Views — 597 tests
+### Views — 660 tests
 
 | File | Tests | Coverage Focus |
 |---|---|---|
-| `DesignSystemTests` | 52 | AppFont accessibility, AppSpacing 4pt grid, AppLayout iOS HIG, AppAnimation spec values, AppColor accessibility, AppSymbol non-empty names |
-| `DesignSystemExtendedTests` | 45 | Extended design token coverage |
+| `DesignSystemTests` | 60 | AppFont accessibility, AppSpacing 4pt grid, AppLayout iOS HIG, AppAnimation spec values, AppColor accessibility, AppSymbol non-empty names |
+| `DesignSystemExtendedTests` | 50 | Extended design token coverage |
 | `ColorTokenTests` | 32 | Asset Catalog color token correctness |
 | `ComponentsTests` | 20 | Shared UI component correctness |
-| `ComponentsExtendedTests` | 14 | Extended component edge cases |
+| `ComponentsExtendedTests` | 17 | Extended component edge cases |
 | `CoverageBoostTests` | 34 | Coverage-boost suite for misc View paths |
-| `ViewBodyCoverageTests` | 66 | View body compile + expression coverage |
-| `OnboardingViewTests` | 35 | OnboardingWelcomeView, OnboardingPermissionView, OnboardingSetupView, OnboardingInterruptModeView |
-| `TrueInterruptViewCoverageTests` | 45 | TrueInterrupt onboarding and settings view paths |
+| `ViewBodyCoverageTests` | 75 | View body compile + expression coverage |
+| `HomeViewLaunchContextResolverTests` | 12 | HomeView status resolver: launch-context overrides, notification-denied recovery, no-reminders banner |
+| `OnboardingViewTests` | 41 | OnboardingWelcomeView, OnboardingPermissionView, OnboardingSetupView, OnboardingInterruptModeView |
+| `TrueInterruptViewCoverageTests` | 44 | TrueInterrupt onboarding and settings view paths |
 | `DarkModeTests` | 17 | Dark Mode rendering correctness for key views |
-| `OverlayAccessibilityTests` | 3 | Overlay accessibility modal flag and VoiceOver |
-| `PreviewTests` | 8 | SwiftUI preview providers compile without crash |
-| `StringCatalogTests` | 201 | All String Catalog keys resolve; no missing/empty values |
+| `OverlayAccessibilityTests` | 5 | Overlay accessibility modal flag and VoiceOver |
+| `OverlayGestureTests` | 11 | `OverlayView.shouldDismissForSwipe` upward-threshold and direction-dominance logic |
+| `SettingsAccessibilityTests` | 3 | `SettingsSavedBanner` body, decorative checkmark accessibility-hidden, hosted-privacy-link localized copy |
+| `PreviewTests` | 9 | SwiftUI preview providers compile without crash |
+| `StringCatalogTests` | 205 | All String Catalog keys resolve; no missing/empty values |
 | `YinYangEyeViewTests` | 9 | Yin-yang logo Path drawing tests |
 | `YinYangEyeViewExtendedTests` | 16 | Extended logo animation and accessibility |
 
@@ -105,12 +114,12 @@
 
 ---
 
-### Integration — 41 tests
+### Integration — 24 tests
 
 | File | Tests | Coverage Focus |
 |---|---|---|
-| `IntegrationTests` | 34 | Multi-service pipeline: scheduler → coordinator → overlay sequence |
-| `MultiServicePipelineIntegrationTests` | 7 | Parallel service start/stop under load |
+| `IntegrationTests` | 20 | Multi-service pipeline: scheduler → coordinator → overlay sequence |
+| `MultiServicePipelineIntegrationTests` | 4 | Parallel service start/stop under load |
 
 ---
 
@@ -122,12 +131,13 @@
 
 ---
 
-### Utilities — 20 tests
+### Utilities — 21 tests
 
 | File | Tests | Coverage Focus |
 |---|---|---|
 | `AccessibilityAnnouncementTests` | 12 | Accessibility announcement text correctness |
 | `AppStorageKeysTests` | 8 | All `@AppStorage` key string constants are unique and non-empty |
+| `LegalLinksTests` | 1 | `LegalLinks.hostedPrivacyPolicyURL` scheme/host/path resolves to the public GitHub Pages URL |
 
 ---
 
