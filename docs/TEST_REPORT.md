@@ -209,7 +209,9 @@ No breaking API mismatches found between test files and the Phase 2 implementati
 
 | Phase | Tests |
 |---|---|
-| Phase 1 (Models + Scheduler + ViewModel core) | ~196 (M2.6 intermediate) |
-| Phase 2 (Haptics, Snooze, Onboarding, DesignSystem, AppCoordinator overlay) | ~74 (M2.6 intermediate; v0.2.0 shipped total: 1,382) |
+| Phase 1 (Models + Scheduler + ViewModel core)¹ | ~196 (M2.6 intermediate) |
+| Phase 2 (Haptics, Snooze, Onboarding, DesignSystem, AppCoordinator overlay)¹ | ~74 (M2.6 intermediate; v0.2.0 shipped total: 1,382) |
 | Post-v0.2.0 additions (Analytics, ScreenTime, TrueInterrupt, PauseCondition, coverage-boost, regression suites) | ~443 |
 | **Total (current, from grep)** | **1,825** |
+
+> ¹ MVVM-era milestone labels — the `ViewModels` / `AppCoordinator` layers were decommissioned in the Phase-2 TCA migration (`#677` / `#701` / `#755`, PRs `#756`–`#760`). Equivalent reducer-level coverage now lives under `Tests/EyePostureReminderTests/TCA/` (see the §"ViewModels — decommissioned" subsection above). The row labels and counts are preserved as historical receipts for what shipped at M2.6 / v0.2.0.
