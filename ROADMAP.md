@@ -586,18 +586,18 @@ Device resumes normal activity
 - **Owner:** Virgil (CI/CD Dev)
 - **Status:** 🔄 PLANNED
 - **Scope:**
-  - Update GitHub Actions to build + sign extension targets
-  - Extension provisioning profiles (development + distribution)
-  - Entitlements file for extensions (app group, family controls, shield points)
-  - TestFlight build includes extensions
-  - App Store Connect setup: extension availability
+  - Update GitHub Actions to build + sign extension targets (partially delivered — unsigned simulator compile path via `./scripts/setup-screentime.sh --build` in `.github/workflows/ci.yml` covers both `ShieldConfigurationExtension` + `DeviceActivityMonitorExtension` (#210, `b8732c8`); signed-archive path lives in `scripts/build_signed.sh` driven from `.github/workflows/testflight.yml` (#418). Signed-distribution upload remains blocked by #201 + real extension distribution profiles/secrets.)
+  - Extension provisioning profiles (development + distribution) (partially delivered — `testflight.yml` wires optional `SHIELD_CONFIG_PROVISION_PROFILE_BASE64` / `DEVICE_ACTIVITY_PROVISION_PROFILE_BASE64` / `*_PROFILE_SPECIFIER` secrets through to `build_signed.sh` (#210, `b8732c8`); when those secrets are absent the workflow gracefully excludes extension targets. Real distribution profiles configured in repo settings remain blocked on #201 entitlement approval.)
+  - Entitlements file for extensions (app group, family controls, shield points) (later delivered — per-extension `*.entitlements` + `*.Distribution.entitlements` files cover App Group `group.com.yashasg.kshana` plus `com.apple.developer.family-controls` for both `ShieldConfigurationExtension` and `DeviceActivityMonitorExtension` (#210 / #415); both extensions also ship `PrivacyInfo.xcprivacy` manifests, and signed-archive validation fails if extension privacy manifests are missing when extension signing is enabled (#635).)
+  - TestFlight build includes extensions (blocked by #201 — `testflight.yml` currently excludes extension targets from the IPA when extension profiles/secrets are absent; the included path is gated on #201 plus extension distribution secrets. Verification scaffolding is in place: `build_signed.sh` validates extension payload presence and per-extension `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION` parity with the containing app when extension signing is enabled (#418 / #592 / #635).)
+  - App Store Connect setup: extension availability (blocked by #201 — requires entitlement approval before an extension-included build can be submitted)
 - **Dependencies:** M3.3 targets + M3.1 entitlement approved
 - **Duration:** 3 days
 - **Acceptance Criteria:**
-  - CI builds extensions without errors
-  - TestFlight build includes both extensions
-  - Code signing validation passes
-  - App Store Connect accepts app + extensions
+  - CI builds extensions without errors (later delivered — unsigned simulator compile path is green; see #210)
+  - TestFlight build includes both extensions (blocked by #201 + real extension distribution profiles/secrets)
+  - Code signing validation passes (blocked by #201 — verification scaffolding ready, but signing requires real distribution profiles)
+  - App Store Connect accepts app + extensions (blocked by #201)
 
 #### M3.11: Local Notification Fallback Positioning
 - **Owner:** Basher (Services Dev) + Linus (iOS UI Dev)
