@@ -21,7 +21,8 @@ import UserNotifications
 /// scopes: `SettingsClient`, `NotificationClient`, `ReminderSchedulerClient`,
 /// `OverlayClient`, `ScreenTimeTrackerClient`, `PauseConditionClient`,
 /// `IPCClient`, `DeviceActivityMonitorClient`,
-/// `ScreenTimeAuthorizationClient`, and `AnalyticsClient`.
+/// `ScreenTimeAuthorizationClient`, `AnalyticsClient`, and
+/// `SessionTimingClient`.
 enum TCATestDependencies {
 
     static func silentSettingsClient() -> SettingsClient {
@@ -125,6 +126,13 @@ enum TCATestDependencies {
         )
     }
 
+    static func silentSessionTimingClient() -> SessionTimingClient {
+        SessionTimingClient(
+            sessionStarted: { _, _ in },
+            sessionEnded: { _, _ in }
+        )
+    }
+
     /// Applies every silent client to the supplied `DependencyValues`. Use as
     /// the body of a `withDependencies:` trailing closure on a `TestStore`
     /// (or production `Store`) constructed for `AppFeature` so child-reducer
@@ -140,5 +148,6 @@ enum TCATestDependencies {
         dependencies.deviceActivityMonitorClient = silentDeviceActivityMonitorClient()
         dependencies.screenTimeAuthorizationClient = ScreenTimeAuthorizationClient()
         dependencies.analyticsClient = AnalyticsClient(log: { _ in })
+        dependencies.sessionTimingClient = silentSessionTimingClient()
     }
 }

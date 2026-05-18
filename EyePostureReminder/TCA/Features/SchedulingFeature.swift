@@ -20,9 +20,6 @@ import UserNotifications
 ///     accessor not yet exposed, so `handleNotification(for:)` still
 ///     resolves routes via App Group `UserDefaults` reads owned by the
 ///     extension rather than the dependency boundary (#900).
-///   * Session-timing analytics: no `SessionTimingClient` /
-///     `AnalyticsLogger` start/stop pair for the reminder fire ↔ overlay
-///     dismissal cycle (#901).
 ///   * Launch-readiness analytics: `startEffect` installs every long-
 ///     running stream but does not emit a cold-launch readiness event,
 ///     so the legacy `AppCoordinator` `launchReady` signal is still
@@ -33,13 +30,15 @@ import UserNotifications
 ///     the existing `cancel(_:)` accessor is the only path consumed
 ///     today (#903).
 ///   * `OverlayClient.lifecycleEvents`-driven bookkeeping: the
-///     reducer now subscribes to the multicast stream from
-///     `startEffect` (cancellable from `stopEffect`) and routes every
-///     `.presented` / `.dismissed` / `.settingsTapped` emission through
-///     `.overlayLifecycleEvent(_:)` (#904). The per-event side-effects
-///     themselves (session-timing emit, DeviceActivity start hook) are
-///     still owned by sibling trackers #901 / #903, so the reducer
-///     handler is currently a structural no-op pending those landings.
+///     reducer subscribes to the multicast stream from `startEffect`
+///     (cancellable from `stopEffect`) and routes every `.presented` /
+///     `.dismissed` / `.settingsTapped` emission through
+///     `.overlayLifecycleEvent(_:)` (#904). `.presented` / `.dismissed`
+///     now drive `SessionTimingClient.sessionStarted` /
+///     `sessionEnded` per-type (#901); the remaining per-event
+///     side-effect (DeviceActivity-on-present) is still owned by
+///     sibling tracker #903 so the `.settingsTapped` variant remains a
+///     structural no-op pending that landing.
 ///
 /// Per-type interval differentiation (#897) is now honoured: `State`
 /// caches both the eyes-side and posture-side `ReminderSettings`
@@ -181,6 +180,7 @@ struct SchedulingFeature {
     @Dependency(\.deviceActivityMonitorClient) var deviceActivity: DeviceActivityMonitorClient
     @Dependency(\.ipcClient) var ipcClient: IPCClient
     @Dependency(\.analyticsClient) var analyticsClient: AnalyticsClient
+    @Dependency(\.sessionTimingClient) var sessionTimingClient: SessionTimingClient
     @Dependency(\.continuousClock) var clock
     @Dependency(\.date) var now
 
@@ -237,13 +237,8 @@ struct SchedulingFeature {
             case .watchdogRecoveryTriggered:
                 return watchdogRecoveryTriggeredEffect()
 
-            case .overlayLifecycleEvent:
-                // Structural no-op: the subscription is installed by
-                // `startEffect` so sibling trackers (#901 session-timing,
-                // #903 DeviceActivity-on-present) can route per-event
-                // side-effects from this handler without re-introducing
-                // the umbrella-deferral drift class fixed by #895.
-                return .none
+            case let .overlayLifecycleEvent(event):
+                return overlayLifecycleEventEffect(event)
 
             case let .internalAction(internalAction):
                 return reduceInternal(internalAction, state: &state)
@@ -701,11 +696,10 @@ extension SchedulingFeature {
 
     /// Subscribes to `OverlayClient.lifecycleEvents()` and forwards each
     /// emission as `.overlayLifecycleEvent(_:)` (#904). The stream is
-    /// installed from `startEffect` and cancelled from `stopEffect`; the
-    /// reducer's handler is currently a no-op, so this effect's job is
-    /// purely to establish the subscription so sibling trackers (#901,
-    /// #903) can add per-event side-effects without re-plumbing the
-    /// stream wiring.
+    /// installed from `startEffect` and cancelled from `stopEffect`. The
+    /// reducer's handler dispatches `SessionTimingClient` calls per #901;
+    /// remaining per-event hooks (DeviceActivity-on-present, #903) plug in
+    /// from the same handler without re-plumbing the stream wiring.
     func overlayLifecycleStreamEffect() -> Effect<Action> {
         let overlayClient = self.overlayClient
         return .run { send in
@@ -714,6 +708,28 @@ extension SchedulingFeature {
             }
         }
         .cancellable(id: CancelID.overlayLifecycleStream, cancelInFlight: true)
+    }
+
+    /// Routes a single `OverlayLifecycleEvent` to the per-variant side-
+    /// effects owned by sibling trackers. `.presented` / `.dismissed` map
+    /// to `SessionTimingClient.sessionStarted` / `sessionEnded` (#901);
+    /// `.settingsTapped` is still a structural no-op pending the analytics
+    /// surface a future tracker will own. Extracted from the reducer body
+    /// so #903 can add the DeviceActivity-on-present hook alongside the
+    /// existing session-timing emit without forking the dispatch site.
+    func overlayLifecycleEventEffect(_ event: OverlayLifecycleEvent) -> Effect<Action> {
+        switch event {
+        case let .presented(type):
+            return .run { [sessionTimingClient, now] _ in
+                await sessionTimingClient.sessionStarted(type, now())
+            }
+        case let .dismissed(type):
+            return .run { [sessionTimingClient, now] _ in
+                await sessionTimingClient.sessionEnded(type, now())
+            }
+        case .settingsTapped:
+            return .none
+        }
     }
 }
 

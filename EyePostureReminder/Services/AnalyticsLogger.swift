@@ -16,6 +16,18 @@ enum AnalyticsEvent: Sendable {
     /// Fired when the app resigns active.
     case appSessionEnd(sessionDurationS: TimeInterval)
 
+    /// Fired when a reminder cycle begins — i.e. the overlay for `type` is
+    /// presented on screen. Paired with `reminderSessionEnded` for the same
+    /// `type` once the overlay is dismissed. Emitted by `SessionTimingClient`
+    /// (#901) from `SchedulingFeature`'s overlay-lifecycle consumer.
+    case reminderSessionStarted(type: ReminderType, at: Date)
+
+    /// Fired when a reminder cycle ends — i.e. the overlay for `type` is
+    /// dismissed. Pairs with the most recent `reminderSessionStarted` for the
+    /// same `type`. Emitted by `SessionTimingClient` (#901) from
+    /// `SchedulingFeature`'s overlay-lifecycle consumer.
+    case reminderSessionEnded(type: ReminderType, at: Date)
+
     // MARK: App Launch Readiness
 
     /// Parameters captured once per app launch/foreground cycle for startup health monitoring.
@@ -388,6 +400,20 @@ enum AnalyticsLogger {
                 screen_time_available=\(payload.screenTimeAvailable, privacy: .public) \
                 watchdog_recovery_needed=\(payload.watchdogRecoveryNeeded, privacy: .public) \
                 latency_s=\(payload.latencyS, format: .fixed(precision: 2), privacy: .public)
+                """)
+
+        case let .reminderSessionStarted(type, date):
+            logger.info("""
+                event=reminder_session_started \
+                type=\(type.rawValue, privacy: .public) \
+                at=\(date.timeIntervalSince1970, format: .fixed(precision: 3), privacy: .public)
+                """)
+
+        case let .reminderSessionEnded(type, date):
+            logger.info("""
+                event=reminder_session_ended \
+                type=\(type.rawValue, privacy: .public) \
+                at=\(date.timeIntervalSince1970, format: .fixed(precision: 3), privacy: .public)
                 """)
 
         default:
