@@ -351,6 +351,26 @@ final class AnalyticsEventTests: XCTestCase {
         }
     }
 
+    // MARK: - #896: notificationPermissionResponded
+
+    func test_notificationPermissionResponded_granted_canBeConstructed() {
+        let event = AnalyticsEvent.notificationPermissionResponded(granted: true)
+        _ = event
+    }
+
+    func test_notificationPermissionResponded_denied_canBeConstructed() {
+        let event = AnalyticsEvent.notificationPermissionResponded(granted: false)
+        _ = event
+    }
+
+    func test_log_notificationPermissionResponded_granted_doesNotCrash() {
+        AnalyticsLogger.log(.notificationPermissionResponded(granted: true))
+    }
+
+    func test_log_notificationPermissionResponded_denied_doesNotCrash() {
+        AnalyticsLogger.log(.notificationPermissionResponded(granted: false))
+    }
+
     // MARK: - #444: ReminderDeliveryPath exhaustiveness
 
     /// Validates that `ReminderDeliveryPath` has exactly the two meaningful cases

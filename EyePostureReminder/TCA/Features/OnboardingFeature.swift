@@ -100,20 +100,20 @@ struct OnboardingFeature {
 
             case .requestNotificationPermission:
                 return .run { send in
-                    // Permission grant outcome (granted / denied) is reflected
-                    // in the subsequent authorisation status read; the boolean
-                    // result and any throws are intentionally swallowed here
-                    // because `notificationStatusChanged` is the single
-                    // source of truth for downstream UI.
-                    _ = try? await notification.requestAuthorization(Self.notificationOptions)
+                    // The boolean returned by `requestAuthorization(_:)` records
+                    // the user's response to the system prompt; we forward it
+                    // to analytics as `.notificationPermissionResponded(granted:)`
+                    // (#896). Throws are still swallowed — the subsequent
+                    // `authorizationStatus()` read remains the single source of
+                    // truth for UI, and we deliberately skip the analytics
+                    // emission on throw so the stream only carries real
+                    // user-driven responses.
+                    let granted = try? await notification.requestAuthorization(Self.notificationOptions)
+                    if let granted {
+                        analytics.log(.notificationPermissionResponded(granted: granted))
+                    }
                     let status = await notification.authorizationStatus()
                     await send(.notificationStatusChanged(status))
-                    // Spec calls for `.notificationPermissionResponded(...)` here;
-                    // that case is not present in the current `AnalyticsEvent`
-                    // surface and adding it would violate the "own this file
-                    // only" constraint, so the analytics call is deferred to
-                    // the AnalyticsLogger surface extension that owns it.
-                    // Tracking: #896.
                 }
 
             case .requestScreenTimeAuthorization:
