@@ -367,6 +367,10 @@ EyePostureReminder/                  (SPM executable target)
 │   ├── Localizable.xcstrings         ~35 user-facing strings; Xcode 15 String Catalog
 │   └── defaults.json                 First-launch seed values for intervals + feature flags
 │
+├── Info.plist                        Main-app Info.plist (`project.yml:67` `INFOPLIST_FILE`); bundle id / scene manifest / `NSMotionUsageDescription` / `NSFocusStatusUsageDescription`
+├── EyePostureReminder.entitlements              (dev signing — App Group `group.com.yashasg.kshana` + Focus Status; FamilyControls pending #201) — `project.yml:69` `CODE_SIGN_ENTITLEMENTS`
+├── EyePostureReminder.Distribution.entitlements (distribution signing — App Store profile without Focus Status; default for `scripts/build_signed.sh`, see `README.md` "Signed TestFlight builds")
+├── AppIcon.xcassets                  App Icon asset catalog (`AppIcon-1024.png` + scaled variants); wired via `project.yml:59,68`
 └── PrivacyInfo.xcprivacy             Apple privacy manifest for App Store Connect compliance (copied via `Package.swift`)
 
 Extensions/                           (XcodeGen app-extension targets)
@@ -394,6 +398,7 @@ Extensions/                           (XcodeGen app-extension targets)
 
 Tests/
 ├── EyePostureReminderTests/          (SPM test target, depends on EyePostureReminder)
+│   ├── README.md                     Unit-test conventions — IUO fixture lifecycle; complements `docs/google_swift_coding_style.md`
 │   ├── Fixtures/
 │   │   └── defaults.json             Test fixture for AppConfig loading tests
 │   ├── Mocks/
@@ -481,6 +486,7 @@ Tests/
 │   └── RegressionTests.swift         Bug regression guards; one section per fixed bug
 │
 └── EyePostureReminderUITests/        (Xcode-only UI test target — not in Package.swift; sharded `uitest-prepare` / `uitest-shard` / `uitest` jobs run on every PR + `main` push per #778)
+    ├── README.md                         UITest target conventions + `XCTExpectFailure` tracking table (cited at §10.1)
     ├── HomeScreenTests.swift
     ├── OnboardingFlowTests.swift
     ├── OverlayTests.swift
@@ -1719,3 +1725,4 @@ Establish baselines on the CI runner (not local) to avoid machine-dependent drif
 | 2026-05-17 | §3 project-structure tree refresh (#859). Dropped the deleted `Tests/EyePostureReminderTests/TCA/ContentViewTests.swift` row (removed in 4f6d4c5 alongside the dead `ContentView` pass-through wrapper). Dropped the `EyePostureReminder/TCA/Bindings/` directory row whose only file (`StoreScopes.swift`) was removed in 82bc5eb — there is no `Bindings/` directory on disk any more. Expanded the `Extensions/Shared/` listing from the lone `ShieldSessionKeys.swift` row to enumerate all eight App Group / shield-session helpers that now ship there (`AppGroupDefaults`, `AppGroupIPCStore`, `ShieldConfigurationCopyLocalization`, `ShieldIntervalEndCleanupPolicy`, `ShieldSessionKeys`, `ShieldSessionSnapshot`, `ShieldTriggerReason`, `WatchdogHeartbeat`) and called out the per-extension `.Distribution.entitlements` files used by signed builds. Docs-only — no source changes. | Copilot |
 | 2026-05-17 | §3 project-structure tree residual-drift fix (#861). Moved `PrivacyInfo.xcprivacy` out of `EyePostureReminder/Resources/` and onto the `EyePostureReminder/` root row (peer of `App/`, `Models/`, `Resources/`) so the tree matches `Package.swift:40 .copy("PrivacyInfo.xcprivacy")`. Added the `Resources/Fonts/` subtree (`Nunito-Regular.ttf`, `Nunito-Italic.ttf`, `OFL-Nunito.txt`). Added the per-extension `PrivacyInfo.xcprivacy` rows for `Extensions/ShieldConfigurationExtension/` and `Extensions/DeviceActivityMonitorExtension/` (shipped in #635). Added the missing `Tests/EyePostureReminderTests/TCA/SettingsFeatureToggleEmissionTests.swift` to the `SettingsFeature*Tests` row. Added the missing `Tests/EyePostureReminderTests/Mocks/MockMediaControllingTests.swift` and `MockRecordingTests.swift` rows. Added the previously-omitted `Tests/EyePostureReminderTests/Utilities/` test subtree (`AccessibilityAnnouncementTests`, `AppStorageKeysTests`, `AsyncTestHelpers`, `LegalLinksTests`). Docs-only — no source changes. | Copilot |
 | 2026-05-17 | §3 + §10 `EyePostureReminderUITests/` drift fix (#862). Added the two on-disk swift sources missing from the §3 tree — `AppStoreScreenshotTests.swift` (opt-in App Store screenshot capture invoked by `scripts/capture-app-store-screenshots.sh`) and `UITestHelpers.swift` (`TestLaunchArguments` + `XCUIApplication` helpers). Replaced every stale ``gated `if: false` in CI per #736`` / ``currently gated by #736`` reference (the §3 parenthetical at L483, the §10.1 pyramid box at L1467, the §10.1 narrative paragraph at L1493, the §10.4 paragraph at L1650, and the §10.5 coverage-targets row at L1665) with the post-#778 wording: the sharded `uitest-prepare` / `uitest-shard` / `uitest` jobs in `.github/workflows/ci.yml` now run on every PR + `main` push, matching `Tests/EyePostureReminderUITests/README.md`. Docs-only — no source changes. | Copilot |
+| 2026-05-17 | §3 project-structure tree residual-drift fix (#863). Added the four main-app root-level deployment-metadata rows that #859/#861/#862 missed for the `EyePostureReminder/` target — `Info.plist` (referenced by `project.yml:67` `INFOPLIST_FILE`), `EyePostureReminder.entitlements` (dev signing — `project.yml:69` `CODE_SIGN_ENTITLEMENTS`), `EyePostureReminder.Distribution.entitlements` (distribution signing used by `scripts/build_signed.sh`), and `AppIcon.xcassets` (App Icon asset catalog wired via `project.yml:59,68`). Mirrors the per-extension `Info.plist` / `.entitlements` / `.Distribution.entitlements` rows that already live under `Extensions/ShieldConfigurationExtension/` and `Extensions/DeviceActivityMonitorExtension/`. Also added the two `Tests/EyePostureReminder*Tests/README.md` rows that have been on disk since commit `9a9294c` (2026-04-24, scaffold XCUITest UI test suite #9) — the UITest README is cited by §10.1 (L1493) but was never reflected in the §3 tree. Docs-only — no source changes. | Copilot |
