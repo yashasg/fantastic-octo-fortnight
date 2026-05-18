@@ -46,7 +46,8 @@ final class SchedulingNotificationRoutingTests: XCTestCase {
                 record: { event, _ in recordedEvents.withValue { $0.append(event) } },
                 trueInterruptChanges: { .finished },
                 selectionChanges: { .finished },
-                recentEvents: { [] }
+                recentEvents: { [] },
+                fallbackRoute: { _ in nil }
             )
             $0.overlayClient = OverlayClient(
                 show: { type, duration, _, _ in
@@ -120,7 +121,8 @@ final class SchedulingNotificationRoutingTests: XCTestCase {
                 record: { event, _ in recordedEvents.withValue { $0.append(event) } },
                 trueInterruptChanges: { .finished },
                 selectionChanges: { .finished },
-                recentEvents: { [] }
+                recentEvents: { [] },
+                fallbackRoute: { _ in nil }
             )
             $0.overlayClient = OverlayClient(
                 show: { type, _, _, _ in shownOverlays.withValue { $0.append(type) } },

@@ -25,6 +25,15 @@ import ScreenTimeExtensionShared
 /// surface the deleted `AppCoordinator.recoverStaleDevice…` detector
 /// required — see `Tests/.../WatchdogHeartbeatTests.swift` for the parity
 /// contract the reducer composes with `WatchdogHeartbeat.status(…)`.
+///
+/// Fallback-routing accessor (#900): `fallbackRoute(for:)` returns the
+/// most recent persisted fallback-routing decision the extension or
+/// background pipeline recorded for `type` — derived from the App Group
+/// event log (`notificationFallbackScheduled` / `notificationFallbackSuppressed`).
+/// Reducer paths (`SchedulingFeature.reminderNotificationEffect`) read it
+/// through this dependency boundary so `TestStore` fakes drive the
+/// fallback path deterministically instead of the live
+/// `UserDefaults(suiteName:)` shared by the extension.
 @DependencyClient
 struct IPCClient: Sendable {
     /// Whether the user has toggled on the True Interrupt (DeviceActivity
@@ -70,6 +79,14 @@ struct IPCClient: Sendable {
     /// used for heartbeat-staleness comparisons; a `TestStore` can drive
     /// both deterministically inside a single `withDependencies` block.
     var recentEvents: @Sendable () async -> [AppGroupIPCEvent] = { [] }
+
+    /// Most recent persisted fallback-routing decision for `type`, or `nil`
+    /// when no decision has been recorded since the event log was last
+    /// rotated (#900). The live implementation derives the value from the
+    /// shared App Group event log so the reducer never reads
+    /// `UserDefaults(suiteName:)` directly; tests substitute the closure
+    /// to drive both the present and missing-route branches deterministically.
+    var fallbackRoute: @Sendable (ReminderType) async -> FallbackRoute? = { _ in nil }
 }
 
 extension IPCClient: DependencyKey {
@@ -95,6 +112,9 @@ extension IPCClient: DependencyKey {
             selectionChanges: { makeSelectionStream() },
             recentEvents: {
                 await MainActor.run { LiveIPCBridge.shared.readEvents() }
+            },
+            fallbackRoute: { type in
+                await MainActor.run { LiveIPCBridge.shared.readFallbackRoute(for: type) }
             }
         )
     }()
@@ -106,6 +126,24 @@ extension DependencyValues {
         get { self[IPCClient.self] }
         set { self[IPCClient.self] = newValue }
     }
+}
+
+/// Persisted fallback-routing decision recorded for a `ReminderType` by
+/// the extension / background pipeline. Returned by `IPCClient.fallbackRoute(for:)`
+/// so reducer paths can inspect the prior fallback decision through the
+/// dependency boundary (#900).
+struct FallbackRoute: Equatable, Sendable {
+    /// Classification of the persisted decision. Mirrors the
+    /// `AppGroupIPCEventKind` cases that participate in fallback routing.
+    enum Reason: String, Equatable, Sendable {
+        /// Last decision was to schedule a notification-fallback for this type.
+        case fallbackScheduled = "fallback_scheduled"
+        /// Last decision was to suppress the notification-fallback for this type.
+        case fallbackSuppressed = "fallback_suppressed"
+    }
+
+    let reason: Reason
+    let recordedAt: Date
 }
 
 /// Main-actor-isolated owner of the live `AppGroupIPCStore`. Subscribes to
@@ -211,6 +249,36 @@ private final class LiveIPCBridge {
                 """)
             return []
         }
+    }
+
+    /// Resolves the most recent persisted fallback-routing decision for
+    /// `type` by scanning the App Group event log for the latest
+    /// `notificationFallbackScheduled` / `notificationFallbackSuppressed`
+    /// entry whose `reasonRaw` matches `type.shieldReason.rawValue`.
+    /// Returns `nil` when the log holds no such entry (the common cold-
+    /// launch case) so the reducer can stay synchronous with the UI
+    /// lifecycle (#900).
+    func readFallbackRoute(for type: ReminderType) -> FallbackRoute? {
+        let typeReasonRaw = type.shieldReason.rawValue
+        let events = readEvents()
+        let mostRecent = events
+            .filter { event in
+                event.reasonRaw == typeReasonRaw &&
+                    (event.kind == .notificationFallbackScheduled ||
+                     event.kind == .notificationFallbackSuppressed)
+            }
+            .max { lhs, rhs in lhs.timestamp < rhs.timestamp }
+        guard let mostRecent else { return nil }
+        let reason: FallbackRoute.Reason
+        switch mostRecent.kind {
+        case .notificationFallbackScheduled:
+            reason = .fallbackScheduled
+        case .notificationFallbackSuppressed:
+            reason = .fallbackSuppressed
+        default:
+            return nil
+        }
+        return FallbackRoute(reason: reason, recordedAt: mostRecent.timestamp)
     }
 }
 

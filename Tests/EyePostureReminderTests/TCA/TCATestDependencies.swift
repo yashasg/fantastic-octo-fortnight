@@ -115,7 +115,8 @@ enum TCATestDependencies {
             record: { _, _ in },
             trueInterruptChanges: { .finished },
             selectionChanges: { .finished },
-            recentEvents: { [] }
+            recentEvents: { [] },
+            fallbackRoute: { _ in nil }
         )
     }
 

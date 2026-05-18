@@ -101,7 +101,8 @@ final class AppFeatureTests: XCTestCase {
                 record: { _, _ in },
                 trueInterruptChanges: { .finished },
                 selectionChanges: { .finished },
-                recentEvents: { [] }
+                recentEvents: { [] },
+                fallbackRoute: { _ in nil }
             )
             $0.deviceActivityMonitorClient = DeviceActivityMonitorClient(
                 schedule: { _, _ in },
