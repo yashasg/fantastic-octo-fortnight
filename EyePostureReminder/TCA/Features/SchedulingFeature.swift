@@ -16,19 +16,21 @@ import UserNotifications
 ///     snapshot, so per-type interval differentiation reuses
 ///     `state.settings.interval` for both reminder types until a richer
 ///     settings client lands.
-///   * Watchdog recovery, fallback-routing IPC reads, session-timing
-///     analytics, launch-readiness analytics, DeviceActivity scheduling on
-///     overlay present, and the `OverlayClient.lifecycleEvents`-driven
-///     bookkeeping all require dependency-client surface that does not yet
-///     exist; those side-effects are tracked under `p0-tca-15` follow-ups.
-///     Watchdog-recovery specifically (IPC-recent-events accessor +
-///     heartbeat-clock adapter + `.watchdogRecoveryTriggered` action) is
-///     tracked under GitLab issue #892 — re-enabling
-///     `SchedulingFeature_WatchdogRecoveryTests.test_watchdogRecovery_deferredToPhase2`
-///     is gated on that issue closing.
+///   * Fallback-routing IPC reads, session-timing analytics,
+///     launch-readiness analytics, DeviceActivity scheduling on overlay
+///     present, and the `OverlayClient.lifecycleEvents`-driven bookkeeping
+///     all require dependency-client surface that does not yet exist;
+///     those side-effects are tracked under `p0-tca-15` follow-ups.
 ///   * `hapticsEnabled`/`pauseMediaDuringBreaks` are not yet exposed on
 ///     `ReminderSettings`; the reducer passes `false` for both when calling
 ///     `OverlayClient.show` (matches the SettingsClient default state).
+///
+/// Watchdog recovery shipped in #892 via `.watchdogRecoveryTriggered`
+/// (action + effect) wired on top of `IPCClient.recentEvents` and the
+/// existing `@Dependency(\.date)` clock; the reducer composes the
+/// staleness verdict with `WatchdogHeartbeat.status(…)` so the behaviour
+/// stays in lock-step with the legacy `WatchdogHeartbeat` parity
+/// contract (`Tests/.../WatchdogHeartbeatTests.swift`).
 @Reducer
 struct SchedulingFeature {
 
@@ -39,6 +41,14 @@ struct SchedulingFeature {
     /// notification scheduled by an earlier app version is still cancellable
     /// here.
     static let snoozeWakeCategory = "com.yashasgujjar.kshana.snooze-wake"
+
+    /// Watchdog-recovery staleness threshold (#892). Mirrors the legacy
+    /// `AppCoordinator.watchdogHeartbeatGraceInterval` rule of thumb — a
+    /// device-activity-lifecycle heartbeat older than this is treated as
+    /// stale, and a missing heartbeat past this window classifies as
+    /// `.missing`. Kept in seconds for direct use with
+    /// `WatchdogHeartbeat.status(staleAfter:)`.
+    static let watchdogHeartbeatStaleThreshold: TimeInterval = 130
 
     @ObservableState
     struct State: Equatable {
@@ -69,6 +79,19 @@ struct SchedulingFeature {
         case clearExpiredSnoozeIfNeeded
         case snoozeWakeFired
         case overlayDismissed(ReminderType)
+        /// Watchdog recovery entry-point (#892). The reducer reads the
+        /// recent App Group IPC event log via `IPCClient.recentEvents`
+        /// and classifies the latest device-activity-lifecycle heartbeat
+        /// using `WatchdogHeartbeat.status(…)` over a 130 s threshold; on
+        /// a `.stale` / `.missing` verdict it cancels every pending
+        /// reminder, cancels DeviceActivity monitoring, records a
+        /// `watchdogRecoveryTriggered` IPC event (timestamped via
+        /// `@Dependency(\.date)` so a `TestStore` can drive the clock),
+        /// emits the `watchdogRecoveryTriggered` + `watchdogRecoveryCompleted`
+        /// analytics pair, and re-enters `.scheduleReminders`. Fresh
+        /// heartbeats short-circuit to a no-op so callers can dispatch
+        /// the action unconditionally at foreground transitions.
+        case watchdogRecoveryTriggered
         case internalAction(Internal)
 
         enum Internal: Equatable {
@@ -146,6 +169,9 @@ struct SchedulingFeature {
 
             case .overlayDismissed:
                 return .run { [deviceActivity] _ in await deviceActivity.cancel(nil) }
+
+            case .watchdogRecoveryTriggered:
+                return watchdogRecoveryTriggeredEffect()
 
             case let .internalAction(internalAction):
                 return reduceInternal(internalAction, state: &state)
@@ -432,6 +458,67 @@ extension SchedulingFeature {
                 await send(.scheduleReminders)
             }
         )
+    }
+
+    /// Watchdog-recovery side effect (#892). Reads the recent App Group
+    /// IPC event log via `IPCClient.recentEvents`, classifies the latest
+    /// device-activity-lifecycle heartbeat using `WatchdogHeartbeat.status(…)`
+    /// against a 130 s staleness threshold, and on a `.stale` / `.missing`
+    /// verdict cancels DeviceActivity monitoring, records a
+    /// `watchdogRecoveryTriggered` IPC event, emits the
+    /// `watchdogRecoveryTriggered` + `watchdogRecoveryCompleted` analytics
+    /// pair, and sends `.scheduleReminders` to re-arm the schedule from a
+    /// clean slate (per-type cancel-and-rearm via
+    /// `ReminderScheduler.rescheduleReminder`; the `.notDetermined`
+    /// fall-through also calls `schedulerClient.cancelAllReminders()`).
+    /// Fresh heartbeats short-circuit so callers can dispatch the action
+    /// unconditionally on foreground.
+    ///
+    /// Behavioural parity with the deleted
+    /// `AppCoordinator.recoverStaleDeviceActivityWatchdogIfNeeded`
+    /// (#680) — the per-reason fallback rescheduling is now subsumed by
+    /// `.scheduleReminders`, which restores the notification fallback
+    /// whenever authorization permits.
+    func watchdogRecoveryTriggeredEffect() -> Effect<Action> {
+        let now = self.now()
+        let analyticsClient = self.analyticsClient
+        let deviceActivity = self.deviceActivity
+        let ipcClient = self.ipcClient
+        return .run { send in
+            let events = await ipcClient.recentEvents()
+            let status = WatchdogHeartbeat.status(
+                from: events,
+                now: now,
+                staleAfter: Self.watchdogHeartbeatStaleThreshold,
+                matching: WatchdogHeartbeatDetail.deviceActivityLifecycleDetails
+            )
+            let detail: String
+            switch status {
+            case .fresh:
+                return
+            case .missing:
+                detail = "missing"
+            case let .stale(_, heartbeatDetail):
+                detail = heartbeatDetail?.rawValue ?? "unknown"
+            }
+
+            await deviceActivity.cancel(nil)
+            await ipcClient.record(
+                AppGroupIPCEvent(
+                    kind: .watchdogRecoveryTriggered,
+                    reasonRaw: nil,
+                    timestamp: now,
+                    detail: detail
+                ),
+                "watchdog_recovery"
+            )
+            analyticsClient.log(.watchdogRecoveryTriggered(reason: nil, detail: detail))
+            analyticsClient.log(.watchdogRecoveryCompleted(
+                sessionCleared: true,
+                fallbackScheduled: false
+            ))
+            await send(.scheduleReminders)
+        }
     }
 }
 

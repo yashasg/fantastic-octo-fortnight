@@ -168,7 +168,8 @@ final class AppDelegateTests: XCTestCase {
                 writeSelection: { _ in false },
                 record: { _, _ in },
                 trueInterruptChanges: { .finished },
-                selectionChanges: { .finished }
+                selectionChanges: { .finished },
+                recentEvents: { [] }
             )
             $0.deviceActivityMonitorClient = DeviceActivityMonitorClient(
                 schedule: { _, _ in },

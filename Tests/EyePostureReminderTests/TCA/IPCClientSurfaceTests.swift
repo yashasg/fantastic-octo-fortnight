@@ -5,10 +5,12 @@ import XCTest
 @testable import EyePostureReminder
 
 /// Surface-level coverage for the `IPCClient` selection accessors added in
-/// `p0-tca-15` (#678). These tests assert the dependency contract reducers
-/// rely on — they do not exercise the live `AppGroupIPCStore`-backed
-/// adapter (covered by `AppGroupIPCStoreTests`), only the closure-typed
-/// surface routes inputs to the configured implementation.
+/// `p0-tca-15` (#678) and the watchdog-recovery `recentEvents` accessor
+/// added in Phase 2 follow-up #892. These tests assert the dependency
+/// contract reducers rely on — they do not exercise the live
+/// `AppGroupIPCStore`-backed adapter (covered by `AppGroupIPCStoreTests`),
+/// only that the closure-typed surface routes inputs to the configured
+/// implementation.
 @MainActor
 final class IPCClientSurfaceTests: XCTestCase {
 
@@ -18,6 +20,11 @@ final class IPCClientSurfaceTests: XCTestCase {
             categoryCount: 1,
             appCount: 2,
             lastUpdated: Date(timeIntervalSince1970: 1_000)
+        )
+        let watchdogEvent = AppGroupIPCEvent(
+            kind: .watchdogHeartbeat,
+            timestamp: Date(timeIntervalSince1970: 2_000),
+            detail: "device_activity_interval_started"
         )
         let (selectionStream, selectionContinuation) =
             AsyncStream<AppGroupSelectionSnapshot>.makeStream()
@@ -45,7 +52,11 @@ final class IPCClientSurfaceTests: XCTestCase {
                 }
             },
             trueInterruptChanges: { toggleStream },
-            selectionChanges: { selectionStream }
+            selectionChanges: { selectionStream },
+            recentEvents: {
+                recorded.withValue { $0.append("recentEvents") }
+                return [watchdogEvent]
+            }
         )
 
         let isEnabled = await client.isTrueInterruptEnabled()
@@ -53,6 +64,7 @@ final class IPCClientSurfaceTests: XCTestCase {
         let readBack = await client.readSelection()
         let didWrite = await client.writeSelection(snapshot)
         await client.record(AppGroupIPCEvent(kind: .shieldStarted), "ctx")
+        let events = await client.recentEvents()
 
         toggleContinuation.yield(true)
         toggleContinuation.finish()
@@ -72,6 +84,7 @@ final class IPCClientSurfaceTests: XCTestCase {
         XCTAssertTrue(didSet)
         XCTAssertEqual(readBack, snapshot)
         XCTAssertTrue(didWrite)
+        XCTAssertEqual(events, [watchdogEvent])
         XCTAssertEqual(toggleValues, [true])
         XCTAssertEqual(selectionValues, [snapshot])
         XCTAssertEqual(recorded.value, [
@@ -79,8 +92,17 @@ final class IPCClientSurfaceTests: XCTestCase {
             "setTrueInterruptEnabled(true)",
             "readSelection",
             "writeSelection(2)",
-            "record(shieldStarted, ctx)"
+            "record(shieldStarted, ctx)",
+            "recentEvents"
         ])
+    }
+
+    func test_silentClient_recentEvents_returnsEmptyArray() async {
+        let client = TCATestDependencies.silentIPCClient()
+
+        let events = await client.recentEvents()
+
+        XCTAssertTrue(events.isEmpty)
     }
 
     func test_silentClient_selectionAccessors_returnSafeFallbacks() async {
