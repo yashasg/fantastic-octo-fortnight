@@ -3,57 +3,48 @@ import Foundation
 import ScreenTimeExtensionShared
 import UserNotifications
 
-/// TCA reducer (`p0-tca-10` / #673) owning the long-running scheduling
-/// orchestration: streams installed at init plus `scheduleReminders`,
+/// TCA reducer owning the long-running scheduling orchestration:
+/// streams installed at init plus `scheduleReminders`,
 /// `reschedule(for:)`, `handleNotification(for:)`,
 /// `handleForegroundTransition`, and `appWillResignActive`. It is the
-/// canonical runtime for that surface (`#755` Phase E) and consumes the
-/// dependency clients defined by `p0-tca-2`.
+/// canonical runtime for that surface and consumes the TCA dependency
+/// clients.
 ///
-/// Behavioural fidelity caveats (intentional deferrals, each tracked by a
-/// dedicated open issue — the closed `p0-tca-15` (#678) meta-tracker no
-/// longer owns these follow-ups, and the umbrella drift from referencing
-/// it was resolved in #895 by splitting per bullet; the dependency-client
-/// surface bundle (#898) was likewise split per surface so each piece has
-/// its own tracker rather than sharing an umbrella):
-///   * `OverlayClient.lifecycleEvents`-driven bookkeeping: the
-///     reducer subscribes to the multicast stream from `startEffect`
-///     (cancellable from `stopEffect`) and routes every `.presented` /
-///     `.dismissed` / `.settingsTapped` emission through
-///     `.overlayLifecycleEvent(_:)` (#904). `.presented` / `.dismissed`
-///     now drive `SessionTimingClient.sessionStarted` /
-///     `sessionEnded` per-type (#901) and the DeviceActivity-on-present
-///     hook landed in #903 — `.presented` calls
+/// Implemented capabilities:
+///   * **Overlay lifecycle subscription (#904).** `startEffect`
+///     subscribes to `OverlayClient.lifecycleEvents` (cancellable from
+///     `stopEffect`) and routes every `.presented` / `.dismissed` /
+///     `.settingsTapped` emission through `.overlayLifecycleEvent(_:)`.
+///     `.presented` / `.dismissed` drive
+///     `SessionTimingClient.sessionStarted` / `sessionEnded` per-type
+///     (#901) and the DeviceActivity-on-present hook (#903):
+///     `.presented` calls
 ///     `DeviceActivityMonitorClient.startScheduleForOverlay(_:)` and
 ///     `.dismissed` calls the existing `cancel(_:)` accessor.
-///     `.settingsTapped` is a structural no-op here by design: the
+///     `.settingsTapped` is a structural no-op here by design — the
 ///     same user action emits
 ///     `AnalyticsEvent.overlayDismissed(method: .settingsTap)` from
-///     `OverlayView.performDismiss(_:)` (so the analytics surface is
-///     already covered at the view layer) and navigation to Settings
-///     is owned by `AppFeature`'s parallel `lifecycleEvents`
-///     subscriber.
-///
-/// Launch-readiness analytics: `startEffect` emits
-/// `SessionTimingClient.launchReady(.streamsInstalled)` from the tail of
-/// the cold-launch installation `.merge` once every long-running stream
-/// subscription is in-flight (#902), restoring the legacy
-/// `AppCoordinator` `launchReady` signal at the dependency boundary.
-///
-/// Per-type interval differentiation (#897) is now honoured: `State`
-/// caches both the eyes-side and posture-side `ReminderSettings`
-/// snapshots vended by `SettingsClient.stream` / `postureStream`, and
-/// the reducer reads them via `State.settings(for:)` so
-/// `rescheduleType`, `thresholdReached`, `reminderNotification`, and
-/// `scheduleReminders` use the correct interval / break duration for
-/// each `ReminderType`.
-///
-/// Watchdog recovery shipped in #892 via `.watchdogRecoveryTriggered`
-/// (action + effect) wired on top of `IPCClient.recentEvents` and the
-/// existing `@Dependency(\.date)` clock; the reducer composes the
-/// staleness verdict with `WatchdogHeartbeat.status(…)` so the behaviour
-/// stays in lock-step with the legacy `WatchdogHeartbeat` parity
-/// contract (`Tests/.../WatchdogHeartbeatTests.swift`).
+///     `OverlayView.performDismiss(_:)` (analytics surface covered at
+///     the view layer) and navigation to Settings is owned by
+///     `AppFeature`'s parallel `lifecycleEvents` subscriber.
+///   * **Launch-readiness analytics (#902).** `startEffect` emits
+///     `SessionTimingClient.launchReady(.streamsInstalled)` from the
+///     tail of the cold-launch installation `.merge` once every
+///     long-running stream subscription is in-flight.
+///   * **Per-type interval differentiation (#897).** `State` caches
+///     both the eyes-side and posture-side `ReminderSettings` snapshots
+///     vended by `SettingsClient.stream` / `postureStream`, and the
+///     reducer reads them via `State.settings(for:)` so
+///     `rescheduleType`, `thresholdReached`, `reminderNotification`,
+///     and `scheduleReminders` use the correct interval / break
+///     duration for each `ReminderType`.
+///   * **Watchdog recovery (#892).** `.watchdogRecoveryTriggered`
+///     (action + effect) is wired on top of `IPCClient.recentEvents`
+///     and the `@Dependency(\.date)` clock; the reducer composes the
+///     staleness verdict with `WatchdogHeartbeat.status(…)` so the
+///     behaviour stays in lock-step with the legacy
+///     `WatchdogHeartbeat` parity contract (see
+///     `Tests/.../WatchdogHeartbeatTests.swift`).
 @Reducer
 struct SchedulingFeature {
 
