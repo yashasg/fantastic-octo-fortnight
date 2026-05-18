@@ -6,10 +6,9 @@ import XCTest
 
 /// Surface-level coverage for the `IPCClient` selection accessors added in
 /// `p0-tca-15` (#678). These tests assert the dependency contract reducers
-/// rely on now that the legacy `SelectedAppsState` wrapper is retired —
-/// they do not exercise the live `AppGroupIPCStore`-backed adapter (covered
-/// by `AppGroupIPCStoreTests`), only the closure-typed surface routes
-/// inputs to the configured implementation.
+/// rely on — they do not exercise the live `AppGroupIPCStore`-backed
+/// adapter (covered by `AppGroupIPCStoreTests`), only the closure-typed
+/// surface routes inputs to the configured implementation.
 @MainActor
 final class IPCClientSurfaceTests: XCTestCase {
 
