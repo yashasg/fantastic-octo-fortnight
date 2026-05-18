@@ -4,7 +4,7 @@
 **Date:** 2026-04-28  
 **Status:** ✅ All unit tests compile cleanly — build verified
 
-> **Count source note:** The v0.2.0 CHANGELOG baseline is 1,382 tests (the authoritative shipped baseline). The current count of **1,825** (from `grep -rc 'func test' Tests/EyePostureReminderTests --include='*.swift'`) reflects ~443 tests added post-v0.2.0 across new modules (Analytics, PauseCondition, ScreenTime, TrueInterrupt, coverage-boost suites, and regression). The M2.6 intermediate count of 270 (pre-v0.2.0) is retained in the summary table for historical context only; it is not the most recent baseline. CHANGELOG counts remain accurate for their respective milestones; this report uses the live grep count as the authoritative current total.
+> **Count source note:** The v0.2.0 CHANGELOG baseline is 1,382 tests (the authoritative shipped baseline). The current count of **1,801** (from `grep -rc 'func test' Tests/EyePostureReminderTests --include='*.swift'`) reflects ~419 tests added post-v0.2.0 across new modules (Analytics, PauseCondition, ScreenTime, TrueInterrupt, coverage-boost suites, and regression), net of MVVM-era suite removals during the TCA migration (e.g. `SettingsViewModel*Tests`, `ContentViewTests`, `NoopServicesTests`). The M2.6 intermediate count of 270 (pre-v0.2.0) is retained in the summary table for historical context only; it is not the most recent baseline. CHANGELOG counts remain accurate for their respective milestones; this report uses the live grep count as the authoritative current total. The UI-test row (15) reflects post-TCA pares: #736 phase 1 retired `DarkModeUITests.swift` (−7), and #806 phases 1–3 dropped reducer/view-covered (A) and redundant (C) bucket cases across the remaining UI test files.
 
 ---
 
@@ -12,15 +12,15 @@
 
 | Metric | Value |
 |---|---|
-| **Total tests** | **1,825** (grep `func test` across 79 .swift files) |
+| **Total tests** | **1,801** (grep `func test` across 96 .swift files) |
 | Build status | ✅ `BUILD SUCCEEDED` (Mac Catalyst / Xcode) |
 | Test-build status | ✅ `TEST BUILD SUCCEEDED` |
 | API mismatches found | 0 |
 | API mismatches fixed | 1 (pre-existing `is` cast warning in AudioInterruptionManagerTests) |
 | Tests at v0.2.0 baseline | 1,382 (per CHANGELOG; authoritative shipped baseline) |
 | Tests at M2.6 (intermediate) | 270 (per CHANGELOG; pre-v0.2.0; not the most recent baseline) |
-| Tests added since v0.2.0 | ~443 (Analytics, ScreenTime, TrueInterrupt, coverage-boost, regression suites) |
-| **UI tests** | **59** (XCUITest; `grep -rc 'func test' Tests/EyePostureReminderUITests --include='*.swift'`) |
+| Tests added since v0.2.0 (net) | ~419 (Analytics, ScreenTime, TrueInterrupt, coverage-boost, regression suites, net of MVVM-era suite removals during the TCA migration) |
+| **UI tests** | **15** (XCUITest; `grep -rc 'func test' Tests/EyePostureReminderUITests --include='*.swift'`; post-#736 phase 1 + #806 phases 1–3 pares) |
 
 ---
 
@@ -211,7 +211,7 @@ No breaking API mismatches found between test files and the Phase 2 implementati
 |---|---|
 | Phase 1 (Models + Scheduler + ViewModel core)¹ | ~196 (M2.6 intermediate) |
 | Phase 2 (Haptics, Snooze, Onboarding, DesignSystem, AppCoordinator overlay)¹ | ~74 (M2.6 intermediate; v0.2.0 shipped total: 1,382) |
-| Post-v0.2.0 additions (Analytics, ScreenTime, TrueInterrupt, PauseCondition, coverage-boost, regression suites) | ~443 |
-| **Total (current, from grep)** | **1,825** |
+| Post-v0.2.0 additions (Analytics, ScreenTime, TrueInterrupt, PauseCondition, coverage-boost, regression suites), net of MVVM-era suite removals during TCA migration | ~419 |
+| **Total (current, from grep)** | **1,801** |
 
 > ¹ MVVM-era milestone labels — the `ViewModels` / `AppCoordinator` layers were decommissioned in the Phase-2 TCA migration (`#677` / `#701` / `#755`, PRs `#756`–`#760`). Equivalent reducer-level coverage now lives under `Tests/EyePostureReminderTests/TCA/` (see the §"ViewModels — decommissioned" subsection above). The row labels and counts are preserved as historical receipts for what shipped at M2.6 / v0.2.0.
