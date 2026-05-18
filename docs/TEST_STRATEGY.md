@@ -28,7 +28,7 @@
 
 | Layer | Count (target) | Speed | Confidence | Scope |
 |-------|----------------|-------|------------|-------|
-| **Unit** | ~70 tests | < 0.5s each | Logic correctness | Services, ViewModels, Models |
+| **Unit** | ~70 tests | < 0.5s each | Logic correctness | Models, Services, TCA Reducers |
 | **Integration** | ~20 tests | 1–3s each | Protocol wiring + scheduling math | Scheduler + mock notification center |
 | **UI** | ~10 tests | 10–30s each | User flows end-to-end | Settings screen, overlay lifecycle |
 
@@ -42,7 +42,7 @@
 |-------|--------|-----------|
 | **Models** | **90%** | Pure Swift data structures — no excuses for missing coverage |
 | **Services** | **80%** | `ReminderScheduler`, `OverlayManager` — high risk, high reward to test |
-| **ViewModels** | **80%** | Pure Swift `ObservableObject` — no UIKit/SwiftUI dependencies |
+| **TCA Reducers** | **80%** | `EyePostureReminder/TCA/Features/*Feature.swift` — exercised through `TestStore` with `withDependencies` fakes (see ARCHITECTURE.md §4.1, §10); every emitted action is asserted deterministically |
 | **Views** | **60%** | UI tests cover critical paths; layout edge cases accepted as manual |
 | **Integration** | N/A (manual baseline) | Real device with live notifications — not tracked by Xcode coverage |
 
@@ -666,7 +666,7 @@ Full regression pass: run all unit tests, all UI tests, and full manual checklis
 
 Every pull request into `main` must pass:
 1. `EyePostureReminderTests` — all unit tests green
-2. Code coverage ≥ 80% for Models + Services + ViewModels
+2. Code coverage ≥ 80% for Models + Services + TCA Reducers
 3. `EyePostureReminderUITests` — settings flow + overlay dismissal
 4. Build succeeds for iOS Simulator (iPhone 15, iOS 17)
 
@@ -727,6 +727,7 @@ EyePostureReminderUITests/
 |------|--------|--------|
 | 2026-04-24 | Initial test strategy for Phase 1 | Livingston |
 | 2026-04-28 | Added §3.5 Phase 3+ Extension Mocks (MockManagedSettingsStore, MockAppGroupUserDefaults, MockAuthorizationCenter) with extension target test structure. Added §4.7 Phase 3+ Extension Testing (manual device-only tests EXT-01 through EXT-10, prerequisites, regression matrix). Updated §8 Regression Strategy with Phase 3+ file change triggers and device-only testing requirement. Emphasized FamilyControls entitlement dependency and simulator limitations. | Rusty |
+| 2026-05-17 | Stripped retired-MVVM `ViewModels` layer references from §1 Test Pyramid Rationale (line 31), §2 Coverage Targets table (line 45), and §8 Automated Regression Gate (line 669); replaced with `TCA Reducers` to match the post-#677/#701/#755 architecture (see ARCHITECTURE.md §4.1 "Why TCA Over MVVM?" + §10 Testing Architecture). Issue #864. | Copilot |
 
 ---
 
