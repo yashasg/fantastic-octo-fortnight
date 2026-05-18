@@ -32,12 +32,14 @@ import UserNotifications
 ///     equivalent) is not yet wired to the overlay-present transition;
 ///     the existing `cancel(_:)` accessor is the only path consumed
 ///     today (#903).
-///   * `OverlayClient.lifecycleEvents`-driven bookkeeping: the multicast
-///     stream defined in `OverlayClient.swift` ships, but
-///     `SchedulingFeature` does not yet subscribe to it from
-///     `startEffect`, so the bookkeeping side-effects that should fan
-///     out from `.presented` / `.dismissed` / `.settingsTapped`
-///     remain inert (#904).
+///   * `OverlayClient.lifecycleEvents`-driven bookkeeping: the
+///     reducer now subscribes to the multicast stream from
+///     `startEffect` (cancellable from `stopEffect`) and routes every
+///     `.presented` / `.dismissed` / `.settingsTapped` emission through
+///     `.overlayLifecycleEvent(_:)` (#904). The per-event side-effects
+///     themselves (session-timing emit, DeviceActivity start hook) are
+///     still owned by sibling trackers #901 / #903, so the reducer
+///     handler is currently a structural no-op pending those landings.
 ///
 /// Per-type interval differentiation (#897) is now honoured: `State`
 /// caches both the eyes-side and posture-side `ReminderSettings`
@@ -141,6 +143,13 @@ struct SchedulingFeature {
         /// heartbeats short-circuit to a no-op so callers can dispatch
         /// the action unconditionally at foreground transitions.
         case watchdogRecoveryTriggered
+        /// Forwarded from `OverlayClient.lifecycleEvents()` once
+        /// `startEffect` installs the subscription (#904). The reducer
+        /// currently treats every variant as a structural no-op — the
+        /// per-event side-effects (session-timing analytics emit,
+        /// DeviceActivity start hook) belong to sibling trackers
+        /// #901 / #903 and will fill the handler as they land.
+        case overlayLifecycleEvent(OverlayLifecycleEvent)
         case internalAction(Internal)
 
         enum Internal: Equatable {
@@ -157,6 +166,7 @@ struct SchedulingFeature {
         case thresholdStream
         case pauseStream
         case ipcStream
+        case overlayLifecycleStream
         case rescheduleDebounce(ReminderType)
         case snoozeWakeTask
     }
@@ -227,6 +237,14 @@ struct SchedulingFeature {
             case .watchdogRecoveryTriggered:
                 return watchdogRecoveryTriggeredEffect()
 
+            case .overlayLifecycleEvent:
+                // Structural no-op: the subscription is installed by
+                // `startEffect` so sibling trackers (#901 session-timing,
+                // #903 DeviceActivity-on-present) can route per-event
+                // side-effects from this handler without re-introducing
+                // the umbrella-deferral drift class fixed by #895.
+                return .none
+
             case let .internalAction(internalAction):
                 return reduceInternal(internalAction, state: &state)
             }
@@ -245,6 +263,7 @@ extension SchedulingFeature {
             thresholdStreamEffect(),
             pauseStreamEffect(),
             ipcStreamEffect(),
+            overlayLifecycleStreamEffect(),
             .run { [pauseClient] _ in await pauseClient.startMonitoring() },
             .send(.scheduleReminders)
         )
@@ -257,6 +276,7 @@ extension SchedulingFeature {
             .cancel(id: CancelID.thresholdStream),
             .cancel(id: CancelID.pauseStream),
             .cancel(id: CancelID.ipcStream),
+            .cancel(id: CancelID.overlayLifecycleStream),
             .cancel(id: CancelID.snoozeWakeTask),
             .run { [pauseClient] _ in await pauseClient.stopMonitoring() }
         )
@@ -677,6 +697,23 @@ extension SchedulingFeature {
             }
         }
         .cancellable(id: CancelID.ipcStream, cancelInFlight: true)
+    }
+
+    /// Subscribes to `OverlayClient.lifecycleEvents()` and forwards each
+    /// emission as `.overlayLifecycleEvent(_:)` (#904). The stream is
+    /// installed from `startEffect` and cancelled from `stopEffect`; the
+    /// reducer's handler is currently a no-op, so this effect's job is
+    /// purely to establish the subscription so sibling trackers (#901,
+    /// #903) can add per-event side-effects without re-plumbing the
+    /// stream wiring.
+    func overlayLifecycleStreamEffect() -> Effect<Action> {
+        let overlayClient = self.overlayClient
+        return .run { send in
+            for await event in overlayClient.lifecycleEvents() {
+                await send(.overlayLifecycleEvent(event))
+            }
+        }
+        .cancellable(id: CancelID.overlayLifecycleStream, cancelInFlight: true)
     }
 }
 
