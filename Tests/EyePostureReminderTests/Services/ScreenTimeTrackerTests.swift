@@ -580,7 +580,12 @@ final class ScreenTimeTrackerTests: XCTestCase {
     // MARK: - Behavioral: pauseAll / resumeAll
 
     /// `pauseAll` must prevent ALL types from firing their threshold callbacks.
-    func test_pauseAll_preventsAllCallbacks() async throws {
+    ///
+    /// Driven deterministically via `sut.tick(now:)` — no wall-clock wait — to
+    /// eliminate the residual 3.0 s inverted-expectation budget on this surface
+    /// (post-#876/#877 sweep, #878). Mirrors the canonical pattern in
+    /// `test_pausedType_doesNotFireCallback`.
+    func test_pauseAll_preventsAllCallbacks() {
         var eyesFired = false
         var postureFired = false
 
@@ -588,27 +593,16 @@ final class ScreenTimeTrackerTests: XCTestCase {
         sut.setThreshold(2, for: .posture)
         sut.pauseAll()
         sut.onThresholdReached = { type in
-            if type == .eyes    { eyesFired   = true }
+            if type == .eyes    { eyesFired    = true }
             if type == .posture { postureFired = true }
         }
 
-        NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
+        sut.tick(now: 1.0)
+        sut.tick(now: 2.0)
+        sut.tick(now: 3.0)
 
-        // Use an inverted expectation: the test passes when the 3 s window expires without
-        // either callback firing (both are paused). Fails immediately if one fires early.
-        let noEyesFire    = XCTestExpectation(description: "eyes must NOT fire")
-        let noPostureFire = XCTestExpectation(description: "posture must NOT fire")
-        noEyesFire.isInverted    = true
-        noPostureFire.isInverted = true
-        sut.onThresholdReached = { type in
-            if type == .eyes    { noEyesFire.fulfill() }
-            if type == .posture { noPostureFire.fulfill() }
-        }
-
-        await fulfillment(of: [noEyesFire, noPostureFire], timeout: 3.0)
-        XCTAssertFalse(eyesFired, "pauseAll must prevent .eyes callback")
-        XCTAssertFalse(postureFired, "pauseAll must prevent .posture callback")
-        sut.stop()
+        XCTAssertFalse(eyesFired, "pauseAll must prevent .eyes callback regardless of accumulated ticks")
+        XCTAssertFalse(postureFired, "pauseAll must prevent .posture callback regardless of accumulated ticks")
     }
 
     /// After `resumeAll`, ALL types paused with `pauseAll` must be able to fire again.
