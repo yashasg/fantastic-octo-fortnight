@@ -13,12 +13,31 @@ import UserNotifications
 /// Behavioural fidelity caveats (intentional deferrals, each tracked by a
 /// dedicated open issue — the closed `p0-tca-15` (#678) meta-tracker no
 /// longer owns these follow-ups, and the umbrella drift from referencing
-/// it was resolved in #895 by splitting per bullet):
-///   * Fallback-routing IPC reads, session-timing analytics,
-///     launch-readiness analytics, DeviceActivity scheduling on overlay
-///     present, and the `OverlayClient.lifecycleEvents`-driven bookkeeping
-///     all require dependency-client surface that does not yet exist
-///     (#898).
+/// it was resolved in #895 by splitting per bullet; the dependency-client
+/// surface bundle (#898) was likewise split per surface so each piece has
+/// its own tracker rather than sharing an umbrella):
+///   * Fallback-routing IPC reads: `IPCClient.fallbackRoute(for:)`
+///     accessor not yet exposed, so `handleNotification(for:)` still
+///     resolves routes via App Group `UserDefaults` reads owned by the
+///     extension rather than the dependency boundary (#900).
+///   * Session-timing analytics: no `SessionTimingClient` /
+///     `AnalyticsLogger` start/stop pair for the reminder fire ↔ overlay
+///     dismissal cycle (#901).
+///   * Launch-readiness analytics: `startEffect` installs every long-
+///     running stream but does not emit a cold-launch readiness event,
+///     so the legacy `AppCoordinator` `launchReady` signal is still
+///     dropped (#902).
+///   * DeviceActivity scheduling on overlay present:
+///     `DeviceActivityMonitorClient.startScheduleForOverlay(_:)` (or
+///     equivalent) is not yet wired to the overlay-present transition;
+///     the existing `cancel(_:)` accessor is the only path consumed
+///     today (#903).
+///   * `OverlayClient.lifecycleEvents`-driven bookkeeping: the multicast
+///     stream defined in `OverlayClient.swift` ships, but
+///     `SchedulingFeature` does not yet subscribe to it from
+///     `startEffect`, so the bookkeeping side-effects that should fan
+///     out from `.presented` / `.dismissed` / `.settingsTapped`
+///     remain inert (#904).
 ///
 /// Per-type interval differentiation (#897) is now honoured: `State`
 /// caches both the eyes-side and posture-side `ReminderSettings`
