@@ -16,10 +16,6 @@ import UserNotifications
 /// it was resolved in #895 by splitting per bullet; the dependency-client
 /// surface bundle (#898) was likewise split per surface so each piece has
 /// its own tracker rather than sharing an umbrella):
-///   * Launch-readiness analytics: `startEffect` installs every long-
-///     running stream but does not emit a cold-launch readiness event,
-///     so the legacy `AppCoordinator` `launchReady` signal is still
-///     dropped (#902).
 ///   * `OverlayClient.lifecycleEvents`-driven bookkeeping: the
 ///     reducer subscribes to the multicast stream from `startEffect`
 ///     (cancellable from `stopEffect`) and routes every `.presented` /
@@ -32,6 +28,12 @@ import UserNotifications
 ///     `.dismissed` calls the existing `cancel(_:)` accessor — so
 ///     `.settingsTapped` is the only remaining structural no-op pending
 ///     its own future tracker.
+///
+/// Launch-readiness analytics: `startEffect` emits
+/// `SessionTimingClient.launchReady(.streamsInstalled)` from the tail of
+/// the cold-launch installation `.merge` once every long-running stream
+/// subscription is in-flight (#902), restoring the legacy
+/// `AppCoordinator` `launchReady` signal at the dependency boundary.
 ///
 /// Per-type interval differentiation (#897) is now honoured: `State`
 /// caches both the eyes-side and posture-side `ReminderSettings`
@@ -253,6 +255,9 @@ extension SchedulingFeature {
             ipcStreamEffect(),
             overlayLifecycleStreamEffect(),
             .run { [pauseClient] _ in await pauseClient.startMonitoring() },
+            .run { [sessionTimingClient] _ in
+                await sessionTimingClient.launchReady(.streamsInstalled)
+            },
             .send(.scheduleReminders)
         )
     }

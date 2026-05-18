@@ -142,7 +142,8 @@ private actor SessionTimingRecorder {
             },
             sessionEnded: { type, date in
                 await self.appendEnded(type, date)
-            }
+            },
+            launchReady: { _ in }
         )
     }
 }

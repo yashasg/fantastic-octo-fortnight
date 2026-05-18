@@ -28,6 +28,13 @@ enum AnalyticsEvent: Sendable {
     /// `SchedulingFeature`'s overlay-lifecycle consumer.
     case reminderSessionEnded(type: ReminderType, at: Date)
 
+    /// Fired once per cold launch at the tail of
+    /// `SchedulingFeature.startEffect` after every long-running stream
+    /// subscription is in-flight. Emitted by `SessionTimingClient` (#902);
+    /// restores the legacy `AppCoordinator` launch-readiness signal at the
+    /// dependency boundary.
+    case reminderLaunchReady(reason: SessionTimingClient.LaunchReadinessReason)
+
     // MARK: App Launch Readiness
 
     /// Parameters captured once per app launch/foreground cycle for startup health monitoring.
@@ -392,6 +399,16 @@ enum AnalyticsLogger {
                 granted=\(granted, privacy: .public)
                 """)
 
+        default:
+            logSessionTiming(event)
+        }
+    }
+
+    // Logs session/launch-timing analytics events. Split out of `logExtended(_:)` to
+    // keep each switch within cyclomatic-complexity limits.
+    private static func logSessionTiming(_ event: AnalyticsEvent) {
+        switch event {
+
         case let .appLaunchReadiness(payload):
             logger.info("""
                 event=app_launch_readiness \
@@ -416,8 +433,16 @@ enum AnalyticsLogger {
                 at=\(date.timeIntervalSince1970, format: .fixed(precision: 3), privacy: .public)
                 """)
 
+        case let .reminderLaunchReady(reason):
+            logger.info("""
+                event=reminder_launch_ready \
+                reason=\(reason.rawValue, privacy: .public)
+                """)
+
         default:
-            assertionFailure("Unhandled analytics event — add a case to logExtended(_:): \(event)")
+            assertionFailure(
+                "Unhandled analytics event — add a case to logExtended(_:) or logSessionTiming(_:): \(event)"
+            )
         }
     }
 }
