@@ -4,7 +4,7 @@
 **Date:** 2026-04-28  
 **Status:** ✅ All unit tests compile cleanly — build verified
 
-> **Count source note:** The v0.2.0 CHANGELOG baseline is 1,382 tests (the authoritative shipped baseline). The current count of **1,801** (from `grep -rc 'func test' Tests/EyePostureReminderTests --include='*.swift'`) reflects ~419 tests added post-v0.2.0 across new modules (Analytics, PauseCondition, ScreenTime, TrueInterrupt, coverage-boost suites, and regression), net of MVVM-era suite removals during the TCA migration (e.g. `SettingsViewModel*Tests`, `ContentViewTests`, `NoopServicesTests`). The M2.6 intermediate count of 270 (pre-v0.2.0) is retained in the summary table for historical context only; it is not the most recent baseline. CHANGELOG counts remain accurate for their respective milestones; this report uses the live grep count as the authoritative current total. The UI-test row (15) reflects post-TCA pares: #736 phase 1 retired `DarkModeUITests.swift` (−7), and #806 phases 1–3 dropped reducer/view-covered (A) and redundant (C) bucket cases across the remaining UI test files.
+> **Count source note:** The v0.2.0 CHANGELOG baseline is **1,382 tests** (the authoritative shipped baseline; frozen historical receipt). The current live count is whatever `grep -rc 'func test' Tests/EyePostureReminderTests --include='*.swift'` reports at HEAD — net of MVVM-era suite removals during the TCA migration (e.g. `SettingsViewModel*Tests`, `ContentViewTests`, `NoopServicesTests`) and additions across new modules (Analytics, PauseCondition, ScreenTime, TrueInterrupt, coverage-boost, regression). The M2.6 intermediate count of **270** (pre-v0.2.0) is retained as a historical receipt only; it is not the most recent baseline. CHANGELOG counts remain accurate for their respective milestones; this report defers to the live grep recipe as the authoritative current total (the literal cumulative number was removed in #889 — it drifted by ±1 on every test add/remove and burnt one dedicated follow-up PR each time; #875 is the evidence). The UI-test count reflects post-TCA pares: #736 phase 1 retired `DarkModeUITests.swift` (−7), and #806 phases 1–3 dropped reducer/view-covered (A) and redundant (C) bucket cases across the remaining UI test files.
 
 ---
 
@@ -12,15 +12,15 @@
 
 | Metric | Value |
 |---|---|
-| **Total tests** | **1,801** (grep `func test` across 96 .swift files) |
+| **Total tests** | run `grep -rc 'func test' Tests/EyePostureReminderTests --include='*.swift' \| awk -F: '{s+=$2} END {print s}'` for the live total (literal removed in #889 — see Count source note above) |
 | Build status | ✅ `BUILD SUCCEEDED` (Mac Catalyst / Xcode) |
 | Test-build status | ✅ `TEST BUILD SUCCEEDED` |
 | API mismatches found | 0 |
 | API mismatches fixed | 1 (pre-existing `is` cast warning in AudioInterruptionManagerTests) |
-| Tests at v0.2.0 baseline | 1,382 (per CHANGELOG; authoritative shipped baseline) |
-| Tests at M2.6 (intermediate) | 270 (per CHANGELOG; pre-v0.2.0; not the most recent baseline) |
-| Tests added since v0.2.0 (net) | ~419 (Analytics, ScreenTime, TrueInterrupt, coverage-boost, regression suites, net of MVVM-era suite removals during the TCA migration) |
-| **UI tests** | **15** (XCUITest; `grep -rc 'func test' Tests/EyePostureReminderUITests --include='*.swift'`; post-#736 phase 1 + #806 phases 1–3 pares) |
+| Tests at v0.2.0 baseline | 1,382 (per CHANGELOG; authoritative shipped baseline; frozen historical receipt) |
+| Tests at M2.6 (intermediate) | 270 (per CHANGELOG; pre-v0.2.0; not the most recent baseline; frozen historical receipt) |
+| Tests added since v0.2.0 (net) | post-v0.2.0 delta across Analytics, ScreenTime, TrueInterrupt, coverage-boost, and regression suites, net of MVVM-era suite removals during the TCA migration (run the live grep recipe above and subtract `1,382` for the live delta) |
+| **UI tests** | run `grep -rc 'func test' Tests/EyePostureReminderUITests --include='*.swift' \| awk -F: '{s+=$2} END {print s}'` for the live total (literal removed in #889; reflects post-#736 phase 1 + #806 phases 1–3 pares) |
 
 ---
 
@@ -257,9 +257,9 @@ No breaking API mismatches found between test files and the Phase 2 implementati
 
 | Phase | Tests |
 |---|---|
-| Phase 1 (Models + Scheduler + ViewModel core)¹ | ~196 (M2.6 intermediate) |
-| Phase 2 (Haptics, Snooze, Onboarding, DesignSystem, AppCoordinator overlay)¹ | ~74 (M2.6 intermediate; v0.2.0 shipped total: 1,382) |
-| Post-v0.2.0 additions (Analytics, ScreenTime, TrueInterrupt, PauseCondition, coverage-boost, regression suites), net of MVVM-era suite removals during TCA migration | ~419 |
-| **Total (current, from grep)** | **1,801** |
+| Phase 1 (Models + Scheduler + ViewModel core)¹ | ~196 (M2.6 intermediate; historical receipt) |
+| Phase 2 (Haptics, Snooze, Onboarding, DesignSystem, AppCoordinator overlay)¹ | ~74 (M2.6 intermediate; v0.2.0 shipped total: 1,382; historical receipts) |
+| Post-v0.2.0 additions (Analytics, ScreenTime, TrueInterrupt, PauseCondition, coverage-boost, regression suites), net of MVVM-era suite removals during TCA migration | post-v0.2.0 delta (run live grep recipe from §Summary and subtract 1,382) |
+| **Total (current)** | see live grep recipe in §Summary above (literal removed in #889) |
 
 > ¹ MVVM-era milestone labels — the `ViewModels` / `AppCoordinator` layers were decommissioned in the Phase-2 TCA migration (`#677` / `#701` / `#755`, PRs `#756`–`#760`). Equivalent reducer-level coverage now lives under `Tests/EyePostureReminderTests/TCA/` (see the §"ViewModels — decommissioned" subsection above). The row labels and counts are preserved as historical receipts for what shipped at M2.6 / v0.2.0.
