@@ -480,11 +480,13 @@ Tests/
 │   │   └── MultiServicePipelineIntegrationTests.swift
 │   └── RegressionTests.swift         Bug regression guards; one section per fixed bug
 │
-└── EyePostureReminderUITests/        (Xcode-only UI test target — not in Package.swift; currently gated `if: false` in CI per #736)
+└── EyePostureReminderUITests/        (Xcode-only UI test target — not in Package.swift; sharded `uitest-prepare` / `uitest-shard` / `uitest` jobs run on every PR + `main` push per #778)
     ├── HomeScreenTests.swift
     ├── OnboardingFlowTests.swift
     ├── OverlayTests.swift
-    └── SettingsFlowTests.swift
+    ├── SettingsFlowTests.swift
+    ├── AppStoreScreenshotTests.swift     Opt-in App Store screenshot capture driven by `scripts/capture-app-store-screenshots.sh` (`APP_STORE_SCREENSHOT_DIR` env)
+    └── UITestHelpers.swift                `TestLaunchArguments` constants + `XCUIApplication` helpers consumed by every UITest case
 ```
 
 **Target Configuration:**
@@ -1462,7 +1464,7 @@ finishOnboardingAndCustomize()
 ```
          ┌─────────────┐
          │  UI Tests   │   XCUITest — critical user flows (onboarding, settings, dismiss)
-         │  (gated)    │   Currently `if: false` in CI per #736 pending TCA rewrite.
+         │  (sharded)  │   Sharded `uitest-prepare` / `uitest-shard` / `uitest` jobs run on every PR + `main` push per #778.
          └──────┬──────┘
                 │
         ┌───────┴────────┐
@@ -1488,7 +1490,7 @@ finishOnboardingAndCustomize()
 
 **Integration tests** sit in `Tests/EyePostureReminderTests/Integration/` (see §10.4). Use them for pipeline verification: does disabling the master toggle actually cancel pending notifications *and* stop `ScreenTimeTracker`? Integration tests wire the real `SettingsStore` + live services through the TCA dependency clients, but still mock UIKit and UNUserNotificationCenter boundaries.
 
-**UI tests** (XCUITest) cover onboarding permission prompt, toggling a reminder type in settings, and tapping the overlay dismiss button. They are currently disabled in CI (`if: false` in `.github/workflows/ci.yml`) per #736 — re-enablement is gated on porting the suite onto the TCA store.
+**UI tests** (XCUITest) cover onboarding permission prompt, toggling a reminder type in settings, and tapping the overlay dismiss button. They run in CI as the sharded `uitest-prepare` / `uitest-shard` / `uitest` jobs in `.github/workflows/ci.yml` on every PR and `main` push (re-enabled post-TCA-migration in #778); known flakes are wrapped in `XCTExpectFailure` per `Tests/EyePostureReminderUITests/README.md`.
 
 ---
 
@@ -1647,7 +1649,7 @@ The canonical test layout is documented in §3 ("Project Structure") under the `
 // How these tests catch a regression: ...
 ```
 
-**UI test target (`EyePostureReminderUITests/`):** Lives outside SPM. Currently gated `if: false` in CI per #736 pending the TCA-store rewrite. Existing cases: `HomeScreenTests`, `OnboardingFlowTests`, `OverlayTests`, `SettingsFlowTests`.
+**UI test target (`EyePostureReminderUITests/`):** Lives outside SPM. Re-enabled in CI after the MVVM → TCA migration (#778) — the `uitest-prepare` / `uitest-shard` / `uitest` jobs in `.github/workflows/ci.yml` build the xctest bundle once, fan out across shards, and aggregate results on every PR and `main` push. Existing cases: `HomeScreenTests`, `OnboardingFlowTests`, `OverlayTests`, `SettingsFlowTests`, plus the opt-in `AppStoreScreenshotTests` screenshot capture suite. Shared launch-argument constants and `XCUIApplication` helpers live in `UITestHelpers.swift`.
 
 ---
 
@@ -1660,7 +1662,7 @@ The canonical test layout is documented in §3 ("Project Structure") under the `
 | **Reducers (TCA)** | 90% | `TestStore` exercises every branch deterministically; no UIKit / hardware dependencies |
 | **Views** | 50% | Design system tokens + string catalog keys; visual layout not measurable by XCTest |
 | **Integration** | Key pipelines | Settings → `SchedulingFeature` → `ScreenTimeTracker`; Pause signals → `SchedulingFeature` |
-| **UI** | Critical flows | Onboarding, settings save, overlay dismiss (currently gated by #736) |
+| **UI** | Critical flows | Onboarding, settings save, overlay dismiss (sharded UITest jobs run in CI per #778) |
 
 **Key service pipelines for integration tests:**
 1. `SettingsStore.masterEnabled = false` → `SchedulingFeature` cancels pending notifications + stops `ScreenTimeTracker`
@@ -1716,3 +1718,4 @@ Establish baselines on the CI runner (not local) to avoid machine-dependent drif
 | 2026-05-15 | Post-TCA-migration refresh (#725). §1 module-dependency graph redrawn around `AppFeature` / per-feature reducers / dependency clients; §3 project-structure tree updated for `EyePostureReminder/TCA/` + live-service-only `Services/`; added §2.8 dependency-client surface; rewrote §4.1 as "Why TCA Over MVVM?"; §4.6 / §4.7 / §5.5 re-anchored from `AppCoordinator` onto `SchedulingFeature` + matching clients; §7.4 SwiftUI example switched to `StoreOf<Feature>` + `WithPerceptionTracking`; §10 Testing Architecture rewritten around the `TestStore` + `withDependencies` workflow; §8 / §8.5 milestone + onboarding-flow refs cleaned. | Rusty |
 | 2026-05-17 | §3 project-structure tree refresh (#859). Dropped the deleted `Tests/EyePostureReminderTests/TCA/ContentViewTests.swift` row (removed in 4f6d4c5 alongside the dead `ContentView` pass-through wrapper). Dropped the `EyePostureReminder/TCA/Bindings/` directory row whose only file (`StoreScopes.swift`) was removed in 82bc5eb — there is no `Bindings/` directory on disk any more. Expanded the `Extensions/Shared/` listing from the lone `ShieldSessionKeys.swift` row to enumerate all eight App Group / shield-session helpers that now ship there (`AppGroupDefaults`, `AppGroupIPCStore`, `ShieldConfigurationCopyLocalization`, `ShieldIntervalEndCleanupPolicy`, `ShieldSessionKeys`, `ShieldSessionSnapshot`, `ShieldTriggerReason`, `WatchdogHeartbeat`) and called out the per-extension `.Distribution.entitlements` files used by signed builds. Docs-only — no source changes. | Copilot |
 | 2026-05-17 | §3 project-structure tree residual-drift fix (#861). Moved `PrivacyInfo.xcprivacy` out of `EyePostureReminder/Resources/` and onto the `EyePostureReminder/` root row (peer of `App/`, `Models/`, `Resources/`) so the tree matches `Package.swift:40 .copy("PrivacyInfo.xcprivacy")`. Added the `Resources/Fonts/` subtree (`Nunito-Regular.ttf`, `Nunito-Italic.ttf`, `OFL-Nunito.txt`). Added the per-extension `PrivacyInfo.xcprivacy` rows for `Extensions/ShieldConfigurationExtension/` and `Extensions/DeviceActivityMonitorExtension/` (shipped in #635). Added the missing `Tests/EyePostureReminderTests/TCA/SettingsFeatureToggleEmissionTests.swift` to the `SettingsFeature*Tests` row. Added the missing `Tests/EyePostureReminderTests/Mocks/MockMediaControllingTests.swift` and `MockRecordingTests.swift` rows. Added the previously-omitted `Tests/EyePostureReminderTests/Utilities/` test subtree (`AccessibilityAnnouncementTests`, `AppStorageKeysTests`, `AsyncTestHelpers`, `LegalLinksTests`). Docs-only — no source changes. | Copilot |
+| 2026-05-17 | §3 + §10 `EyePostureReminderUITests/` drift fix (#862). Added the two on-disk swift sources missing from the §3 tree — `AppStoreScreenshotTests.swift` (opt-in App Store screenshot capture invoked by `scripts/capture-app-store-screenshots.sh`) and `UITestHelpers.swift` (`TestLaunchArguments` + `XCUIApplication` helpers). Replaced every stale ``gated `if: false` in CI per #736`` / ``currently gated by #736`` reference (the §3 parenthetical at L483, the §10.1 pyramid box at L1467, the §10.1 narrative paragraph at L1493, the §10.4 paragraph at L1650, and the §10.5 coverage-targets row at L1665) with the post-#778 wording: the sharded `uitest-prepare` / `uitest-shard` / `uitest` jobs in `.github/workflows/ci.yml` now run on every PR + `main` push, matching `Tests/EyePostureReminderUITests/README.md`. Docs-only — no source changes. | Copilot |
