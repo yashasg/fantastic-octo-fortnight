@@ -488,11 +488,11 @@ Device resumes normal activity
 - **Owner:** Linus (iOS UI Dev) + Basher (Services Dev)
 - **Status:** 🔄 PLANNED
 - **Scope:**
-  - FamilyControls authorization flow (request + gating)
-  - App/category selection UI (form picker, category browser)
-  - Persist selection to app group shared state
-  - Fallback UI if authorization denied (show notification-only reminder)
-  - UX copy for authorization screen (explain why we need Screen Time access)
+  - FamilyControls authorization flow (request + gating) (blocked by #201 entitlement approval)
+  - App/category selection UI (form picker, category browser) (later delivered via `AppCategoryPickerFeature` reducer (#694) + `AppCategoryPickerView` store wiring (#722))
+  - Persist selection to app group shared state (later delivered via `IPCClient` selection persistence (#723) + `AppCategoryPickerFeature` ↔ `IPCClient.read/writeSelection` wiring (#894))
+  - Fallback UI if authorization denied (show notification-only reminder) (blocked by #201 entitlement approval)
+  - UX copy for authorization screen (explain why we need Screen Time access) (blocked by #201 entitlement approval)
 - **Dependencies:** M3.3 targets ready
 - **Duration:** 5 days
 - **Acceptance Criteria:**
@@ -537,11 +537,11 @@ Device resumes normal activity
 - **Owner:** Basher (Services Dev)
 - **Status:** 🔄 PLANNED
 - **Scope:**
-  - App Group (`group.com.yashasg.kshana`) UserDefaults syncing config + state
-  - Main app writes: authorized apps, shield schedule, last shield time
-  - Extensions read: config for shield rendering
-  - Optional watchdog: separate app extension that monitors break compliance (logs to shared container)
-  - Testing: verify consistency across app/extensions under edge cases (app restart, extension crash)
+  - App Group (`group.com.yashasg.kshana`) UserDefaults syncing config + state (later delivered via App Group mismatch fix (#415) + `AppGroupIPCStore` work)
+  - Main app writes: authorized apps, shield schedule, last shield time (partially delivered via `IPCClient` selection persistence (#723) + `IPCClient.fallbackRoute(for:)` (#900); shield-schedule/last-shield-time persistence remains blocked by #201 / #410)
+  - Extensions read: config for shield rendering (blocked by #201 / #410 — real shield-config reading is part of ShieldAction Phase 2 (#410))
+  - Optional watchdog: separate app extension that monitors break compliance (logs to shared container) (later delivered via TCA Phase 2 watchdog recovery (#892); tracking issue #891. Implementation is in-process TCA effects rather than a separate app extension.)
+  - Testing: verify consistency across app/extensions under edge cases (app restart, extension crash) (partially delivered via `SessionTimingClient` overlay-lifecycle wiring (#901); full extension-side consistency tests remain blocked by #201 / #410)
 - **Dependencies:** M3.6 (shield logic ready)
 - **Duration:** 3 days
 - **Acceptance Criteria:**
