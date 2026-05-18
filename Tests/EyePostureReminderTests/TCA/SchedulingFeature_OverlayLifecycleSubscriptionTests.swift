@@ -10,10 +10,14 @@ import XCTest
 /// subscription so a subsequent `.start` reinstalls cleanly without leaking
 /// the previous task.
 ///
-/// The reducer handler is intentionally a no-op pending sibling trackers
-/// #901 (session-timing) and #903 (DeviceActivity-on-overlay-present); this
-/// suite asserts the **subscription wiring** itself so those follow-ups can
-/// add side-effects without re-plumbing the stream installation.
+/// `.presented` / `.dismissed` now also dispatch `SessionTimingClient`
+/// per #901, and `.settingsTapped` remains a structural no-op pending the
+/// remaining sibling tracker (#903 — DeviceActivity-on-present). This suite
+/// asserts the **subscription wiring** itself so those follow-ups can add
+/// further side-effects without re-plumbing the stream installation; the
+/// per-variant `SessionTimingClient` contract is asserted by
+/// `SessionTimingTests` so this file stays focused on the subscription
+/// invariant.
 @MainActor
 final class OverlayLifecycleSubscriptionTests: XCTestCase {
 
@@ -95,20 +99,21 @@ final class OverlayLifecycleSubscriptionTests: XCTestCase {
         await store.finish()
     }
 
-    /// `.overlayLifecycleEvent` handler is a structural no-op today —
-    /// state must not mutate and no follow-up effects must be emitted.
-    /// Locks in the contract sibling trackers #901 / #903 will replace
-    /// with real side-effects.
-    func test_overlayLifecycleEvent_handlerIsStructuralNoOp() async {
+    /// `.overlayLifecycleEvent(.settingsTapped(_:))` must remain a
+    /// structural no-op — state must not mutate and no follow-up effects
+    /// must be emitted. `.presented` / `.dismissed` now dispatch
+    /// `SessionTimingClient` per #901, so this case is the only remaining
+    /// no-op variant pending the sibling tracker (#903 — DeviceActivity-
+    /// on-present) that owns the next per-variant side-effect.
+    func test_overlayLifecycleEvent_settingsTappedIsStructuralNoOp() async {
         let store = TestStore(initialState: SchedulingFeature.State()) {
             SchedulingFeature()
         } withDependencies: {
             TCATestDependencies.applyAllSilentClients(&$0)
         }
 
-        await store.send(.overlayLifecycleEvent(.presented(.eyes)))
-        await store.send(.overlayLifecycleEvent(.dismissed(.posture)))
         await store.send(.overlayLifecycleEvent(.settingsTapped(.eyes)))
+        await store.send(.overlayLifecycleEvent(.settingsTapped(.posture)))
 
         await store.finish()
     }
