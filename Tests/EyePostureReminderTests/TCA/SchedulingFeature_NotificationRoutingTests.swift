@@ -251,7 +251,7 @@ final class SchedulingNotificationRoutingTests: XCTestCase {
                 lifecycleEvents: { .finished }
             )
             $0.reminderSchedulerClient = ReminderSchedulerClient(
-                scheduleReminders: { _ in },
+                scheduleReminders: { _, _ in },
                 rescheduleReminder: { type, _ in
                     rescheduledTypes.withValue { $0.append(type) }
                 },
@@ -287,7 +287,11 @@ final class SchedulingNotificationRoutingTests: XCTestCase {
         let rescheduledTypes = LockIsolated<[ReminderType]>([])
 
         var initial = SchedulingFeature.State()
-        initial.settings = ReminderSettings(interval: 1200, breakDuration: 20)
+        // The test sends `.thresholdReached(.posture)`, so seed the
+        // posture-side snapshot (#897) — the reducer reads
+        // `state.settings(for: .posture)` for the interval guard and
+        // `overlayClient.show` payload.
+        initial.postureSettings = ReminderSettings(interval: 1200, breakDuration: 20)
         initial.notificationAuthStatus = .denied
 
         let store = TestStore(initialState: initial) {
@@ -303,7 +307,7 @@ final class SchedulingNotificationRoutingTests: XCTestCase {
                 lifecycleEvents: { .finished }
             )
             $0.reminderSchedulerClient = ReminderSchedulerClient(
-                scheduleReminders: { _ in },
+                scheduleReminders: { _, _ in },
                 rescheduleReminder: { type, _ in
                     rescheduledTypes.withValue { $0.append(type) }
                 },

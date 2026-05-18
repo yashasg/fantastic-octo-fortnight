@@ -41,8 +41,13 @@ struct EyePostureReminderApp: App {
         // root state observes the persisted (or `--show-overlay-*`-inflated)
         // `breakDuration` immediately, before `SchedulingFeature.start`
         // installs the `SettingsClient` stream subscription. Closes the
-        // settings-load race documented in #737.
+        // settings-load race documented in #737. Per #897 the posture-side
+        // snapshot is seeded in lock-step so `state.scheduling.postureSettings`
+        // also lands a non-zero interval / break duration before the first
+        // `SettingsClient.postureStream` emission, preventing the per-type
+        // reducer paths from briefly disabling the posture tracker.
         initialState.scheduling.settings = SettingsStore.eyesSnapshotFromUserDefaults()
+        initialState.scheduling.postureSettings = SettingsStore.postureSnapshotFromUserDefaults()
         self.store = Store(initialState: initialState) { AppFeature() }
     }
 

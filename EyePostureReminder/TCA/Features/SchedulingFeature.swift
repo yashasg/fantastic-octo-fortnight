@@ -14,15 +14,19 @@ import UserNotifications
 /// dedicated open issue — the closed `p0-tca-15` (#678) meta-tracker no
 /// longer owns these follow-ups, and the umbrella drift from referencing
 /// it was resolved in #895 by splitting per bullet):
-///   * `SettingsClient` only vends a single eyes-side `ReminderSettings`
-///     snapshot, so per-type interval differentiation reuses
-///     `state.settings.interval` for both reminder types until a richer
-///     settings client lands (#897).
 ///   * Fallback-routing IPC reads, session-timing analytics,
 ///     launch-readiness analytics, DeviceActivity scheduling on overlay
 ///     present, and the `OverlayClient.lifecycleEvents`-driven bookkeeping
 ///     all require dependency-client surface that does not yet exist
 ///     (#898).
+///
+/// Per-type interval differentiation (#897) is now honoured: `State`
+/// caches both the eyes-side and posture-side `ReminderSettings`
+/// snapshots vended by `SettingsClient.stream` / `postureStream`, and
+/// the reducer reads them via `State.settings(for:)` so
+/// `rescheduleType`, `thresholdReached`, `reminderNotification`, and
+/// `scheduleReminders` use the correct interval / break duration for
+/// each `ReminderType`.
 ///
 /// Watchdog recovery shipped in #892 via `.watchdogRecoveryTriggered`
 /// (action + effect) wired on top of `IPCClient.recentEvents` and the
@@ -52,7 +56,18 @@ struct SchedulingFeature {
     @ObservableState
     struct State: Equatable {
         var notificationAuthStatus: UNAuthorizationStatus = .notDetermined
+        /// Eyes-side `ReminderSettings` snapshot fed by
+        /// `SettingsClient.stream()`. Treated as the canonical eyes-side
+        /// schedule input; posture-side reads use `postureSettings` instead
+        /// so per-type interval differentiation (#897) stays honoured.
         var settings = ReminderSettings(interval: 0, breakDuration: 0)
+        /// Posture-side `ReminderSettings` snapshot fed by
+        /// `SettingsClient.postureStream()`. Mirrors `settings` for the
+        /// posture reminder type so `rescheduleType(.posture)` /
+        /// `thresholdReached(.posture)` / `reminderNotification(.posture)`
+        /// use the posture interval + break duration instead of the
+        /// eyes-side values (#897).
+        var postureSettings = ReminderSettings(interval: 0, breakDuration: 0)
         var isPausedByConditions: Bool = false
         var isUITestModeEnabled: Bool = false
         var snoozedUntil: Date?
@@ -61,6 +76,18 @@ struct SchedulingFeature {
         struct PendingOverlay: Equatable, Sendable {
             let type: ReminderType
             let duration: TimeInterval
+        }
+
+        /// Per-type accessor for the cached `ReminderSettings` snapshot
+        /// (#897). Callers driving a single-type effect (reschedule,
+        /// threshold-reached, reminder-notification) should use this
+        /// helper so the posture-side interval / break duration is
+        /// respected when `type == .posture`.
+        func settings(for type: ReminderType) -> ReminderSettings {
+            switch type {
+            case .eyes:    return settings
+            case .posture: return postureSettings
+            }
         }
     }
 
@@ -75,6 +102,10 @@ struct SchedulingFeature {
         case thresholdReached(ReminderType)
         case pauseConditionChanged(Bool)
         case settingsChanged(ReminderSettings)
+        /// Posture-side counterpart of `.settingsChanged`. Mutates
+        /// `state.postureSettings` so per-type interval differentiation
+        /// (#897) stays honoured for posture reminders.
+        case postureSettingsChanged(ReminderSettings)
         case clearExpiredSnoozeIfNeeded
         case snoozeWakeFired
         case overlayDismissed(ReminderType)
@@ -103,6 +134,7 @@ struct SchedulingFeature {
 
     enum CancelID: Hashable {
         case settingsStream
+        case postureSettingsStream
         case thresholdStream
         case pauseStream
         case ipcStream
@@ -160,6 +192,10 @@ struct SchedulingFeature {
                 state.settings = newSettings
                 return .none
 
+            case let .postureSettingsChanged(newSettings):
+                state.postureSettings = newSettings
+                return .none
+
             case .clearExpiredSnoozeIfNeeded:
                 return clearExpiredSnoozeEffect(state: &state)
 
@@ -186,6 +222,7 @@ extension SchedulingFeature {
     func startEffect() -> Effect<Action> {
         .merge(
             settingsStreamEffect(),
+            postureSettingsStreamEffect(),
             thresholdStreamEffect(),
             pauseStreamEffect(),
             ipcStreamEffect(),
@@ -197,6 +234,7 @@ extension SchedulingFeature {
     func stopEffect() -> Effect<Action> {
         .merge(
             .cancel(id: CancelID.settingsStream),
+            .cancel(id: CancelID.postureSettingsStream),
             .cancel(id: CancelID.thresholdStream),
             .cancel(id: CancelID.pauseStream),
             .cancel(id: CancelID.ipcStream),
@@ -240,7 +278,10 @@ extension SchedulingFeature {
             await send(.internalAction(.cancelSnoozeWake))
 
             if status == .authorized {
-                await schedulerClient.scheduleReminders(snapshot.settings)
+                await schedulerClient.scheduleReminders(
+                    snapshot.eyesSettings,
+                    snapshot.postureSettings
+                )
             } else {
                 await schedulerClient.cancelAllReminders()
             }
@@ -250,7 +291,8 @@ extension SchedulingFeature {
             guard !snapshot.isUITestMode else { return }
 
             await Self.configureTracker(
-                settings: snapshot.settings,
+                eyesSettings: snapshot.eyesSettings,
+                postureSettings: snapshot.postureSettings,
                 isPausedByConditions: snapshot.isPausedByConditions,
                 tracker: trackerClient
             )
@@ -259,7 +301,7 @@ extension SchedulingFeature {
 
     func rescheduleTypeEffect(type: ReminderType, state: State) -> Effect<Action> {
         let snoozedUntil = state.snoozedUntil
-        let currentSettings = state.settings
+        let currentSettings = state.settings(for: type)
         let clock = self.clock
         let notificationClient = self.notificationClient
         let schedulerClient = self.schedulerClient
@@ -318,10 +360,11 @@ extension SchedulingFeature {
         // Snooze guard (`#755` Phase E): swallow the notification if a
         // snooze is still active.
         if let until = state.snoozedUntil, until > now() { return .none }
-        let duration = state.settings.breakDuration
-        let interval = state.settings.interval
-        let hapticsEnabled = state.settings.hapticsEnabled
-        let pauseMediaDuringBreaks = state.settings.pauseMediaDuringBreaks
+        let perTypeSettings = state.settings(for: type)
+        let duration = perTypeSettings.breakDuration
+        let interval = perTypeSettings.interval
+        let hapticsEnabled = perTypeSettings.hapticsEnabled
+        let pauseMediaDuringBreaks = perTypeSettings.pauseMediaDuringBreaks
         let analyticsClient = self.analyticsClient
         let ipcClient = self.ipcClient
         let overlayClient = self.overlayClient
@@ -351,11 +394,11 @@ extension SchedulingFeature {
     }
 
     func thresholdReachedEffect(type: ReminderType, state: State) -> Effect<Action> {
-        let interval = state.settings.interval
-        let duration = state.settings.breakDuration
-        let hapticsEnabled = state.settings.hapticsEnabled
-        let pauseMediaDuringBreaks = state.settings.pauseMediaDuringBreaks
-        let currentSettings = state.settings
+        let currentSettings = state.settings(for: type)
+        let interval = currentSettings.interval
+        let duration = currentSettings.breakDuration
+        let hapticsEnabled = currentSettings.hapticsEnabled
+        let pauseMediaDuringBreaks = currentSettings.pauseMediaDuringBreaks
         let authStatus = state.notificationAuthStatus
         let analyticsClient = self.analyticsClient
         let overlayClient = self.overlayClient
@@ -572,6 +615,21 @@ extension SchedulingFeature {
         .cancellable(id: CancelID.settingsStream, cancelInFlight: true)
     }
 
+    /// Posture-side counterpart of `settingsStreamEffect()` (#897). Drains
+    /// `SettingsClient.postureStream()` and dispatches
+    /// `.postureSettingsChanged`, so the cached `state.postureSettings`
+    /// snapshot stays in lock-step with posture-side mutations made from
+    /// `SettingsFeature` / `OnboardingFeature` / `resetToDefaults()`.
+    func postureSettingsStreamEffect() -> Effect<Action> {
+        let settingsClient = self.settingsClient
+        return .run { send in
+            for await snapshot in settingsClient.postureStream() {
+                await send(.postureSettingsChanged(snapshot))
+            }
+        }
+        .cancellable(id: CancelID.postureSettingsStream, cancelInFlight: true)
+    }
+
     func thresholdStreamEffect() -> Effect<Action> {
         let trackerClient = self.trackerClient
         return .run { send in
@@ -608,14 +666,20 @@ extension SchedulingFeature {
 /// Plain-old-Swift snapshot of the values `scheduleRemindersEffect` reads from
 /// `State`. Extracted into a dedicated value to keep the closure capture list
 /// short enough for SwiftLint's `closure_parameter_position` rule.
+///
+/// Carries both the eyes-side and posture-side `ReminderSettings` snapshots
+/// (#897) so `scheduleRemindersEffect` can pass per-type values to
+/// `ReminderSchedulerClient.scheduleReminders` and `configureTracker`.
 private struct SchedulingSnapshot: Sendable {
-    let settings: ReminderSettings
+    let eyesSettings: ReminderSettings
+    let postureSettings: ReminderSettings
     let snoozedUntil: Date?
     let isUITestMode: Bool
     let isPausedByConditions: Bool
 
     init(state: SchedulingFeature.State) {
-        self.settings = state.settings
+        self.eyesSettings = state.settings
+        self.postureSettings = state.postureSettings
         self.snoozedUntil = state.snoozedUntil
         self.isUITestMode = state.isUITestModeEnabled
         self.isPausedByConditions = state.isPausedByConditions
@@ -625,12 +689,17 @@ private struct SchedulingSnapshot: Sendable {
 extension SchedulingFeature {
 
     static func configureTracker(
-        settings: ReminderSettings,
+        eyesSettings: ReminderSettings,
+        postureSettings: ReminderSettings,
         isPausedByConditions: Bool,
         tracker: ScreenTimeTrackerClient
     ) async {
-        let interval = settings.interval
         for type in ReminderType.allCases {
+            let interval: TimeInterval
+            switch type {
+            case .eyes:    interval = eyesSettings.interval
+            case .posture: interval = postureSettings.interval
+            }
             if interval > 0 {
                 await tracker.setThreshold(interval, type)
                 await tracker.enableTracking(type)

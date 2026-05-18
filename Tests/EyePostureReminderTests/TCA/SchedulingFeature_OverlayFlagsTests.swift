@@ -112,7 +112,11 @@ final class SchedulingFeatureOverlayFlagsTests: XCTestCase {
         let shownOverlays = LockIsolated<[ShowArgs]>([])
 
         var initial = SchedulingFeature.State()
-        initial.settings = ReminderSettings(
+        // The test exercises the `.posture` threshold path, so seed the
+        // posture-side `ReminderSettings` snapshot (#897) — the reducer
+        // now reads `state.settings(for: .posture)` (== `postureSettings`)
+        // for break duration, haptics, and pauseMedia.
+        initial.postureSettings = ReminderSettings(
             interval: 1200,
             breakDuration: 30,
             hapticsEnabled: true,
@@ -137,7 +141,7 @@ final class SchedulingFeatureOverlayFlagsTests: XCTestCase {
                 lifecycleEvents: { .finished }
             )
             $0.reminderSchedulerClient = ReminderSchedulerClient(
-                scheduleReminders: { _ in },
+                scheduleReminders: { _, _ in },
                 rescheduleReminder: { _, _ in },
                 cancelReminder: { _ in },
                 cancelAllReminders: {}
@@ -183,7 +187,7 @@ final class SchedulingFeatureOverlayFlagsTests: XCTestCase {
                 lifecycleEvents: { .finished }
             )
             $0.reminderSchedulerClient = ReminderSchedulerClient(
-                scheduleReminders: { _ in },
+                scheduleReminders: { _, _ in },
                 rescheduleReminder: { _, _ in },
                 cancelReminder: { _ in },
                 cancelAllReminders: {}

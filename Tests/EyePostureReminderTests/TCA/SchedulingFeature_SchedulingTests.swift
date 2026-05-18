@@ -6,14 +6,13 @@ import XCTest
 
 /// `TestStore` parity coverage for `SchedulingFeature` — Phase 3 issue
 /// `p0-tca-17` (#680). Covers the `.scheduleReminders` and `.rescheduleType`
-/// branches of the reducer (history: ported in `#755` Phase E, PR #760).
+/// branches of the reducer (history: ported in `#755` Phase E, PR #760;
+/// per-type interval differentiation enabled in #897).
 ///
 /// Behavioural-fidelity caveats from the `SchedulingFeature` preamble
 /// (deferred to Phase 2):
 ///   * `analytics.log(.schedulePathSelected(...))` is not yet emitted by the
 ///     reducer, so the matching assertion is omitted here.
-///   * Per-type interval differentiation is collapsed onto
-///     `state.settings.interval`.
 @MainActor
 final class SchedulingFeatureSchedulingTests: XCTestCase {
 
@@ -23,11 +22,11 @@ final class SchedulingFeatureSchedulingTests: XCTestCase {
     ///   * refresh the cached auth status,
     ///   * skip the snooze-wake notification (no snooze),
     ///   * call `cancelSnoozeWake` to evict any stale wake task,
-    ///   * forward the cached `ReminderSettings` to
-    ///     `schedulerClient.scheduleReminders`,
+    ///   * forward the cached per-type `ReminderSettings` pair to
+    ///     `schedulerClient.scheduleReminders` (#897),
     ///   * configure the tracker for both reminder types.
     func test_scheduleReminders_authorized_callsScheduleAndConfiguresTracker() async {
-        let scheduledSnapshots = LockIsolated<[ReminderSettings]>([])
+        let scheduledSnapshots = LockIsolated<[(ReminderSettings, ReminderSettings)]>([])
         let cancelledAll = LockIsolated(0)
         let setThresholds = LockIsolated<[(TimeInterval, ReminderType)]>([])
         let enabledTypes = LockIsolated<[ReminderType]>([])
@@ -36,6 +35,7 @@ final class SchedulingFeatureSchedulingTests: XCTestCase {
 
         var initial = SchedulingFeature.State()
         initial.settings = ReminderSettings(interval: 1200, breakDuration: 20)
+        initial.postureSettings = ReminderSettings(interval: 1800, breakDuration: 30)
 
         let store = TestStore(initialState: initial) {
             SchedulingFeature()
@@ -48,8 +48,8 @@ final class SchedulingFeatureSchedulingTests: XCTestCase {
                 removedPending.withValue { $0.append(ids) }
             }
             $0.reminderSchedulerClient = ReminderSchedulerClient(
-                scheduleReminders: { snap in
-                    scheduledSnapshots.withValue { $0.append(snap) }
+                scheduleReminders: { eyes, posture in
+                    scheduledSnapshots.withValue { $0.append((eyes, posture)) }
                 },
                 rescheduleReminder: { _, _ in },
                 cancelReminder: { _ in },
@@ -78,15 +78,27 @@ final class SchedulingFeatureSchedulingTests: XCTestCase {
 
         XCTAssertEqual(scheduledSnapshots.value.count, 1,
                        "Authorized + no snooze must invoke scheduleReminders exactly once")
-        XCTAssertEqual(scheduledSnapshots.value.first,
+        XCTAssertEqual(scheduledSnapshots.value.first?.0,
                        ReminderSettings(interval: 1200, breakDuration: 20),
-                       "Scheduler must receive the cached settings snapshot")
+                       "Scheduler must receive the cached eyes-side settings snapshot")
+        XCTAssertEqual(scheduledSnapshots.value.first?.1,
+                       ReminderSettings(interval: 1800, breakDuration: 30),
+                       "Scheduler must receive the cached posture-side settings snapshot (#897)")
         XCTAssertEqual(cancelledAll.value, 0,
                        "Authorized path must not invoke cancelAllReminders")
         XCTAssertEqual(setThresholds.value.count, 2,
                        "Tracker must be configured for both reminder types")
         XCTAssertEqual(Set(enabledTypes.value), Set(ReminderType.allCases),
                        "Both reminder types must have tracking enabled")
+        // Per-type intervals (#897): tracker thresholds use eyes / posture
+        // values independently rather than both reading from `state.settings`.
+        let thresholdsByType = Dictionary(
+            uniqueKeysWithValues: setThresholds.value.map { ($1, $0) }
+        )
+        XCTAssertEqual(thresholdsByType[.eyes], 1200,
+                       "Eyes-side tracker must use eyes interval (#897)")
+        XCTAssertEqual(thresholdsByType[.posture], 1800,
+                       "Posture-side tracker must use posture interval (#897)")
         XCTAssertEqual(resumedAll.value, 1,
                        "configureTracker must resume tracking after enabling per-type")
         XCTAssertEqual(removedPending.value, [[SchedulingFeature.snoozeWakeCategory]],
@@ -110,7 +122,7 @@ final class SchedulingFeatureSchedulingTests: XCTestCase {
                 authorizationStatus: .denied
             )
             $0.reminderSchedulerClient = ReminderSchedulerClient(
-                scheduleReminders: { _ in scheduledCount.withValue { $0 += 1 } },
+                scheduleReminders: { _, _ in scheduledCount.withValue { $0 += 1 } },
                 rescheduleReminder: { _, _ in },
                 cancelReminder: { _ in },
                 cancelAllReminders: { cancelledAll.withValue { $0 += 1 } }
@@ -192,7 +204,7 @@ final class SchedulingFeatureSchedulingTests: XCTestCase {
                 authorizationStatus: .authorized
             )
             $0.reminderSchedulerClient = ReminderSchedulerClient(
-                scheduleReminders: { _ in },
+                scheduleReminders: { _, _ in },
                 rescheduleReminder: { type, _ in
                     rescheduledTypes.withValue { $0.append(type) }
                 },
@@ -247,7 +259,7 @@ final class SchedulingFeatureSchedulingTests: XCTestCase {
                 authorizationStatus: .authorized
             )
             $0.reminderSchedulerClient = ReminderSchedulerClient(
-                scheduleReminders: { _ in },
+                scheduleReminders: { _, _ in },
                 rescheduleReminder: { _, _ in },
                 cancelReminder: { type in cancelledTypes.withValue { $0.append(type) } },
                 cancelAllReminders: {}
@@ -297,7 +309,7 @@ final class SchedulingFeatureSchedulingTests: XCTestCase {
                 authorizationStatus: .denied
             )
             $0.reminderSchedulerClient = ReminderSchedulerClient(
-                scheduleReminders: { _ in },
+                scheduleReminders: { _, _ in },
                 rescheduleReminder: { type, _ in
                     rescheduledTypes.withValue { $0.append(type) }
                 },
@@ -371,5 +383,148 @@ final class SchedulingFeatureSchedulingTests: XCTestCase {
         XCTAssertEqual(loggedEvents.value.count, 1)
         XCTAssertTrue(loggedEvents.value[0].contains("appSessionEnd"),
                       "backgroundTransition must emit appSessionEnd analytics")
+    }
+
+    // MARK: - .postureSettingsChanged — pure state write
+
+    /// `.postureSettingsChanged` is a synchronous state write fed by the
+    /// posture-settings-stream effect (#897); it must update
+    /// `state.postureSettings` without producing a follow-up effect and
+    /// must leave the eyes-side `state.settings` untouched.
+    func test_postureSettingsChanged_writesPostureStateOnly() async {
+        var initial = SchedulingFeature.State()
+        initial.settings = ReminderSettings(interval: 1200, breakDuration: 20)
+
+        let store = TestStore(initialState: initial) {
+            SchedulingFeature()
+        } withDependencies: {
+            TCATestDependencies.applyAllSilentClients(&$0)
+        }
+
+        let updatedPosture = ReminderSettings(interval: 1800, breakDuration: 30)
+        await store.send(.postureSettingsChanged(updatedPosture)) {
+            $0.postureSettings = updatedPosture
+        }
+        XCTAssertEqual(store.state.settings,
+                       ReminderSettings(interval: 1200, breakDuration: 20),
+                       "Posture-side write must not perturb the eyes-side snapshot (#897)")
+    }
+
+    // MARK: - .rescheduleType — per-type interval differentiation (#897)
+
+    /// `.rescheduleType(.posture)` must forward the cached posture-side
+    /// `ReminderSettings` to `schedulerClient.rescheduleReminder` instead
+    /// of reusing the eyes-side snapshot — per-type interval split (#897).
+    func test_rescheduleType_posture_usesPostureSettings() async {
+        let clock = TestClock()
+        let rescheduledCalls = LockIsolated<[(ReminderType, ReminderSettings)]>([])
+        let setThresholds = LockIsolated<[(TimeInterval, ReminderType)]>([])
+
+        var initial = SchedulingFeature.State()
+        // Eyes interval is distinct from posture so a regression that
+        // re-reads `state.settings` instead of `state.postureSettings`
+        // fails this assertion.
+        initial.settings = ReminderSettings(interval: 1200, breakDuration: 20)
+        initial.postureSettings = ReminderSettings(interval: 2400, breakDuration: 45)
+        initial.notificationAuthStatus = .authorized
+
+        let store = TestStore(initialState: initial) {
+            SchedulingFeature()
+        } withDependencies: {
+            TCATestDependencies.applyAllSilentClients(&$0)
+            $0.continuousClock = clock
+            $0.notificationClient = TCATestDependencies.silentNotificationClient(
+                authorizationStatus: .authorized
+            )
+            $0.reminderSchedulerClient = ReminderSchedulerClient(
+                scheduleReminders: { _, _ in },
+                rescheduleReminder: { type, settings in
+                    rescheduledCalls.withValue { $0.append((type, settings)) }
+                },
+                cancelReminder: { _ in },
+                cancelAllReminders: {}
+            )
+            $0.screenTimeTrackerClient = ScreenTimeTrackerClient(
+                setThreshold: { interval, type in
+                    setThresholds.withValue { $0.append((interval, type)) }
+                },
+                enableTracking: { _ in },
+                disableTracking: { _ in },
+                pauseAll: {},
+                resumeAll: {},
+                reset: { _ in },
+                thresholdReached: { .finished }
+            )
+        }
+
+        await store.send(.rescheduleType(.posture))
+        await clock.advance(by: .milliseconds(300))
+        await store.receive(.internalAction(.authStatusRefreshed(.authorized)))
+
+        await store.finish()
+
+        XCTAssertEqual(rescheduledCalls.value.count, 1,
+                       "Posture reschedule must hit the scheduler exactly once")
+        XCTAssertEqual(rescheduledCalls.value.first?.0, .posture)
+        XCTAssertEqual(rescheduledCalls.value.first?.1,
+                       ReminderSettings(interval: 2400, breakDuration: 45),
+                       "Posture reschedule must forward the posture-side settings (#897)")
+        XCTAssertEqual(setThresholds.value, [(2400, .posture)],
+                       "Posture tracker threshold must use the posture interval (#897)")
+    }
+
+    /// `.rescheduleType(.eyes)` must continue to use the eyes-side
+    /// settings even when the posture interval is different — guards
+    /// the eyes path against an accidental flip to `postureSettings`.
+    func test_rescheduleType_eyes_usesEyesSettingsWhenPostureDiffers() async {
+        let clock = TestClock()
+        let rescheduledCalls = LockIsolated<[(ReminderType, ReminderSettings)]>([])
+        let setThresholds = LockIsolated<[(TimeInterval, ReminderType)]>([])
+
+        var initial = SchedulingFeature.State()
+        initial.settings = ReminderSettings(interval: 900, breakDuration: 15)
+        initial.postureSettings = ReminderSettings(interval: 2400, breakDuration: 45)
+        initial.notificationAuthStatus = .authorized
+
+        let store = TestStore(initialState: initial) {
+            SchedulingFeature()
+        } withDependencies: {
+            TCATestDependencies.applyAllSilentClients(&$0)
+            $0.continuousClock = clock
+            $0.notificationClient = TCATestDependencies.silentNotificationClient(
+                authorizationStatus: .authorized
+            )
+            $0.reminderSchedulerClient = ReminderSchedulerClient(
+                scheduleReminders: { _, _ in },
+                rescheduleReminder: { type, settings in
+                    rescheduledCalls.withValue { $0.append((type, settings)) }
+                },
+                cancelReminder: { _ in },
+                cancelAllReminders: {}
+            )
+            $0.screenTimeTrackerClient = ScreenTimeTrackerClient(
+                setThreshold: { interval, type in
+                    setThresholds.withValue { $0.append((interval, type)) }
+                },
+                enableTracking: { _ in },
+                disableTracking: { _ in },
+                pauseAll: {},
+                resumeAll: {},
+                reset: { _ in },
+                thresholdReached: { .finished }
+            )
+        }
+
+        await store.send(.rescheduleType(.eyes))
+        await clock.advance(by: .milliseconds(300))
+        await store.receive(.internalAction(.authStatusRefreshed(.authorized)))
+
+        await store.finish()
+
+        XCTAssertEqual(rescheduledCalls.value.first?.1,
+                       ReminderSettings(interval: 900, breakDuration: 15),
+                       "Eyes reschedule must keep using the eyes-side settings (#897)")
+        XCTAssertEqual(setThresholds.value, [(900, .eyes)],
+                       "Eyes tracker threshold must use the eyes interval (#897)")
     }
 }

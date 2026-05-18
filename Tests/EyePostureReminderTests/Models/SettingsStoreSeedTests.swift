@@ -156,4 +156,75 @@ final class SettingsStoreSeedTests: XCTestCase {
         let snapshot = SettingsStore.eyesSnapshotFromUserDefaults(defaults)
         XCTAssertTrue(snapshot.pauseMediaDuringBreaks)
     }
+
+    // MARK: - Posture-side snapshot (#897)
+
+    /// Cold-launch seed must fall back to `ReminderSettings.defaultPosture`
+    /// when no posture-side keys are persisted yet, mirroring the eyes-side
+    /// fallback contract.
+    func test_postureSnapshot_emptyDefaults_fallsBackToDefaultPosture() {
+        let snapshot = SettingsStore.postureSnapshotFromUserDefaults(defaults)
+        XCTAssertEqual(
+            snapshot, ReminderSettings.defaultPosture,
+            "First-cold-launch seed must fall back to ReminderSettings.defaultPosture"
+        )
+    }
+
+    func test_postureSnapshot_emptyDefaults_intervalIsNonZero() {
+        let snapshot = SettingsStore.postureSnapshotFromUserDefaults(defaults)
+        XCTAssertGreaterThan(
+            snapshot.interval, 0,
+            "Posture seed must never produce interval: 0 — thresholdReachedEffect "
+            + "guards on `interval > 0` and would silently no-op (#897)"
+        )
+    }
+
+    func test_postureSnapshot_emptyDefaults_breakDurationIsNonZero() {
+        let snapshot = SettingsStore.postureSnapshotFromUserDefaults(defaults)
+        XCTAssertGreaterThan(
+            snapshot.breakDuration, 0,
+            "Posture seed must never produce breakDuration: 0 — that is the "
+            + "exact class of race #737 closes for the eyes side"
+        )
+    }
+
+    func test_postureSnapshot_persistedInterval_isReturned() {
+        defaults.set(2400.0, forKey: SettingsStore.Keys.postureInterval)
+        let snapshot = SettingsStore.postureSnapshotFromUserDefaults(defaults)
+        XCTAssertEqual(snapshot.interval, 2400)
+    }
+
+    func test_postureSnapshot_persistedBreakDuration_isReturned() {
+        defaults.set(15.0, forKey: SettingsStore.Keys.postureBreakDuration)
+        let snapshot = SettingsStore.postureSnapshotFromUserDefaults(defaults)
+        XCTAssertEqual(snapshot.breakDuration, 15)
+    }
+
+    func test_postureSnapshot_bothKeysPersisted_returnsExactValues() {
+        defaults.set(1800.0, forKey: SettingsStore.Keys.postureInterval)
+        defaults.set(20.0, forKey: SettingsStore.Keys.postureBreakDuration)
+        let snapshot = SettingsStore.postureSnapshotFromUserDefaults(defaults)
+        XCTAssertEqual(
+            snapshot,
+            ReminderSettings(
+                interval: 1800,
+                breakDuration: 20,
+                hapticsEnabled: true,
+                pauseMediaDuringBreaks: false
+            )
+        )
+    }
+
+    /// Eyes and posture seeds must read independently — overwriting only
+    /// the eyes-side interval must leave the posture-side snapshot on its
+    /// own persisted value (or default). Regression coverage for the #897
+    /// per-type collapse the reducer used to inherit.
+    func test_postureSnapshot_eyesIntervalOverride_doesNotLeakIntoPosture() {
+        defaults.set(900.0, forKey: SettingsStore.Keys.eyesInterval)
+        defaults.set(2400.0, forKey: SettingsStore.Keys.postureInterval)
+        let eyes = SettingsStore.eyesSnapshotFromUserDefaults(defaults)
+        let posture = SettingsStore.postureSnapshotFromUserDefaults(defaults)
+        XCTAssertEqual(eyes.interval, 900)
+        XCTAssertEqual(posture.interval, 2400)
+    }
 }
