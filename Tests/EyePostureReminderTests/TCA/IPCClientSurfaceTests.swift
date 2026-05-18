@@ -56,7 +56,8 @@ final class IPCClientSurfaceTests: XCTestCase {
             recentEvents: {
                 recorded.withValue { $0.append("recentEvents") }
                 return [watchdogEvent]
-            }
+            },
+            fallbackRoute: { _ in nil }
         )
 
         let isEnabled = await client.isTrueInterruptEnabled()
@@ -128,5 +129,50 @@ final class IPCClientSurfaceTests: XCTestCase {
         }
 
         XCTAssertTrue(values.isEmpty)
+    }
+
+    // MARK: - fallbackRoute(for:) surface (#900)
+
+    /// `fallbackRoute(for:)` routes the requested `ReminderType` to the
+    /// configured closure and returns the persisted decision verbatim,
+    /// preserving both the `reason` raw value and the `recordedAt`
+    /// timestamp so reducers can correlate the prior decision with
+    /// downstream analytics windows.
+    func test_overriddenClient_fallbackRoute_routesToConfiguredClosure() async {
+        let recorded = LockIsolated<[ReminderType]>([])
+        let persistedRoute = FallbackRoute(
+            reason: .fallbackSuppressed,
+            recordedAt: Date(timeIntervalSince1970: 3_000)
+        )
+        let client = IPCClient(
+            isTrueInterruptEnabled: { false },
+            setTrueInterruptEnabled: { _ in false },
+            readSelection: { .empty },
+            writeSelection: { _ in false },
+            record: { _, _ in },
+            trueInterruptChanges: { .finished },
+            selectionChanges: { .finished },
+            recentEvents: { [] },
+            fallbackRoute: { type in
+                recorded.withValue { $0.append(type) }
+                return persistedRoute
+            }
+        )
+
+        let resolved = await client.fallbackRoute(.posture)
+
+        XCTAssertEqual(recorded.value, [.posture])
+        XCTAssertEqual(resolved, persistedRoute)
+    }
+
+    /// The silent client defaults to `nil` so reducer paths that do not
+    /// override `fallbackRoute` (the cold-launch baseline) observe the
+    /// missing-route branch deterministically.
+    func test_silentClient_fallbackRoute_returnsNil() async {
+        let client = TCATestDependencies.silentIPCClient()
+
+        let resolved = await client.fallbackRoute(.eyes)
+
+        XCTAssertNil(resolved)
     }
 }

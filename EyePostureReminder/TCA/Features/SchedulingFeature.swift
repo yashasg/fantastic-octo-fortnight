@@ -16,10 +16,6 @@ import UserNotifications
 /// it was resolved in #895 by splitting per bullet; the dependency-client
 /// surface bundle (#898) was likewise split per surface so each piece has
 /// its own tracker rather than sharing an umbrella):
-///   * Fallback-routing IPC reads: `IPCClient.fallbackRoute(for:)`
-///     accessor not yet exposed, so `handleNotification(for:)` still
-///     resolves routes via App Group `UserDefaults` reads owned by the
-///     extension rather than the dependency boundary (#900).
 ///   * Launch-readiness analytics: `startEffect` installs every long-
 ///     running stream but does not emit a cold-launch readiness event,
 ///     so the legacy `AppCoordinator` `launchReady` signal is still
@@ -407,11 +403,12 @@ extension SchedulingFeature {
 
         return .run { _ in
             await settingsClient.setSnoozeCount(0)
+            let priorRoute = await ipcClient.fallbackRoute(type)
             await ipcClient.record(
                 AppGroupIPCEvent(
                     kind: .notificationFallbackDelivered,
                     reasonRaw: type.shieldReason.rawValue,
-                    detail: nil
+                    detail: priorRoute.map { "prior_route=\($0.reason.rawValue)" }
                 ),
                 nil
             )

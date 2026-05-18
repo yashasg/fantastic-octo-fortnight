@@ -62,7 +62,8 @@ final class SchedulingFeatureWatchdogRecoveryTests: XCTestCase {
                 },
                 trueInterruptChanges: { .finished },
                 selectionChanges: { .finished },
-                recentEvents: { [staleHeartbeat] }
+                recentEvents: { [staleHeartbeat] },
+                fallbackRoute: { _ in nil }
             )
             $0.reminderSchedulerClient = ReminderSchedulerClient(
                 scheduleReminders: { _, _ in },
@@ -145,7 +146,8 @@ final class SchedulingFeatureWatchdogRecoveryTests: XCTestCase {
                 record: { event, _ in recordedEvents.withValue { $0.append(event) } },
                 trueInterruptChanges: { .finished },
                 selectionChanges: { .finished },
-                recentEvents: { [] }
+                recentEvents: { [] },
+                fallbackRoute: { _ in nil }
             )
             $0.reminderSchedulerClient = ReminderSchedulerClient(
                 scheduleReminders: { _, _ in },
@@ -205,7 +207,8 @@ final class SchedulingFeatureWatchdogRecoveryTests: XCTestCase {
                 record: { event, _ in recordedEvents.withValue { $0.append(event) } },
                 trueInterruptChanges: { .finished },
                 selectionChanges: { .finished },
-                recentEvents: { [freshHeartbeat] }
+                recentEvents: { [freshHeartbeat] },
+                fallbackRoute: { _ in nil }
             )
             $0.reminderSchedulerClient = ReminderSchedulerClient(
                 scheduleReminders: { _, _ in },
@@ -265,7 +268,8 @@ final class SchedulingFeatureWatchdogRecoveryTests: XCTestCase {
                 record: { event, _ in recordedEvents.withValue { $0.append(event) } },
                 trueInterruptChanges: { .finished },
                 selectionChanges: { .finished },
-                recentEvents: { [coordinatorHeartbeat] }
+                recentEvents: { [coordinatorHeartbeat] },
+                fallbackRoute: { _ in nil }
             )
             $0.reminderSchedulerClient = ReminderSchedulerClient(
                 scheduleReminders: { _, _ in },
@@ -310,7 +314,8 @@ final class SchedulingFeatureWatchdogRecoveryTests: XCTestCase {
                 record: { _, _ in },
                 trueInterruptChanges: { stream },
                 selectionChanges: { .finished },
-                recentEvents: { [] }
+                recentEvents: { [] },
+                fallbackRoute: { _ in nil }
             )
         }
         store.exhaustivity = .off
