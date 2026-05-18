@@ -131,7 +131,8 @@ enum TCATestDependencies {
     static func silentSessionTimingClient() -> SessionTimingClient {
         SessionTimingClient(
             sessionStarted: { _, _ in },
-            sessionEnded: { _, _ in }
+            sessionEnded: { _, _ in },
+            launchReady: { _ in }
         )
     }
 
