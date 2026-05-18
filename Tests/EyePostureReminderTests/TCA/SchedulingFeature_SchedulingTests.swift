@@ -469,8 +469,11 @@ final class SchedulingFeatureSchedulingTests: XCTestCase {
         XCTAssertEqual(rescheduledCalls.value.first?.1,
                        ReminderSettings(interval: 2400, breakDuration: 45),
                        "Posture reschedule must forward the posture-side settings (#897)")
-        XCTAssertEqual(setThresholds.value, [(2400, .posture)],
+        XCTAssertEqual(setThresholds.value.count, 1)
+        XCTAssertEqual(setThresholds.value.first?.0, 2400,
                        "Posture tracker threshold must use the posture interval (#897)")
+        XCTAssertEqual(setThresholds.value.first?.1, .posture,
+                       "Posture tracker threshold must target the posture type")
     }
 
     /// `.rescheduleType(.eyes)` must continue to use the eyes-side
@@ -524,7 +527,10 @@ final class SchedulingFeatureSchedulingTests: XCTestCase {
         XCTAssertEqual(rescheduledCalls.value.first?.1,
                        ReminderSettings(interval: 900, breakDuration: 15),
                        "Eyes reschedule must keep using the eyes-side settings (#897)")
-        XCTAssertEqual(setThresholds.value, [(900, .eyes)],
+        XCTAssertEqual(setThresholds.value.count, 1)
+        XCTAssertEqual(setThresholds.value.first?.0, 900,
                        "Eyes tracker threshold must use the eyes interval (#897)")
+        XCTAssertEqual(setThresholds.value.first?.1, .eyes,
+                       "Eyes tracker threshold must target the eyes type")
     }
 }
