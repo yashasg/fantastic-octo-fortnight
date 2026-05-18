@@ -65,7 +65,7 @@ final class SchedulingFeatureWatchdogRecoveryTests: XCTestCase {
                 recentEvents: { [staleHeartbeat] }
             )
             $0.reminderSchedulerClient = ReminderSchedulerClient(
-                scheduleReminders: { _ in },
+                scheduleReminders: { _, _ in },
                 rescheduleReminder: { _, _ in },
                 cancelReminder: { _ in },
                 cancelAllReminders: { cancelledAll.withValue { $0 += 1 } }
@@ -148,7 +148,7 @@ final class SchedulingFeatureWatchdogRecoveryTests: XCTestCase {
                 recentEvents: { [] }
             )
             $0.reminderSchedulerClient = ReminderSchedulerClient(
-                scheduleReminders: { _ in },
+                scheduleReminders: { _, _ in },
                 rescheduleReminder: { _, _ in },
                 cancelReminder: { _ in },
                 cancelAllReminders: { cancelledAll.withValue { $0 += 1 } }
@@ -208,7 +208,7 @@ final class SchedulingFeatureWatchdogRecoveryTests: XCTestCase {
                 recentEvents: { [freshHeartbeat] }
             )
             $0.reminderSchedulerClient = ReminderSchedulerClient(
-                scheduleReminders: { _ in },
+                scheduleReminders: { _, _ in },
                 rescheduleReminder: { _, _ in },
                 cancelReminder: { _ in },
                 cancelAllReminders: { cancelledAll.withValue { $0 += 1 } }
@@ -268,7 +268,7 @@ final class SchedulingFeatureWatchdogRecoveryTests: XCTestCase {
                 recentEvents: { [coordinatorHeartbeat] }
             )
             $0.reminderSchedulerClient = ReminderSchedulerClient(
-                scheduleReminders: { _ in },
+                scheduleReminders: { _, _ in },
                 rescheduleReminder: { _, _ in },
                 cancelReminder: { _ in },
                 cancelAllReminders: { cancelledAll.withValue { $0 += 1 } }

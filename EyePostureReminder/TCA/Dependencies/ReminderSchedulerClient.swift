@@ -10,10 +10,18 @@ import Foundation
 /// — Phase 1 will refactor `ReminderScheduler` to honour it directly.
 @DependencyClient
 struct ReminderSchedulerClient: Sendable {
-    /// Schedules every enabled reminder type using the supplied baseline
-    /// settings. The Phase 0 adapter delegates to the live `ReminderScheduler`,
-    /// which reads the shared `SettingsStore`.
-    var scheduleReminders: @Sendable (ReminderSettings) async -> Void
+    /// Schedules every enabled reminder type using the supplied per-type
+    /// baseline settings. The Phase 0 adapter delegates to the live
+    /// `ReminderScheduler`, which reads the shared `SettingsStore` directly,
+    /// so the closure parameters are observed only by `TestStore` fakes
+    /// today; production behaviour reads each type's persisted interval +
+    /// break duration from `SettingsStore`. The per-type pair landed with
+    /// #897 so the test path can assert eyes-vs-posture differentiation
+    /// instead of collapsing onto a single `ReminderSettings`.
+    var scheduleReminders: @Sendable (
+        _ eyes: ReminderSettings,
+        _ posture: ReminderSettings
+    ) async -> Void
 
     /// Reschedules a single reminder type after settings have changed.
     var rescheduleReminder: @Sendable (ReminderType, ReminderSettings) async -> Void
@@ -29,7 +37,7 @@ extension ReminderSchedulerClient: DependencyKey {
     static let liveValue: ReminderSchedulerClient = {
         Task { @MainActor in _ = LiveReminderSchedulerBridge.shared }
         return ReminderSchedulerClient(
-            scheduleReminders: { _ in
+            scheduleReminders: { _, _ in
                 await LiveReminderSchedulerBridge.shared.scheduleAll()
             },
             rescheduleReminder: { type, _ in

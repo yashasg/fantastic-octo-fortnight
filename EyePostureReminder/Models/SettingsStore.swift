@@ -439,9 +439,10 @@ extension SettingsStore {
     /// auto-dismissing overlays during the UI-test backdoor (#737).
     ///
     /// Falls back to `ReminderSettings.defaultEyes` for any key not yet
-    /// persisted (first cold launch after install). Per the docstring at the
-    /// top of `SchedulingFeature` the eyes-side snapshot is shared by both
-    /// reminder types until per-type settings land.
+    /// persisted (first cold launch after install). The posture-side
+    /// counterpart is `postureSnapshotFromUserDefaults(_:)`, also seeded by
+    /// `EyePostureReminderApp.init()` after #897 so the TCA root carries
+    /// both per-type snapshots before the `SettingsClient` streams emit.
     nonisolated static func eyesSnapshotFromUserDefaults(
         _ defaults: UserDefaults = .standard
     ) -> ReminderSettings {
@@ -455,6 +456,40 @@ extension SettingsStore {
         // Per #899 the overlay-presentation flags ride along on the snapshot
         // so the SchedulingFeature seed reads consistent values before the
         // first SettingsClient.stream emission lands.
+        let hapticsEnabled = defaults.object(forKey: Keys.hapticsEnabled) != nil
+            ? defaults.bool(forKey: Keys.hapticsEnabled)
+            : true
+        let pauseMediaDuringBreaks = defaults.object(forKey: Keys.pauseMediaDuringBreaks) != nil
+            ? defaults.bool(forKey: Keys.pauseMediaDuringBreaks)
+            : false
+        return ReminderSettings(
+            interval: interval,
+            breakDuration: breakDuration,
+            hapticsEnabled: hapticsEnabled,
+            pauseMediaDuringBreaks: pauseMediaDuringBreaks
+        )
+    }
+
+    /// Posture-side counterpart to `eyesSnapshotFromUserDefaults(_:)`
+    /// (#897). Synchronously reads the persisted posture interval +
+    /// break duration (plus the shared overlay flags) from the supplied
+    /// `UserDefaults` so `EyePostureReminderApp.init()` can seed the TCA
+    /// root `state.scheduling.postureSettings` before
+    /// `SchedulingFeature.start` installs the
+    /// `SettingsClient.postureStream` subscription. Mirrors the eyes-side
+    /// fallback contract: any missing key falls back to
+    /// `ReminderSettings.defaultPosture` (interval + break duration) or
+    /// the shipping defaults for the overlay flags.
+    nonisolated static func postureSnapshotFromUserDefaults(
+        _ defaults: UserDefaults = .standard
+    ) -> ReminderSettings {
+        let fallback = ReminderSettings.defaultPosture
+        let interval = defaults.object(forKey: Keys.postureInterval) != nil
+            ? defaults.double(forKey: Keys.postureInterval)
+            : fallback.interval
+        let breakDuration = defaults.object(forKey: Keys.postureBreakDuration) != nil
+            ? defaults.double(forKey: Keys.postureBreakDuration)
+            : fallback.breakDuration
         let hapticsEnabled = defaults.object(forKey: Keys.hapticsEnabled) != nil
             ? defaults.bool(forKey: Keys.hapticsEnabled)
             : true

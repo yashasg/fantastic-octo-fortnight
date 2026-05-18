@@ -52,7 +52,7 @@ final class SchedulingFeatureSnoozeTests: XCTestCase {
                 deliveredNotifications: { [] }
             )
             $0.reminderSchedulerClient = ReminderSchedulerClient(
-                scheduleReminders: { _ in },
+                scheduleReminders: { _, _ in },
                 rescheduleReminder: { _, _ in },
                 cancelReminder: { _ in },
                 cancelAllReminders: { cancelledAll.withValue { $0 += 1 } }

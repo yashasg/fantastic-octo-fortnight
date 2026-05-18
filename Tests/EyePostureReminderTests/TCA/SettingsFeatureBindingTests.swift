@@ -35,7 +35,7 @@ final class SettingsFeatureBindingTests: XCTestCase {
         } withDependencies: {
             $0.settingsClient = settings
             $0.reminderSchedulerClient = ReminderSchedulerClient(
-                scheduleReminders: { _ in },
+                scheduleReminders: { _, _ in },
                 rescheduleReminder: { type, snapshot in
                     rescheduleCalls.withValue { $0.append((type, snapshot)) }
                 },
@@ -105,7 +105,7 @@ final class SettingsFeatureBindingTests: XCTestCase {
         } withDependencies: {
             $0.settingsClient = settings
             $0.reminderSchedulerClient = ReminderSchedulerClient(
-                scheduleReminders: { _ in },
+                scheduleReminders: { _, _ in },
                 rescheduleReminder: { type, snapshot in
                     rescheduleCalls.withValue { $0.append((type, snapshot)) }
                 },
@@ -166,7 +166,7 @@ final class SettingsFeatureBindingTests: XCTestCase {
         } withDependencies: {
             $0.settingsClient = settings
             $0.reminderSchedulerClient = ReminderSchedulerClient(
-                scheduleReminders: { _ in },
+                scheduleReminders: { _, _ in },
                 rescheduleReminder: { _, snapshot in
                     rescheduleCalls.withValue { $0.append(snapshot) }
                 },
@@ -227,7 +227,7 @@ final class SettingsFeatureBindingTests: XCTestCase {
         } withDependencies: {
             $0.settingsClient = settings
             $0.reminderSchedulerClient = ReminderSchedulerClient(
-                scheduleReminders: { _ in },
+                scheduleReminders: { _, _ in },
                 rescheduleReminder: { type, snapshot in
                     rescheduleCalls.withValue { $0.append((type, snapshot)) }
                 },
@@ -297,7 +297,7 @@ final class SettingsFeatureBindingTests: XCTestCase {
         } withDependencies: {
             $0.settingsClient = settings
             $0.reminderSchedulerClient = ReminderSchedulerClient(
-                scheduleReminders: { _ in },
+                scheduleReminders: { _, _ in },
                 rescheduleReminder: { type, snapshot in
                     rescheduleCalls.withValue { $0.append((type, snapshot)) }
                 },
@@ -358,7 +358,7 @@ final class SettingsFeatureBindingTests: XCTestCase {
         } withDependencies: {
             $0.settingsClient = settings
             $0.reminderSchedulerClient = ReminderSchedulerClient(
-                scheduleReminders: { _ in },
+                scheduleReminders: { _, _ in },
                 rescheduleReminder: { _, snapshot in
                     rescheduleCalls.withValue { $0.append(snapshot) }
                 },

@@ -66,7 +66,7 @@ enum TCATestDependencies {
 
     static func silentReminderSchedulerClient() -> ReminderSchedulerClient {
         ReminderSchedulerClient(
-            scheduleReminders: { _ in },
+            scheduleReminders: { _, _ in },
             rescheduleReminder: { _, _ in },
             cancelReminder: { _ in },
             cancelAllReminders: {}

@@ -133,7 +133,7 @@ final class AppDelegateTests: XCTestCase {
                 deliveredNotifications: { [] }
             )
             $0.reminderSchedulerClient = ReminderSchedulerClient(
-                scheduleReminders: { _ in },
+                scheduleReminders: { _, _ in },
                 rescheduleReminder: { _, _ in },
                 cancelReminder: { _ in },
                 cancelAllReminders: {}
