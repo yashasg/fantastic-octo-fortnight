@@ -53,14 +53,14 @@
 - **Delivered:**
   - Xcode project with SPM (Swift Package Manager) scaffolding
   - iOS 16+ deployment target
-  - SwiftUI app lifecycle, folder structure matching MVVM
+  - SwiftUI app lifecycle, folder structure matching MVVM (the `ViewModels` layer was later decommissioned in the Phase-2 TCA migration — #864)
   - CI/CD via GitHub Actions (build, test, lint on `macos-14`)
 
 #### M0.2: Architecture Scaffolding ✅
 - **Owner:** Rusty (Architect)
 - **Status:** ✅ Complete
 - **Delivered:**
-  - MVVM architecture with Models, Services, ViewModels, Views layers
+  - MVVM architecture with Models, Services, ViewModels, Views layers (the `ViewModels` layer was later decommissioned in the Phase-2 TCA migration — #864)
   - `ReminderType`, `ReminderSettings`, `SettingsStore` models defined
   - `ReminderScheduler`, `OverlayManager` protocols + implementations
   - Service layer established (`AppCoordinator` orchestrator added in Phase 2, decommissioned in the Phase-2 TCA migration — #677 / #755 / PRs #756–#760)
@@ -100,14 +100,14 @@
   - Test plan templates, 80% coverage targets, UI test scope
   - Bug triage (P0-P3 severity levels)
 - **Evolved (Phase 1-2):**
-  - 71+ unit tests across Models, Services, ViewModels (80%+ coverage achieved)
+  - 71+ unit tests across Models, Services, ViewModels (80%+ coverage achieved) — the `ViewModels` layer was later decommissioned in the Phase-2 TCA migration (#864), with coverage migrated onto TCA Reducers
   - XCUITest scaffold for end-to-end flows (HomeScreen, Settings, Onboarding)
   - Integration tests for service wiring
 
 ### Phase 0 Success Criteria
 - ✅ Project builds without errors (Swift Package Manager)
 - ✅ CI/CD pipeline operational (GitHub Actions, SwiftLint, tests)
-- ✅ MVVM architecture established and reviewed
+- ✅ MVVM architecture established and reviewed (the `ViewModels` layer was later decommissioned in the Phase-2 TCA migration — #864)
 - ✅ Design system in Figma + implemented in code
 - ✅ User journeys mapped with accessibility scenarios
 - ✅ Test strategy executed (80%+ coverage maintained)
@@ -737,7 +737,7 @@ Device resumes normal activity
 - ✅ **Crash-Free Rate:** Target 99.5%+ (to measure post-launch)
 - ✅ **Battery Impact:** < 3% per day (actual: ~1–2% measured via ScreenTimeTracker)
 - ✅ **Average Memory Usage:** < 30 MB idle (validated)
-- ✅ **Unit Test Coverage:** 81%+ (achieved: 1,382 unit tests + 53 UI tests across Models, Services, ViewModels, Views, Pause)
+- ✅ **Unit Test Coverage:** 81%+ (achieved: 1,382 unit tests + 53 UI tests across Models, Services, ViewModels, Views, Pause — the `ViewModels` layer was later decommissioned in the Phase-2 TCA migration (#864), with coverage migrated onto TCA Reducers)
 
 ### User Experience (Phase 1+2 Delivered)
 - ✅ **Onboarding Completion:** 90%+ of first-launch users reach Settings (to measure post-launch)
