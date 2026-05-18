@@ -113,12 +113,18 @@ final class OverlayManagerTerminationTests: XCTestCase {
             windowSceneProvider: { nil }
         )
 
-        // Even if audio was logically paused (we can't easily test this via the
-        // headless no-scene path, but post anyway), termination must not call
-        // resume.
-        center.post(name: OverlayManager.willTerminateNotification, object: nil)
+        // `withExtendedLifetime` keeps `manager` alive across the post, which
+        // matters because the willTerminate observer captures `[weak self]`.
+        // It also makes the otherwise-invisible "manager is required" data
+        // dependency explicit, silencing the "never used" warning #872.
+        withExtendedLifetime(manager) {
+            // Even if audio was logically paused (we can't easily test this via
+            // the headless no-scene path, but post anyway), termination must
+            // not call resume.
+            center.post(name: OverlayManager.willTerminateNotification, object: nil)
 
-        XCTAssertEqual(mockAudio.resumeCallCount, 0)
+            XCTAssertEqual(mockAudio.resumeCallCount, 0)
+        }
     }
 
     // MARK: - deinit cleanup

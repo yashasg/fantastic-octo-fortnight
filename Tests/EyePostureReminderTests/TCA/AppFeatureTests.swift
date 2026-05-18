@@ -375,7 +375,7 @@ final class AppFeatureTests: XCTestCase {
         store.exhaustivity = .off
 
         await store.send(.overlaySettingsRequested(.eyes))
-        await store.finish(timeout: NSEC_PER_SEC)
+        await store.finish(timeout: .seconds(1))
 
         XCTAssertTrue(
             UserDefaults.standard.bool(forKey: AppStorageKey.openSettingsOnLaunch),
