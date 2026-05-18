@@ -25,9 +25,14 @@ import UserNotifications
 ///     `sessionEnded` per-type (#901) and the DeviceActivity-on-present
 ///     hook landed in #903 — `.presented` calls
 ///     `DeviceActivityMonitorClient.startScheduleForOverlay(_:)` and
-///     `.dismissed` calls the existing `cancel(_:)` accessor — so
-///     `.settingsTapped` is the only remaining structural no-op pending
-///     its own future tracker.
+///     `.dismissed` calls the existing `cancel(_:)` accessor.
+///     `.settingsTapped` is a structural no-op here by design: the
+///     same user action emits
+///     `AnalyticsEvent.overlayDismissed(method: .settingsTap)` from
+///     `OverlayView.performDismiss(_:)` (so the analytics surface is
+///     already covered at the view layer) and navigation to Settings
+///     is owned by `AppFeature`'s parallel `lifecycleEvents`
+///     subscriber.
 ///
 /// Launch-readiness analytics: `startEffect` emits
 /// `SessionTimingClient.launchReady(.streamsInstalled)` from the tail of
@@ -715,8 +720,10 @@ extension SchedulingFeature {
     /// to `SessionTimingClient.sessionStarted` / `sessionEnded` (#901)
     /// and to `DeviceActivityMonitorClient.startScheduleForOverlay(_:)`
     /// (on `.presented`) / `cancel(_:)` (on `.dismissed`) per #903.
-    /// `.settingsTapped` is still a structural no-op pending the
-    /// analytics surface a future tracker will own.
+    /// `.settingsTapped` is intentionally a no-op here: the same user
+    /// action emits `AnalyticsEvent.overlayDismissed(method: .settingsTap)`
+    /// from `OverlayView.performDismiss(_:)`, and navigation to Settings
+    /// is owned by `AppFeature`'s parallel `lifecycleEvents` subscriber.
     func overlayLifecycleEventEffect(_ event: OverlayLifecycleEvent) -> Effect<Action> {
         switch event {
         case let .presented(type):
