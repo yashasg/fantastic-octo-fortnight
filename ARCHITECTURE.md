@@ -947,7 +947,7 @@ jobs:
           path: TestResults.xcresult
 ```
 
-**Coverage Target:** 85% for Models, Services, ViewModels. Views are tested via UI tests.
+**Coverage Target:** 85% for Models, Services, ViewModels (the `ViewModels` layer was decommissioned in the Phase-2 TCA migration — #677 / #701 / #755; see §10.5 Coverage Targets for the canonical post-TCA table with `Reducers (TCA)` at 90%). Views are tested via UI tests.
 
 ---
 
@@ -957,7 +957,7 @@ jobs:
 |-------|-----------|-----------------|-----------|
 | **Models** | Unit | 90% | `SettingsStore` read/write, default values |
 | **Services** | Unit | 85% | `ReminderScheduler` schedules correct intervals; `OverlayManager` doesn't double-present |
-| **ViewModels** | Unit | 85% | Settings changes trigger reschedule; bindings update correctly |
+| **ViewModels** _(decommissioned)_ | Unit | 85% | Settings changes trigger reschedule; bindings update correctly — superseded by `Reducers (TCA)` at 90% after the Phase-2 TCA migration (#677 / #701 / #755); see §10.5 Coverage Targets |
 | **Views** | UI | 50% | Settings pickers save; overlay dismiss button works; countdown updates |
 | **Integration** | Manual | N/A | End-to-end on device with real notifications; test in Low Power Mode |
 
@@ -1051,7 +1051,7 @@ struct ExampleView: View {
 ### 7.5 Error Handling
 
 - Use `async throws` for service methods that can fail (e.g., `requestAuthorization`)
-- Use `Result<Success, Failure>` for ViewModel methods that bridge async errors to SwiftUI (which doesn't support `throws` in bindings)
+- Use `Result<Success, Failure>` for ViewModel methods that bridge async errors to SwiftUI (which doesn't support `throws` in bindings) — the `ViewModel` layer itself was decommissioned in the Phase-2 TCA migration (#677 / #701 / #755); the equivalent post-TCA pattern is catching async failures inside dependency-client methods and returning sentinel values, e.g. `EyePostureReminder/TCA/Dependencies/IPCClient.swift:143/158/171`
 - Log errors via `print("...")` for Phase 1; replace with OSLog in Phase 2
 
 **Don't:**
@@ -1726,3 +1726,4 @@ Establish baselines on the CI runner (not local) to avoid machine-dependent drif
 | 2026-05-17 | §3 project-structure tree residual-drift fix (#861). Moved `PrivacyInfo.xcprivacy` out of `EyePostureReminder/Resources/` and onto the `EyePostureReminder/` root row (peer of `App/`, `Models/`, `Resources/`) so the tree matches `Package.swift:40 .copy("PrivacyInfo.xcprivacy")`. Added the `Resources/Fonts/` subtree (`Nunito-Regular.ttf`, `Nunito-Italic.ttf`, `OFL-Nunito.txt`). Added the per-extension `PrivacyInfo.xcprivacy` rows for `Extensions/ShieldConfigurationExtension/` and `Extensions/DeviceActivityMonitorExtension/` (shipped in #635). Added the missing `Tests/EyePostureReminderTests/TCA/SettingsFeatureToggleEmissionTests.swift` to the `SettingsFeature*Tests` row. Added the missing `Tests/EyePostureReminderTests/Mocks/MockMediaControllingTests.swift` and `MockRecordingTests.swift` rows. Added the previously-omitted `Tests/EyePostureReminderTests/Utilities/` test subtree (`AccessibilityAnnouncementTests`, `AppStorageKeysTests`, `AsyncTestHelpers`, `LegalLinksTests`). Docs-only — no source changes. | Copilot |
 | 2026-05-17 | §3 + §10 `EyePostureReminderUITests/` drift fix (#862). Added the two on-disk swift sources missing from the §3 tree — `AppStoreScreenshotTests.swift` (opt-in App Store screenshot capture invoked by `scripts/capture-app-store-screenshots.sh`) and `UITestHelpers.swift` (`TestLaunchArguments` + `XCUIApplication` helpers). Replaced every stale ``gated `if: false` in CI per #736`` / ``currently gated by #736`` reference (the §3 parenthetical at L483, the §10.1 pyramid box at L1467, the §10.1 narrative paragraph at L1493, the §10.4 paragraph at L1650, and the §10.5 coverage-targets row at L1665) with the post-#778 wording: the sharded `uitest-prepare` / `uitest-shard` / `uitest` jobs in `.github/workflows/ci.yml` now run on every PR + `main` push, matching `Tests/EyePostureReminderUITests/README.md`. Docs-only — no source changes. | Copilot |
 | 2026-05-17 | §3 project-structure tree residual-drift fix (#863). Added the four main-app root-level deployment-metadata rows that #859/#861/#862 missed for the `EyePostureReminder/` target — `Info.plist` (referenced by `project.yml:67` `INFOPLIST_FILE`), `EyePostureReminder.entitlements` (dev signing — `project.yml:69` `CODE_SIGN_ENTITLEMENTS`), `EyePostureReminder.Distribution.entitlements` (distribution signing used by `scripts/build_signed.sh`), and `AppIcon.xcassets` (App Icon asset catalog wired via `project.yml:59,68`). Mirrors the per-extension `Info.plist` / `.entitlements` / `.Distribution.entitlements` rows that already live under `Extensions/ShieldConfigurationExtension/` and `Extensions/DeviceActivityMonitorExtension/`. Also added the two `Tests/EyePostureReminder*Tests/README.md` rows that have been on disk since commit `9a9294c` (2026-04-24, scaffold XCUITest UI test suite #9) — the UITest README is cited by §10.1 (L1493) but was never reflected in the §3 tree. Docs-only — no source changes. | Copilot |
+| 2026-05-17 | Annotated three residual retired-MVVM `ViewModels` / `ViewModel` references missed by the #864 (TEST_STRATEGY) and #866 (ROADMAP) citation sweeps: §6.2 Coverage Target line (L950), §6.3 Testing Strategy table row (L960), and §7.5 Error Handling bullet (L1054). Each annotation points to the canonical post-TCA replacement — §10.5 Coverage Targets (`Reducers (TCA)` at 90%) for the §6 callsites, and the live `EyePostureReminder/TCA/Dependencies/IPCClient.swift:143/158/171` `do/catch` pattern for §7.5 — and cites the Phase-2 TCA migration ticket trio (#677 / #701 / #755). Issue #868. Docs-only — no source changes. | Copilot |
