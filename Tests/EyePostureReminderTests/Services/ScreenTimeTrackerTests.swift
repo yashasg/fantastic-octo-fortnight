@@ -376,58 +376,71 @@ final class ScreenTimeTrackerTests: XCTestCase {
         NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
     }
 
-    // MARK: - Timer-driven threshold callback (2-second integration)
+    // MARK: - Timer-driven threshold callback (deterministic tick driver)
 
-    /// Verifies the full tick → threshold → callback path.
+    /// Verifies the full tick → threshold → callback path for `.eyes`.
     ///
-    /// Sets threshold = 2, posts `didBecomeActiveNotification` to arm the 1 s
-    /// tick timer, then waits up to 5 s for the callback to fire.
-    func test_thresholdReached_callbackFires_afterSufficientTicks() async throws {
-        let exp = expectation(description: "threshold callback fires for .eyes")
+    /// Driven deterministically via `sut.tick(now:)` — no wall-clock wait — to
+    /// eliminate the simulator-watchdog termination flake observed under
+    /// full-suite Release-config load (#812, #865). The previous
+    /// implementation posted `didBecomeActiveNotification` and awaited a 5 s
+    /// expectation; under accumulated suite-wide wall-clock pressure the
+    /// simulator could SIGKILL xctest before this test completed. The manual-
+    /// tick form follows the existing pattern (see
+    /// `test_reset_zeroesElapsed_delaysNextCallback`,
+    /// `test_pausedType_doesNotFireCallback`).
+    func test_thresholdReached_callbackFires_afterSufficientTicks() {
+        var fired = false
         sut.setThreshold(2, for: .eyes)
         sut.onThresholdReached = { type in
-            if type == .eyes { exp.fulfill() }
+            if type == .eyes { fired = true }
         }
 
-        NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
+        sut.tick(now: 1.0)
+        sut.tick(now: 2.0)
 
-        await fulfillment(of: [exp], timeout: 5.0)
-        sut.stop()
+        XCTAssertTrue(fired, "Eyes threshold callback must fire once ticks accumulate to the threshold")
     }
 
-    func test_thresholdReached_callbackFires_forPosture() async throws {
-        let exp = expectation(description: "threshold callback fires for .posture")
+    /// Verifies the full tick → threshold → callback path for `.posture`.
+    ///
+    /// See `test_thresholdReached_callbackFires_afterSufficientTicks` for the
+    /// deterministic-tick rationale (#865).
+    func test_thresholdReached_callbackFires_forPosture() {
+        var fired = false
         sut.setThreshold(2, for: .posture)
         sut.onThresholdReached = { type in
-            if type == .posture { exp.fulfill() }
+            if type == .posture { fired = true }
         }
 
-        NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
+        sut.tick(now: 1.0)
+        sut.tick(now: 2.0)
 
-        await fulfillment(of: [exp], timeout: 5.0)
-        sut.stop()
+        XCTAssertTrue(fired, "Posture threshold callback must fire once ticks accumulate to the threshold")
     }
 
     /// After a threshold fires, the elapsed counter resets to 0, so the callback
     /// fires again after another `threshold` seconds of continuous ticking.
-    func test_thresholdReached_elapsedResets_allowsSubsequentCallbacks() async throws {
+    ///
+    /// Driven deterministically via `sut.tick(now:)` — the original 8 s
+    /// wall-clock variant was the highest-residual-risk sibling of #812/#865.
+    func test_thresholdReached_elapsedResets_allowsSubsequentCallbacks() {
         var callCount = 0
-        let firstFire = expectation(description: "first threshold fire")
-        let secondFire = expectation(description: "second threshold fire")
-
         sut.setThreshold(2, for: .eyes)
         sut.onThresholdReached = { type in
             guard type == .eyes else { return }
             callCount += 1
-            if callCount == 1 { firstFire.fulfill() }
-            if callCount == 2 { secondFire.fulfill() }
         }
 
-        NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
+        // First firing: 1.0 + 1.0 = 2.0 ≥ threshold.
+        sut.tick(now: 1.0)
+        sut.tick(now: 2.0)
+        XCTAssertEqual(callCount, 1, "Callback must fire once after the first threshold period")
 
-        await fulfillment(of: [firstFire, secondFire], timeout: 8.0)
-        XCTAssertGreaterThanOrEqual(callCount, 2, "Callback must fire multiple times after counter reset")
-        sut.stop()
+        // Counter is zeroed on fire; second firing requires another full threshold period.
+        sut.tick(now: 3.0)
+        sut.tick(now: 4.0)
+        XCTAssertEqual(callCount, 2, "Callback must fire again after counter reset")
     }
 
     // MARK: - Pause prevents threshold from firing
