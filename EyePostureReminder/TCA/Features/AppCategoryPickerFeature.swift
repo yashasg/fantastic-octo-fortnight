@@ -9,11 +9,17 @@ import UIKit
 /// surface.
 ///
 /// Tracks the Screen Time authorisation status, holds the latest
-/// `AppGroupSelectionSnapshot` (sourced from `IPCClient.readSelection` /
-/// `selectionChanges`), drives the authorisation request flow, and routes
-/// the `denied` recovery path through iOS Settings. The parent `AppFeature`
-/// is responsible for dismissing the destination on `.doneTapped` (e.g. by
-/// clearing `state.destination`).
+/// `AppGroupSelectionSnapshot` (hydrated on `.onAppear` from
+/// `IPCClient.readSelection` and persisted on `.selectionChanged` via
+/// `IPCClient.writeSelection`; see #894), drives the authorisation request
+/// flow, and routes the `denied` recovery path through iOS Settings. The
+/// parent `AppFeature` is responsible for dismissing the destination on
+/// `.doneTapped` (e.g. by clearing `state.destination`).
+///
+/// Subscribing to `IPCClient.selectionChanges` for live cross-process
+/// updates is intentionally deferred — it requires a `CancelID` and an
+/// owning lifetime that we do not need until `FamilyControls` unblocks the
+/// `FamilyActivityPicker` integration (#201).
 @Reducer
 struct AppCategoryPickerFeature {
     @ObservableState
@@ -34,6 +40,7 @@ struct AppCategoryPickerFeature {
     }
 
     @Dependency(\.screenTimeAuthorizationClient) var screenTimeAuthorizationClient
+    @Dependency(\.ipcClient) var ipcClient
     @Dependency(\.openURL) var openURL
 
     var body: some ReducerOf<Self> {
@@ -41,11 +48,12 @@ struct AppCategoryPickerFeature {
             switch action {
             case .onAppear:
                 state.isLoadingSelection = true
-                // Selection persistence to App Group is owned by p0-tca-15 (#678) —
-                // IPCClient surface is intentionally not extended here.
-                state.selection = .empty
-                state.isLoadingSelection = false
-                return .run { send in
+                // Sequential read keeps `TestStore` receive ordering
+                // deterministic (the selection snapshot is the first
+                // action observed by parents that pin transitions).
+                return .run { [ipcClient, screenTimeAuthorizationClient] send in
+                    let snapshot = await ipcClient.readSelection()
+                    await send(.selectionChanged(snapshot))
                     let status = await screenTimeAuthorizationClient.status()
                     await send(.authorizationStatusChanged(status))
                 }
@@ -67,10 +75,16 @@ struct AppCategoryPickerFeature {
                 #endif
 
             case .selectionChanged(let snapshot):
+                let didChange = state.selection != snapshot
                 state.selection = snapshot
-                // Selection persistence to App Group is owned by p0-tca-15 (#678) —
-                // IPCClient surface is intentionally not extended here.
-                return .none
+                state.isLoadingSelection = false
+                // Persist only on real transitions. `AppGroupIPCStore.writeSelection`
+                // already dedupes broadcasts on equal payloads, but the reducer-
+                // level guard keeps the effect free on hydration re-entries.
+                guard didChange else { return .none }
+                return .run { [ipcClient] _ in
+                    _ = await ipcClient.writeSelection(snapshot)
+                }
 
             case .authorizationStatusChanged(let status):
                 state.authorizationStatus = status
