@@ -201,7 +201,7 @@ to make the TCA Phase-1 reducers testable in isolation.
   coverage). The MVVM decommission tracked in #677 and #702 has landed —
   PR #754 deleted the `SelectedAppsState` wrapper (#678 final) and PR #760
   deleted the `AppCoordinator` stack (#755 Phase E); the follow-up
-  doc/citation sweep continues in #767..#866.
+  doc/citation sweep continues in #767..#870.
 
 ---
 
