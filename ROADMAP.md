@@ -520,18 +520,18 @@ Device resumes normal activity
 - **Owner:** Basher (Services Dev) + Linus (iOS UI Dev)
 - **Status:** 🔄 PLANNED
 - **Scope:**
-  - `managedSettingsClient` (TCA dep, invoked from `SchedulingFeature` or a dedicated shield-feature reducer) applies ManagedSettings.store.shield(applications: [...])
-  - ShieldConfiguration extension provides customized shield UI (logo, messaging)
-  - ShieldAction extension allows user to request app access ("I need 1 min" button) with confirmation
-  - Shield dismissal triggers `managedSettingsClient.clearShields()` (TCA dep)
-  - Logging: track shield duration, user interactions
+  - `managedSettingsClient` (TCA dep, invoked from `SchedulingFeature` or a dedicated shield-feature reducer) applies ManagedSettings.store.shield(applications: [...]) (blocked by #201 entitlement approval — no `managedSettingsClient` TCA dep exists yet; the integration boundary is the `ScreenTimeShieldProviding` protocol (`beginShield(for:)` / `endShield()` in `EyePostureReminder/Services/ScreenTimeShieldProtocols.swift`) with `ScreenTimeShieldNoop` as the compile-only default (`isAvailable = false`) until live `ManagedSettingsStore.shield(applications:)` wiring is unblocked)
+  - ShieldConfiguration extension provides customized shield UI (logo, messaging) (later delivered via `ShieldConfigurationDataSourceImpl` in `Extensions/ShieldConfigurationExtension/ShieldConfigurationDataSource.swift` rendering `ShieldConfiguration.Label` title/subtitle through `ShieldConfigurationCopy.make(for:)` + `ShieldConfigurationCopyLocalization`, driven by `ShieldSessionSnapshot` read from App Group `UserDefaults` via `AppGroupDefaults.resolve(consumer:)`; per-extension `PrivacyInfo.xcprivacy` manifests + signed-archive validation for extension privacy manifests shipped via #635. Custom logo asset remains TODO.)
+  - ShieldAction extension allows user to request app access ("I need 1 min" button) with confirmation (blocked by #201 / #410 — ShieldAction extension target is intentionally absent from `project.yml` (see header comment lines 7–10); deferred to ShieldAction Phase 2 (#410) until FamilyControls authorisation makes the callbacks meaningful on device)
+  - Shield dismissal triggers `managedSettingsClient.clearShields()` (TCA dep) (blocked by #201 — `ScreenTimeShieldProviding.endShield()` is the integration boundary; `ScreenTimeShieldNoop.endShield()` is a no-op until live `ManagedSettingsStore` clearing is wired)
+  - Logging: track shield duration, user interactions (partially delivered — `AppGroupIPCStore` defines the `shieldStarted` / `shieldEnded` / `accessRequested` event taxonomy plus the consumer-side reader on `accessRequested` (#723 / #892); live emissions remain blocked by #201 / #410 because the shield and ShieldAction callbacks must run on device to fire the events)
 - **Dependencies:** M3.5
 - **Duration:** 6 days
 - **Acceptance Criteria:**
-  - ManagedSettings shield applies successfully during break
-  - Shield UI renders with custom branding
-  - User can request access; coordinator logs request
-  - Shield clears after break or manual request
+  - ManagedSettings shield applies successfully during break (blocked by #201)
+  - Shield UI renders with custom branding (later delivered for text — `ShieldConfigurationDataSourceImpl` renders custom title/subtitle from `ShieldSessionSnapshot`; custom logo asset remains TODO)
+  - User can request access; coordinator logs request (blocked by #201 / #410 — ShieldAction extension target deferred to Phase 2; consumer-side `accessRequested` reader already in place via `AppGroupIPCStore`)
+  - Shield clears after break or manual request (blocked by #201)
 
 #### M3.7: App Group Shared State & Watchdog
 - **Owner:** Basher (Services Dev)
