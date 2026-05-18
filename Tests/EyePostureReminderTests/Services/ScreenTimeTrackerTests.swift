@@ -187,7 +187,11 @@ final class ScreenTimeTrackerTests: XCTestCase {
 
     // MARK: - startIfActive — AppStateProviding seam
 
-    /// Injecting `.active` state triggers `startTicking()`: threshold fires within 2 s.
+    /// Injecting `.active` state triggers `startTicking()`: threshold fires after the
+    /// first 1 s timer fire (delta = 1.0 ≥ threshold = 1.0). The 2.5 s timeout gives
+    /// a ~1 s safety margin past `Timer.scheduledTimer`'s 0.5 s tolerance window —
+    /// down from the previous 4.0 s, eliminating cumulative simulator-watchdog
+    /// pressure (#876 / #877).
     func test_startIfActive_withActiveState_startsTimer() async {
         let center = NotificationCenter()
         let tracker = ScreenTimeTracker(
@@ -205,7 +209,7 @@ final class ScreenTimeTrackerTests: XCTestCase {
 
         tracker.startIfActive()
 
-        await fulfillment(of: [exp], timeout: 4.0)
+        await fulfillment(of: [exp], timeout: 2.5)
     }
 
     /// Injecting `.background` state keeps timer stopped: threshold must NOT fire.
@@ -252,7 +256,8 @@ final class ScreenTimeTrackerTests: XCTestCase {
 
         tracker.startIfActive()
 
-        await fulfillment(of: [exp], timeout: 4.0)
+        // 2.5 s timeout — see `test_startIfActive_withActiveState_startsTimer` (#877).
+        await fulfillment(of: [exp], timeout: 2.5)
         XCTAssertEqual(factoryCallCount, 1)
     }
 
@@ -278,7 +283,8 @@ final class ScreenTimeTrackerTests: XCTestCase {
 
         tracker.startIfActive()
 
-        await fulfillment(of: [exp], timeout: 4.0)
+        // 2.5 s timeout — see `test_startIfActive_withActiveState_startsTimer` (#877).
+        await fulfillment(of: [exp], timeout: 2.5)
         XCTAssertEqual(factoryCallCount, 0)
     }
 
@@ -306,7 +312,8 @@ final class ScreenTimeTrackerTests: XCTestCase {
 
         center.post(name: UIApplication.didBecomeActiveNotification, object: nil)
 
-        await fulfillment(of: [exp], timeout: 4.0)
+        // 2.5 s timeout — see `test_startIfActive_withActiveState_startsTimer` (#877).
+        await fulfillment(of: [exp], timeout: 2.5)
         XCTAssertEqual(factoryCallCount, 1)
     }
 
@@ -332,7 +339,8 @@ final class ScreenTimeTrackerTests: XCTestCase {
 
         center.post(name: UIApplication.didBecomeActiveNotification, object: nil)
 
-        await fulfillment(of: [exp], timeout: 4.0)
+        // 2.5 s timeout — see `test_startIfActive_withActiveState_startsTimer` (#877).
+        await fulfillment(of: [exp], timeout: 2.5)
         XCTAssertEqual(factoryCallCount, 0)
     }
 
@@ -495,71 +503,78 @@ final class ScreenTimeTrackerTests: XCTestCase {
     // MARK: - Behavioral: resume after pause
 
     /// `pause` followed by `resume` must allow the threshold callback to fire again.
-    /// This verifies the pause/resume cycle is reversible and counting resumes from 0
-    /// (pause resets elapsed to 0 per the ScreenTimeTracker contract).
-    func test_resume_afterPause_callbackEventuallyFires() async throws {
-        let exp = expectation(description: "callback fires after resume")
+    /// This verifies the pause/resume cycle is reversible and counting resumes from 0.
+    ///
+    /// Driven deterministically via `sut.tick(now:)` — no wall-clock wait — to
+    /// eliminate cumulative simulator-watchdog pressure (#876 / #877). The
+    /// previous implementation posted `didBecomeActiveNotification` and
+    /// awaited a 5 s expectation.
+    func test_resume_afterPause_callbackEventuallyFires() {
+        var fired = false
         sut.setThreshold(2, for: .eyes)
         sut.pause(for: .eyes)
         sut.onThresholdReached = { type in
-            if type == .eyes { exp.fulfill() }
+            if type == .eyes { fired = true }
         }
 
-        NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
-
-        // Resume immediately: callback must still fire after ~2 s because pause
-        // resets elapsed time for this type.
         sut.resume(for: .eyes)
 
-        await fulfillment(of: [exp], timeout: 5.0)
-        sut.stop()
+        sut.tick(now: 1.0)
+        sut.tick(now: 2.0)
+
+        XCTAssertTrue(fired, "Eyes threshold callback must fire after pause + resume + sufficient ticks")
     }
 
     // MARK: - Behavioral: disableTracking prevents callback permanently
 
     /// After `disableTracking` the type must never fire a threshold callback,
-    /// even if the tick timer is running — the threshold entry is removed.
-    func test_disableTracking_preventsCallback() async throws {
+    /// even when other types continue to accumulate via deterministic ticks —
+    /// the threshold entry is removed.
+    ///
+    /// Driven deterministically via `sut.tick(now:)` — no wall-clock wait — to
+    /// eliminate cumulative simulator-watchdog pressure (#876 / #877).
+    func test_disableTracking_preventsCallback() {
         var eyesFired = false
-        let postureExp = expectation(description: "posture callback fires (timer is alive)")
+        var postureFired = false
 
         sut.setThreshold(2, for: .eyes)
         sut.setThreshold(2, for: .posture)
         sut.onThresholdReached = { type in
             if type == .eyes    { eyesFired = true }
-            if type == .posture { postureExp.fulfill() }
+            if type == .posture { postureFired = true }
         }
 
-        // Disable .eyes BEFORE starting the timer so the threshold entry is removed.
         sut.disableTracking(for: .eyes)
 
-        NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
+        sut.tick(now: 1.0)
+        sut.tick(now: 2.0)
 
-        // Wait for posture to fire (proves the timer is alive).
-        await fulfillment(of: [postureExp], timeout: 5.0)
+        XCTAssertTrue(postureFired, "Posture must still fire — confirms the tick driver is alive")
         XCTAssertFalse(eyesFired, "disableTracking must permanently prevent .eyes from firing")
-        sut.stop()
     }
 
     // MARK: - Behavioral: setThreshold(0) never fires callback
 
     /// A threshold of exactly 0 must be ignored by the tick logic (guard: threshold > 0).
-    func test_setThreshold_zero_neverFiresCallback() async throws {
+    ///
+    /// Driven deterministically via `sut.tick(now:)` — no wall-clock wait — to
+    /// eliminate cumulative simulator-watchdog pressure (#876 / #877).
+    func test_setThreshold_zero_neverFiresCallback() {
         var eyesFired = false
-        let postureExp = expectation(description: "posture fires (non-zero threshold)")
+        var postureFired = false
 
         sut.setThreshold(0, for: .eyes)
         sut.setThreshold(2, for: .posture)
         sut.onThresholdReached = { type in
             if type == .eyes    { eyesFired = true }
-            if type == .posture { postureExp.fulfill() }
+            if type == .posture { postureFired = true }
         }
 
-        NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
+        sut.tick(now: 1.0)
+        sut.tick(now: 2.0)
 
-        await fulfillment(of: [postureExp], timeout: 5.0)
+        XCTAssertTrue(postureFired, "Posture must still fire — confirms the tick driver is alive")
         XCTAssertFalse(eyesFired, "threshold = 0 must never trigger the callback")
-        sut.stop()
     }
 
     // MARK: - Behavioral: pauseAll / resumeAll
@@ -597,24 +612,28 @@ final class ScreenTimeTrackerTests: XCTestCase {
     }
 
     /// After `resumeAll`, ALL types paused with `pauseAll` must be able to fire again.
-    func test_resumeAll_afterPauseAll_allowsAllCallbacks() async throws {
-        let eyesExp    = expectation(description: ".eyes fires after resumeAll")
-        let postureExp = expectation(description: ".posture fires after resumeAll")
+    ///
+    /// Driven deterministically via `sut.tick(now:)` — no wall-clock wait — to
+    /// eliminate cumulative simulator-watchdog pressure (#876 / #877).
+    func test_resumeAll_afterPauseAll_allowsAllCallbacks() {
+        var eyesFired = false
+        var postureFired = false
 
         sut.setThreshold(2, for: .eyes)
         sut.setThreshold(2, for: .posture)
         sut.pauseAll()
         sut.onThresholdReached = { type in
-            if type == .eyes    { eyesExp.fulfill() }
-            if type == .posture { postureExp.fulfill() }
+            if type == .eyes    { eyesFired = true }
+            if type == .posture { postureFired = true }
         }
-
-        NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
 
         sut.resumeAll()
 
-        await fulfillment(of: [eyesExp, postureExp], timeout: 6.0)
-        sut.stop()
+        sut.tick(now: 1.0)
+        sut.tick(now: 2.0)
+
+        XCTAssertTrue(eyesFired, "Eyes threshold must fire after resumeAll")
+        XCTAssertTrue(postureFired, "Posture threshold must fire after resumeAll")
     }
 
 }
@@ -906,7 +925,8 @@ extension ScreenTimeTrackerTests {
         }
 
         lifecycleCenter.post(name: UIApplication.didBecomeActiveNotification, object: nil)
-        await fulfillment(of: [fired], timeout: 5.0)
+        // 2.5 s timeout — see `test_startIfActive_withActiveState_startsTimer` (#877).
+        await fulfillment(of: [fired], timeout: 2.5)
     }
 
     func test_customLifecycleNotificationCenter_ignoresDefaultCenterPosts() async {

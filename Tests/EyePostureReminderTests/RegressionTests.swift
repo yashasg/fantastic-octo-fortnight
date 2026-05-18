@@ -274,18 +274,24 @@ final class ScreenTimeTrackerRegressionTests: XCTestCase {
     }
 
     /// After pause + resume, the type must fire again when the threshold is reached.
+    ///
+    /// Driven deterministically via `sut.tick(now:)` — no wall-clock wait — to
+    /// eliminate cumulative simulator-watchdog pressure (#876 / #877). The
+    /// previous implementation posted `didBecomeActiveNotification` and
+    /// awaited a 4.5 s expectation.
     func test_resume_allowsCallbackAfterPause() {
-        let callbackFired = expectation(description: "resumed type fires callback")
-
+        var fired = false
         sut.setThreshold(2, for: .eyes)
         sut.pause(for: .eyes)
         sut.resume(for: .eyes)
         sut.onThresholdReached = { type in
-            if type == .eyes { callbackFired.fulfill() }
+            if type == .eyes { fired = true }
         }
 
-        NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
-        wait(for: [callbackFired], timeout: 4.5)
+        sut.tick(now: 1.0)
+        sut.tick(now: 2.0)
+
+        XCTAssertTrue(fired, "Resumed type must fire callback after sufficient ticks")
     }
 
     /// pauseAll() must prevent ALL types from firing.
