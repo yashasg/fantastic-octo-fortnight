@@ -1,5 +1,5 @@
 import ComposableArchitecture
-import UserNotifications
+@preconcurrency import UserNotifications
 import XCTest
 
 @testable import EyePostureReminder
