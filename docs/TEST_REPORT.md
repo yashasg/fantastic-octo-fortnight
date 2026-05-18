@@ -174,7 +174,7 @@
 | `SchedulingFeature_ForegroundTransitionTests` | `SchedulingFeature.foregroundTransition` no-snooze auth-status-unchanged refresh-only path |
 | `SettingsFeatureToggleEmissionTests` | `SettingsFeature.settingToggleChanged` analytics emission per toggle key |
 | `SettingsFeatureSnoozeTests` | `SettingsFeature.snoozeTapped` persists expiry + zeroes counter + logs analytics |
-| `SchedulingFeature_WatchdogRecoveryTests` | `SchedulingFeature` watchdog-recovery deferral (Phase-2 IPC-heartbeat dependency `XCTSkip` until landed) |
+| `SchedulingFeature_WatchdogRecoveryTests` | `SchedulingFeature.watchdogRecoveryTriggered` parity coverage (#892): stale / missing / fresh / coordinator-detail-ignored `TestStore` cases against the legacy `WatchdogHeartbeat.status(...)` contract |
 | `IPCClientSurfaceTests` | `IPCClient` overridden-client surface routes all accessors to the test recorder |
 | `TCATestDependencies` | Shared no-op dependency-stub factory (no tests; helper only) |
 

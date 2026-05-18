@@ -40,7 +40,7 @@ existing `@StateObject AppCoordinator`, so behaviour is byte-equivalent.
 - **#699 — Bridge `AppDelegate` notification routes to TCA root Store.**
 - **#700 — Wire `ScenePhase` observation as a TCA effect.**
 - **#701 — Strip `: ObservableObject` (and the manual `objectWillChange.send()` broadcast) from `SettingsStore`.** Closes the final piece of the MVVM decommission: all SwiftUI surfaces now read settings through their feature stores, non-SwiftUI consumers use the existing `addObserver` / `removeObserver` surface, and `import Combine` is gone from the file.
-- **#892 — Watchdog-recovery surface lands on `SchedulingFeature`.** Added `IPCClient.recentEvents` (live-wired to `AppGroupIPCStore.readEvents()`), `static SchedulingFeature.watchdogStaleThreshold` (130s — parity with `WatchdogHeartbeatTests`), and the public `.watchdogRecoveryTriggered` action which reads recent events, computes `WatchdogHeartbeat.status(...)` against the `@Dependency(\.date)` clock, and — on `.stale`/`.missing` — cancels every reminder, restarts the schedule, and emits the `.watchdogRecoveryTriggered` / `.watchdogRecoveryCompleted` analytics pair. Re-enables `SchedulingFeature_WatchdogRecoveryTests.test_watchdogRecovery_deferredToPhase2` as four behavioural-parity tests against `WatchdogHeartbeatTests`. Closes #892.
+- **#892 — Watchdog-recovery surface lands on `SchedulingFeature`.** Added `IPCClient.recentEvents` (live-wired to `AppGroupIPCStore.readEvents()`), `static SchedulingFeature.watchdogHeartbeatStaleThreshold` (130s — parity with `WatchdogHeartbeatTests`), and the public `.watchdogRecoveryTriggered` action which reads recent events, computes `WatchdogHeartbeat.status(...)` against the `@Dependency(\.date)` clock, and — on `.stale`/`.missing` — cancels every reminder, restarts the schedule, and emits the `.watchdogRecoveryTriggered` / `.watchdogRecoveryCompleted` analytics pair. Re-enables `SchedulingFeature_WatchdogRecoveryTests.test_watchdogRecovery_deferredToPhase2` as four behavioural-parity tests against `WatchdogHeartbeatTests`. Closes #892.
 
 #### Engineering docs — TCA refresh
 - **#725 — Rewrite `ARCHITECTURE.md` + `IMPLEMENTATION_PLAN.md` around the post-migration TCA layout.** §1 module-dependency graph redrawn around `AppFeature` / per-feature reducers / dependency clients; §3 project structure now lists `EyePostureReminder/TCA/` and the live-service-only `Services/` block; new §2.8 documents the dependency-client layer; §4.1 replaced ("Why TCA"); §10 testing architecture rewritten around `TestStore` + `withDependencies` overrides; `IMPLEMENTATION_PLAN.md` §3 / §9 / §11 / §12 re-anchored to reducers and dependency clients.
@@ -195,14 +195,18 @@ to make the TCA Phase-1 reducers testable in isolation.
 
 ### 📋 Meta
 
-- **1,801 unit tests** locally on `main` (was 1,382 at v0.2.0; +419 net
-  driven mostly by Phase-3 TestStore coverage and the DI-seam test fanout,
-  net of MVVM-era suite removals during the TCA migration). Live grep:
-  `grep -rc 'func test' Tests/EyePostureReminderTests --include='*.swift'`;
-  1,758 executed under `./scripts/build.sh all` (2 intentionally `XCTSkip`-gated
-  — `SchedulingFeature_WatchdogRecoveryTests.test_watchdogRecovery_deferredToPhase2`
-  and `SettingsStoreSeedTests.test_uiTestOverlayBreakDuration`). Mirrors
-  `docs/TEST_REPORT.md` L7 / L15 / L225 (authoritative).
+- **Unit-test totals** — run
+  `grep -rc 'func test' Tests/EyePostureReminderTests --include='*.swift' | awk -F: '{s+=$2} END {print s}'`
+  for the live total. Baseline at v0.2.0 was **1,382**; growth is driven
+  mostly by Phase-3 TestStore coverage and the DI-seam test fanout, net
+  of MVVM-era suite removals during the TCA migration. The single
+  permanently `XCTSkip`-gated test is
+  `SettingsStoreSeedTests.test_uiTestOverlayBreakDuration` (DEBUG-only
+  `uiTestOverlayBreakDuration` backdoor). Mirrors `docs/TEST_REPORT.md`
+  L7 / L15 (authoritative; the literal cumulative count was removed in
+  #893 — it drifted by ±N on every test add/remove, with #892 being the
+  trigger that exposed the residual `1,801` / `+419 net` / `1,758`
+  literals).
 - **Post-`v0.2.0` PR stream** — run `git log v0.2.0..main --first-parent` for the
   full ledger; this section groups the contributor-visible delta. (The literal
   cumulative count was removed in #885 — it drifted by exactly +1 on every
