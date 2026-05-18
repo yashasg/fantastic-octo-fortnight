@@ -384,6 +384,16 @@ final class SchedulingFeatureSchedulingTests: XCTestCase {
         XCTAssertTrue(loggedEvents.value[0].contains("appSessionEnd"),
                       "backgroundTransition must emit appSessionEnd analytics")
     }
+}
+
+// MARK: - #897 per-type interval differentiation
+//
+// These tests live in a same-file `extension` rather than on the main
+// `SchedulingFeatureSchedulingTests` class so the class body stays
+// under SwiftLint's `type_body_length` 400-line cap (#906). Behaviour
+// coverage is unchanged — this is a pure cohort move.
+@MainActor
+extension SchedulingFeatureSchedulingTests {
 
     // MARK: - .postureSettingsChanged — pure state write
 
