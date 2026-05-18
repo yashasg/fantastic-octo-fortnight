@@ -420,7 +420,7 @@ OverlayClient.dismiss → OverlayManager.dismiss()
 | `OverlayManager` | Unit + integration tests asserting window level and dismiss behaviour |
 | Feature reducers (`SchedulingFeature`, `SettingsFeature`, `OnboardingFeature`, `OverlayFeature`, `HomeFeature`, `AppCategoryPickerFeature`) | `TestStore` coverage under `Tests/EyePostureReminderTests/TCA/`; fakes injected via `withDependencies` overrides on the matching dependency clients |
 | Integration (`Tests/EyePostureReminderTests/Integration/`) | Real `SettingsStore` + live services wired through TCA clients; mocked UIKit + UNUserNotificationCenter boundaries |
-| End-to-end | Manual testing on simulator with shortened intervals (10 s); XCUITest suite currently gated behind #736 pending TCA rewrite |
+| End-to-end | Manual testing on simulator with shortened intervals (10 s); XCUITest suite runs in CI as the sharded `uitest-prepare` / `uitest-shard` / `uitest` jobs in `.github/workflows/ci.yml` on every PR and `main` push (re-enabled post-TCA-migration in #778) |
 
 See `ARCHITECTURE.md` §10 for the full testing architecture (pyramid, mock patterns, coverage targets).
 
