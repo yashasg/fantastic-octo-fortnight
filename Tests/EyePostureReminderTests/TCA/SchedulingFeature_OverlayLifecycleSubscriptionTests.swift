@@ -15,7 +15,7 @@ import XCTest
 /// suite asserts the **subscription wiring** itself so those follow-ups can
 /// add side-effects without re-plumbing the stream installation.
 @MainActor
-final class SchedulingFeatureOverlayLifecycleSubscriptionTests: XCTestCase {
+final class OverlayLifecycleSubscriptionTests: XCTestCase {
 
     /// `.start` must install the subscription so subsequent overlay-side
     /// emissions surface as `.overlayLifecycleEvent(_:)` actions on the
