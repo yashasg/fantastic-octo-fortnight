@@ -72,7 +72,17 @@ final class SettingsStoreSeedTests: XCTestCase {
         defaults.set(1500.0, forKey: SettingsStore.Keys.eyesInterval)
         defaults.set(30.0, forKey: SettingsStore.Keys.eyesBreakDuration)
         let snapshot = SettingsStore.eyesSnapshotFromUserDefaults(defaults)
-        XCTAssertEqual(snapshot, ReminderSettings(interval: 1500, breakDuration: 30))
+        // #899: empty haptics/pauseMedia keys surface the shipping defaults
+        // (haptics on, pauseMedia off) — matches SettingsStore.init.
+        XCTAssertEqual(
+            snapshot,
+            ReminderSettings(
+                interval: 1500,
+                breakDuration: 30,
+                hapticsEnabled: true,
+                pauseMediaDuringBreaks: false
+            )
+        )
     }
 
     // MARK: - UI-test inflation parity
@@ -115,5 +125,35 @@ final class SettingsStoreSeedTests: XCTestCase {
         let snapshot = SettingsStore.eyesSnapshotFromUserDefaults(defaults)
         XCTAssertEqual(snapshot.interval, ReminderSettings.defaultEyes.interval)
         XCTAssertEqual(snapshot.breakDuration, 15)
+    }
+
+    // MARK: - Overlay-flag propagation (#899)
+
+    /// Until a value is persisted, the seed must surface the same `false`
+    /// literal the pre-#899 SchedulingFeature passed to OverlayClient.show
+    /// for `pauseMediaDuringBreaks` — preserving cold-launch parity.
+    func test_eyesSnapshot_emptyDefaults_pauseMediaDuringBreaksDefaultsFalse() {
+        let snapshot = SettingsStore.eyesSnapshotFromUserDefaults(defaults)
+        XCTAssertFalse(snapshot.pauseMediaDuringBreaks)
+    }
+
+    /// `hapticsEnabled` ships defaulted to `true` (matching
+    /// `SettingsStore.init`'s persisted-default), so the seed must surface
+    /// `true` when no value has been persisted yet.
+    func test_eyesSnapshot_emptyDefaults_hapticsEnabledDefaultsTrue() {
+        let snapshot = SettingsStore.eyesSnapshotFromUserDefaults(defaults)
+        XCTAssertTrue(snapshot.hapticsEnabled)
+    }
+
+    func test_eyesSnapshot_persistedHapticsEnabledFalse_isReturned() {
+        defaults.set(false, forKey: SettingsStore.Keys.hapticsEnabled)
+        let snapshot = SettingsStore.eyesSnapshotFromUserDefaults(defaults)
+        XCTAssertFalse(snapshot.hapticsEnabled)
+    }
+
+    func test_eyesSnapshot_persistedPauseMediaTrue_isReturned() {
+        defaults.set(true, forKey: SettingsStore.Keys.pauseMediaDuringBreaks)
+        let snapshot = SettingsStore.eyesSnapshotFromUserDefaults(defaults)
+        XCTAssertTrue(snapshot.pauseMediaDuringBreaks)
     }
 }

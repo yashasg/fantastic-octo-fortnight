@@ -23,10 +23,6 @@ import UserNotifications
 ///     present, and the `OverlayClient.lifecycleEvents`-driven bookkeeping
 ///     all require dependency-client surface that does not yet exist
 ///     (#898).
-///   * `hapticsEnabled`/`pauseMediaDuringBreaks` are not yet exposed on
-///     `ReminderSettings`; the reducer passes `false` for both when calling
-///     `OverlayClient.show` (matches the SettingsClient default state) —
-///     #899.
 ///
 /// Watchdog recovery shipped in #892 via `.watchdogRecoveryTriggered`
 /// (action + effect) wired on top of `IPCClient.recentEvents` and the
@@ -324,6 +320,8 @@ extension SchedulingFeature {
         if let until = state.snoozedUntil, until > now() { return .none }
         let duration = state.settings.breakDuration
         let interval = state.settings.interval
+        let hapticsEnabled = state.settings.hapticsEnabled
+        let pauseMediaDuringBreaks = state.settings.pauseMediaDuringBreaks
         let analyticsClient = self.analyticsClient
         let ipcClient = self.ipcClient
         let overlayClient = self.overlayClient
@@ -345,7 +343,7 @@ extension SchedulingFeature {
                 thresholdS: interval,
                 deliveryPath: .notificationFallback
             ))
-            await overlayClient.show(type, duration, false, false)
+            await overlayClient.show(type, duration, hapticsEnabled, pauseMediaDuringBreaks)
             // Reset the in-app counter so the foreground tracker doesn't fire
             // an additional overlay immediately after this notification.
             await trackerClient.reset(type)
@@ -355,6 +353,8 @@ extension SchedulingFeature {
     func thresholdReachedEffect(type: ReminderType, state: State) -> Effect<Action> {
         let interval = state.settings.interval
         let duration = state.settings.breakDuration
+        let hapticsEnabled = state.settings.hapticsEnabled
+        let pauseMediaDuringBreaks = state.settings.pauseMediaDuringBreaks
         let currentSettings = state.settings
         let authStatus = state.notificationAuthStatus
         let analyticsClient = self.analyticsClient
@@ -369,7 +369,7 @@ extension SchedulingFeature {
 
         return .run { _ in
             await settingsClient.setSnoozeCount(0)
-            await overlayClient.show(type, duration, false, false)
+            await overlayClient.show(type, duration, hapticsEnabled, pauseMediaDuringBreaks)
             analyticsClient.log(.reminderTriggered(
                 type: type,
                 thresholdS: interval,

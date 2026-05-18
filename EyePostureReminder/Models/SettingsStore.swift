@@ -216,9 +216,19 @@ final class SettingsStore {
     func settings(for type: ReminderType) -> ReminderSettings {
         switch type {
         case .eyes:
-            return ReminderSettings(interval: eyesInterval, breakDuration: eyesBreakDuration)
+            return ReminderSettings(
+                interval: eyesInterval,
+                breakDuration: eyesBreakDuration,
+                hapticsEnabled: hapticsEnabled,
+                pauseMediaDuringBreaks: pauseMediaDuringBreaks
+            )
         case .posture:
-            return ReminderSettings(interval: postureInterval, breakDuration: postureBreakDuration)
+            return ReminderSettings(
+                interval: postureInterval,
+                breakDuration: postureBreakDuration,
+                hapticsEnabled: hapticsEnabled,
+                pauseMediaDuringBreaks: pauseMediaDuringBreaks
+            )
         }
     }
 
@@ -442,7 +452,21 @@ extension SettingsStore {
         let breakDuration = defaults.object(forKey: Keys.eyesBreakDuration) != nil
             ? defaults.double(forKey: Keys.eyesBreakDuration)
             : fallback.breakDuration
-        return ReminderSettings(interval: interval, breakDuration: breakDuration)
+        // Per #899 the overlay-presentation flags ride along on the snapshot
+        // so the SchedulingFeature seed reads consistent values before the
+        // first SettingsClient.stream emission lands.
+        let hapticsEnabled = defaults.object(forKey: Keys.hapticsEnabled) != nil
+            ? defaults.bool(forKey: Keys.hapticsEnabled)
+            : true
+        let pauseMediaDuringBreaks = defaults.object(forKey: Keys.pauseMediaDuringBreaks) != nil
+            ? defaults.bool(forKey: Keys.pauseMediaDuringBreaks)
+            : false
+        return ReminderSettings(
+            interval: interval,
+            breakDuration: breakDuration,
+            hapticsEnabled: hapticsEnabled,
+            pauseMediaDuringBreaks: pauseMediaDuringBreaks
+        )
     }
 }
 
