@@ -1,5 +1,44 @@
 # Virgil — History
 
+## 2026-05-18 — #210 TestFlight workflow concurrency hardening
+
+Audited issue #210 for non-#201-gated incremental hardening. Found one actionable gap: `testflight.yml` missing concurrency group.
+
+**What shipped:**
+- MR !930: Added `concurrency:` group to `testflight.yml` (scoped to `${{ github.ref }}`, `cancel-in-progress: false`)
+- Mirrors ci.yml pattern (line 22-24)
+- Prevents wasteful concurrent TestFlight deploys when multiple `workflow_dispatch` triggers arrive in parallel
+- Non-#201-gated: no dependency on FamilyControls entitlement approval or extension profiles
+
+**What was audited (all ✅ except testflight.yml):**
+- `.github/workflows/ci.yml` — has concurrency group, cache, entitlements validation
+- `.github/workflows/testflight.yml` — ❌ missing concurrency group (shipped fix)
+- `scripts/build_signed.sh` — has `verify_archived_*` functions (version sync, privacy manifests, extension binaries)
+- `scripts/setup-screentime.sh` — has xcodegen check, build validation, warning grep
+- `project.yml` — MARKETING_VERSION/CURRENT_PROJECT_VERSION flow correctly, app-group entitlements wired
+- `Extensions/**/*.entitlements` — all 4 files present, minimal, app-group consistent, FamilyControls correctly absent pending #201
+
+**What remains #201-blocked (unchanged):**
+- TestFlight build including extension binaries (requires extension distribution profiles)
+- App Store Connect acceptance of app + extensions
+
+**Verification:**
+- `./scripts/build.sh all` passed (1766 tests, 1 skipped, 0 failures)
+- YAML parse clean (workflow structure unchanged, only added concurrency block)
+- Posted audit status to GitHub issue #210 and GitLab #210
+
+**Branch/commit:**
+- Branch: `users/squad/210-testflight-concurrency`
+- Commit: `54370ea`
+- GitLab MR: !930
+- Issue #210 stays open until #201 lands
+
+### Learnings
+
+- **Concurrency groups are a workflow safety hardening pattern** — they prevent wasteful parallel runs and potential race conditions on shared resources (e.g., App Store Connect upload slots). CI already has this; TestFlight should too.
+- **Issue #210's prior PRs (#418, #592, #635) already shipped the majority of hardening** — PrivacyInfo manifests, archive validation, version sync, CI entitlements guardrail. Only the concurrency group was missing.
+- **#201 (FamilyControls entitlement approval) is the blocker** — the two remaining acceptance items (TestFlight build with extensions, App Store Connect acceptance) both require Apple's entitlement approval + real extension distribution profiles. No repo-side work can unblock these.
+
 ## Core Context
 
 - **Project:** kshana (formerly Eye & Posture Reminder) — lightweight iOS app with True Interrupt Mode via Screen Time APIs
