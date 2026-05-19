@@ -182,3 +182,33 @@ Basher owns AnalyticsLogger; you own HomeView + UITestMode cross-domain visibili
 - Virgil decision: `.squad/decisions.md` (2026-05-17 Release + Wholemodule section)
 - Basher history: `.squad/agents/basher/history.md` (same update)
 - Orchestration: `.squad/orchestration-log/2026-05-17T09-13-37Z-scribe.md`
+
+## Learnings
+
+### 2026-05-15 — #808: IMPLEMENTATION_PLAN.md OverlayManager drift (docs-only fix)
+
+**Task:** Retire stale OverlayManager / OverlayPresenting / MockOverlayPresenting references from IMPLEMENTATION_PLAN.md post-#920 (UIWindow-backed overlay deleted in favor of TCA AppFeature.State.overlay → RootView.fullScreenCover).
+
+**Lines edited:**
+- **L90** (Services tree): `OverlayManager.swift` → annotated `(retired in #920)`
+- **L153** (Foreground flow): `OverlayManager` → `OverlayFeature / AppFeature.State.overlay / OverlayClient`
+- **L186-190** (Flow diagram): `OverlayManager.show` → `AppFeature.State.overlay` set
+- **L384-392** (Threshold flow): `OverlayManager.showOverlay` → `AppFeature.State.overlay = .some(...); RootView.fullScreenCover`
+- **L420** (Test table): `OverlayManager` row → `OverlayClient` lifecycle tests + note "retired OverlayManager UIWindow tests in #920"
+
+**Verification:**
+```bash
+grep -nE 'OverlayManager|OverlayPresenting' IMPLEMENTATION_PLAN.md
+```
+**Before:** 7 matches (L90, 153, 186, 190, 384, 392, 420)
+**After:** 2 matches — both explicit "retired in #920" annotations (L90, 420)
+
+**Cross-reference:** ARCHITECTURE.md §1 (lines 57-61) confirmed canonical post-#920 architecture (reducer-owned overlay state, no UIWindow).
+
+**Refs:**
+- Branch: `users/squad/808-implementation-plan-overlay-drift`
+- Commit: b0040339ebdfd3708bd80bf79fe686dedb54098d
+- GitLab MR: !931
+- GitHub PR: #812
+
+**Learning:** Docs cleanup requires reading canonical architecture doc first (ARCHITECTURE.md) to match voice + technical facts, then surgical edits only. No restructuring. Cross-grepping before/after confirms zero residual drift.
