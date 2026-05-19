@@ -52,7 +52,7 @@ final class OverlayStoreViewTests: XCTestCase {
         XCTAssertTrue(view.hapticsEnabled)
     }
 
-    func test_storeInit_callbackAccessors_areNoOpsByDefault() {
+    func test_storeInit_typeAccessors_reflectStoreState() {
         let store = Store(
             initialState: OverlayFeature.State(type: .eyes, duration: 20)
         ) {
@@ -61,12 +61,13 @@ final class OverlayStoreViewTests: XCTestCase {
 
         let view = OverlayView(store: store)
 
-        // Store-driven `OverlayView` does not surface closure callbacks; the
-        // accessors must return no-op defaults so the wrapper's API stays
-        // safe to call (legacy tests treat these as escape-valve hooks).
-        view.onDismiss()
-        view.onSettingsTap()
-        view.onAnalyticsEvent(.overlayAutoDismissed(type: .eyes, durationS: 20))
+        // Store-driven `OverlayView` no longer surfaces the legacy closure
+        // accessors (`onDismiss`, `onSettingsTap`, `onAnalyticsEvent`)
+        // retired in `#920`; the store-backed property accessors still
+        // expose the immutable type / duration / haptics snapshot for the
+        // view-body tests.
+        XCTAssertEqual(view.type, .eyes)
+        XCTAssertEqual(view.duration, 20)
     }
 
     // MARK: - Body evaluation

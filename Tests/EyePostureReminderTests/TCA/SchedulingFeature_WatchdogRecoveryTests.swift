@@ -362,12 +362,11 @@ final class SchedulingFeatureWatchdogRecoveryTests: XCTestCase {
                 thresholdReached: { .finished }
             )
             $0.overlayClient = OverlayClient(
-                show: { _, _, _, _ in },
-                dismiss: {},
-                clearQueue: {},
-                clearQueueForType: { _ in },
-                isVisible: { false },
-                lifecycleEvents: { .finished }
+                lifecycleEvents: { .finished },
+                broadcast: { _ in },
+                pauseExternalAudio: {},
+                resumeExternalAudio: {},
+                postScreenChanged: {}
             )
         }
         store.exhaustivity = .off

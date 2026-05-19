@@ -27,13 +27,18 @@ import SwiftUI
 ///   the `.fullScreenCover` below then renders `AppCategoryPickerView`
 ///   driven by the destination's scoped store.
 /// - **Overlay**: the `.fullScreenCover` body renders the real
-///   `OverlayView(store:)` driven by the scoped `OverlayFeature` store
-///   (#919 Phase 1). In production the cover only fires once
-///   `SchedulingFeature` writes `state.overlay` — that switch is tracked
-///   under #919 Phase 2 (#920), which also retires the parallel
-///   `OverlayManager` `UIWindow`-hosted path. Until then, `OverlayManager`
-///   continues to own the live overlay presentation; `state.overlay`
-///   remains a teardown sink for `#738`'s two-phase dismiss.
+///   `OverlayView(store:)` driven by the scoped `OverlayFeature` store.
+///   `#919` Phase 1 introduced this canonical SwiftUI cover; `#920`
+///   Phase 2 retired the parallel `OverlayManager` `UIWindow`-hosted path
+///   so production presentation now flows through
+///   `AppFeature.scheduling(.delegate(.presentOverlay(...)))` writing
+///   `state.overlay = OverlayFeature.State(...)` (or enqueuing onto
+///   `state.overlayQueue` if a break is already on screen). `OverlayFeature`
+///   owns the `#738` two-phase dismiss chain (cancel timer → wait for
+///   animation → resume audio + broadcast `.dismissed` + post
+///   `screenChanged`); the parent reducer observes
+///   `.overlay(.presented(.dismissed))` to nil the slot and pop the next
+///   queued entry.
 struct RootView: View {
     @Perception.Bindable var store: StoreOf<AppFeature>
     @AppStorage(AppStorageKey.hasSeenOnboarding) private var persistedHasSeenOnboarding = false

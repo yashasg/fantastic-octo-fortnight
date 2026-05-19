@@ -140,7 +140,32 @@ struct SchedulingFeature {
         /// DeviceActivity start hook) belong to sibling trackers
         /// #901 / #903 and will fill the handler as they land.
         case overlayLifecycleEvent(OverlayLifecycleEvent)
+        /// Delegate actions that bubble up to `AppFeature` for handling of
+        /// owner-state writes (`#920`: the parent reducer owns
+        /// `@Presents var overlay` plus `overlayQueue`, so this child
+        /// reducer must emit a delegate rather than mutate either slot
+        /// directly).
+        case delegate(Delegate)
         case internalAction(Internal)
+
+        /// Delegate vocabulary surfaced to `AppFeature` per `#920`. The
+        /// child reducer never mutates the parent's overlay slot itself —
+        /// it asks the parent to do it via these cases.
+        @CasePathable
+        enum Delegate: Equatable {
+            /// Request the parent reducer to present `request` via
+            /// `state.overlay = OverlayFeature.State(...)`, or enqueue it
+            /// onto `state.overlayQueue` if an overlay is already on
+            /// screen (queue ordering preserves `#289` FIFO).
+            case presentOverlay(OverlayPresentationRequest)
+            /// Request the parent reducer to drop every queued overlay and
+            /// dismiss the currently presented one (Focus mode / Driving
+            /// mode pause-condition activation). The parent dispatches
+            /// `.overlay(.presented(.dismissTapped))` so the SwiftUI exit
+            /// animation, resume-audio, and `#738` teardown sequence still
+            /// run — the queue write is synchronous on `state`.
+            case suspendOverlayForPauseCondition
+        }
 
         enum Internal: Equatable {
             case scheduleSnoozeWake(Date)
@@ -231,11 +256,25 @@ struct SchedulingFeature {
             case let .overlayLifecycleEvent(event):
                 return overlayLifecycleEventEffect(event)
 
+            case .delegate:
+                return .none
+
             case let .internalAction(internalAction):
                 return reduceInternal(internalAction, state: &state)
             }
         }
     }
+}
+
+/// Payload bundled into `SchedulingFeature.Action.Delegate.presentOverlay`
+/// so the parent reducer (`#920`) can either write `state.overlay =
+/// OverlayFeature.State(...)` or enqueue onto `state.overlayQueue` from a
+/// single Sendable value.
+struct OverlayPresentationRequest: Equatable, Sendable {
+    let type: ReminderType
+    let duration: TimeInterval
+    let hapticsEnabled: Bool
+    let pauseMediaEnabled: Bool
 }
 
 // MARK: - Public effect builders
@@ -395,31 +434,39 @@ extension SchedulingFeature {
         let pauseMediaDuringBreaks = perTypeSettings.pauseMediaDuringBreaks
         let analyticsClient = self.analyticsClient
         let ipcClient = self.ipcClient
-        let overlayClient = self.overlayClient
         let settingsClient = self.settingsClient
         let trackerClient = self.trackerClient
 
-        return .run { _ in
-            await settingsClient.setSnoozeCount(0)
-            let priorRoute = await ipcClient.fallbackRoute(type)
-            await ipcClient.record(
-                AppGroupIPCEvent(
-                    kind: .notificationFallbackDelivered,
-                    reasonRaw: type.shieldReason.rawValue,
-                    detail: priorRoute.map { "prior_route=\($0.reason.rawValue)" }
-                ),
-                nil
-            )
-            analyticsClient.log(.reminderTriggered(
-                type: type,
-                thresholdS: interval,
-                deliveryPath: .notificationFallback
-            ))
-            await overlayClient.show(type, duration, hapticsEnabled, pauseMediaDuringBreaks)
-            // Reset the in-app counter so the foreground tracker doesn't fire
-            // an additional overlay immediately after this notification.
-            await trackerClient.reset(type)
-        }
+        let request = OverlayPresentationRequest(
+            type: type,
+            duration: duration,
+            hapticsEnabled: hapticsEnabled,
+            pauseMediaEnabled: pauseMediaDuringBreaks
+        )
+
+        return .merge(
+            .send(.delegate(.presentOverlay(request))),
+            .run { _ in
+                await settingsClient.setSnoozeCount(0)
+                let priorRoute = await ipcClient.fallbackRoute(type)
+                await ipcClient.record(
+                    AppGroupIPCEvent(
+                        kind: .notificationFallbackDelivered,
+                        reasonRaw: type.shieldReason.rawValue,
+                        detail: priorRoute.map { "prior_route=\($0.reason.rawValue)" }
+                    ),
+                    nil
+                )
+                analyticsClient.log(.reminderTriggered(
+                    type: type,
+                    thresholdS: interval,
+                    deliveryPath: .notificationFallback
+                ))
+                // Reset the in-app counter so the foreground tracker doesn't fire
+                // an additional overlay immediately after this notification.
+                await trackerClient.reset(type)
+            }
+        )
     }
 
     func thresholdReachedEffect(type: ReminderType, state: State) -> Effect<Action> {
@@ -430,7 +477,6 @@ extension SchedulingFeature {
         let pauseMediaDuringBreaks = currentSettings.pauseMediaDuringBreaks
         let authStatus = state.notificationAuthStatus
         let analyticsClient = self.analyticsClient
-        let overlayClient = self.overlayClient
         let schedulerClient = self.schedulerClient
         let settingsClient = self.settingsClient
 
@@ -439,36 +485,40 @@ extension SchedulingFeature {
         // surfaces for the per-type enable check.
         guard interval > 0 else { return .none }
 
-        return .run { _ in
-            await settingsClient.setSnoozeCount(0)
-            await overlayClient.show(type, duration, hapticsEnabled, pauseMediaDuringBreaks)
-            analyticsClient.log(.reminderTriggered(
-                type: type,
-                thresholdS: interval,
-                deliveryPath: .screenTimeThreshold
-            ))
-            if authStatus == .authorized {
-                await schedulerClient.rescheduleReminder(type, currentSettings)
+        let request = OverlayPresentationRequest(
+            type: type,
+            duration: duration,
+            hapticsEnabled: hapticsEnabled,
+            pauseMediaEnabled: pauseMediaDuringBreaks
+        )
+
+        return .merge(
+            .send(.delegate(.presentOverlay(request))),
+            .run { _ in
+                await settingsClient.setSnoozeCount(0)
+                analyticsClient.log(.reminderTriggered(
+                    type: type,
+                    thresholdS: interval,
+                    deliveryPath: .screenTimeThreshold
+                ))
+                if authStatus == .authorized {
+                    await schedulerClient.rescheduleReminder(type, currentSettings)
+                }
             }
-        }
+        )
     }
 
     func pauseConditionChangedEffect(isPaused: Bool, state: State) -> Effect<Action> {
-        let snoozedUntil = state.snoozedUntil
-        let currentNow = now()
-        let overlayClient = self.overlayClient
         let trackerClient = self.trackerClient
-        return .run { _ in
-            if isPaused {
-                await trackerClient.pauseAll()
-                await overlayClient.clearQueue()
-                await overlayClient.dismiss()
-                return
-            }
-            // Resume only if no active snooze is in effect (`#755` Phase E).
-            guard (snoozedUntil ?? .distantPast) <= currentNow else { return }
-            await trackerClient.resumeAll()
+        if isPaused {
+            return .merge(
+                .send(.delegate(.suspendOverlayForPauseCondition)),
+                .run { _ in await trackerClient.pauseAll() }
+            )
         }
+        // Resume only if no active snooze is in effect (`#755` Phase E).
+        guard (state.snoozedUntil ?? .distantPast) <= now() else { return .none }
+        return .run { _ in await trackerClient.resumeAll() }
     }
 
     func foregroundTransitionEffect(state: State) -> Effect<Action> {
