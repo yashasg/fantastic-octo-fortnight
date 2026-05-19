@@ -5,6 +5,14 @@
 # Supply account/team/profile/API-key values through environment variables only.
 # It does not run unit tests or UI tests; use scripts/build.sh for validation.
 #
+# The signed XcodeGen spec is derived from the committed `project.yml` (single
+# source of truth) by `scripts/lib/signed_project_spec.py`. The Python helper
+# applies the signing/path/versioning overlays needed for distribution while
+# preserving everything else from `project.yml`, so adding a target to
+# `project.yml` automatically flows into the signed build (and the helper
+# fails loudly if the target hasn't been wired through this script's
+# entitlement / provisioning-profile env vars). See issue #929.
+#
 # Usage:
 #   APPLE_TEAM_ID=XXXXXXXXXX ./scripts/build_signed.sh archive
 #   APPLE_TEAM_ID=XXXXXXXXXX ./scripts/build_signed.sh export
@@ -177,6 +185,18 @@ require_xcodegen() {
   require_tool "xcodegen" "Install with: brew install xcodegen"
 }
 
+require_python3_yaml() {
+  require_tool "python3" "Install with: brew install python@3"
+  if ! python3 -c "import yaml" >/dev/null 2>&1; then
+    info "PyYAML not found — installing into the active python3 (--user)…"
+    if ! python3 -m pip install --user --quiet pyyaml >&2; then
+      fail "Failed to install PyYAML. Install it manually:"
+      fail "  python3 -m pip install --user pyyaml"
+      exit 1
+    fi
+  fi
+}
+
 require_team_id() {
   if [[ -z "$APPLE_TEAM_ID" ]]; then
     if [[ "$TEAM_ID_AMBIGUOUS" == "true" ]]; then
@@ -243,13 +263,6 @@ code_sign_style_value() {
   else
     echo "Automatic"
   fi
-}
-
-yaml_quote() {
-  local value="$1"
-  local escaped
-  escaped=$(printf '%s' "$value" | sed "s/'/''/g")
-  printf "'%s'" "$escaped"
 }
 
 require_signed_entitlements() {
@@ -704,6 +717,7 @@ redact_stream() {
 generate_project() {
   header "GENERATE SIGNED PROJECT"
   require_xcodegen
+  require_python3_yaml
   require_signed_entitlements
 
   mkdir -p "$PROJECT_DIR"
@@ -711,202 +725,60 @@ generate_project() {
   local style_value
   local marketing_version
   local build_number
-  local manual_signing_settings=""
+  local extension_profiles_flag
   style_value="$(code_sign_style_value)"
   marketing_version="$(archive_marketing_version)"
   build_number="$(archive_build_number)"
 
-  # Scope manual signing only to the generated app-wrapper target. Passing these
-  # as command-line build settings makes Xcode apply them to Swift Package
-  # targets too, and SPM targets cannot consume provisioning profiles.
-  if [[ "$SIGNING_STYLE" == "manual" ]]; then
-    manual_signing_settings="        CODE_SIGN_IDENTITY: $(yaml_quote "$SIGNING_CERTIFICATE")"
-    if [[ -n "$PROVISIONING_PROFILE_SPECIFIER" ]]; then
-      manual_signing_settings="${manual_signing_settings}
-        PROVISIONING_PROFILE_SPECIFIER: $(yaml_quote "$PROVISIONING_PROFILE_SPECIFIER")"
-    fi
-  fi
-
-  # Build extension dependency and target YAML snippets.
-  # These are injected into the heredoc only when EXTENSION_PROFILES_AVAILABLE=YES.
-  # Blocked on issue #201 (FamilyControls entitlement) — set NO until profiles are ready.
-  local ext_app_deps=""
-  local ext_targets=""
   if [[ "$EXTENSION_PROFILES_AVAILABLE" == "YES" ]]; then
+    extension_profiles_flag="yes"
     warn "EXTENSION_PROFILES_AVAILABLE=YES — including extension targets in signed archive."
     warn "This requires FamilyControls entitlement approval (#201) and extension profiles."
-
-    local sc_profile_line=""
-    local da_profile_line=""
-    local sc_manual_signing_settings=""
-    local da_manual_signing_settings=""
-    if [[ "$SIGNING_STYLE" == "manual" ]]; then
-      sc_manual_signing_settings="        CODE_SIGN_IDENTITY: $(yaml_quote "$SIGNING_CERTIFICATE")"
-      da_manual_signing_settings="        CODE_SIGN_IDENTITY: $(yaml_quote "$SIGNING_CERTIFICATE")"
-      if [[ -n "$SHIELD_CONFIG_PROFILE" ]]; then
-        sc_profile_line="        PROVISIONING_PROFILE_SPECIFIER: $(yaml_quote "$SHIELD_CONFIG_PROFILE")"
-      fi
-      if [[ -n "$DEVICE_ACTIVITY_PROFILE" ]]; then
-        da_profile_line="        PROVISIONING_PROFILE_SPECIFIER: $(yaml_quote "$DEVICE_ACTIVITY_PROFILE")"
-      fi
-    fi
-
-    ext_app_deps="      - target: ShieldConfigurationExtension
-        embed: true
-        link: false
-      - target: DeviceActivityMonitorExtension
-        embed: true
-        link: false"
-
-    ext_targets="
-  ShieldConfigurationExtension:
-    type: app-extension
-    platform: iOS
-    deploymentTarget: \"16.0\"
-    sources:
-      - path: $(yaml_quote "${PACKAGE_PATH}/Extensions/ShieldConfigurationExtension")
-        excludes:
-          - \"*.entitlements\"
-          - Info.plist
-      - path: $(yaml_quote "${PACKAGE_PATH}/Extensions/Shared")
-    dependencies:
-      - sdk: ManagedSettingsUI.framework
-      - sdk: ManagedSettings.framework
-      - sdk: AppIntents.framework
-    settings:
-      base:
-        PRODUCT_BUNDLE_IDENTIFIER: $(yaml_quote "$SHIELD_CONFIG_BUNDLE_ID")
-        TARGETED_DEVICE_FAMILY: \"1\"
-        INFOPLIST_FILE: $(yaml_quote "${PACKAGE_PATH}/Extensions/ShieldConfigurationExtension/Info.plist")
-        CODE_SIGN_ENTITLEMENTS: $(yaml_quote "$SHIELD_CONFIG_ENTITLEMENTS_PATH")
-        DEVELOPMENT_TEAM: $(yaml_quote "$APPLE_TEAM_ID")
-        CODE_SIGN_STYLE: $(yaml_quote "$style_value")
-        CODE_SIGNING_ALLOWED: \"YES\"
-        CODE_SIGNING_REQUIRED: \"YES\"
-        ENABLE_BITCODE: \"NO\"
-        ENABLE_APP_INTENTS_METADATA_EXTRACTION: \"NO\"
-        ENABLE_APPINTENTS_METADATA_EXTRACTION: \"NO\"
-        MARKETING_VERSION: $(yaml_quote "$marketing_version")
-        CURRENT_PROJECT_VERSION: $(yaml_quote "$build_number")
-${sc_manual_signing_settings}
-${sc_profile_line}
-
-  DeviceActivityMonitorExtension:
-    type: app-extension
-    platform: iOS
-    deploymentTarget: \"16.0\"
-    sources:
-      - path: $(yaml_quote "${PACKAGE_PATH}/Extensions/DeviceActivityMonitorExtension")
-        excludes:
-          - \"*.entitlements\"
-          - Info.plist
-      - path: $(yaml_quote "${PACKAGE_PATH}/Extensions/Shared")
-    dependencies:
-      - sdk: DeviceActivity.framework
-      - sdk: ManagedSettings.framework
-      - sdk: AppIntents.framework
-    settings:
-      base:
-        PRODUCT_BUNDLE_IDENTIFIER: $(yaml_quote "$DEVICE_ACTIVITY_BUNDLE_ID")
-        TARGETED_DEVICE_FAMILY: \"1\"
-        INFOPLIST_FILE: $(yaml_quote "${PACKAGE_PATH}/Extensions/DeviceActivityMonitorExtension/Info.plist")
-        CODE_SIGN_ENTITLEMENTS: $(yaml_quote "$DEVICE_ACTIVITY_ENTITLEMENTS_PATH")
-        DEVELOPMENT_TEAM: $(yaml_quote "$APPLE_TEAM_ID")
-        CODE_SIGN_STYLE: $(yaml_quote "$style_value")
-        CODE_SIGNING_ALLOWED: \"YES\"
-        CODE_SIGNING_REQUIRED: \"YES\"
-        ENABLE_BITCODE: \"NO\"
-        ENABLE_APP_INTENTS_METADATA_EXTRACTION: \"NO\"
-        ENABLE_APPINTENTS_METADATA_EXTRACTION: \"NO\"
-        MARKETING_VERSION: $(yaml_quote "$marketing_version")
-        CURRENT_PROJECT_VERSION: $(yaml_quote "$build_number")
-${da_manual_signing_settings}
-${da_profile_line}"
   else
+    extension_profiles_flag="no"
     info "EXTENSION_PROFILES_AVAILABLE=NO — building main app only (current TestFlight path)."
     info "Set EXTENSION_PROFILES_AVAILABLE=YES with extension profiles to include extensions."
   fi
 
-  # Archive for iOS distribution requires a proper .xcodeproj with a signed
-  # app-wrapper target.  SPM executable targets cannot be archived for device
-  # distribution without one.  This generated project mirrors the pattern used
-  # in UITests/project.yml (app-wrapper + SPM package dependency) but enables
-  # distribution signing instead of test-only, unsigned settings.
-  cat > "$PROJECT_SPEC" <<EOF
-name: ${APP_TARGET}Signed
-
-options:
-  deploymentTarget:
-    iOS: "16.0"
-  xcodeVersion: "16.4"
-  minimumXcodeGenVersion: "2.40.0"
-  generateEmptyDirectories: false
-
-packages:
-  EyePostureReminder:
-    path: $(yaml_quote "$PACKAGE_PATH")
-
-targets:
-  ${APP_TARGET}:
-    type: application
-    platform: iOS
-    deploymentTarget: "16.0"
-    dependencies:
-      - package: EyePostureReminder
-${ext_app_deps}
-    sources:
-      - path: $(yaml_quote "${PACKAGE_PATH}/EyePostureReminder/AppIcon.xcassets")
-    settings:
-      base:
-        PRODUCT_BUNDLE_IDENTIFIER: $(yaml_quote "$APP_BUNDLE_ID")
-        TARGETED_DEVICE_FAMILY: "1"
-        INFOPLIST_FILE: $(yaml_quote "${PACKAGE_PATH}/EyePostureReminder/Info.plist")
-        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-        CODE_SIGN_ENTITLEMENTS: $(yaml_quote "$SIGNED_ENTITLEMENTS_PATH")
-        DEVELOPMENT_TEAM: $(yaml_quote "$APPLE_TEAM_ID")
-        CODE_SIGN_STYLE: $(yaml_quote "$style_value")
-        CODE_SIGNING_ALLOWED: "YES"
-        CODE_SIGNING_REQUIRED: "YES"
-        ENABLE_BITCODE: "NO"
-        ENABLE_APP_INTENTS_METADATA_EXTRACTION: "NO"
-        ENABLE_APPINTENTS_METADATA_EXTRACTION: "NO"
-        MARKETING_VERSION: $(yaml_quote "$marketing_version")
-        CURRENT_PROJECT_VERSION: $(yaml_quote "$build_number")
-${manual_signing_settings}
-    postBuildScripts:
-      - name: "Assemble App Bundle"
-        basedOnDependencyAnalysis: false
-        script: |
-          set -e
-          BIN_SRC="\${BUILT_PRODUCTS_DIR}/\${EXECUTABLE_NAME}"
-          BIN_DST="\${BUILT_PRODUCTS_DIR}/\${EXECUTABLE_FOLDER_PATH}/\${EXECUTABLE_NAME}"
-          if [ -f "\$BIN_SRC" ] && [ "\$BIN_SRC" != "\$BIN_DST" ]; then
-            cp "\$BIN_SRC" "\$BIN_DST"
-            chmod +x "\$BIN_DST"
-          fi
-
-          BUNDLE_NAME="\${PRODUCT_MODULE_NAME}_\${PRODUCT_MODULE_NAME}.bundle"
-          BUNDLE_SRC="\${BUILT_PRODUCTS_DIR}/\${BUNDLE_NAME}"
-          BUNDLE_DST="\${BUILT_PRODUCTS_DIR}/\${EXECUTABLE_FOLDER_PATH}/\${BUNDLE_NAME}"
-          if [ -d "\$BUNDLE_SRC" ]; then
-            rm -rf "\$BUNDLE_DST"
-            cp -r "\$BUNDLE_SRC" "\$BUNDLE_DST"
-          fi
-
-          PRIVACY_SRC="${PACKAGE_PATH}/EyePostureReminder/PrivacyInfo.xcprivacy"
-          PRIVACY_DST="\${BUILT_PRODUCTS_DIR}/\${EXECUTABLE_FOLDER_PATH}/PrivacyInfo.xcprivacy"
-          if [ -f "\$PRIVACY_SRC" ]; then
-            cp "\$PRIVACY_SRC" "\$PRIVACY_DST"
-          fi
-${ext_targets}
-schemes:
-  ${SCHEME}:
-    build:
-      targets:
-        ${APP_TARGET}: [run, archive]
-    archive:
-      config: ${CONFIGURATION}
-EOF
+  # The signed-build spec is a transformation of the committed project.yml
+  # (single source of truth — see scripts/lib/signed_project_spec.py). The
+  # transformation applies:
+  #
+  #   1. Distribution signing settings per target (replaces the simulator
+  #      NO/empty signing values from project.yml with Apple Distribution
+  #      and optional manual provisioning profile pins).
+  #   2. .Distribution.entitlements variants for each target.
+  #   3. Marketing version / build number overrides from this script.
+  #   4. Absolute paths (the signed .xcodeproj is generated outside
+  #      ScreenTimeExtensions/, so the project.yml relative paths need to
+  #      be re-anchored).
+  #   5. A PrivacyInfo.xcprivacy copy step (App Store privacy nutrition
+  #      label requirement; the simulator build doesn't need it).
+  #   6. A single archive-focused scheme.
+  #   7. Optional pruning of extension targets when their provisioning
+  #      profiles are not available (gated on #201).
+  #
+  # The helper fails loudly if project.yml adds a target the signing
+  # path hasn't been wired for — see _TARGET_SIGNING_PROFILE in the
+  # helper. Closes the project.yml ↔ build_signed.sh drift (#929).
+  python3 "${PACKAGE_PATH}/scripts/lib/signed_project_spec.py" \
+    --source "$PROJECT_SOURCE_SPEC" \
+    --output "$PROJECT_SPEC" \
+    --app-name "$APP_TARGET" \
+    --package-path "$PACKAGE_PATH" \
+    --marketing-version "$marketing_version" \
+    --build-number "$build_number" \
+    --team-id "$APPLE_TEAM_ID" \
+    --signing-style "$style_value" \
+    --code-sign-identity "$SIGNING_CERTIFICATE" \
+    --signed-entitlements "$SIGNED_ENTITLEMENTS_PATH" \
+    --shield-config-entitlements "$SHIELD_CONFIG_ENTITLEMENTS_PATH" \
+    --device-activity-entitlements "$DEVICE_ACTIVITY_ENTITLEMENTS_PATH" \
+    --provisioning-profile "$PROVISIONING_PROFILE_SPECIFIER" \
+    --shield-config-profile "$SHIELD_CONFIG_PROFILE" \
+    --device-activity-profile "$DEVICE_ACTIVITY_PROFILE" \
+    --extension-profiles-available "$extension_profiles_flag" \
+    --configuration "$CONFIGURATION"
 
   xcodegen generate \
     --spec "$PROJECT_SPEC" \
