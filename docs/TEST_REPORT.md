@@ -64,9 +64,6 @@
 | File | Coverage Focus |
 |---|---|
 | `ReminderSchedulerTests` | Schedule all/single/cancel, notification content, triggers, identifiers, error resilience |
-| `OverlayManagerTests` | Singleton identity, visible state, guard paths, queue management, audio wiring |
-| `OverlayManagerExtendedTests` | Extended overlay manager coverage |
-| `OverlayManagerTerminationTests` | Overlay window teardown on `UIApplication.willTerminateNotification` (#714) |
 | `AudioInterruptionManagerTests` | Protocol conformance, pause/resume cycles, invariant safety |
 | `PauseConditionManagerTests` | All pause-condition aggregation paths (Focus, driving, CarPlay) |
 | `FocusModeExtendedTests` | Focus mode edge cases |
@@ -97,6 +94,12 @@
 ### ViewModels — decommissioned
 
 > The legacy MVVM `SettingsViewModel` layer (and its four `SettingsViewModel*Tests.swift` suites) was decommissioned during the TCA migration (`#677` / `#755`, PRs `#756`–`#760`). Equivalent Settings coverage now lives in TCA reducer tests under `Tests/EyePostureReminderTests/TCA/Settings*.swift` (`SettingsFeatureTests`, `SettingsFeatureSnoozeTests`, `SettingsFeatureToggleEmissionTests`, `SettingsFeatureBindingTests`) — see the new §"TCA Reducers" rollup below.
+
+---
+
+### OverlayManager — decommissioned
+
+> The legacy singleton `OverlayManager` UIWindow service (and its three `OverlayManager*Tests.swift` suites + `MockOverlayPresenting`) was decommissioned in `#919` Phase 1 / `#920` Phase 2. Presentation now flows through `AppFeature.State.overlay` + `RootView.fullScreenCover`; the overlay queue is reducer-owned in `AppFeature`; lifecycle / audio side-effects are routed through `OverlayClient`. Equivalent coverage now lives in TCA reducer tests under `Tests/EyePostureReminderTests/TCA/Overlay*.swift` and `Tests/EyePostureReminderTests/TCA/SchedulingFeature_Overlay*.swift` (`OverlayFeatureTests`, `OverlayFeatureBehaviorTests`, `SchedulingFeature_OverlayFlagsTests`, `SchedulingFeature_OverlayLifecycleSubscriptionTests`, `SchedulingFeature_DeviceActivityOverlayTests`) and in view-level suites under `Tests/EyePostureReminderTests/Views/` (`OverlayStoreViewTests`, `OverlayGestureTests`, `OverlayAccessibilityTests`).
 
 ---
 
@@ -208,7 +211,6 @@
 | `MockSettingsPersisting` | `SettingsPersisting` | In-memory UserDefaults replacement |
 | `MockReminderScheduler` | `ReminderScheduling` | Tracks reducer/feature → scheduler call counts (TCA `TestStore` and direct mock-call verification) |
 | `MockMediaControlling` | `MediaControlling` | Counts pause/resume calls in overlay tests |
-| `MockOverlayPresenting` | `OverlayPresenting` | Tracks showOverlay type/duration/haptics order for FIFO verification |
 | `MockPauseConditionProvider` | `PauseConditionProviding` | Returns configurable pause-condition states |
 | `MockDeviceActivityMonitorProviding` | `DeviceActivityMonitorProviding` | Stubs DeviceActivity callbacks |
 | `MockScreenTimeAuthorizationProviding` | `ScreenTimeAuthorizationProviding` | Controls authorization grant/deny in tests |
@@ -232,7 +234,7 @@
 | **Snooze count** persistence + reset | `SettingsStorePhase2Tests` | ✅ Complete |
 | **Onboarding flag** (`hasSeenOnboarding`) | `OnboardingTests` | ✅ Complete |
 | **Accessibility** (`AppFont` Dynamic Type, `AppLayout` HIG) | `DesignSystemTests` | ✅ Complete |
-| **OverlayManager queue FIFO** (notification-routing level via `MockOverlayPresenting`) | `OverlayManagerTests`, `SchedulingFeature_NotificationRoutingTests` | ✅ Unit-testable paths complete |
+| **Overlay queue FIFO** (reducer-owned `overlayQueue` in `AppFeature`, routed via the TCA delegate vocabulary; `OverlayManager`/`MockOverlayPresenting` retired in #920) | `OverlayFeatureTests`, `OverlayFeatureBehaviorTests`, `SchedulingFeature_NotificationRoutingTests`, `SchedulingFeature_OverlayLifecycleSubscriptionTests` | ✅ Unit-testable paths complete |
 | **Smart Pause** (Focus Mode, CarPlay, driving) | `PauseConditionManagerTests`, `FocusModeExtendedTests`, `DrivingDetectionExtendedTests` | ✅ Complete |
 | **Screen-Time Triggers** (`ScreenTimeTracker`) | `ScreenTimeTrackerTests`, `ScreenTimeAuthorizationTests` | ✅ Complete |
 | **True Interrupt Mode** (shield, IPC, DeviceActivity) | `ScreenTimeShieldTests`, `DeviceActivityMonitorTests`, `AppGroupIPCStoreTests` | ✅ Unit-testable paths complete |
@@ -250,7 +252,7 @@ The following test scenarios require a live `UIWindowScene` or `UIApplication` w
 
 | Gap | Reason | Tracking |
 |---|---|---|
-| `OverlayManager.overlayQueue` FIFO ordering under concurrent shows | `isOverlayVisible` requires a real `UIWindow` in an active `UIWindowScene` | Simulator integration suite |
+| `RootView.fullScreenCover` overlay presentation under concurrent `AppFeature.State.overlay` updates (post-#920 reducer-owned queue) | Requires a real `UIWindowScene` to observe SwiftUI sheet lifecycle and dismissal animations | Simulator integration suite |
 | `OverlayView` haptic feedback firing on countdown | `UIImpactFeedbackGenerator` requires a live device/simulator | Simulator integration suite |
 | `OverlayView` swipe-up dismiss gesture | Requires `DragGesture` and a rendered View | Simulator UI test |
 | `OverlayView` countdown ring animation | Timer-driven animation requires render loop | Simulator UI test |
@@ -273,7 +275,7 @@ The following test scenarios require a live `UIWindowScene` or `UIApplication` w
 |---|---|---|---|
 | 1 | `AudioInterruptionManagerTests.swift:27` | Pre-existing warning: `sut is MediaControlling` on IUO always succeeds. | Fixed: changed to `let controlling: MediaControlling? = sut; XCTAssertNotNil(controlling)` |
 
-No breaking API mismatches found between test files and the Phase 2 implementation. All mocks correctly match their protocol signatures (`OverlayPresenting.showOverlay` with `hapticsEnabled: Bool` parameter included).
+No breaking API mismatches found between test files and the Phase 2 implementation. All mocks correctly match their protocol signatures (the legacy `OverlayPresenting` protocol and `MockOverlayPresenting` mock were retired in #920; overlay presentation now flows through `AppFeature.State.overlay` + `OverlayClient` lifecycle events, no presentation-protocol mock required).
 
 ---
 
