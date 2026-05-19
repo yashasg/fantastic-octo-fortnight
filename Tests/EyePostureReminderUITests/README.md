@@ -14,11 +14,9 @@ none of the assertions depend on MVVM- or TCA-specific internals, so the
 existing coverage transferred unchanged. Per-feature `TestStore` tests under
 `Tests/EyePostureReminderTests/TCA/` cover the reducer logic separately.
 
-Tests with known regressions or flakes are wrapped in `XCTExpectFailure` and
-linked to a tracking issue — drop the wrapper once the underlying fix lands:
-
-| Test | Tracking issue | Reason |
-|---|---|---|
+No UITest is currently `XCTExpectFailure`-wrapped. If a flake re-appears,
+wrap the failing case in `XCTExpectFailure(_:)` *and* file a tracking issue
+in the same MR so the wrapper has a paired exit criterion.
 
 ### Running locally
 
