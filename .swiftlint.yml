@@ -16,8 +16,15 @@
 # CI runs the same command in .github/workflows/ci.yml before build/test.
 
 # ── Excluded paths ────────────────────────────────────────────────────────────
+# `.git` covers parallel squad worktrees that live under `.git/worktrees-tmp/<N>/`
+# (each carries its own nested `DerivedData/` of Xcode-generated sources,
+# SwiftPM checkouts, and resource_bundle_accessor stubs). SwiftLint walks paths
+# below the repo root regardless of source control, so without this exclude
+# `./scripts/build.sh lint` exits red on `main` whenever any sibling squad
+# session has built artifacts in its worktree (issue #931).
 excluded:
   - .build
+  - .git
   - .worktrees
   - DerivedData
   - EyePostureReminder/DerivedData
