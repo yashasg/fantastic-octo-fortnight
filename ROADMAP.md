@@ -62,7 +62,7 @@
 - **Delivered:**
   - MVVM architecture with Models, Services, ViewModels, Views layers (the `ViewModels` layer was later decommissioned in the Phase-2 TCA migration — #864)
   - `ReminderType`, `ReminderSettings`, `SettingsStore` models defined
-  - `ReminderScheduler`, `OverlayManager` protocols + implementations
+  - `ReminderScheduler` protocol + implementation; overlay scaffolding (`OverlayManager` UIWindow path + `OverlayPresenting` protocol later retired in the Phase-2 TCA migration — #920; `OverlayClient` side-effects surface retained)
   - Service layer established (`AppCoordinator` orchestrator added in Phase 2, decommissioned in the Phase-2 TCA migration — #677 / #755 / PRs #756–#760)
 
 #### M0.3: CI/CD Pipeline ✅
@@ -169,7 +169,7 @@
 - **Owner:** Linus (iOS UI Dev)
 - **Status:** ✅ Complete
 - **Delivered:**
-  - `OverlayManager.swift` (UIWindow at `.alert + 1` level)
+  - `OverlayManager.swift` (UIWindow at `.alert + 1` level) (UIWindow path later retired in the Phase-2 TCA migration — #920; overlay presentation is now driven by `AppFeature.State.overlay` -> `RootView.fullScreenCover`)
   - `OverlayView.swift` (SwiftUI): blur background, SF Symbol, countdown ring, dismiss button, swipe-up dismiss
   - Auto-dismiss after configured duration (DispatchQueue.asyncAfter)
   - UIHostingController bridges UIKit ↔ SwiftUI
