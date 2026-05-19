@@ -167,7 +167,9 @@ iOS fires Eye Reminder notification
     │      │
     │      ▼
     │  App receives notification
-    │  OverlayManager.show() called immediately
+    │  SchedulingFeature emits .delegate(.presentOverlay(.eyes)) →
+    │  AppFeature writes OverlayFeature.State into @Presents var overlay →
+    │  RootView.fullScreenCover renders OverlayView immediately
     │  (notification does NOT appear as banner)
     │      │
     │      ▼
@@ -183,7 +185,7 @@ iOS fires Eye Reminder notification
     │      │      │
     │      │      ▼
     │      │  Overlay slides up and off-screen (0.2s ease-in)
-    │      │  Overlay window removed from hierarchy
+    │      │  AppFeature.State.overlay cleared (fullScreenCover dismissed)
     │      │  Snooze action sheet appears (Phase 2):
     │      │    [Snooze 5 min]  [Snooze 1 hour]  [Rest of Day]  [No Snooze]
     │      │  User selects option → snooze activated or dismissed
@@ -223,8 +225,8 @@ iOS fires Eye Reminder notification
                   ▼
               Device unlocks (Face ID / Touch ID)
               App opens
-              OverlayManager.show() called
-              Overlay appears (same flow as above)
+              UNUserNotificationCenterDelegate sets AppFeature.State.overlay
+              (RootView.fullScreenCover renders OverlayView — same flow as above)
 ```
 
 **Key UX decisions:**
@@ -438,7 +440,7 @@ User taps notification
     ▼
 App launches (cold start)
 UNUserNotificationCenterDelegate.didReceive() called
-OverlayManager.show() triggered
+SchedulingFeature → AppFeature.State.overlay set (RootView.fullScreenCover renders OverlayView)
     │
     ▼
 Overlay appears normally
@@ -673,33 +675,34 @@ All reminders continue normally
 **Handling:**
 ```
 First reminder fires
-OverlayManager.show(type: .eyes)
-Overlay window created, eye break displayed
+SchedulingFeature emits .delegate(.presentOverlay(.eyes)) →
+AppFeature.State.overlay = OverlayFeature.State(.eyes)
+RootView.fullScreenCover renders OverlayView (eye break displayed)
     │
     ▼
 [5 seconds later]
 Second reminder fires (posture)
-OverlayManager checks: is an overlay currently visible?
+AppFeature checks: is state.overlay != nil?
     │
     ├─ YES
     │      │
     │      ▼
-    │  Queue second reminder internally (stored in OverlayManager)
-    │  Do NOT create second overlay window
+    │  Append to AppFeature.State.overlayQueue (TCA-owned queue)
+    │  Do NOT replace the in-flight overlay
     │      │
     │      ▼
     │  User dismisses first overlay (eyes)
     │      │
     │      ▼
-    │  OverlayManager.dismiss() called
+    │  OverlayFeature .dismiss → AppFeature clears @Presents var overlay
     │  Check queue: is there a pending reminder?
     │      │
     │      └─ YES
     │             │
     │             ▼
     │         Wait 2 seconds (breathing room)
-    │         OverlayManager.show(type: .posture)
-    │         Second overlay appears
+    │         AppFeature.State.overlay = OverlayFeature.State(.posture)
+    │         RootView.fullScreenCover renders the queued overlay
     │
     └─ NO
            │
@@ -966,7 +969,7 @@ Snooze active: no new overlays, no new shields, no new notifications
 until snooze expires or user taps "Cancel snooze"
 ```
 
-> ⚠️ **Ordering matters (#267):** `clearQueue()` must execute before `dismiss()`. If `dismiss()` is called first, the underlying overlay-layer dismissal path will dequeue and present the next queued overlay before `clearQueue()` can remove it. That orphan overlay has no dismissal path because `screenTimeTracker` is already paused. See **#267** for the code-level fix (`cancelAllReminders()` ordering bug) and **#920** for the in-flight retirement of the queue-aware `OverlayManager` UIWindow path in favour of TCA-owned `state.overlay`. The canonical TCA-era call-site is `SchedulingFeature.pauseConditionChangedEffect` (`EyePostureReminder/TCA/Features/SchedulingFeature.swift:461-466`); see also the canonical post-#677 / #755 pipeline in **§8.2 Snooze Controls** below.
+> ⚠️ **Ordering matters (#267):** `clearQueue()` must execute before `dismiss()`. If `dismiss()` is called first, the underlying overlay-layer dismissal path will dequeue and present the next queued overlay before `clearQueue()` can remove it. That orphan overlay has no dismissal path because `screenTimeTracker` is already paused. See **#267** for the code-level fix (`cancelAllReminders()` ordering bug). Overlay presentation is now TCA-owned (`AppFeature.State.overlay` → `RootView.fullScreenCover`; the legacy `OverlayManager` UIWindow path was retired in **#920**). The canonical TCA-era call-site is `SchedulingFeature.pauseConditionChangedEffect` (`EyePostureReminder/TCA/Features/SchedulingFeature.swift:461-466`); see also the canonical post-#677 / #755 pipeline in **§8.2 Snooze Controls** below.
 
 #### Shield state when snooze is active
 
