@@ -34,7 +34,7 @@
 | **Frank** | Legal Advisor | Terms of Service, Privacy Policy, legal compliance, disclaimer content |
 | **Virgil** | CI/CD Developer | GitHub Actions pipeline, build optimization, binary caching, test infrastructure |
 | **Turk** | Data Analyst | Success metrics tracking, post-launch analytics, user behavior (deferred Phase 3+) |
-| **Ralph** | Code Formatter | SwiftLint enforcement, refactoring coordination |
+| **Ralph** | Work Monitor | GitLab backlog + CI/PR watch, drives the work loop |
 | **Scribe** | Orchestration | Decision logging, team sync documentation, handoff notes |
 
 ---
