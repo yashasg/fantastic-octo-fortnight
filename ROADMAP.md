@@ -1,6 +1,6 @@
 # kshana — iOS App Roadmap
 
-> **Status:** v0.2.0 (Restful Grove) shipped — Phase 1+2 complete; **PIVOT to True Interrupt Mode (Screen Time APIs)** — Phase 3 (Interrupt Mode MVP)  
+> **Status:** v0.2.0 (Restful Grove) tagged — Phase 1 complete; Phase 2 ~95% (M2.9 App Store Prep — assets + submission — outstanding); **PIVOT to True Interrupt Mode (Screen Time APIs)** — Phase 3 (Interrupt Mode MVP)  
 > **Core Value Proposition:** True Interrupt Mode via Apple Screen Time APIs (FamilyControls + DeviceActivity + ManagedSettings) to pause distracting apps during break reminders. Local notifications are backup-only, not core.  
 > **Target Platform:** iOS 16+ (17+ for full Screen Time API support)  
 > **Architecture:** TCA (ComposableArchitecture) + Screen Time APIs (DeviceActivity, ManagedSettings, ShieldConfiguration), app groups, extension communication  
@@ -10,11 +10,11 @@
 
 ## Executive Summary
 
-**kshana pivots to True Interrupt Mode.** Shipped **v0.2.0 (Restful Grove)** — Phase 1+2 complete with overlay reminders, smart pause, accessibility, yin-yang branding, 1,382 unit tests, 81%+ coverage. **Now pivoting to Phase 3 (Interrupt Mode MVP):** Core product value is Apple Screen Time APIs (FamilyControls authorization + DeviceActivity monitoring + ManagedSettings to shield distracting apps during breaks). Local notification reminders become backup-only, not the primary product promise. Phase 3 unblocks on entitlement approval (Case ID 102881605113). New phase includes: extension targets (ShieldConfiguration), device activity monitoring, app/category picker, managed settings + shield actions, app group shared state, pre-permission UX refinement, and legal/privacy updates for data controller terminology.
+**kshana pivots to True Interrupt Mode.** Tagged **v0.2.0 (Restful Grove)** with overlay reminders, smart pause, accessibility, yin-yang branding, 1,382 unit tests, 81%+ coverage — Phase 1 complete and Phase 2 ~95% (M2.9 App Store Prep — assets + submission — still outstanding pending product decision). **Now pivoting to Phase 3 (Interrupt Mode MVP):** Core product value is Apple Screen Time APIs (FamilyControls authorization + DeviceActivity monitoring + ManagedSettings to shield distracting apps during breaks). Local notification reminders become backup-only, not the primary product promise. Phase 3 unblocks on entitlement approval (Case ID 102881605113). New phase includes: extension targets (ShieldConfiguration), device activity monitoring, app/category picker, managed settings + shield actions, app group shared state, pre-permission UX refinement, and legal/privacy updates for data controller terminology.
 
 - **Phase 0: Foundation** ✅ – Project scaffolding, CI/CD, architecture, design system
 - **Phase 1: MVP** ✅ – Reminders, overlay, settings (shipped)
-- **Phase 2: Polish** ✅ – Onboarding, haptics, snooze, smart pause, accessibility, data-driven config, Restful Grove identity, yin-yang logo (shipped)
+- **Phase 2: Polish** 🔄 ~95% – Onboarding, haptics, snooze, smart pause, accessibility, data-driven config, Restful Grove identity, yin-yang logo (v0.2.0 tagged; M2.9 App Store Prep — assets + submission — outstanding)
 - **Phase 3: Interrupt Mode MVP** 🔄 – Screen Time APIs, app shielding, extension architecture, pre-permission UX, legal updates (in progress)
 
 ---
@@ -219,11 +219,11 @@
 
 ---
 
-## Phase 2: Polish ✅ COMPLETE
+## Phase 2: Polish 🔄 ~95%
 
 **Goal:** Elevate UX with onboarding, haptics, smart pause, accessibility, data-driven config, and App Store readiness.
 
-**Status:** Shipped. Screen-time triggers implemented (ScreenTimeTracker replacing wall-clock intervals). Smart pause complete (Focus Mode, CarPlay, driving detection). Onboarding, snooze, haptics, accessibility refined. Data-driven config via Asset Catalog (colors), String Catalog (copy), defaults.json (settings). App Store listing documented. v0.2.0 (Restful Grove) tagged and shipped.
+**Status:** ~95%. Screen-time triggers implemented (ScreenTimeTracker replacing wall-clock intervals). Smart pause complete (Focus Mode, CarPlay, driving detection). Onboarding, snooze, haptics, accessibility refined. Data-driven config via Asset Catalog (colors), String Catalog (copy), defaults.json (settings). App Store listing documented. v0.2.0 (Restful Grove) tagged. **M2.9 App Store Prep (metadata assets + TestFlight/App Store submission) still outstanding pending product decision** — see §M2.9 below.
 
 ### Milestones
 
@@ -665,10 +665,10 @@ Device resumes normal activity
 |---|---|---|---|
 | **Phase 0** | ✅ Complete | M0.1–M0.6 | 2 weeks; all foundation work shipped |
 | **Phase 1** | ✅ Complete | M1.1–M1.8 | 3 weeks; MVP with 65+ unit tests, notifications, overlay |
-| **Phase 2** | ✅ Complete | M2.1–M2.10 | 4 weeks; screen-time triggers, smart pause, onboarding, haptics, data-driven config, yin-yang logo animation, 7 quality passes, Restful Grove identity; v0.2.0 shipped |
+| **Phase 2** | 🔄 ~95% | M2.1–M2.10 | 4 weeks; screen-time triggers, smart pause, onboarding, haptics, data-driven config, yin-yang logo animation, 7 quality passes, Restful Grove identity; v0.2.0 tagged. M2.9 App Store Prep (assets + submission) outstanding |
 | **Phase 3** | 🔄 In Progress | M3.1–M3.11 | Planned 3+ weeks; blocked on Screen Time API entitlement approval #201; iCloud sync, widgets, watchOS deferred |
 
-**Current Project Status:** v0.2.0 (Restful Grove) tagged and shipped. Phase 2 complete. Phase 3 (Interrupt Mode MVP) in progress — unblocked on Screen Time API entitlement approval (Apple Case ID 102881605113, issue #201).
+**Current Project Status:** v0.2.0 (Restful Grove) tagged. Phase 2 ~95% — M2.9 App Store Prep (metadata assets + TestFlight/App Store submission) outstanding pending product decision. Phase 3 (Interrupt Mode MVP) in progress — blocked on Screen Time API entitlement approval (Apple Case ID 102881605113, issue #201).
 
 ---
 
@@ -693,11 +693,11 @@ Device resumes normal activity
 ### Before App Store Submission
 1. **Q:** Approve TestFlight submission?  
    **Owner:** Danny  
-   **Decision:** Pending — Phase 2 complete, ready to submit
+   **Decision:** Pending — Phase 2 ~95% (M2.9 App Store Prep assets + submission outstanding); approval here is what closes M2.9
 
 2. **Q:** Should Phase 4 (iCloud, widgets, watchOS) be in v1.0 or v1.1?  
    **Owner:** Danny  
-   **Recommendation:** Defer to v1.1 post-launch (Phase 2 scope sufficient for v1.0)
+   **Recommendation:** Defer to v1.1 post-launch (Phase 2 scope — once M2.9 lands — is sufficient for v1.0)
 
 3. **Q:** Confirm bundle ID and App Store Connect account  
    **Owner:** Danny + Yashasg  
@@ -723,11 +723,11 @@ Device resumes normal activity
 | Risk | Probability | Impact | Status | Mitigation |
 |---|---|---|---|---|
 | Dependency injection refactoring breaks tests | Medium | Medium | 🔄 Active | Livingston testing M3.1; existing tests guard against regressions |
-| App Store submission delay | Low | High | 🔄 Active | Phase 2 complete; awaiting decision to proceed |
+| App Store submission delay | Low | High | 🔄 Active | Phase 2 ~95% (M2.9 App Store Prep outstanding); awaiting product decision on assets + submission |
 | watchOS development expertise gap | Medium | Low | 🔄 Active | Defer to Phase 4; Linus to upskill early in M4.1 |
 | Widget battery impact exceeds targets | Low | Low | 🔄 Active | Measure early in Phase 4; adjust update frequency |
 | iCloud sync conflicts (edge cases) | Low | Medium | 🔄 Active | Last-write-wins strategy + logging in Phase 4 |
-| Phase 3 timeline slips | Medium | Low | 🔄 Active | Phase 1+2 complete; Phase 3 is optional post-launch |
+| Phase 3 timeline slips | Medium | Low | 🔄 Active | Phase 1 complete and Phase 2 ~95% (M2.9 outstanding); Phase 3 is optional post-launch |
 
 ---
 
@@ -822,8 +822,8 @@ Phase 3: Interrupt Mode MVP 🔄 In Progress
 - ✅ Team: 13 members (PM, Design, Architect, 2 iOS Devs, Tester, Code Reviewer, Legal, CI/CD, Data Analyst, Formatter, Scribe)
 
 **Ready for:**
-- 🔄 App Store submission (Phase 2 complete, docs ready, privacy policy published)
+- 🔄 App Store submission (Phase 2 ~95% — M2.9 metadata assets + submission outstanding; docs ready, privacy policy published)
 - 🔄 TestFlight beta distribution
 - 🔄 Phase 3 (Screen Time APIs + app shielding; entitlement approval #201 pending)
 
-**Next Decision:** Approve App Store submission or defer Phase 3 items to v1.0 release? (Recommend: v1.0 with Phase 1+2, Phase 3 as v1.1 post-launch)
+**Next Decision:** Approve App Store submission (which closes M2.9 / Phase 2) or defer Phase 3 items to v1.0 release? (Recommend: v1.0 with Phase 1 + Phase 2 once M2.9 lands, Phase 3 as v1.1 post-launch)
