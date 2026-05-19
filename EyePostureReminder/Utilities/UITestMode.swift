@@ -7,16 +7,21 @@ import Foundation
 /// (currently `AccessibleToggle`) only need this launch-argument check,
 /// so a free-standing helper is sufficient.
 ///
-/// `#if DEBUG` ensures the `CommandLine` inspection is compiled out of
+/// `#if DEBUG || CI` ensures the `CommandLine` inspection is compiled out of
 /// Release/TestFlight builds, preventing accidental onboarding-state resets
-/// in production (re: #350, #405).
+/// in production (re: #350, #405). The `CI` condition is injected by
+/// `scripts/build.sh cmd_test` so Release-config CI test runs can still
+/// exercise this helper (precedent: `AnalyticsLogger.testEventHandler`, see
+/// `.squad/decisions.md` 2026-05-17 — CI Clean-Build + Release-Config
+/// Speedup). TestFlight/App Store builds do not define `CI`, so the
+/// production guarantee is preserved.
 enum UITestMode {
 
     /// `true` when the app was launched by XCUITest with one of the
     /// onboarding-control launch arguments. Used to suppress background
     /// services and to swap SwiftUI controls for UIKit-backed equivalents
     /// that XCUITest can reliably tap.
-#if DEBUG
+#if DEBUG || CI
     static var isEnabled: Bool {
         resolve()
     }
