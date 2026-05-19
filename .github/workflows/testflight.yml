@@ -29,9 +29,9 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Marketing version to deploy (e.g. 0.1.0)"
+        description: "Marketing version to deploy (semver MAJOR.MINOR.PATCH; must match project.yml MARKETING_VERSION)"
         required: true
-        default: "0.1.0"
+        default: "0.2.0"
 
 permissions:
   contents: read
