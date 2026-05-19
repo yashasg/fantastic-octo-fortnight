@@ -8,30 +8,39 @@ import XCTest
 ///
 /// Complements the synchronous-only `OverlayFeatureTests` by exercising
 /// the reducer through its real `continuousClock` timer effect, the
-/// `OverlayClient.dismiss` side effect, and every analytics emission the
-/// previous `OverlayManager`/`OverlayManagerTests` pair guaranteed.
+/// `OverlayClient.broadcast(.dismissed)` side effect, and every
+/// analytics emission the previous `OverlayManager`/`OverlayManagerTests`
+/// pair guaranteed.
+///
+/// `#920` retired `OverlayClient.dismiss`; what was once
+/// "client.dismiss invocation count" is now "broadcast(`.dismissed`)
+/// invocation count" — `OverlayFeature` calls `broadcast` from its
+/// `.dismissed` effect so external observers (`AppFeature` settings
+/// handoff, `SchedulingFeature` session-timing / DeviceActivity) see the
+/// teardown.
 @MainActor
 final class OverlayFeatureBehaviorTests: XCTestCase {
 
     // MARK: - Helpers
 
-    /// Captured `AnalyticsEvent`s + `OverlayClient.dismiss` invocation count
-    /// for assertion. Lock-isolated so the `@Sendable` client closures may
-    /// mutate them safely from any executor.
+    /// Captured `AnalyticsEvent`s + `broadcast(.dismissed)` invocation
+    /// count for assertion. Lock-isolated so the `@Sendable` client
+    /// closures may mutate them safely from any executor.
     private struct Spies {
         let analytics: LockIsolated<[AnalyticsEvent]>
-        let dismissCalls: LockIsolated<Int>
+        let dismissBroadcasts: LockIsolated<Int>
     }
 
     private func makeSpies() -> Spies {
-        Spies(analytics: LockIsolated([]), dismissCalls: LockIsolated(0))
+        Spies(analytics: LockIsolated([]), dismissBroadcasts: LockIsolated(0))
     }
 
     /// Builds a `TestStore` for `OverlayFeature` with a `TestClock`,
-    /// analytics capture, and an `OverlayClient` whose `dismiss` increments
-    /// `spies.dismissCalls`. Every other Phase-1 client is stubbed silent so
-    /// child-reducer scopes inside `AppFeature` would not crash if these
-    /// dependencies were ever read.
+    /// analytics capture, and an `OverlayClient` whose `broadcast` filters
+    /// `.dismissed(_)` and increments `spies.dismissBroadcasts`. Every
+    /// other Phase-1 client is stubbed silent so child-reducer scopes
+    /// inside `AppFeature` would not crash if these dependencies were
+    /// ever read.
     private func makeStore(
         initialState: OverlayFeature.State,
         clock: TestClock<Duration>,
@@ -46,12 +55,15 @@ final class OverlayFeatureBehaviorTests: XCTestCase {
                 spies.analytics.withValue { $0.append(event) }
             })
             $0.overlayClient = OverlayClient(
-                show: { _, _, _, _ in },
-                dismiss: { spies.dismissCalls.withValue { $0 += 1 } },
-                clearQueue: {},
-                clearQueueForType: { _ in },
-                isVisible: { false },
-                lifecycleEvents: { .finished }
+                lifecycleEvents: { .finished },
+                broadcast: { event in
+                    if case .dismissed = event {
+                        spies.dismissBroadcasts.withValue { $0 += 1 }
+                    }
+                },
+                pauseExternalAudio: {},
+                resumeExternalAudio: {},
+                postScreenChanged: {}
             )
         }
     }
@@ -80,9 +92,10 @@ final class OverlayFeatureBehaviorTests: XCTestCase {
         await store.receive(\.timerExpired) { $0.isDismissing = true }
         await store.send(.dismissAnimationCompleted) { $0.isFinalized = true }
         await store.receive(\.dismissed)
+        await store.finish()
 
-        XCTAssertEqual(spies.dismissCalls.value, 1,
-                       "overlayClient.dismiss must fire exactly once on auto-expiry")
+        XCTAssertEqual(spies.dismissBroadcasts.value, 1,
+                       "broadcast(.dismissed) must fire exactly once on auto-expiry")
     }
 
     // MARK: - .dismissTapped: cancels timer + side effects
@@ -108,6 +121,7 @@ final class OverlayFeatureBehaviorTests: XCTestCase {
         // Advance well past the original duration: tick effect must be
         // cancelled, so no further `timerTick` actions arrive.
         await clock.advance(by: .seconds(30))
+        await store.finish()
     }
 
     func test_dismissTapped_callsOverlayClientDismissExactlyOnce() async {
@@ -120,16 +134,17 @@ final class OverlayFeatureBehaviorTests: XCTestCase {
         )
 
         await store.send(.dismissTapped) { $0.isDismissing = true }
-        // Two-phase dismiss (#738): `overlayClient.dismiss` must NOT have
+        // Two-phase dismiss (#738): `broadcast(.dismissed)` must NOT have
         // fired yet — only the animation-completion phase owns that side
         // effect.
-        XCTAssertEqual(spies.dismissCalls.value, 0,
-                       "overlayClient.dismiss must not fire on dismissTapped alone (two-phase dismiss)")
+        XCTAssertEqual(spies.dismissBroadcasts.value, 0,
+                       "broadcast(.dismissed) must not fire on dismissTapped alone (two-phase dismiss)")
         await store.send(.dismissAnimationCompleted) { $0.isFinalized = true }
         await store.receive(\.dismissed)
+        await store.finish()
 
-        XCTAssertEqual(spies.dismissCalls.value, 1,
-                       "overlayClient.dismiss must fire exactly once per user tap")
+        XCTAssertEqual(spies.dismissBroadcasts.value, 1,
+                       "broadcast(.dismissed) must fire exactly once per user tap")
     }
 
     func test_dismissTapped_immediately_logsOverlayDismissedWithButtonAndZeroElapsed() async {
@@ -144,6 +159,7 @@ final class OverlayFeatureBehaviorTests: XCTestCase {
         await store.send(.dismissTapped) { $0.isDismissing = true }
         await store.send(.dismissAnimationCompleted) { $0.isFinalized = true }
         await store.receive(\.dismissed)
+        await store.finish()
 
         let events = spies.analytics.value
         XCTAssertEqual(events.count, 1,
@@ -177,6 +193,7 @@ final class OverlayFeatureBehaviorTests: XCTestCase {
         await store.send(.dismissTapped) { $0.isDismissing = true }
         await store.send(.dismissAnimationCompleted) { $0.isFinalized = true }
         await store.receive(\.dismissed)
+        await store.finish()
 
         let events = spies.analytics.value
         guard let event = events.first,
@@ -197,20 +214,21 @@ final class OverlayFeatureBehaviorTests: XCTestCase {
         let store = makeStore(initialState: initial, clock: clock, spies: spies)
 
         await store.send(.dismissTapped)
+        await store.finish()
 
         XCTAssertEqual(spies.analytics.value.count, 0,
                        "Re-entrant dismissTapped must not double-log analytics")
-        XCTAssertEqual(spies.dismissCalls.value, 0,
-                       "Re-entrant dismissTapped must not call overlay.dismiss again")
+        XCTAssertEqual(spies.dismissBroadcasts.value, 0,
+                       "Re-entrant dismissTapped must not broadcast .dismissed again")
     }
 
     // MARK: - Two-phase dismiss ordering (#738)
 
-    /// Asserts the strict happens-before ordering required by #702 Phase 2:
-    /// **analytics → animation-pending → animation-completed → overlay
-    /// client dismiss → dismissed.** The `overlayClient.dismiss` call is
-    /// gated entirely on `.dismissAnimationCompleted` arriving — it never
-    /// fires off `.dismissTapped` alone.
+    /// Asserts the strict happens-before ordering required by #738:
+    /// **analytics → animation-pending → animation-completed → broadcast
+    /// dismissed → dismissed.** The `broadcast(.dismissed)` call is gated
+    /// entirely on `.dismissAnimationCompleted` arriving — it never fires
+    /// off `.dismissTapped` alone.
     func test_twoPhaseDismiss_dismissTapped_ordering() async {
         let clock = TestClock()
         let spies = makeSpies()
@@ -220,23 +238,24 @@ final class OverlayFeatureBehaviorTests: XCTestCase {
             spies: spies
         )
 
-        // Phase 1: tap → analytics + isDismissing flip; no dismiss yet.
+        // Phase 1: tap → analytics + isDismissing flip; no broadcast yet.
         await store.send(.dismissTapped) { $0.isDismissing = true }
         XCTAssertEqual(spies.analytics.value.count, 1,
                        "Analytics emits on dismissTapped, not on completion")
-        XCTAssertEqual(spies.dismissCalls.value, 0,
-                       "overlayClient.dismiss must wait for animation completion")
+        XCTAssertEqual(spies.dismissBroadcasts.value, 0,
+                       "broadcast(.dismissed) must wait for animation completion")
 
-        // Phase 2: animation completes → overlayClient.dismiss + dismissed.
+        // Phase 2: animation completes → broadcast(.dismissed) + dismissed.
         await store.send(.dismissAnimationCompleted) { $0.isFinalized = true }
         await store.receive(\.dismissed)
-        XCTAssertEqual(spies.dismissCalls.value, 1,
-                       "overlayClient.dismiss must fire exactly once after completion")
+        await store.finish()
+        XCTAssertEqual(spies.dismissBroadcasts.value, 1,
+                       "broadcast(.dismissed) must fire exactly once after completion")
     }
 
     /// Same ordering contract applied to the auto-dismiss path so the view
     /// can play `AppAnimation.overlayAutoDismiss` before the underlying
-    /// `UIWindow` is torn down.
+    /// `fullScreenCover` slot is torn down.
     func test_twoPhaseDismiss_timerExpired_ordering() async {
         let clock = TestClock()
         let spies = makeSpies()
@@ -249,18 +268,19 @@ final class OverlayFeatureBehaviorTests: XCTestCase {
         await store.send(.timerExpired) { $0.isDismissing = true }
         XCTAssertEqual(spies.analytics.value.count, 1,
                        "Analytics emits on timerExpired, not on completion")
-        XCTAssertEqual(spies.dismissCalls.value, 0,
-                       "overlayClient.dismiss must wait for animation completion")
+        XCTAssertEqual(spies.dismissBroadcasts.value, 0,
+                       "broadcast(.dismissed) must wait for animation completion")
 
         await store.send(.dismissAnimationCompleted) { $0.isFinalized = true }
         await store.receive(\.dismissed)
-        XCTAssertEqual(spies.dismissCalls.value, 1,
-                       "overlayClient.dismiss must fire exactly once after completion")
+        await store.finish()
+        XCTAssertEqual(spies.dismissBroadcasts.value, 1,
+                       "broadcast(.dismissed) must fire exactly once after completion")
     }
 
     /// Defence-in-depth: a re-entrant `.dismissAnimationCompleted` (e.g.
     /// SwiftUI animation interrupt firing the completion callback twice)
-    /// must not call `overlayClient.dismiss` a second time.
+    /// must not call `broadcast(.dismissed)` a second time.
     func test_dismissAnimationCompleted_reentrant_doesNotCallOverlayDismissTwice() async {
         let clock = TestClock()
         let spies = makeSpies()
@@ -273,11 +293,11 @@ final class OverlayFeatureBehaviorTests: XCTestCase {
         await store.send(.dismissTapped) { $0.isDismissing = true }
         await store.send(.dismissAnimationCompleted) { $0.isFinalized = true }
         await store.receive(\.dismissed)
-        XCTAssertEqual(spies.dismissCalls.value, 1)
-
         await store.send(.dismissAnimationCompleted)
-        XCTAssertEqual(spies.dismissCalls.value, 1,
-                       "Re-entrant .dismissAnimationCompleted must not fire overlay.dismiss again")
+        await store.finish()
+
+        XCTAssertEqual(spies.dismissBroadcasts.value, 1,
+                       "Re-entrant .dismissAnimationCompleted must not broadcast .dismissed again")
     }
 
     // MARK: - .settingsTapped: analytics-only side effect
@@ -292,6 +312,7 @@ final class OverlayFeatureBehaviorTests: XCTestCase {
         )
 
         await store.send(.settingsTapped)
+        await store.finish()
 
         let events = spies.analytics.value
         XCTAssertEqual(events.count, 1)
@@ -304,7 +325,7 @@ final class OverlayFeatureBehaviorTests: XCTestCase {
                        "Settings-tap dismissal must use DismissMethod.settingsTap")
         XCTAssertEqual(elapsedS, 0, accuracy: 0.001)
 
-        XCTAssertEqual(spies.dismissCalls.value, 0,
+        XCTAssertEqual(spies.dismissBroadcasts.value, 0,
                        "settingsTapped does not itself dismiss the overlay")
     }
 
@@ -326,6 +347,7 @@ final class OverlayFeatureBehaviorTests: XCTestCase {
         await store.send(.settingsTapped)
         // Cancel the still-running tick effect to let the test finish cleanly.
         await store.send(.dismissed)
+        await store.finish()
 
         let dismissEvents = spies.analytics.value.compactMap { event -> TimeInterval? in
             if case let .overlayDismissed(_, method, elapsed) = event,
@@ -339,7 +361,7 @@ final class OverlayFeatureBehaviorTests: XCTestCase {
                        "settingsTapped must report elapsed = duration − secondsRemaining")
     }
 
-    // MARK: - .timerExpired: auto-dismissal analytics + overlay.dismiss
+    // MARK: - .timerExpired: auto-dismissal analytics + broadcast(.dismissed)
 
     func test_timerExpired_logsOverlayAutoDismissedWithFullDuration() async {
         let clock = TestClock()
@@ -353,6 +375,7 @@ final class OverlayFeatureBehaviorTests: XCTestCase {
         await store.send(.timerExpired) { $0.isDismissing = true }
         await store.send(.dismissAnimationCompleted) { $0.isFinalized = true }
         await store.receive(\.dismissed)
+        await store.finish()
 
         let events = spies.analytics.value
         XCTAssertEqual(events.count, 1)
@@ -377,12 +400,13 @@ final class OverlayFeatureBehaviorTests: XCTestCase {
         await store.send(.timerExpired) { $0.isDismissing = true }
         // Two-phase dismiss (#738): the side-effect doesn't fire until the
         // view (or this test) sends `.dismissAnimationCompleted`.
-        XCTAssertEqual(spies.dismissCalls.value, 0,
-                       "overlayClient.dismiss must not fire on timerExpired alone (two-phase dismiss)")
+        XCTAssertEqual(spies.dismissBroadcasts.value, 0,
+                       "broadcast(.dismissed) must not fire on timerExpired alone (two-phase dismiss)")
         await store.send(.dismissAnimationCompleted) { $0.isFinalized = true }
         await store.receive(\.dismissed)
+        await store.finish()
 
-        XCTAssertEqual(spies.dismissCalls.value, 1)
+        XCTAssertEqual(spies.dismissBroadcasts.value, 1)
     }
 
     func test_timerExpired_whileAlreadyDismissing_emitsNoAnalyticsAndNoOverlayCall() async {
@@ -393,10 +417,11 @@ final class OverlayFeatureBehaviorTests: XCTestCase {
         let store = makeStore(initialState: initial, clock: clock, spies: spies)
 
         await store.send(.timerExpired)
+        await store.finish()
 
         XCTAssertEqual(spies.analytics.value.count, 0,
                        "Re-entrant timerExpired must not double-log auto-dismissal")
-        XCTAssertEqual(spies.dismissCalls.value, 0,
-                       "Re-entrant timerExpired must not call overlay.dismiss again")
+        XCTAssertEqual(spies.dismissBroadcasts.value, 0,
+                       "Re-entrant timerExpired must not broadcast .dismissed again")
     }
 }

@@ -16,14 +16,14 @@ final class SchedulingNotificationRoutingTests: XCTestCase {
 
     /// `.notificationRouted(.reminder(.eyes))` fires the notification-fallback
     /// pipeline: clears the snooze counter, records an IPC fallback event,
-    /// emits `.reminderTriggered(.notificationFallback)`, presents the
-    /// overlay, and resets the in-app tracker so it doesn't double-fire.
-    /// Eyes branch of `.notificationRouted` (#755 Phase E).
+    /// emits `.reminderTriggered(.notificationFallback)`, requests the
+    /// overlay via `.delegate(.presentOverlay)` (`#920` delegate handoff to
+    /// `AppFeature`), and resets the in-app tracker so it doesn't
+    /// double-fire. Eyes branch of `.notificationRouted` (#755 Phase E).
     func test_notificationRouted_reminderEyes_runsFallbackPipeline() async {
         let setSnoozeCounts = LockIsolated<[Int]>([])
         let recordedEvents = LockIsolated<[AppGroupIPCEvent]>([])
         let loggedEvents = LockIsolated<[String]>([])
-        let shownOverlays = LockIsolated<[(ReminderType, TimeInterval)]>([])
         let resetTypes = LockIsolated<[ReminderType]>([])
 
         var initial = SchedulingFeature.State()
@@ -49,16 +49,6 @@ final class SchedulingNotificationRoutingTests: XCTestCase {
                 recentEvents: { [] },
                 fallbackRoute: { _ in nil }
             )
-            $0.overlayClient = OverlayClient(
-                show: { type, duration, _, _ in
-                    shownOverlays.withValue { $0.append((type, duration)) }
-                },
-                dismiss: {},
-                clearQueue: {},
-                clearQueueForType: { _ in },
-                isVisible: { false },
-                lifecycleEvents: { .finished }
-            )
             $0.screenTimeTrackerClient = ScreenTimeTrackerClient(
                 setThreshold: { _, _ in },
                 enableTracking: { _ in },
@@ -74,6 +64,7 @@ final class SchedulingNotificationRoutingTests: XCTestCase {
         }
 
         await store.send(.notificationRouted(.reminder(.eyes)))
+        await store.receive(\.delegate.presentOverlay)
         await store.finish()
 
         XCTAssertEqual(setSnoozeCounts.value, [0],
@@ -84,9 +75,6 @@ final class SchedulingNotificationRoutingTests: XCTestCase {
                        "Reminder notification must record a fallback-delivered IPC event")
         XCTAssertEqual(recordedEvents.value.first?.reasonRaw,
                        ReminderType.eyes.shieldReason.rawValue)
-        XCTAssertEqual(shownOverlays.value.count, 1)
-        XCTAssertEqual(shownOverlays.value.first?.0, .eyes)
-        XCTAssertEqual(shownOverlays.value.first?.1, 20)
         XCTAssertEqual(resetTypes.value, [.eyes],
                        "Reminder notification must reset the in-app tracker for that type")
         XCTAssertTrue(loggedEvents.value.contains(where: {
@@ -102,7 +90,6 @@ final class SchedulingNotificationRoutingTests: XCTestCase {
     func test_notificationRouted_reminderDuringActiveSnooze_isNoOp() async {
         let now = Date(timeIntervalSince1970: 1_700_000_000)
         let recordedEvents = LockIsolated<[AppGroupIPCEvent]>([])
-        let shownOverlays = LockIsolated<[ReminderType]>([])
 
         var initial = SchedulingFeature.State()
         initial.snoozedUntil = now.addingTimeInterval(60 * 60)
@@ -124,14 +111,6 @@ final class SchedulingNotificationRoutingTests: XCTestCase {
                 recentEvents: { [] },
                 fallbackRoute: { _ in nil }
             )
-            $0.overlayClient = OverlayClient(
-                show: { type, _, _, _ in shownOverlays.withValue { $0.append(type) } },
-                dismiss: {},
-                clearQueue: {},
-                clearQueueForType: { _ in },
-                isVisible: { false },
-                lifecycleEvents: { .finished }
-            )
         }
 
         await store.send(.notificationRouted(.reminder(.posture)))
@@ -139,8 +118,8 @@ final class SchedulingNotificationRoutingTests: XCTestCase {
 
         XCTAssertTrue(recordedEvents.value.isEmpty,
                       "Snoozed notification path must not record IPC events")
-        XCTAssertTrue(shownOverlays.value.isEmpty,
-                      "Snoozed notification path must not show overlay")
+        // No `.delegate(.presentOverlay)` action is expected — TestStore
+        // exhaustivity would surface any extra emission as a failure.
     }
 
     // MARK: - .notificationRouted(.snoozeWake)
@@ -188,7 +167,6 @@ final class SchedulingNotificationRoutingTests: XCTestCase {
     /// must short-circuit via the 300 ms disable-debounce guard
     /// (#755 Phase E).
     func test_thresholdReached_intervalZero_isNoOp() async {
-        let shownOverlays = LockIsolated<[ReminderType]>([])
         let loggedEvents = LockIsolated<[String]>([])
 
         var initial = SchedulingFeature.State()
@@ -198,14 +176,6 @@ final class SchedulingNotificationRoutingTests: XCTestCase {
             SchedulingFeature()
         } withDependencies: {
             TCATestDependencies.applyAllSilentClients(&$0)
-            $0.overlayClient = OverlayClient(
-                show: { type, _, _, _ in shownOverlays.withValue { $0.append(type) } },
-                dismiss: {},
-                clearQueue: {},
-                clearQueueForType: { _ in },
-                isVisible: { false },
-                lifecycleEvents: { .finished }
-            )
             $0.analyticsClient = AnalyticsClient(log: { event in
                 loggedEvents.withValue { $0.append(String(describing: event)) }
             })
@@ -214,7 +184,8 @@ final class SchedulingNotificationRoutingTests: XCTestCase {
         await store.send(.thresholdReached(.eyes))
         await store.finish()
 
-        XCTAssertTrue(shownOverlays.value.isEmpty)
+        // No `.delegate(.presentOverlay)` emission expected — TestStore
+        // exhaustivity guarantees an unexpected emission would fail.
         XCTAssertTrue(loggedEvents.value.isEmpty)
     }
 
@@ -225,7 +196,6 @@ final class SchedulingNotificationRoutingTests: XCTestCase {
     /// counter, and reschedule the next reminder for that type.
     func test_thresholdReached_enabledAuthorized_showsOverlayAndReschedules() async {
         let setSnoozeCounts = LockIsolated<[Int]>([])
-        let shownOverlays = LockIsolated<[(ReminderType, TimeInterval)]>([])
         let loggedEvents = LockIsolated<[String]>([])
         let rescheduledTypes = LockIsolated<[ReminderType]>([])
 
@@ -242,16 +212,6 @@ final class SchedulingNotificationRoutingTests: XCTestCase {
                 setSnoozeCounts.withValue { $0.append(value) }
             }
             $0.settingsClient = settings
-            $0.overlayClient = OverlayClient(
-                show: { type, duration, _, _ in
-                    shownOverlays.withValue { $0.append((type, duration)) }
-                },
-                dismiss: {},
-                clearQueue: {},
-                clearQueueForType: { _ in },
-                isVisible: { false },
-                lifecycleEvents: { .finished }
-            )
             $0.reminderSchedulerClient = ReminderSchedulerClient(
                 scheduleReminders: { _, _ in },
                 rescheduleReminder: { type, _ in
@@ -266,12 +226,10 @@ final class SchedulingNotificationRoutingTests: XCTestCase {
         }
 
         await store.send(.thresholdReached(.eyes))
+        await store.receive(\.delegate.presentOverlay)
         await store.finish()
 
         XCTAssertEqual(setSnoozeCounts.value, [0])
-        XCTAssertEqual(shownOverlays.value.count, 1)
-        XCTAssertEqual(shownOverlays.value.first?.0, .eyes)
-        XCTAssertEqual(shownOverlays.value.first?.1, 20)
         XCTAssertEqual(rescheduledTypes.value, [.eyes])
         XCTAssertTrue(loggedEvents.value.contains(where: {
             $0.contains("reminderTriggered") && $0.contains("screenTimeThreshold")
@@ -285,14 +243,14 @@ final class SchedulingNotificationRoutingTests: XCTestCase {
     /// the reducer must not call `scheduler.rescheduleReminder` because
     /// there is no notification queue to reschedule into.
     func test_thresholdReached_enabledUnauthorized_showsOverlayButSkipsReschedule() async {
-        let shownOverlays = LockIsolated<[ReminderType]>([])
         let rescheduledTypes = LockIsolated<[ReminderType]>([])
 
         var initial = SchedulingFeature.State()
         // The test sends `.thresholdReached(.posture)`, so seed the
         // posture-side snapshot (#897) — the reducer reads
         // `state.settings(for: .posture)` for the interval guard and
-        // `overlayClient.show` payload.
+        // the `OverlayPresentationRequest` it emits via
+        // `.delegate(.presentOverlay)`.
         initial.postureSettings = ReminderSettings(interval: 1200, breakDuration: 20)
         initial.notificationAuthStatus = .denied
 
@@ -300,14 +258,6 @@ final class SchedulingNotificationRoutingTests: XCTestCase {
             SchedulingFeature()
         } withDependencies: {
             TCATestDependencies.applyAllSilentClients(&$0)
-            $0.overlayClient = OverlayClient(
-                show: { type, _, _, _ in shownOverlays.withValue { $0.append(type) } },
-                dismiss: {},
-                clearQueue: {},
-                clearQueueForType: { _ in },
-                isVisible: { false },
-                lifecycleEvents: { .finished }
-            )
             $0.reminderSchedulerClient = ReminderSchedulerClient(
                 scheduleReminders: { _, _ in },
                 rescheduleReminder: { type, _ in
@@ -319,9 +269,9 @@ final class SchedulingNotificationRoutingTests: XCTestCase {
         }
 
         await store.send(.thresholdReached(.posture))
+        await store.receive(\.delegate.presentOverlay)
         await store.finish()
 
-        XCTAssertEqual(shownOverlays.value, [.posture])
         XCTAssertTrue(rescheduledTypes.value.isEmpty,
                       "Denied auth must skip scheduler.rescheduleReminder")
     }

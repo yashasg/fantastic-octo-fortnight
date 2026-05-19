@@ -34,12 +34,11 @@ final class OverlayLifecycleSubscriptionTests: XCTestCase {
         } withDependencies: {
             TCATestDependencies.applyAllSilentClients(&$0)
             $0.overlayClient = OverlayClient(
-                show: { _, _, _, _ in },
-                dismiss: {},
-                clearQueue: {},
-                clearQueueForType: { _ in },
-                isVisible: { false },
-                lifecycleEvents: { stream }
+                lifecycleEvents: { stream },
+                broadcast: { _ in },
+                pauseExternalAudio: {},
+                resumeExternalAudio: {},
+                postScreenChanged: {}
             )
         }
         store.exhaustivity = .off
@@ -72,12 +71,11 @@ final class OverlayLifecycleSubscriptionTests: XCTestCase {
         } withDependencies: {
             TCATestDependencies.applyAllSilentClients(&$0)
             $0.overlayClient = OverlayClient(
-                show: { _, _, _, _ in },
-                dismiss: {},
-                clearQueue: {},
-                clearQueueForType: { _ in },
-                isVisible: { false },
-                lifecycleEvents: { stream }
+                lifecycleEvents: { stream },
+                broadcast: { _ in },
+                pauseExternalAudio: {},
+                resumeExternalAudio: {},
+                postScreenChanged: {}
             )
         }
         store.exhaustivity = .off

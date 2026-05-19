@@ -11,7 +11,8 @@
 // Bug 5: Data-driven defaults (AppConfig replaces hardcoded ReminderSettings statics)
 // Bug #119: PauseConditionManager cold-start focus seed — isFocused=true at startMonitoring() must pause immediately
 // Bug #118: ScreenTimeTracker double-resign — second willResignActive must cancel first reset Task (one reset, not two)
-// Bug #117: OverlayManager queue-on-no-scene — showOverlay with no UIWindowScene must queue, not drop
+// Bug #117: OverlayManager queue-on-no-scene — retired by `#920` (UIWindow path
+// removed; TCA-side queue now lives on `AppFeature.State.overlayQueue`)
 
 import ComposableArchitecture
 import SwiftUI
@@ -902,92 +903,9 @@ final class ScreenTimeDoubleResignTests: XCTestCase {
     }
 }
 
-// MARK: ─── Bug #117: OverlayManager Queue-on-No-Scene ────────────────────────
-
-/// Regression tests for Bug #117: `OverlayManager.showOverlay()` must queue the
-/// request when no active `UIWindowScene` is found, not silently drop it.
-///
-/// **Root cause:** Before the fix, the no-scene guard path returned without
-/// appending to `overlayQueue`, discarding the overlay request entirely.
-///
-/// **Fix:** The `else` branch of the window-scene guard now appends to
-/// `overlayQueue` so the request is presented once a scene becomes foreground-active.
-///
-/// **Testability note:**
-/// The private `overlayQueue` cannot be inspected directly. Full end-to-end FIFO
-/// verification (queue fills → scene activates → presentNextQueuedOverlay dequeues)
-/// requires a live `UIWindowScene` and is covered by the simulator integration suite.
-/// The unit tests below verify:
-///   1. `showOverlay` does not crash when no scene is active (headless test runner).
-///   2. The `onDismiss` callback is NOT called synchronously (it would be called
-///      immediately only if the overlay were "silently completed" instead of queued).
-///   3. `isOverlayVisible` remains `false` (no scene → no window created).
-///   4. `clearQueue()` drains the queue without crash (proves a queue exists to drain).
-///
-/// Reducer-level notification-routing coverage lives in
-/// `SchedulingNotificationRoutingTests.test_notificationRouted_reminderEyes_runsFallbackPipeline`;
-/// this class stays focused on the no-scene queueing contract inside `OverlayManager`.
-@MainActor
-final class OverlayQueueNoSceneTests: XCTestCase {
-
-    /// Core regression: `showOverlay` must not crash when there is no active
-    /// UIWindowScene (the headless test runner has none). Before the fix the path
-    /// fell through with a silent drop; the fix adds the queue-append so the call
-    /// succeeds without a scene.
-    func test_showOverlay_withNoActiveWindowScene_doesNotCrash() {
-        let manager = OverlayManager()
-        manager.showOverlay(for: .eyes, duration: 20, hapticsEnabled: false, pauseMediaEnabled: false) {}
-        manager.clearQueue()
-    }
-
-    /// The `onDismiss` callback must NOT fire synchronously for a queued request.
-    /// A silent-drop implementation might invoke the callback immediately to "complete"
-    /// the request; queueing holds the callback until the overlay is actually shown
-    /// and dismissed.
-    func test_showOverlay_withNoActiveWindowScene_doesNotFireDismissCallbackImmediately() {
-        let manager = OverlayManager()
-        var dismissFired = false
-
-        manager.showOverlay(for: .eyes, duration: 20, hapticsEnabled: false, pauseMediaEnabled: false) {
-            dismissFired = true
-        }
-
-        XCTAssertFalse(
-            dismissFired,
-            "#117 regression: onDismiss must not fire synchronously for a queued request. "
-            + "A silent drop that calls onDismiss() immediately would cause the scheduling flow to "
-            + "reschedule the reminder without ever having shown the overlay.")
-
-        manager.clearQueue()
-    }
-
-    /// No overlay window can be created without a scene — `isOverlayVisible` must
-    /// stay `false` after a `showOverlay` call in a headless test environment.
-    func test_showOverlay_withNoActiveWindowScene_isOverlayVisibleRemainsFalse() {
-        let manager = OverlayManager()
-
-        manager.showOverlay(for: .posture, duration: 15, hapticsEnabled: true, pauseMediaEnabled: false) {}
-
-        XCTAssertFalse(
-            manager.isOverlayVisible,
-            "#117 regression: isOverlayVisible must stay false when showOverlay is called with no active scene")
-
-        manager.clearQueue()
-    }
-
-    /// Multiple `showOverlay` calls with no active scene must all be queued without
-    /// crashing. `clearQueue()` must succeed (proving the queue was populated).
-    func test_showOverlay_multipleCallsWithNoScene_allQueueWithoutCrash() {
-        let manager = OverlayManager()
-
-        manager.showOverlay(for: .eyes, duration: 20, hapticsEnabled: false, pauseMediaEnabled: false) {}
-        manager.showOverlay(for: .posture, duration: 10, hapticsEnabled: false, pauseMediaEnabled: false) {}
-        manager.showOverlay(for: .eyes, duration: 30, hapticsEnabled: true, pauseMediaEnabled: false) {}
-
-        // clearQueue must not crash — it drains whatever was queued.
-        manager.clearQueue()
-
-        // After clearing, isOverlayVisible must still be false.
-        XCTAssertFalse(manager.isOverlayVisible)
-    }
-}
+// Bug #117 (`OverlayManager.showOverlay` queue-on-no-scene) was retired by
+// `#920` along with the `OverlayManager` UIWindow path. The TCA reducer now
+// owns overlay queueing via `AppFeature.State.overlayQueue` (`#289` FIFO
+// preservation tested under `AppFeatureTests.overlayQueue_*`); the no-scene
+// branch is moot once `RootView.fullScreenCover` is the only presentation
+// surface.

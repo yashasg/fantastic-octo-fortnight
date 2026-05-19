@@ -76,12 +76,11 @@ enum TCATestDependencies {
 
     static func silentOverlayClient() -> OverlayClient {
         OverlayClient(
-            show: { _, _, _, _ in },
-            dismiss: {},
-            clearQueue: {},
-            clearQueueForType: { _ in },
-            isVisible: { false },
-            lifecycleEvents: { .finished }
+            lifecycleEvents: { .finished },
+            broadcast: { _ in },
+            pauseExternalAudio: {},
+            resumeExternalAudio: {},
+            postScreenChanged: {}
         )
     }
 

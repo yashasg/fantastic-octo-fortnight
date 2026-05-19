@@ -1,3 +1,4 @@
+import ComposableArchitecture
 import SwiftUI
 import UIKit
 import XCTest
@@ -27,41 +28,61 @@ final class ViewBodyCoverageTests: XCTestCase {
         XCTAssertNotNil(hc.view, file: file, line: line)
     }
 
+    /// Builds an `OverlayView` through the canonical `init(store:)` form
+    /// introduced by `#919` and made the only init by `#920`. Uses silent
+    /// TCA clients so SwiftUI body evaluation produces no I/O.
+    private func makeOverlayView(
+        type: ReminderType,
+        duration: TimeInterval,
+        hapticsEnabled: Bool = true
+    ) -> OverlayView {
+        let store = Store(
+            initialState: OverlayFeature.State(
+                type: type,
+                duration: duration,
+                hapticsEnabled: hapticsEnabled
+            )
+        ) {
+            OverlayFeature()
+        } withDependencies: {
+            TCATestDependencies.applyAllSilentClients(&$0)
+        }
+        return OverlayView(store: store)
+    }
+
     // MARK: - OverlayView (all permutations)
 
     func test_overlayView_eyes_fullDuration() {
-        render(OverlayView(type: .eyes, duration: 20, hapticsEnabled: true, onDismiss: {}))
+        render(makeOverlayView(type: .eyes, duration: 20, hapticsEnabled: true))
     }
 
     func test_overlayView_posture_fullDuration() {
-        render(OverlayView(type: .posture, duration: 10, hapticsEnabled: true, onDismiss: {}))
+        render(makeOverlayView(type: .posture, duration: 10, hapticsEnabled: true))
     }
 
     func test_overlayView_hapticsDisabled() {
-        render(OverlayView(type: .eyes, duration: 5, hapticsEnabled: false, onDismiss: {}))
+        render(makeOverlayView(type: .eyes, duration: 5, hapticsEnabled: false))
     }
 
     func test_overlayView_zeroDuration() {
-        render(OverlayView(type: .eyes, duration: 0, hapticsEnabled: false, onDismiss: {}))
+        render(makeOverlayView(type: .eyes, duration: 0, hapticsEnabled: false))
     }
 
     func test_overlayView_withAllCallbacks() {
-        render(OverlayView(
-            type: .posture,
-            duration: 15,
-            hapticsEnabled: true,
-            onAnalyticsEvent: { _ in },
-            onSettingsTap: {},
-            onDismiss: {}
-        ))
+        // `#920` removed the closure-init's onAnalyticsEvent/onSettingsTap
+        // hooks — analytics and the settings-tap broadcast now flow
+        // through the reducer's `.settingsTapped` effect. Coverage of the
+        // posture / haptics-on permutation is preserved by rendering the
+        // store-driven view.
+        render(makeOverlayView(type: .posture, duration: 15, hapticsEnabled: true))
     }
 
     func test_overlayView_eyes_shortDuration() {
-        render(OverlayView(type: .eyes, duration: 1, hapticsEnabled: true, onDismiss: {}))
+        render(makeOverlayView(type: .eyes, duration: 1, hapticsEnabled: true))
     }
 
     func test_overlayView_posture_longDuration() {
-        render(OverlayView(type: .posture, duration: 60, hapticsEnabled: false, onDismiss: {}))
+        render(makeOverlayView(type: .posture, duration: 60, hapticsEnabled: false))
     }
 
     // MARK: - LegalDocumentView
@@ -431,28 +452,19 @@ final class ViewBodyCoverageTests: XCTestCase {
 #endif
 
     func test_overlayView_eyes_bodyEvaluation() {
-        let view = OverlayView(
-            type: .eyes, duration: 20, hapticsEnabled: true, reduceMotionOverride: false,
-            onDismiss: {}
-        )
+        let view = makeOverlayView(type: .eyes, duration: 20, hapticsEnabled: true)
         let described = String(describing: view.body)
         XCTAssertFalse(described.isEmpty)
     }
 
     func test_overlayView_posture_bodyEvaluation() {
-        let view = OverlayView(
-            type: .posture, duration: 10, hapticsEnabled: false, reduceMotionOverride: false,
-            onDismiss: {}
-        )
+        let view = makeOverlayView(type: .posture, duration: 10, hapticsEnabled: false)
         let described = String(describing: view.body)
         XCTAssertFalse(described.isEmpty)
     }
 
     func test_overlayView_allSubviews_bodyEvaluation() {
-        let view = OverlayView(
-            type: .eyes, duration: 20, hapticsEnabled: true,
-            reduceMotionOverride: false,
-            onAnalyticsEvent: { _ in }, onSettingsTap: {}, onDismiss: {})
+        let view = makeOverlayView(type: .eyes, duration: 20, hapticsEnabled: true)
         // Force deep evaluation of body
         _ = view.body
         let described = String(describing: view.body)

@@ -42,7 +42,6 @@ final class AppDelegateTests: XCTestCase {
     var delegate: AppDelegate!
     var settings: SettingsStore!
     var mockNotif: MockNotificationCenter!
-    var mockOverlay: MockOverlayPresenting!
     var store: StoreOf<AppFeature>!
     var snoozeCountWrites: LockIsolated<[Int]>!
 
@@ -51,7 +50,6 @@ final class AppDelegateTests: XCTestCase {
         let persistence = MockSettingsPersisting()
         settings        = SettingsStore(store: persistence)
         mockNotif       = MockNotificationCenter()
-        mockOverlay     = MockOverlayPresenting()
         snoozeCountWrites = LockIsolated<[Int]>([])
         store = Self.makeAppFeatureStore(
             settings: settings,
@@ -65,7 +63,6 @@ final class AppDelegateTests: XCTestCase {
         delegate = nil
         settings = nil
         mockNotif = nil
-        mockOverlay = nil
         store = nil
         snoozeCountWrites = nil
         try await super.tearDown()
@@ -139,12 +136,11 @@ final class AppDelegateTests: XCTestCase {
                 cancelAllReminders: {}
             )
             $0.overlayClient = OverlayClient(
-                show: { _, _, _, _ in },
-                dismiss: {},
-                clearQueue: {},
-                clearQueueForType: { _ in },
-                isVisible: { false },
-                lifecycleEvents: { .finished }
+                lifecycleEvents: { .finished },
+                broadcast: { _ in },
+                pauseExternalAudio: {},
+                resumeExternalAudio: {},
+                postScreenChanged: {}
             )
             $0.screenTimeTrackerClient = ScreenTimeTrackerClient(
                 setThreshold: { _, _ in },

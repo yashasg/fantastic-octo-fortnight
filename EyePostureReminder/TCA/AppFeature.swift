@@ -41,6 +41,12 @@ struct AppFeature {
         var scheduling: SchedulingFeature.State = .init()
         @Presents var overlay: OverlayFeature.State?
         @Presents var destination: Destination.State?
+        /// FIFO queue of overlay-presentation requests deferred while an
+        /// overlay is already on screen. The reducer pops the head into
+        /// `overlay` on `.overlay(.presented(.dismissed))` so `#289` queue
+        /// ordering is preserved by the canonical TCA state instead of
+        /// `OverlayManager` (`#920` retirement).
+        var overlayQueue: [OverlayPresentationRequest] = []
     }
 
     enum Action {
@@ -121,14 +127,62 @@ struct AppFeature {
                 return .send(.scheduling(.notificationRouted(route)))
             case .overlay(.presented(.dismissed)):
                 // Two-phase dismiss (#738): once `OverlayFeature` finishes
-                // its `dismissAnimationCompleted` → `overlayClient.dismiss`
-                // → `dismissed` chain, the presentation slot in the root
-                // store must be cleared so `RootView`'s
+                // its `dismissAnimationCompleted` → `dismissed` chain, the
+                // presentation slot in the root store must be cleared so
+                // `RootView`'s
                 // `.fullScreenCover(item: $store.scope(state: \.$overlay, …))`
                 // tears down the cover. The `@Presents` machinery does not
                 // auto-clear on a child action; the parent reducer owns the
                 // nil write.
+                //
+                // `#920`: after nil-ing the slot, pop the queue head (if
+                // any) into `state.overlay` so `#289` FIFO ordering is
+                // preserved by the canonical TCA state. Setting a fresh
+                // `OverlayFeature.State` immediately re-arms
+                // `RootView.fullScreenCover` for the next break.
                 state.overlay = nil
+                if !state.overlayQueue.isEmpty {
+                    let next = state.overlayQueue.removeFirst()
+                    state.overlay = OverlayFeature.State(
+                        type: next.type,
+                        duration: next.duration,
+                        hapticsEnabled: next.hapticsEnabled,
+                        pauseMediaEnabled: next.pauseMediaEnabled
+                    )
+                }
+                return .none
+            case let .scheduling(.delegate(.presentOverlay(request))):
+                // `#920`: `SchedulingFeature` emits this delegate from
+                // `thresholdReachedEffect` and `reminderNotificationEffect`
+                // instead of calling `overlayClient.show(...)`. The parent
+                // reducer owns the `@Presents var overlay` slot, so the
+                // present-or-enqueue branch lives here. Queue ordering
+                // mirrors the legacy `OverlayManager.overlayQueue` FIFO
+                // behaviour (`#289` regression contract).
+                if state.overlay == nil {
+                    state.overlay = OverlayFeature.State(
+                        type: request.type,
+                        duration: request.duration,
+                        hapticsEnabled: request.hapticsEnabled,
+                        pauseMediaEnabled: request.pauseMediaEnabled
+                    )
+                } else {
+                    state.overlayQueue.append(request)
+                }
+                return .none
+            case .scheduling(.delegate(.suspendOverlayForPauseCondition)):
+                // `#920`: pause-condition activation (Focus / Driving) used
+                // to call `overlayClient.clearQueue() + dismiss()` directly
+                // from `SchedulingFeature.pauseConditionChangedEffect`.
+                // The TCA equivalent is to drop every queued entry
+                // synchronously and dispatch `.dismissTapped` on the
+                // currently presented overlay so the SwiftUI exit
+                // animation + `#738` two-phase teardown (resume audio,
+                // broadcast `.dismissed`, post screenChanged) still run.
+                state.overlayQueue.removeAll()
+                if state.overlay != nil, state.overlay?.isDismissing != true {
+                    return .send(.overlay(.presented(.dismissTapped)))
+                }
                 return .none
             case .overlaySettingsRequested:
                 // Setting the shared `openSettingsOnLaunch` flag is what

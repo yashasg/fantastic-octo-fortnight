@@ -1,3 +1,4 @@
+import ComposableArchitecture
 import SwiftUI
 import UIKit
 import XCTest
@@ -31,14 +32,23 @@ final class PreviewTests: XCTestCase {
 
     // MARK: - OverlayView
 
+    private func makeOverlayView(type: ReminderType, duration: TimeInterval) -> OverlayView {
+        let store = Store(
+            initialState: OverlayFeature.State(type: type, duration: duration)
+        ) {
+            OverlayFeature()
+        } withDependencies: {
+            TCATestDependencies.applyAllSilentClients(&$0)
+        }
+        return OverlayView(store: store)
+    }
+
     func test_overlayView_eyes_preview() {
-        let view = OverlayView(type: .eyes, duration: 20) {}
-        assertPreviewRenders(view)
+        assertPreviewRenders(makeOverlayView(type: .eyes, duration: 20))
     }
 
     func test_overlayView_posture_preview() {
-        let view = OverlayView(type: .posture, duration: 10) {}
-        assertPreviewRenders(view)
+        assertPreviewRenders(makeOverlayView(type: .posture, duration: 10))
     }
 
     // MARK: - YinYangEyeView
