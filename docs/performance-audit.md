@@ -79,10 +79,15 @@ deinit {
 
 All three cleanup operations are present: observer removal, timer invalidation, and task cancellation.
 
-### 🟢 GOOD — OverlayManager removes scene activation observer
-**File:** `EyePostureReminder/Services/OverlayManager.swift:106-110`
+### ⚪ RETIRED — `OverlayManager` scene activation observer (#920)
 
-The `sceneActivationObserver` is properly removed in `deinit` using the token-based `addObserver(forName:)` pattern.
+The legacy UIWindow-backed `OverlayManager` service (and the
+`sceneActivationObserver` it owned) was deleted in **#920** (commit
+`e19529f`). Overlay presentation now flows through
+`AppFeature.State.overlay` → `RootView.fullScreenCover(item:)`, which is
+managed by SwiftUI's view hierarchy and does not register a scene-activation
+observer. The original finding ("observer is properly removed in `deinit`")
+no longer has a referent in this codebase.
 
 ### 🟢 GOOD — LiveCarPlayDetector cleans up observer
 **File:** `EyePostureReminder/Services/PauseConditionManager.swift:123-128`
@@ -124,13 +129,16 @@ Every timer callback, notification observer closure, and Task uses `[weak self]`
 - `ScreenTimeTracker.swift:225` — reset task
 - `PauseConditionManager.swift:229, 235, 239` — detector callbacks
 - `PauseConditionManager.swift:247, 256` — Combine sinks
-- `OverlayManager.swift:99, 164` — scene observer, dismiss callback
 
 No retain cycles detected. (The previous `AppCoordinator.swift:157/178`
 threshold/pause-state callbacks were removed in #755 Phase E; the equivalent
 flow now runs inside `SchedulingFeature.thresholdReachedEffect` /
 `pauseStateChanged` via structured-concurrency `for await` loops on the
-dependency-client async streams, which don't capture `self`.)
+dependency-client async streams, which don't capture `self`. The previous
+`OverlayManager` scene-observer + dismiss-callback citation was dropped in
+**#935** along with the rest of the OverlayManager retirement sweep — the
+UIWindow path was deleted in #920 and overlay presentation no longer
+captures `self` in app-owned closures.)
 
 ### 🟢 GOOD — Single TCA Store owned by `App.init`, never re-created
 **File:** `EyePostureReminder/App/EyePostureReminderApp.swift:15, 48`
@@ -159,12 +167,17 @@ the tree allocates a duplicate root store.
 
 The app uses only SF Symbols (system icons) and custom font files. Font files are ~270KB each (Nunito Regular + Italic) — reasonable. No bitmap images in the asset catalog. The `Colors.xcassets` contains only color definitions (<1KB each).
 
-### 🟡 WARNING — OverlayManager creates UIWindow on-demand but allocates UIHostingController on main thread
-**File:** `EyePostureReminder/Services/OverlayManager.swift:157-173`
+### ⚪ RETIRED — `OverlayManager` UIWindow + `UIHostingController` allocation (#920)
 
-`UIHostingController` creation involves SwiftUI view tree setup on the main thread. While this is inherently required (UIKit mandate), the OverlayView contains haptic generator allocation. This is a minor concern since overlays fire at most every 10-60 minutes.
-
-**Recommendation:** No action needed — frequency is too low to matter.
+The original WARNING flagged that the legacy `OverlayManager` service
+allocated a `UIWindow` on demand and bridged the SwiftUI overlay through a
+`UIHostingController` on the main thread. That service was deleted in **#920**
+(commit `e19529f`). Overlay presentation now uses
+`RootView.fullScreenCover(item: $store.scope(state: \.$overlay, …))` against
+`OverlayFeature.State`, so SwiftUI owns the presentation surface; there is no
+app-owned `UIWindow` or app-owned `UIHostingController` on the overlay path.
+The original "frequency is too low to matter" recommendation is preserved
+for historical traceability — the underlying allocation no longer happens.
 
 ---
 
@@ -475,3 +488,4 @@ The three warnings are all P3/P4 severity — none will cause measurable battery
 | --- | --- | --- |
 | 2026-05-15 | Post-TCA-migration refresh (#775). Re-anchored AppCoordinator-era sections onto current TCA stack: §2 debounce cancellation now cites `SchedulingFeature.CancelID.rescheduleDebounce` / `.snoozeWakeTask`; §3 `[weak self]` list drops the deleted `AppCoordinator` callbacks and notes the equivalent `for await` flow inside `SchedulingFeature`; §3 lifecycle ownership rewritten as "Single TCA Store owned by `App.init`" with `StoreOf<AppFeature>` + `WithPerceptionTracking` references; §4 SwiftUI body claim re-anchored from `@EnvironmentObject` to scoped `StoreOf<…Feature>` + `@AppStorage`; §4 `ForEach` identity citation moved from `SettingsViewModel.intervalOptions` to `SettingsPickerOptions.intervalOptions` (#755 Phase B); §4 "lazy SettingsViewModel" rewritten as "SettingsView does no eager work at construction"; §7 startup section now cites `EyePostureReminderApp.init` + `SchedulingFeature.start` instead of the deleted `AppCoordinator.init`; §8 debounce / UI-test-mode sections re-anchored onto `SchedulingFeature` + `UITestMode` + entitlement-gated `*Noop` dependency-client fallbacks. No findings were added or removed — only file/symbol citations were updated to match the post-#755 architecture. | Rusty |
 | 2026-05-17 | Drop the false `NoopScreenTimeTracker` / `NoopPauseConditionManager` fallback claim from §8 (#830). `ScreenTimeTrackerClient` / `PauseConditionClient` construct their live implementations unconditionally — there is no Noop branch for those two protocols. UI-test isolation now reads as a single gate: `SchedulingFeature.State.isUITestModeEnabled`. Entitlement-gated `ScreenTimeAuthorizationNoop` and `DeviceActivityMonitorNoop` remain wired and continue to swap in until #201 lands; their citation is preserved. | Copilot |
+| 2026-05-19 | Retire stale `EyePostureReminder/Services/OverlayManager.swift` citations across §2 (scene-activation observer) and §3 (UIWindow / `UIHostingController` allocation WARNING + `[weak self]` bullet) post-#920 (commit `e19529f`). The UIWindow-backed `OverlayManager` service was deleted in #920; overlay presentation now flows through `AppFeature.State.overlay` → `RootView.fullScreenCover(item: $store.scope(...))`. No new findings — three retirements only. Mirrors the #921 / #922 / #923 / #924 / #925 / #926 / #932 post-#920 docs cleanup sweep. Closes #935. | Copilot |
