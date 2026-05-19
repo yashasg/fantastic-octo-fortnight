@@ -26,12 +26,14 @@ import SwiftUI
 ///   intercepts to write `state.destination = .appCategoryPicker(...)`;
 ///   the `.fullScreenCover` below then renders `AppCategoryPickerView`
 ///   driven by the destination's scoped store.
-/// - **Overlay**: scaffolding pattern remains for the overlay cover.
-///   `OverlayManager` still owns the `UIWindow`-hosted overlay
-///   presentation; `state.overlay` is currently only used as a teardown
-///   sink (`#738`'s two-phase dismiss). #919 tracks swapping the UIKit
-///   path for the SwiftUI `.fullScreenCover` once `OverlayView` accepts
-///   `StoreOf<OverlayFeature>`.
+/// - **Overlay**: the `.fullScreenCover` body renders the real
+///   `OverlayView(store:)` driven by the scoped `OverlayFeature` store
+///   (#919 Phase 1). In production the cover only fires once
+///   `SchedulingFeature` writes `state.overlay` — that switch is tracked
+///   under #919 Phase 2 (#920), which also retires the parallel
+///   `OverlayManager` `UIWindow`-hosted path. Until then, `OverlayManager`
+///   continues to own the live overlay presentation; `state.overlay`
+///   remains a teardown sink for `#738`'s two-phase dismiss.
 struct RootView: View {
     @Perception.Bindable var store: StoreOf<AppFeature>
     @AppStorage(AppStorageKey.hasSeenOnboarding) private var persistedHasSeenOnboarding = false
@@ -97,8 +99,8 @@ struct RootView: View {
             }
             .fullScreenCover(
                 item: $store.scope(state: \.$overlay, action: \.overlay)
-            ) { _ in
-                EmptyView()
+            ) { overlayStore in
+                OverlayView(store: overlayStore)
             }
         }
     }
