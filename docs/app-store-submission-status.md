@@ -105,3 +105,9 @@ Legend: ✅ Done · ⚠️ In progress / partial · ❌ Not started · 🔒 Bloc
 4. **Export app icon** — 1024×1024 PNG, no alpha.
 5. **Register App Group** in Apple Developer Portal for all three bundle IDs.
 6. **Bump version** to 1.0 in `project.yml` when ready to submit.
+
+---
+
+## Related Research
+
+- [`docs/app-store-competitive-aso.md`](app-store-competitive-aso.md) — Competitive ASO benchmark (#426). Verdict: keep the current keyword strategy for v1.0; defer keyword experiments to v1.1 post-launch analytics.

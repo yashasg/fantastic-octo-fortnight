@@ -72,6 +72,8 @@ eye health,20-20-20,screen break,reminder,posture check,eye strain,ergonomic,scr
 - Removed low-intent single word "rest" (Issue #376); removed "timer" to stay within the 100-char budget after adding "posture check"
 - Excluded words already in app name/subtitle (Apple indexes those separately); standalone "wellness" and standalone "posture" excluded since both appear in the subtitle ("Eye & Posture Wellness") — "posture check" as a compound is intentionally retained per Issue #376
 
+**Supporting research:** competitive ASO benchmark and verdict on the current keyword strategy live in [`docs/app-store-competitive-aso.md`](app-store-competitive-aso.md) (delivered for #426).
+
 ---
 
 ## 5. What's New (v1.0 — App Store Launch)
