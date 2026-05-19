@@ -47,14 +47,18 @@
                        │ ReminderType     │         │                      │
                        │ ReminderSettings │         │ ReminderScheduler    │
                        │ SettingsStore    │         │ ScreenTimeTracker    │
-                       │ AppConfig        │         │ OverlayManager       │
-                       │ SettingsPicker-  │         │ PauseConditionMgr    │
-                       │   Options        │         │ AudioInterruptionMgr │
-                       └──────────────────┘         │ AnalyticsLogger      │
-                                                    │ MetricKitSubscriber  │
+                       │ AppConfig        │         │ PauseConditionMgr    │
+                       │ SettingsPicker-  │         │ AudioInterruptionMgr │
+                       │   Options        │         │ AnalyticsLogger      │
+                       └──────────────────┘         │ MetricKitSubscriber  │
                                                     │ ServiceLifecycle     │
                                                     │ AppGroupIPCProviding │
                                                     └──────────────────────┘
+            (Overlay presentation is reducer-owned: `AppFeature.State.overlay`
+             drives `RootView.fullScreenCover`; `OverlayClient` only owns the
+             lifecycle-event multicast + audio / accessibility side-effects.
+             #919 Phase 1 / #920 Phase 2 retired the `OverlayManager` UIWindow
+             path.)
 ```
 
 **Dependency Rules (post-TCA migration, #677 / #755):**
@@ -101,25 +105,42 @@ extension UNUserNotificationCenter: NotificationScheduling { }
 
 ---
 
-### 2.2 `OverlayPresenting`
+### 2.2 `OverlayClient` (overlay side-effects)
 
-Abstracts overlay window lifecycle so we can verify presentation logic without creating real UIWindows in tests.
+Reducers do not present overlays directly. Presentation state lives in the
+canonical TCA slot `AppFeature.State.overlay` (a `@Presents OverlayFeature.State?`),
+and `RootView.fullScreenCover(item:)` renders the real `OverlayView(store:)`
+against that slot. `SchedulingFeature` only signals intent (delegate vocabulary
+`presentOverlay(_:)` / `suspendOverlayForPauseCondition`); `AppFeature`
+writes or enqueues into `state.overlay` / `state.overlayQueue` (FIFO, #289).
+
+`OverlayClient` is the narrow side-effect dependency that `OverlayFeature`
+and other reducers consume:
 
 ```swift
-protocol OverlayPresenting {
-    func showOverlay(
-        for reminderType: ReminderType,
-        duration: TimeInterval,
-        onDismiss: @escaping () -> Void
-    )
-    
-    func dismissOverlay()
-    
-    var isOverlayVisible: Bool { get }
+@DependencyClient
+struct OverlayClient: Sendable {
+    var lifecycleEvents: @Sendable () -> AsyncStream<OverlayLifecycleEvent>
+    var broadcast: @Sendable (OverlayLifecycleEvent) async -> Void
+    var pauseExternalAudio: @Sendable () async -> Void   // AVAudioSession interruption
+    var resumeExternalAudio: @Sendable () async -> Void
+    var postScreenChanged: @Sendable () async -> Void    // UIAccessibility.screenChanged
+}
+
+enum OverlayLifecycleEvent: Equatable, Sendable {
+    case presented(ReminderType)
+    case dismissed(ReminderType)
+    case settingsTapped(ReminderType)
 }
 ```
 
-**Why:** UI tests verify overlay appearance; unit tests mock the presenter to verify scheduling logic doesn't double-trigger.
+**Why:** `OverlayFeature` stays pure (no `import AVFoundation`, no `import UIKit`)
+and remains drivable from `TestStore` via `withDependencies { $0.overlayClient = … }`.
+Subscribers (`AppFeature` settings-handoff #786, `SchedulingFeature`
+session-timing #901 / DeviceActivity #903) react to lifecycle events without
+knowing about presentation mechanics. The `show` / `dismiss` / `clearQueue`
+surface that pre-dated #919/#920 (with a `UIWindow`-backed `OverlayManager`
++ `OverlayPresenting` protocol + `MockOverlayPresenting` mock) is **deleted**.
 
 ---
 
@@ -255,7 +276,7 @@ Defined in `EyePostureReminder/TCA/Dependencies/*Client.swift`. Each client is a
 | `SettingsClient` | `SettingsStore` (observer surface added in #716) | `SchedulingFeature` / `SettingsFeature` read + stream settings |
 | `ReminderSchedulerClient` | `ReminderScheduler` | `SchedulingFeature` schedules / cancels notification requests |
 | `ScreenTimeTrackerClient` | `ScreenTimeTracker` | `SchedulingFeature` drives the foreground accumulation timer |
-| `OverlayClient` | `OverlayManager` | `SchedulingFeature` presents / dismisses the UIWindow overlay |
+| `OverlayClient` | _none — overlay side-effects only_ | `OverlayFeature` runs the lifecycle multicast, audio pause/resume, and `UIAccessibility.screenChanged` posts. Presentation is reducer-owned (`AppFeature.State.overlay` → `RootView.fullScreenCover`). |
 | `NotificationClient` | `UNUserNotificationCenter` | `SchedulingFeature` snooze-wake delivery |
 | `PauseConditionClient` | `PauseConditionManager` | `SchedulingFeature` Focus / CarPlay / driving signals |
 | `ScreenTimeAuthorizationClient` | `LiveScreenTimeAuthorizationProviding` | `OnboardingFeature` FamilyControls authorization |
@@ -298,7 +319,7 @@ EyePostureReminder/                  (SPM executable target)
 │   │   ├── SettingsClient.swift           Wraps `SettingsStore` observer surface
 │   │   ├── ReminderSchedulerClient.swift  Wraps `ReminderScheduler`
 │   │   ├── ScreenTimeTrackerClient.swift  Wraps `ScreenTimeTracker`
-│   │   ├── OverlayClient.swift            Wraps `OverlayManager`
+│   │   ├── OverlayClient.swift            Overlay side-effects: lifecycle multicast (`broadcast` / `lifecycleEvents`), `pauseExternalAudio` / `resumeExternalAudio`, `postScreenChanged`. No `show` / `dismiss` — presentation is reducer-owned via `AppFeature.State.overlay`.
 │   │   ├── NotificationClient.swift       Wraps `UNUserNotificationCenter`
 │   │   ├── PauseConditionClient.swift     Wraps `PauseConditionManager`
 │   │   ├── ScreenTimeAuthorizationClient.swift  Wraps live FamilyControls authorization
@@ -317,7 +338,6 @@ EyePostureReminder/                  (SPM executable target)
 │   ├── ReminderScheduler.swift       UNNotification scheduling; NotificationScheduling + ReminderScheduling protocols
 │   ├── ScreenTimeTracker.swift       Continuous screen-on timer; ScreenTimeTracking protocol
 │   ├── PauseConditionManager.swift   Focus/CarPlay/driving aggregation; all detector + PauseConditionProviding protocols
-│   ├── OverlayManager.swift          UIWindow overlay lifecycle; OverlayPresenting protocol
 │   ├── AudioInterruptionManager.swift AVAudioSession interruption; MediaControlling protocol
 │   ├── AnalyticsLogger.swift         Structured event logging via os.Logger (see TELEMETRY.md)
 │   ├── MetricKitSubscriber.swift     MXMetricManager subscriber for OS-level crash/perf diagnostics
@@ -405,7 +425,6 @@ Tests/
 │   │   ├── MockDetectors.swift       MockFocusStatusDetector, MockCarPlayDetector, MockDrivingActivityDetector
 │   │   ├── MockMediaControlling.swift
 │   │   ├── MockNotificationCenter.swift
-│   │   ├── MockOverlayPresenting.swift
 │   │   ├── MockPauseConditionProvider.swift
 │   │   ├── MockReminderScheduler.swift
 │   │   ├── MockScreenTimeTracker.swift
@@ -442,7 +461,6 @@ Tests/
 │   │   ├── FocusModeExtendedTests.swift / LiveFocusStatusDetectorTests.swift
 │   │   ├── LiveCarPlayDetectorTests.swift
 │   │   ├── MetricKitSubscriberTests.swift
-│   │   ├── OverlayManagerTests.swift / OverlayManagerExtendedTests.swift / OverlayManagerTerminationTests.swift
 │   │   ├── PauseConditionManagerTests.swift
 │   │   ├── ReminderSchedulerTests.swift
 │   │   ├── ScreenTimeAuthorizationTests.swift
@@ -608,7 +626,7 @@ The Asset Catalog defines the following semantic color tokens (each with light/d
 // SwiftUI (automatic dark/light adaptation)
 Color("ReminderBlue")
 
-// UIKit (e.g., UIWindow tint in OverlayManager)
+// UIKit (e.g., underlying named colours feeding SwiftUI bridges)
 UIColor(named: "ReminderBlue")
 ```
 Replaces all `UIColor(dynamicProvider:)` calls in `DesignSystem.swift`. The OS handles dark/light switching — no Swift logic needed.
@@ -686,8 +704,10 @@ UIApplication.didBecomeActive  ──► SchedulingFeature `.foregroundTransitio
                               `.thresholdReached(type)`
                                        │
                                        ▼
-                              `notificationClient.deliver` (foreground) or
-                              `overlayClient.show` (in-app)
+                              `notificationClient.deliver` (background) or
+                              `.delegate(.presentOverlay(_))` (foreground) →
+                              `AppFeature` writes `state.overlay`, which
+                              `RootView.fullScreenCover` renders
                                        │
                               overlay dismissed
                                        │
@@ -956,7 +976,7 @@ jobs:
 | Layer | Test Type | Coverage Target | Key Tests |
 |-------|-----------|-----------------|-----------|
 | **Models** | Unit | 90% | `SettingsStore` read/write, default values |
-| **Services** | Unit | 85% | `ReminderScheduler` schedules correct intervals; `OverlayManager` doesn't double-present |
+| **Services** | Unit | 85% | `ReminderScheduler` schedules correct intervals; `AudioInterruptionManager` activates/deactivates `AVAudioSession` exactly once per overlay |
 | **ViewModels** _(decommissioned)_ | Unit | 85% | Settings changes trigger reschedule; bindings update correctly — superseded by `Reducers (TCA)` at 90% after the Phase-2 TCA migration (#677 / #701 / #755); see §10.5 Coverage Targets |
 | **Views** | UI | 50% | Settings pickers save; overlay dismiss button works; countdown updates |
 | **Integration** | Manual | N/A | End-to-end on device with real notifications; test in Low Power Mode |
@@ -1268,7 +1288,7 @@ class ShieldActionHandler: ShieldActionDelegate {
 
 ### 5.5.7 Local Notification Fallback (Phase 2-3 Bridge)
 
-**Phase 2 behavior (current):** `SchedulingFeature` reducer reacts to `screenTimeTrackerClient` threshold events → emits `notificationClient.deliver` (background) or `overlayClient.show` (foreground) effects. `OverlayManager` still owns the `UIWindow` lifecycle behind `OverlayClient`.
+**Phase 2 behavior (current):** `SchedulingFeature` reacts to `screenTimeTrackerClient` threshold events → emits `notificationClient.deliver` (background) or `.delegate(.presentOverlay(_))` (foreground). `AppFeature` owns the `@Presents var overlay` slot: it writes `OverlayFeature.State(...)` when the slot is empty, or appends an `OverlayPresentationRequest` to `state.overlayQueue` (FIFO, #289). `RootView.fullScreenCover(item: $store.scope(state: \.$overlay, …))` renders the real `OverlayView(store:)`. `#919` Phase 1 / `#920` Phase 2 retired the `OverlayManager` UIWindow path; `OverlayClient` is now overlay-side-effects only (lifecycle multicast + audio + accessibility).
 
 **Phase 3 behavior (with Shield):** Same, but only if:
 1. `familyControlsAuthorized == false` (user denied FamilyControls), OR
@@ -1288,17 +1308,17 @@ This dual-mode design ensures:
 
 ---
 
-### 5.5.8 OverlayManager Phase 2 → Phase 3 Transition
+### 5.5.8 Overlay Phase 2 → Phase 3 Transition
 
-**Phase 2 (current):** `OverlayManager` is the primary interrupt mechanism.
+**Phase 2 (current):** Reducer-owned TCA overlay is the primary interrupt mechanism. `SchedulingFeature` emits `.delegate(.presentOverlay(_))`; `AppFeature` writes `state.overlay` (or enqueues into `state.overlayQueue`); `RootView.fullScreenCover` renders `OverlayView(store:)`.
 
 **Phase 3+ (with Shield):**
-- Shield is the primary interrupt (system-enforced, user cannot swipe away)
-- Overlay becomes a **fallback for snooze/deferral**
-- `OverlayManager` still exists; same code, same behavior
-- `SchedulingFeature` reducer decides which path to use based on `state.familyControlsAuthorized` + the live shield state surfaced by `IPCClient`
+- Shield is the primary interrupt (system-enforced, user cannot swipe away).
+- Overlay becomes a **fallback for snooze/deferral**.
+- The TCA overlay slot stays exactly as it is in Phase 2 — `state.overlay` + `OverlayFeature` + `RootView.fullScreenCover`.
+- `SchedulingFeature` reducer decides which path to use based on `state.familyControlsAuthorized` + the live shield state surfaced by `IPCClient`, and emits either the existing `.delegate(.presentOverlay(_))` (overlay path) or a future shield-presentation action (Phase 3 path).
 
-**No code changes to `OverlayManager` itself** — `OverlayClient` continues to expose the same `show` / `dismiss` surface to `SchedulingFeature` and `OverlayFeature`, and the reducer logic chooses between shield and overlay paths.
+**No code changes to `OverlayClient` / `OverlayFeature`** — the same delegate-driven presentation surface serves both shield-deferral and pure-overlay flows. `#919` / `#920` retired the legacy `OverlayManager` UIWindow path; nothing in the Phase 3 design re-introduces a parallel presentation channel.
 
 ---
 
@@ -1370,7 +1390,7 @@ trueInterrupt.ipc.eventLog       Data   Legacy: JSON-encoded [AppGroupIPCEvent] 
 |-----------|-------------------|
 | **M1.1: Project scaffold** | Xcode project created, folder structure matches this doc, unit test target configured |
 | **M1.2: Models + persistence** | `ReminderType`, `ReminderSettings`, `SettingsStore` implemented. Unit tests pass at 90% coverage. |
-| **M1.3: Services** | `ReminderScheduler` schedules/cancels notifications via protocol. `OverlayManager` creates/dismisses UIWindow. Unit tests pass with mocks. |
+| **M1.3: Services** | `ReminderScheduler` schedules/cancels notifications via protocol. `OverlayClient` provides overlay side-effects (lifecycle multicast + audio + accessibility); presentation is reducer-owned (`AppFeature.State.overlay` → `RootView.fullScreenCover`). Unit tests pass with mocks. |
 | **M1.4: Feature reducers** | `HomeFeature`, `SettingsFeature`, `OnboardingFeature` reducers and their `TestStore` coverage (TCA Phase 1; #688, #690–#695). |
 | **M1.5: Views** | `SettingsView` renders pickers, saves on change. `OverlayView` shows countdown, dismisses. UI tests pass. |
 | **M1.6: Integration** | End-to-end manual test on simulator: set 10s interval, verify overlay appears, dismiss works, auto-dismiss works. |
@@ -1510,7 +1530,6 @@ Every system boundary is behind a protocol. Live-service unit tests inject mock 
 |----------|-----------|-----------------|
 | `NotificationScheduling` | `MockNotificationCenter` | `UNUserNotificationCenter` |
 | `SettingsPersisting` | `MockSettingsPersisting` | `UserDefaults` |
-| `OverlayPresenting` | `MockOverlayPresenting` | `OverlayManager` |
 | `ReminderScheduling` | `MockReminderScheduler` | `ReminderScheduler` |
 | `MediaControlling` | `MockMediaControlling` | `AudioInterruptionManager` |
 | `ScreenTimeTracking` | `MockScreenTimeTracker` | `ScreenTimeTracker` |
@@ -1552,7 +1571,7 @@ override func setUp() {
 | Testing scheduling logic in `ReminderScheduler` | `MockNotificationCenter` | — |
 | Testing that `SettingsStore` reads/writes correct keys | — | `MockSettingsPersisting` (is the real test subject) |
 | Testing `PauseConditionManager` aggregation | All three detector mocks | — |
-| Integration test: `SchedulingFeature` full pipeline | `MockNotificationCenter`, `MockOverlayPresenting`, fake `NotificationClient` / `OverlayClient` | `SettingsStore`, `ScreenTimeTracker`, real reducer composition |
+| Integration test: `SchedulingFeature` full pipeline | `MockNotificationCenter`, `OverlayClient.testValue` (lifecycle-event recorder), fake `NotificationClient` / `OverlayClient` | `SettingsStore`, `ScreenTimeTracker`, real reducer composition |
 | UI test: settings screen saves correctly | — | Full app stack |
 
 ---
@@ -1618,7 +1637,7 @@ override func tearDown() async throws {
 
 #### `@MainActor` Considerations
 
-`OverlayManager`, `ScreenTimeTracker`, and every reducer touching SwiftUI state are `@MainActor` isolated. Their test classes must be annotated `@MainActor` too:
+`ScreenTimeTracker` and every reducer touching SwiftUI state are `@MainActor` isolated, as is `OverlayClient`'s live bridge (`LiveOverlayClientBridge`) so its audio + accessibility side-effects hop through the main actor. Their test classes must be annotated `@MainActor` too:
 
 ```swift
 @MainActor
