@@ -945,8 +945,9 @@ SchedulingFeature observes the snoozedUntilStream and executes the cancel-all pi
 Step 1: overlayClient.clearQueue()    ← MUST run first (see #267)
     │
     ▼
-Step 2: if overlayClient.isOverlayVisible → overlayClient.dismissOverlay()
-         (queue is empty; presentNextQueuedOverlay() sees nothing to show)
+Step 2: overlayClient.dismiss()
+         (queue already cleared in Step 1, so no next overlay is auto-presented;
+          unconditional — `OverlayClient.dismiss()` is a no-op if no overlay is on screen)
     │
     ▼
 Step 3: `managedSettingsClient.clearAllShields()` (TCA dep, pending #201)
@@ -965,7 +966,7 @@ Snooze active: no new overlays, no new shields, no new notifications
 until snooze expires or user taps "Cancel snooze"
 ```
 
-> ⚠️ **Ordering matters (#267):** `clearQueue()` must execute before `dismissOverlay()`. If `dismissOverlay()` is called first, it internally calls `presentNextQueuedOverlay()`, which dequeues and shows the next queued overlay before `clearQueue()` can remove it. That orphan overlay has no dismissal path because `screenTimeTracker` is already paused. See **#267** for the code-level fix (`cancelAllReminders()` ordering bug).
+> ⚠️ **Ordering matters (#267):** `clearQueue()` must execute before `dismiss()`. If `dismiss()` is called first, the underlying overlay-layer dismissal path will dequeue and present the next queued overlay before `clearQueue()` can remove it. That orphan overlay has no dismissal path because `screenTimeTracker` is already paused. See **#267** for the code-level fix (`cancelAllReminders()` ordering bug) and **#920** for the in-flight retirement of the queue-aware `OverlayManager` UIWindow path in favour of TCA-owned `state.overlay`. The canonical TCA-era call-site is `SchedulingFeature.pauseConditionChangedEffect` (`EyePostureReminder/TCA/Features/SchedulingFeature.swift:461-466`); see also the canonical post-#677 / #755 pipeline in **§8.2 Snooze Controls** below.
 
 #### Shield state when snooze is active
 
