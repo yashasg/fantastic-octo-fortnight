@@ -403,9 +403,31 @@ validate_app_store_upload_version() {
   local marketing_version
   marketing_version="$(archive_marketing_version)"
 
-  if [[ "$marketing_version" != "1.0" ]]; then
-    fail "App Store uploads must use MARKETING_VERSION 1.0; current value is ${marketing_version}."
-    fail "Run './scripts/build.sh version 1.0' and commit the version bump before uploading."
+  if [[ -z "$marketing_version" ]]; then
+    fail "App Store uploads require MARKETING_VERSION; resolved value is empty."
+    fail "Set MARKETING_VERSION explicitly or run './scripts/build.sh version <semver>' to commit a version."
+    exit 1
+  fi
+
+  if [[ ! "$marketing_version" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ]]; then
+    fail "App Store uploads require a semver MARKETING_VERSION (MAJOR.MINOR or MAJOR.MINOR.PATCH); got '${marketing_version}'."
+    fail "Run './scripts/build.sh version <semver>' to set a valid value, then re-dispatch."
+    exit 1
+  fi
+
+  case "$marketing_version" in
+    0|0.0|0.0.0)
+      fail "App Store uploads cannot use placeholder MARKETING_VERSION '${marketing_version}'."
+      fail "Bump to a real release version (e.g. '0.2.0') before uploading."
+      exit 1
+      ;;
+  esac
+
+  local project_marketing_version
+  project_marketing_version="$(project_setting_value MARKETING_VERSION)"
+  if [[ -n "$project_marketing_version" && "$marketing_version" != "$project_marketing_version" ]]; then
+    fail "MARKETING_VERSION override '${marketing_version}' does not match project.yml ('${project_marketing_version}')."
+    fail "Either run './scripts/build.sh version ${marketing_version}' and commit, or align the override to '${project_marketing_version}'."
     exit 1
   fi
 }
