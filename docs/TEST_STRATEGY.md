@@ -41,7 +41,7 @@
 | Layer | Target | Rationale |
 |-------|--------|-----------|
 | **Models** | **90%** | Pure Swift data structures — no excuses for missing coverage |
-| **Services** | **80%** | `ReminderScheduler`, `OverlayManager` — high risk, high reward to test |
+| **Services** | **80%** | `ReminderScheduler`, `OverlayClient` — high risk, high reward to test (the `OverlayManager` UIWindow service was retired in #920) |
 | **TCA Reducers** | **80%** | `EyePostureReminder/TCA/Features/*Feature.swift` — exercised through `TestStore` with `withDependencies` fakes (see ARCHITECTURE.md §4.1, §10); every emitted action is asserted deterministically |
 | **Views** | **60%** | UI tests cover critical paths; layout edge cases accepted as manual |
 | **Integration** | N/A (manual baseline) | Real device with live notifications — not tracked by Xcode coverage |
@@ -106,59 +106,23 @@ final class MockNotificationScheduler: NotificationScheduling {
 
 ---
 
-### 3.2 `MockOverlayPresenter` — mocking `OverlayPresenting`
+### 3.2 Overlay testing (`OverlayClient` dependency overrides) — post-#920
 
-**Why:** `OverlayManager` creates a real `UIWindow` at `.alert + 1` level. That requires a running `UIWindowScene`, which is unavailable in unit test hosts. Mocking `OverlayPresenting` lets us verify scheduling logic never calls `show()` twice without an intervening `dismiss()`.
+**Status:** The `OverlayPresenting` protocol and `MockOverlayPresenter` mock were retired in #920 (commit e19529f) along with the UIWindow-backed `OverlayManager` service. There is no longer a protocol mock for overlay presentation.
+
+**Current approach:** Overlay presentation is TCA-owned (`AppFeature.State.overlay` → `RootView.fullScreenCover`); side-effects (audio session, accessibility post, lifecycle multicast) live on the `OverlayClient` TCA dependency. Tests override the client via `withDependencies` in `TestStore`-based suites:
 
 ```swift
-// EyePostureReminderTests/Mocks/MockOverlayPresenter.swift
-
-final class MockOverlayPresenter: OverlayPresenting {
-    
-    // MARK: - State
-    private(set) var isOverlayVisible: Bool = false
-    private(set) var showCallCount = 0
-    private(set) var dismissCallCount = 0
-    private(set) var lastShownType: ReminderType? = nil
-    private(set) var lastDuration: TimeInterval = 0
-    var onDismissCallback: (() -> Void)? = nil
-    
-    // MARK: - OverlayPresenting
-    func showOverlay(
-        for reminderType: ReminderType,
-        duration: TimeInterval,
-        onDismiss: @escaping () -> Void
-    ) {
-        isOverlayVisible = true
-        showCallCount += 1
-        lastShownType = reminderType
-        lastDuration = duration
-        onDismissCallback = onDismiss
-    }
-    
-    func dismissOverlay() {
-        isOverlayVisible = false
-        dismissCallCount += 1
-        onDismissCallback?()
-        onDismissCallback = nil
-    }
-    
-    // MARK: - Test Helpers
-    func simulateDismiss() {
-        dismissOverlay()
-    }
-    
-    func reset() {
-        isOverlayVisible = false
-        showCallCount = 0
-        dismissCallCount = 0
-        lastShownType = nil
-        onDismissCallback = nil
-    }
+// Tests/EyePostureReminderTests/TCA/OverlayFeatureBehaviorTests.swift (example)
+let store = TestStore(initialState: OverlayFeature.State(.eyes)) {
+    OverlayFeature()
+} withDependencies: {
+    $0.overlayClient = .testValue  // recording fake from TCA test infra
+    $0.continuousClock = ImmediateClock()
 }
 ```
 
-**Tests that use this mock:** `OverlayManagerTests`, `ReminderSchedulerTests` (verifying no double-show)
+**Tests that exercise overlay behaviour:** `Tests/EyePostureReminderTests/TCA/OverlayFeatureTests.swift`, `OverlayFeatureBehaviorTests.swift`, `AppFeatureTests.swift` (queue / dismiss), `SchedulingFeature_DeviceActivityOverlayTests.swift`, `SchedulingFeature_OverlayFlagsTests.swift`, `SchedulingFeature_OverlayLifecycleSubscriptionTests.swift`. View-side coverage lives in `Tests/EyePostureReminderTests/Views/Overlay*Tests.swift`.
 
 ---
 
@@ -194,7 +158,7 @@ final class MockAudioSession: MediaControlling {
 }
 ```
 
-**Tests that use this mock:** `OverlayManagerTests` (audio session around overlay), any future background audio interruption tests
+**Tests that use this mock:** `AudioInterruptionManagerTests` and overlay-side suites under `Tests/EyePostureReminderTests/TCA/OverlayFeature*Tests.swift` (audio session activation around overlay presentation; the legacy `OverlayManagerTests` was retired with the UIWindow path in #920).
 
 ---
 
@@ -417,7 +381,11 @@ Tests/
 
 ---
 
-### 4.3 Overlay Logic (`OverlayManagerTests`)
+### 4.3 Overlay Logic (`OverlayFeature` + `OverlayClient`)
+
+> **#920 retirement note:** The legacy `OverlayManagerTests` suite (OV-01..OV-13) was retired with the `OverlayManager` UIWindow service in #920 (commit e19529f). The OV-01..OV-13 scenarios below are preserved for historical traceability; equivalent coverage now lives in the TCA-side suites listed in **Current location**.
+
+**Current location:** `Tests/EyePostureReminderTests/TCA/OverlayFeatureTests.swift`, `OverlayFeatureBehaviorTests.swift`, `AppFeatureTests.swift` (queue / dismiss parity), and the view-side `Tests/EyePostureReminderTests/Views/Overlay{StoreView,Gesture,Accessibility}Tests.swift`.
 
 | # | Test Name | Scenario | Expected Result |
 |---|-----------|----------|-----------------|
@@ -679,7 +647,7 @@ Re-run the **full manual test checklist** whenever any of these files change:
 | Changed File | Re-test Focus |
 |---|---|
 | `ReminderScheduler.swift` | NS-01 through NS-15, LC-01, LC-02 |
-| `OverlayManager.swift` | OV-01 through OV-13, EC-01–EC-03 |
+| `OverlayFeature.swift` / `OverlayClient.swift` | `OverlayFeature*Tests`, `AppFeatureTests` (queue/dismiss), `Views/Overlay*Tests` — formerly OV-01 through OV-13 + EC-01–EC-03; `OverlayManager.swift` UIWindow path retired in #920 |
 | `SettingsStore.swift` | SP-01 through SP-13, PF-01 through PF-04 |
 | `SettingsFeature.swift` | SP-06–SP-09, PF-01–PF-04 |
 | `OverlayView.swift` | VoiceOver checklist §6.1, Reduce Motion §6.3 |
@@ -705,14 +673,22 @@ Re-run the **full manual test checklist** whenever any of these files change:
 EyePostureReminderTests/
 ├── Mocks/
 │   ├── MockNotificationScheduler.swift   (§3.1)
-│   ├── MockOverlayPresenter.swift        (§3.2)
 │   ├── MockAudioSession.swift            (§3.3)
 │   └── MockUserDefaults.swift            (§3.4)
 ├── Models/
 │   └── SettingsStoreTests.swift          (§4.1 — SP-01 to SP-13)
-└── Services/
-    ├── ReminderSchedulerTests.swift      (§4.2 — NS-01 to NS-15)
-    └── OverlayManagerTests.swift         (§4.3 — OV-01 to OV-13)
+├── Services/
+│   └── ReminderSchedulerTests.swift      (§4.2 — NS-01 to NS-15)
+├── TCA/
+│   ├── OverlayFeatureTests.swift         (§4.3 — TestStore on OverlayFeature)
+│   ├── OverlayFeatureBehaviorTests.swift (§4.3 — analytics + lifecycle parity)
+│   └── AppFeatureTests.swift             (§4.3 — overlay queue / dismiss parity)
+└── Views/
+    ├── OverlayStoreViewTests.swift       (§4.3 — SwiftUI body coverage)
+    ├── OverlayGestureTests.swift         (§4.3 — dismiss button, swipe)
+    └── OverlayAccessibilityTests.swift   (§4.3 — VoiceOver / Dynamic Type)
+
+> §3.2 / OverlayManagerTests / MockOverlayPresenter retired in #920; see §3.2 note above.
 
 EyePostureReminderUITests/
 ├── SettingsFlowTests.swift               (§4.1 save/load via UI)
