@@ -22,14 +22,15 @@ import SwiftUI
 ///   `.overlaySettingsRequested` handoffs — both collapse to
 ///   `state.destination = .settingsSheet(...)` so the sheet store lifetime
 ///   tracks the destination slot. The `appCategoryPicker` cover stays as
-///   scaffolding (`EmptyView()`) until a follow-up issue migrates the
-///   onboarding-owned picker presentation.
+///   scaffolding (`EmptyView()`) until #918 migrates the onboarding-owned
+///   picker presentation into the destination's
+///   `StoreOf<AppCategoryPickerFeature>`.
 /// - **Overlay**: same scaffolding pattern as `appCategoryPicker`.
 ///   `OverlayManager` still owns the `UIWindow`-hosted overlay
 ///   presentation; `state.overlay` is currently only used as a teardown
-///   sink (`#738`'s two-phase dismiss). A follow-up issue will swap the
-///   UIKit path for the SwiftUI `.fullScreenCover` once `OverlayView`
-///   accepts `StoreOf<OverlayFeature>`.
+///   sink (`#738`'s two-phase dismiss). #919 tracks swapping the UIKit
+///   path for the SwiftUI `.fullScreenCover` once `OverlayView` accepts
+///   `StoreOf<OverlayFeature>`.
 struct RootView: View {
     @Perception.Bindable var store: StoreOf<AppFeature>
     @AppStorage(AppStorageKey.hasSeenOnboarding) private var persistedHasSeenOnboarding = false
