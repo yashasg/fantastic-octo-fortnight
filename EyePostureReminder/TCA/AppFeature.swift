@@ -153,6 +153,21 @@ struct AppFeature {
                 state.destination = .settingsSheet(SettingsFeature.State())
                 state.home.settingsSheetActive = true
                 return .none
+            case .onboarding(.openAppCategoryPicker):
+                // #918: OnboardingView's "Set Up" CTA on the True Interrupt
+                // Mode page dispatches `.onboarding(.openAppCategoryPicker)`.
+                // The parent owns presentation: write the canonical
+                // destination so `RootView`'s `.fullScreenCover(item:
+                // $store.scope(state: \.destination?.appCategoryPicker, ...))`
+                // presents the picker from a single store, retiring the
+                // previous `OnboardingView.@State showAppCategoryPicker`
+                // mirror + local-store `OnboardingAppCategoryPickerSheet`
+                // wrapper. Dismissal flows back through SwiftUI's
+                // `@Environment(\.dismiss)` on the picker's Done button,
+                // which the `@Presents` machinery converts into
+                // `.destination(.dismiss)`.
+                state.destination = .appCategoryPicker(AppCategoryPickerFeature.State())
+                return .none
             case .openSettingsSheetRequested:
                 // #814: RootView's `@AppStorage(openSettingsOnLaunch)`
                 // observer routes the legacy UserDefaults handoff

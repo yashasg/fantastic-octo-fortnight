@@ -448,6 +448,24 @@ final class AppFeatureTests: XCTestCase {
         }
     }
 
+    /// `.onboarding(.openAppCategoryPicker)` is the parent-observed signal
+    /// `OnboardingView`'s "Set Up" CTA (and the `.finishAndCustomizeTapped`
+    /// reducer effect) emits when the user opts into configuring True
+    /// Interrupt Mode app/category coverage during onboarding. The parent
+    /// must write `state.destination = .appCategoryPicker(...)` so
+    /// `RootView`'s `.fullScreenCover` presents the canonical
+    /// `AppCategoryPickerFeature` store — retiring the previous
+    /// `OnboardingView.@State showAppCategoryPicker` mirror + local-store
+    /// `OnboardingAppCategoryPickerSheet` wrapper (#918 acceptance).
+    func test_onboardingOpenAppCategoryPicker_presentsAppCategoryPickerDestination() async {
+        let store = makeStore()
+        store.exhaustivity = .off
+
+        await store.send(.onboarding(.openAppCategoryPicker)) {
+            $0.destination = .appCategoryPicker(AppCategoryPickerFeature.State())
+        }
+    }
+
     /// `.openSettingsSheetRequested` is the non-`HomeView` entry point used
     /// by `RootView`'s `@AppStorage(openSettingsOnLaunch)` observer. It
     /// routes both the `.overlaySettingsRequested` UserDefaults handoff

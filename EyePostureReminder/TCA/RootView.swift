@@ -15,17 +15,18 @@ import SwiftUI
 ///   though the persistence path doesn't yet route through the reducer.
 /// - **Destinations**: the `@Presents var destination` slot on
 ///   `AppFeature.State` is the canonical owner of the Settings sheet
-///   (`#814`). `HomeView`'s gear button dispatches
-///   `.home(.settingsTapped)` and `RootView`'s
+///   (`#814`) and the True Interrupt Mode picker (`#918`). `HomeView`'s
+///   gear button dispatches `.home(.settingsTapped)` and `RootView`'s
 ///   `@AppStorage(openSettingsOnLaunch)` observer dispatches
 ///   `.openSettingsSheetRequested` for the `OnboardingView` /
 ///   `.overlaySettingsRequested` handoffs — both collapse to
 ///   `state.destination = .settingsSheet(...)` so the sheet store lifetime
-///   tracks the destination slot. The `appCategoryPicker` cover stays as
-///   scaffolding (`EmptyView()`) until #918 migrates the onboarding-owned
-///   picker presentation into the destination's
-///   `StoreOf<AppCategoryPickerFeature>`.
-/// - **Overlay**: same scaffolding pattern as `appCategoryPicker`.
+///   tracks the destination slot. `OnboardingView`'s "Set Up" CTA
+///   dispatches `.onboarding(.openAppCategoryPicker)`, which the parent
+///   intercepts to write `state.destination = .appCategoryPicker(...)`;
+///   the `.fullScreenCover` below then renders `AppCategoryPickerView`
+///   driven by the destination's scoped store.
+/// - **Overlay**: scaffolding pattern remains for the overlay cover.
 ///   `OverlayManager` still owns the `UIWindow`-hosted overlay
 ///   presentation; `state.overlay` is currently only used as a teardown
 ///   sink (`#738`'s two-phase dismiss). #919 tracks swapping the UIKit
@@ -91,8 +92,8 @@ struct RootView: View {
                     state: \.destination?.appCategoryPicker,
                     action: \.destination.appCategoryPicker
                 )
-            ) { _ in
-                EmptyView()
+            ) { pickerStore in
+                AppCategoryPickerView(store: pickerStore)
             }
             .fullScreenCover(
                 item: $store.scope(state: \.$overlay, action: \.overlay)

@@ -5,21 +5,25 @@ import UserNotifications
 /// TCA reducer (`p0-tca-7` / #670) backing the onboarding flow.
 ///
 /// Owns the observable behaviour for the onboarding tab carousel:
-/// `currentPage` navigation, notification + Screen Time authorisation
-/// status (sourced from `NotificationClient` and
-/// `ScreenTimeAuthorizationClient`), and the `showAppCategoryPicker`
-/// flag that drives parent-side presentation. The onboarding views read
-/// from this store directly.
+/// `currentPage` navigation and the notification + Screen Time
+/// authorisation status (sourced from `NotificationClient` and
+/// `ScreenTimeAuthorizationClient`). The onboarding views read from this
+/// store directly.
 ///
 /// ## Persistence and parent wiring
 ///
 /// `.completedOnboarding` is emitted but never acted on locally; the parent
 /// (`AppFeature`) listens for it to flip
 /// `@AppStorage(AppStorageKey.hasSeenOnboarding)` and dismiss the
-/// onboarding flow. `showAppCategoryPicker` follows the same parent-driven
-/// presentation contract: this reducer only flips the flag while the parent
-/// presents `Destination.appCategoryPicker` (Phase 2 wiring lives in
-/// `p0-tca-11` / #674).
+/// onboarding flow. `.openAppCategoryPicker` follows the same
+/// parent-observed-signal contract: this reducer emits the action with no
+/// local state mutation, and the parent intercepts it to write
+/// `state.destination = .appCategoryPicker(...)` so `RootView`'s
+/// `.fullScreenCover` presents the canonical picker store (#918, replacing
+/// the previous `OnboardingView.@State` mirror + local-store sheet
+/// wrapper). Dismissal flows back through SwiftUI's `@Environment(\.dismiss)`
+/// on the picker's Done button, which clears the destination via the
+/// standard `@Presents` teardown.
 @Reducer
 struct OnboardingFeature {
     @ObservableState
@@ -34,9 +38,6 @@ struct OnboardingFeature {
 
         /// Latest `UNAuthorizationStatus` observed via `NotificationClient`.
         var notificationAuthStatus: UNAuthorizationStatus = .notDetermined
-
-        /// Drives parent-side presentation of `AppCategoryPickerView`.
-        var showAppCategoryPicker: Bool = false
     }
 
     enum Action: Equatable {
@@ -49,8 +50,12 @@ struct OnboardingFeature {
         case requestScreenTimeAuthorization
         case notificationStatusChanged(UNAuthorizationStatus)
         case screenTimeStatusChanged(ScreenTimeAuthorizationStatus)
+        /// Parent-observed signal — `AppFeature` intercepts this action to
+        /// present the canonical `AppCategoryPickerFeature` destination
+        /// (#918). The reducer itself performs no local state mutation;
+        /// dismissal is handled via the picker's Done button, which calls
+        /// `@Environment(\.dismiss)` and flows through `@Presents` teardown.
         case openAppCategoryPicker
-        case dismissAppCategoryPicker
         case completedOnboarding
         /// Writes the current `TabView` page index back into the reducer.
         /// `nextTapped` covers tap-based navigation; this case covers
@@ -131,11 +136,8 @@ struct OnboardingFeature {
                 return .none
 
             case .openAppCategoryPicker:
-                state.showAppCategoryPicker = true
-                return .none
-
-            case .dismissAppCategoryPicker:
-                state.showAppCategoryPicker = false
+                // Parent-observed signal — `AppFeature` intercepts to write
+                // `state.destination = .appCategoryPicker(...)` (#918).
                 return .none
 
             case .completedOnboarding:

@@ -18,7 +18,6 @@ final class OnboardingFeatureTests: XCTestCase {
         XCTAssertEqual(state.currentPage, 0)
         XCTAssertEqual(state.screenTimeStatus, .unavailable)
         XCTAssertEqual(state.notificationAuthStatus, .notDetermined)
-        XCTAssertFalse(state.showAppCategoryPicker)
     }
 
     // MARK: - Static configuration
@@ -117,9 +116,10 @@ final class OnboardingFeatureTests: XCTestCase {
 
         await store.send(.finishAndCustomizeTapped)
         await store.receive(\.completedOnboarding)
-        await store.receive(\.openAppCategoryPicker) {
-            $0.showAppCategoryPicker = true
-        }
+        // `.openAppCategoryPicker` is a parent-observed signal — `AppFeature`
+        // intercepts it to write `state.destination = .appCategoryPicker(...)`
+        // (#918). The child reducer performs no local state mutation.
+        await store.receive(\.openAppCategoryPicker)
     }
 
     // MARK: - .requestNotificationPermission
@@ -280,28 +280,21 @@ final class OnboardingFeatureTests: XCTestCase {
         }
     }
 
-    // MARK: - picker presentation gates
+    // MARK: - picker presentation gate
 
-    func test_openAppCategoryPicker_setsFlag() async {
+    /// `.openAppCategoryPicker` is a parent-observed signal post-#918:
+    /// `AppFeature` intercepts to write
+    /// `state.destination = .appCategoryPicker(...)`, so the child reducer
+    /// performs no local state mutation. Asserting `await store.send(...)`
+    /// without a state-mutation closure verifies the no-op contract — any
+    /// future regression that re-introduces local state would cause the
+    /// `TestStore` exhaustive check to fail.
+    func test_openAppCategoryPicker_isParentObservedSignal_noLocalMutation() async {
         let store = TestStore(initialState: OnboardingFeature.State()) {
             OnboardingFeature()
         }
 
-        await store.send(.openAppCategoryPicker) {
-            $0.showAppCategoryPicker = true
-        }
-    }
-
-    func test_dismissAppCategoryPicker_clearsFlag() async {
-        var initial = OnboardingFeature.State()
-        initial.showAppCategoryPicker = true
-        let store = TestStore(initialState: initial) {
-            OnboardingFeature()
-        }
-
-        await store.send(.dismissAppCategoryPicker) {
-            $0.showAppCategoryPicker = false
-        }
+        await store.send(.openAppCategoryPicker)
     }
 
     // MARK: - .completedOnboarding
