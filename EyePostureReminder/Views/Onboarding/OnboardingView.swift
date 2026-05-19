@@ -23,7 +23,6 @@ struct OnboardingView: View {
     typealias AccessibilityNotificationPosterFactory = () -> AccessibilityNotificationPosting
 
     @Perception.Bindable var store: StoreOf<OnboardingFeature>
-    @State private var showAppCategoryPicker = false
 
     private let accessibilityNotificationPoster: AccessibilityNotificationPosting
 
@@ -89,9 +88,6 @@ struct OnboardingView: View {
             .onChangeCompat(of: store.currentPage) { _ in
                 accessibilityNotificationPoster.postScreenChanged()
             }
-            .sheet(isPresented: $showAppCategoryPicker) {
-                OnboardingAppCategoryPickerSheet(onSelectApps: {})
-            }
         }
     }
 
@@ -111,7 +107,7 @@ struct OnboardingView: View {
     private var onboardingSetUpAction: (() -> Void)? {
         store.screenTimeStatus == .unavailable
             ? nil
-            : { showAppCategoryPicker = true }
+            : { store.send(.openAppCategoryPicker) }
     }
 
     func finishOnboarding() {
@@ -140,25 +136,6 @@ struct OnboardingView: View {
     /// path emits exactly one `.onboardingCompleted` event with the correct CTA.
     private func markOnboardingComplete() {
         UserDefaults.standard.set(true, forKey: AppStorageKey.hasSeenOnboarding)
-    }
-}
-
-// MARK: - AppCategoryPicker Sheet Wrapper
-
-/// Owns a local `Store` for `AppCategoryPickerView` while the onboarding
-/// flow's app-category picker presentation is still view-owned. When
-/// `#755` Phase D wires `RootView` as the destination owner, this wrapper
-/// is removed and the picker is presented via `$store.scope(...)` against
-/// `AppFeature.Destination.appCategoryPicker`.
-private struct OnboardingAppCategoryPickerSheet: View {
-    let onSelectApps: () -> Void
-
-    @State private var store = Store(
-        initialState: AppCategoryPickerFeature.State()
-    ) { AppCategoryPickerFeature() }
-
-    var body: some View {
-        AppCategoryPickerView(store: store, onSelectApps: onSelectApps)
     }
 }
 
