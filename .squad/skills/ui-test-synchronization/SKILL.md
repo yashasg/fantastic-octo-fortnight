@@ -14,8 +14,7 @@ Accessibility trees can keep elements mounted during transitions, making raw exi
 ## iOS/XCUITest Helpers
 - `waitForHittable(timeout:)` with single total deadline.
 - `waitForOverlayPresented()` anchored on a hittable control.
-- `waitForOverlayDismissed()` anchored on fallback screen + overlay root non-existence.
-- `waitForNotHittable()` for hidden mounted elements.
+- `waitForOverlayToRemainAbsent(timeout:pollInterval:)` for asserting the overlay never appears across a full observation window (root non-existence — guards against false-green from a transiently-hidden mounted overlay).
 
 ## Runtime-gated prompt pattern
 - For simulator-dependent surfaces (permissions/Screen Time prompts), assert one of the valid UI affordances (e.g., banner **or** fallback pill) instead of one brittle branch.
@@ -34,3 +33,14 @@ Accessibility trees can keep elements mounted during transitions, making raw exi
 ## Overlay lifetime pinning for launch-arg tests
 - For launch-argument driven overlay entry points, seed deterministic long break durations in app startup test hooks so overlays stay mounted through shard startup latency.
 - Reset test defaults before seeding to avoid cross-test contamination between shards.
+
+## waitForOverlayPresented timeout contract
+- **Default: 20 s** on macos-15 CI runners. M-series Mac completes in <5 s; the larger budget only matters on loaded CI.
+- Use a **single shared deadline** for the two sequential phases (visibility + hittability). Never give each phase the full timeout independently — that silently doubles wall-clock cost on failure paths.
+- Reserve a minimum (3 s) for the hittability phase even when visibility consumed most of the budget.
+- 8 s was the previous default, tuned on M-series hardware. CI failures in run 25957888870 showed overlay.root consistently appeared *after* 8 s on loaded macos-15 runners (every OverlayPresentationTests test failed with 14-15 s elapsed = 8 s + 6 s tearDown overhead).
+
+## Cold-simulator accessibility-tree hang
+- On a cold simulator (very first test after boot), XCTest's internal snapshot evaluation for `waitForExistence` / `isHittable` can block for minutes, surfacing as "Failed to get matching snapshots: Timed out while evaluating UI query".
+- A generous timeout budget (20+ s) reduces the chance of our test-helper timeout racing ahead of XCTest's internal evaluation.
+- If the "Failed to get matching snapshots" error appears alongside our XCTAssertTrue failure, the cold-simulator snapshot evaluation is the trigger, not a broken overlay identifier.

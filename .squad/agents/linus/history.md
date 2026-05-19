@@ -158,3 +158,57 @@ Two child issues now assigned from Google Swift audit: #650 (column-limit line-w
 Toulour (Accessibility Auditor), Denham (HIG Reviewer), Sponder (API Contract Monitor) will file issues that may route to me for UI-side fixes.
 
 - **2026-05-15: Team consolidation — 7 teams collapsed to 2 (Dev + Strategy).** You are now explicitly on the **Dev team** alongside Rusty, Linus, Livingston, Saul, Basher, Yen, Benedict, Virgil. Dev team owns code, tests, build, and CI. Strategy team (Danny, Tess, Reuben, Turk, Frank, Roman, Toulour, Denham, Sponder, Bashir, Matsui, Bruiser) handles product, design, research, legal, audits, and ASO. Scribe and Ralph remain on the roster outside both teams (silent infra). Use GitHub label `team:dev` for issue routing; see .squad/streams.json for canonical Dev workstream folder scopes.
+
+## 2026-05-17 — Upcoming: Coordinated Source Edits for Release-Config CI (HomeView + UITestMode)
+
+**FYI:** Virgil and Scribe orchestrated Release + wholemodule defaults in scripts/build.sh (Commit edc772c). Follow-up gap identified:
+
+22 `#if DEBUG` guards in 5 app source files will break tests under Release config:
+- **HomeView.swift** — your domain (Linus)
+- UITestMode.swift — UI layer
+- AppDelegate.swift — app entry
+- EyePostureReminderApp.swift — app root
+- AnalyticsLogger.swift — Basher's domain (Services)
+
+**Next Step (Pending Yashas Authorization)**
+
+Source edits: `#if DEBUG` → `#if DEBUG || CI` (5 files, ~22 lines) + script injects `-D CI` via OTHER_SWIFT_FLAGS.
+
+**Coordination**
+
+Basher owns AnalyticsLogger; you own HomeView + UITestMode cross-domain visibility. When authorization arrives, both will be assigned source-edit PRs with unified strategy. See `.squad/log/2026-05-17T09-13-37Z-scripts-release-wholemodule-impl.md` for full context.
+
+**Refs**
+- Virgil decision: `.squad/decisions.md` (2026-05-17 Release + Wholemodule section)
+- Basher history: `.squad/agents/basher/history.md` (same update)
+- Orchestration: `.squad/orchestration-log/2026-05-17T09-13-37Z-scribe.md`
+
+## Learnings
+
+### 2026-05-15 — #808: IMPLEMENTATION_PLAN.md OverlayManager drift (docs-only fix)
+
+**Task:** Retire stale OverlayManager / OverlayPresenting / MockOverlayPresenting references from IMPLEMENTATION_PLAN.md post-#920 (UIWindow-backed overlay deleted in favor of TCA AppFeature.State.overlay → RootView.fullScreenCover).
+
+**Lines edited:**
+- **L90** (Services tree): `OverlayManager.swift` → annotated `(retired in #920)`
+- **L153** (Foreground flow): `OverlayManager` → `OverlayFeature / AppFeature.State.overlay / OverlayClient`
+- **L186-190** (Flow diagram): `OverlayManager.show` → `AppFeature.State.overlay` set
+- **L384-392** (Threshold flow): `OverlayManager.showOverlay` → `AppFeature.State.overlay = .some(...); RootView.fullScreenCover`
+- **L420** (Test table): `OverlayManager` row → `OverlayClient` lifecycle tests + note "retired OverlayManager UIWindow tests in #920"
+
+**Verification:**
+```bash
+grep -nE 'OverlayManager|OverlayPresenting' IMPLEMENTATION_PLAN.md
+```
+**Before:** 7 matches (L90, 153, 186, 190, 384, 392, 420)
+**After:** 2 matches — both explicit "retired in #920" annotations (L90, 420)
+
+**Cross-reference:** ARCHITECTURE.md §1 (lines 57-61) confirmed canonical post-#920 architecture (reducer-owned overlay state, no UIWindow).
+
+**Refs:**
+- Branch: `users/squad/808-implementation-plan-overlay-drift`
+- Commit: b0040339ebdfd3708bd80bf79fe686dedb54098d
+- GitLab MR: !931
+- GitHub PR: #812
+
+**Learning:** Docs cleanup requires reading canonical architecture doc first (ARCHITECTURE.md) to match voice + technical facts, then surgical edits only. No restructuring. Cross-grepping before/after confirms zero residual drift.

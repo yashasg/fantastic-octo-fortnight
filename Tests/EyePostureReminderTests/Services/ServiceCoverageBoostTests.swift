@@ -5,8 +5,9 @@ import XCTest
 @testable import EyePostureReminder
 
 /// Additional service and model tests targeting coverage gaps in partially-covered
-/// production files: PauseConditionManager, OverlayManager, MetricKitSubscriber,
-/// AppDelegate, and related service helpers.
+/// production files: PauseConditionManager, MetricKitSubscriber, AppDelegate, and
+/// related service helpers. Overlay tests previously hosted here were retired by
+/// `#920` along with the `OverlayManager` UIWindow path.
 @MainActor
 final class ServiceCoverageBoostTests: XCTestCase {
 
@@ -137,72 +138,6 @@ final class ServiceCoverageBoostTests: XCTestCase {
         // Initial state should be propagated
         XCTAssertTrue(mgr.isPaused)
         mgr.stopMonitoring()
-    }
-
-    // MARK: - OverlayManager — Additional Tests
-
-    func test_overlayManager_isOverlayVisible_initiallyFalse() {
-        let mgr = OverlayManager(audioManager: MockMediaControlling())
-        XCTAssertFalse(mgr.isOverlayVisible)
-    }
-
-    func test_overlayManager_dismissOverlay_whenNotVisible_isNoOp() {
-        let mgr = OverlayManager(audioManager: MockMediaControlling())
-        mgr.dismissOverlay() // should not crash
-        XCTAssertFalse(mgr.isOverlayVisible)
-    }
-
-    func test_overlayManager_clearQueue_whenEmpty_doesNotCrash() {
-        let mgr = OverlayManager(audioManager: MockMediaControlling())
-        mgr.clearQueue()
-        mgr.clearQueue(for: .eyes)
-        mgr.clearQueue(for: .posture)
-    }
-
-    func test_overlayManager_showOverlay_withoutScene_queuesRequest() {
-        let audio = MockMediaControlling()
-        let mgr = OverlayManager(audioManager: audio)
-        mgr.showOverlay(
-            for: .eyes, duration: 20, hapticsEnabled: true,
-            pauseMediaEnabled: true, onDismiss: {})
-        // No active scene → queued, not shown
-        XCTAssertFalse(mgr.isOverlayVisible)
-        XCTAssertEqual(audio.pauseCallCount, 0)
-    }
-
-    func test_overlayManager_multipleQueuedRequests() {
-        let mgr = OverlayManager(audioManager: MockMediaControlling())
-        for _ in 0..<5 {
-            mgr.showOverlay(
-                for: .eyes, duration: 10, hapticsEnabled: false,
-                pauseMediaEnabled: false, onDismiss: {})
-        }
-        // All queued since no scene available
-        XCTAssertFalse(mgr.isOverlayVisible)
-    }
-
-    func test_overlayManager_clearQueueForType_specific() {
-        let mgr = OverlayManager(audioManager: MockMediaControlling())
-        mgr.showOverlay(for: .eyes, duration: 10, hapticsEnabled: false,
-                        pauseMediaEnabled: false, onDismiss: {})
-        mgr.showOverlay(for: .posture, duration: 10, hapticsEnabled: false,
-                        pauseMediaEnabled: false, onDismiss: {})
-        mgr.clearQueue(for: .eyes)
-        // posture should still be queued
-    }
-
-    // MARK: - MockOverlayPresenting Extended
-
-    func test_mockOverlayPresenting_completeCycle() {
-        let mock = MockOverlayPresenting()
-        XCTAssertFalse(mock.isOverlayVisible)
-        var dismissed = false
-        mock.showOverlay(for: .eyes, duration: 20, hapticsEnabled: true,
-                         pauseMediaEnabled: true, onDismiss: { dismissed = true })
-        XCTAssertTrue(mock.isOverlayVisible)
-        XCTAssertEqual(mock.showCallCount, 1)
-        mock.simulateDismiss(index: 0)
-        XCTAssertTrue(dismissed)
     }
 
     // MARK: - MetricKitSubscriber

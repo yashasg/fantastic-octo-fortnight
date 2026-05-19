@@ -1,3 +1,4 @@
+import ComposableArchitecture
 import XCTest
 
 @testable import EyePostureReminder
@@ -110,74 +111,57 @@ final class CoverageBoostTests: XCTestCase {
 
     // MARK: - OverlayView Init Contract
 
+    /// `#920` removed the closure-init in favour of the canonical
+    /// `init(store:)`. The view exposes `type`, `duration`, and
+    /// `hapticsEnabled` as proxy accessors that read from the underlying
+    /// `OverlayFeature.State` — these tests preserve that property
+    /// contract.
+
+    private func makeOverlayView(
+        type: ReminderType,
+        duration: TimeInterval,
+        hapticsEnabled: Bool = true
+    ) -> OverlayView {
+        let store = Store(
+            initialState: OverlayFeature.State(
+                type: type,
+                duration: duration,
+                hapticsEnabled: hapticsEnabled
+            )
+        ) {
+            OverlayFeature()
+        } withDependencies: {
+            TCATestDependencies.applyAllSilentClients(&$0)
+        }
+        return OverlayView(store: store)
+    }
+
     func test_overlayView_initWithEyeType_setsProperties() {
-        var dismissCalled = false
-        let view = OverlayView(
-            type: .eyes,
-            duration: 20,
-            hapticsEnabled: true,
-            onDismiss: { dismissCalled = true }
-        )
+        let view = makeOverlayView(type: .eyes, duration: 20, hapticsEnabled: true)
         XCTAssertEqual(view.type, .eyes)
         XCTAssertEqual(view.duration, 20)
         XCTAssertTrue(view.hapticsEnabled)
-        view.onDismiss()
-        XCTAssertTrue(dismissCalled)
     }
 
     func test_overlayView_initWithPostureType_setsProperties() {
-        let view = OverlayView(
-            type: .posture,
-            duration: 10,
-            hapticsEnabled: false,
-            onDismiss: {}
-        )
+        let view = makeOverlayView(type: .posture, duration: 10, hapticsEnabled: false)
         XCTAssertEqual(view.type, .posture)
         XCTAssertEqual(view.duration, 10)
         XCTAssertFalse(view.hapticsEnabled)
     }
 
     func test_overlayView_defaultHapticsEnabled_isTrue() {
-        let view = OverlayView(type: .eyes, duration: 20, onDismiss: {})
+        // `OverlayFeature.State.init(...)` defaults `hapticsEnabled` to
+        // `true` — `OverlayView` must read that through to its proxy.
+        let store = Store(
+            initialState: OverlayFeature.State(type: .eyes, duration: 20)
+        ) {
+            OverlayFeature()
+        } withDependencies: {
+            TCATestDependencies.applyAllSilentClients(&$0)
+        }
+        let view = OverlayView(store: store)
         XCTAssertTrue(view.hapticsEnabled)
-    }
-
-    func test_overlayView_onSettingsTap_defaultIsNoOp() {
-        let view = OverlayView(type: .eyes, duration: 20, onDismiss: {})
-        // Should not crash — default is {}
-        view.onSettingsTap()
-    }
-
-    func test_overlayView_onAnalyticsEvent_defaultIsNoOp() {
-        let view = OverlayView(type: .eyes, duration: 20, onDismiss: {})
-        // Should not crash — default is { _ in }
-        view.onAnalyticsEvent(.overlayAutoDismissed(type: .eyes, durationS: 20))
-    }
-
-    func test_overlayView_customOnSettingsTap_isCalled() {
-        var tapped = false
-        let view = OverlayView(
-            type: .posture,
-            duration: 10,
-            onAnalyticsEvent: { _ in },
-            onSettingsTap: { tapped = true },
-            onDismiss: {}
-        )
-        view.onSettingsTap()
-        XCTAssertTrue(tapped)
-    }
-
-    func test_overlayView_customOnAnalyticsEvent_isCalled() {
-        var eventReceived: AnalyticsEvent?
-        let view = OverlayView(
-            type: .eyes,
-            duration: 20,
-            onAnalyticsEvent: { eventReceived = $0 },
-            onDismiss: {}
-        )
-        let event = AnalyticsEvent.overlayAutoDismissed(type: .eyes, durationS: 20)
-        view.onAnalyticsEvent(event)
-        XCTAssertNotNil(eventReceived)
     }
 
     // MARK: - SoftElevation Modifier

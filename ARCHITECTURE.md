@@ -27,17 +27,17 @@
  │      Views       │  │ Feature Reducers     │  │   Dependency Clients     │
  │                  │  │                      │  │    (TCA boundaries)      │
  │ RootView         │  │ HomeFeature          │  │ SettingsClient           │
- │ ContentView      │◄─┤ SettingsFeature      │◄─┤ ReminderSchedulerClient  │
- │ HomeView         │  │ OnboardingFeature    │  │ ScreenTimeTrackerClient  │
- │ SettingsView     │  │ OverlayFeature       │  │ OverlayClient            │
- │ OnboardingView   │  │ SchedulingFeature    │  │ NotificationClient       │
- │ OverlayView      │  │ AppCategoryPicker-   │  │ PauseConditionClient     │
- │ AppCategory-     │  │   Feature            │  │ ScreenTimeAuthorization- │
- │   PickerView     │  │                      │  │   Client                 │
- │ DesignSystem     │  │                      │  │ DeviceActivityMonitor-   │
- │ LegalDocument-   │  │                      │  │   Client                 │
- │   View           │  │                      │  │ IPCClient                │
- │ YinYangEyeView   │  │                      │  │ AnalyticsClient          │
+ │ HomeView         │◄─┤ SettingsFeature      │◄─┤ ReminderSchedulerClient  │
+ │ SettingsView     │  │ OnboardingFeature    │  │ ScreenTimeTrackerClient  │
+ │ OnboardingView   │  │ OverlayFeature       │  │ OverlayClient            │
+ │ OverlayView      │  │ SchedulingFeature    │  │ NotificationClient       │
+ │ AppCategory-     │  │ AppCategoryPicker-   │  │ PauseConditionClient     │
+ │   PickerView     │  │   Feature            │  │ ScreenTimeAuthorization- │
+ │ DesignSystem     │  │                      │  │   Client                 │
+ │ LegalDocument-   │  │                      │  │ DeviceActivityMonitor-   │
+ │   View           │  │                      │  │   Client                 │
+ │ YinYangEyeView   │  │                      │  │ IPCClient                │
+ │                  │  │                      │  │ AnalyticsClient          │
  └──────────────────┘  └──────────┬───────────┘  └─────────────┬────────────┘
                                   │                            │
                                   ▼                            ▼
@@ -47,14 +47,18 @@
                        │ ReminderType     │         │                      │
                        │ ReminderSettings │         │ ReminderScheduler    │
                        │ SettingsStore    │         │ ScreenTimeTracker    │
-                       │ AppConfig        │         │ OverlayManager       │
-                       │ SettingsPicker-  │         │ PauseConditionMgr    │
-                       │   Options        │         │ AudioInterruptionMgr │
-                       └──────────────────┘         │ AnalyticsLogger      │
-                                                    │ MetricKitSubscriber  │
+                       │ AppConfig        │         │ PauseConditionMgr    │
+                       │ SettingsPicker-  │         │ AudioInterruptionMgr │
+                       │   Options        │         │ AnalyticsLogger      │
+                       └──────────────────┘         │ MetricKitSubscriber  │
                                                     │ ServiceLifecycle     │
                                                     │ AppGroupIPCProviding │
                                                     └──────────────────────┘
+            (Overlay presentation is reducer-owned: `AppFeature.State.overlay`
+             drives `RootView.fullScreenCover`; `OverlayClient` only owns the
+             lifecycle-event multicast + audio / accessibility side-effects.
+             #919 Phase 1 / #920 Phase 2 retired the `OverlayManager` UIWindow
+             path.)
 ```
 
 **Dependency Rules (post-TCA migration, #677 / #755):**
@@ -101,25 +105,42 @@ extension UNUserNotificationCenter: NotificationScheduling { }
 
 ---
 
-### 2.2 `OverlayPresenting`
+### 2.2 `OverlayClient` (overlay side-effects)
 
-Abstracts overlay window lifecycle so we can verify presentation logic without creating real UIWindows in tests.
+Reducers do not present overlays directly. Presentation state lives in the
+canonical TCA slot `AppFeature.State.overlay` (a `@Presents OverlayFeature.State?`),
+and `RootView.fullScreenCover(item:)` renders the real `OverlayView(store:)`
+against that slot. `SchedulingFeature` only signals intent (delegate vocabulary
+`presentOverlay(_:)` / `suspendOverlayForPauseCondition`); `AppFeature`
+writes or enqueues into `state.overlay` / `state.overlayQueue` (FIFO, #289).
+
+`OverlayClient` is the narrow side-effect dependency that `OverlayFeature`
+and other reducers consume:
 
 ```swift
-protocol OverlayPresenting {
-    func showOverlay(
-        for reminderType: ReminderType,
-        duration: TimeInterval,
-        onDismiss: @escaping () -> Void
-    )
-    
-    func dismissOverlay()
-    
-    var isOverlayVisible: Bool { get }
+@DependencyClient
+struct OverlayClient: Sendable {
+    var lifecycleEvents: @Sendable () -> AsyncStream<OverlayLifecycleEvent>
+    var broadcast: @Sendable (OverlayLifecycleEvent) async -> Void
+    var pauseExternalAudio: @Sendable () async -> Void   // AVAudioSession interruption
+    var resumeExternalAudio: @Sendable () async -> Void
+    var postScreenChanged: @Sendable () async -> Void    // UIAccessibility.screenChanged
+}
+
+enum OverlayLifecycleEvent: Equatable, Sendable {
+    case presented(ReminderType)
+    case dismissed(ReminderType)
+    case settingsTapped(ReminderType)
 }
 ```
 
-**Why:** UI tests verify overlay appearance; unit tests mock the presenter to verify scheduling logic doesn't double-trigger.
+**Why:** `OverlayFeature` stays pure (no `import AVFoundation`, no `import UIKit`)
+and remains drivable from `TestStore` via `withDependencies { $0.overlayClient = … }`.
+Subscribers (`AppFeature` settings-handoff #786, `SchedulingFeature`
+session-timing #901 / DeviceActivity #903) react to lifecycle events without
+knowing about presentation mechanics. The `show` / `dismiss` / `clearQueue`
+surface that pre-dated #919/#920 (with a `UIWindow`-backed `OverlayManager`
++ `OverlayPresenting` protocol + `MockOverlayPresenting` mock) is **deleted**.
 
 ---
 
@@ -255,7 +276,7 @@ Defined in `EyePostureReminder/TCA/Dependencies/*Client.swift`. Each client is a
 | `SettingsClient` | `SettingsStore` (observer surface added in #716) | `SchedulingFeature` / `SettingsFeature` read + stream settings |
 | `ReminderSchedulerClient` | `ReminderScheduler` | `SchedulingFeature` schedules / cancels notification requests |
 | `ScreenTimeTrackerClient` | `ScreenTimeTracker` | `SchedulingFeature` drives the foreground accumulation timer |
-| `OverlayClient` | `OverlayManager` | `SchedulingFeature` presents / dismisses the UIWindow overlay |
+| `OverlayClient` | _none — overlay side-effects only_ | `OverlayFeature` runs the lifecycle multicast, audio pause/resume, and `UIAccessibility.screenChanged` posts. Presentation is reducer-owned (`AppFeature.State.overlay` → `RootView.fullScreenCover`). |
 | `NotificationClient` | `UNUserNotificationCenter` | `SchedulingFeature` snooze-wake delivery |
 | `PauseConditionClient` | `PauseConditionManager` | `SchedulingFeature` Focus / CarPlay / driving signals |
 | `ScreenTimeAuthorizationClient` | `LiveScreenTimeAuthorizationProviding` | `OnboardingFeature` FamilyControls authorization |
@@ -298,14 +319,13 @@ EyePostureReminder/                  (SPM executable target)
 │   │   ├── SettingsClient.swift           Wraps `SettingsStore` observer surface
 │   │   ├── ReminderSchedulerClient.swift  Wraps `ReminderScheduler`
 │   │   ├── ScreenTimeTrackerClient.swift  Wraps `ScreenTimeTracker`
-│   │   ├── OverlayClient.swift            Wraps `OverlayManager`
+│   │   ├── OverlayClient.swift            Overlay side-effects: lifecycle multicast (`broadcast` / `lifecycleEvents`), `pauseExternalAudio` / `resumeExternalAudio`, `postScreenChanged`. No `show` / `dismiss` — presentation is reducer-owned via `AppFeature.State.overlay`.
 │   │   ├── NotificationClient.swift       Wraps `UNUserNotificationCenter`
 │   │   ├── PauseConditionClient.swift     Wraps `PauseConditionManager`
 │   │   ├── ScreenTimeAuthorizationClient.swift  Wraps live FamilyControls authorization
 │   │   ├── DeviceActivityMonitorClient.swift    Wraps the Phase-3 DeviceActivity provider
 │   │   ├── IPCClient.swift                Wraps `AppGroupIPCProviding` for cross-process state
 │   │   └── AnalyticsClient.swift          Wraps `AnalyticsLogger`
-│   └── Bindings/                          SwiftUI binding helpers for `@Perception.Bindable` stores
 │
 ├── Models/
 │   ├── AppConfig.swift               Codable struct; loads defaults.json; .fallback hardcoded
@@ -318,20 +338,17 @@ EyePostureReminder/                  (SPM executable target)
 │   ├── ReminderScheduler.swift       UNNotification scheduling; NotificationScheduling + ReminderScheduling protocols
 │   ├── ScreenTimeTracker.swift       Continuous screen-on timer; ScreenTimeTracking protocol
 │   ├── PauseConditionManager.swift   Focus/CarPlay/driving aggregation; all detector + PauseConditionProviding protocols
-│   ├── OverlayManager.swift          UIWindow overlay lifecycle; OverlayPresenting protocol
 │   ├── AudioInterruptionManager.swift AVAudioSession interruption; MediaControlling protocol
 │   ├── AnalyticsLogger.swift         Structured event logging via os.Logger (see TELEMETRY.md)
 │   ├── MetricKitSubscriber.swift     MXMetricManager subscriber for OS-level crash/perf diagnostics
 │   ├── ServiceLifecycle.swift        Lifecycle protocol (start/stop) for uniform service management
 │   ├── AppGroupIPCProviding.swift    App-group UserDefaults wrapper + event log for main ↔ extension state
 │   ├── ScreenTimeAuthorizationProviding.swift  FamilyControls authorization abstraction
-│   ├── ScreenTimeAuthorizationStub.swift / ...Noop.swift  Build-time stubs for non-FamilyControls builds
+│   ├── ScreenTimeAuthorizationNoop.swift  Default build-time stub returning `.unavailable` until #201 entitlement
 │   ├── ScreenTimeShieldProtocols.swift / ScreenTimeShieldTypes.swift / ScreenTimeShieldNoop.swift  ManagedSettings shield surface
-│   ├── DeviceActivityMonitorProviding.swift / DeviceActivityMonitorNoop.swift  DeviceActivity stubs
-│   └── NoopServices.swift            Centralized no-op fallbacks for distribution builds
+│   └── DeviceActivityMonitorProviding.swift / DeviceActivityMonitorNoop.swift  DeviceActivity stubs
 │
 ├── Views/
-│   ├── ContentView.swift             Thin wrapper retained for preview / test compatibility; delegates to `RootView`
 │   ├── HomeView.swift                App home screen; consumes `StoreOf<HomeFeature>`
 │   ├── SettingsView.swift            Settings screen; consumes `StoreOf<SettingsFeature>`
 │   ├── ReminderRowView.swift         Per-type interval/duration row
@@ -354,52 +371,72 @@ EyePostureReminder/                  (SPM executable target)
 │   ├── Logger+App.swift              OSLog subsystem categories: .lifecycle, .scheduling, .overlay, .settings
 │   ├── AppStorageKeys.swift          Centralized `@AppStorage` key constants
 │   ├── AccessibilityNotificationPosting.swift  Wraps `UIAccessibility.post` for testability
-│   ├── DateProviding.swift           Injectable date provider (test seam)
 │   ├── LegalLinks.swift              Canonical privacy / terms URLs
 │   └── UITestMode.swift              `#if DEBUG` launch-arg helpers for UI tests
 │
-└── Resources/
-    ├── Colors.xcassets               Semantic color tokens with dark/light variants:
-    │                                   Legacy: ReminderBlue, ReminderGreen, WarningOrange, WarningText
-    │                                   Restful Grove: RGPrimaryRest, RGSecondaryCalm, RGAccentWarm,
-    │                                     RGSurface, RGSurfaceTint, RGBackground, RGTextPrimary,
-    │                                     RGTextSecondary, RGSeparatorSoft, RGShadowCard
-    ├── Localizable.xcstrings         ~35 user-facing strings; Xcode 15 String Catalog
-    ├── defaults.json                 First-launch seed values for intervals + feature flags
-    └── PrivacyInfo.xcprivacy         Apple privacy manifest for App Store Connect compliance
+├── Resources/
+│   ├── Colors.xcassets               Semantic color tokens with dark/light variants:
+│   │                                   Legacy: ReminderBlue, ReminderGreen, WarningOrange, WarningText
+│   │                                   Restful Grove: RGPrimaryRest, RGSecondaryCalm, RGAccentWarm,
+│   │                                     RGSurface, RGSurfaceTint, RGBackground, RGTextPrimary,
+│   │                                     RGTextSecondary, RGSeparatorSoft, RGShadowCard
+│   ├── Fonts/
+│   │   ├── Nunito-Regular.ttf            Custom UI font (Restful Grove typography)
+│   │   ├── Nunito-Italic.ttf             Custom UI font — italic variant
+│   │   └── OFL-Nunito.txt                SIL Open Font License notice bundled alongside Nunito files
+│   ├── Localizable.xcstrings         ~35 user-facing strings; Xcode 15 String Catalog
+│   └── defaults.json                 First-launch seed values for intervals + feature flags
+│
+├── Info.plist                        Main-app Info.plist (`project.yml:67` `INFOPLIST_FILE`); bundle id / scene manifest / `NSMotionUsageDescription` / `NSFocusStatusUsageDescription`
+├── EyePostureReminder.entitlements              (dev signing — App Group `group.com.yashasg.kshana` + Focus Status; FamilyControls pending #201) — `project.yml:69` `CODE_SIGN_ENTITLEMENTS`
+├── EyePostureReminder.Distribution.entitlements (distribution signing — App Store profile without Focus Status; default for `scripts/build_signed.sh`, see `README.md` "Signed TestFlight builds")
+├── AppIcon.xcassets                  App Icon asset catalog (`AppIcon-1024.png` + scaled variants); wired via `project.yml:59,68`
+└── PrivacyInfo.xcprivacy             Apple privacy manifest for App Store Connect compliance (copied via `Package.swift`)
 
 Extensions/                           (XcodeGen app-extension targets)
-├── Shared/
-│   └── ShieldSessionKeys.swift       App Group UserDefaults keys mirrored from ShieldSession
+├── Shared/                           App Group helpers shared by main app + both extensions
+│   ├── AppGroupDefaults.swift             App Group `UserDefaults` suite accessor
+│   ├── AppGroupIPCStore.swift             Cross-process event log built on `AppGroupDefaults`
+│   ├── ShieldConfigurationCopyLocalization.swift  Localised strings for shield UI copy
+│   ├── ShieldIntervalEndCleanupPolicy.swift       Snapshot-aware cleanup policy on interval end
+│   ├── ShieldSessionKeys.swift            App Group UserDefaults keys mirrored from ShieldSession
+│   ├── ShieldSessionSnapshot.swift        Codable snapshot of an active shield session
+│   ├── ShieldTriggerReason.swift          Reason enum recorded when a shield is raised
+│   └── WatchdogHeartbeat.swift            Liveness heartbeat written by the monitor extension
 ├── ShieldConfigurationExtension/
 │   ├── Info.plist                    com.apple.ManagedSettingsUI.shield-configuration-service
 │   ├── ShieldConfigurationDataSource.swift
-│   └── ShieldConfigurationExtension.entitlements
+│   ├── ShieldConfigurationExtension.entitlements             (dev signing)
+│   ├── ShieldConfigurationExtension.Distribution.entitlements (distribution signing)
+│   └── PrivacyInfo.xcprivacy         Apple privacy manifest for the shield-configuration extension (#635)
 └── DeviceActivityMonitorExtension/
     ├── Info.plist                    com.apple.deviceactivity.monitor-extension
     ├── DeviceActivityMonitorExtension.swift
-    └── DeviceActivityMonitorExtension.entitlements
+    ├── DeviceActivityMonitorExtension.entitlements             (dev signing)
+    ├── DeviceActivityMonitorExtension.Distribution.entitlements (distribution signing)
+    └── PrivacyInfo.xcprivacy         Apple privacy manifest for the device-activity-monitor extension (#635)
 
 Tests/
 ├── EyePostureReminderTests/          (SPM test target, depends on EyePostureReminder)
+│   ├── README.md                     Unit-test conventions — IUO fixture lifecycle; complements `docs/google_swift_coding_style.md`
 │   ├── Fixtures/
 │   │   └── defaults.json             Test fixture for AppConfig loading tests
 │   ├── Mocks/
 │   │   ├── MockDetectors.swift       MockFocusStatusDetector, MockCarPlayDetector, MockDrivingActivityDetector
 │   │   ├── MockMediaControlling.swift
 │   │   ├── MockNotificationCenter.swift
-│   │   ├── MockOverlayPresenting.swift
 │   │   ├── MockPauseConditionProvider.swift
 │   │   ├── MockReminderScheduler.swift
 │   │   ├── MockScreenTimeTracker.swift
 │   │   ├── MockSettingsPersisting.swift
 │   │   ├── MockAppGroupIPCRecorder.swift  Captures `IPCClient` writes in unit tests
 │   │   ├── MockAppStateProvider.swift     Fake `UIApplication.applicationState`
-│   │   ├── MockDateProvider.swift         Fake clock for SchedulingFeature snooze tests
 │   │   ├── MockDeviceActivityMonitorProviding.swift
 │   │   ├── MockScreenTimeAuthorizationProviding.swift
 │   │   ├── MockScreenTimeShieldProviding.swift
 │   │   ├── MockAccessibilityNotificationPoster.swift
+│   │   ├── MockMediaControllingTests.swift  Self-tests for `MockMediaControlling` recording fidelity
+│   │   ├── MockRecordingTests.swift         Self-tests for `ServiceLifecycle` mock detector recording
 │   │   └── TestBundleHelper.swift    TestBundle.module — resolves SPM resource bundle in tests
 │   ├── Models/
 │   │   ├── AppConfigTests.swift
@@ -424,8 +461,6 @@ Tests/
 │   │   ├── FocusModeExtendedTests.swift / LiveFocusStatusDetectorTests.swift
 │   │   ├── LiveCarPlayDetectorTests.swift
 │   │   ├── MetricKitSubscriberTests.swift
-│   │   ├── NoopServicesTests.swift
-│   │   ├── OverlayManagerTests.swift / OverlayManagerExtendedTests.swift / OverlayManagerTerminationTests.swift
 │   │   ├── PauseConditionManagerTests.swift
 │   │   ├── ReminderSchedulerTests.swift
 │   │   ├── ScreenTimeAuthorizationTests.swift
@@ -436,7 +471,6 @@ Tests/
 │   ├── TCA/                          `TestStore` coverage per feature reducer + dependency client
 │   │   ├── AppFeatureTests.swift
 │   │   ├── AppCategoryPickerFeatureTests.swift
-│   │   ├── ContentViewTests.swift
 │   │   ├── HomeFeatureTests.swift
 │   │   ├── OnboardingFeatureTests.swift
 │   │   ├── OverlayFeatureTests.swift / OverlayFeatureBehaviorTests.swift
@@ -445,7 +479,7 @@ Tests/
 │   │   ├── SchedulingFeature_SchedulingTests.swift
 │   │   ├── SchedulingFeature_SnoozeTests.swift
 │   │   ├── SchedulingFeature_WatchdogRecoveryTests.swift
-│   │   ├── SettingsFeatureTests.swift / SettingsFeatureBindingTests.swift / SettingsFeatureSnoozeTests.swift
+│   │   ├── SettingsFeatureTests.swift / SettingsFeatureBindingTests.swift / SettingsFeatureSnoozeTests.swift / SettingsFeatureToggleEmissionTests.swift
 │   │   ├── IPCClientSurfaceTests.swift
 │   │   └── TCATestDependencies.swift  Shared `withDependencies` overrides for TestStore setup
 │   ├── Views/
@@ -459,16 +493,24 @@ Tests/
 │   │   ├── SettingsAccessibilityTests.swift / StringCatalogTests.swift
 │   │   ├── TrueInterruptViewCoverageTests.swift
 │   │   └── YinYangEyeViewTests.swift / YinYangEyeViewExtendedTests.swift
+│   ├── Utilities/                    Unit tests for `EyePostureReminder/Utilities/` helpers
+│   │   ├── AccessibilityAnnouncementTests.swift  `AccessibilityNotificationPosting` announcement coverage (#287)
+│   │   ├── AppStorageKeysTests.swift             Centralised `@AppStorage` key constant coverage
+│   │   ├── AsyncTestHelpers.swift                Shared `XCTestCase` polling helpers (#456) — deterministic waits
+│   │   └── LegalLinksTests.swift                 Canonical privacy / terms URL coverage
 │   ├── Integration/                  Real SettingsStore + live services wired through TCA clients; mocked UIKit / UNUserNotificationCenter
 │   │   ├── IntegrationTests.swift
 │   │   └── MultiServicePipelineIntegrationTests.swift
 │   └── RegressionTests.swift         Bug regression guards; one section per fixed bug
 │
-└── EyePostureReminderUITests/        (Xcode-only UI test target — not in Package.swift; currently gated `if: false` in CI per #736)
+└── EyePostureReminderUITests/        (Xcode-only UI test target — not in Package.swift; sharded `uitest-prepare` / `uitest-shard` / `uitest` jobs run on every PR + `main` push per #778)
+    ├── README.md                         UITest target conventions + `XCTExpectFailure` tracking table (cited at §10.1)
     ├── HomeScreenTests.swift
     ├── OnboardingFlowTests.swift
     ├── OverlayTests.swift
-    └── SettingsFlowTests.swift
+    ├── SettingsFlowTests.swift
+    ├── AppStoreScreenshotTests.swift     Opt-in App Store screenshot capture driven by `scripts/capture-app-store-screenshots.sh` (`APP_STORE_SCREENSHOT_DIR` env)
+    └── UITestHelpers.swift                `TestLaunchArguments` constants + `XCUIApplication` helpers consumed by every UITest case
 ```
 
 **Target Configuration:**
@@ -584,7 +626,7 @@ The Asset Catalog defines the following semantic color tokens (each with light/d
 // SwiftUI (automatic dark/light adaptation)
 Color("ReminderBlue")
 
-// UIKit (e.g., UIWindow tint in OverlayManager)
+// UIKit (e.g., underlying named colours feeding SwiftUI bridges)
 UIColor(named: "ReminderBlue")
 ```
 Replaces all `UIColor(dynamicProvider:)` calls in `DesignSystem.swift`. The OS handles dark/light switching — no Swift logic needed.
@@ -662,8 +704,10 @@ UIApplication.didBecomeActive  ──► SchedulingFeature `.foregroundTransitio
                               `.thresholdReached(type)`
                                        │
                                        ▼
-                              `notificationClient.deliver` (foreground) or
-                              `overlayClient.show` (in-app)
+                              `notificationClient.deliver` (background) or
+                              `.delegate(.presentOverlay(_))` (foreground) →
+                              `AppFeature` writes `state.overlay`, which
+                              `RootView.fullScreenCover` renders
                                        │
                               overlay dismissed
                                        │
@@ -923,7 +967,7 @@ jobs:
           path: TestResults.xcresult
 ```
 
-**Coverage Target:** 85% for Models, Services, ViewModels. Views are tested via UI tests.
+**Coverage Target:** 85% for Models, Services, ViewModels (the `ViewModels` layer was decommissioned in the Phase-2 TCA migration — #677 / #701 / #755; see §10.5 Coverage Targets for the canonical post-TCA table with `Reducers (TCA)` at 90%). Views are tested via UI tests.
 
 ---
 
@@ -932,8 +976,8 @@ jobs:
 | Layer | Test Type | Coverage Target | Key Tests |
 |-------|-----------|-----------------|-----------|
 | **Models** | Unit | 90% | `SettingsStore` read/write, default values |
-| **Services** | Unit | 85% | `ReminderScheduler` schedules correct intervals; `OverlayManager` doesn't double-present |
-| **ViewModels** | Unit | 85% | Settings changes trigger reschedule; bindings update correctly |
+| **Services** | Unit | 85% | `ReminderScheduler` schedules correct intervals; `AudioInterruptionManager` activates/deactivates `AVAudioSession` exactly once per overlay |
+| **ViewModels** _(decommissioned)_ | Unit | 85% | Settings changes trigger reschedule; bindings update correctly — superseded by `Reducers (TCA)` at 90% after the Phase-2 TCA migration (#677 / #701 / #755); see §10.5 Coverage Targets |
 | **Views** | UI | 50% | Settings pickers save; overlay dismiss button works; countdown updates |
 | **Integration** | Manual | N/A | End-to-end on device with real notifications; test in Low Power Mode |
 
@@ -1027,7 +1071,7 @@ struct ExampleView: View {
 ### 7.5 Error Handling
 
 - Use `async throws` for service methods that can fail (e.g., `requestAuthorization`)
-- Use `Result<Success, Failure>` for ViewModel methods that bridge async errors to SwiftUI (which doesn't support `throws` in bindings)
+- Use `Result<Success, Failure>` for ViewModel methods that bridge async errors to SwiftUI (which doesn't support `throws` in bindings) — the `ViewModel` layer itself was decommissioned in the Phase-2 TCA migration (#677 / #701 / #755); the equivalent post-TCA pattern is catching async failures inside dependency-client methods and returning sentinel values, e.g. `EyePostureReminder/TCA/Dependencies/IPCClient.swift:143/158/171`
 - Log errors via `print("...")` for Phase 1; replace with OSLog in Phase 2
 
 **Don't:**
@@ -1244,7 +1288,7 @@ class ShieldActionHandler: ShieldActionDelegate {
 
 ### 5.5.7 Local Notification Fallback (Phase 2-3 Bridge)
 
-**Phase 2 behavior (current):** `SchedulingFeature` reducer reacts to `screenTimeTrackerClient` threshold events → emits `notificationClient.deliver` (background) or `overlayClient.show` (foreground) effects. `OverlayManager` still owns the `UIWindow` lifecycle behind `OverlayClient`.
+**Phase 2 behavior (current):** `SchedulingFeature` reacts to `screenTimeTrackerClient` threshold events → emits `notificationClient.deliver` (background) or `.delegate(.presentOverlay(_))` (foreground). `AppFeature` owns the `@Presents var overlay` slot: it writes `OverlayFeature.State(...)` when the slot is empty, or appends an `OverlayPresentationRequest` to `state.overlayQueue` (FIFO, #289). `RootView.fullScreenCover(item: $store.scope(state: \.$overlay, …))` renders the real `OverlayView(store:)`. `#919` Phase 1 / `#920` Phase 2 retired the `OverlayManager` UIWindow path; `OverlayClient` is now overlay-side-effects only (lifecycle multicast + audio + accessibility).
 
 **Phase 3 behavior (with Shield):** Same, but only if:
 1. `familyControlsAuthorized == false` (user denied FamilyControls), OR
@@ -1264,17 +1308,17 @@ This dual-mode design ensures:
 
 ---
 
-### 5.5.8 OverlayManager Phase 2 → Phase 3 Transition
+### 5.5.8 Overlay Phase 2 → Phase 3 Transition
 
-**Phase 2 (current):** `OverlayManager` is the primary interrupt mechanism.
+**Phase 2 (current):** Reducer-owned TCA overlay is the primary interrupt mechanism. `SchedulingFeature` emits `.delegate(.presentOverlay(_))`; `AppFeature` writes `state.overlay` (or enqueues into `state.overlayQueue`); `RootView.fullScreenCover` renders `OverlayView(store:)`.
 
 **Phase 3+ (with Shield):**
-- Shield is the primary interrupt (system-enforced, user cannot swipe away)
-- Overlay becomes a **fallback for snooze/deferral**
-- `OverlayManager` still exists; same code, same behavior
-- `SchedulingFeature` reducer decides which path to use based on `state.familyControlsAuthorized` + the live shield state surfaced by `IPCClient`
+- Shield is the primary interrupt (system-enforced, user cannot swipe away).
+- Overlay becomes a **fallback for snooze/deferral**.
+- The TCA overlay slot stays exactly as it is in Phase 2 — `state.overlay` + `OverlayFeature` + `RootView.fullScreenCover`.
+- `SchedulingFeature` reducer decides which path to use based on `state.familyControlsAuthorized` + the live shield state surfaced by `IPCClient`, and emits either the existing `.delegate(.presentOverlay(_))` (overlay path) or a future shield-presentation action (Phase 3 path).
 
-**No code changes to `OverlayManager` itself** — `OverlayClient` continues to expose the same `show` / `dismiss` surface to `SchedulingFeature` and `OverlayFeature`, and the reducer logic chooses between shield and overlay paths.
+**No code changes to `OverlayClient` / `OverlayFeature`** — the same delegate-driven presentation surface serves both shield-deferral and pure-overlay flows. `#919` / `#920` retired the legacy `OverlayManager` UIWindow path; nothing in the Phase 3 design re-introduces a parallel presentation channel.
 
 ---
 
@@ -1346,7 +1390,7 @@ trueInterrupt.ipc.eventLog       Data   Legacy: JSON-encoded [AppGroupIPCEvent] 
 |-----------|-------------------|
 | **M1.1: Project scaffold** | Xcode project created, folder structure matches this doc, unit test target configured |
 | **M1.2: Models + persistence** | `ReminderType`, `ReminderSettings`, `SettingsStore` implemented. Unit tests pass at 90% coverage. |
-| **M1.3: Services** | `ReminderScheduler` schedules/cancels notifications via protocol. `OverlayManager` creates/dismisses UIWindow. Unit tests pass with mocks. |
+| **M1.3: Services** | `ReminderScheduler` schedules/cancels notifications via protocol. `OverlayClient` provides overlay side-effects (lifecycle multicast + audio + accessibility); presentation is reducer-owned (`AppFeature.State.overlay` → `RootView.fullScreenCover`). Unit tests pass with mocks. |
 | **M1.4: Feature reducers** | `HomeFeature`, `SettingsFeature`, `OnboardingFeature` reducers and their `TestStore` coverage (TCA Phase 1; #688, #690–#695). |
 | **M1.5: Views** | `SettingsView` renders pickers, saves on change. `OverlayView` shows countdown, dismisses. UI tests pass. |
 | **M1.6: Integration** | End-to-end manual test on simulator: set 10s interval, verify overlay appears, dismiss works, auto-dismiss works. |
@@ -1446,7 +1490,7 @@ finishOnboardingAndCustomize()
 ```
          ┌─────────────┐
          │  UI Tests   │   XCUITest — critical user flows (onboarding, settings, dismiss)
-         │  (gated)    │   Currently `if: false` in CI per #736 pending TCA rewrite.
+         │  (sharded)  │   Sharded `uitest-prepare` / `uitest-shard` / `uitest` jobs run on every PR + `main` push per #778.
          └──────┬──────┘
                 │
         ┌───────┴────────┐
@@ -1472,7 +1516,7 @@ finishOnboardingAndCustomize()
 
 **Integration tests** sit in `Tests/EyePostureReminderTests/Integration/` (see §10.4). Use them for pipeline verification: does disabling the master toggle actually cancel pending notifications *and* stop `ScreenTimeTracker`? Integration tests wire the real `SettingsStore` + live services through the TCA dependency clients, but still mock UIKit and UNUserNotificationCenter boundaries.
 
-**UI tests** (XCUITest) cover onboarding permission prompt, toggling a reminder type in settings, and tapping the overlay dismiss button. They are currently disabled in CI (`if: false` in `.github/workflows/ci.yml`) per #736 — re-enablement is gated on porting the suite onto the TCA store.
+**UI tests** (XCUITest) cover onboarding permission prompt, toggling a reminder type in settings, and tapping the overlay dismiss button. They run in CI as the sharded `uitest-prepare` / `uitest-shard` / `uitest` jobs in `.github/workflows/ci.yml` on every PR and `main` push (re-enabled post-TCA-migration in #778); known flakes are wrapped in `XCTExpectFailure` per `Tests/EyePostureReminderUITests/README.md`.
 
 ---
 
@@ -1486,7 +1530,6 @@ Every system boundary is behind a protocol. Live-service unit tests inject mock 
 |----------|-----------|-----------------|
 | `NotificationScheduling` | `MockNotificationCenter` | `UNUserNotificationCenter` |
 | `SettingsPersisting` | `MockSettingsPersisting` | `UserDefaults` |
-| `OverlayPresenting` | `MockOverlayPresenting` | `OverlayManager` |
 | `ReminderScheduling` | `MockReminderScheduler` | `ReminderScheduler` |
 | `MediaControlling` | `MockMediaControlling` | `AudioInterruptionManager` |
 | `ScreenTimeTracking` | `MockScreenTimeTracker` | `ScreenTimeTracker` |
@@ -1528,7 +1571,7 @@ override func setUp() {
 | Testing scheduling logic in `ReminderScheduler` | `MockNotificationCenter` | — |
 | Testing that `SettingsStore` reads/writes correct keys | — | `MockSettingsPersisting` (is the real test subject) |
 | Testing `PauseConditionManager` aggregation | All three detector mocks | — |
-| Integration test: `SchedulingFeature` full pipeline | `MockNotificationCenter`, `MockOverlayPresenting`, fake `NotificationClient` / `OverlayClient` | `SettingsStore`, `ScreenTimeTracker`, real reducer composition |
+| Integration test: `SchedulingFeature` full pipeline | `MockNotificationCenter`, `OverlayClient.testValue` (lifecycle-event recorder), fake `NotificationClient` / `OverlayClient` | `SettingsStore`, `ScreenTimeTracker`, real reducer composition |
 | UI test: settings screen saves correctly | — | Full app stack |
 
 ---
@@ -1594,7 +1637,7 @@ override func tearDown() async throws {
 
 #### `@MainActor` Considerations
 
-`OverlayManager`, `ScreenTimeTracker`, and every reducer touching SwiftUI state are `@MainActor` isolated. Their test classes must be annotated `@MainActor` too:
+`ScreenTimeTracker` and every reducer touching SwiftUI state are `@MainActor` isolated, as is `OverlayClient`'s live bridge (`LiveOverlayClientBridge`) so its audio + accessibility side-effects hop through the main actor. Their test classes must be annotated `@MainActor` too:
 
 ```swift
 @MainActor
@@ -1631,7 +1674,7 @@ The canonical test layout is documented in §3 ("Project Structure") under the `
 // How these tests catch a regression: ...
 ```
 
-**UI test target (`EyePostureReminderUITests/`):** Lives outside SPM. Currently gated `if: false` in CI per #736 pending the TCA-store rewrite. Existing cases: `HomeScreenTests`, `OnboardingFlowTests`, `OverlayTests`, `SettingsFlowTests`.
+**UI test target (`EyePostureReminderUITests/`):** Lives outside SPM. Re-enabled in CI after the MVVM → TCA migration (#778) — the `uitest-prepare` / `uitest-shard` / `uitest` jobs in `.github/workflows/ci.yml` build the xctest bundle once, fan out across shards, and aggregate results on every PR and `main` push. Existing cases: `HomeScreenTests`, `OnboardingFlowTests`, `OverlayTests`, `SettingsFlowTests`, plus the opt-in `AppStoreScreenshotTests` screenshot capture suite. Shared launch-argument constants and `XCUIApplication` helpers live in `UITestHelpers.swift`.
 
 ---
 
@@ -1644,7 +1687,7 @@ The canonical test layout is documented in §3 ("Project Structure") under the `
 | **Reducers (TCA)** | 90% | `TestStore` exercises every branch deterministically; no UIKit / hardware dependencies |
 | **Views** | 50% | Design system tokens + string catalog keys; visual layout not measurable by XCTest |
 | **Integration** | Key pipelines | Settings → `SchedulingFeature` → `ScreenTimeTracker`; Pause signals → `SchedulingFeature` |
-| **UI** | Critical flows | Onboarding, settings save, overlay dismiss (currently gated by #736) |
+| **UI** | Critical flows | Onboarding, settings save, overlay dismiss (sharded UITest jobs run in CI per #778) |
 
 **Key service pipelines for integration tests:**
 1. `SettingsStore.masterEnabled = false` → `SchedulingFeature` cancels pending notifications + stops `ScreenTimeTracker`
@@ -1698,3 +1741,8 @@ Establish baselines on the CI runner (not local) to avoid machine-dependent drif
 | 2026-04-25 | Fix docs drift (#93): added 3 undocumented services (AnalyticsLogger, MetricKitSubscriber, ServiceLifecycle) to module graph + project structure; corrected color token names in §4.4 to match Asset Catalog (ReminderBlue, ReminderGreen, WarningOrange, PermissionBanner, PermissionBannerText, WarningText) | Rusty |
 | 2026-04-28 | Added §5.5 True Interrupt Mode (Phase 3+) architecture: FamilyControls authorization flow, four-target app extension model (main + DeviceActivityMonitor + ShieldConfiguration + ShieldAction), ManagedSettingsStore shield blocking, App Group state schema, ShieldConfiguration data-only limitations (no animations/arbitrary views), local notification fallback pattern, distribution gating (Apple case ID 102881605113 pending). Updated Phase 3 milestones with explicit True Interrupt Mode scope. | Rusty |
 | 2026-05-15 | Post-TCA-migration refresh (#725). §1 module-dependency graph redrawn around `AppFeature` / per-feature reducers / dependency clients; §3 project-structure tree updated for `EyePostureReminder/TCA/` + live-service-only `Services/`; added §2.8 dependency-client surface; rewrote §4.1 as "Why TCA Over MVVM?"; §4.6 / §4.7 / §5.5 re-anchored from `AppCoordinator` onto `SchedulingFeature` + matching clients; §7.4 SwiftUI example switched to `StoreOf<Feature>` + `WithPerceptionTracking`; §10 Testing Architecture rewritten around the `TestStore` + `withDependencies` workflow; §8 / §8.5 milestone + onboarding-flow refs cleaned. | Rusty |
+| 2026-05-17 | §3 project-structure tree refresh (#859). Dropped the deleted `Tests/EyePostureReminderTests/TCA/ContentViewTests.swift` row (removed in 4f6d4c5 alongside the dead `ContentView` pass-through wrapper). Dropped the `EyePostureReminder/TCA/Bindings/` directory row whose only file (`StoreScopes.swift`) was removed in 82bc5eb — there is no `Bindings/` directory on disk any more. Expanded the `Extensions/Shared/` listing from the lone `ShieldSessionKeys.swift` row to enumerate all eight App Group / shield-session helpers that now ship there (`AppGroupDefaults`, `AppGroupIPCStore`, `ShieldConfigurationCopyLocalization`, `ShieldIntervalEndCleanupPolicy`, `ShieldSessionKeys`, `ShieldSessionSnapshot`, `ShieldTriggerReason`, `WatchdogHeartbeat`) and called out the per-extension `.Distribution.entitlements` files used by signed builds. Docs-only — no source changes. | Copilot |
+| 2026-05-17 | §3 project-structure tree residual-drift fix (#861). Moved `PrivacyInfo.xcprivacy` out of `EyePostureReminder/Resources/` and onto the `EyePostureReminder/` root row (peer of `App/`, `Models/`, `Resources/`) so the tree matches `Package.swift:40 .copy("PrivacyInfo.xcprivacy")`. Added the `Resources/Fonts/` subtree (`Nunito-Regular.ttf`, `Nunito-Italic.ttf`, `OFL-Nunito.txt`). Added the per-extension `PrivacyInfo.xcprivacy` rows for `Extensions/ShieldConfigurationExtension/` and `Extensions/DeviceActivityMonitorExtension/` (shipped in #635). Added the missing `Tests/EyePostureReminderTests/TCA/SettingsFeatureToggleEmissionTests.swift` to the `SettingsFeature*Tests` row. Added the missing `Tests/EyePostureReminderTests/Mocks/MockMediaControllingTests.swift` and `MockRecordingTests.swift` rows. Added the previously-omitted `Tests/EyePostureReminderTests/Utilities/` test subtree (`AccessibilityAnnouncementTests`, `AppStorageKeysTests`, `AsyncTestHelpers`, `LegalLinksTests`). Docs-only — no source changes. | Copilot |
+| 2026-05-17 | §3 + §10 `EyePostureReminderUITests/` drift fix (#862). Added the two on-disk swift sources missing from the §3 tree — `AppStoreScreenshotTests.swift` (opt-in App Store screenshot capture invoked by `scripts/capture-app-store-screenshots.sh`) and `UITestHelpers.swift` (`TestLaunchArguments` + `XCUIApplication` helpers). Replaced every stale ``gated `if: false` in CI per #736`` / ``currently gated by #736`` reference (the §3 parenthetical at L483, the §10.1 pyramid box at L1467, the §10.1 narrative paragraph at L1493, the §10.4 paragraph at L1650, and the §10.5 coverage-targets row at L1665) with the post-#778 wording: the sharded `uitest-prepare` / `uitest-shard` / `uitest` jobs in `.github/workflows/ci.yml` now run on every PR + `main` push, matching `Tests/EyePostureReminderUITests/README.md`. Docs-only — no source changes. | Copilot |
+| 2026-05-17 | §3 project-structure tree residual-drift fix (#863). Added the four main-app root-level deployment-metadata rows that #859/#861/#862 missed for the `EyePostureReminder/` target — `Info.plist` (referenced by `project.yml:67` `INFOPLIST_FILE`), `EyePostureReminder.entitlements` (dev signing — `project.yml:69` `CODE_SIGN_ENTITLEMENTS`), `EyePostureReminder.Distribution.entitlements` (distribution signing used by `scripts/build_signed.sh`), and `AppIcon.xcassets` (App Icon asset catalog wired via `project.yml:59,68`). Mirrors the per-extension `Info.plist` / `.entitlements` / `.Distribution.entitlements` rows that already live under `Extensions/ShieldConfigurationExtension/` and `Extensions/DeviceActivityMonitorExtension/`. Also added the two `Tests/EyePostureReminder*Tests/README.md` rows that have been on disk since commit `9a9294c` (2026-04-24, scaffold XCUITest UI test suite #9) — the UITest README is cited by §10.1 (L1493) but was never reflected in the §3 tree. Docs-only — no source changes. | Copilot |
+| 2026-05-17 | Annotated three residual retired-MVVM `ViewModels` / `ViewModel` references missed by the #864 (TEST_STRATEGY) and #866 (ROADMAP) citation sweeps: §6.2 Coverage Target line (L950), §6.3 Testing Strategy table row (L960), and §7.5 Error Handling bullet (L1054). Each annotation points to the canonical post-TCA replacement — §10.5 Coverage Targets (`Reducers (TCA)` at 90%) for the §6 callsites, and the live `EyePostureReminder/TCA/Dependencies/IPCClient.swift:143/158/171` `do/catch` pattern for §7.5 — and cites the Phase-2 TCA migration ticket trio (#677 / #701 / #755). Issue #868. Docs-only — no source changes. | Copilot |

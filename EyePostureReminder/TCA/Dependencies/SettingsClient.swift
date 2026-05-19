@@ -22,7 +22,7 @@ struct EnabledFlags: Sendable, Equatable {
 
 /// TCA dependency client wrapping `SettingsStore` for reducer consumption.
 ///
-/// Phase 0 of the MVVM → TCA migration (#665). The closure surface is the
+/// Phase 0 of the TCA migration (#665). The closure surface is the
 /// normative contract Phase 1 reducers will copy verbatim. The `liveValue`
 /// adapter routes every getter and setter through the existing `@MainActor`
 /// `SettingsStore` so both worlds coexist during the migration.
@@ -38,6 +38,23 @@ struct SettingsClient: Sendable {
     /// Multicast stream of `ReminderSettings` snapshots. A new subscriber
     /// receives the current snapshot and every subsequent change.
     var stream: @Sendable () -> AsyncStream<ReminderSettings> = { .finished }
+
+    /// Synchronous snapshot of the latest published `ReminderSettings` for the
+    /// posture side. Vended alongside `snapshot` so `SettingsFeature` can seed
+    /// the posture-side bindable mirrors without round-tripping through the
+    /// `@AppStorage` keys that the legacy `SettingsView` posture pickers used
+    /// to read directly. See #805.
+    var postureSnapshot: @Sendable () -> ReminderSettings = {
+        ReminderSettings(interval: 0, breakDuration: 0)
+    }
+
+    /// Multicast stream of posture-side `ReminderSettings` snapshots. A new
+    /// subscriber receives the current snapshot synchronously and every
+    /// subsequent change. Mirrors `stream()` so consumers that need posture
+    /// values (e.g. `SettingsFeature`) can react to external mutations
+    /// (reset, Onboarding writes) without coupling to the eyes-side
+    /// `ReminderSettings` payload. See #805.
+    var postureStream: @Sendable () -> AsyncStream<ReminderSettings> = { .finished }
 
     /// Synchronous snapshot of the persisted enable-flag triplet. Cached on
     /// the file-scope `enabledFlagsCache` so reducers can read it off the
@@ -102,6 +119,8 @@ extension SettingsClient: DependencyKey {
         return SettingsClient(
             snapshot: { settingsSnapshotCache.value },
             stream: { makeSettingsStream() },
+            postureSnapshot: { postureSnapshotCache.value },
+            postureStream: { makePostureStream() },
             enabledFlagsSnapshot: { enabledFlagsCache.value },
             enabledFlagsStream: { makeEnabledFlagsStream() },
             updateGlobalEnabled: { value in
@@ -190,6 +209,10 @@ private final class LiveSettingsBridge {
         settingsSnapshotCache.setValue(initial)
         broadcastSettings(initial)
 
+        let initialPosture = store.settings(for: .posture)
+        postureSnapshotCache.setValue(initialPosture)
+        broadcastPosture(initialPosture)
+
         let initialFlags = EnabledFlags(
             global: store.globalEnabled,
             eyes: store.eyesEnabled,
@@ -198,9 +221,19 @@ private final class LiveSettingsBridge {
         enabledFlagsCache.setValue(initialFlags)
         broadcastEnabledFlags(initialFlags)
 
-        store.addObserver { snapshot in
+        store.addObserver { [store] snapshot in
             settingsSnapshotCache.setValue(snapshot)
             broadcastSettings(snapshot)
+
+            // `SettingsStore.broadcastChange` fires after **any** mutable
+            // property changes, but only delivers the eyes-side snapshot to
+            // observers. Re-read the posture-side directly so a posture
+            // interval/break edit (or `resetToDefaults()`) reaches the
+            // file-scope posture cache and continuations. See #805.
+            let posture = store.settings(for: .posture)
+            guard posture != postureSnapshotCache.value else { return }
+            postureSnapshotCache.setValue(posture)
+            broadcastPosture(posture)
         }
 
         // `SettingsView` writes the master / per-type enable flags directly to
@@ -241,6 +274,13 @@ private let settingsSnapshotCache = LockIsolated<ReminderSettings>(
     ReminderSettings(interval: 0, breakDuration: 0)
 )
 
+/// File-scoped posture-side snapshot cache; safe to read from any actor.
+/// Mirrors `settingsSnapshotCache` for the posture-side bindable surface
+/// added in #805.
+private let postureSnapshotCache = LockIsolated<ReminderSettings>(
+    ReminderSettings(interval: 0, breakDuration: 0)
+)
+
 /// File-scoped enable-flag cache; safe to read from any actor. Seeded to
 /// `.allEnabled` so reads before `LiveSettingsBridge.bootstrap()` finishes
 /// (e.g. during early Phase-2 `state.home.*` initialisation) match the
@@ -251,6 +291,11 @@ private let enabledFlagsCache = LockIsolated<EnabledFlags>(.allEnabled)
 /// to side-step a Swift constraint-solver bug that surfaces when
 /// `Continuation.onTermination` captures `@MainActor`-isolated static storage.
 private let settingsContinuations =
+    LockIsolated<[UUID: AsyncStream<ReminderSettings>.Continuation]>([:])
+
+/// File-scoped posture-side multicast continuations. Kept alongside
+/// `settingsContinuations` for the same `@MainActor` reason. See #805.
+private let postureContinuations =
     LockIsolated<[UUID: AsyncStream<ReminderSettings>.Continuation]>([:])
 
 /// File-scoped multicast continuations for `EnabledFlags` subscribers. Kept
@@ -268,6 +313,23 @@ private func makeSettingsStream() -> AsyncStream<ReminderSettings> {
     settingsContinuations.withValue { $0[id] = continuation }
     continuation.onTermination = { _ in
         settingsContinuations.withValue { dict in
+            dict[id] = nil
+        }
+    }
+    return stream
+}
+
+/// File-scoped factory used by the live `postureStream` closure to register a
+/// new multicast subscriber. Yields the current cached posture snapshot
+/// synchronously so first reads never block on the next posture mutation.
+/// Mirrors `makeSettingsStream` for the posture-side surface added in #805.
+private func makePostureStream() -> AsyncStream<ReminderSettings> {
+    let (stream, continuation) = AsyncStream<ReminderSettings>.makeStream()
+    let id = UUID()
+    continuation.yield(postureSnapshotCache.value)
+    postureContinuations.withValue { $0[id] = continuation }
+    continuation.onTermination = { _ in
+        postureContinuations.withValue { dict in
             dict[id] = nil
         }
     }
@@ -293,6 +355,12 @@ private func makeEnabledFlagsStream() -> AsyncStream<EnabledFlags> {
 
 private func broadcastSettings(_ value: ReminderSettings) {
     settingsContinuations.withValue { dict in
+        for continuation in dict.values { continuation.yield(value) }
+    }
+}
+
+private func broadcastPosture(_ value: ReminderSettings) {
+    postureContinuations.withValue { dict in
         for continuation in dict.values { continuation.yield(value) }
     }
 }

@@ -3,18 +3,17 @@
 //
 // Main onboarding container — 4-screen TabView with page indicator.
 //
-// Migrated off `@EnvironmentObject AppCoordinator` / `SettingsStore` to a
-// scoped `StoreOf<OnboardingFeature>` as part of `#755` Phase C (was #702
-// Phase 5). The legacy `finishOnboarding()` / `finishOnboardingAndCustomize()`
-// instance methods are preserved as button-handler entry points that emit
-// the `.onboardingCompleted` analytics event directly via `AnalyticsLogger`
-// to keep the #324 single-event invariant cleanly testable from unit-test
-// processes without bootstrapping a TCA `TestStore`. Phase D collapses these
-// view methods into reducer-driven actions once `RootView` owns the button
-// wiring.  The `notificationCenter` / `screenTimeAuthorization` references
-// previously pulled from `AppCoordinator` are now sourced from
-// `OnboardingFeature.State` (status fields refreshed via `.onAppear` + the
-// injected dependency clients).
+// The view consumes a scoped `StoreOf<OnboardingFeature>` (TCA migration
+// landed in `#755` Phase C, originally tracked as `#702` Phase 5). The
+// `finishOnboarding()` / `finishOnboardingAndCustomize()` instance
+// methods are button-handler entry points that emit the
+// `.onboardingCompleted` analytics event directly via `AnalyticsLogger`
+// to keep the #324 single-event invariant cleanly testable from
+// unit-test processes without bootstrapping a TCA `TestStore`. Status
+// fields (notification + Screen Time authorisation) are sourced from
+// `OnboardingFeature.State`, refreshed via `.onAppear` and the injected
+// `NotificationClient` / `ScreenTimeAuthorizationClient` dependency
+// clients.
 
 import ComposableArchitecture
 import SwiftUI
@@ -24,7 +23,6 @@ struct OnboardingView: View {
     typealias AccessibilityNotificationPosterFactory = () -> AccessibilityNotificationPosting
 
     @Perception.Bindable var store: StoreOf<OnboardingFeature>
-    @State private var showAppCategoryPicker = false
 
     private let accessibilityNotificationPoster: AccessibilityNotificationPosting
 
@@ -54,8 +52,8 @@ struct OnboardingView: View {
                     .tag(0)
                 // Notification permission flows through the reducer's
                 // `.requestNotificationPermission` effect (which uses the
-                // injected `NotificationClient`), so the view no longer needs
-                // to thread `AppCoordinator.notificationCenter` through.
+                // injected `NotificationClient`), so the view does not
+                // thread a `UNUserNotificationCenter` instance through.
                 OnboardingPermissionView(
                     onNext: { store.send(.nextTapped) },
                     requestPermission: {
@@ -90,9 +88,6 @@ struct OnboardingView: View {
             .onChangeCompat(of: store.currentPage) { _ in
                 accessibilityNotificationPoster.postScreenChanged()
             }
-            .sheet(isPresented: $showAppCategoryPicker) {
-                OnboardingAppCategoryPickerSheet(onSelectApps: {})
-            }
         }
     }
 
@@ -112,7 +107,7 @@ struct OnboardingView: View {
     private var onboardingSetUpAction: (() -> Void)? {
         store.screenTimeStatus == .unavailable
             ? nil
-            : { showAppCategoryPicker = true }
+            : { store.send(.openAppCategoryPicker) }
     }
 
     func finishOnboarding() {
@@ -141,25 +136,6 @@ struct OnboardingView: View {
     /// path emits exactly one `.onboardingCompleted` event with the correct CTA.
     private func markOnboardingComplete() {
         UserDefaults.standard.set(true, forKey: AppStorageKey.hasSeenOnboarding)
-    }
-}
-
-// MARK: - AppCategoryPicker Sheet Wrapper
-
-/// Owns a local `Store` for `AppCategoryPickerView` while the onboarding
-/// flow's app-category picker presentation is still view-owned. When
-/// `#755` Phase D wires `RootView` as the destination owner, this wrapper
-/// is removed and the picker is presented via `$store.scope(...)` against
-/// `AppFeature.Destination.appCategoryPicker`.
-private struct OnboardingAppCategoryPickerSheet: View {
-    let onSelectApps: () -> Void
-
-    @State private var store = Store(
-        initialState: AppCategoryPickerFeature.State()
-    ) { AppCategoryPickerFeature() }
-
-    var body: some View {
-        AppCategoryPickerView(store: store, onSelectApps: onSelectApps)
     }
 }
 

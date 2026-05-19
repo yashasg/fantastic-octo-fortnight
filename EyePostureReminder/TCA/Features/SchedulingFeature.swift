@@ -3,47 +3,82 @@ import Foundation
 import ScreenTimeExtensionShared
 import UserNotifications
 
-/// TCA reducer (`p0-tca-10` / #673) owning the long-running scheduling
-/// orchestration that the legacy `AppCoordinator` previously held.
+/// TCA reducer owning the long-running scheduling orchestration:
+/// streams installed at init plus `scheduleReminders`,
+/// `reschedule(for:)`, `handleNotification(for:)`,
+/// `handleForegroundTransition`, and `appWillResignActive`. It is the
+/// canonical runtime for that surface and consumes the TCA dependency
+/// clients.
 ///
-/// Built as a behavioural mirror of the (now-deleted) hot paths from
-/// `EyePostureReminder/Services/AppCoordinator.swift` — the streams
-/// installed at init plus `scheduleReminders`, `reschedule(for:)`,
-/// `handleNotification(for:)`, `handleForegroundTransition`, and
-/// `appWillResignActive` — using the dependency clients defined by
-/// `p0-tca-2`. The legacy `AppCoordinator*.swift` files were removed
-/// in `#755` Phase E (commit b9a1c96, PR #760); this reducer is now
-/// the canonical runtime for the surface it ports.
-///
-/// Behavioural fidelity caveats (intentional deferrals, tracked under
-/// `p0-tca-15`):
-///   * `SettingsClient` only vends a single eyes-side `ReminderSettings`
-///     snapshot, so per-type interval differentiation reuses
-///     `state.settings.interval` for both reminder types until a richer
-///     settings client lands.
-///   * Watchdog recovery, fallback-routing IPC reads, session-timing
-///     analytics, launch-readiness analytics, DeviceActivity scheduling on
-///     overlay present, and the `OverlayClient.lifecycleEvents`-driven
-///     bookkeeping all require dependency-client surface that does not yet
-///     exist; those side-effects are tracked under `p0-tca-15` follow-ups.
-///   * `hapticsEnabled`/`pauseMediaDuringBreaks` are not yet exposed on
-///     `ReminderSettings`; the reducer passes `false` for both when calling
-///     `OverlayClient.show` (matches the SettingsClient default state).
+/// Implemented capabilities:
+///   * **Overlay lifecycle subscription (#904).** `startEffect`
+///     subscribes to `OverlayClient.lifecycleEvents` (cancellable from
+///     `stopEffect`) and routes every `.presented` / `.dismissed` /
+///     `.settingsTapped` emission through `.overlayLifecycleEvent(_:)`.
+///     `.presented` / `.dismissed` drive
+///     `SessionTimingClient.sessionStarted` / `sessionEnded` per-type
+///     (#901) and the DeviceActivity-on-present hook (#903):
+///     `.presented` calls
+///     `DeviceActivityMonitorClient.startScheduleForOverlay(_:)` and
+///     `.dismissed` calls the existing `cancel(_:)` accessor.
+///     `.settingsTapped` is a structural no-op here by design — the
+///     same user action emits
+///     `AnalyticsEvent.overlayDismissed(method: .settingsTap)` from
+///     `OverlayView.performDismiss(_:)` (analytics surface covered at
+///     the view layer) and navigation to Settings is owned by
+///     `AppFeature`'s parallel `lifecycleEvents` subscriber.
+///   * **Launch-readiness analytics (#902).** `startEffect` emits
+///     `SessionTimingClient.launchReady(.streamsInstalled)` from the
+///     tail of the cold-launch installation `.merge` once every
+///     long-running stream subscription is in-flight.
+///   * **Per-type interval differentiation (#897).** `State` caches
+///     both the eyes-side and posture-side `ReminderSettings` snapshots
+///     vended by `SettingsClient.stream` / `postureStream`, and the
+///     reducer reads them via `State.settings(for:)` so
+///     `rescheduleType`, `thresholdReached`, `reminderNotification`,
+///     and `scheduleReminders` use the correct interval / break
+///     duration for each `ReminderType`.
+///   * **Watchdog recovery (#892).** `.watchdogRecoveryTriggered`
+///     (action + effect) is wired on top of `IPCClient.recentEvents`
+///     and the `@Dependency(\.date)` clock; the reducer composes the
+///     staleness verdict with `WatchdogHeartbeat.status(…)` so the
+///     behaviour stays in lock-step with the legacy
+///     `WatchdogHeartbeat` parity contract (see
+///     `Tests/.../WatchdogHeartbeatTests.swift`).
 @Reducer
 struct SchedulingFeature {
 
     typealias NotificationRoute = AppDelegate.NotificationRoute
 
     /// Identifier for the silent one-time wake notification scheduled when
-    /// a snooze begins. Stable across the legacy `AppCoordinator` → TCA
-    /// migration so a snooze-wake notification scheduled under the old
-    /// runtime is still cancellable here.
+    /// a snooze begins. The value is stable across releases so a snooze-wake
+    /// notification scheduled by an earlier app version is still cancellable
+    /// here.
     static let snoozeWakeCategory = "com.yashasgujjar.kshana.snooze-wake"
+
+    /// Watchdog-recovery staleness threshold (#892). Mirrors the legacy
+    /// `AppCoordinator.watchdogHeartbeatGraceInterval` rule of thumb — a
+    /// device-activity-lifecycle heartbeat older than this is treated as
+    /// stale, and a missing heartbeat past this window classifies as
+    /// `.missing`. Kept in seconds for direct use with
+    /// `WatchdogHeartbeat.status(staleAfter:)`.
+    static let watchdogHeartbeatStaleThreshold: TimeInterval = 130
 
     @ObservableState
     struct State: Equatable {
         var notificationAuthStatus: UNAuthorizationStatus = .notDetermined
+        /// Eyes-side `ReminderSettings` snapshot fed by
+        /// `SettingsClient.stream()`. Treated as the canonical eyes-side
+        /// schedule input; posture-side reads use `postureSettings` instead
+        /// so per-type interval differentiation (#897) stays honoured.
         var settings = ReminderSettings(interval: 0, breakDuration: 0)
+        /// Posture-side `ReminderSettings` snapshot fed by
+        /// `SettingsClient.postureStream()`. Mirrors `settings` for the
+        /// posture reminder type so `rescheduleType(.posture)` /
+        /// `thresholdReached(.posture)` / `reminderNotification(.posture)`
+        /// use the posture interval + break duration instead of the
+        /// eyes-side values (#897).
+        var postureSettings = ReminderSettings(interval: 0, breakDuration: 0)
         var isPausedByConditions: Bool = false
         var isUITestModeEnabled: Bool = false
         var snoozedUntil: Date?
@@ -52,6 +87,18 @@ struct SchedulingFeature {
         struct PendingOverlay: Equatable, Sendable {
             let type: ReminderType
             let duration: TimeInterval
+        }
+
+        /// Per-type accessor for the cached `ReminderSettings` snapshot
+        /// (#897). Callers driving a single-type effect (reschedule,
+        /// threshold-reached, reminder-notification) should use this
+        /// helper so the posture-side interval / break duration is
+        /// respected when `type == .posture`.
+        func settings(for type: ReminderType) -> ReminderSettings {
+            switch type {
+            case .eyes:    return settings
+            case .posture: return postureSettings
+            }
         }
     }
 
@@ -66,10 +113,59 @@ struct SchedulingFeature {
         case thresholdReached(ReminderType)
         case pauseConditionChanged(Bool)
         case settingsChanged(ReminderSettings)
+        /// Posture-side counterpart of `.settingsChanged`. Mutates
+        /// `state.postureSettings` so per-type interval differentiation
+        /// (#897) stays honoured for posture reminders.
+        case postureSettingsChanged(ReminderSettings)
         case clearExpiredSnoozeIfNeeded
         case snoozeWakeFired
         case overlayDismissed(ReminderType)
+        /// Watchdog recovery entry-point (#892). The reducer reads the
+        /// recent App Group IPC event log via `IPCClient.recentEvents`
+        /// and classifies the latest device-activity-lifecycle heartbeat
+        /// using `WatchdogHeartbeat.status(…)` over a 130 s threshold; on
+        /// a `.stale` / `.missing` verdict it cancels every pending
+        /// reminder, cancels DeviceActivity monitoring, records a
+        /// `watchdogRecoveryTriggered` IPC event (timestamped via
+        /// `@Dependency(\.date)` so a `TestStore` can drive the clock),
+        /// emits the `watchdogRecoveryTriggered` + `watchdogRecoveryCompleted`
+        /// analytics pair, and re-enters `.scheduleReminders`. Fresh
+        /// heartbeats short-circuit to a no-op so callers can dispatch
+        /// the action unconditionally at foreground transitions.
+        case watchdogRecoveryTriggered
+        /// Forwarded from `OverlayClient.lifecycleEvents()` once
+        /// `startEffect` installs the subscription (#904). The reducer
+        /// currently treats every variant as a structural no-op — the
+        /// per-event side-effects (session-timing analytics emit,
+        /// DeviceActivity start hook) belong to sibling trackers
+        /// #901 / #903 and will fill the handler as they land.
+        case overlayLifecycleEvent(OverlayLifecycleEvent)
+        /// Delegate actions that bubble up to `AppFeature` for handling of
+        /// owner-state writes (`#920`: the parent reducer owns
+        /// `@Presents var overlay` plus `overlayQueue`, so this child
+        /// reducer must emit a delegate rather than mutate either slot
+        /// directly).
+        case delegate(Delegate)
         case internalAction(Internal)
+
+        /// Delegate vocabulary surfaced to `AppFeature` per `#920`. The
+        /// child reducer never mutates the parent's overlay slot itself —
+        /// it asks the parent to do it via these cases.
+        @CasePathable
+        enum Delegate: Equatable {
+            /// Request the parent reducer to present `request` via
+            /// `state.overlay = OverlayFeature.State(...)`, or enqueue it
+            /// onto `state.overlayQueue` if an overlay is already on
+            /// screen (queue ordering preserves `#289` FIFO).
+            case presentOverlay(OverlayPresentationRequest)
+            /// Request the parent reducer to drop every queued overlay and
+            /// dismiss the currently presented one (Focus mode / Driving
+            /// mode pause-condition activation). The parent dispatches
+            /// `.overlay(.presented(.dismissTapped))` so the SwiftUI exit
+            /// animation, resume-audio, and `#738` teardown sequence still
+            /// run — the queue write is synchronous on `state`.
+            case suspendOverlayForPauseCondition
+        }
 
         enum Internal: Equatable {
             case scheduleSnoozeWake(Date)
@@ -81,9 +177,11 @@ struct SchedulingFeature {
 
     enum CancelID: Hashable {
         case settingsStream
+        case postureSettingsStream
         case thresholdStream
         case pauseStream
         case ipcStream
+        case overlayLifecycleStream
         case rescheduleDebounce(ReminderType)
         case snoozeWakeTask
     }
@@ -98,6 +196,7 @@ struct SchedulingFeature {
     @Dependency(\.deviceActivityMonitorClient) var deviceActivity: DeviceActivityMonitorClient
     @Dependency(\.ipcClient) var ipcClient: IPCClient
     @Dependency(\.analyticsClient) var analyticsClient: AnalyticsClient
+    @Dependency(\.sessionTimingClient) var sessionTimingClient: SessionTimingClient
     @Dependency(\.continuousClock) var clock
     @Dependency(\.date) var now
 
@@ -138,6 +237,10 @@ struct SchedulingFeature {
                 state.settings = newSettings
                 return .none
 
+            case let .postureSettingsChanged(newSettings):
+                state.postureSettings = newSettings
+                return .none
+
             case .clearExpiredSnoozeIfNeeded:
                 return clearExpiredSnoozeEffect(state: &state)
 
@@ -147,11 +250,31 @@ struct SchedulingFeature {
             case .overlayDismissed:
                 return .run { [deviceActivity] _ in await deviceActivity.cancel(nil) }
 
+            case .watchdogRecoveryTriggered:
+                return watchdogRecoveryTriggeredEffect()
+
+            case let .overlayLifecycleEvent(event):
+                return overlayLifecycleEventEffect(event)
+
+            case .delegate:
+                return .none
+
             case let .internalAction(internalAction):
                 return reduceInternal(internalAction, state: &state)
             }
         }
     }
+}
+
+/// Payload bundled into `SchedulingFeature.Action.Delegate.presentOverlay`
+/// so the parent reducer (`#920`) can either write `state.overlay =
+/// OverlayFeature.State(...)` or enqueue onto `state.overlayQueue` from a
+/// single Sendable value.
+struct OverlayPresentationRequest: Equatable, Sendable {
+    let type: ReminderType
+    let duration: TimeInterval
+    let hapticsEnabled: Bool
+    let pauseMediaEnabled: Bool
 }
 
 // MARK: - Public effect builders
@@ -161,10 +284,15 @@ extension SchedulingFeature {
     func startEffect() -> Effect<Action> {
         .merge(
             settingsStreamEffect(),
+            postureSettingsStreamEffect(),
             thresholdStreamEffect(),
             pauseStreamEffect(),
             ipcStreamEffect(),
+            overlayLifecycleStreamEffect(),
             .run { [pauseClient] _ in await pauseClient.startMonitoring() },
+            .run { [sessionTimingClient] _ in
+                await sessionTimingClient.launchReady(.streamsInstalled)
+            },
             .send(.scheduleReminders)
         )
     }
@@ -172,9 +300,11 @@ extension SchedulingFeature {
     func stopEffect() -> Effect<Action> {
         .merge(
             .cancel(id: CancelID.settingsStream),
+            .cancel(id: CancelID.postureSettingsStream),
             .cancel(id: CancelID.thresholdStream),
             .cancel(id: CancelID.pauseStream),
             .cancel(id: CancelID.ipcStream),
+            .cancel(id: CancelID.overlayLifecycleStream),
             .cancel(id: CancelID.snoozeWakeTask),
             .run { [pauseClient] _ in await pauseClient.stopMonitoring() }
         )
@@ -193,8 +323,9 @@ extension SchedulingFeature {
             let status = await notificationClient.authorizationStatus()
             await send(.internalAction(.authStatusRefreshed(status)))
 
-            // Snooze guard — ported from the deleted `AppCoordinator.scheduleReminders`
-            // (#755 Phase E).
+            // Snooze guard (`#755` Phase E): if a snooze is still active,
+            // pause trackers, drop scheduled reminders, and ensure the
+            // wake notification is armed for the snooze-expiry time.
             if let until = snapshot.snoozedUntil {
                 if until > Date() {
                     await trackerClient.pauseAll()
@@ -214,17 +345,21 @@ extension SchedulingFeature {
             await send(.internalAction(.cancelSnoozeWake))
 
             if status == .authorized {
-                await schedulerClient.scheduleReminders(snapshot.settings)
+                await schedulerClient.scheduleReminders(
+                    snapshot.eyesSettings,
+                    snapshot.postureSettings
+                )
             } else {
                 await schedulerClient.cancelAllReminders()
             }
 
-            // Skip foreground tracker reconfig in UI-test mode for parity with
-            // the deleted `AppCoordinator.scheduleReminders` (#755 Phase E).
+            // Skip foreground tracker reconfig in UI-test mode so the
+            // deterministic test environment isn't perturbed (`#755` Phase E).
             guard !snapshot.isUITestMode else { return }
 
             await Self.configureTracker(
-                settings: snapshot.settings,
+                eyesSettings: snapshot.eyesSettings,
+                postureSettings: snapshot.postureSettings,
                 isPausedByConditions: snapshot.isPausedByConditions,
                 tracker: trackerClient
             )
@@ -233,7 +368,7 @@ extension SchedulingFeature {
 
     func rescheduleTypeEffect(type: ReminderType, state: State) -> Effect<Action> {
         let snoozedUntil = state.snoozedUntil
-        let currentSettings = state.settings
+        let currentSettings = state.settings(for: type)
         let clock = self.clock
         let notificationClient = self.notificationClient
         let schedulerClient = self.schedulerClient
@@ -243,8 +378,8 @@ extension SchedulingFeature {
             try? await clock.sleep(for: .milliseconds(300))
             if Task.isCancelled { return }
 
-            // Snooze guard — ported from the deleted `AppCoordinator.performReschedule`
-            // (#755 Phase E).
+            // Snooze guard (`#755` Phase E): skip the reschedule if a
+            // snooze is still active.
             if let until = snoozedUntil, until > Date() { return }
 
             let status = await notificationClient.authorizationStatus()
@@ -289,85 +424,101 @@ extension SchedulingFeature {
         type: ReminderType,
         state: inout State
     ) -> Effect<Action> {
-        // Snooze guard — ported from the deleted `AppCoordinator.handleNotification`
-        // (#755 Phase E).
+        // Snooze guard (`#755` Phase E): swallow the notification if a
+        // snooze is still active.
         if let until = state.snoozedUntil, until > now() { return .none }
-        let duration = state.settings.breakDuration
-        let interval = state.settings.interval
+        let perTypeSettings = state.settings(for: type)
+        let duration = perTypeSettings.breakDuration
+        let interval = perTypeSettings.interval
+        let hapticsEnabled = perTypeSettings.hapticsEnabled
+        let pauseMediaDuringBreaks = perTypeSettings.pauseMediaDuringBreaks
         let analyticsClient = self.analyticsClient
         let ipcClient = self.ipcClient
-        let overlayClient = self.overlayClient
         let settingsClient = self.settingsClient
         let trackerClient = self.trackerClient
 
-        return .run { _ in
-            await settingsClient.setSnoozeCount(0)
-            await ipcClient.record(
-                AppGroupIPCEvent(
-                    kind: .notificationFallbackDelivered,
-                    reasonRaw: type.shieldReason.rawValue,
-                    detail: nil
-                ),
-                nil
-            )
-            analyticsClient.log(.reminderTriggered(
-                type: type,
-                thresholdS: interval,
-                deliveryPath: .notificationFallback
-            ))
-            await overlayClient.show(type, duration, false, false)
-            // Reset the in-app counter so the foreground tracker doesn't fire
-            // an additional overlay immediately after this notification.
-            await trackerClient.reset(type)
-        }
+        let request = OverlayPresentationRequest(
+            type: type,
+            duration: duration,
+            hapticsEnabled: hapticsEnabled,
+            pauseMediaEnabled: pauseMediaDuringBreaks
+        )
+
+        return .merge(
+            .send(.delegate(.presentOverlay(request))),
+            .run { _ in
+                await settingsClient.setSnoozeCount(0)
+                let priorRoute = await ipcClient.fallbackRoute(type)
+                await ipcClient.record(
+                    AppGroupIPCEvent(
+                        kind: .notificationFallbackDelivered,
+                        reasonRaw: type.shieldReason.rawValue,
+                        detail: priorRoute.map { "prior_route=\($0.reason.rawValue)" }
+                    ),
+                    nil
+                )
+                analyticsClient.log(.reminderTriggered(
+                    type: type,
+                    thresholdS: interval,
+                    deliveryPath: .notificationFallback
+                ))
+                // Reset the in-app counter so the foreground tracker doesn't fire
+                // an additional overlay immediately after this notification.
+                await trackerClient.reset(type)
+            }
+        )
     }
 
     func thresholdReachedEffect(type: ReminderType, state: State) -> Effect<Action> {
-        let interval = state.settings.interval
-        let duration = state.settings.breakDuration
-        let currentSettings = state.settings
+        let currentSettings = state.settings(for: type)
+        let interval = currentSettings.interval
+        let duration = currentSettings.breakDuration
+        let hapticsEnabled = currentSettings.hapticsEnabled
+        let pauseMediaDuringBreaks = currentSettings.pauseMediaDuringBreaks
         let authStatus = state.notificationAuthStatus
         let analyticsClient = self.analyticsClient
-        let overlayClient = self.overlayClient
         let schedulerClient = self.schedulerClient
         let settingsClient = self.settingsClient
 
-        // Defensive guard mirroring the 300 ms disable-debounce window from
-        // the deleted `AppCoordinator` init (#755 Phase E) — interval is the
-        // only signal the SettingsClient surfaces for the per-type enable check.
+        // Defensive guard mirroring the 300 ms disable-debounce window
+        // (`#755` Phase E) — interval is the only signal `SettingsClient`
+        // surfaces for the per-type enable check.
         guard interval > 0 else { return .none }
 
-        return .run { _ in
-            await settingsClient.setSnoozeCount(0)
-            await overlayClient.show(type, duration, false, false)
-            analyticsClient.log(.reminderTriggered(
-                type: type,
-                thresholdS: interval,
-                deliveryPath: .screenTimeThreshold
-            ))
-            if authStatus == .authorized {
-                await schedulerClient.rescheduleReminder(type, currentSettings)
+        let request = OverlayPresentationRequest(
+            type: type,
+            duration: duration,
+            hapticsEnabled: hapticsEnabled,
+            pauseMediaEnabled: pauseMediaDuringBreaks
+        )
+
+        return .merge(
+            .send(.delegate(.presentOverlay(request))),
+            .run { _ in
+                await settingsClient.setSnoozeCount(0)
+                analyticsClient.log(.reminderTriggered(
+                    type: type,
+                    thresholdS: interval,
+                    deliveryPath: .screenTimeThreshold
+                ))
+                if authStatus == .authorized {
+                    await schedulerClient.rescheduleReminder(type, currentSettings)
+                }
             }
-        }
+        )
     }
 
     func pauseConditionChangedEffect(isPaused: Bool, state: State) -> Effect<Action> {
-        let snoozedUntil = state.snoozedUntil
-        let currentNow = now()
-        let overlayClient = self.overlayClient
         let trackerClient = self.trackerClient
-        return .run { _ in
-            if isPaused {
-                await trackerClient.pauseAll()
-                await overlayClient.clearQueue()
-                await overlayClient.dismiss()
-                return
-            }
-            // Resume only if no active snooze (ported from the deleted
-            // `AppCoordinator.pauseConditionChanged`, #755 Phase E).
-            guard (snoozedUntil ?? .distantPast) <= currentNow else { return }
-            await trackerClient.resumeAll()
+        if isPaused {
+            return .merge(
+                .send(.delegate(.suspendOverlayForPauseCondition)),
+                .run { _ in await trackerClient.pauseAll() }
+            )
         }
+        // Resume only if no active snooze is in effect (`#755` Phase E).
+        guard (state.snoozedUntil ?? .distantPast) <= now() else { return .none }
+        return .run { _ in await trackerClient.resumeAll() }
     }
 
     func foregroundTransitionEffect(state: State) -> Effect<Action> {
@@ -382,8 +533,9 @@ extension SchedulingFeature {
             let status = await notificationClient.authorizationStatus()
             await send(.internalAction(.authStatusRefreshed(status)))
 
-            // Ported from the deleted `AppCoordinator.handleForegroundTransition`
-            // (#755 Phase E).
+            // Foreground snooze reconciliation (`#755` Phase E): clear
+            // expired snoozes and reschedule, or re-arm the wake
+            // notification for a still-active snooze.
             if let until = snoozedUntil {
                 if until <= Date() {
                     await settingsClient.setSnoozedUntil(nil)
@@ -431,6 +583,67 @@ extension SchedulingFeature {
                 await send(.scheduleReminders)
             }
         )
+    }
+
+    /// Watchdog-recovery side effect (#892). Reads the recent App Group
+    /// IPC event log via `IPCClient.recentEvents`, classifies the latest
+    /// device-activity-lifecycle heartbeat using `WatchdogHeartbeat.status(…)`
+    /// against a 130 s staleness threshold, and on a `.stale` / `.missing`
+    /// verdict cancels DeviceActivity monitoring, records a
+    /// `watchdogRecoveryTriggered` IPC event, emits the
+    /// `watchdogRecoveryTriggered` + `watchdogRecoveryCompleted` analytics
+    /// pair, and sends `.scheduleReminders` to re-arm the schedule from a
+    /// clean slate (per-type cancel-and-rearm via
+    /// `ReminderScheduler.rescheduleReminder`; the `.notDetermined`
+    /// fall-through also calls `schedulerClient.cancelAllReminders()`).
+    /// Fresh heartbeats short-circuit so callers can dispatch the action
+    /// unconditionally on foreground.
+    ///
+    /// Behavioural parity with the deleted
+    /// `AppCoordinator.recoverStaleDeviceActivityWatchdogIfNeeded`
+    /// (#680) — the per-reason fallback rescheduling is now subsumed by
+    /// `.scheduleReminders`, which restores the notification fallback
+    /// whenever authorization permits.
+    func watchdogRecoveryTriggeredEffect() -> Effect<Action> {
+        let now = self.now()
+        let analyticsClient = self.analyticsClient
+        let deviceActivity = self.deviceActivity
+        let ipcClient = self.ipcClient
+        return .run { send in
+            let events = await ipcClient.recentEvents()
+            let status = WatchdogHeartbeat.status(
+                from: events,
+                now: now,
+                staleAfter: Self.watchdogHeartbeatStaleThreshold,
+                matching: WatchdogHeartbeatDetail.deviceActivityLifecycleDetails
+            )
+            let detail: String
+            switch status {
+            case .fresh:
+                return
+            case .missing:
+                detail = "missing"
+            case let .stale(_, heartbeatDetail):
+                detail = heartbeatDetail?.rawValue ?? "unknown"
+            }
+
+            await deviceActivity.cancel(nil)
+            await ipcClient.record(
+                AppGroupIPCEvent(
+                    kind: .watchdogRecoveryTriggered,
+                    reasonRaw: nil,
+                    timestamp: now,
+                    detail: detail
+                ),
+                "watchdog_recovery"
+            )
+            analyticsClient.log(.watchdogRecoveryTriggered(reason: nil, detail: detail))
+            analyticsClient.log(.watchdogRecoveryCompleted(
+                sessionCleared: true,
+                fallbackScheduled: false
+            ))
+            await send(.scheduleReminders)
+        }
     }
 }
 
@@ -481,6 +694,21 @@ extension SchedulingFeature {
         .cancellable(id: CancelID.settingsStream, cancelInFlight: true)
     }
 
+    /// Posture-side counterpart of `settingsStreamEffect()` (#897). Drains
+    /// `SettingsClient.postureStream()` and dispatches
+    /// `.postureSettingsChanged`, so the cached `state.postureSettings`
+    /// snapshot stays in lock-step with posture-side mutations made from
+    /// `SettingsFeature` / `OnboardingFeature` / `resetToDefaults()`.
+    func postureSettingsStreamEffect() -> Effect<Action> {
+        let settingsClient = self.settingsClient
+        return .run { send in
+            for await snapshot in settingsClient.postureStream() {
+                await send(.postureSettingsChanged(snapshot))
+            }
+        }
+        .cancellable(id: CancelID.postureSettingsStream, cancelInFlight: true)
+    }
+
     func thresholdStreamEffect() -> Effect<Action> {
         let trackerClient = self.trackerClient
         return .run { send in
@@ -510,6 +738,49 @@ extension SchedulingFeature {
         }
         .cancellable(id: CancelID.ipcStream, cancelInFlight: true)
     }
+
+    /// Subscribes to `OverlayClient.lifecycleEvents()` and forwards each
+    /// emission as `.overlayLifecycleEvent(_:)` (#904). The stream is
+    /// installed from `startEffect` and cancelled from `stopEffect`. The
+    /// reducer's handler dispatches `SessionTimingClient` calls per #901
+    /// and `DeviceActivityMonitorClient.startScheduleForOverlay(_:)` /
+    /// `cancel(_:)` per #903; future per-event hooks plug in from the
+    /// same handler without re-plumbing the stream wiring.
+    func overlayLifecycleStreamEffect() -> Effect<Action> {
+        let overlayClient = self.overlayClient
+        return .run { send in
+            for await event in overlayClient.lifecycleEvents() {
+                await send(.overlayLifecycleEvent(event))
+            }
+        }
+        .cancellable(id: CancelID.overlayLifecycleStream, cancelInFlight: true)
+    }
+
+    /// Routes a single `OverlayLifecycleEvent` to the per-variant side-
+    /// effects owned by sibling trackers. `.presented` / `.dismissed` map
+    /// to `SessionTimingClient.sessionStarted` / `sessionEnded` (#901)
+    /// and to `DeviceActivityMonitorClient.startScheduleForOverlay(_:)`
+    /// (on `.presented`) / `cancel(_:)` (on `.dismissed`) per #903.
+    /// `.settingsTapped` is intentionally a no-op here: the same user
+    /// action emits `AnalyticsEvent.overlayDismissed(method: .settingsTap)`
+    /// from `OverlayView.performDismiss(_:)`, and navigation to Settings
+    /// is owned by `AppFeature`'s parallel `lifecycleEvents` subscriber.
+    func overlayLifecycleEventEffect(_ event: OverlayLifecycleEvent) -> Effect<Action> {
+        switch event {
+        case let .presented(type):
+            return .run { [sessionTimingClient, deviceActivity, now] _ in
+                await sessionTimingClient.sessionStarted(type, now())
+                await deviceActivity.startScheduleForOverlay(type)
+            }
+        case let .dismissed(type):
+            return .run { [sessionTimingClient, deviceActivity, now] _ in
+                await sessionTimingClient.sessionEnded(type, now())
+                await deviceActivity.cancel(nil)
+            }
+        case .settingsTapped:
+            return .none
+        }
+    }
 }
 
 // MARK: - Snapshot + side-effect helpers
@@ -517,14 +788,20 @@ extension SchedulingFeature {
 /// Plain-old-Swift snapshot of the values `scheduleRemindersEffect` reads from
 /// `State`. Extracted into a dedicated value to keep the closure capture list
 /// short enough for SwiftLint's `closure_parameter_position` rule.
+///
+/// Carries both the eyes-side and posture-side `ReminderSettings` snapshots
+/// (#897) so `scheduleRemindersEffect` can pass per-type values to
+/// `ReminderSchedulerClient.scheduleReminders` and `configureTracker`.
 private struct SchedulingSnapshot: Sendable {
-    let settings: ReminderSettings
+    let eyesSettings: ReminderSettings
+    let postureSettings: ReminderSettings
     let snoozedUntil: Date?
     let isUITestMode: Bool
     let isPausedByConditions: Bool
 
     init(state: SchedulingFeature.State) {
-        self.settings = state.settings
+        self.eyesSettings = state.settings
+        self.postureSettings = state.postureSettings
         self.snoozedUntil = state.snoozedUntil
         self.isUITestMode = state.isUITestModeEnabled
         self.isPausedByConditions = state.isPausedByConditions
@@ -534,12 +811,17 @@ private struct SchedulingSnapshot: Sendable {
 extension SchedulingFeature {
 
     static func configureTracker(
-        settings: ReminderSettings,
+        eyesSettings: ReminderSettings,
+        postureSettings: ReminderSettings,
         isPausedByConditions: Bool,
         tracker: ScreenTimeTrackerClient
     ) async {
-        let interval = settings.interval
         for type in ReminderType.allCases {
+            let interval: TimeInterval
+            switch type {
+            case .eyes:    interval = eyesSettings.interval
+            case .posture: interval = postureSettings.interval
+            }
             if interval > 0 {
                 await tracker.setThreshold(interval, type)
                 await tracker.enableTracking(type)
@@ -552,9 +834,8 @@ extension SchedulingFeature {
     }
 
     /// Returns a sendable closure that schedules the silent one-time wake
-    /// notification for the supplied date — ports the behaviour of the
-    /// deleted `AppCoordinator.scheduleSnoozeWakeNotification(at:)` (#755
-    /// Phase E) so a killed app is woken when the snooze period expires.
+    /// notification for the supplied date (`#755` Phase E) so a killed app
+    /// is woken when the snooze period expires.
     func makeScheduleSnoozeNotification() -> @Sendable (Date) async -> Void {
         let notificationClient = self.notificationClient
         return { date in

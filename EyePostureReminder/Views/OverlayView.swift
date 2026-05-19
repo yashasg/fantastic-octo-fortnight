@@ -1,30 +1,39 @@
+import ComposableArchitecture
 import SwiftUI
 import UIKit
 
 /// Full-screen overlay displayed when an eye-break or posture reminder fires.
 ///
 /// The view presents a calming gradient background, a countdown ring, and
-/// dismiss controls (button, swipe-up, or settings link). It is shown inside
-/// a dedicated `UIWindow` managed by ``OverlayManager`` and communicates
-/// dismissal exclusively through closure callbacks — it never writes to
-/// persistence directly.
+/// dismiss controls (button, swipe-up, or settings link). All presentation
+/// state — countdown, dismissal phase, analytics — flows through
+/// `OverlayFeature` so the reducer owns the two-phase dismiss contract
+/// (`#738`).
+///
+/// `#919` Phase 1 introduced the `init(store:)` initializer alongside a
+/// legacy closure-driven body that was used by the now-retired
+/// `OverlayManager` `UIWindow` + `UIHostingController` presentation.
+/// `#920` Phase 2 retired the `OverlayManager` path entirely; the
+/// canonical `StoreOf<OverlayFeature>`-driven body is now the only
+/// path, rendered by
+/// `RootView.fullScreenCover(item: $store.scope(state: \.$overlay, …))`.
 struct OverlayView: View {
+
+    // MARK: - Swipe-up gesture helpers (preserved for unit-test access)
 
     static let swipeDismissMinimumUpwardTravel: CGFloat = 30
 
-    let type: ReminderType
-    let duration: TimeInterval
-    let hapticsEnabled: Bool
-    let onDismiss: () -> Void
-    let onSettingsTap: () -> Void
-    let onAnalyticsEvent: (AnalyticsEvent) -> Void
-    private let reduceMotionOverride: Bool?
+    static func shouldDismissForSwipe(translation: CGSize) -> Bool {
+        let upwardTravel = -translation.height
+        guard upwardTravel >= swipeDismissMinimumUpwardTravel else { return false }
+        return upwardTravel > abs(translation.width)
+    }
 
-    @State private var secondsRemaining: Int
-    @State private var timer: Timer?
+    @Perception.Bindable var store: StoreOf<OverlayFeature>
+
     @State private var contentOpacity: Double = 0
     @State private var slideOffset: CGFloat = AppLayout.overlayEntranceOffset
-    @State private var isDismissing = false
+    @State private var hasStartedExitAnimation = false
 
     // Generators created in onAppear and pre-prepared for low-latency haptics.
     @State private var impactGenerator: UIImpactFeedbackGenerator?
@@ -32,52 +41,55 @@ struct OverlayView: View {
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    init(
-        type: ReminderType,
-        duration: TimeInterval,
-        hapticsEnabled: Bool = true,
-        reduceMotionOverride: Bool? = nil,
-        onAnalyticsEvent: @escaping (AnalyticsEvent) -> Void = { _ in },
-        onSettingsTap: @escaping () -> Void = {},
-        onDismiss: @escaping () -> Void
-    ) {
-        self.type              = type
-        self.duration          = duration
-        self.hapticsEnabled    = hapticsEnabled
-        self.onAnalyticsEvent  = onAnalyticsEvent
-        self.onSettingsTap     = onSettingsTap
-        self.onDismiss         = onDismiss
-        self.reduceMotionOverride = reduceMotionOverride
-        _secondsRemaining      = State(initialValue: Int(duration))
+    init(store: StoreOf<OverlayFeature>) {
+        self.store = store
     }
 
+    // MARK: - Backward-compat property accessors
+    //
+    // Existing view-body tests (`CoverageBoostTests`, `ViewBodyCoverageTests`,
+    // `OverlayAccessibilityTests`, `PreviewTests`) read `view.type`,
+    // `view.duration`, and `view.hapticsEnabled` directly on the wrapper.
+    // Preserve those property surfaces so the migration of those tests to
+    // `init(store:)` doesn't have to rewrite every assertion in lockstep.
+
+    var type: ReminderType { store.type }
+    var duration: TimeInterval { store.duration }
+    var hapticsEnabled: Bool { store.hapticsEnabled }
+
+    // MARK: - Body
+
     var body: some View {
-        ZStack(alignment: .topTrailing) {
-            backgroundGradient
-            dismissButton
-            centerContent
+        WithPerceptionTracking {
+            ZStack(alignment: .topTrailing) {
+                backgroundGradient
+                dismissButton
+                centerContent
+            }
+            .accessibilityElement(children: .contain)
+            .accessibilityIdentifier("overlay.root")
+            // SwiftUI's `accessibilityViewIsModal(_:)` is not available in
+            // the current SDK and `.isModal` trait alone does not suppress
+            // VoiceOver traversal. The `.fullScreenCover` host already
+            // isolates focus to the overlay's window, and `postScreenChanged`
+            // (fired by `OverlayFeature.onAppear` / `.dismissed`) returns
+            // VoiceOver focus to the underlying content on exit.
+            .accessibilityAddTraits(.isModal)
+            .accessibilityAction(AccessibilityActionKind.escape) {
+                handleDismissTapped()
+            }
+            .opacity(contentOpacity)
+            .offset(y: slideOffset)
+            .gesture(swipeUpDismissGesture)
+            .onAppear(perform: handleAppear)
+            .onChangeCompat(of: store.isDismissing) { isDismissing in
+                if isDismissing { runExitAnimation() }
+            }
         }
-        .accessibilityElement(children: .contain)
-        .accessibilityIdentifier("overlay.root")
-        // Modal suppression is handled at the UIKit layer: OverlayManager sets
-        // hostingController.view.accessibilityViewIsModal = true on the hosting
-        // controller's view, which correctly prevents VoiceOver from escaping
-        // the overlay window. SwiftUI's accessibilityViewIsModal(_:) is not
-        // available in the current SDK; .accessibilityAddTraits(.isModal) only
-        // adds a trait without suppressing traversal, so it is omitted here.
-        .accessibilityAction(AccessibilityActionKind.escape) {
-            performDismiss(method: .button)
-        }
-        .opacity(contentOpacity)
-        .offset(y: slideOffset)
-        .gesture(swipeUpDismissGesture)
-        .onAppear(perform: handleAppear)
-        .onDisappear { timer?.invalidate() }
     }
 
     // MARK: - Body Sections
 
-    /// Adaptive top-to-bottom gradient filling the entire screen behind overlay content.
     private var backgroundGradient: some View {
         LinearGradient(
             colors: [AppColor.background, AppColor.surfaceTint],
@@ -87,10 +99,9 @@ struct OverlayView: View {
         .ignoresSafeArea()
     }
 
-    /// Secondary dismiss control (× icon) anchored to the top-trailing corner.
     private var dismissButton: some View {
         Button(
-            action: { performDismiss(method: .button) },
+            action: { handleDismissTapped() },
             label: {
                 Image(systemName: AppSymbol.dismiss)
                     .font(AppFont.overlayDismiss)
@@ -107,8 +118,6 @@ struct OverlayView: View {
         .accessibilityIdentifier("overlay.dismissButton")
     }
 
-    /// Vertically-centered content stack containing the icon, headline, countdown, and action
-    /// buttons.
     private var centerContent: some View {
         VStack(spacing: AppSpacing.lg) {
             Spacer()
@@ -123,15 +132,14 @@ struct OverlayView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    /// Soft circular glow ring behind the reminder-type SF Symbol icon.
     private var iconAura: some View {
         ZStack {
             Circle()
-                .fill(type.color.opacity(AppOpacity.iconAura))
-            Image(systemName: type.symbolName)
+                .fill(store.type.color.opacity(AppOpacity.iconAura))
+            Image(systemName: store.type.symbolName)
                 .symbolRenderingMode(.hierarchical)
                 .font(AppFont.overlayIcon)
-                .foregroundStyle(type.color)
+                .foregroundStyle(store.type.color)
         }
         .frame(
             width: AppLayout.overlayIconSize * 1.75,
@@ -140,17 +148,16 @@ struct OverlayView: View {
         .accessibilityHidden(true)
     }
 
-    /// Title and supportive-text labels for the active reminder type.
     private var headlineSection: some View {
         Group {
-            Text(type.overlayTitle)
+            Text(store.type.overlayTitle)
                 .font(AppFont.headline)
                 .foregroundStyle(AppColor.textPrimary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, AppSpacing.xl)
                 .accessibilitySortPriority(1)
 
-            Text(type.overlaySupportiveText)
+            Text(store.type.overlaySupportiveText)
                 .font(AppFont.body)
                 .foregroundStyle(AppColor.textSecondary)
                 .multilineTextAlignment(.center)
@@ -159,7 +166,6 @@ struct OverlayView: View {
         }
     }
 
-    /// Animated circular countdown ring showing remaining seconds until auto-dismiss.
     private var countdownRing: some View {
         ZStack {
             Circle()
@@ -167,24 +173,24 @@ struct OverlayView: View {
                 .accessibilityHidden(true)
 
             Circle()
-                .trim(from: 0, to: CGFloat(secondsRemaining) / CGFloat(max(duration, 1)))
+                .trim(from: 0, to: CGFloat(store.secondsRemaining) / CGFloat(max(store.duration, 1)))
                 .stroke(
-                    type.color,
+                    store.type.color,
                     style: StrokeStyle(lineWidth: AppLayout.countdownRingStroke, lineCap: .round)
                 )
                 .rotationEffect(.degrees(-90))
                 .animation(
-                    shouldReduceMotion ? .none : AppAnimation.countdownRingCurve,
-                    value: secondsRemaining
+                    reduceMotion ? .none : AppAnimation.countdownRingCurve,
+                    value: store.secondsRemaining
                 )
                 .accessibilityHidden(true)
 
-            Text("\(secondsRemaining)")
+            Text("\(store.secondsRemaining)")
                 .font(AppFont.countdown)
                 .foregroundStyle(AppColor.textPrimary)
                 .monospacedDigit()
                 .contentTransition(
-                    shouldReduceMotion ? .identity : .numericText(countsDown: true)
+                    reduceMotion ? .identity : .numericText(countsDown: true)
                 )
         }
         .frame(
@@ -196,17 +202,16 @@ struct OverlayView: View {
         .accessibilityValue(
             String.localizedStringWithFormat(
                 NSLocalizedString("overlay.countdown.value", bundle: .module, comment: ""),
-                secondsRemaining
+                store.secondsRemaining
             )
         )
         .accessibilityAddTraits(.updatesFrequently)
     }
 
-    /// Primary "Done" button and secondary "Settings" link at the bottom of the overlay.
     private var actionSection: some View {
         Group {
             Button(
-                action: { performDismiss(method: .button) },
+                action: { handleDismissTapped() },
                 label: { Text("overlay.doneButton", bundle: .module) }
             )
             .buttonStyle(.primary)
@@ -215,7 +220,7 @@ struct OverlayView: View {
             .accessibilityIdentifier("overlay.doneButton")
 
             Button(
-                action: { performDismiss(method: .settingsTap) },
+                action: { handleSettingsTapped() },
                 label: {
                     Label(
                         title: { Text("overlay.settingsLabel", bundle: .module) },
@@ -232,23 +237,17 @@ struct OverlayView: View {
         }
     }
 
-    /// Swipe-up drag gesture that dismisses the overlay, mirroring the upward slide entrance.
     private var swipeUpDismissGesture: some Gesture {
-        DragGesture(minimumDistance: Self.swipeDismissMinimumUpwardTravel)
+        DragGesture(minimumDistance: OverlayView.swipeDismissMinimumUpwardTravel)
             .onEnded { value in
-                if Self.shouldDismissForSwipe(translation: value.translation) {
-                    performDismiss(method: .swipe)
+                if OverlayView.shouldDismissForSwipe(translation: value.translation) {
+                    handleDismissTapped()
                 }
             }
     }
 
-    static func shouldDismissForSwipe(translation: CGSize) -> Bool {
-        let upwardTravel = -translation.height
-        guard upwardTravel >= swipeDismissMinimumUpwardTravel else { return false }
-        return upwardTravel > abs(translation.width)
-    }
+    // MARK: - Action handlers
 
-    /// Prepares haptic generators, fires entrance animation, and starts the countdown timer.
     private func handleAppear() {
         let impact = UIImpactFeedbackGenerator(style: .medium)
         impact.prepare()
@@ -257,95 +256,92 @@ struct OverlayView: View {
         notification.prepare()
         notificationGenerator = notification
 
-        if hapticsEnabled { notification.notificationOccurred(.warning) }
+        if store.hapticsEnabled { notification.notificationOccurred(.warning) }
 
-        withMotionSafe(shouldReduceMotion, animation: AppAnimation.calmingEntranceCurve) {
+        withMotionSafe(reduceMotion, animation: AppAnimation.calmingEntranceCurve) {
             contentOpacity = 1
             slideOffset = 0
         }
-        startTimer()
+        store.send(.onAppear)
     }
 
-    // MARK: - Manual dismiss (× button, swipe up, or Settings tap)
-
-    /// Animates the overlay out and invokes `onDismiss` after the exit transition completes.
-    private func performDismiss(method: AnalyticsEvent.DismissMethod = .button) {
-        guard !isDismissing else { return }
-        isDismissing = true
-        timer?.invalidate()
-        let elapsedS = duration - TimeInterval(secondsRemaining)
-        onAnalyticsEvent(.overlayDismissed(type: type, method: method, elapsedS: elapsedS))
-        if method == .settingsTap {
-            onSettingsTap()
-        }
-        if hapticsEnabled { notificationGenerator?.notificationOccurred(.success) }
-        let screenHeight = UIApplication.shared.connectedScenes
-            .compactMap { $0 as? UIWindowScene }
-            .first?.screen.bounds.height ?? 1000
-        withMotionSafe(shouldReduceMotion, animation: AppAnimation.overlayDismissCurve) {
-            contentOpacity = 0
-            slideOffset = -screenHeight
-        }
-        let delay = shouldReduceMotion ? 0.05 : AppAnimation.overlayDismiss
-        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-            onDismiss()
-        }
+    private func handleDismissTapped() {
+        guard !store.isDismissing else { return }
+        store.send(.dismissTapped)
     }
 
-    // MARK: - Auto-dismiss (countdown reaches zero)
-
-    /// Fades out the overlay when the countdown expires and invokes `onDismiss`.
-    private func performAutoDismiss() {
-        guard !isDismissing else { return }
-        isDismissing = true
-        onAnalyticsEvent(.overlayAutoDismissed(type: type, durationS: duration))
-        triggerCompletionHaptic()
-        withMotionSafe(shouldReduceMotion, animation: AppAnimation.overlayFadeCurve) {
-            contentOpacity = 0
-        }
-        let delay = shouldReduceMotion ? 0.05 : AppAnimation.overlayAutoDismiss
-        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-            onDismiss()
-        }
+    private func handleSettingsTapped() {
+        guard !store.isDismissing else { return }
+        store.send(.settingsTapped)
+        store.send(.dismissTapped)
     }
 
-    // MARK: - Timer
+    /// Runs the exit transition (slide-up + fade for manual dismiss, fade-only
+    /// for auto-dismiss when the countdown hit zero) and then dispatches
+    /// `.dismissAnimationCompleted` so the reducer can fire its tear-down
+    /// effect chain (`resumeExternalAudio` + `broadcast(.dismissed)` +
+    /// `postScreenChanged` via `OverlayClient`). `#738` two-phase dismiss
+    /// contract: the reducer never tears the slot down before the view
+    /// animation finishes — `AppFeature` clears `state.overlay` only when
+    /// `.dismissed` arrives.
+    private func runExitAnimation() {
+        guard !hasStartedExitAnimation else { return }
+        hasStartedExitAnimation = true
 
-    private var shouldReduceMotion: Bool {
-        reduceMotionOverride ?? reduceMotion
-    }
+        let isAutoDismiss = store.secondsRemaining == 0
 
-    /// Starts a one-second repeating timer that decrements `secondsRemaining` and triggers
-    /// auto-dismiss at zero.
-    private func startTimer() {
-        guard timer == nil else { return }
-        let newTimer = Timer(timeInterval: 1, repeats: true) { _ in
-            if secondsRemaining > 1 {
-                secondsRemaining -= 1
+        if store.hapticsEnabled {
+            if isAutoDismiss {
+                impactGenerator?.impactOccurred()
             } else {
-                secondsRemaining = 0
-                timer?.invalidate()
-                performAutoDismiss()
+                notificationGenerator?.notificationOccurred(.success)
             }
         }
-        newTimer.tolerance = 0.5
-        RunLoop.main.add(newTimer, forMode: .common)
-        timer = newTimer
-    }
 
-    // MARK: - Haptic Feedback
+        if isAutoDismiss {
+            withMotionSafe(reduceMotion, animation: AppAnimation.overlayFadeCurve) {
+                contentOpacity = 0
+            }
+        } else {
+            let screenHeight = UIApplication.shared.connectedScenes
+                .compactMap { $0 as? UIWindowScene }
+                .first?.screen.bounds.height ?? 1000
+            withMotionSafe(reduceMotion, animation: AppAnimation.overlayDismissCurve) {
+                contentOpacity = 0
+                slideOffset = -screenHeight
+            }
+        }
 
-    /// Fires an impact haptic when the break completes, if haptics are enabled.
-    private func triggerCompletionHaptic() {
-        guard hapticsEnabled else { return }
-        impactGenerator?.impactOccurred()
+        let baseDelay = isAutoDismiss ? AppAnimation.overlayAutoDismiss : AppAnimation.overlayDismiss
+        let delay = reduceMotion ? 0.05 : baseDelay
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+            store.send(.dismissAnimationCompleted)
+        }
     }
 }
 
+// MARK: - Previews
+
 #Preview {
-    OverlayView(type: .eyes, duration: 20) {}
+    OverlayView(
+        store: Store(
+            initialState: OverlayFeature.State(
+                type: .eyes,
+                duration: 20,
+                hapticsEnabled: true
+            )
+        ) { OverlayFeature() }
+    )
 }
 
 #Preview("Posture") {
-    OverlayView(type: .posture, duration: 10) {}
+    OverlayView(
+        store: Store(
+            initialState: OverlayFeature.State(
+                type: .posture,
+                duration: 10,
+                hapticsEnabled: true
+            )
+        ) { OverlayFeature() }
+    )
 }

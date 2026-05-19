@@ -9,10 +9,17 @@ Versioning strategy: `0.x.x` during TestFlight beta, `1.0.0` at App Store launch
 
 ## Unreleased
 
-> Spans 165 PRs merged on top of `v0.2.0` — the headline is the **TCA migration**
-> (Phases 1 & 2 shipped, Phase 3 TestStore coverage in flight) plus a deep
-> dependency-injection pass (#462 Phase A) and the App Store / TestFlight
-> readiness sweep (#411 → #635).
+> Spans the post-`v0.2.0` PR stream — the headline is the **TCA framework
+> migration** (TCA Phases 1, 2 & 3 all shipped, including the #806 phase-1/2/3
+> UI-test → TestStore audit landings) plus a deep dependency-injection pass
+> (#462 Phase A) and the App Store / TestFlight readiness sweep (#411 → #635).
+> Run `git log v0.2.0..main --first-parent` for the live ledger.
+>
+> **Not** shipped here: the product-level **Phase 3 (True Interrupt Mode /
+> Screen Time shielding)** — the TCA reducers and dependency-client surface
+> are wired structurally, but the user-facing path is still entitlement-blocked
+> on Apple's FamilyControls approval (#201). See `README.md` and `ROADMAP.md`
+> for the live product-phase status.
 
 ### 🔄 Changed
 
@@ -39,11 +46,18 @@ existing `@StateObject AppCoordinator`, so behaviour is byte-equivalent.
 - **#699 — Bridge `AppDelegate` notification routes to TCA root Store.**
 - **#700 — Wire `ScenePhase` observation as a TCA effect.**
 - **#701 — Strip `: ObservableObject` (and the manual `objectWillChange.send()` broadcast) from `SettingsStore`.** Closes the final piece of the MVVM decommission: all SwiftUI surfaces now read settings through their feature stores, non-SwiftUI consumers use the existing `addObserver` / `removeObserver` surface, and `import Combine` is gone from the file.
+- **#892 — Watchdog-recovery surface lands on `SchedulingFeature`.** Added `IPCClient.recentEvents` (live-wired to `AppGroupIPCStore.readEvents()`), `static SchedulingFeature.watchdogHeartbeatStaleThreshold` (130s — parity with `WatchdogHeartbeatTests`), and the public `.watchdogRecoveryTriggered` action which reads recent events, computes `WatchdogHeartbeat.status(...)` against the `@Dependency(\.date)` clock, and — on `.stale`/`.missing` — cancels every reminder, restarts the schedule, and emits the `.watchdogRecoveryTriggered` / `.watchdogRecoveryCompleted` analytics pair. Re-enables `SchedulingFeature_WatchdogRecoveryTests.test_watchdogRecovery_deferredToPhase2` as four behavioural-parity tests against `WatchdogHeartbeatTests`. Closes #892.
+- **#894 — `AppCategoryPickerFeature` now hydrates and persists selection through `IPCClient` (root-cause fix for stale `#678` comments).** `.onAppear` calls `ipcClient.readSelection()` and dispatches `.selectionChanged(snapshot)` to seed `state.selection` from the App Group store; `.selectionChanged` persists transitions via `ipcClient.writeSelection(_:)` guarded by a `didChange` check so re-emits never loop (`AppGroupIPCStore.writeSelection` already dedupes, but the reducer-level guard keeps the effect free on hydration re-entries). The two stale `// Selection persistence to App Group is owned by p0-tca-15 (#678) — IPCClient surface is intentionally not extended here.` inline comments (lines 44–46 and 71–72) are dropped: `IPCClient.readSelection` / `writeSelection` / `selectionChanges` shipped in #678, but the reducer was never wired to them, so the persistence path silently no-op'd. Stream-subscription via `ipcClient.selectionChanges()` is intentionally scoped out — it requires a `CancelID` and an owning lifetime and is not required for read/write hydration parity. `AppCategoryPickerFeatureTests` rewritten: new `test_onAppear_hydratesFromIPCClientAndPollsAuthorisationStatus`, `test_onAppear_seedsNonEmptySnapshotFromIPCClient`, `test_onAppear_emptyPersistedSnapshot_doesNotWrite`, `test_selectionChanged_persistsNewSnapshotViaIPCClient`, and `test_selectionChanged_unchangedSnapshot_doesNotPersist` recorder-asserted via `LockIsolated`. Closes #894.
+- **#896 — `OnboardingFeature.requestNotificationPermission` now emits `.notificationPermissionResponded(granted:)` (root-cause fix for the untracked deferral).** Added the new case to `AnalyticsEvent` (Onboarding section) and a matching `logExtended` branch that writes `event=notification_permission_responded granted=<bool>` to `os.Logger` with `.public` privacy. The reducer captures the boolean returned by `notification.requestAuthorization(_:)` and forwards it via `analytics.log(.notificationPermissionResponded(granted:))`; throws still pass through `try?` and intentionally skip the emission so the stream only carries real user-driven responses (`authorizationStatus()` remains the single source of truth for UI). The `// Spec calls for .notificationPermissionResponded(...) here…` deferral comment is removed. `OnboardingFeatureTests` extended: the existing granted / denied / throws tests now assert the emitted analytics event count + payload via a `LockIsolated<[AnalyticsEvent]>` recorder, and `AnalyticsEventTests` / `AnalyticsLoggerTests` gain construction + crash-safety coverage for both boolean payloads. Closes #896.
+- **#918 — `RootView.appCategoryPicker` fullScreenCover now renders the real `AppCategoryPickerView` from `StoreOf<AppCategoryPickerFeature>`; onboarding-owned picker presentation routes through the reducer.** `OnboardingView`'s "Set Up" CTA on the True Interrupt Mode page now dispatches `store.send(.openAppCategoryPicker)` instead of flipping a local `@State showAppCategoryPicker` flag; `AppFeature` intercepts the child action and writes `state.destination = .appCategoryPicker(AppCategoryPickerFeature.State())` so `RootView`'s `.fullScreenCover(item: $store.scope(state: \.destination?.appCategoryPicker, ...))` presents the canonical picker store. The previous scaffolding — `RootView`'s `EmptyView()` cover body, `OnboardingView.@State private var showAppCategoryPicker`, the `.sheet(isPresented:)` modifier, and the private `OnboardingAppCategoryPickerSheet` wrapper that owned a parallel local-store — is deleted. `OnboardingFeature.State.showAppCategoryPicker` and `Action.dismissAppCategoryPicker` are removed (dead state / dead action after the destination-owned migration); `.openAppCategoryPicker` is retained as a parent-observed signal with no local mutation. `OnboardingFeatureTests` updated to drop the flag assertions; new `AppFeatureTests.test_onboardingOpenAppCategoryPicker_presentsAppCategoryPickerDestination` covers the destination intercept. `RootView.swift` docstring updated to drop the "scaffolding (`EmptyView()`)" caveat for `appCategoryPicker` (overlay caveat stays — #919 still tracks the `OverlayView` migration). Dismissal continues to flow through SwiftUI's `@Environment(\.dismiss)` on the picker's Done button, which the `@Presents` machinery converts into `.destination(.dismiss)`. Settings' self-contained `AppCategoryPickerSheet` wrapper is unchanged (intentionally local — different presenting surface). `./scripts/build.sh all` green (1817 tests, 0 failures). Closes #918.
+- **#919 Phase 1 — `OverlayView` accepts `StoreOf<OverlayFeature>`; `RootView`'s overlay `.fullScreenCover` renders the real `OverlayView(store:)` (no `EmptyView()`).** `OverlayView` becomes a thin wrapper with two initializers — the canonical `init(store:)` dispatches to a new private `OverlayStoreView` body driven by `OverlayFeature` (countdown from `store.secondsRemaining`, two-phase dismiss via `.dismissTapped` → `.dismissAnimationCompleted` per #738, exit animation gated on `store.isDismissing`), while the legacy closure-driven `init(type:duration:…)` continues to back the existing `OverlayManager` + `UIHostingController` path and the existing view-body tests via a private `OverlayClosureView`. Backward-compat property accessors (`view.type` / `.duration` / `.hapticsEnabled` / `.onDismiss` / `.onSettingsTap` / `.onAnalyticsEvent`) plus the static `swipeDismissMinimumUpwardTravel` / `shouldDismissForSwipe(translation:)` helpers are preserved so `CoverageBoostTests`, `OverlayAccessibilityTests`, `OverlayGestureTests`, `ViewBodyCoverageTests`, and `PreviewTests` keep passing untouched. `RootView`'s overlay `.fullScreenCover` body now renders `OverlayView(store: overlayStore)` against the scoped overlay store; in production `state.overlay` still stays `nil` (`SchedulingFeature` continues to call `overlayClient.show(...)` → `OverlayManager` → `UIWindow`) so the cover is dormant until #919 Phase 2 (#920) flips presentation through `state.overlay`. `RootView.swift` docstring rewritten to credit the Phase 1 wiring and call out the residual `OverlayManager` caveat. New `OverlayStoreViewTests` (7 cases) covers the store-init property surface, body evaluation through `UIHostingController`, zero-duration rendering, and the `AppFeature`-scoped `fullScreenCover` integration. `./scripts/build.sh all` green (1824 tests, 0 failures). Phase 2 (retire `OverlayManager`, move queueing / audio / accessibility into TCA, migrate legacy closure-based test call sites, delete closure-based `OverlayView` init) tracked as #920.
+- **#920 Phase 2 — Retire the `OverlayManager` `UIWindow` path; canonical TCA state-driven overlay presentation.** `EyePostureReminder/Services/OverlayManager.swift`, the `OverlayPresenting` protocol, the `MockOverlayPresenting` mock, and `OverlayClient`'s legacy `show` / `dismiss` / `clearQueue` / `clearQueueForType` / `isVisible` surface are deleted; production presentation now flows entirely through `AppFeature.State.overlay` + `RootView.fullScreenCover` + the `SchedulingFeature` delegate vocabulary (`.delegate(.presentOverlay(_))` / `.overlay(.presented(.dismissed))`). `OverlayClient` keeps only the cross-cutting side-effects (`lifecycleEvents` / `broadcast` / `pauseExternalAudio` / `resumeExternalAudio` / `postScreenChanged`). Closure-based `OverlayView` init and the `UIHostingController` bridge tests are removed; remaining view-body tests bind directly to `StoreOf<OverlayFeature>`. Closes #920.
 
 #### Engineering docs — TCA refresh
 - **#725 — Rewrite `ARCHITECTURE.md` + `IMPLEMENTATION_PLAN.md` around the post-migration TCA layout.** §1 module-dependency graph redrawn around `AppFeature` / per-feature reducers / dependency clients; §3 project structure now lists `EyePostureReminder/TCA/` and the live-service-only `Services/` block; new §2.8 documents the dependency-client layer; §4.1 replaced ("Why TCA"); §10 testing architecture rewritten around `TestStore` + `withDependencies` overrides; `IMPLEMENTATION_PLAN.md` §3 / §9 / §11 / §12 re-anchored to reducers and dependency clients.
 - **#741 — `ROADMAP.md` header + Phase-2/3 bullets re-anchored to TCA.** L6 header switched from `MVVM + Screen Time APIs` to `TCA (ComposableArchitecture) + Screen Time APIs`; M2.3b Smart Pause bullet rewritten as `SchedulingFeature` → `screenTimeTrackerClient.pauseAll/.resumeAll`; Phase-3 data-flow box `AppCoordinator.handleBreakNeeded()` replaced with `SchedulingFeature .thresholdReached → OverlayClient.show / NotificationClient.deliver`; Decision 1.1 + Final Status Summary updated to describe the post-migration architecture. Phase 0 / Phase 1 "shipped" milestone bullets retain their original MVVM-era wording as historical receipts.
 - **#742 — `UX_FLOWS.md` flow diagrams re-anchored to TCA reducers.** §2.1 routing paragraph rewritten around `RootView` + `AppFeature.State.hasSeenOnboarding`; §2.6 Shield-vs-fallback flow box and overlay-suppression contract re-anchored to `SchedulingFeature` + `OverlayClient` / `NotificationClient`; §6.7 snooze cascade re-attributed to `SettingsFeature.snoozeTapped` / `SchedulingFeature` snoozedUntilStream observer (cancel-all pipeline, `internalAction(.scheduleSnoozeWake)`); §6.7 snooze-wake handler attributed to `SchedulingFeature.snoozeWakeFired`; "Cancel snooze" path attributed to `SettingsFeature.cancelSnooze`.
+- **#921 / #922 / #923 / #924 / #925 / #926 — Post-#920 docs cleanup sweep.** Retired stale `OverlayManager` / `OverlayPresenting` / `MockOverlayPresenting` references across the long-form docs after the Phase 2 retirement: `UX_FLOWS.md` §6.7 now cites the canonical `overlayClient.dismiss()` call (#921); `ARCHITECTURE.md` §1.1 / §2.2 / §2 clients table / §3 source tree / §5.5.7 / §5.5.8 / §6.3 / §7.5 / §10.2 / §10.3 / §11 milestone exit criteria rewritten around the `OverlayClient` lifecycle-event surface + `AppFeature.State.overlay` (#922); `IMPLEMENTATION_PLAN.md` retired the stale milestone scaffolding tied to the deleted symbols (#923); `UX_FLOWS.md` overlay-flow descriptions re-anchored to the reducer-owned `fullScreenCover` path (#924); `docs/TEST_STRATEGY.md` dropped the `MockOverlayPresenter` mock matrix entries (#925); `ROADMAP.md` notes the OverlayManager retirement as a Phase 2 deliverable (#926). Pure docs cleanup — no code or test changes, `./scripts/build.sh all` ✅ on each branch.
 
 #### #462 Phase A — Dependency-injection seams across services
 A long mechanical pass replacing every implicit global / singleton lookup in
@@ -193,13 +207,29 @@ to make the TCA Phase-1 reducers testable in isolation.
 
 ### 📋 Meta
 
-- **2,184 unit tests** locally on `main` (was 1,382 at v0.2.0; +802 net
-  driven mostly by Phase-3 TestStore coverage and the DI-seam test fanout).
-- **165 PRs** merged on top of `v0.2.0` — see `git log v0.2.0..main` for the
-  full ledger; this section groups the contributor-visible delta.
+- **Unit-test totals** — run
+  `grep -rc 'func test' Tests/EyePostureReminderTests --include='*.swift' | awk -F: '{s+=$2} END {print s}'`
+  for the live total. Baseline at v0.2.0 was **1,382**; growth is driven
+  mostly by Phase-3 TestStore coverage and the DI-seam test fanout, net
+  of MVVM-era suite removals during the TCA migration. The single
+  permanently `XCTSkip`-gated test is
+  `SettingsStoreSeedTests.test_uiTestOverlayBreakDuration` (DEBUG-only
+  `uiTestOverlayBreakDuration` backdoor). Mirrors `docs/TEST_REPORT.md`
+  L7 / L15 (authoritative; the literal cumulative count was removed in
+  #893 — it drifted by ±N on every test add/remove, with #892 being the
+  trigger that exposed the residual `1,801` / `+419 net` / `1,758`
+  literals).
+- **Post-`v0.2.0` PR stream** — run `git log v0.2.0..main --first-parent` for the
+  full ledger; this section groups the contributor-visible delta. (The literal
+  cumulative count was removed in #885 — it drifted by exactly +1 on every
+  merge and burnt one dedicated follow-up PR each time; #881–#884 are the
+  evidence.)
 - **Phase 3 of the TCA migration is in flight** (per-feature `TestStore`
-  coverage); the remaining MVVM decommission work is tracked in #677 and
-  #702 and will appear in the next release section once those land.
+  coverage). The MVVM decommission tracked in #677 and #702 has landed —
+  PR #754 deleted the `SelectedAppsState` wrapper (#678 final) and PR #760
+  deleted the `AppCoordinator` stack (#755 Phase E); the follow-up
+  doc/citation sweep continues in the `#767+` series (run
+  `git log --grep='Closes #' v0.2.0..main --oneline` for the live list).
 
 ---
 

@@ -21,10 +21,14 @@ enum TestLaunchArguments {
     /// Triggers the posture check overlay immediately on launch; used by OverlayTests
     /// to display the overlay without waiting for the timer.
     static let showOverlayPosture = "--show-overlay-posture"
-    /// Seeds `ScreenTimeAuthorizationStub(.notDetermined)` so the
-    /// TrueInterruptSkippedBanner and TrueInterruptSetupPill can render in UITests.
-    /// The simulator's real FamilyControls status is `.unavailable`; without this arg
-    /// neither element would ever appear (#399).
+    /// Seeds `AppStorageKey.uiTestScreenTimeStatus = .notDetermined` (via
+    /// `AppDelegate.preSeedUITestDefaults()` / `applyUITestLaunchArguments()`)
+    /// so the TrueInterruptSkippedBanner and TrueInterruptSetupPill can render
+    /// in UITests. `HomeView` reads the AppStorage key directly when computing
+    /// True-Interrupt visibility; the live `ScreenTimeAuthorizationProviding`
+    /// remains `ScreenTimeAuthorizationNoop`. The simulator's real
+    /// FamilyControls status is `.unavailable`; without this arg neither
+    /// element would ever appear (#399).
     static let simulateScreenTimeNotDetermined = "--simulate-screen-time-not-determined"
     /// Pre-seeds the True Interrupt skipped-banner dismissed flag so UITests can
     /// assert the setup pill directly without depending on an earlier banner tap.
@@ -186,48 +190,38 @@ extension XCUIApplication {
     ///
     /// Tests should call this once, then use shorter follow-up waits for
     /// secondary elements (dismiss button, supportive text, settings link).
+    ///
+    /// A shared deadline caps the total budget at `timeout` seconds (plus a
+    /// 3-second minimum reserved for the hittability phase) so the two
+    /// sequential waits don't silently double the wall-clock cost.
+    ///
+    /// - Note: 20 s default matches the macos-15 CI runner profile. Local
+    ///   M-series machines finish in <5 s; the inflated budget only fires on
+    ///   loaded CI runners where the overlay appearance or accessibility-tree
+    ///   evaluation is slow.
     @discardableResult
-    func waitForOverlayPresented(timeout: TimeInterval = 8) -> Bool {
-        guard waitForOverlayVisible(timeout: timeout) else { return false }
+    func waitForOverlayPresented(timeout: TimeInterval = 20) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        guard waitForOverlayVisible(timeout: deadline.timeIntervalSinceNow) else {
+            return false
+        }
         let doneButton = buttons["overlay.doneButton"]
-        return waitForElementHittable(doneButton, timeout: timeout)
+        // Reserve at least 3 s for the hittability phase even when the
+        // visibility check consumed most of the budget.
+        let hittableTimeout = max(3.0, deadline.timeIntervalSinceNow)
+        return waitForElementHittable(doneButton, timeout: hittableTimeout)
     }
 
     /// Waits until the overlay root exists, regardless of button hittability.
     @discardableResult
-    func waitForOverlayVisible(timeout: TimeInterval = 8) -> Bool {
+    func waitForOverlayVisible(timeout: TimeInterval = 20) -> Bool {
         otherElements["overlay.root"].waitForExistence(timeout: timeout)
-    }
-
-    /// Waits for overlay dismissal using a positive fallback state and explicit
-    /// overlay-root disappearance.
-    @discardableResult
-    func waitForOverlayDismissed(timeout: TimeInterval = 3) -> Bool {
-        let overlayRoot = otherElements["overlay.root"]
-        let deadline = Date().addingTimeInterval(timeout)
-
-        while Date() < deadline {
-            if !overlayRoot.exists && waitForHomeScreenReady(timeout: 0.5) {
-                return true
-            }
-            activate()
-            let step = min(0.2, max(0.05, deadline.timeIntervalSinceNow))
-            RunLoop.current.run(until: Date().addingTimeInterval(step))
-        }
-
-        return !overlayRoot.exists && waitForHomeScreenReady(timeout: 1)
     }
 
     /// Verifies that `overlay.root` never appears throughout the full observation window.
     @discardableResult
     func waitForOverlayToRemainAbsent(timeout: TimeInterval = 2, pollInterval: TimeInterval = 0.1) -> Bool {
         otherElements["overlay.root"].waitForContinuousNonExistence(timeout: timeout, pollInterval: pollInterval)
-    }
-
-    /// Backward-compatible alias kept for existing tests.
-    @discardableResult
-    func waitForOverlayReady(timeout: TimeInterval = 4) -> Bool {
-        waitForOverlayPresented(timeout: timeout)
     }
 
     /// Waits for an element to become hittable and retries once after activating the app.
@@ -317,12 +311,6 @@ extension XCUIElement {
         return exists && isHittable
     }
 
-    /// Waits until the element no longer exists in the accessibility tree.
-    @discardableResult
-    func waitForNonExistence(timeout: TimeInterval = 3) -> Bool {
-        waitFor(predicate: NSPredicate(format: "exists == false"), timeout: timeout)
-    }
-
     /// Verifies `exists == false` for the full timeout window, failing if the element appears at any point.
     @discardableResult
     func waitForContinuousNonExistence(timeout: TimeInterval = 3, pollInterval: TimeInterval = 0.1) -> Bool {
@@ -335,35 +323,12 @@ extension XCUIElement {
         return !exists
     }
 
-    /// Waits until the element is not hittable (covers hidden-but-mounted cases).
-    @discardableResult
-    func waitForNotHittable(timeout: TimeInterval = 3) -> Bool {
-        waitFor(predicate: NSPredicate(format: "hittable == false"), timeout: timeout)
-    }
-
     /// Taps an element after waiting for a hittable state.
     @discardableResult
     func tapWhenHittable(timeout: TimeInterval = 3) -> Bool {
         guard waitForHittable(timeout: timeout) else { return false }
         tap()
         return true
-    }
-
-    /// Waits until the element's `value` differs from `initialValue`.
-    ///
-    /// Use after `tap()`-ing a `Switch` whose binding writes through
-    /// `@AppStorage` / a Bindable store: SwiftUI may not have committed the
-    /// rendered value by the time the tap returns, especially on loaded CI
-    /// runners. Reading `value` immediately is racy.
-    @discardableResult
-    func waitForValueChange(from initialValue: String?, timeout: TimeInterval = 3) -> Bool {
-        let predicate: NSPredicate
-        if let initialValue {
-            predicate = NSPredicate(format: "value != %@", initialValue)
-        } else {
-            predicate = NSPredicate(format: "value != nil")
-        }
-        return waitFor(predicate: predicate, timeout: timeout)
     }
 
 }

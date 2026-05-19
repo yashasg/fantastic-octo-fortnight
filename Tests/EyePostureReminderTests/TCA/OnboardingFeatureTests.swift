@@ -18,7 +18,6 @@ final class OnboardingFeatureTests: XCTestCase {
         XCTAssertEqual(state.currentPage, 0)
         XCTAssertEqual(state.screenTimeStatus, .unavailable)
         XCTAssertEqual(state.notificationAuthStatus, .notDetermined)
-        XCTAssertFalse(state.showAppCategoryPicker)
     }
 
     // MARK: - Static configuration
@@ -117,14 +116,16 @@ final class OnboardingFeatureTests: XCTestCase {
 
         await store.send(.finishAndCustomizeTapped)
         await store.receive(\.completedOnboarding)
-        await store.receive(\.openAppCategoryPicker) {
-            $0.showAppCategoryPicker = true
-        }
+        // `.openAppCategoryPicker` is a parent-observed signal — `AppFeature`
+        // intercepts it to write `state.destination = .appCategoryPicker(...)`
+        // (#918). The child reducer performs no local state mutation.
+        await store.receive(\.openAppCategoryPicker)
     }
 
     // MARK: - .requestNotificationPermission
 
     func test_requestNotificationPermission_swallowsThrowAndUpdatesStatus() async {
+        let analyticsEvents = LockIsolated<[AnalyticsEvent]>([])
         let store = TestStore(initialState: OnboardingFeature.State()) {
             OnboardingFeature()
         } withDependencies: {
@@ -139,17 +140,29 @@ final class OnboardingFeatureTests: XCTestCase {
                 pendingRequests: { [] },
                 deliveredNotifications: { [] }
             )
-            $0.analyticsClient = AnalyticsClient(log: { _ in })
+            $0.analyticsClient = AnalyticsClient(
+                log: { event in analyticsEvents.withValue { $0.append(event) } }
+            )
         }
 
         await store.send(.requestNotificationPermission)
         await store.receive(\.notificationStatusChanged) {
             $0.notificationAuthStatus = .authorized
         }
+
+        analyticsEvents.withValue { events in
+            let responded = events.filter {
+                if case .notificationPermissionResponded = $0 { return true }
+                return false
+            }
+            XCTAssertTrue(responded.isEmpty,
+                          "Throws must skip the analytics emission so the stream only records real user responses")
+        }
     }
 
     func test_requestNotificationPermission_grantedRoutesAuthorizedStatus() async {
         let requestCalls = LockIsolated<[UNAuthorizationOptions]>([])
+        let analyticsEvents = LockIsolated<[AnalyticsEvent]>([])
         let store = TestStore(initialState: OnboardingFeature.State()) {
             OnboardingFeature()
         } withDependencies: {
@@ -165,7 +178,9 @@ final class OnboardingFeatureTests: XCTestCase {
                 pendingRequests: { [] },
                 deliveredNotifications: { [] }
             )
-            $0.analyticsClient = AnalyticsClient(log: { _ in })
+            $0.analyticsClient = AnalyticsClient(
+                log: { event in analyticsEvents.withValue { $0.append(event) } }
+            )
         }
 
         await store.send(.requestNotificationPermission)
@@ -178,9 +193,19 @@ final class OnboardingFeatureTests: XCTestCase {
             XCTAssertEqual(calls.first, OnboardingFeature.notificationOptions,
                            "Must request the documented .alert/.sound/.badge bundle")
         }
+
+        analyticsEvents.withValue { events in
+            let responded: [Bool] = events.compactMap {
+                if case let .notificationPermissionResponded(granted) = $0 { return granted }
+                return nil
+            }
+            XCTAssertEqual(responded, [true],
+                           "Granted response must emit exactly one .notificationPermissionResponded(true) (#896)")
+        }
     }
 
     func test_requestNotificationPermission_deniedRoutesDeniedStatus() async {
+        let analyticsEvents = LockIsolated<[AnalyticsEvent]>([])
         let store = TestStore(initialState: OnboardingFeature.State()) {
             OnboardingFeature()
         } withDependencies: {
@@ -193,12 +218,23 @@ final class OnboardingFeatureTests: XCTestCase {
                 pendingRequests: { [] },
                 deliveredNotifications: { [] }
             )
-            $0.analyticsClient = AnalyticsClient(log: { _ in })
+            $0.analyticsClient = AnalyticsClient(
+                log: { event in analyticsEvents.withValue { $0.append(event) } }
+            )
         }
 
         await store.send(.requestNotificationPermission)
         await store.receive(\.notificationStatusChanged) {
             $0.notificationAuthStatus = .denied
+        }
+
+        analyticsEvents.withValue { events in
+            let responded: [Bool] = events.compactMap {
+                if case let .notificationPermissionResponded(granted) = $0 { return granted }
+                return nil
+            }
+            XCTAssertEqual(responded, [false],
+                           "Denied response must emit exactly one .notificationPermissionResponded(false) (#896)")
         }
     }
 
@@ -244,28 +280,21 @@ final class OnboardingFeatureTests: XCTestCase {
         }
     }
 
-    // MARK: - picker presentation gates
+    // MARK: - picker presentation gate
 
-    func test_openAppCategoryPicker_setsFlag() async {
+    /// `.openAppCategoryPicker` is a parent-observed signal post-#918:
+    /// `AppFeature` intercepts to write
+    /// `state.destination = .appCategoryPicker(...)`, so the child reducer
+    /// performs no local state mutation. Asserting `await store.send(...)`
+    /// without a state-mutation closure verifies the no-op contract — any
+    /// future regression that re-introduces local state would cause the
+    /// `TestStore` exhaustive check to fail.
+    func test_openAppCategoryPicker_isParentObservedSignal_noLocalMutation() async {
         let store = TestStore(initialState: OnboardingFeature.State()) {
             OnboardingFeature()
         }
 
-        await store.send(.openAppCategoryPicker) {
-            $0.showAppCategoryPicker = true
-        }
-    }
-
-    func test_dismissAppCategoryPicker_clearsFlag() async {
-        var initial = OnboardingFeature.State()
-        initial.showAppCategoryPicker = true
-        let store = TestStore(initialState: initial) {
-            OnboardingFeature()
-        }
-
-        await store.send(.dismissAppCategoryPicker) {
-            $0.showAppCategoryPicker = false
-        }
+        await store.send(.openAppCategoryPicker)
     }
 
     // MARK: - .completedOnboarding

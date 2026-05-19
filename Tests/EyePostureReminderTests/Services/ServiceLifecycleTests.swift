@@ -67,52 +67,6 @@ final class ServiceLifecycleTests: XCTestCase {
         XCTAssertEqual(provider.stopMonitoringCallCount, 1)
     }
 
-    // MARK: - Noop Conformance (NoopScreenTimeTracker → ServiceLifecycle)
-
-    /// NoopScreenTimeTracker conforms to ServiceLifecycle via ScreenTimeTracking.
-    @MainActor
-    func test_noopScreenTimeTracker_conformsToServiceLifecycle() {
-        let tracker: any ServiceLifecycle = NoopScreenTimeTracker()
-        tracker.startMonitoring()
-        tracker.stopMonitoring()
-    }
-
-    /// NoopScreenTimeTracker start/stop are no-ops (don't crash).
-    @MainActor
-    func test_noopScreenTimeTracker_startStop_areNoOps() {
-        let tracker = NoopScreenTimeTracker()
-        tracker.startMonitoring()
-        tracker.stopMonitoring()
-        tracker.startMonitoring()
-        tracker.stopMonitoring()
-    }
-
-    // MARK: - Noop Conformance (NoopPauseConditionManager → ServiceLifecycle)
-
-    /// NoopPauseConditionManager conforms to ServiceLifecycle via PauseConditionProviding.
-    @MainActor
-    func test_noopPauseConditionManager_conformsToServiceLifecycle() {
-        let manager: any ServiceLifecycle = NoopPauseConditionManager()
-        manager.startMonitoring()
-        manager.stopMonitoring()
-    }
-
-    /// NoopPauseConditionManager.isPaused is always false.
-    @MainActor
-    func test_noopPauseConditionManager_isPaused_isFalse() {
-        let manager = NoopPauseConditionManager()
-        XCTAssertFalse(manager.isPaused,
-                       "NoopPauseConditionManager.isPaused must always be false")
-    }
-
-    /// NoopPauseConditionManager start/stop are no-ops (don't crash).
-    @MainActor
-    func test_noopPauseConditionManager_startStop_areNoOps() {
-        let manager = NoopPauseConditionManager()
-        manager.startMonitoring()
-        manager.stopMonitoring()
-    }
-
     // MARK: - Polymorphic Usage
 
     /// An array of ServiceLifecycle implementors can be uniformly started/stopped.
@@ -120,9 +74,7 @@ final class ServiceLifecycleTests: XCTestCase {
     func test_serviceLifecycle_polymorphicArray_canBeUniformlyControlled() {
         let services: [any ServiceLifecycle] = [
             MockScreenTimeTracker(),
-            MockPauseConditionProvider(),
-            NoopScreenTimeTracker(),
-            NoopPauseConditionManager()
+            MockPauseConditionProvider()
         ]
 
         for service in services {

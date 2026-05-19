@@ -2,14 +2,17 @@
 # scripts/build.sh — Standardized build/test/lint runner for Eye & Posture Reminder
 #
 # Usage:
-#   ./scripts/build.sh build           # Compile the project
-#   ./scripts/build.sh test            # Run unit tests
+#   ./scripts/build.sh build           # Compile the project (Release by default)
+#   ./scripts/build.sh test            # Run unit tests (Release by default)
 #   ./scripts/build.sh lint            # Run SwiftLint (if available)
 #   ./scripts/build.sh clean           # Clean build artifacts
 #   ./scripts/build.sh all             # build + lint + test
 #   ./scripts/build.sh check           # Quick syntax check (compile only, no tests)
 #   ./scripts/build.sh version         # Show current marketing version
 #   ./scripts/build.sh version 0.2.0   # Set marketing version in project.yml
+#
+# Build configuration (default: Release; override for local dev):
+#   CONFIGURATION=Debug ./scripts/build.sh build
 
 set -euo pipefail
 
@@ -26,6 +29,15 @@ fail()  { echo -e "${RED}✗ $*${RESET}" >&2; }
 info()  { echo -e "${CYAN}▶ $*${RESET}"; }
 warn()  { echo -e "${YELLOW}⚠ $*${RESET}"; }
 header(){ echo -e "\n${BOLD}${CYAN}━━━ $* ━━━${RESET}"; }
+
+# ── Build configuration ───────────────────────────────────────────────────────
+# Defaults to Release for CI correctness (whole-module optimisation, no -Onone).
+# `cmd_test` injects `SWIFT_ACTIVE_COMPILATION_CONDITIONS=CI` so test-only
+# hooks gated on `#if DEBUG || CI` remain visible. See `.squad/decisions.md`
+# (2026-05-17 — CI Clean-Build + Release-Config Speedup Decision) and #807.
+#
+# Local dev override: CONFIGURATION=Debug ./scripts/build.sh build
+CONFIGURATION="${CONFIGURATION:-Release}"
 
 # ── Constants ────────────────────────────────────────────────────────────────
 SCHEME="EyePostureReminder"
@@ -58,6 +70,10 @@ XCODE_FLAGS=(
   ENABLE_BITCODE=NO
   ENABLE_APP_INTENTS_METADATA_EXTRACTION=NO
   ENABLE_APPINTENTS_METADATA_EXTRACTION=NO
+  SWIFT_COMPILATION_MODE=wholemodule   # whole-module optimisation (Release-style, no project.yml edit needed)
+  COMPILER_INDEX_STORE_ENABLE=NO       # CI has no IDE — skip index store writes (~1–3 min saved)
+  DEBUG_INFORMATION_FORMAT=dwarf       # skip dSYM bundle for non-archive builds (~30–90 s saved)
+  ONLY_ACTIVE_ARCH=YES                 # simulator arm64-only — skip x86_64 slice
   # SWIFT_TREAT_WARNINGS_AS_ERRORS / GCC_TREAT_WARNINGS_AS_ERRORS are NOT set
   # here — passing them as xcodebuild build settings would propagate to every
   # SwiftPM dependency (e.g. swift-collections, swift-concurrency-extras), and
@@ -439,12 +455,14 @@ cmd_build() {
   require_xcodebuild
   local dest
   dest=$(detect_destination)
-  info "Destination: $dest"
-  info "Scheme:      $SCHEME"
+  info "Destination:    $dest"
+  info "Scheme:         $SCHEME"
+  info "Configuration:  $CONFIGURATION"
 
   run_xcodebuild build \
     -scheme "$SCHEME" \
     -destination "$dest" \
+    -configuration "$CONFIGURATION" \
     -derivedDataPath "$DERIVED_DATA_PATH"
 
   pass "Build succeeded"
@@ -460,18 +478,53 @@ cmd_test() {
   require_xcodebuild
   local dest
   dest=$(detect_destination)
-  info "Destination: $dest"
-  info "Test scheme: $SCHEME (includes $TEST_SCHEME)"
+  info "Destination:    $dest"
+  info "Test scheme:    $SCHEME (includes $TEST_SCHEME)"
+  info "Configuration:  $CONFIGURATION"
+
+  # `CI` is injected as a Swift active compilation condition so test-only
+  # hooks gated on `#if DEBUG || CI` (e.g. `AnalyticsLogger.testEventHandler`)
+  # are visible under Release. The flag is scoped to `build-for-testing`
+  # so it never reaches archive builds — see `.squad/decisions.md`
+  # (2026-05-17 — CI Clean-Build + Release-Config Speedup Decision)
+  # and issue #807.
 
   rm -rf "${PACKAGE_PATH}/TestResults.xcresult"
 
-  if ! run_xcodebuild test \
+  info "Step 1/2 — building for testing…"
+  if ! run_xcodebuild build-for-testing \
     -scheme "$SCHEME" \
+    -destination "$dest" \
+    -configuration "$CONFIGURATION" \
+    -derivedDataPath "$DERIVED_DATA_PATH" \
+    ENABLE_TESTABILITY=YES \
+    SWIFT_ACTIVE_COMPILATION_CONDITIONS='$(inherited) CI'; then
+    fail "build-for-testing failed"
+    exit 1
+  fi
+
+  # Locate the generated xctestrun file
+  local xctestrun
+  xctestrun=$(find "${DERIVED_DATA_PATH}/Build/Products" \
+    -name "${SCHEME}_*.xctestrun" \
+    -maxdepth 1 \
+    -print \
+    | sort | tail -1)
+
+  if [[ -z "$xctestrun" || ! -f "$xctestrun" ]]; then
+    fail "No valid .xctestrun found after build-for-testing"
+    exit 1
+  fi
+  info "xctestrun: $xctestrun"
+
+  info "Step 2/2 — running tests without rebuilding…"
+  if ! run_xcodebuild test-without-building \
+    -xctestrun "$xctestrun" \
     -destination "$dest" \
     -derivedDataPath "$DERIVED_DATA_PATH" \
     -resultBundlePath "${PACKAGE_PATH}/TestResults.xcresult" \
     -enableCodeCoverage YES; then
-    fail "xcodebuild test failed"
+    fail "xcodebuild test-without-building failed"
     summarize_xcresult_failures "${PACKAGE_PATH}/TestResults.xcresult"
     exit 1
   fi
@@ -523,6 +576,7 @@ cmd_clean() {
   xcodebuild clean -skipMacroValidation \
     -scheme "$SCHEME" \
     -destination "$dest" \
+    -configuration "$CONFIGURATION" \
     -derivedDataPath "$DERIVED_DATA_PATH" \
     "${XCODE_FLAGS[@]}" \
     | grep -E "^(Build|Clean|error:|warning:)" || true
@@ -613,8 +667,9 @@ cmd_uitest() {
 
   local dest
   dest=$(detect_destination)
-  info "Destination: $dest"
+  info "Destination:    $dest"
   info "UI Test scheme: $UI_TEST_SCHEME"
+  info "Configuration:  $CONFIGURATION"
   info "Result bundle: $result_bundle_path"
   if (( only_testing_count > 0 )); then
     info "Running filtered UI tests:"
@@ -640,7 +695,9 @@ cmd_uitest() {
       -project "$project" \
       -scheme "$UI_TEST_SCHEME" \
       -destination "$dest" \
-      -derivedDataPath "$DERIVED_DATA_PATH"
+      -configuration "$CONFIGURATION" \
+      -derivedDataPath "$DERIVED_DATA_PATH" \
+      ENABLE_TESTABILITY=YES
 
     # Locate the generated xctestrun file
     xctestrun=$(find "${DERIVED_DATA_PATH}/Build/Products" \
@@ -660,7 +717,7 @@ cmd_uitest() {
   # (build-for-testing may generate a path pointing at the flat SPM binary).
   info "Patching UITargetAppPath in xctestrun…"
   /usr/libexec/PlistBuddy \
-    -c "Set :${UI_TEST_SCHEME}:UITargetAppPath __TESTROOT__/Debug-iphonesimulator/EyePostureReminder.app" \
+    -c "Set :${UI_TEST_SCHEME}:UITargetAppPath __TESTROOT__/${CONFIGURATION}-iphonesimulator/EyePostureReminder.app" \
     "$xctestrun" || warn "PlistBuddy patch failed — xctestrun may already have the correct path"
 
   # Ensure the .app bundle contains the executable and resource bundle.
@@ -668,7 +725,7 @@ cmd_uitest() {
   # doesn't always copy them into the .app; copy them if missing.
   local products_root
   products_root="$(cd "$(dirname "$xctestrun")" && pwd)"
-  local products_dir="${products_root}/Debug-iphonesimulator"
+  local products_dir="${products_root}/${CONFIGURATION}-iphonesimulator"
   local app_dir="${products_dir}/EyePostureReminder.app"
   local spm_bin="${products_dir}/EyePostureReminder"
   local app_bin="${app_dir}/EyePostureReminder"
@@ -829,8 +886,8 @@ usage() {
   echo -e "${BOLD}Usage:${RESET} $(basename "$0") <command>"
   echo ""
   echo "Commands:"
-  echo "  build              Compile the project"
-  echo "  test               Run unit tests"
+  echo "  build              Compile the project (default: Release)"
+  echo "  test               Run unit tests (default: Release)"
   echo "  uitest             Run UI tests (generates xcodeproj if needed)"
   echo "                     Options:"
   echo "                       --only-testing <target/class[/test]>"
@@ -842,6 +899,10 @@ usage() {
   echo "  check              Alias for build (xcodebuild has no syntax-only mode)"
   echo "  version            Show current marketing version"
   echo "  version <x.y.z>   Set marketing version in project.yml"
+  echo ""
+  echo "Environment:"
+  echo "  CONFIGURATION      Build configuration (default: Release; set to Debug for local dev)"
+  echo "  SIMULATOR          xcodebuild -destination string (overrides auto-detection)"
 }
 
 # ── Entry point ───────────────────────────────────────────────────────────────

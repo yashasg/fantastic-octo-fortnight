@@ -3,25 +3,21 @@ import SwiftUI
 import UIKit
 import UserNotifications
 
-/// Home screen, wired to `HomeFeature` as part of `#755` Phase A.
+/// Home screen, wired to `HomeFeature` (`#755` Phase A).
 ///
-/// The legacy `@EnvironmentObject SettingsStore` / `AppCoordinator` graph has
-/// been removed from this view: every per-type enable flag, master toggle, and
-/// notification auth status is now read from `StoreOf<HomeFeature>`. Local
-/// `@AppStorage`-backed state (`openSettingsOnLaunch`,
-/// `trueInterruptSkippedBannerDismissed`) stays in the view because
-/// `HomeFeature` doesn't persist those yet; the sheet now hands off to the
-/// TCA-driven `SettingsView` (`#755` Phase B), which is sourced from a
-/// scoped `StoreOf<SettingsFeature>` and no longer relies on environment
-/// inheritance from `EyePostureReminderApp`.
+/// Every per-type enable flag, master toggle, and notification auth status
+/// is read from `StoreOf<HomeFeature>`. The Settings sheet is presented
+/// exclusively through `AppFeature.Destination.settingsSheet` by `RootView`
+/// (#814); the gear button and in-screen banners dispatch `.settingsTapped`
+/// and the parent reducer owns the destination write. The
+/// `openSettingsOnLaunch` UserDefaults handoff is observed by `RootView`,
+/// which routes it through `AppFeature.Action.openSettingsSheetRequested`.
 struct HomeView: View {
     typealias LaunchArgumentsProvider = () -> [String]
     typealias ProcessEnvironmentProvider = () -> [String: String]
 
     @Perception.Bindable var store: StoreOf<HomeFeature>
 
-    @State private var showSettings = false
-    @AppStorage(AppStorageKey.openSettingsOnLaunch) private var openSettingsOnLaunch = false
     @AppStorage(AppStorageKey.trueInterruptSkippedBannerDismissed)
     private var trueInterruptBannerDismissed = false
 #if DEBUG
@@ -238,7 +234,7 @@ struct HomeView: View {
                     TrueInterruptSkippedBanner(
                         onSetUp: {
                             trueInterruptBannerDismissed = true
-                            showSettings = true
+                            store.send(.settingsTapped)
                         },
                         onDismiss: {
                             trueInterruptBannerDismissed = true
@@ -250,7 +246,7 @@ struct HomeView: View {
                 // Shown after the banner is dismissed while setup is still pending.
                 if shouldShowTrueInterruptPrompts,
                    effectiveTrueInterruptBannerDismissed {
-                    TrueInterruptSetupPill(onTap: { showSettings = true })
+                    TrueInterruptSetupPill(onTap: { store.send(.settingsTapped) })
                 }
 
                 if shouldShowNotificationRecovery && !shouldShowNoRemindersConfigured {
@@ -258,7 +254,7 @@ struct HomeView: View {
                 }
 
                 if shouldShowNoRemindersConfigured {
-                    HomeNoRemindersConfiguredBanner(onOpenSettings: { showSettings = true })
+                    HomeNoRemindersConfiguredBanner(onOpenSettings: { store.send(.settingsTapped) })
                 }
             }
             .padding(.horizontal, AppSpacing.xl)
@@ -268,7 +264,7 @@ struct HomeView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
-                        showSettings = true
+                        store.send(.settingsTapped)
                     } label: {
                         Image(systemName: AppSymbol.settings)
                             .symbolRenderingMode(.hierarchical)
@@ -280,37 +276,21 @@ struct HomeView: View {
                     .accessibilityIdentifier("home.settingsButton")
                 }
             }
-            .sheet(isPresented: $showSettings) {
-                // Phase B (#755) owns the SettingsFeature store locally so
-                // the sheet handoff can drop SwiftUI's environment-object
-                // inheritance from EyePostureReminderApp. Phase D will
-                // promote this wrapper into RootView once the destination
-                // graph takes over presentation ownership.
-                NavigationStack {
-                    SettingsSheet(isPresented: $showSettings)
-                }
-            }
             .background(AppColor.background.ignoresSafeArea())
             .onAppear {
                 store.send(.onAppear)
-                if openSettingsOnLaunch {
-                    openSettingsOnLaunch = false
-                    showSettings = true
-                }
             }
             .task {
                 await store.send(.task).finish()
             }
-            .onChangeCompat(of: openSettingsOnLaunch) { newValue in
-                if newValue {
-                    openSettingsOnLaunch = false
-                    showSettings = true
-                }
-            }
             // Announce master-toggle state changes to VoiceOver (#287).
-            // Guard prevents double-announcement while SettingsView sheet is open.
+            // Guard reads `store.settingsSheetActive` so the announcement is
+            // suppressed while the canonical Settings destination is up
+            // (`AppFeature.Destination.settingsSheet`, written by
+            // `.home(.settingsTapped)` / `.openSettingsSheetRequested` —
+            // #814). Pre-#814 this guarded on a local `@State showSettings`.
             .onChangeCompat(of: store.globalEnabled) { _ in
-                guard !showSettings else { return }
+                guard !store.settingsSheetActive else { return }
                 accessibilityNotificationPoster.postAnnouncement(message: statusLabel)
             }
         }
@@ -320,24 +300,6 @@ struct HomeView: View {
         if let url = URL(string: UIApplication.openSettingsURLString) {
             UIApplication.shared.open(url)
         }
-    }
-}
-
-// MARK: - Settings Sheet Wrapper
-
-/// Holds the `SettingsFeature` store for the Settings sheet presented from
-/// `HomeView`. Phase D (`#755`) will fold this presentation into
-/// `RootView` via `AppFeature.Destination.settingsSheet`; until then this
-/// wrapper keeps the store lifetime tied to the sheet so the reducer's
-/// timers / streams shut down on dismiss.
-private struct SettingsSheet: View {
-    @Binding var isPresented: Bool
-    @State private var store = Store(
-        initialState: SettingsFeature.State()
-    ) { SettingsFeature() }
-
-    var body: some View {
-        SettingsView(store: store, isPresented: $isPresented)
     }
 }
 

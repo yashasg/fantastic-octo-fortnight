@@ -240,7 +240,7 @@ Both `.rotationEffect` and `.scaleEffect` are transform-based operations that ru
 
 ### 🟢 GOOD — Animations respect reduce-motion
 All animation sites check `@Environment(\.accessibilityReduceMotion)`:
-- `ContentView.swift:19` — onboarding transition
+- `RootView.swift:47` — onboarding transition
 - `HomeView.swift:45` — status crossfade
 - `OverlayView.swift:159, 234, 257, 276` — countdown ring, entrance, dismiss
 - `YinYangEyeView.swift:66` — spin and breathing
@@ -394,19 +394,19 @@ enforced, without thrashing `ScreenTimeTracker`.
 
 ### 🟢 GOOD — UI test mode disables background services
 **Files:** `EyePostureReminder/Utilities/UITestMode.swift`;
-`EyePostureReminder/Services/NoopServices.swift:17, 41`;
 `EyePostureReminder/TCA/Features/SchedulingFeature.swift:48, 224`
 
-`UITestMode.isUITestMode` reads `ProcessInfo.processInfo.arguments` once and
-gates background work two ways: (1) `SchedulingFeature.State` carries an
-`isUITestModeEnabled` flag that short-circuits the `.start` effect's
-threshold/pause/foreground subscriptions, and (2) the dependency clients
-themselves fall back to `Noop*` implementations (`NoopScreenTimeTracker`,
-`NoopPauseConditionManager`, `ScreenTimeAuthorizationNoop`,
-`DeviceActivityMonitorNoop`) when the live entitlements aren't available
-or when XCUITest is detected. This eliminates the 1-second timer and motion
-activity monitoring during UI tests — the same outcome the deleted
-`AppCoordinator.isUITestMode` branch produced before #755 Phase E (PR #760).
+`UITestMode.isEnabled` reads `ProcessInfo.processInfo.arguments` once and
+gates background work via `SchedulingFeature.State.isUITestModeEnabled`,
+which short-circuits the `.start` effect's threshold/pause/foreground
+subscriptions and skips foreground `ScreenTimeTracker` reconfig
+(`SchedulingFeature.scheduleReminders`, line 224). Entitlement-gated
+fallbacks (`ScreenTimeAuthorizationNoop`, `DeviceActivityMonitorNoop`) are
+swapped in by their dependency clients when FamilyControls /
+DeviceActivity is unavailable; under that combination the 1-second timer
+and motion-activity monitoring stay quiet during UI tests — the same
+outcome the deleted `AppCoordinator.isUITestMode` branch produced before
+#755 Phase E (PR #760).
 
 ### 🟢 GOOD — MetricKit subscriber registered for production monitoring
 **File:** `EyePostureReminder/Services/MetricKitSubscriber.swift`
@@ -473,4 +473,5 @@ The three warnings are all P3/P4 severity — none will cause measurable battery
 
 | Date | Change | By |
 | --- | --- | --- |
-| 2026-05-15 | Post-TCA-migration refresh (#775). Re-anchored AppCoordinator-era sections onto current TCA stack: §2 debounce cancellation now cites `SchedulingFeature.CancelID.rescheduleDebounce` / `.snoozeWakeTask`; §3 `[weak self]` list drops the deleted `AppCoordinator` callbacks and notes the equivalent `for await` flow inside `SchedulingFeature`; §3 lifecycle ownership rewritten as "Single TCA Store owned by `App.init`" with `StoreOf<AppFeature>` + `WithPerceptionTracking` references; §4 SwiftUI body claim re-anchored from `@EnvironmentObject` to scoped `StoreOf<…Feature>` + `@AppStorage`; §4 `ForEach` identity citation moved from `SettingsViewModel.intervalOptions` to `SettingsPickerOptions.intervalOptions` (#755 Phase B); §4 "lazy SettingsViewModel" rewritten as "SettingsView does no eager work at construction"; §7 startup section now cites `EyePostureReminderApp.init` + `SchedulingFeature.start` instead of the deleted `AppCoordinator.init`; §8 debounce / UI-test-mode sections re-anchored onto `SchedulingFeature` + `UITestMode` + `NoopServices` / `*Noop` dependency-client fallbacks. No findings were added or removed — only file/symbol citations were updated to match the post-#755 architecture. | Rusty |
+| 2026-05-15 | Post-TCA-migration refresh (#775). Re-anchored AppCoordinator-era sections onto current TCA stack: §2 debounce cancellation now cites `SchedulingFeature.CancelID.rescheduleDebounce` / `.snoozeWakeTask`; §3 `[weak self]` list drops the deleted `AppCoordinator` callbacks and notes the equivalent `for await` flow inside `SchedulingFeature`; §3 lifecycle ownership rewritten as "Single TCA Store owned by `App.init`" with `StoreOf<AppFeature>` + `WithPerceptionTracking` references; §4 SwiftUI body claim re-anchored from `@EnvironmentObject` to scoped `StoreOf<…Feature>` + `@AppStorage`; §4 `ForEach` identity citation moved from `SettingsViewModel.intervalOptions` to `SettingsPickerOptions.intervalOptions` (#755 Phase B); §4 "lazy SettingsViewModel" rewritten as "SettingsView does no eager work at construction"; §7 startup section now cites `EyePostureReminderApp.init` + `SchedulingFeature.start` instead of the deleted `AppCoordinator.init`; §8 debounce / UI-test-mode sections re-anchored onto `SchedulingFeature` + `UITestMode` + entitlement-gated `*Noop` dependency-client fallbacks. No findings were added or removed — only file/symbol citations were updated to match the post-#755 architecture. | Rusty |
+| 2026-05-17 | Drop the false `NoopScreenTimeTracker` / `NoopPauseConditionManager` fallback claim from §8 (#830). `ScreenTimeTrackerClient` / `PauseConditionClient` construct their live implementations unconditionally — there is no Noop branch for those two protocols. UI-test isolation now reads as a single gate: `SchedulingFeature.State.isUITestModeEnabled`. Entitlement-gated `ScreenTimeAuthorizationNoop` and `DeviceActivityMonitorNoop` remain wired and continue to swap in until #201 lands; their citation is preserved. | Copilot |

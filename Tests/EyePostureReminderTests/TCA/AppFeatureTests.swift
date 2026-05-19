@@ -35,6 +35,8 @@ final class AppFeatureTests: XCTestCase {
             $0.settingsClient = SettingsClient(
                 snapshot: { ReminderSettings(interval: 0, breakDuration: 0) },
                 stream: { .finished },
+                postureSnapshot: { ReminderSettings(interval: 0, breakDuration: 0) },
+                postureStream: { .finished },
                 enabledFlagsSnapshot: { .allEnabled },
                 enabledFlagsStream: { .finished },
                 updateGlobalEnabled: { _ in },
@@ -63,18 +65,17 @@ final class AppFeatureTests: XCTestCase {
                 deliveredNotifications: { [] }
             )
             $0.reminderSchedulerClient = ReminderSchedulerClient(
-                scheduleReminders: { _ in },
+                scheduleReminders: { _, _ in },
                 rescheduleReminder: { _, _ in },
                 cancelReminder: { _ in },
                 cancelAllReminders: {}
             )
             $0.overlayClient = overlayClientOverride ?? OverlayClient(
-                show: { _, _, _, _ in },
-                dismiss: {},
-                clearQueue: {},
-                clearQueueForType: { _ in },
-                isVisible: { false },
-                lifecycleEvents: { .finished }
+                lifecycleEvents: { .finished },
+                broadcast: { _ in },
+                pauseExternalAudio: {},
+                resumeExternalAudio: {},
+                postScreenChanged: {}
             )
             $0.screenTimeTrackerClient = ScreenTimeTrackerClient(
                 setThreshold: { _, _ in },
@@ -98,11 +99,14 @@ final class AppFeatureTests: XCTestCase {
                 writeSelection: { _ in false },
                 record: { _, _ in },
                 trueInterruptChanges: { .finished },
-                selectionChanges: { .finished }
+                selectionChanges: { .finished },
+                recentEvents: { [] },
+                fallbackRoute: { _ in nil }
             )
             $0.deviceActivityMonitorClient = DeviceActivityMonitorClient(
                 schedule: { _, _ in },
-                cancel: { _ in }
+                cancel: { _ in },
+                startScheduleForOverlay: { _ in }
             )
             $0.screenTimeAuthorizationClient = ScreenTimeAuthorizationClient()
             $0.analyticsClient = AnalyticsClient(log: { _ in })
@@ -130,7 +134,7 @@ final class AppFeatureTests: XCTestCase {
     /// without producing a follow-up effect — the bridge from
     /// `@AppStorage(AppStorageKey.hasSeenOnboarding)` written by
     /// `OnboardingView.markOnboardingComplete` relies on this exact pure write
-    /// so `ContentView` flips from `OnboardingView` → `HomeView`.
+    /// so `RootView` flips from `OnboardingView` → `HomeView`.
     func test_hasSeenOnboardingChanged_true_setsStateAndProducesNoEffect() async {
         let store = makeStore()
 
@@ -153,7 +157,7 @@ final class AppFeatureTests: XCTestCase {
     }
 
     /// Sending the same value as the current state is still applied (the
-    /// reducer does not early-return) — `ContentView` guards against a
+    /// reducer does not early-return) — `RootView` guards against a
     /// redundant dispatch but the reducer itself stays idempotent.
     func test_hasSeenOnboardingChanged_idempotent_keepsValueStable() async {
         var initial = AppFeature.State()
@@ -237,12 +241,12 @@ final class AppFeatureTests: XCTestCase {
     /// `breakDuration` (mirroring `EyePostureReminderApp.init()`'s synchronous
     /// `SettingsStore.eyesSnapshotFromUserDefaults` read), the seeded value
     /// must survive `.notificationRouted(.reminder(.eyes))` reduction so
-    /// `SchedulingFeature.reminderNotificationEffect` calls
-    /// `overlayClient.show` with the correct duration. Pre-#737 the seed was
-    /// always `(interval: 0, breakDuration: 0)` regardless of UserDefaults,
-    /// so the UI-test backdoor would intermittently fire `overlayClient.show(
-    /// type, 0, …)` and the overlay would auto-dismiss before any UITest
-    /// could interact with it.
+    /// `SchedulingFeature.reminderNotificationEffect` emits
+    /// `.delegate(.presentOverlay(...))` with the correct duration. Pre-#737
+    /// the seed was always `(interval: 0, breakDuration: 0)` regardless of
+    /// UserDefaults, so the UI-test backdoor would intermittently surface an
+    /// overlay with duration 0 that auto-dismissed before any UITest could
+    /// interact with it.
     func test_notificationRouted_preservesSeededSchedulingSettings() async {
         var initial = AppFeature.State()
         initial.scheduling.settings = ReminderSettings(interval: 1200, breakDuration: 600)
@@ -257,8 +261,9 @@ final class AppFeatureTests: XCTestCase {
 
         XCTAssertEqual(store.state.scheduling.settings.breakDuration, 600,
                        "Seeded breakDuration must survive the action chain — this is the "
-                       + "value SchedulingFeature.reminderNotificationEffect feeds into "
-                       + "overlayClient.show(type, duration, _, _).")
+                       + "value SchedulingFeature.reminderNotificationEffect embeds in the "
+                       + "`OverlayPresentationRequest` it emits via "
+                       + "`.delegate(.presentOverlay)`.")
         XCTAssertEqual(store.state.scheduling.settings.interval, 1200,
                        "Seeded interval must also survive — thresholdReachedEffect guards "
                        + "on `interval > 0` and would silently no-op otherwise.")
@@ -351,10 +356,9 @@ final class AppFeatureTests: XCTestCase {
 
     // MARK: - Overlay → Settings handoff (#786)
 
-    /// `.overlaySettingsRequested` is the reducer-side replacement for the
-    /// legacy `AppCoordinator` handoff: when the user taps the "Settings"
-    /// affordance inside the in-break overlay, the reducer must write
-    /// `openSettingsOnLaunch = true` to the shared `UserDefaults` so
+    /// `.overlaySettingsRequested` writes `openSettingsOnLaunch = true` to
+    /// the shared `UserDefaults` when the user taps the "Settings"
+    /// affordance inside the in-break overlay, so
     /// `HomeView`'s `.onChangeCompat(of: openSettingsOnLaunch)` presents
     /// the Settings sheet on the next layout pass. Regression coverage for
     /// #786 — pre-fix the tap was a no-op because no reducer consumed
@@ -374,7 +378,7 @@ final class AppFeatureTests: XCTestCase {
         store.exhaustivity = .off
 
         await store.send(.overlaySettingsRequested(.eyes))
-        await store.finish(timeout: NSEC_PER_SEC)
+        await store.finish(timeout: .seconds(1))
 
         XCTAssertTrue(
             UserDefaults.standard.bool(forKey: AppStorageKey.openSettingsOnLaunch),
@@ -386,19 +390,17 @@ final class AppFeatureTests: XCTestCase {
     /// `.onAppear` subscribes to `OverlayClient.lifecycleEvents()` and
     /// forwards every `.settingsTapped` emission as
     /// `.overlaySettingsRequested(type)`. Without this wiring the in-overlay
-    /// "Settings" link is a dead-end after the MVVM → TCA migration removed
-    /// `AppCoordinator` (#755). Regression coverage for #786.
+    /// "Settings" link would be a dead-end. Regression coverage for #786.
     func test_onAppear_forwardsOverlaySettingsTappedEventsToReducer() async {
         let (lifecycleStream, lifecycleContinuation) =
             AsyncStream<OverlayLifecycleEvent>.makeStream()
         let store = makeStore(
             overlayClient: OverlayClient(
-                show: { _, _, _, _ in },
-                dismiss: {},
-                clearQueue: {},
-                clearQueueForType: { _ in },
-                isVisible: { false },
-                lifecycleEvents: { lifecycleStream }
+                lifecycleEvents: { lifecycleStream },
+                broadcast: { _ in },
+                pauseExternalAudio: {},
+                resumeExternalAudio: {},
+                postScreenChanged: {}
             )
         )
         store.exhaustivity = .off
@@ -423,5 +425,233 @@ final class AppFeatureTests: XCTestCase {
 
         lifecycleContinuation.finish()
         await task.cancel()
+    }
+
+    // MARK: - Settings destination handoff (#814)
+
+    /// `.home(.settingsTapped)` is the canonical user-driven action for
+    /// opening the Settings sheet from `HomeView` (gear toolbar button,
+    /// `TrueInterruptSkippedBanner`/`Pill` setup CTAs, "no reminders"
+    /// banner). Pre-#814 `HomeView` owned a local `@State showSettings`
+    /// bridge plus a private `SettingsSheet` wrapper; the parent reducer
+    /// must now write `state.destination = .settingsSheet(...)` itself so
+    /// presentation flows through the canonical `RootView` graph and the
+    /// store lifetime tracks the destination slot.
+    func test_homeSettingsTapped_presentsSettingsSheetDestination() async {
+        let store = makeStore()
+        store.exhaustivity = .off
+
+        await store.send(.home(.settingsTapped)) {
+            $0.destination = .settingsSheet(SettingsFeature.State())
+            $0.home.settingsSheetActive = true
+        }
+    }
+
+    /// `.onboarding(.openAppCategoryPicker)` is the parent-observed signal
+    /// `OnboardingView`'s "Set Up" CTA (and the `.finishAndCustomizeTapped`
+    /// reducer effect) emits when the user opts into configuring True
+    /// Interrupt Mode app/category coverage during onboarding. The parent
+    /// must write `state.destination = .appCategoryPicker(...)` so
+    /// `RootView`'s `.fullScreenCover` presents the canonical
+    /// `AppCategoryPickerFeature` store — retiring the previous
+    /// `OnboardingView.@State showAppCategoryPicker` mirror + local-store
+    /// `OnboardingAppCategoryPickerSheet` wrapper (#918 acceptance).
+    func test_onboardingOpenAppCategoryPicker_presentsAppCategoryPickerDestination() async {
+        let store = makeStore()
+        store.exhaustivity = .off
+
+        await store.send(.onboarding(.openAppCategoryPicker)) {
+            $0.destination = .appCategoryPicker(AppCategoryPickerFeature.State())
+        }
+    }
+
+    /// `.openSettingsSheetRequested` is the non-`HomeView` entry point used
+    /// by `RootView`'s `@AppStorage(openSettingsOnLaunch)` observer. It
+    /// routes both the `.overlaySettingsRequested` UserDefaults handoff
+    /// (#786) and `OnboardingView.finishOnboardingAndCustomize()` through
+    /// the reducer so the destination write never depends on a SwiftUI
+    /// `@State` bridge inside `HomeView` (#814 acceptance).
+    func test_openSettingsSheetRequested_presentsSettingsSheetDestination() async {
+        let store = makeStore()
+        store.exhaustivity = .off
+
+        await store.send(.openSettingsSheetRequested) {
+            $0.destination = .settingsSheet(SettingsFeature.State())
+            $0.home.settingsSheetActive = true
+        }
+    }
+
+    /// `state.home.settingsSheetActive` mirrors the canonical destination
+    /// presence so `HomeView`'s `.onChangeCompat(of: store.globalEnabled)`
+    /// guard (#287 — VoiceOver master-toggle announcement) can suppress
+    /// while Settings is open without keeping a `@State showSettings`
+    /// bridge. `.destination(.dismiss)` must clear the mirror so the
+    /// announcement re-arms after the sheet tears down.
+    func test_destinationDismiss_clearsHomeSettingsSheetActive() async {
+        var initial = AppFeature.State()
+        initial.destination = .settingsSheet(SettingsFeature.State())
+        initial.home.settingsSheetActive = true
+        let store = makeStore(initialState: initial)
+        store.exhaustivity = .off
+
+        await store.send(.destination(.dismiss)) {
+            $0.destination = nil
+            $0.home.settingsSheetActive = false
+        }
+    }
+
+    // MARK: - Overlay presentation queue (`#920` retirement of `OverlayManager`)
+
+    /// `SchedulingFeature` emits `.delegate(.presentOverlay(request))` from
+    /// `thresholdReachedEffect` / `reminderNotificationEffect`. When no
+    /// overlay is on screen the parent writes the request directly into
+    /// `state.overlay`, immediately re-arming `RootView.fullScreenCover`.
+    func test_schedulingDelegatePresentOverlay_whenNoOverlay_writesOverlayState() async {
+        let store = makeStore()
+        store.exhaustivity = .off
+
+        let request = OverlayPresentationRequest(
+            type: .eyes,
+            duration: 20,
+            hapticsEnabled: true,
+            pauseMediaEnabled: false
+        )
+
+        await store.send(.scheduling(.delegate(.presentOverlay(request))))
+
+        XCTAssertNotNil(store.state.overlay,
+                        ".delegate(.presentOverlay) must populate state.overlay when no overlay is on screen")
+        XCTAssertEqual(store.state.overlay?.type, .eyes)
+        XCTAssertEqual(store.state.overlay?.duration, 20)
+        XCTAssertTrue(store.state.overlay?.hapticsEnabled ?? false)
+        XCTAssertFalse(store.state.overlay?.pauseMediaEnabled ?? true)
+        XCTAssertTrue(store.state.overlayQueue.isEmpty,
+                      "When the overlay slot was free the request must NOT be enqueued")
+    }
+
+    /// When an overlay is already on screen the request is FIFO-appended to
+    /// `state.overlayQueue` so it can be popped after the current overlay
+    /// finishes — preserving the legacy `OverlayManager.overlayQueue`
+    /// (#289) contract.
+    func test_schedulingDelegatePresentOverlay_whenOverlayVisible_enqueuesRequest() async {
+        var initial = AppFeature.State()
+        initial.overlay = OverlayFeature.State(type: .eyes, duration: 20)
+        let store = makeStore(initialState: initial)
+        store.exhaustivity = .off
+
+        let request = OverlayPresentationRequest(
+            type: .posture,
+            duration: 30,
+            hapticsEnabled: false,
+            pauseMediaEnabled: true
+        )
+
+        await store.send(.scheduling(.delegate(.presentOverlay(request))))
+
+        XCTAssertEqual(store.state.overlay?.type, .eyes,
+                       "Currently-visible overlay must NOT be replaced — the new request waits in the queue")
+        XCTAssertEqual(store.state.overlayQueue.count, 1)
+        XCTAssertEqual(store.state.overlayQueue.first, request)
+    }
+
+    /// `.overlay(.presented(.dismissed))` clears the slot and pops the head
+    /// of `state.overlayQueue` (if any) into `state.overlay` so the next
+    /// queued overlay surfaces immediately. Mirrors the legacy
+    /// `OverlayManager.dismiss` → `presentNextInQueue` behaviour.
+    func test_overlayPresentedDismissed_popsQueueHead() async {
+        var initial = AppFeature.State()
+        initial.overlay = OverlayFeature.State(type: .eyes, duration: 20)
+        initial.overlayQueue = [
+            OverlayPresentationRequest(
+                type: .posture,
+                duration: 30,
+                hapticsEnabled: false,
+                pauseMediaEnabled: true
+            )
+        ]
+        let store = makeStore(initialState: initial)
+        store.exhaustivity = .off
+
+        await store.send(.overlay(.presented(.dismissed)))
+
+        XCTAssertEqual(store.state.overlay?.type, .posture,
+                       "Queue head must be popped into state.overlay on dismissal")
+        XCTAssertEqual(store.state.overlay?.duration, 30)
+        XCTAssertFalse(store.state.overlay?.hapticsEnabled ?? true)
+        XCTAssertTrue(store.state.overlay?.pauseMediaEnabled ?? false)
+        XCTAssertTrue(store.state.overlayQueue.isEmpty,
+                      "Popped request must be removed from the queue")
+    }
+
+    /// `.overlay(.presented(.dismissed))` with an empty queue clears the
+    /// slot to `nil` so `RootView.fullScreenCover` tears down — the queue
+    /// pop is conditional on the queue being non-empty.
+    func test_overlayPresentedDismissed_emptyQueue_clearsOverlayToNil() async {
+        var initial = AppFeature.State()
+        initial.overlay = OverlayFeature.State(type: .eyes, duration: 20)
+        let store = makeStore(initialState: initial)
+        store.exhaustivity = .off
+
+        await store.send(.overlay(.presented(.dismissed)))
+
+        XCTAssertNil(store.state.overlay,
+                     "Empty queue must result in nil overlay (cover tears down)")
+        XCTAssertTrue(store.state.overlayQueue.isEmpty)
+    }
+
+    /// Pause-condition activation (Focus mode / Driving mode) routes through
+    /// `SchedulingFeature.pauseConditionChangedEffect`, which emits
+    /// `.delegate(.suspendOverlayForPauseCondition)`. The parent reducer
+    /// clears every queued entry synchronously and — if an overlay is on
+    /// screen — dispatches `.overlay(.presented(.dismissTapped))` so the
+    /// `#738` two-phase teardown (exit animation + resume audio +
+    /// broadcast `.dismissed`) still runs.
+    func test_schedulingDelegateSuspendOverlayForPauseCondition_whileVisible_clearsQueueAndDismisses() async {
+        var initial = AppFeature.State()
+        initial.overlay = OverlayFeature.State(type: .eyes, duration: 20)
+        initial.overlayQueue = [
+            OverlayPresentationRequest(
+                type: .posture,
+                duration: 30,
+                hapticsEnabled: false,
+                pauseMediaEnabled: false
+            )
+        ]
+        let store = makeStore(initialState: initial)
+        store.exhaustivity = .off
+
+        await store.send(.scheduling(.delegate(.suspendOverlayForPauseCondition)))
+
+        XCTAssertTrue(store.state.overlayQueue.isEmpty,
+                      "Queue must be cleared on pause-condition activation")
+        // The reducer dispatched `.overlay(.presented(.dismissTapped))`,
+        // which routes through `OverlayFeature`'s reducer and flips
+        // `isDismissing = true`. With non-exhaustive matching the precise
+        // action chain is not asserted here — what matters is that the
+        // overlay state reflects the dismiss-tap side effect.
+        await store.receive(\.overlay.presented.dismissTapped)
+        XCTAssertTrue(store.state.overlay?.isDismissing ?? false,
+                      "Dispatched .dismissTapped must flip the child reducer's `isDismissing`")
+    }
+
+    /// When no overlay is visible the pause-condition suspend action only
+    /// drops queue entries — no `.dismissTapped` dispatch is needed.
+    func test_schedulingDelegateSuspendOverlayForPauseCondition_whileHidden_onlyClearsQueue() async {
+        var initial = AppFeature.State()
+        initial.overlayQueue = [
+            OverlayPresentationRequest(
+                type: .eyes,
+                duration: 20,
+                hapticsEnabled: true,
+                pauseMediaEnabled: false
+            )
+        ]
+        let store = makeStore(initialState: initial)
+        store.exhaustivity = .off
+
+        await store.send(.scheduling(.delegate(.suspendOverlayForPauseCondition)))
+
+        XCTAssertTrue(store.state.overlayQueue.isEmpty)
+        XCTAssertNil(store.state.overlay)
     }
 }

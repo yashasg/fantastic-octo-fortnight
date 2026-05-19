@@ -1,6 +1,6 @@
 # kshana — iOS App Roadmap
 
-> **Status:** v0.2.0 (Restful Grove) shipped — Phase 1+2 complete; **PIVOT to True Interrupt Mode (Screen Time APIs)** — Phase 3 (Interrupt Mode MVP)  
+> **Status:** v0.2.0 (Restful Grove) tagged — Phase 1 complete; Phase 2 ~95% (M2.9 App Store Prep — assets + submission — outstanding); **PIVOT to True Interrupt Mode (Screen Time APIs)** — Phase 3 (Interrupt Mode MVP)  
 > **Core Value Proposition:** True Interrupt Mode via Apple Screen Time APIs (FamilyControls + DeviceActivity + ManagedSettings) to pause distracting apps during break reminders. Local notifications are backup-only, not core.  
 > **Target Platform:** iOS 16+ (17+ for full Screen Time API support)  
 > **Architecture:** TCA (ComposableArchitecture) + Screen Time APIs (DeviceActivity, ManagedSettings, ShieldConfiguration), app groups, extension communication  
@@ -10,11 +10,11 @@
 
 ## Executive Summary
 
-**kshana pivots to True Interrupt Mode.** Shipped **v0.2.0 (Restful Grove)** — Phase 1+2 complete with overlay reminders, smart pause, accessibility, yin-yang branding, 1,382 unit tests, 81%+ coverage. **Now pivoting to Phase 3 (Interrupt Mode MVP):** Core product value is Apple Screen Time APIs (FamilyControls authorization + DeviceActivity monitoring + ManagedSettings to shield distracting apps during breaks). Local notification reminders become backup-only, not the primary product promise. Phase 3 unblocks on entitlement approval (Case ID 102881605113). New phase includes: extension targets (ShieldConfiguration), device activity monitoring, app/category picker, managed settings + shield actions, app group shared state, pre-permission UX refinement, and legal/privacy updates for data controller terminology.
+**kshana pivots to True Interrupt Mode.** Tagged **v0.2.0 (Restful Grove)** with overlay reminders, smart pause, accessibility, yin-yang branding, 1,382 unit tests, 81%+ coverage — Phase 1 complete and Phase 2 ~95% (M2.9 App Store Prep — assets + submission — still outstanding pending product decision). **Now pivoting to Phase 3 (Interrupt Mode MVP):** Core product value is Apple Screen Time APIs (FamilyControls authorization + DeviceActivity monitoring + ManagedSettings to shield distracting apps during breaks). Local notification reminders become backup-only, not the primary product promise. Phase 3 unblocks on entitlement approval (Case ID 102881605113). New phase includes: extension targets (ShieldConfiguration), device activity monitoring, app/category picker, managed settings + shield actions, app group shared state, pre-permission UX refinement, and legal/privacy updates for data controller terminology.
 
 - **Phase 0: Foundation** ✅ – Project scaffolding, CI/CD, architecture, design system
 - **Phase 1: MVP** ✅ – Reminders, overlay, settings (shipped)
-- **Phase 2: Polish** ✅ – Onboarding, haptics, snooze, smart pause, accessibility, data-driven config, Restful Grove identity, yin-yang logo (shipped)
+- **Phase 2: Polish** 🔄 ~95% – Onboarding, haptics, snooze, smart pause, accessibility, data-driven config, Restful Grove identity, yin-yang logo (v0.2.0 tagged; M2.9 App Store Prep — assets + submission — outstanding)
 - **Phase 3: Interrupt Mode MVP** 🔄 – Screen Time APIs, app shielding, extension architecture, pre-permission UX, legal updates (in progress)
 
 ---
@@ -34,7 +34,7 @@
 | **Frank** | Legal Advisor | Terms of Service, Privacy Policy, legal compliance, disclaimer content |
 | **Virgil** | CI/CD Developer | GitHub Actions pipeline, build optimization, binary caching, test infrastructure |
 | **Turk** | Data Analyst | Success metrics tracking, post-launch analytics, user behavior (deferred Phase 3+) |
-| **Ralph** | Code Formatter | SwiftLint enforcement, refactoring coordination |
+| **Ralph** | Work Monitor | GitLab backlog + CI/PR watch, drives the work loop |
 | **Scribe** | Orchestration | Decision logging, team sync documentation, handoff notes |
 
 ---
@@ -53,16 +53,16 @@
 - **Delivered:**
   - Xcode project with SPM (Swift Package Manager) scaffolding
   - iOS 16+ deployment target
-  - SwiftUI app lifecycle, folder structure matching MVVM
+  - SwiftUI app lifecycle, folder structure matching MVVM (the `ViewModels` layer was later decommissioned in the Phase-2 TCA migration — #864)
   - CI/CD via GitHub Actions (build, test, lint on `macos-14`)
 
 #### M0.2: Architecture Scaffolding ✅
 - **Owner:** Rusty (Architect)
 - **Status:** ✅ Complete
 - **Delivered:**
-  - MVVM architecture with Models, Services, ViewModels, Views layers
+  - MVVM architecture with Models, Services, ViewModels, Views layers (the `ViewModels` layer was later decommissioned in the Phase-2 TCA migration — #864)
   - `ReminderType`, `ReminderSettings`, `SettingsStore` models defined
-  - `ReminderScheduler`, `OverlayManager` protocols + implementations
+  - `ReminderScheduler` protocol + implementation; overlay scaffolding (`OverlayManager` UIWindow path + `OverlayPresenting` protocol later retired in the Phase-2 TCA migration — #920; `OverlayClient` side-effects surface retained)
   - Service layer established (`AppCoordinator` orchestrator added in Phase 2, decommissioned in the Phase-2 TCA migration — #677 / #755 / PRs #756–#760)
 
 #### M0.3: CI/CD Pipeline ✅
@@ -100,14 +100,14 @@
   - Test plan templates, 80% coverage targets, UI test scope
   - Bug triage (P0-P3 severity levels)
 - **Evolved (Phase 1-2):**
-  - 71+ unit tests across Models, Services, ViewModels (80%+ coverage achieved)
+  - 71+ unit tests across Models, Services, ViewModels (80%+ coverage achieved) — the `ViewModels` layer was later decommissioned in the Phase-2 TCA migration (#864), with coverage migrated onto TCA Reducers
   - XCUITest scaffold for end-to-end flows (HomeScreen, Settings, Onboarding)
   - Integration tests for service wiring
 
 ### Phase 0 Success Criteria
 - ✅ Project builds without errors (Swift Package Manager)
 - ✅ CI/CD pipeline operational (GitHub Actions, SwiftLint, tests)
-- ✅ MVVM architecture established and reviewed
+- ✅ MVVM architecture established and reviewed (the `ViewModels` layer was later decommissioned in the Phase-2 TCA migration — #864)
 - ✅ Design system in Figma + implemented in code
 - ✅ User journeys mapped with accessibility scenarios
 - ✅ Test strategy executed (80%+ coverage maintained)
@@ -129,7 +129,7 @@
   - `SettingsStore.swift` wrapping UserDefaults with type-safe accessors
   - Default values: eyes (1200s / 20s), posture (1800s / 10s), remindersEnabled (true)
   - Unit tests with 90%+ coverage for save/load/clear
-  - `SettingsViewModel` binds UI to store; publishes changes
+  - `SettingsViewModel` binds UI to store; publishes changes (the `SettingsViewModel` was later decommissioned in the Phase-2 TCA migration — #677 / #701 / #755; settings binding now flows through `SettingsFeature` reducer + dependency clients)
 
 #### M1.2: Settings UI ✅
 - **Owner:** Linus (iOS UI Dev)
@@ -138,7 +138,7 @@
   - `SettingsView.swift` with SwiftUI Form layout
   - Toggle for "Enable Reminders"
   - `ReminderRowView` components (interval + duration pickers)
-  - Live binding to ViewModel; changes save immediately
+  - Live binding to ViewModel; changes save immediately (the `SettingsViewModel` was later decommissioned in the Phase-2 TCA migration — #677 / #701 / #755; the SwiftUI `Form` now binds directly to `SettingsFeature` state via `StoreOf<SettingsFeature>` + `WithPerceptionTracking`)
   - Accessibility labels for VoiceOver
 
 #### M1.3: Notification Scheduling ✅
@@ -169,7 +169,7 @@
 - **Owner:** Linus (iOS UI Dev)
 - **Status:** ✅ Complete
 - **Delivered:**
-  - `OverlayManager.swift` (UIWindow at `.alert + 1` level)
+  - `OverlayManager.swift` (UIWindow at `.alert + 1` level) (UIWindow path later retired in the Phase-2 TCA migration — #920; overlay presentation is now driven by `AppFeature.State.overlay` -> `RootView.fullScreenCover`)
   - `OverlayView.swift` (SwiftUI): blur background, SF Symbol, countdown ring, dismiss button, swipe-up dismiss
   - Auto-dismiss after configured duration (DispatchQueue.asyncAfter)
   - UIHostingController bridges UIKit ↔ SwiftUI
@@ -219,11 +219,11 @@
 
 ---
 
-## Phase 2: Polish ✅ COMPLETE
+## Phase 2: Polish 🔄 ~95%
 
 **Goal:** Elevate UX with onboarding, haptics, smart pause, accessibility, data-driven config, and App Store readiness.
 
-**Status:** Shipped. Screen-time triggers implemented (ScreenTimeTracker replacing wall-clock intervals). Smart pause complete (Focus Mode, CarPlay, driving detection). Onboarding, snooze, haptics, accessibility refined. Data-driven config via Asset Catalog (colors), String Catalog (copy), defaults.json (settings). App Store listing documented. v0.2.0 (Restful Grove) tagged and shipped.
+**Status:** ~95%. Screen-time triggers implemented (ScreenTimeTracker replacing wall-clock intervals). Smart pause complete (Focus Mode, CarPlay, driving detection). Onboarding, snooze, haptics, accessibility refined. Data-driven config via Asset Catalog (colors), String Catalog (copy), defaults.json (settings). App Store listing documented. v0.2.0 (Restful Grove) tagged. **M2.9 App Store Prep (metadata assets + TestFlight/App Store submission) still outstanding pending product decision** — see §M2.9 below.
 
 ### Milestones
 
@@ -410,7 +410,7 @@ Local notification fallback ensures we gracefully degrade if Screen Time APIs un
 - **ShieldAction Extension:** Implements `ShieldActionProvider` protocol for app/website unblocker buttons
 - **New Services:**
   - `DeviceActivityMonitor` — observes screen time via DeviceActivity.monitoredDevices
-  - `ManagedSettingsCoordinator` — configures shields via ManagedSettings
+  - `ManagedSettingsClient` — TCA dependency wired into `SchedulingFeature` (or a dedicated shield-feature reducer) that configures shields via ManagedSettings (legacy `ManagedSettingsCoordinator` was removed during the TCA migration)
   - `AppCategoryPicker` — UI for category/app selection
   - `AppGroupBridge` — inter-process communication (main app ↔ extensions)
 
@@ -420,7 +420,7 @@ Reminder fires (via ScreenTimeTracker)
     ↓
 SchedulingFeature reducer .thresholdReached → OverlayClient.show / NotificationClient.deliver
     ↓
-ManagedSettingsCoordinator.shieldAppsForBreak()
+managedSettingsClient.shieldAppsForBreak()   (TCA dep, invoked by SchedulingFeature effect)
     ↓
 ManagedSettings.apply() — shield config pushed to DeviceActivity
     ↓
@@ -430,7 +430,7 @@ Shield renders on device (user cannot bypass immediately)
     ↓
 Break duration elapses
     ↓
-ManagedSettingsCoordinator.clearShields()
+managedSettingsClient.clearShields()   (TCA dep)
     ↓
 Device resumes normal activity
     ↓
@@ -471,28 +471,28 @@ Device resumes normal activity
 - **Owner:** Basher (Services Dev) + Virgil (CI/CD)
 - **Status:** 🔄 PLANNED
 - **Scope:**
-  - Add ShieldConfiguration extension target to Xcode project
-  - Add ShieldAction extension target (optional first phase)
-  - Configure Info.plist for extensions (NSExtensionPointIdentifier)
-  - Add app group to main app + both extensions
-  - Update CI/CD to build/test both targets
-  - Code signing: ensure extension provisioning profiles included
+  - Add ShieldConfiguration extension target to Xcode project (later delivered via `project.yml` `ShieldConfigurationExtension` target + `Extensions/ShieldConfigurationExtension/` sources)
+  - Add ShieldAction extension target (optional first phase) (deferred to ShieldAction Phase 2 (#410) — compile-only scaffold not yet added; `project.yml` currently defines only the ShieldConfiguration + DeviceActivityMonitor extension targets)
+  - Configure Info.plist for extensions (NSExtensionPointIdentifier) (later delivered via per-extension `Info.plist` wiring in `project.yml` (`INFOPLIST_FILE` for `ShieldConfigurationExtension` + `DeviceActivityMonitorExtension`))
+  - Add app group to main app + both extensions (later delivered via App Group mismatch fix (#415) — `group.com.yashasg.kshana` now attached to main app + both extension entitlements files)
+  - Update CI/CD to build/test both targets (later delivered via `.github/workflows/ci.yml` step that runs `./scripts/setup-screentime.sh --build` for an unsigned simulator compile of both extension targets (#210 partial))
+  - Code signing: ensure extension provisioning profiles included (blocked by #201 entitlement approval — signed extension distribution path lives in `scripts/build_signed.sh` and the remaining #210 acceptance items)
 - **Dependencies:** M3.2 spike complete
 - **Duration:** 3 days
 - **Acceptance Criteria:**
-  - Both extension targets build without errors
-  - CI/CD pipeline builds and signs both targets
-  - App group shared container accessible from both targets
+  - Both extension targets build without errors (later delivered — CI compiles both targets unsigned for the simulator)
+  - CI/CD pipeline builds and signs both targets (partially delivered — unsigned build path delivered via #210; signed build path remains blocked by #201)
+  - App group shared container accessible from both targets (later delivered via #415 + `Extensions/Shared/ShieldSessionKeys.swift` `appGroupID` constant)
 
 #### M3.4: Authorization + App/Category Picker
 - **Owner:** Linus (iOS UI Dev) + Basher (Services Dev)
 - **Status:** 🔄 PLANNED
 - **Scope:**
-  - FamilyControls authorization flow (request + gating)
-  - App/category selection UI (form picker, category browser)
-  - Persist selection to app group shared state
-  - Fallback UI if authorization denied (show notification-only reminder)
-  - UX copy for authorization screen (explain why we need Screen Time access)
+  - FamilyControls authorization flow (request + gating) (blocked by #201 entitlement approval)
+  - App/category selection UI (form picker, category browser) (later delivered via `AppCategoryPickerFeature` reducer (#694) + `AppCategoryPickerView` store wiring (#722))
+  - Persist selection to app group shared state (later delivered via `IPCClient` selection persistence (#723) + `AppCategoryPickerFeature` ↔ `IPCClient.read/writeSelection` wiring (#894))
+  - Fallback UI if authorization denied (show notification-only reminder) (blocked by #201 entitlement approval)
+  - UX copy for authorization screen (explain why we need Screen Time access) (blocked by #201 entitlement approval)
 - **Dependencies:** M3.3 targets ready
 - **Duration:** 5 days
 - **Acceptance Criteria:**
@@ -505,43 +505,43 @@ Device resumes normal activity
 - **Owner:** Basher (Services Dev)
 - **Status:** 🔄 PLANNED
 - **Scope:**
-  - `DeviceActivityMonitor` service tracks screen-on time per app/category (via ScreenTime APIs)
-  - Integrate with existing ScreenTimeTracker (bridge to new API)
-  - Test DeviceActivity schedule updates
-  - Edge cases: app backgrounding, device lock, multi-app scenarios
+  - `DeviceActivityMonitor` service tracks screen-on time per app/category (via ScreenTime APIs) (blocked by #201 entitlement approval — real `DeviceActivityCenter.startMonitoring` semantics need FamilyControls plus a live `ShieldSession` derived from a `FamilyActivityPicker` selection (#410); compile-only scaffold delivered via the `DeviceActivityMonitorExtension` target + `DeviceActivityMonitorProviding` protocol + `DeviceActivityMonitorNoop` adapter)
+  - Integrate with existing ScreenTimeTracker (bridge to new API) (later delivered via `DeviceActivityMonitorClient` TCA dep (`schedule(_:_:)` / `cancel(_:)` / `startScheduleForOverlay(_:)`) routed through `LiveDeviceActivityMonitorBridge`; `SchedulingFeature.startEffect` calls `startScheduleForOverlay(_:)` on `OverlayClient.lifecycleEvents` `.presented` and `cancel(_:)` on `.dismissed` (#903). The live adapter remains a no-op until #201 promotes the bridge off `DeviceActivityMonitorNoop`.)
+  - Test DeviceActivity schedule updates (later delivered via `DeviceActivityMonitorClient` `@DependencyClient` test seam in `SchedulingFeature` `TestStore` tests — schedule/cancel call sites are recorder-asserted independent of the real Apple framework (#903); device-level scheduling tests remain blocked by #201)
+  - Edge cases: app backgrounding, device lock, multi-app scenarios (blocked by #201 — requires a live monitoring extension exercised against real Apple framework lifecycles)
 - **Dependencies:** M3.3, M3.4
 - **Duration:** 4 days
 - **Acceptance Criteria:**
-  - DeviceActivityMonitor detects apps launched by user
-  - Screen time accrual matches expected thresholds
-  - Transitions to shield state on break reminder
+  - DeviceActivityMonitor detects apps launched by user (blocked by #201)
+  - Screen time accrual matches expected thresholds (blocked by #201)
+  - Transitions to shield state on break reminder (blocked by #201 / #410 — live shield application is ShieldAction Phase 2)
 
 #### M3.6: ManagedSettings Shielding + ShieldAction Extension
 - **Owner:** Basher (Services Dev) + Linus (iOS UI Dev)
 - **Status:** 🔄 PLANNED
 - **Scope:**
-  - `ManagedSettingsCoordinator` applies ManagedSettings.store.shield(applications: [...])
-  - ShieldConfiguration extension provides customized shield UI (logo, messaging)
-  - ShieldAction extension allows user to request app access ("I need 1 min" button) with confirmation
-  - Shield dismissal triggers ManagedSettingsCoordinator.clearShields()
-  - Logging: track shield duration, user interactions
+  - `managedSettingsClient` (TCA dep, invoked from `SchedulingFeature` or a dedicated shield-feature reducer) applies ManagedSettings.store.shield(applications: [...]) (blocked by #201 entitlement approval — no `managedSettingsClient` TCA dep exists yet; the integration boundary is the `ScreenTimeShieldProviding` protocol (`beginShield(for:)` / `endShield()` in `EyePostureReminder/Services/ScreenTimeShieldProtocols.swift`) with `ScreenTimeShieldNoop` as the compile-only default (`isAvailable = false`) until live `ManagedSettingsStore.shield(applications:)` wiring is unblocked)
+  - ShieldConfiguration extension provides customized shield UI (logo, messaging) (later delivered via `ShieldConfigurationDataSourceImpl` in `Extensions/ShieldConfigurationExtension/ShieldConfigurationDataSource.swift` rendering `ShieldConfiguration.Label` title/subtitle through `ShieldConfigurationCopy.make(for:)` + `ShieldConfigurationCopyLocalization`, driven by `ShieldSessionSnapshot` read from App Group `UserDefaults` via `AppGroupDefaults.resolve(consumer:)`; per-extension `PrivacyInfo.xcprivacy` manifests + signed-archive validation for extension privacy manifests shipped via #635. Custom logo asset remains TODO.)
+  - ShieldAction extension allows user to request app access ("I need 1 min" button) with confirmation (blocked by #201 / #410 — ShieldAction extension target is intentionally absent from `project.yml` (see header comment lines 7–10); deferred to ShieldAction Phase 2 (#410) until FamilyControls authorisation makes the callbacks meaningful on device)
+  - Shield dismissal triggers `managedSettingsClient.clearShields()` (TCA dep) (blocked by #201 — `ScreenTimeShieldProviding.endShield()` is the integration boundary; `ScreenTimeShieldNoop.endShield()` is a no-op until live `ManagedSettingsStore` clearing is wired)
+  - Logging: track shield duration, user interactions (partially delivered — `AppGroupIPCStore` defines the `shieldStarted` / `shieldEnded` / `accessRequested` event taxonomy plus the consumer-side reader on `accessRequested` (#723 / #892); live emissions remain blocked by #201 / #410 because the shield and ShieldAction callbacks must run on device to fire the events)
 - **Dependencies:** M3.5
 - **Duration:** 6 days
 - **Acceptance Criteria:**
-  - ManagedSettings shield applies successfully during break
-  - Shield UI renders with custom branding
-  - User can request access; coordinator logs request
-  - Shield clears after break or manual request
+  - ManagedSettings shield applies successfully during break (blocked by #201)
+  - Shield UI renders with custom branding (later delivered for text — `ShieldConfigurationDataSourceImpl` renders custom title/subtitle from `ShieldSessionSnapshot`; custom logo asset remains TODO)
+  - User can request access; coordinator logs request (blocked by #201 / #410 — ShieldAction extension target deferred to Phase 2; consumer-side `accessRequested` reader already in place via `AppGroupIPCStore`)
+  - Shield clears after break or manual request (blocked by #201)
 
 #### M3.7: App Group Shared State & Watchdog
 - **Owner:** Basher (Services Dev)
 - **Status:** 🔄 PLANNED
 - **Scope:**
-  - App Group (`group.com.yashasg.kshana`) UserDefaults syncing config + state
-  - Main app writes: authorized apps, shield schedule, last shield time
-  - Extensions read: config for shield rendering
-  - Optional watchdog: separate app extension that monitors break compliance (logs to shared container)
-  - Testing: verify consistency across app/extensions under edge cases (app restart, extension crash)
+  - App Group (`group.com.yashasg.kshana`) UserDefaults syncing config + state (later delivered via App Group mismatch fix (#415) + `AppGroupIPCStore` work)
+  - Main app writes: authorized apps, shield schedule, last shield time (partially delivered via `IPCClient` selection persistence (#723) + `IPCClient.fallbackRoute(for:)` (#900); shield-schedule/last-shield-time persistence remains blocked by #201 / #410)
+  - Extensions read: config for shield rendering (blocked by #201 / #410 — real shield-config reading is part of ShieldAction Phase 2 (#410))
+  - Optional watchdog: separate app extension that monitors break compliance (logs to shared container) (later delivered via TCA Phase 2 watchdog recovery (#892); tracking issue #891. Implementation is in-process TCA effects rather than a separate app extension.)
+  - Testing: verify consistency across app/extensions under edge cases (app restart, extension crash) (partially delivered via `SessionTimingClient` overlay-lifecycle wiring (#901); full extension-side consistency tests remain blocked by #201 / #410)
 - **Dependencies:** M3.6 (shield logic ready)
 - **Duration:** 3 days
 - **Acceptance Criteria:**
@@ -586,18 +586,18 @@ Device resumes normal activity
 - **Owner:** Virgil (CI/CD Dev)
 - **Status:** 🔄 PLANNED
 - **Scope:**
-  - Update GitHub Actions to build + sign extension targets
-  - Extension provisioning profiles (development + distribution)
-  - Entitlements file for extensions (app group, family controls, shield points)
-  - TestFlight build includes extensions
-  - App Store Connect setup: extension availability
+  - Update GitHub Actions to build + sign extension targets (partially delivered — unsigned simulator compile path via `./scripts/setup-screentime.sh --build` in `.github/workflows/ci.yml` covers both `ShieldConfigurationExtension` + `DeviceActivityMonitorExtension` (#210, `b8732c8`); signed-archive path lives in `scripts/build_signed.sh` driven from `.github/workflows/testflight.yml` (#418). Signed-distribution upload remains blocked by #201 + real extension distribution profiles/secrets.)
+  - Extension provisioning profiles (development + distribution) (partially delivered — `testflight.yml` wires optional `SHIELD_CONFIG_PROVISION_PROFILE_BASE64` / `DEVICE_ACTIVITY_PROVISION_PROFILE_BASE64` / `*_PROFILE_SPECIFIER` secrets through to `build_signed.sh` (#210, `b8732c8`); when those secrets are absent the workflow gracefully excludes extension targets. Real distribution profiles configured in repo settings remain blocked on #201 entitlement approval.)
+  - Entitlements file for extensions (app group, family controls, shield points) (later delivered — per-extension `*.entitlements` + `*.Distribution.entitlements` files cover App Group `group.com.yashasg.kshana` plus `com.apple.developer.family-controls` for both `ShieldConfigurationExtension` and `DeviceActivityMonitorExtension` (#210 / #415); both extensions also ship `PrivacyInfo.xcprivacy` manifests, and signed-archive validation fails if extension privacy manifests are missing when extension signing is enabled (#635).)
+  - TestFlight build includes extensions (blocked by #201 — `testflight.yml` currently excludes extension targets from the IPA when extension profiles/secrets are absent; the included path is gated on #201 plus extension distribution secrets. Verification scaffolding is in place: `build_signed.sh` validates extension payload presence and per-extension `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION` parity with the containing app when extension signing is enabled (#418 / #592 / #635).)
+  - App Store Connect setup: extension availability (blocked by #201 — requires entitlement approval before an extension-included build can be submitted)
 - **Dependencies:** M3.3 targets + M3.1 entitlement approved
 - **Duration:** 3 days
 - **Acceptance Criteria:**
-  - CI builds extensions without errors
-  - TestFlight build includes both extensions
-  - Code signing validation passes
-  - App Store Connect accepts app + extensions
+  - CI builds extensions without errors (later delivered — unsigned simulator compile path is green; see #210)
+  - TestFlight build includes both extensions (blocked by #201 + real extension distribution profiles/secrets)
+  - Code signing validation passes (blocked by #201 — verification scaffolding ready, but signing requires real distribution profiles)
+  - App Store Connect accepts app + extensions (blocked by #201)
 
 #### M3.11: Local Notification Fallback Positioning
 - **Owner:** Basher (Services Dev) + Linus (iOS UI Dev)
@@ -665,10 +665,10 @@ Device resumes normal activity
 |---|---|---|---|
 | **Phase 0** | ✅ Complete | M0.1–M0.6 | 2 weeks; all foundation work shipped |
 | **Phase 1** | ✅ Complete | M1.1–M1.8 | 3 weeks; MVP with 65+ unit tests, notifications, overlay |
-| **Phase 2** | ✅ Complete | M2.1–M2.10 | 4 weeks; screen-time triggers, smart pause, onboarding, haptics, data-driven config, yin-yang logo animation, 7 quality passes, Restful Grove identity; v0.2.0 shipped |
+| **Phase 2** | 🔄 ~95% | M2.1–M2.10 | 4 weeks; screen-time triggers, smart pause, onboarding, haptics, data-driven config, yin-yang logo animation, 7 quality passes, Restful Grove identity; v0.2.0 tagged. M2.9 App Store Prep (assets + submission) outstanding |
 | **Phase 3** | 🔄 In Progress | M3.1–M3.11 | Planned 3+ weeks; blocked on Screen Time API entitlement approval #201; iCloud sync, widgets, watchOS deferred |
 
-**Current Project Status:** v0.2.0 (Restful Grove) tagged and shipped. Phase 2 complete. Phase 3 (Interrupt Mode MVP) in progress — unblocked on Screen Time API entitlement approval (Apple Case ID 102881605113, issue #201).
+**Current Project Status:** v0.2.0 (Restful Grove) tagged. Phase 2 ~95% — M2.9 App Store Prep (metadata assets + TestFlight/App Store submission) outstanding pending product decision. Phase 3 (Interrupt Mode MVP) in progress — blocked on Screen Time API entitlement approval (Apple Case ID 102881605113, issue #201).
 
 ---
 
@@ -693,11 +693,11 @@ Device resumes normal activity
 ### Before App Store Submission
 1. **Q:** Approve TestFlight submission?  
    **Owner:** Danny  
-   **Decision:** Pending — Phase 2 complete, ready to submit
+   **Decision:** Pending — Phase 2 ~95% (M2.9 App Store Prep assets + submission outstanding); approval here is what closes M2.9
 
 2. **Q:** Should Phase 4 (iCloud, widgets, watchOS) be in v1.0 or v1.1?  
    **Owner:** Danny  
-   **Recommendation:** Defer to v1.1 post-launch (Phase 2 scope sufficient for v1.0)
+   **Recommendation:** Defer to v1.1 post-launch (Phase 2 scope — once M2.9 lands — is sufficient for v1.0)
 
 3. **Q:** Confirm bundle ID and App Store Connect account  
    **Owner:** Danny + Yashasg  
@@ -723,11 +723,11 @@ Device resumes normal activity
 | Risk | Probability | Impact | Status | Mitigation |
 |---|---|---|---|---|
 | Dependency injection refactoring breaks tests | Medium | Medium | 🔄 Active | Livingston testing M3.1; existing tests guard against regressions |
-| App Store submission delay | Low | High | 🔄 Active | Phase 2 complete; awaiting decision to proceed |
+| App Store submission delay | Low | High | 🔄 Active | Phase 2 ~95% (M2.9 App Store Prep outstanding); awaiting product decision on assets + submission |
 | watchOS development expertise gap | Medium | Low | 🔄 Active | Defer to Phase 4; Linus to upskill early in M4.1 |
 | Widget battery impact exceeds targets | Low | Low | 🔄 Active | Measure early in Phase 4; adjust update frequency |
 | iCloud sync conflicts (edge cases) | Low | Medium | 🔄 Active | Last-write-wins strategy + logging in Phase 4 |
-| Phase 3 timeline slips | Medium | Low | 🔄 Active | Phase 1+2 complete; Phase 3 is optional post-launch |
+| Phase 3 timeline slips | Medium | Low | 🔄 Active | Phase 1 complete and Phase 2 ~95% (M2.9 outstanding); Phase 3 is optional post-launch |
 
 ---
 
@@ -737,7 +737,7 @@ Device resumes normal activity
 - ✅ **Crash-Free Rate:** Target 99.5%+ (to measure post-launch)
 - ✅ **Battery Impact:** < 3% per day (actual: ~1–2% measured via ScreenTimeTracker)
 - ✅ **Average Memory Usage:** < 30 MB idle (validated)
-- ✅ **Unit Test Coverage:** 81%+ (achieved: 1,382 unit tests + 53 UI tests across Models, Services, ViewModels, Views, Pause)
+- ✅ **Unit Test Coverage:** 81%+ (achieved: 1,382 unit tests + 53 UI tests across Models, Services, ViewModels, Views, Pause — the `ViewModels` layer was later decommissioned in the Phase-2 TCA migration (#864), with coverage migrated onto TCA Reducers)
 
 ### User Experience (Phase 1+2 Delivered)
 - ✅ **Onboarding Completion:** 90%+ of first-launch users reach Settings (to measure post-launch)
@@ -822,8 +822,8 @@ Phase 3: Interrupt Mode MVP 🔄 In Progress
 - ✅ Team: 13 members (PM, Design, Architect, 2 iOS Devs, Tester, Code Reviewer, Legal, CI/CD, Data Analyst, Formatter, Scribe)
 
 **Ready for:**
-- 🔄 App Store submission (Phase 2 complete, docs ready, privacy policy published)
+- 🔄 App Store submission (Phase 2 ~95% — M2.9 metadata assets + submission outstanding; docs ready, privacy policy published)
 - 🔄 TestFlight beta distribution
 - 🔄 Phase 3 (Screen Time APIs + app shielding; entitlement approval #201 pending)
 
-**Next Decision:** Approve App Store submission or defer Phase 3 items to v1.0 release? (Recommend: v1.0 with Phase 1+2, Phase 3 as v1.1 post-launch)
+**Next Decision:** Approve App Store submission (which closes M2.9 / Phase 2) or defer Phase 3 items to v1.0 release? (Recommend: v1.0 with Phase 1 + Phase 2 once M2.9 lands, Phase 3 as v1.1 post-launch)

@@ -29,7 +29,7 @@ Users can customise reminder intervals and break durations. The overlay is dismi
 | Background scheduling | **UserNotifications** (`UNUserNotificationCenter`) |
 | Overlay window | **UIKit** – secondary `UIWindow` at `.alert` window level |
 | Persistent settings | **UserDefaults** (lightweight key-value store) |
-| App lifecycle | **UIApplicationDelegate** / `SceneDelegate` |
+| App lifecycle | **SwiftUI App lifecycle** (`@main` / `App`) bridged via `@UIApplicationDelegateAdaptor` → `AppDelegate.swift` |
 | Haptics | **CoreHaptics** / `UINotificationFeedbackGenerator` |
 | Accessibility | **UIAccessibility** APIs |
 
@@ -87,7 +87,7 @@ EyePostureReminder
 ├── Services                           – Live implementations of the capabilities the
 │   ├── ReminderScheduler.swift            TCA dependency clients wrap.
 │   ├── ScreenTimeTracker.swift
-│   ├── OverlayManager.swift
+│   │   (OverlayManager.swift — retired in #920)
 │   ├── PauseConditionManager.swift
 │   ├── AudioInterruptionManager.swift
 │   ├── AnalyticsLogger.swift
@@ -96,7 +96,7 @@ EyePostureReminder
 │   ├── ServiceLifecycle.swift
 │   └── (FamilyControls + DeviceActivity + Shield wrappers — see ARCHITECTURE.md §3)
 └── Views
-    ├── RootView is the canonical entry; ContentView is a thin compatibility wrapper.
+    ├── RootView is the canonical entry.
     ├── HomeView.swift                 – consumes `StoreOf<HomeFeature>`
     ├── SettingsView.swift             – consumes `StoreOf<SettingsFeature>`
     ├── ReminderRowView.swift          – per-type interval/duration row
@@ -115,7 +115,7 @@ Phase 3 adds extension targets and Screen Time services:
 kshana (Main App)
 ├── (existing Phase 1–2 structure above)
 ├── Services (new)
-│   ├── ManagedSettingsCoordinator    – configures shields via ManagedSettings.store
+│   ├── ManagedSettingsClient         – TCA dep wired into SchedulingFeature; configures shields via ManagedSettings.store
 │   ├── DeviceActivityMonitor         – observes screen time via DeviceActivity
 │   └── AppGroupBridge                – inter-process communication (main ↔ extensions)
 ├── Models (new)
@@ -150,7 +150,7 @@ Shared App Group (group.com.kshana.screentime)
 
 - A live `Timer` in the background is unreliable – iOS suspends apps after a few seconds of background activity.
 - `UNUserNotificationCenter` is the standard, battery-efficient mechanism for time-based alerts; iOS wakes the app only when necessary.
-- When the user taps the notification (or the app is in the foreground), `OverlayManager` presents the overlay instead.
+- When the user taps the notification (or the app is in the foreground), `OverlayFeature` (driven by `AppFeature.State.overlay` → `RootView.fullScreenCover`) presents the overlay instead; `OverlayClient` handles lifecycle multicast + audio/accessibility side-effects.
 
 **Phase 2 additions:**
 
@@ -183,11 +183,11 @@ UNUserNotificationCenter fires notification
   │ App in foreground?            │ App in background?
   │                               │
   ▼                               ▼
-OverlayManager                 System notification
+OverlayFeature                 System notification
 presents overlay                banner / lock screen
-immediately                     (user taps → app opens
-                                 → UNUserNotificationCenterDelegate
-                                    calls OverlayManager)
+immediately via                 (user taps → app opens
+AppFeature.State.overlay        → UNUserNotificationCenterDelegate
+                                   sets AppFeature.State.overlay)
 ```
 
 ### 4.2 Screen Time APIs & True Interruption (Phase 3 – New)
@@ -215,7 +215,7 @@ ReminderScheduler.scheduleNext()
 SchedulingFeature `.thresholdReached(type)` reducer effect
         │
         ▼
-ManagedSettingsCoordinator.shieldAppsForBreak()
+managedSettingsClient.shieldAppsForBreak()   (TCA dep, invoked by SchedulingFeature)
   – reads ShieldedAppCategory (user-selected apps from AppCategoryPickerView)
   – configures DeviceActivity schedule
         │
@@ -232,7 +232,7 @@ Extension Process (ShieldConfiguration target)
   │ Break duration elapses                  │ User requests access
   │                                          │ (ShieldAction button)
   ▼                                          ▼
-ManagedSettingsCoordinator.clearShields()   ShieldActionProvider
+managedSettingsClient.clearShields()        ShieldActionProvider
   – ManagedSettings.store.clear()           – Logs access request
   – Notification cancelled (fallback)        – Requires confirmation
                                               – Sets 5-min grace period
@@ -381,16 +381,16 @@ ScreenTimeTracker accumulates screen-on seconds
 Threshold reached → SchedulingFeature .thresholdReached(type) → OverlayClient.show / NotificationClient.deliver
         │
         ▼
-OverlayManager.showOverlay(...)   (live service behind OverlayClient)
+AppFeature.State.overlay = .some(...)   (OverlayClient emits lifecycle multicast)
         │
         ▼
-OverlayView shown with countdown
+RootView.fullScreenCover shows OverlayView with countdown
         │
   ┌─────┴──────────┐
   │ User taps ×    │ Timer elapses
   ▼                ▼
-OverlayClient.dismiss → OverlayManager.dismiss()
-  UIWindow removed from hierarchy
+OverlayClient.dismiss → AppFeature.State.overlay = nil
+  fullScreenCover dismissed
   SchedulingFeature emits screenTimeTrackerClient.reset(for: type) — re-arms for next cycle
 ```
 
@@ -417,10 +417,10 @@ OverlayClient.dismiss → OverlayManager.dismiss()
 |---|---|
 | `SettingsStore` | Unit tests with an in-memory `UserDefaults` suite |
 | `ReminderScheduler` | Unit tests mocking `UNUserNotificationCenter` via a protocol |
-| `OverlayManager` | Unit + integration tests asserting window level and dismiss behaviour |
+| `OverlayClient` | Unit tests asserting lifecycle multicast + audio/accessibility side-effects (retired `OverlayManager` UIWindow tests in #920) |
 | Feature reducers (`SchedulingFeature`, `SettingsFeature`, `OnboardingFeature`, `OverlayFeature`, `HomeFeature`, `AppCategoryPickerFeature`) | `TestStore` coverage under `Tests/EyePostureReminderTests/TCA/`; fakes injected via `withDependencies` overrides on the matching dependency clients |
 | Integration (`Tests/EyePostureReminderTests/Integration/`) | Real `SettingsStore` + live services wired through TCA clients; mocked UIKit + UNUserNotificationCenter boundaries |
-| End-to-end | Manual testing on simulator with shortened intervals (10 s); XCUITest suite currently gated behind #736 pending TCA rewrite |
+| End-to-end | Manual testing on simulator with shortened intervals (10 s); XCUITest suite runs in CI as the sharded `uitest-prepare` / `uitest-shard` / `uitest` jobs in `.github/workflows/ci.yml` on every PR and `main` push (re-enabled post-TCA-migration in #778) |
 
 See `ARCHITECTURE.md` §10 for the full testing architecture (pyramid, mock patterns, coverage targets).
 

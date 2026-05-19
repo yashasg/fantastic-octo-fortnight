@@ -217,7 +217,7 @@ enum AppAnimation {
     static let overlayFadeCurve: Animation    = .linear(duration: overlayAutoDismiss)
     static let settingsExpandCurve: Animation = .easeInOut(duration: settingsExpand)
     static let countdownRingCurve: Animation  = .linear(duration: countdownRingTick)
-    /// Onboarding transition used in ContentView (hasSeenOnboarding toggle)
+    /// Onboarding transition used in RootView (hasSeenOnboarding toggle)
     static let onboardingTransition: Animation = .easeInOut(duration: onboardingFadeIn)
     /// Onboarding screen fade-in entrance animation (easeOut + delay)
     static let onboardingFadeInCurve: Animation =

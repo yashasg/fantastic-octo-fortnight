@@ -2,30 +2,30 @@ import ComposableArchitecture
 import Foundation
 import UserNotifications
 
-/// Phase 1 reducer (`p0-tca-6` / #669) replacing the legacy
-/// `SettingsViewModel` for the Settings screen.
+/// Reducer powering the Settings screen, introduced by `p0-tca-6` / #669.
 ///
-/// `#755` Phase B extends the surface so `SettingsView` can read every value
-/// it previously sourced from `@EnvironmentObject AppCoordinator` directly
-/// from this store: notification authorisation, Screen Time authorisation,
-/// and the snooze-cancel action that mirrors
-/// `SettingsViewModel.cancelSnooze()`.
+/// `#755` Phase B extended the surface so `SettingsView` can read every
+/// value it needs — debounced eyes-side reschedules, notification
+/// authorisation, Screen Time / FamilyControls authorisation, and the
+/// snooze-cancel action — directly from this store, without reaching
+/// across to a parallel object graph.
 ///
-/// ## Phase 0 dependency surface
+/// ## Posture-side bindable surface (#805)
 ///
-/// `SettingsClient.snapshot` (defined in `p0-tca-2` / #663) only returns
-/// the eyes-side `ReminderSettings`. The posture-side `prev*` capture
-/// fields live on `State` per the issue spec but are populated only once
-/// Phase 2 extends the snapshot surface (`p0-tca-15` / #678). They default
-/// to `.zero` and are not exercised by this reducer.
+/// Eyes-side and posture-side reminder pickers now both flow through this
+/// reducer's bindable surface. `SettingsClient.snapshot` continues to vend
+/// eyes-side values; the parallel `postureSnapshot` / `postureStream` pair
+/// added in #805 carry posture-side values without changing the eyes-side
+/// payload that `HomeFeature` and `SchedulingFeature` consume.
 ///
 /// ## Why `settings` is computed
 ///
 /// `ReminderSettings.interval` and `ReminderSettings.breakDuration` are
 /// declared `let`, which makes `\State.settings.interval` only a read-only
 /// `KeyPath`. `BindableAction` requires `WritableKeyPath`, so the bindable
-/// surface uses the top-level `eyesInterval` / `eyesBreakDuration` mirrors
-/// and `settings` is derived from them. This keeps the spec's
+/// surface uses the top-level `eyesInterval` / `eyesBreakDuration` /
+/// `postureInterval` / `postureBreakDuration` mirrors and `settings` /
+/// `postureSettings` are derived from them. This keeps the spec's
 /// `state.settings` accessor intact for downstream callers
 /// (`scheduler.rescheduleReminder(_:_:)`).
 @Reducer
@@ -38,6 +38,15 @@ struct SettingsFeature {
         /// Eyes-side break duration, in seconds. Bindable from the View.
         var eyesBreakDuration: TimeInterval = 0
 
+        /// Posture-side reminder interval, in seconds. Bindable from the View.
+        /// Mirrors `eyesInterval` after #805 migrated the posture pickers off
+        /// `@AppStorage`.
+        var postureInterval: TimeInterval = 0
+
+        /// Posture-side break duration, in seconds. Bindable from the View.
+        /// Mirrors `eyesBreakDuration` after #805.
+        var postureBreakDuration: TimeInterval = 0
+
         /// Last-committed eyes interval; used to compute analytics deltas.
         var prevEyesInterval: TimeInterval = .zero
 
@@ -45,13 +54,16 @@ struct SettingsFeature {
         /// deltas.
         var prevEyesBreakDuration: TimeInterval = .zero
 
-        /// Last-committed posture interval. Populated once Phase 2 extends
-        /// `SettingsClient` to vend posture-side snapshots (`p0-tca-15`).
+        /// Last-committed posture interval; used to compute analytics
+        /// deltas. Populated from `SettingsClient.postureSnapshot` on
+        /// `.onAppear` and refreshed on every `.postureSettingsChanged`
+        /// (#805).
         var prevPostureInterval: TimeInterval = .zero
 
-        /// Last-committed posture break duration. Populated once Phase 2
-        /// extends `SettingsClient` to vend posture-side snapshots
-        /// (`p0-tca-15`).
+        /// Last-committed posture break duration; used to compute analytics
+        /// deltas. Populated from `SettingsClient.postureSnapshot` on
+        /// `.onAppear` and refreshed on every `.postureSettingsChanged`
+        /// (#805).
         var prevPostureBreakDuration: TimeInterval = .zero
 
         /// Drives presentation of the reset-to-defaults confirmation alert.
@@ -60,15 +72,15 @@ struct SettingsFeature {
         /// Drives presentation of the transient "Saved" banner.
         var showSavedBanner: Bool = false
 
-        /// Current notification authorization status. Surfaced by
-        /// `SettingsView` to render the "Notifications disabled" warning row
-        /// previously sourced from `AppCoordinator.notificationAuthStatus`.
+        /// Current notification authorization status. Populated from the
+        /// `NotificationClient` stream and surfaced by `SettingsView` to
+        /// render the "Notifications disabled" warning row.
         var notificationAuthStatus: UNAuthorizationStatus = .notDetermined
 
-        /// Current Screen Time / FamilyControls authorisation status. Drives
-        /// the True Interrupt Mode status row + denied-recovery callout
-        /// previously sourced from
-        /// `AppCoordinator.screenTimeAuthorization.authorizationStatus`.
+        /// Current Screen Time / FamilyControls authorisation status.
+        /// Populated from the `ScreenTimeAuthorizationClient` stream and
+        /// drives the True Interrupt Mode status row + denied-recovery
+        /// callout in `SettingsView`.
         var screenTimeAuthStatus: ScreenTimeAuthorizationStatus = .unavailable
 
         /// Aggregated eyes-side `ReminderSettings` view used by the
@@ -81,6 +93,16 @@ struct SettingsFeature {
                 breakDuration: eyesBreakDuration
             )
         }
+
+        /// Aggregated posture-side `ReminderSettings` view used by the
+        /// scheduler client when posture pickers commit. Computed for the
+        /// same `let`-field reason as `settings`.
+        var postureSettings: ReminderSettings {
+            ReminderSettings(
+                interval: postureInterval,
+                breakDuration: postureBreakDuration
+            )
+        }
     }
 
     enum Action: BindableAction, Equatable {
@@ -88,6 +110,7 @@ struct SettingsFeature {
         case onAppear
         case task
         case settingsChanged(ReminderSettings)
+        case postureSettingsChanged(ReminderSettings)
         case snoozeTapped(SnoozeOption)
         case cancelSnooze
         case resetConfirmed
@@ -97,9 +120,10 @@ struct SettingsFeature {
 
         /// Emit a `setting_changed` analytics event for settings that are
         /// still persisted via `@AppStorage` rather than the bindable surface
-        /// of this reducer. `SettingsView` forwards every change to one of
-        /// the seven post-TCA non-bindable rows (#777 silent-emission gap)
-        /// plus the Settings-screen posture interval/duration pickers.
+        /// of this reducer. After #805 the seven non-bindable rows
+        /// (master/per-type enable, haptics, pause-during-focus, etc.) remain
+        /// the only callers — the Settings-screen interval/duration pickers
+        /// emit directly from the bindable surface for both eyes and posture.
         ///
         /// `oldValue` / `newValue` are pre-stringified by the caller so the
         /// action stays `Equatable` regardless of the underlying setting's
@@ -108,9 +132,8 @@ struct SettingsFeature {
         case settingToggleChanged(setting: AnalyticsEvent.SettingKey, oldValue: String, newValue: String)
     }
 
-    /// Snooze durations exposed to the Settings UI. Mirrors
-    /// `SettingsViewModel.SnoozeOption` so analytics codes are stable
-    /// across the MVVM → TCA migration. Localised labels stay in the View
+    /// Snooze durations exposed to the Settings UI. Analytics codes
+    /// stay stable across releases. Localised labels stay in the View
     /// layer per the Phase 1 "own this file only" constraint.
     enum SnoozeOption: String, CaseIterable, Equatable, Sendable {
         case fiveMinutes
@@ -142,6 +165,8 @@ struct SettingsFeature {
     private enum CancelID: Hashable {
         case eyesIntervalDebounce
         case eyesBreakDurationDebounce
+        case postureIntervalDebounce
+        case postureBreakDurationDebounce
         case snoozeBanner
         case settingToggleBanner
         case screenTimeAuthStatusStream
@@ -199,6 +224,44 @@ struct SettingsFeature {
                 }
                 .cancellable(id: CancelID.eyesBreakDurationDebounce, cancelInFlight: true)
 
+            case .binding(\.postureInterval):
+                let oldValue = state.prevPostureInterval
+                let newValue = state.postureInterval
+                let nextSettings = state.postureSettings
+                state.showSavedBanner = true
+                return .run { send in
+                    try await clock.sleep(for: .milliseconds(300))
+                    await settingsClient.updatePostureInterval(newValue)
+                    await scheduler.rescheduleReminder(.posture, nextSettings)
+                    analytics.log(.settingChanged(
+                        setting: .postureInterval,
+                        oldValue: String(oldValue),
+                        newValue: String(newValue)
+                    ))
+                    try await clock.sleep(for: Self.savedBannerVisibilityDuration)
+                    await send(.savedBannerExpired)
+                }
+                .cancellable(id: CancelID.postureIntervalDebounce, cancelInFlight: true)
+
+            case .binding(\.postureBreakDuration):
+                let oldValue = state.prevPostureBreakDuration
+                let newValue = state.postureBreakDuration
+                let nextSettings = state.postureSettings
+                state.showSavedBanner = true
+                return .run { send in
+                    try await clock.sleep(for: .milliseconds(300))
+                    await settingsClient.updatePostureBreakDuration(newValue)
+                    await scheduler.rescheduleReminder(.posture, nextSettings)
+                    analytics.log(.settingChanged(
+                        setting: .postureBreakDuration,
+                        oldValue: String(oldValue),
+                        newValue: String(newValue)
+                    ))
+                    try await clock.sleep(for: Self.savedBannerVisibilityDuration)
+                    await send(.savedBannerExpired)
+                }
+                .cancellable(id: CancelID.postureBreakDurationDebounce, cancelInFlight: true)
+
             case .binding:
                 return .none
 
@@ -208,6 +271,11 @@ struct SettingsFeature {
                 state.eyesBreakDuration = snapshot.breakDuration
                 state.prevEyesInterval = snapshot.interval
                 state.prevEyesBreakDuration = snapshot.breakDuration
+                let posture = settingsClient.postureSnapshot()
+                state.postureInterval = posture.interval
+                state.postureBreakDuration = posture.breakDuration
+                state.prevPostureInterval = posture.interval
+                state.prevPostureBreakDuration = posture.breakDuration
                 return .run { [notificationClient, screenTimeAuthorizationClient] send in
                     async let notification = notificationClient.authorizationStatus()
                     async let screenTime = screenTimeAuthorizationClient.status()
@@ -237,6 +305,13 @@ struct SettingsFeature {
                 state.eyesBreakDuration = snapshot.breakDuration
                 state.prevEyesInterval = snapshot.interval
                 state.prevEyesBreakDuration = snapshot.breakDuration
+                return .none
+
+            case let .postureSettingsChanged(snapshot):
+                state.postureInterval = snapshot.interval
+                state.postureBreakDuration = snapshot.breakDuration
+                state.prevPostureInterval = snapshot.interval
+                state.prevPostureBreakDuration = snapshot.breakDuration
                 return .none
 
             case let .snoozeTapped(option):
@@ -279,10 +354,10 @@ struct SettingsFeature {
             case let .settingToggleChanged(setting, oldValue, newValue):
                 // #787: the non-bindable rows (master toggle, eyes/posture
                 // enable, smart-pause toggles, …) write through `@AppStorage`
-                // and reach the reducer only via this analytics shim. The
-                // legacy `SettingsViewModel` flipped the saved-banner for
-                // every persisted change, so we mirror that here. Without
-                // this, the master-toggle XCUITest assertion in
+                // and reach the reducer only via this analytics shim. Every
+                // persisted setting change also flips the saved-banner, so
+                // we mirror that here. Without this, the master-toggle
+                // XCUITest assertion in
                 // `SettingsFlowTests.test_settings_savedBanner_appearsOnToggle`
                 // never observes the banner (read as "XCUI flake" until the
                 // root cause was identified).
@@ -304,11 +379,9 @@ struct SettingsFeature {
 
 extension SettingsFeature.SnoozeOption {
     /// Computes the absolute snooze expiry date from an injected reference
-    /// date and calendar. Copied verbatim from
-    /// `SettingsViewModel.SnoozeOption.endDate(referenceDate:calendar:)`
-    /// so behaviour — including the rest-of-day midnight calculation that
-    /// honours DST transitions — matches the legacy implementation
-    /// exactly.
+    /// date and calendar. Behaviour — including the rest-of-day midnight
+    /// calculation that honours DST transitions — is locked in by the
+    /// `SnoozeOption` unit tests.
     func endDate(referenceDate: Date, calendar: Calendar) -> Date {
         switch self {
         case .fiveMinutes:

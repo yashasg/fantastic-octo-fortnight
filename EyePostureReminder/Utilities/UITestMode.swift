@@ -1,12 +1,11 @@
 import Foundation
 
-/// Process-level UI test mode detection.
+/// Process-level UI test mode detection (`#755` Phase E).
 ///
-/// Lifted from `AppCoordinator.isUITestMode` during `#755` Phase E, when the
-/// `AppCoordinator` stack was deleted. Surviving consumers (currently
-/// `AccessibleToggle`) only need the launch-argument check; they never
-/// touched any other `AppCoordinator` state, so a free-standing helper is
-/// sufficient.
+/// Inspects `CommandLine.arguments` for the onboarding-control launch
+/// arguments XCUITest uses to drive deterministic launches. Consumers
+/// (currently `AccessibleToggle`) only need this launch-argument check,
+/// so a free-standing helper is sufficient.
 ///
 /// `#if DEBUG` ensures the `CommandLine` inspection is compiled out of
 /// Release/TestFlight builds, preventing accidental onboarding-state resets

@@ -45,7 +45,7 @@ tests with `// MARK: -` sections.
 ## Mocks and fakes
 
 Place protocol-conforming mocks in `Tests/EyePostureReminderTests/Mocks/`
-and prefix the type with `Mock` (e.g. `MockOverlayPresenting`,
+and prefix the type with `Mock` (e.g. `MockSettingsPersisting`,
 `MockNotificationCenter`). Mocks should be deterministic and capture the
 inputs needed for assertions; avoid recording state the test does not read.
 

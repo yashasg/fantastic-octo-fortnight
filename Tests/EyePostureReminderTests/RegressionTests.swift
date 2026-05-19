@@ -11,7 +11,8 @@
 // Bug 5: Data-driven defaults (AppConfig replaces hardcoded ReminderSettings statics)
 // Bug #119: PauseConditionManager cold-start focus seed — isFocused=true at startMonitoring() must pause immediately
 // Bug #118: ScreenTimeTracker double-resign — second willResignActive must cancel first reset Task (one reset, not two)
-// Bug #117: OverlayManager queue-on-no-scene — showOverlay with no UIWindowScene must queue, not drop
+// Bug #117: OverlayManager queue-on-no-scene — retired by `#920` (UIWindow path
+// removed; TCA-side queue now lives on `AppFeature.State.overlayQueue`)
 
 import ComposableArchitecture
 import SwiftUI
@@ -247,90 +248,131 @@ final class ScreenTimeTrackerRegressionTests: XCTestCase {
     }
 
     /// disableTracking removes a type from the tracker; no callback fires afterward.
+    ///
+    /// Driven deterministically via `sut.tick(now:)` — no wall-clock wait — to
+    /// eliminate the residual ~3.5 s inverted-expectation budget on this surface
+    /// (post-#876/#877 sweep, #878). `tick()` directly exercises the threshold
+    /// guard logic that `disableTracking` mutates; multiple ticks past the
+    /// would-be threshold prove the disabled type never fires.
     func test_disableTracking_removesType_noCallbackFires() {
-        let noCallback = expectation(description: "no callback after disableTracking")
-        noCallback.isInverted = true
+        var fired = false
 
         sut.setThreshold(2, for: .eyes)
         sut.disableTracking(for: .eyes)
-        sut.onThresholdReached = { _ in noCallback.fulfill() }
+        sut.onThresholdReached = { _ in fired = true }
 
-        NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
-        wait(for: [noCallback], timeout: 3.5)
+        sut.tick(now: 1.0)
+        sut.tick(now: 2.0)
+        sut.tick(now: 3.0)
+
+        XCTAssertFalse(fired, "disableTracking must permanently prevent the callback from firing")
     }
 
     /// pause(for:) prevents counter accumulation for one type.
     /// Regression guard: if pausing is ignored, reminders fire during user-initiated snooze.
+    ///
+    /// Driven deterministically via `sut.tick(now:)` — no wall-clock wait — to
+    /// eliminate the residual ~3.5 s inverted-expectation budget on this surface
+    /// (post-#876/#877 sweep, #878). Mirrors the canonical pattern in
+    /// `Services/ScreenTimeTrackerTests.swift::test_pausedType_doesNotFireCallback`.
     func test_pause_preventsCallbackFiring() {
-        let noCallback = expectation(description: "paused type must not fire")
-        noCallback.isInverted = true
+        var fired = false
 
         sut.setThreshold(2, for: .eyes)
         sut.pause(for: .eyes)
-        sut.onThresholdReached = { _ in noCallback.fulfill() }
+        sut.onThresholdReached = { _ in fired = true }
 
-        NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
-        wait(for: [noCallback], timeout: 3.5)
+        sut.tick(now: 1.0)
+        sut.tick(now: 2.0)
+        sut.tick(now: 3.0)
+
+        XCTAssertFalse(fired, "Paused type must not fire the threshold callback regardless of accumulated ticks")
     }
 
     /// After pause + resume, the type must fire again when the threshold is reached.
+    ///
+    /// Driven deterministically via `sut.tick(now:)` — no wall-clock wait — to
+    /// eliminate cumulative simulator-watchdog pressure (#876 / #877). The
+    /// previous implementation posted `didBecomeActiveNotification` and
+    /// awaited a 4.5 s expectation.
     func test_resume_allowsCallbackAfterPause() {
-        let callbackFired = expectation(description: "resumed type fires callback")
-
+        var fired = false
         sut.setThreshold(2, for: .eyes)
         sut.pause(for: .eyes)
         sut.resume(for: .eyes)
         sut.onThresholdReached = { type in
-            if type == .eyes { callbackFired.fulfill() }
+            if type == .eyes { fired = true }
         }
 
-        NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
-        wait(for: [callbackFired], timeout: 4.5)
+        sut.tick(now: 1.0)
+        sut.tick(now: 2.0)
+
+        XCTAssertTrue(fired, "Resumed type must fire callback after sufficient ticks")
     }
 
     /// pauseAll() must prevent ALL types from firing.
+    ///
+    /// Driven deterministically via `sut.tick(now:)` — no wall-clock wait — to
+    /// eliminate the residual ~3.5 s inverted-expectation budget on this surface
+    /// (post-#876/#877 sweep, #878). Mirrors the canonical pattern in
+    /// `Services/ScreenTimeTrackerTests.swift::test_pausedType_doesNotFireCallback`.
     func test_pauseAll_preventsAllCallbacks() {
-        let noCallback = expectation(description: "no callbacks after pauseAll")
-        noCallback.isInverted = true
+        var fired = false
 
         for type in ReminderType.allCases {
             sut.setThreshold(2, for: type)
         }
         sut.pauseAll()
-        sut.onThresholdReached = { _ in noCallback.fulfill() }
+        sut.onThresholdReached = { _ in fired = true }
 
-        NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
-        wait(for: [noCallback], timeout: 3.5)
+        sut.tick(now: 1.0)
+        sut.tick(now: 2.0)
+        sut.tick(now: 3.0)
+
+        XCTAssertFalse(fired, "pauseAll must prevent every type's threshold callback regardless of accumulated ticks")
     }
 
-    // MARK: Threshold Firing (Timer-Based)
+    // MARK: Threshold Firing (Deterministic Tick Driver)
 
     /// Core regression: the tracker must fire onThresholdReached when continuous
     /// screen-on time reaches the configured threshold.
     /// Bug 4 root cause: old wall-clock timers never called onThresholdReached based
     /// on actual screen-on duration — this test would have timed out on the old code.
+    ///
+    /// Driven deterministically via `sut.tick(now:)` — no wall-clock wait — to
+    /// eliminate the simulator-watchdog termination flake observed under
+    /// full-suite Release-config load (#812, #865, #876). The previous
+    /// implementation posted `didBecomeActiveNotification` and awaited a
+    /// 4.5 s expectation; under accumulated suite-wide wall-clock pressure
+    /// the simulator could SIGKILL xctest before this test completed. The
+    /// manual-tick form mirrors the deterministic pattern in
+    /// `Services/ScreenTimeTrackerTests.swift` after #865.
     func test_thresholdReached_firesCallback_forEyes() {
-        let callbackFired = expectation(description: "eyes threshold callback fires")
-
+        var fired = false
         sut.setThreshold(2, for: .eyes)
         sut.onThresholdReached = { type in
-            if type == .eyes { callbackFired.fulfill() }
+            if type == .eyes { fired = true }
         }
 
-        NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
-        wait(for: [callbackFired], timeout: 4.5)
+        sut.tick(now: 1.0)
+        sut.tick(now: 2.0)
+
+        XCTAssertTrue(fired, "Eyes threshold callback must fire once ticks accumulate to the threshold")
     }
 
+    /// See `test_thresholdReached_firesCallback_forEyes` for the
+    /// deterministic-tick rationale (#876).
     func test_thresholdReached_firesCallback_forPosture() {
-        let callbackFired = expectation(description: "posture threshold callback fires")
-
+        var fired = false
         sut.setThreshold(2, for: .posture)
         sut.onThresholdReached = { type in
-            if type == .posture { callbackFired.fulfill() }
+            if type == .posture { fired = true }
         }
 
-        NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
-        wait(for: [callbackFired], timeout: 4.5)
+        sut.tick(now: 1.0)
+        sut.tick(now: 2.0)
+
+        XCTAssertTrue(fired, "Posture threshold callback must fire once ticks accumulate to the threshold")
     }
 
     /// After the threshold fires, the counter resets to 0 — enabling a second callback cycle.
@@ -361,11 +403,19 @@ final class ScreenTimeTrackerRegressionTests: XCTestCase {
     /// The callback must NOT fire during screen-off.
     /// Regression: if the timer is not stopped on resignActive, reminders fire while
     /// the screen is off (the wall-clock timer bug).
+    ///
+    /// Tightened inverted window (3.5 s → 1.8 s) and compressed `threshold` to
+    /// `0.5` (post-#876/#877 sweep, #878). The contract under test is "after
+    /// `willResignActive`, the real `Timer.scheduledTimer` is invalidated and
+    /// no further ticks fire" — so the wait window is the test. 1.8 s spans
+    /// the worst-case `Timer.scheduledTimer(withTimeInterval: 1.0)` + 0.5 s
+    /// tolerance plus a 0.3 s safety margin, so a regressed (still-running)
+    /// timer would surface as a callback within the window.
     func test_willResignActive_stopsAccumulation_noCallbackDuringScreenOff() {
         let noCallback = expectation(description: "no callback while screen is off")
         noCallback.isInverted = true
 
-        sut.setThreshold(2, for: .eyes)
+        sut.setThreshold(0.5, for: .eyes)
         sut.onThresholdReached = { _ in noCallback.fulfill() }
 
         // Start ticking, then immediately resign active.
@@ -374,32 +424,44 @@ final class ScreenTimeTrackerRegressionTests: XCTestCase {
         NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
         NotificationCenter.default.post(name: UIApplication.willResignActiveNotification, object: nil)
 
-        wait(for: [noCallback], timeout: 3.5)
+        wait(for: [noCallback], timeout: 1.8)
     }
 
     /// Returning to active within the grace period resumes counting from where it left off
     /// (counter is NOT reset). The callback must eventually fire.
     /// Regression guard: if the grace period cancellation doesn't work, counters reset on every
     /// brief interruption (notification banner, incoming call), making long intervals impossible.
+    ///
+    /// Driven deterministically via `tracker.tick(now:)` with a compressed
+    /// `resetGracePeriod: 0.3` — no `RunLoop.current.run(until:)` and no
+    /// wall-clock wait (post-#876/#877 sweep, #878). The previous implementation
+    /// paid two `RunLoop` runs (~0.7 s) plus a 6 s expectation timeout. Mirrors
+    /// the canonical pattern in
+    /// `Services/ScreenTimeTrackerTests.swift::test_gracePeriod_withinGrace_preservesElapsedTime`.
     func test_withinGracePeriod_returnsToActive_resumesCounting() {
-        let callbackFired = expectation(description: "callback fires after resume within grace period")
+        let tracker = ScreenTimeTracker(resetGracePeriod: 0.3)
+        defer { tracker.stop() }
 
-        sut.setThreshold(3, for: .eyes)
-        sut.onThresholdReached = { type in
-            if type == .eyes { callbackFired.fulfill() }
+        var callCount = 0
+        tracker.setThreshold(3, for: .eyes)
+        tracker.onThresholdReached = { type in
+            if type == .eyes { callCount += 1 }
         }
 
-        // Start counting.
-        NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
+        // Accumulate ~2.0 s of elapsed time (below threshold = 3).
+        tracker.tick(now: 1.0)
+        tracker.tick(now: 2.0)
+        XCTAssertEqual(callCount, 0, "Threshold = 3 must not fire after 2 s of accumulation")
 
-        // Briefly resign (~0.5s accumulated), then return within the 5-second grace period.
-        RunLoop.current.run(until: Date(timeIntervalSinceNow: 0.5))
+        // Brief resign + immediate return — synchronous posts run inside the
+        // 0.3 s grace window, so the resetTask is cancelled before it fires.
         NotificationCenter.default.post(name: UIApplication.willResignActiveNotification, object: nil)
-        RunLoop.current.run(until: Date(timeIntervalSinceNow: 0.2))
         NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
 
-        // Resumed from ~0.5s; callback should fire within ~3s more.
-        wait(for: [callbackFired], timeout: 6.0)
+        // If elapsed was preserved across the resign/return round-trip, one
+        // post-resume tick brings the counter from 2.0 → 3.0 and fires the callback.
+        tracker.tick(now: 3.0)
+        XCTAssertEqual(callCount, 1, "Returning within grace must preserve elapsed counters")
     }
 }
 // MARK: ─── Bug 5: Data-Driven Defaults ───────────────────────────────────────
@@ -757,13 +819,22 @@ final class PauseConditionColdStartTests: XCTestCase {
 /// **Fix:** `resetTask?.cancel()` is called before `resetTask = Task { … }` in
 /// `handleWillResignActive` (`ScreenTimeTracker.swift` line ~224).
 ///
-/// **How this catches a regression:**
-/// A threshold of 5.5 s guarantees the threshold requires 6 ticks (~6 s) to fire.
-/// With the fix, no orphan exists; elapsed accumulates to 5.5 s and the threshold
-/// fires at ~6 s. With the bug, the orphaned first Task fires `resetAll()` at t ≈ 5 s
-/// (before elapsed reaches the threshold), wiping the counter; the threshold then
-/// needs another 6 ticks and fires at ~11 s.
-/// Timeout of 9 s: passes with the fix (~6 s actual), times out without it (~11 s).
+/// **How this catches a regression (deterministic-tick variant — #876):**
+/// The SUT is constructed with `resetGracePeriod: 0.3` so the orphan-Task (if
+/// any) fires `resetAll()` ~0.3 s after the first `willResignActive`, instead
+/// of the 5 s production default. Elapsed time is pre-accumulated to 2.0 s via
+/// `sut.tick(now:)` (under a 2.5 s threshold), then the double-resign +
+/// becomeActive sequence is posted. After waiting one grace period plus a
+/// safety margin, a final `sut.tick(now:)` adds ~1.0 s of elapsed time:
+/// - **Fix:** elapsed remains 2.0 s after the lifecycle round-trip; the final
+///   tick brings it to ~3.0 s ≥ 2.5 s → threshold callback fires.
+/// - **Bug:** the orphaned Task wiped elapsed to 0 during the wait; the final
+///   tick brings it to ~1.0 s < 2.5 s → callback never fires and the
+///   expectation times out.
+///
+/// This eliminates the previous 9 s wall-clock budget (which was SIGKILLed
+/// under full-suite Release-config load — #876) and mirrors the deterministic
+/// tick pattern used in `Services/ScreenTimeTrackerTests.swift` after #812/#865.
 @MainActor
 final class ScreenTimeDoubleResignTests: XCTestCase {
 
@@ -771,7 +842,10 @@ final class ScreenTimeDoubleResignTests: XCTestCase {
 
     override func setUp() {
         super.setUp()
-        sut = ScreenTimeTracker()
+        // Compressed grace period (#876): 0.3 s lets the orphaned reset-Task
+        // (bug path) fire well within the test budget without the previous
+        // 5 s wall-clock dependency that triggered simulator-watchdog SIGKILLs.
+        sut = ScreenTimeTracker(resetGracePeriod: 0.3)
     }
 
     override func tearDown() {
@@ -781,124 +855,57 @@ final class ScreenTimeDoubleResignTests: XCTestCase {
     }
 
     func test_doubleWillResignActive_secondCancelsFirst_onlyOneResetOccurs() async {
-        // Threshold > 5 s so the orphaned first Task fires resetAll() BEFORE the
-        // threshold would be reached. 5.5 s requires 6 ticks; orphan fires at ~5 s.
-        sut.setThreshold(5.5, for: .eyes)
+        sut.setThreshold(2.5, for: .eyes)
 
         let thresholdFired = expectation(
-            description: "#118: threshold fires at ~6s (fix) not ~11s (bug — orphaned Task wipes counter at ~5s)")
+            description: "#118: threshold fires only when the orphaned reset Task was cancelled")
         sut.onThresholdReached = { type in
             if type == .eyes { thresholdFired.fulfill() }
         }
 
-        // Start the 1-second tick timer.
-        NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
+        // Pre-accumulate elapsed to 2.0 s (just under the 2.5 s threshold) via
+        // deterministic ticks — no wall-clock dependency.
+        // First tick: lastTickTime == 0 → delta defaults to 1.0 → elapsed = 1.0.
+        // Second tick: delta = 2.0 - 1.0 = 1.0 → elapsed = 2.0.
+        sut.tick(now: 1.0)
+        sut.tick(now: 2.0)
 
-        // Double-resign: the second resign MUST call resetTask?.cancel() before arming
-        // a new Task (the fix). Without the fix, the first Task is orphaned and fires
-        // resetAll() 5 s later regardless of subsequent lifecycle events.
+        // Double-resign: arms reset Task A. With the fix, the second resign
+        // cancels A before arming Task B; without the fix, A is orphaned.
+        // The trailing didBecomeActive cancels Task B in both cases (and
+        // restarts the 1 s production tick timer, which we shut down below
+        // before it can fire and mask the bug).
         NotificationCenter.default.post(name: UIApplication.willResignActiveNotification, object: nil)
         NotificationCenter.default.post(name: UIApplication.willResignActiveNotification, object: nil)
-
-        // Return to active within the grace period — this cancels the one remaining
-        // Task (the second resign's Task with the fix applied).
         NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
 
-        // Fix: only one Task was ever live; it was cancelled by didBecomeActive.
-        //      Elapsed accumulates from 0; threshold fires at ~6 s. ✓
-        // Bug: first Task was NOT cancelled; second Task was cancelled by didBecomeActive.
-        //      Orphaned first Task fires resetAll() at t ≈ 5 s, wiping the counter.
-        //      Elapsed restarts from 0; threshold fires at ~11 s. ✗ (outside 9 s window)
-        await fulfillment(of: [thresholdFired], timeout: 9.0)
+        // Wait one grace period (0.3 s) plus a safety margin (0.2 s) so the
+        // orphan-Task (bug path) has time to invoke `resetAll()` on the main
+        // actor. With the fix applied no Task is alive, so this wait is a
+        // no-op for the elapsed counters.
+        try? await Task.sleep(nanoseconds: 500_000_000)
+
+        // One more deterministic tick. Fix: elapsed (2.0) + delta (1.0) = 3.0
+        // ≥ threshold (2.5) → callback fires synchronously inside `tick`.
+        // Bug: orphan reset elapsed to 0 during the wait; delta (1.0) <
+        // threshold → callback does NOT fire.
+        sut.tick(now: 3.0)
+
+        // Shut down the production 1 s tick timer (started by the trailing
+        // didBecomeActive) before its earliest possible fire (~1.0 s post
+        // didBecomeActive). Without this, the timer could fire during
+        // `fulfillment` and spuriously cross the threshold in the bug path,
+        // masking the regression. `stop()` calls `resetAll()` after the
+        // expectation has already been fulfilled (or not) synchronously above.
+        sut.stop()
+
+        await fulfillment(of: [thresholdFired], timeout: 0.2)
     }
 }
 
-// MARK: ─── Bug #117: OverlayManager Queue-on-No-Scene ────────────────────────
-
-/// Regression tests for Bug #117: `OverlayManager.showOverlay()` must queue the
-/// request when no active `UIWindowScene` is found, not silently drop it.
-///
-/// **Root cause:** Before the fix, the no-scene guard path returned without
-/// appending to `overlayQueue`, discarding the overlay request entirely.
-///
-/// **Fix:** The `else` branch of the window-scene guard now appends to
-/// `overlayQueue` so the request is presented once a scene becomes foreground-active.
-///
-/// **Testability note:**
-/// The private `overlayQueue` cannot be inspected directly. Full end-to-end FIFO
-/// verification (queue fills → scene activates → presentNextQueuedOverlay dequeues)
-/// requires a live `UIWindowScene` and is covered by the simulator integration suite.
-/// The unit tests below verify:
-///   1. `showOverlay` does not crash when no scene is active (headless test runner).
-///   2. The `onDismiss` callback is NOT called synchronously (it would be called
-///      immediately only if the overlay were "silently completed" instead of queued).
-///   3. `isOverlayVisible` remains `false` (no scene → no window created).
-///   4. `clearQueue()` drains the queue without crash (proves a queue exists to drain).
-///
-/// Reducer-level notification-routing coverage lives in
-/// `SchedulingNotificationRoutingTests.test_notificationRouted_reminderEyes_runsFallbackPipeline`;
-/// this class stays focused on the no-scene queueing contract inside `OverlayManager`.
-@MainActor
-final class OverlayQueueNoSceneTests: XCTestCase {
-
-    /// Core regression: `showOverlay` must not crash when there is no active
-    /// UIWindowScene (the headless test runner has none). Before the fix the path
-    /// fell through with a silent drop; the fix adds the queue-append so the call
-    /// succeeds without a scene.
-    func test_showOverlay_withNoActiveWindowScene_doesNotCrash() {
-        let manager = OverlayManager()
-        manager.showOverlay(for: .eyes, duration: 20, hapticsEnabled: false, pauseMediaEnabled: false) {}
-        manager.clearQueue()
-    }
-
-    /// The `onDismiss` callback must NOT fire synchronously for a queued request.
-    /// A silent-drop implementation might invoke the callback immediately to "complete"
-    /// the request; queueing holds the callback until the overlay is actually shown
-    /// and dismissed.
-    func test_showOverlay_withNoActiveWindowScene_doesNotFireDismissCallbackImmediately() {
-        let manager = OverlayManager()
-        var dismissFired = false
-
-        manager.showOverlay(for: .eyes, duration: 20, hapticsEnabled: false, pauseMediaEnabled: false) {
-            dismissFired = true
-        }
-
-        XCTAssertFalse(
-            dismissFired,
-            "#117 regression: onDismiss must not fire synchronously for a queued request. "
-            + "A silent drop that calls onDismiss() immediately would cause the scheduling flow to "
-            + "reschedule the reminder without ever having shown the overlay.")
-
-        manager.clearQueue()
-    }
-
-    /// No overlay window can be created without a scene — `isOverlayVisible` must
-    /// stay `false` after a `showOverlay` call in a headless test environment.
-    func test_showOverlay_withNoActiveWindowScene_isOverlayVisibleRemainsFalse() {
-        let manager = OverlayManager()
-
-        manager.showOverlay(for: .posture, duration: 15, hapticsEnabled: true, pauseMediaEnabled: false) {}
-
-        XCTAssertFalse(
-            manager.isOverlayVisible,
-            "#117 regression: isOverlayVisible must stay false when showOverlay is called with no active scene")
-
-        manager.clearQueue()
-    }
-
-    /// Multiple `showOverlay` calls with no active scene must all be queued without
-    /// crashing. `clearQueue()` must succeed (proving the queue was populated).
-    func test_showOverlay_multipleCallsWithNoScene_allQueueWithoutCrash() {
-        let manager = OverlayManager()
-
-        manager.showOverlay(for: .eyes, duration: 20, hapticsEnabled: false, pauseMediaEnabled: false) {}
-        manager.showOverlay(for: .posture, duration: 10, hapticsEnabled: false, pauseMediaEnabled: false) {}
-        manager.showOverlay(for: .eyes, duration: 30, hapticsEnabled: true, pauseMediaEnabled: false) {}
-
-        // clearQueue must not crash — it drains whatever was queued.
-        manager.clearQueue()
-
-        // After clearing, isOverlayVisible must still be false.
-        XCTAssertFalse(manager.isOverlayVisible)
-    }
-}
+// Bug #117 (`OverlayManager.showOverlay` queue-on-no-scene) was retired by
+// `#920` along with the `OverlayManager` UIWindow path. The TCA reducer now
+// owns overlay queueing via `AppFeature.State.overlayQueue` (`#289` FIFO
+// preservation tested under `AppFeatureTests.overlayQueue_*`); the no-scene
+// branch is moot once `RootView.fullScreenCover` is the only presentation
+// surface.

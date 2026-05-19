@@ -5,7 +5,7 @@ import UserNotifications
 /// TCA dependency client wrapping `UNUserNotificationCenter` for reducer
 /// consumption.
 ///
-/// Phase 0 of the MVVM → TCA migration (#665). The `liveValue` adapter
+/// Phase 0 of the TCA migration (#665). The `liveValue` adapter
 /// forwards every call to `UNUserNotificationCenter.current()`, matching the
 /// signatures expected by Phase 1 reducers.
 @DependencyClient

@@ -4,21 +4,26 @@ import UserNotifications
 
 /// TCA reducer (`p0-tca-7` / #670) backing the onboarding flow.
 ///
-/// Owns the observable behaviour previously handled by `OnboardingView` +
-/// the `OnboardingCoordinator`-style hooks that historically routed
-/// through `AppCoordinator` (deleted in `#755` Phase E). The onboarding
-/// views now read from this store directly, so the legacy coordinator
-/// plumbing is fully retired.
+/// Owns the observable behaviour for the onboarding tab carousel:
+/// `currentPage` navigation and the notification + Screen Time
+/// authorisation status (sourced from `NotificationClient` and
+/// `ScreenTimeAuthorizationClient`). The onboarding views read from this
+/// store directly.
 ///
 /// ## Persistence and parent wiring
 ///
 /// `.completedOnboarding` is emitted but never acted on locally; the parent
 /// (`AppFeature`) listens for it to flip
 /// `@AppStorage(AppStorageKey.hasSeenOnboarding)` and dismiss the
-/// onboarding flow. `showAppCategoryPicker` follows the same parent-driven
-/// presentation contract: this reducer only flips the flag while the parent
-/// presents `Destination.appCategoryPicker` (Phase 2 wiring lives in
-/// `p0-tca-11` / #674).
+/// onboarding flow. `.openAppCategoryPicker` follows the same
+/// parent-observed-signal contract: this reducer emits the action with no
+/// local state mutation, and the parent intercepts it to write
+/// `state.destination = .appCategoryPicker(...)` so `RootView`'s
+/// `.fullScreenCover` presents the canonical picker store (#918, replacing
+/// the previous `OnboardingView.@State` mirror + local-store sheet
+/// wrapper). Dismissal flows back through SwiftUI's `@Environment(\.dismiss)`
+/// on the picker's Done button, which clears the destination via the
+/// standard `@Presents` teardown.
 @Reducer
 struct OnboardingFeature {
     @ObservableState
@@ -33,9 +38,6 @@ struct OnboardingFeature {
 
         /// Latest `UNAuthorizationStatus` observed via `NotificationClient`.
         var notificationAuthStatus: UNAuthorizationStatus = .notDetermined
-
-        /// Drives parent-side presentation of `AppCategoryPickerView`.
-        var showAppCategoryPicker: Bool = false
     }
 
     enum Action: Equatable {
@@ -48,8 +50,12 @@ struct OnboardingFeature {
         case requestScreenTimeAuthorization
         case notificationStatusChanged(UNAuthorizationStatus)
         case screenTimeStatusChanged(ScreenTimeAuthorizationStatus)
+        /// Parent-observed signal — `AppFeature` intercepts this action to
+        /// present the canonical `AppCategoryPickerFeature` destination
+        /// (#918). The reducer itself performs no local state mutation;
+        /// dismissal is handled via the picker's Done button, which calls
+        /// `@Environment(\.dismiss)` and flows through `@Presents` teardown.
         case openAppCategoryPicker
-        case dismissAppCategoryPicker
         case completedOnboarding
         /// Writes the current `TabView` page index back into the reducer.
         /// `nextTapped` covers tap-based navigation; this case covers
@@ -67,9 +73,8 @@ struct OnboardingFeature {
     static let lastPageIndex: Int = 3
 
     /// Notification authorisation options requested by the onboarding
-    /// permission page. Matches the set used by the legacy `AppCoordinator`
-    /// (deleted in `#755` Phase E) so the system prompt copy stayed
-    /// identical across the migration.
+    /// permission page. Stable across releases so the system prompt copy
+    /// shown to existing users does not change.
     static let notificationOptions: UNAuthorizationOptions = [.alert, .sound, .badge]
 
     var body: some ReducerOf<Self> {
@@ -100,19 +105,20 @@ struct OnboardingFeature {
 
             case .requestNotificationPermission:
                 return .run { send in
-                    // Permission grant outcome (granted / denied) is reflected
-                    // in the subsequent authorisation status read; the boolean
-                    // result and any throws are intentionally swallowed here
-                    // because `notificationStatusChanged` is the single
-                    // source of truth for downstream UI.
-                    _ = try? await notification.requestAuthorization(Self.notificationOptions)
+                    // The boolean returned by `requestAuthorization(_:)` records
+                    // the user's response to the system prompt; we forward it
+                    // to analytics as `.notificationPermissionResponded(granted:)`
+                    // (#896). Throws are still swallowed — the subsequent
+                    // `authorizationStatus()` read remains the single source of
+                    // truth for UI, and we deliberately skip the analytics
+                    // emission on throw so the stream only carries real
+                    // user-driven responses.
+                    let granted = try? await notification.requestAuthorization(Self.notificationOptions)
+                    if let granted {
+                        analytics.log(.notificationPermissionResponded(granted: granted))
+                    }
                     let status = await notification.authorizationStatus()
                     await send(.notificationStatusChanged(status))
-                    // Spec calls for `.notificationPermissionResponded(...)` here;
-                    // that case is not present in the current `AnalyticsEvent`
-                    // surface and adding it would violate the "own this file
-                    // only" constraint, so the analytics call is deferred to
-                    // the AnalyticsLogger surface extension that owns it.
                 }
 
             case .requestScreenTimeAuthorization:
@@ -130,11 +136,8 @@ struct OnboardingFeature {
                 return .none
 
             case .openAppCategoryPicker:
-                state.showAppCategoryPicker = true
-                return .none
-
-            case .dismissAppCategoryPicker:
-                state.showAppCategoryPicker = false
+                // Parent-observed signal — `AppFeature` intercepts to write
+                // `state.destination = .appCategoryPicker(...)` (#918).
                 return .none
 
             case .completedOnboarding:

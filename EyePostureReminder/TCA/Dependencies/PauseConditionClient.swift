@@ -4,7 +4,7 @@ import Foundation
 /// TCA dependency client wrapping `PauseConditionManager` for reducer
 /// consumption.
 ///
-/// Phase 0 of the MVVM → TCA migration (#665). The `liveValue` adapter
+/// Phase 0 of the TCA migration (#665). The `liveValue` adapter
 /// installs a single `onPauseStateChanged` closure on the underlying manager
 /// that multicasts to every active `pauseChanges` subscriber via
 /// per-subscriber `AsyncStream` continuations.

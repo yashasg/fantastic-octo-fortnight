@@ -21,13 +21,16 @@ import UserNotifications
 /// scopes: `SettingsClient`, `NotificationClient`, `ReminderSchedulerClient`,
 /// `OverlayClient`, `ScreenTimeTrackerClient`, `PauseConditionClient`,
 /// `IPCClient`, `DeviceActivityMonitorClient`,
-/// `ScreenTimeAuthorizationClient`, and `AnalyticsClient`.
+/// `ScreenTimeAuthorizationClient`, `AnalyticsClient`, and
+/// `SessionTimingClient`.
 enum TCATestDependencies {
 
     static func silentSettingsClient() -> SettingsClient {
         SettingsClient(
             snapshot: { ReminderSettings(interval: 0, breakDuration: 0) },
             stream: { .finished },
+            postureSnapshot: { ReminderSettings(interval: 0, breakDuration: 0) },
+            postureStream: { .finished },
             enabledFlagsSnapshot: { .allEnabled },
             enabledFlagsStream: { .finished },
             updateGlobalEnabled: { _ in },
@@ -64,7 +67,7 @@ enum TCATestDependencies {
 
     static func silentReminderSchedulerClient() -> ReminderSchedulerClient {
         ReminderSchedulerClient(
-            scheduleReminders: { _ in },
+            scheduleReminders: { _, _ in },
             rescheduleReminder: { _, _ in },
             cancelReminder: { _ in },
             cancelAllReminders: {}
@@ -73,12 +76,11 @@ enum TCATestDependencies {
 
     static func silentOverlayClient() -> OverlayClient {
         OverlayClient(
-            show: { _, _, _, _ in },
-            dismiss: {},
-            clearQueue: {},
-            clearQueueForType: { _ in },
-            isVisible: { false },
-            lifecycleEvents: { .finished }
+            lifecycleEvents: { .finished },
+            broadcast: { _ in },
+            pauseExternalAudio: {},
+            resumeExternalAudio: {},
+            postScreenChanged: {}
         )
     }
 
@@ -111,14 +113,25 @@ enum TCATestDependencies {
             writeSelection: { _ in false },
             record: { _, _ in },
             trueInterruptChanges: { .finished },
-            selectionChanges: { .finished }
+            selectionChanges: { .finished },
+            recentEvents: { [] },
+            fallbackRoute: { _ in nil }
         )
     }
 
     static func silentDeviceActivityMonitorClient() -> DeviceActivityMonitorClient {
         DeviceActivityMonitorClient(
             schedule: { _, _ in },
-            cancel: { _ in }
+            cancel: { _ in },
+            startScheduleForOverlay: { _ in }
+        )
+    }
+
+    static func silentSessionTimingClient() -> SessionTimingClient {
+        SessionTimingClient(
+            sessionStarted: { _, _ in },
+            sessionEnded: { _, _ in },
+            launchReady: { _ in }
         )
     }
 
@@ -137,5 +150,6 @@ enum TCATestDependencies {
         dependencies.deviceActivityMonitorClient = silentDeviceActivityMonitorClient()
         dependencies.screenTimeAuthorizationClient = ScreenTimeAuthorizationClient()
         dependencies.analyticsClient = AnalyticsClient(log: { _ in })
+        dependencies.sessionTimingClient = silentSessionTimingClient()
     }
 }

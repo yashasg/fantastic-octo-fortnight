@@ -42,7 +42,7 @@ User taps app icon (first time)
 Launch Screen (standard iOS animation, < 1 second)
     │
     ▼
-ContentView checks @AppStorage("hasSeenOnboarding")
+RootView checks @AppStorage("hasSeenOnboarding")
     │
     ├─ false (first launch)
     │      │
@@ -130,7 +130,7 @@ ContentView checks @AppStorage("hasSeenOnboarding")
     │      ▼
     │  hasSeenOnboarding = true (written to UserDefaults)
     │  onboardingCompleted(cta: .getStarted or .customize) telemetry logged
-    │  ContentView transitions to HomeView (opacity crossfade, 0.4s)
+    │  RootView transitions to HomeView (opacity crossfade, 0.4s)
     │  If permission granted, reminders scheduled; if denied, fallback to local alerts
     │
     └─ true (returning user)
@@ -167,7 +167,9 @@ iOS fires Eye Reminder notification
     │      │
     │      ▼
     │  App receives notification
-    │  OverlayManager.show() called immediately
+    │  SchedulingFeature emits .delegate(.presentOverlay(.eyes)) →
+    │  AppFeature writes OverlayFeature.State into @Presents var overlay →
+    │  RootView.fullScreenCover renders OverlayView immediately
     │  (notification does NOT appear as banner)
     │      │
     │      ▼
@@ -183,7 +185,7 @@ iOS fires Eye Reminder notification
     │      │      │
     │      │      ▼
     │      │  Overlay slides up and off-screen (0.2s ease-in)
-    │      │  Overlay window removed from hierarchy
+    │      │  AppFeature.State.overlay cleared (fullScreenCover dismissed)
     │      │  Snooze action sheet appears (Phase 2):
     │      │    [Snooze 5 min]  [Snooze 1 hour]  [Rest of Day]  [No Snooze]
     │      │  User selects option → snooze activated or dismissed
@@ -223,8 +225,8 @@ iOS fires Eye Reminder notification
                   ▼
               Device unlocks (Face ID / Touch ID)
               App opens
-              OverlayManager.show() called
-              Overlay appears (same flow as above)
+              UNUserNotificationCenterDelegate sets AppFeature.State.overlay
+              (RootView.fullScreenCover renders OverlayView — same flow as above)
 ```
 
 **Key UX decisions:**
@@ -252,7 +254,7 @@ SchedulingFeature reducer evaluates shouldUseShieldPath
     ├─ YES (shield available, configured, entitlement granted)
     │      │
     │      ▼
-    │  ManagedSettingsCoordinator applies shield to selected apps
+    │  `ManagedSettingsClient` (TCA dep) applies shield to selected apps
     │  Notification scheduling SKIPPED for this event
     │  (no concurrent banner, no lock-screen notification)
     │
@@ -266,7 +268,7 @@ SchedulingFeature reducer evaluates shouldUseShieldPath
 - True Interrupt mode is disabled in Settings
 - No apps or categories are selected for shielding
 - FamilyControls entitlement not yet approved (#201 BLOCKER)
-- `ManagedSettingsCoordinator` throws an error applying the shield
+- `ManagedSettingsClient` (TCA dep) returns an error applying the shield
 - Device does not support Screen Time (e.g., Simulator, MDM restrictions)
 
 **The two paths are mutually exclusive per reminder event.** There is no scenario where both a shield and a notification fire for the same break event.
@@ -304,7 +306,7 @@ ShieldActionProvider receives action
 Sends Action.requestTemporaryAccess(duration: 5 min) into SchedulingFeature
     │
     ▼
-ManagedSettingsCoordinator temporarily removes shield (5-min window)
+`ManagedSettingsClient` (TCA dep) temporarily removes shield (5-min window)
 User can use app normally for 5 minutes
     │
     ▼
@@ -438,7 +440,7 @@ User taps notification
     ▼
 App launches (cold start)
 UNUserNotificationCenterDelegate.didReceive() called
-OverlayManager.show() triggered
+SchedulingFeature → AppFeature.State.overlay set (RootView.fullScreenCover renders OverlayView)
     │
     ▼
 Overlay appears normally
@@ -673,33 +675,34 @@ All reminders continue normally
 **Handling:**
 ```
 First reminder fires
-OverlayManager.show(type: .eyes)
-Overlay window created, eye break displayed
+SchedulingFeature emits .delegate(.presentOverlay(.eyes)) →
+AppFeature.State.overlay = OverlayFeature.State(.eyes)
+RootView.fullScreenCover renders OverlayView (eye break displayed)
     │
     ▼
 [5 seconds later]
 Second reminder fires (posture)
-OverlayManager checks: is an overlay currently visible?
+AppFeature checks: is state.overlay != nil?
     │
     ├─ YES
     │      │
     │      ▼
-    │  Queue second reminder internally (stored in OverlayManager)
-    │  Do NOT create second overlay window
+    │  Append to AppFeature.State.overlayQueue (TCA-owned queue)
+    │  Do NOT replace the in-flight overlay
     │      │
     │      ▼
     │  User dismisses first overlay (eyes)
     │      │
     │      ▼
-    │  OverlayManager.dismiss() called
+    │  OverlayFeature .dismiss → AppFeature clears @Presents var overlay
     │  Check queue: is there a pending reminder?
     │      │
     │      └─ YES
     │             │
     │             ▼
     │         Wait 2 seconds (breathing room)
-    │         OverlayManager.show(type: .posture)
-    │         Second overlay appears
+    │         AppFeature.State.overlay = OverlayFeature.State(.posture)
+    │         RootView.fullScreenCover renders the queued overlay
     │
     └─ NO
            │
@@ -737,12 +740,12 @@ OverlayManager checks: is an overlay currently visible?
 3. Notification Permission screen explains why alerts matter, then offers "Allow Reminder Alerts" or "Not now"
 4. Reminder Setup screen lets user pick eye/posture intervals with interactive pickers; "Get Started" advances to Screen 4
 5. True Interrupt Mode screen explains Screen Time-based blocking; user taps "Skip for Now" or "Customize Settings"
-6. `hasSeenOnboarding` flag set → ContentView crossfades to HomeView
+6. `hasSeenOnboarding` flag set → RootView crossfades to HomeView
 7. If "Customize Settings" was tapped, `openSettingsOnLaunch = true` → HomeView opens Settings sheet immediately
 8. Reminders are scheduled. Done.
 
 **Implementation details:**
-- `ContentView` checks `@AppStorage(hasSeenOnboarding)` to gate the flow
+- `RootView` checks `@AppStorage(hasSeenOnboarding)` to gate the flow
 - `OnboardingView` uses a `TabView` with `PageTabViewStyle` for horizontal swipe between screens
 - `OnboardingInterruptModeView` (Screen 4) blocks accidental swipe-past with a `highPriorityGesture`
 - `OnboardingSetupView` (Screen 3) has one CTA: "Get Started" (advances to Screen 4); interval pickers bind directly to `SettingsStore`
@@ -945,11 +948,12 @@ SchedulingFeature observes the snoozedUntilStream and executes the cancel-all pi
 Step 1: overlayClient.clearQueue()    ← MUST run first (see #267)
     │
     ▼
-Step 2: if overlayClient.isOverlayVisible → overlayClient.dismissOverlay()
-         (queue is empty; presentNextQueuedOverlay() sees nothing to show)
+Step 2: overlayClient.dismiss()
+         (queue already cleared in Step 1, so no next overlay is auto-presented;
+          unconditional — `OverlayClient.dismiss()` is a no-op if no overlay is on screen)
     │
     ▼
-Step 3: ManagedSettingsCoordinator.clearAllShields()
+Step 3: `managedSettingsClient.clearAllShields()` (TCA dep, pending #201)
          (active shield removed from all shielded apps immediately)
     │
     ▼
@@ -965,15 +969,15 @@ Snooze active: no new overlays, no new shields, no new notifications
 until snooze expires or user taps "Cancel snooze"
 ```
 
-> ⚠️ **Ordering matters (#267):** `clearQueue()` must execute before `dismissOverlay()`. If `dismissOverlay()` is called first, it internally calls `presentNextQueuedOverlay()`, which dequeues and shows the next queued overlay before `clearQueue()` can remove it. That orphan overlay has no dismissal path because `screenTimeTracker` is already paused. See **#267** for the code-level fix (`cancelAllReminders()` ordering bug).
+> ⚠️ **Ordering matters (#267):** `clearQueue()` must execute before `dismiss()`. If `dismiss()` is called first, the underlying overlay-layer dismissal path will dequeue and present the next queued overlay before `clearQueue()` can remove it. That orphan overlay has no dismissal path because `screenTimeTracker` is already paused. See **#267** for the code-level fix (`cancelAllReminders()` ordering bug). Overlay presentation is now TCA-owned (`AppFeature.State.overlay` → `RootView.fullScreenCover`; the legacy `OverlayManager` UIWindow path was retired in **#920**). The canonical TCA-era call-site is `SchedulingFeature.pauseConditionChangedEffect` (`EyePostureReminder/TCA/Features/SchedulingFeature.swift:461-466`); see also the canonical post-#677 / #755 pipeline in **§8.2 Snooze Controls** below.
 
 #### Shield state when snooze is active
 
 - All Screen Time shields are **removed immediately** on snooze activation.
 - Users can open previously-shielded apps freely during the snooze window.
-- `ManagedSettingsCoordinator` re-applies shields when snooze expires (on snooze-wake).
+- `managedSettingsClient` (TCA dep) re-applies shields when snooze expires (on snooze-wake).
 
-> **Status:** `ManagedSettingsCoordinator` shield-clearing on snooze is **not yet integrated** (pending #201 entitlement). The `cancelAllReminders()` ordering fix (#267) must land first, then shield-clearing can be wired in.
+> **Status:** `managedSettingsClient` shield-clearing on snooze is **not yet integrated** (pending #201 entitlement and the TCA `ManagedSettings` dependency client; the legacy `ManagedSettingsCoordinator` was removed during the TCA migration). The `cancelAllReminders()` ordering fix (#267) must land first, then shield-clearing can be wired in.
 
 #### Snooze expiry (snooze-wake) while app is shielded
 
@@ -981,11 +985,11 @@ If the snooze wake fires while the user has re-opened a previously-shielded app:
 
 1. `SchedulingFeature` reducer receives `.snoozeWakeFired` (routed from the snooze-wake notification or in-process snooze-wake task).
 2. `trackerClient.resumeAll()` re-enables monitoring.
-3. If `shouldUseShieldPath` → `ManagedSettingsCoordinator` re-applies shields.
+3. If `shouldUseShieldPath` → `managedSettingsClient` (TCA dep) re-applies shields.
 4. Screen Time shield reappears on shielded apps (system-level, iOS-managed).
 5. Snooze-wake overlay / notification fires via normal path (Section 2.2 / 2.6).
 
-There is **no race** between shield re-application and the wake notification because shield application is synchronous via `ManagedSettingsCoordinator` and the wake notification is fired after `resumeAll()` completes.
+There is **no race** between shield re-application and the wake notification because shield application is synchronous via `managedSettingsClient` (TCA dep) and the wake notification is fired after `resumeAll()` completes.
 
 #### User navigates to Settings mid-shield
 
@@ -1085,13 +1089,14 @@ Snooze controls are in the **Settings screen**, not on the overlay. This separat
 
 **Snooze access path:** Overlay → tap ⚙️ → Settings screen → snooze button. Two deliberate taps prevents accidental suppression.
 
-**Snooze activation sequence (canonical):**
-1. `overlayManager.clearQueue()` — clears queued overlays first (see #267)
-2. `overlayManager.dismissOverlay()` — dismisses visible overlay (queue already empty; no orphan shown)
-3. `ManagedSettingsCoordinator.clearAllShields()` — removes active True Interrupt shields (pending #201)
-4. `scheduler.cancelAllReminders()` — cancels all scheduled notifications
-5. `screenTimeTracker.pauseAll()` — pauses tracking
-6. Snooze-wake notification scheduled
+**Snooze activation sequence (canonical, TCA pipeline post-#677 / #755):**
+1. User taps a snooze option in Settings → `SettingsFeature.snoozeTapped(option)` (`SettingsFeature.swift:319`) computes the endDate and writes `settingsClient.setSnoozedUntil(endDate)` (`SettingsFeature.swift:323`).
+2. The settings stream propagates the new `snoozedUntil` into `SchedulingFeature`, whose `scheduleRemindersEffect` enters the snooze branch (`SchedulingFeature.swift:183-212`).
+3. `trackerClient.pauseAll()` (`SchedulingFeature.swift:200`) pauses tracking.
+4. `schedulerClient.cancelAllReminders()` (`SchedulingFeature.swift:201`) cancels all scheduled notifications. Note: the `Snooze` reducer also `.cancel(id: .rescheduleDebounce(...))` / `.cancel(id: .snoozeWakeTask)` via TCA cancellation IDs — see `docs/performance-audit.md:102-115`.
+5. The snooze-wake notification is scheduled via `scheduleSnoozeNotification(until)` (`SchedulingFeature.swift:204`) and a structured-concurrency wake task is registered through `.internalAction(.scheduleSnoozeWake(until))`.
+6. Overlay teardown is routed through `AppFeature.overlay(.presented(.dismissed))` which clears the `@Presents var overlay` (`AppFeature.swift:125-134`). Overlay lifecycle is owned by `OverlayFeature` + `AppFeature.Destination` — there is no singleton `OverlayManager` reachable from snooze.
+7. Shields, when entitlement (#201) lands, will be invoked via a TCA `ManagedSettings` dependency client (the `ManagedSettingsCoordinator` symbol was removed during the TCA migration).
 
 **While snooze is active:** No new overlays, shields, or notifications are delivered. The snooze-wake notification is the only scheduled event.
 

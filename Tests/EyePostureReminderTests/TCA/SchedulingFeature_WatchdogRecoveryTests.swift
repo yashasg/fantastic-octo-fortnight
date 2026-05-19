@@ -1,47 +1,294 @@
 import ComposableArchitecture
+import ScreenTimeExtensionShared
 import UserNotifications
 import XCTest
 
 @testable import EyePostureReminder
 
 /// Watchdog-recovery TestStore coverage for `SchedulingFeature` —
-/// Phase 3 issue `p0-tca-17` (#680).
+/// Phase 3 issue `p0-tca-17` (#680) + Phase 2 watchdog-recovery
+/// follow-up (#892).
 ///
-/// The legacy `AppCoordinator.runWatchdogRecoveryIfNeeded(at:)` (deleted in
-/// `#755` Phase E, PR #760) read the App Group IPC log, detected a stale
-/// heartbeat, then cancelled every reminder and restarted the schedule. The
-/// TCA `SchedulingFeature` reducer (this file's PR is the Phase-3 test
-/// rewrite, not the Phase-2 wiring) does not yet expose a watchdog-recovery
-/// action because the dependency-client surface required for it (an
-/// `IPCClient.recentEvents`-style accessor + a heartbeat clock adapter) has
-/// not been added — see the deferral note in the `SchedulingFeature.swift`
-/// preamble (watchdog recovery, fallback-routing IPC reads, session-timing
-/// analytics, launch-readiness analytics, DeviceActivity scheduling on
-/// overlay present, and `OverlayClient.lifecycleEvents`-driven bookkeeping
-/// are tracked under `p0-tca-15` follow-ups).
+/// Watchdog recovery reads the App Group IPC log via
+/// `IPCClient.recentEvents`, detects a stale heartbeat using the live
+/// `@Dependency(\.date)` clock, cancels every reminder, and restarts the
+/// schedule. The `.watchdogRecoveryTriggered` action delegates the verdict
+/// to `WatchdogHeartbeat.status(...)` so the behaviour stays in lock-step
+/// with the legacy `WatchdogHeartbeat` parity contract (see
+/// `Tests/EyePostureReminderTests/Services/WatchdogHeartbeatTests.swift`).
 ///
-/// The pause-condition + IPC stream effects defined in `startEffect()` are
-/// the closest in-scope analogues to "external trigger reschedules" so the
-/// covering tests assert those paths here. The watchdog-recovery test
-/// itself documents the deferral via `XCTSkip` so the migration ticket can
-/// re-enable it once the wider dependency surface lands.
+/// Two additional in-scope analogues are exercised below: the
+/// `ipcStream` true-interrupt subscriber, which fires `.scheduleReminders`
+/// on every emitted change, and the `pauseStream` subscriber, which routes
+/// every emitted `Bool` to `.pauseConditionChanged`. They are kept here as
+/// belt-and-braces coverage of the related external-signal-driven
+/// reschedule rails.
 @MainActor
 final class SchedulingFeatureWatchdogRecoveryTests: XCTestCase {
 
-    // MARK: - Watchdog-recovery deferral
+    // MARK: - .watchdogRecoveryTriggered — stale heartbeat
 
-    /// Records the deferral. Once Phase-2 lands the IPC-recent-events
-    /// accessor + heartbeat clock adapter, replace this `XCTSkip` with the
-    /// behavioural-parity test against the new
-    /// `.watchdogRecoveryTriggered` action.
-    func test_watchdogRecovery_deferredToPhase2() throws {
-        try XCTSkipIf(true, """
-            SchedulingFeature lacks watchdog-recovery surface in Phase 1
-            (see the deferral note in the SchedulingFeature.swift preamble).
-            Re-enable once an IPCClient.recentEvents accessor + heartbeat
-            clock adapter ship so the legacy watchdog-heartbeat coverage
-            can be ported into a behavioural-parity test.
-            """)
+    /// A stale device-activity-lifecycle heartbeat (older than the
+    /// 130 s threshold) must trigger the recovery branch: cancel every
+    /// reminder, restart the schedule, record an IPC
+    /// `watchdogRecoveryTriggered` event, and emit the
+    /// `watchdogRecoveryTriggered` + `watchdogRecoveryCompleted`
+    /// analytics pair. Legacy parity vector mirrors
+    /// `WatchdogHeartbeatTests.test_status_whenLatestHeartbeatExceedsThreshold_returnsStale`.
+    func test_watchdogRecoveryTriggered_staleHeartbeat_cancelsAndReschedules() async {
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        let staleHeartbeat = WatchdogHeartbeat.event(
+            .deviceActivityIntervalEnded,
+            timestamp: now.addingTimeInterval(-200)
+        )
+        let cancelledAll = LockIsolated(0)
+        let recordedEvents = LockIsolated<[AppGroupIPCEvent]>([])
+        let recordedContexts = LockIsolated<[String?]>([])
+        let analyticsEvents = LockIsolated<[AnalyticsEvent]>([])
+
+        let store = TestStore(initialState: SchedulingFeature.State()) {
+            SchedulingFeature()
+        } withDependencies: {
+            TCATestDependencies.applyAllSilentClients(&$0)
+            $0.date = .constant(now)
+            $0.ipcClient = IPCClient(
+                isTrueInterruptEnabled: { false },
+                setTrueInterruptEnabled: { _ in false },
+                readSelection: { .empty },
+                writeSelection: { _ in false },
+                record: { event, context in
+                    recordedEvents.withValue { $0.append(event) }
+                    recordedContexts.withValue { $0.append(context) }
+                },
+                trueInterruptChanges: { .finished },
+                selectionChanges: { .finished },
+                recentEvents: { [staleHeartbeat] },
+                fallbackRoute: { _ in nil }
+            )
+            $0.reminderSchedulerClient = ReminderSchedulerClient(
+                scheduleReminders: { _, _ in },
+                rescheduleReminder: { _, _ in },
+                cancelReminder: { _ in },
+                cancelAllReminders: { cancelledAll.withValue { $0 += 1 } }
+            )
+            $0.analyticsClient = AnalyticsClient(log: { event in
+                analyticsEvents.withValue { $0.append(event) }
+            })
+        }
+        store.exhaustivity = .off
+
+        await store.send(.watchdogRecoveryTriggered)
+        await store.receive(\.scheduleReminders)
+        await store.finish()
+
+        XCTAssertEqual(
+            cancelledAll.value, 1,
+            "Stale heartbeat must invoke schedulerClient.cancelAllReminders exactly once"
+        )
+        XCTAssertEqual(
+            recordedEvents.value.map(\.kind), [.watchdogRecoveryTriggered],
+            "Stale heartbeat must persist an IPC watchdogRecoveryTriggered event"
+        )
+        XCTAssertEqual(
+            recordedEvents.value.first?.detail, "device_activity_interval_ended",
+            "Recovery event detail must carry the staleness heartbeat detail"
+        )
+        XCTAssertEqual(
+            recordedEvents.value.first?.timestamp, now,
+            "Recovery event timestamp must use the deterministic clock"
+        )
+        XCTAssertEqual(
+            recordedContexts.value, ["watchdog_recovery"],
+            "Recovery event must carry the watchdog_recovery context tag"
+        )
+        XCTAssertTrue(
+            analyticsEvents.value.contains(where: { event in
+                if case .watchdogRecoveryTriggered(nil, "device_activity_interval_ended") = event {
+                    return true
+                }
+                return false
+            }),
+            "Analytics must include watchdogRecoveryTriggered with the staleness detail"
+        )
+        XCTAssertTrue(
+            analyticsEvents.value.contains(where: { event in
+                if case .watchdogRecoveryCompleted(true, false) = event {
+                    return true
+                }
+                return false
+            }),
+            "Analytics must include watchdogRecoveryCompleted after recovery finishes"
+        )
+    }
+
+    // MARK: - .watchdogRecoveryTriggered — missing heartbeat
+
+    /// A `recentEvents` log that contains no watchdog heartbeats must
+    /// classify as `.missing` and trigger the recovery branch. Legacy
+    /// parity vector mirrors
+    /// `WatchdogHeartbeatTests.test_status_whenNoHeartbeat_returnsMissing`.
+    func test_watchdogRecoveryTriggered_missingHeartbeat_triggersRecovery() async {
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        let cancelledAll = LockIsolated(0)
+        let recordedEvents = LockIsolated<[AppGroupIPCEvent]>([])
+        let analyticsEvents = LockIsolated<[AnalyticsEvent]>([])
+
+        let store = TestStore(initialState: SchedulingFeature.State()) {
+            SchedulingFeature()
+        } withDependencies: {
+            TCATestDependencies.applyAllSilentClients(&$0)
+            $0.date = .constant(now)
+            $0.ipcClient = IPCClient(
+                isTrueInterruptEnabled: { false },
+                setTrueInterruptEnabled: { _ in false },
+                readSelection: { .empty },
+                writeSelection: { _ in false },
+                record: { event, _ in recordedEvents.withValue { $0.append(event) } },
+                trueInterruptChanges: { .finished },
+                selectionChanges: { .finished },
+                recentEvents: { [] },
+                fallbackRoute: { _ in nil }
+            )
+            $0.reminderSchedulerClient = ReminderSchedulerClient(
+                scheduleReminders: { _, _ in },
+                rescheduleReminder: { _, _ in },
+                cancelReminder: { _ in },
+                cancelAllReminders: { cancelledAll.withValue { $0 += 1 } }
+            )
+            $0.analyticsClient = AnalyticsClient(log: { event in
+                analyticsEvents.withValue { $0.append(event) }
+            })
+        }
+        store.exhaustivity = .off
+
+        await store.send(.watchdogRecoveryTriggered)
+        await store.receive(\.scheduleReminders)
+        await store.finish()
+
+        XCTAssertEqual(cancelledAll.value, 1)
+        XCTAssertEqual(recordedEvents.value.first?.detail, "missing")
+        XCTAssertTrue(
+            analyticsEvents.value.contains(where: { event in
+                if case .watchdogRecoveryTriggered(nil, "missing") = event {
+                    return true
+                }
+                return false
+            })
+        )
+    }
+
+    // MARK: - .watchdogRecoveryTriggered — fresh heartbeat is a no-op
+
+    /// A fresh device-activity-lifecycle heartbeat (within the 130 s
+    /// threshold) must classify as `.fresh` and must NOT trigger
+    /// recovery — the action is idempotent under fresh sessions. Legacy
+    /// parity vector mirrors
+    /// `WatchdogHeartbeatTests.test_status_whenLatestHeartbeatWithinThreshold_returnsFresh`.
+    func test_watchdogRecoveryTriggered_freshHeartbeat_isNoOp() async {
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        let freshHeartbeat = WatchdogHeartbeat.event(
+            .deviceActivityIntervalStarted,
+            timestamp: now.addingTimeInterval(-30)
+        )
+        let cancelledAll = LockIsolated(0)
+        let recordedEvents = LockIsolated<[AppGroupIPCEvent]>([])
+        let analyticsEvents = LockIsolated<[AnalyticsEvent]>([])
+
+        let store = TestStore(initialState: SchedulingFeature.State()) {
+            SchedulingFeature()
+        } withDependencies: {
+            TCATestDependencies.applyAllSilentClients(&$0)
+            $0.date = .constant(now)
+            $0.ipcClient = IPCClient(
+                isTrueInterruptEnabled: { false },
+                setTrueInterruptEnabled: { _ in false },
+                readSelection: { .empty },
+                writeSelection: { _ in false },
+                record: { event, _ in recordedEvents.withValue { $0.append(event) } },
+                trueInterruptChanges: { .finished },
+                selectionChanges: { .finished },
+                recentEvents: { [freshHeartbeat] },
+                fallbackRoute: { _ in nil }
+            )
+            $0.reminderSchedulerClient = ReminderSchedulerClient(
+                scheduleReminders: { _, _ in },
+                rescheduleReminder: { _, _ in },
+                cancelReminder: { _ in },
+                cancelAllReminders: { cancelledAll.withValue { $0 += 1 } }
+            )
+            $0.analyticsClient = AnalyticsClient(log: { event in
+                analyticsEvents.withValue { $0.append(event) }
+            })
+        }
+        store.exhaustivity = .off
+
+        await store.send(.watchdogRecoveryTriggered)
+        await store.finish()
+
+        XCTAssertEqual(
+            cancelledAll.value, 0,
+            "Fresh heartbeat must not cancel reminders"
+        )
+        XCTAssertTrue(
+            recordedEvents.value.isEmpty,
+            "Fresh heartbeat must not record an IPC recovery event"
+        )
+        XCTAssertTrue(
+            analyticsEvents.value.isEmpty,
+            "Fresh heartbeat must not emit any analytics events"
+        )
+    }
+
+    // MARK: - .watchdogRecoveryTriggered — coordinator heartbeat ignored
+
+    /// A coordinator-side heartbeat (`appForeground`) must NOT be
+    /// counted against the device-activity-lifecycle staleness window.
+    /// If only coordinator heartbeats are present, the verdict must be
+    /// `.missing` and recovery must fire. Legacy parity vector mirrors
+    /// `WatchdogHeartbeatTests.test_status_matchingDeviceActivityDetails_ignoresNewerCoordinatorHeartbeat`.
+    func test_watchdogRecoveryTriggered_ignoresCoordinatorHeartbeats() async {
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        let coordinatorHeartbeat = WatchdogHeartbeat.event(
+            .appForeground,
+            timestamp: now.addingTimeInterval(-5)
+        )
+        let cancelledAll = LockIsolated(0)
+        let recordedEvents = LockIsolated<[AppGroupIPCEvent]>([])
+
+        let store = TestStore(initialState: SchedulingFeature.State()) {
+            SchedulingFeature()
+        } withDependencies: {
+            TCATestDependencies.applyAllSilentClients(&$0)
+            $0.date = .constant(now)
+            $0.ipcClient = IPCClient(
+                isTrueInterruptEnabled: { false },
+                setTrueInterruptEnabled: { _ in false },
+                readSelection: { .empty },
+                writeSelection: { _ in false },
+                record: { event, _ in recordedEvents.withValue { $0.append(event) } },
+                trueInterruptChanges: { .finished },
+                selectionChanges: { .finished },
+                recentEvents: { [coordinatorHeartbeat] },
+                fallbackRoute: { _ in nil }
+            )
+            $0.reminderSchedulerClient = ReminderSchedulerClient(
+                scheduleReminders: { _, _ in },
+                rescheduleReminder: { _, _ in },
+                cancelReminder: { _ in },
+                cancelAllReminders: { cancelledAll.withValue { $0 += 1 } }
+            )
+        }
+        store.exhaustivity = .off
+
+        await store.send(.watchdogRecoveryTriggered)
+        await store.receive(\.scheduleReminders)
+        await store.finish()
+
+        XCTAssertEqual(
+            cancelledAll.value, 1,
+            "Coordinator-only heartbeats must not mask a missing device-activity heartbeat"
+        )
+        XCTAssertEqual(recordedEvents.value.first?.detail, "missing")
     }
 
     // MARK: - IPC stream → reschedule (closest in-scope analogue)
@@ -66,7 +313,9 @@ final class SchedulingFeatureWatchdogRecoveryTests: XCTestCase {
                 writeSelection: { _ in false },
                 record: { _, _ in },
                 trueInterruptChanges: { stream },
-                selectionChanges: { .finished }
+                selectionChanges: { .finished },
+                recentEvents: { [] },
+                fallbackRoute: { _ in nil }
             )
         }
         store.exhaustivity = .off
@@ -113,12 +362,11 @@ final class SchedulingFeatureWatchdogRecoveryTests: XCTestCase {
                 thresholdReached: { .finished }
             )
             $0.overlayClient = OverlayClient(
-                show: { _, _, _, _ in },
-                dismiss: {},
-                clearQueue: {},
-                clearQueueForType: { _ in },
-                isVisible: { false },
-                lifecycleEvents: { .finished }
+                lifecycleEvents: { .finished },
+                broadcast: { _ in },
+                pauseExternalAudio: {},
+                resumeExternalAudio: {},
+                postScreenChanged: {}
             )
         }
         store.exhaustivity = .off

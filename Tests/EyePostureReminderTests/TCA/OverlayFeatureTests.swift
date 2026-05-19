@@ -5,8 +5,10 @@ import XCTest
 
 /// `TestStore` baseline coverage for `OverlayFeature` (Phase 1 reducer
 /// `p0-tca-8` / #671). Verifies the synchronous state mutations and pure
-/// dispatch contracts of every action; long-form behavioural parity with
-/// `OverlayManager` lives under Phase 3 issue `p0-tca-20` (#683).
+/// dispatch contracts of every action. `#920` removed the legacy
+/// `OverlayManager` UIWindow path; long-form behavioural parity now
+/// lives in `OverlayFeatureBehaviorTests` (the reducer owns the
+/// dismiss-broadcast / audio / accessibility side effects directly).
 @MainActor
 final class OverlayFeatureTests: XCTestCase {
 
@@ -65,8 +67,9 @@ final class OverlayFeatureTests: XCTestCase {
 
         await store.send(.onAppear)
         // Two-phase dismiss (#738): `.timerExpired` flips `isDismissing`
-        // and emits analytics, but the actual `overlayClient.dismiss()`
-        // side effect is deferred until the view (or this test) sends
+        // and emits analytics, but the actual dismissal side-effects
+        // (resume audio, broadcast `.dismissed`, post screenChanged)
+        // are deferred until the view (or this test) sends
         // `.dismissAnimationCompleted`.
         await store.receive(\.timerExpired) {
             $0.isDismissing = true
@@ -75,6 +78,7 @@ final class OverlayFeatureTests: XCTestCase {
             $0.isFinalized = true
         }
         await store.receive(\.dismissed)
+        await store.finish()
     }
 
     // MARK: - .timerTick
@@ -108,6 +112,7 @@ final class OverlayFeatureTests: XCTestCase {
             $0.isFinalized = true
         }
         await store.receive(\.dismissed)
+        await store.finish()
     }
 
     func test_timerTick_belowZero_clampsAtZeroAndEmitsTimerExpired() async {
@@ -126,6 +131,7 @@ final class OverlayFeatureTests: XCTestCase {
             $0.isFinalized = true
         }
         await store.receive(\.dismissed)
+        await store.finish()
     }
 
     // MARK: - .dismissTapped
@@ -164,6 +170,7 @@ final class OverlayFeatureTests: XCTestCase {
         } withDependencies: { TCATestDependencies.applyAllSilentClients(&$0) }
 
         await store.send(.settingsTapped)
+        await store.finish()
     }
 
     // MARK: - .timerExpired
@@ -211,6 +218,7 @@ final class OverlayFeatureTests: XCTestCase {
             $0.isFinalized = true
         }
         await store.receive(\.dismissed)
+        await store.finish()
     }
 
     /// `.dismissAnimationCompleted` after `.timerExpired` flips
@@ -229,12 +237,13 @@ final class OverlayFeatureTests: XCTestCase {
             $0.isFinalized = true
         }
         await store.receive(\.dismissed)
+        await store.finish()
     }
 
     /// Idempotency guard: re-arrival of `.dismissAnimationCompleted` (e.g.
     /// SwiftUI animation interrupt firing the completion callback twice)
     /// must not dispatch `.dismissed` a second time, which would otherwise
-    /// double-tear the underlying `UIWindow` via `overlayClient.dismiss`.
+    /// double-broadcast `.dismissed` and double-run the resume-audio path.
     func test_dismissAnimationCompleted_reentrant_isNoOp() async {
         let store = TestStore(
             initialState: OverlayFeature.State(type: .eyes, duration: 10)
@@ -252,6 +261,7 @@ final class OverlayFeatureTests: XCTestCase {
 
         // Second arrival is a pure no-op — no state delta, no follow-up.
         await store.send(.dismissAnimationCompleted)
+        await store.finish()
     }
 
     /// Out-of-order arrival: a stray `.dismissAnimationCompleted` before any
@@ -278,5 +288,6 @@ final class OverlayFeatureTests: XCTestCase {
         } withDependencies: { TCATestDependencies.applyAllSilentClients(&$0) }
 
         await store.send(.dismissed)
+        await store.finish()
     }
 }

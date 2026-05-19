@@ -2,11 +2,10 @@ import Foundation
 
 @testable import EyePostureReminder
 
-/// Mock implementation of `PauseConditionProviding` for use in scheduling /
-/// pause-condition integration tests (formerly `AppCoordinatorTests`,
-/// migrated to `SchedulingFeature*Tests` in `#755` Phase E). Lets tests
-/// control pause-condition state without real Focus mode, CarPlay, or
-/// driving-detection logic.
+/// Mock implementation of `PauseConditionProviding` for use in
+/// `SchedulingFeature*Tests`. Lets tests control pause-condition state
+/// without real Focus mode, CarPlay, or driving-detection logic
+/// (#755 Phase E).
 @MainActor
 final class MockPauseConditionProvider: PauseConditionProviding {
 

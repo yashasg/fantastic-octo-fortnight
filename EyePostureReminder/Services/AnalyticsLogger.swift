@@ -16,6 +16,25 @@ enum AnalyticsEvent: Sendable {
     /// Fired when the app resigns active.
     case appSessionEnd(sessionDurationS: TimeInterval)
 
+    /// Fired when a reminder cycle begins — i.e. the overlay for `type` is
+    /// presented on screen. Paired with `reminderSessionEnded` for the same
+    /// `type` once the overlay is dismissed. Emitted by `SessionTimingClient`
+    /// (#901) from `SchedulingFeature`'s overlay-lifecycle consumer.
+    case reminderSessionStarted(type: ReminderType, at: Date)
+
+    /// Fired when a reminder cycle ends — i.e. the overlay for `type` is
+    /// dismissed. Pairs with the most recent `reminderSessionStarted` for the
+    /// same `type`. Emitted by `SessionTimingClient` (#901) from
+    /// `SchedulingFeature`'s overlay-lifecycle consumer.
+    case reminderSessionEnded(type: ReminderType, at: Date)
+
+    /// Fired once per cold launch at the tail of
+    /// `SchedulingFeature.startEffect` after every long-running stream
+    /// subscription is in-flight. Emitted by `SessionTimingClient` (#902);
+    /// restores the legacy `AppCoordinator` launch-readiness signal at the
+    /// dependency boundary.
+    case reminderLaunchReady(reason: SessionTimingClient.LaunchReadinessReason)
+
     // MARK: App Launch Readiness
 
     /// Parameters captured once per app launch/foreground cycle for startup health monitoring.
@@ -175,6 +194,14 @@ enum AnalyticsEvent: Sendable {
     /// Fired when the user completes onboarding. `cta` records which exit button was tapped.
     case onboardingCompleted(cta: OnboardingCTA)
 
+    /// Fired when the user responds to the system notification-permission prompt
+    /// shown during onboarding. `granted` reflects the boolean returned by
+    /// `UNUserNotificationCenter.requestAuthorization(options:)` — `true` when
+    /// the user tapped *Allow*, `false` when they tapped *Don't Allow*. The
+    /// event is intentionally not emitted when the underlying call throws, so
+    /// the stream only contains real user-driven responses.
+    case notificationPermissionResponded(granted: Bool)
+
     /// Non-PII code for the onboarding exit CTA the user tapped.
     enum OnboardingCTA: String, CaseIterable {
         case getStarted = "get_started"
@@ -212,9 +239,16 @@ enum AnalyticsLogger {
         category: "Analytics"
     )
 
-#if DEBUG
+#if DEBUG || CI
     /// Test-only hook. Set in unit tests to intercept emitted events; must be
     /// reset to `nil` in `tearDown` to avoid cross-test contamination.
+    ///
+    /// Visible under either `DEBUG` (developer builds) or `CI` (Release-config
+    /// test runs that inject `-DCI` via `scripts/build.sh cmd_test`). The
+    /// symbol is never present in production archive builds — verify via
+    /// `SWIFT_ACTIVE_COMPILATION_CONDITIONS` on the archive scheme. See
+    /// `.squad/decisions.md` (2026-05-17 — CI Clean-Build + Release-Config
+    /// Speedup Decision) and issue #807.
     ///
     /// `nonisolated(unsafe)` acknowledges the Swift 6 isolation trade-off:
     /// XCTest serialises test cases within a process so no actual data race
@@ -227,7 +261,7 @@ enum AnalyticsLogger {
 
     /// Emit an analytics event as a structured os.Logger entry.
     static func log(_ event: AnalyticsEvent) {
-#if DEBUG
+#if DEBUG || CI
         testEventHandler?(event)
 #endif
         switch event {
@@ -359,6 +393,22 @@ enum AnalyticsLogger {
                 cta=\(cta.rawValue, privacy: .public)
                 """)
 
+        case let .notificationPermissionResponded(granted):
+            logger.info("""
+                event=notification_permission_responded \
+                granted=\(granted, privacy: .public)
+                """)
+
+        default:
+            logSessionTiming(event)
+        }
+    }
+
+    // Logs session/launch-timing analytics events. Split out of `logExtended(_:)` to
+    // keep each switch within cyclomatic-complexity limits.
+    private static func logSessionTiming(_ event: AnalyticsEvent) {
+        switch event {
+
         case let .appLaunchReadiness(payload):
             logger.info("""
                 event=app_launch_readiness \
@@ -369,8 +419,30 @@ enum AnalyticsLogger {
                 latency_s=\(payload.latencyS, format: .fixed(precision: 2), privacy: .public)
                 """)
 
+        case let .reminderSessionStarted(type, date):
+            logger.info("""
+                event=reminder_session_started \
+                type=\(type.rawValue, privacy: .public) \
+                at=\(date.timeIntervalSince1970, format: .fixed(precision: 3), privacy: .public)
+                """)
+
+        case let .reminderSessionEnded(type, date):
+            logger.info("""
+                event=reminder_session_ended \
+                type=\(type.rawValue, privacy: .public) \
+                at=\(date.timeIntervalSince1970, format: .fixed(precision: 3), privacy: .public)
+                """)
+
+        case let .reminderLaunchReady(reason):
+            logger.info("""
+                event=reminder_launch_ready \
+                reason=\(reason.rawValue, privacy: .public)
+                """)
+
         default:
-            assertionFailure("Unhandled analytics event — add a case to logExtended(_:): \(event)")
+            assertionFailure(
+                "Unhandled analytics event — add a case to logExtended(_:) or logSessionTiming(_:): \(event)"
+            )
         }
     }
 }

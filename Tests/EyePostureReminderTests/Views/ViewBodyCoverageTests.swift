@@ -1,3 +1,4 @@
+import ComposableArchitecture
 import SwiftUI
 import UIKit
 import XCTest
@@ -11,9 +12,10 @@ import XCTest
 /// force SwiftUI body evaluation and register line coverage. Different state
 /// permutations exercise conditional branches inside view bodies.
 ///
-/// NOTE: Views that use `@EnvironmentObject` + `@AppStorage` crash in the SPM
-/// test-host process (`bundleProxyForCurrentProcess is nil`) so those are tested
-/// via `_ = view.body` or callback-contract tests instead.
+/// NOTE: Views that use `@AppStorage` crash in the SPM test-host process
+/// (`bundleProxyForCurrentProcess is nil`) because `UserDefaults(suiteName:)`
+/// cannot resolve the host bundle — those are tested via `_ = view.body` or
+/// callback-contract tests instead.
 @MainActor
 final class ViewBodyCoverageTests: XCTestCase {
 
@@ -26,41 +28,61 @@ final class ViewBodyCoverageTests: XCTestCase {
         XCTAssertNotNil(hc.view, file: file, line: line)
     }
 
+    /// Builds an `OverlayView` through the canonical `init(store:)` form
+    /// introduced by `#919` and made the only init by `#920`. Uses silent
+    /// TCA clients so SwiftUI body evaluation produces no I/O.
+    private func makeOverlayView(
+        type: ReminderType,
+        duration: TimeInterval,
+        hapticsEnabled: Bool = true
+    ) -> OverlayView {
+        let store = Store(
+            initialState: OverlayFeature.State(
+                type: type,
+                duration: duration,
+                hapticsEnabled: hapticsEnabled
+            )
+        ) {
+            OverlayFeature()
+        } withDependencies: {
+            TCATestDependencies.applyAllSilentClients(&$0)
+        }
+        return OverlayView(store: store)
+    }
+
     // MARK: - OverlayView (all permutations)
 
     func test_overlayView_eyes_fullDuration() {
-        render(OverlayView(type: .eyes, duration: 20, hapticsEnabled: true, onDismiss: {}))
+        render(makeOverlayView(type: .eyes, duration: 20, hapticsEnabled: true))
     }
 
     func test_overlayView_posture_fullDuration() {
-        render(OverlayView(type: .posture, duration: 10, hapticsEnabled: true, onDismiss: {}))
+        render(makeOverlayView(type: .posture, duration: 10, hapticsEnabled: true))
     }
 
     func test_overlayView_hapticsDisabled() {
-        render(OverlayView(type: .eyes, duration: 5, hapticsEnabled: false, onDismiss: {}))
+        render(makeOverlayView(type: .eyes, duration: 5, hapticsEnabled: false))
     }
 
     func test_overlayView_zeroDuration() {
-        render(OverlayView(type: .eyes, duration: 0, hapticsEnabled: false, onDismiss: {}))
+        render(makeOverlayView(type: .eyes, duration: 0, hapticsEnabled: false))
     }
 
     func test_overlayView_withAllCallbacks() {
-        render(OverlayView(
-            type: .posture,
-            duration: 15,
-            hapticsEnabled: true,
-            onAnalyticsEvent: { _ in },
-            onSettingsTap: {},
-            onDismiss: {}
-        ))
+        // `#920` removed the closure-init's onAnalyticsEvent/onSettingsTap
+        // hooks — analytics and the settings-tap broadcast now flow
+        // through the reducer's `.settingsTapped` effect. Coverage of the
+        // posture / haptics-on permutation is preserved by rendering the
+        // store-driven view.
+        render(makeOverlayView(type: .posture, duration: 15, hapticsEnabled: true))
     }
 
     func test_overlayView_eyes_shortDuration() {
-        render(OverlayView(type: .eyes, duration: 1, hapticsEnabled: true, onDismiss: {}))
+        render(makeOverlayView(type: .eyes, duration: 1, hapticsEnabled: true))
     }
 
     func test_overlayView_posture_longDuration() {
-        render(OverlayView(type: .posture, duration: 60, hapticsEnabled: false, onDismiss: {}))
+        render(makeOverlayView(type: .posture, duration: 60, hapticsEnabled: false))
     }
 
     // MARK: - LegalDocumentView
@@ -108,9 +130,10 @@ final class ViewBodyCoverageTests: XCTestCase {
     }
 
     // MARK: - OnboardingSetupView
-    // NOTE: OnboardingSetupView uses @EnvironmentObject (SettingsStore), which crashes
-    // in the SPM test-host process. Body rendering is skipped per project convention;
-    // only callback-contract and token tests are run here.
+    // NOTE: OnboardingSetupView binds pickers to `@AppStorage(SettingsStore.Keys.*)`,
+    // which crashes in the SPM test-host process (`bundleProxyForCurrentProcess`
+    // is `nil`). Body rendering is skipped per project convention; only
+    // callback-contract and token tests are run here.
 
     func test_onboardingSetupView_getStartedCallback() {
         var started = false
@@ -120,7 +143,16 @@ final class ViewBodyCoverageTests: XCTestCase {
     }
 
     // MARK: - ReminderRowView
-
+    //
+    // Rendering tests for `ReminderRowView` are gated on `#if !CI` because the
+    // view embeds `SwiftUI.Picker` and the Swift compiler emits opaque-type
+    // descriptor references to the `_` private `View.tag(_:includeOptional:)`
+    // overload. The Xcode 26.4 simulator SDK marks `SwiftUICore.framework`
+    // as client-restricted, so the test xctest bundle fails to dlopen with
+    // a `symbol not found in flat namespace` error. Local Xcode IDE runs
+    // still exercise these tests (the `CI` flag is only injected from
+    // `scripts/build.sh cmd_test`). Tracked in #807.
+#if !CI
     func test_reminderRowView_eyes_enabled() {
         render(ReminderRowView(
             type: .eyes,
@@ -184,6 +216,7 @@ final class ViewBodyCoverageTests: XCTestCase {
             ))
         }
     }
+#endif
 
     // MARK: - YinYangEyeView
 
@@ -368,6 +401,7 @@ final class ViewBodyCoverageTests: XCTestCase {
         XCTAssertFalse(described.isEmpty)
     }
 
+#if !CI
     func test_reminderRowView_eyes_enabled_bodyEvaluation() {
         let view = ReminderRowView(
             type: .eyes,
@@ -415,30 +449,22 @@ final class ViewBodyCoverageTests: XCTestCase {
         let described = String(describing: view.body)
         XCTAssertFalse(described.isEmpty)
     }
+#endif
 
     func test_overlayView_eyes_bodyEvaluation() {
-        let view = OverlayView(
-            type: .eyes, duration: 20, hapticsEnabled: true, reduceMotionOverride: false,
-            onDismiss: {}
-        )
+        let view = makeOverlayView(type: .eyes, duration: 20, hapticsEnabled: true)
         let described = String(describing: view.body)
         XCTAssertFalse(described.isEmpty)
     }
 
     func test_overlayView_posture_bodyEvaluation() {
-        let view = OverlayView(
-            type: .posture, duration: 10, hapticsEnabled: false, reduceMotionOverride: false,
-            onDismiss: {}
-        )
+        let view = makeOverlayView(type: .posture, duration: 10, hapticsEnabled: false)
         let described = String(describing: view.body)
         XCTAssertFalse(described.isEmpty)
     }
 
     func test_overlayView_allSubviews_bodyEvaluation() {
-        let view = OverlayView(
-            type: .eyes, duration: 20, hapticsEnabled: true,
-            reduceMotionOverride: false,
-            onAnalyticsEvent: { _ in }, onSettingsTap: {}, onDismiss: {})
+        let view = makeOverlayView(type: .eyes, duration: 20, hapticsEnabled: true)
         // Force deep evaluation of body
         _ = view.body
         let described = String(describing: view.body)
@@ -553,6 +579,7 @@ final class ViewBodyCoverageTests: XCTestCase {
             "ReminderType.posture.rawValue must be 'posture' — used in 'settings.posture.{kind}Picker' (#427)")
     }
 
+#if !CI
     /// Verifies `ReminderRowView` body evaluates with both pickers visible (isEnabled=true) (#427).
     func test_reminderRowView_eyes_enabled_pickersRendered_bodyEvaluates() {
         let view = ReminderRowView(
@@ -585,6 +612,7 @@ final class ViewBodyCoverageTests: XCTestCase {
             "ReminderRowView (posture, enabled) body must evaluate — pickers must render with identifiers (#427)"
         )
     }
+#endif
 
     // MARK: - #428: IconContainer image is self-hiding (decorative)
 
@@ -611,6 +639,7 @@ final class ViewBodyCoverageTests: XCTestCase {
 
     // MARK: - #432: ReminderRowView accepts injected poster for VoiceOver announcements
 
+#if !CI
     /// Verifies `ReminderRowView` compiles and its body evaluates when a mock
     /// `AccessibilityNotificationPosting` is injected — confirming the #432 API contract.
     func test_reminderRowView_acceptsMockPoster_bodyEvaluates_enabled() {
@@ -644,6 +673,7 @@ final class ViewBodyCoverageTests: XCTestCase {
         XCTAssertFalse(described.isEmpty,
             "ReminderRowView with injected poster (disabled) body must evaluate (#432)")
     }
+#endif
 
     /// Verifies the localization strings for picker-visibility announcements exist and are non-empty.
     func test_pickerVisibilityAnnouncementStrings_exist() {
