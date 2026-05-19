@@ -43,27 +43,9 @@ UITests/*.xcworkspace/
 ScreenTimeExtensions/*.xcodeproj/
 ScreenTimeExtensions/*.xcworkspace/
 
-# One-time scripts and tool output logs
-fix_multiline.py
-manual_violations.txt
-other_violations.txt
-swiftlint_violations.txt
-excalidraw.log
-
-# Build/audit artifacts (one-off binaries and logs — never commit)
-audit_check
-build_check.log
-build_output.log
-audit_workflows.sh
-detailed_audit.py
-detailed_manual_audit.sh
-edge_case_audit.sh
-final_audit.sh
-script_validation.sh
-
-# Dev artifacts (screenshots, issue dumps, preview files)
+# Dev artifacts (screenshots, issue dumps, preview files, tool logs)
 *.png
 *.jpeg
 *-issues.json
 uitest_run.log
-yinyang-preview.html
+excalidraw.log
